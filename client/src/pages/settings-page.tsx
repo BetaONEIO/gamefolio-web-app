@@ -903,8 +903,16 @@ export default function SettingsPage() {
     profileFont: (user as any)?.profileFont || "default",
     profileFontEffect: (user as any)?.profileFontEffect || "none",
     profileFontAnimation: (user as any)?.profileFontAnimation || "none",
-    profileFontColor: (user as any)?.profileFontColor || "#FFFFFF"
+    profileFontColor: (user as any)?.profileFontColor || "#FFFFFF",
+    gameDescription: (user as any)?.gameDescription || "",
+    gameKeyFeatures: ((user as any)?.gameKeyFeatures || []) as string[],
+    studioFoundedYear: (user as any)?.studioFoundedYear || "",
+    studioTeamSize: (user as any)?.studioTeamSize || "",
+    gameReleaseDate: (user as any)?.gameReleaseDate || "",
+    gameSteamUrl: (user as any)?.gameSteamUrl || "",
+    gameEpicUrl: (user as any)?.gameEpicUrl || "",
   });
+  const [newKeyFeature, setNewKeyFeature] = useState("");
   
   const [avatarBorderColor, setAvatarBorderColor] = useState<string>(user?.avatarBorderColor || '#B7FF1A');
   const [selectedBorderId, setSelectedBorderId] = useState<number | null>(user?.selectedAvatarBorderId ?? -1);
@@ -1136,6 +1144,7 @@ export default function SettingsPage() {
         };
 
         return {
+          ...prev,
           displayName: user.displayName || "",
           bio: user.bio || "",
           avatarUrl: user.avatarUrl || "",
@@ -1238,7 +1247,14 @@ export default function SettingsPage() {
     primaryUserType !== savedPrimary ||
     isStreamingEnabled !== savedIsStreamer ||
     streamPlatform !== ((user as any)?.streamPlatform || 'twitch') ||
-    showLiveOverlay !== ((user as any)?.showLiveOverlay || false);
+    showLiveOverlay !== ((user as any)?.showLiveOverlay || false) ||
+    normalizeValue(profileData.gameDescription) !== normalizeValue((user as any)?.gameDescription) ||
+    normalizeValue(profileData.studioFoundedYear) !== normalizeValue((user as any)?.studioFoundedYear) ||
+    normalizeValue(profileData.studioTeamSize) !== normalizeValue((user as any)?.studioTeamSize) ||
+    normalizeValue(profileData.gameReleaseDate) !== normalizeValue((user as any)?.gameReleaseDate) ||
+    normalizeValue(profileData.gameSteamUrl) !== normalizeValue((user as any)?.gameSteamUrl) ||
+    normalizeValue(profileData.gameEpicUrl) !== normalizeValue((user as any)?.gameEpicUrl) ||
+    JSON.stringify(profileData.gameKeyFeatures) !== JSON.stringify((user as any)?.gameKeyFeatures || []);
   
 
   // Handle crop complete callback
@@ -2758,6 +2774,133 @@ export default function SettingsPage() {
                     rows={3}
                   />
                 </div>
+
+                {primaryUserType.split(',').map(t => t.trim()).includes('indie_developer') && (
+                  <div className="space-y-4 border border-border rounded-lg p-4">
+                    <div>
+                      <h3 className="text-sm font-semibold">Indie Game Details</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Shown on your public Gamefolio profile in the Overview tab.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="gameDescription">Game Description</Label>
+                      <Textarea
+                        id="gameDescription"
+                        value={profileData.gameDescription}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, gameDescription: e.target.value }))}
+                        placeholder="Tell players about your game..."
+                        rows={4}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Key Features</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={newKeyFeature}
+                          onChange={(e) => setNewKeyFeature(e.target.value)}
+                          placeholder="Add a feature..."
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const val = newKeyFeature.trim();
+                              if (val) {
+                                setProfileData(prev => ({ ...prev, gameKeyFeatures: [...prev.gameKeyFeatures, val] }));
+                                setNewKeyFeature("");
+                              }
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => {
+                            const val = newKeyFeature.trim();
+                            if (val) {
+                              setProfileData(prev => ({ ...prev, gameKeyFeatures: [...prev.gameKeyFeatures, val] }));
+                              setNewKeyFeature("");
+                            }
+                          }}
+                        >
+                          Add
+                        </Button>
+                      </div>
+                      {profileData.gameKeyFeatures.length > 0 && (
+                        <ul className="space-y-1 mt-2">
+                          {profileData.gameKeyFeatures.map((feature, idx) => (
+                            <li key={idx} className="flex items-center justify-between text-sm bg-muted/50 rounded px-2 py-1">
+                              <span>{feature}</span>
+                              <button
+                                type="button"
+                                className="text-muted-foreground hover:text-destructive"
+                                onClick={() => setProfileData(prev => ({
+                                  ...prev,
+                                  gameKeyFeatures: prev.gameKeyFeatures.filter((_, i) => i !== idx),
+                                }))}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="studioFoundedYear">Studio Founded Year</Label>
+                        <Input
+                          id="studioFoundedYear"
+                          value={profileData.studioFoundedYear}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, studioFoundedYear: e.target.value }))}
+                          placeholder="e.g. 2021"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="studioTeamSize">Team Size</Label>
+                        <Input
+                          id="studioTeamSize"
+                          value={profileData.studioTeamSize}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, studioTeamSize: e.target.value }))}
+                          placeholder="e.g. 5 people"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="gameReleaseDate">Release Date</Label>
+                      <Input
+                        id="gameReleaseDate"
+                        value={profileData.gameReleaseDate}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, gameReleaseDate: e.target.value }))}
+                        placeholder="e.g. Q4 2026 or Available Now"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="gameSteamUrl">Steam Store URL</Label>
+                        <Input
+                          id="gameSteamUrl"
+                          value={profileData.gameSteamUrl}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, gameSteamUrl: e.target.value }))}
+                          placeholder="https://store.steampowered.com/app/..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="gameEpicUrl">Epic Games Store URL</Label>
+                        <Input
+                          id="gameEpicUrl"
+                          value={profileData.gameEpicUrl}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, gameEpicUrl: e.target.value }))}
+                          placeholder="https://store.epicgames.com/..."
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">

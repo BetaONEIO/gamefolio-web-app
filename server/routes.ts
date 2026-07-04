@@ -6012,6 +6012,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "discordUsername", "epicUsername", "twitchUsername", "youtubeUsername",
         "twitterUsername", "instagramUsername", "facebookUsername", "nintendoUsername", "rumbleUsername",
         "streamPlatform", "streamChannelName", "showLiveOverlay",
+        "gameDescription", "gameKeyFeatures", "studioFoundedYear", "studioTeamSize",
+        "gameReleaseDate", "gameSteamUrl", "gameEpicUrl",
       ]);
       const safeBody = Object.fromEntries(
         Object.entries(req.body).filter(([key]) => ALLOWED_PROFILE_FIELDS.has(key))
