@@ -23,6 +23,7 @@ import AuthModal from "@/components/auth/auth-modal";
 import DailyXpBonus from "@/components/gamification/DailyXpBonus";
 import DailyStreakOverlay from "@/components/gamification/DailyStreak";
 import { ProtectedRoute } from "@/components/auth/protected-route";
+import { PartnerProtectedRoute } from "@/components/auth/partner-protected-route";
 import { AdminProtectedRoute } from "@/components/auth/admin-protected-route";
 import { OnboardingGuard } from "@/components/auth/onboarding-guard";
 import { PageTransition } from "@/components/ui/page-transition";
@@ -110,6 +111,8 @@ const ClipPage = lazyWithRecovery(() => import("./pages/ClipPage"));
 const ClipRedirectPage = lazyWithRecovery(() => import("./pages/ClipRedirectPage"));
 const UploadPage = lazyWithRecovery(() => import("./pages/UploadPage"));
 const ScheduledPostsPage = lazyWithRecovery(() => import("./pages/ScheduledPostsPage"));
+const IndieDashboardPage = lazyWithRecovery(() => import("./pages/IndieDashboardPage"));
+const StreamerDashboardPage = lazyWithRecovery(() => import("./pages/StreamerDashboardPage"));
 const BulkUploadPage = lazyWithRecovery(() => import("./pages/BulkUploadPage"));
 const ScreenshotUploadPage = lazyWithRecovery(() => import("./pages/ScreenshotUploadPage"));
 const AccountSettingsPage = lazyWithRecovery(() => import("./pages/AccountSettingsPage"));
@@ -485,6 +488,8 @@ function Router() {
           <ProtectedRoute path="/hashtag/:hashtag" component={HashtagPage} />
           <ProtectedRoute path="/upload" component={UploadPage} />
           <ProtectedRoute path="/scheduled-posts" component={ScheduledPostsPage} />
+          <PartnerProtectedRoute path="/indie/dashboard" partnerType="indie" component={IndieDashboardPage} />
+          <PartnerProtectedRoute path="/streamer/dashboard" partnerType="streamer" component={StreamerDashboardPage} />
           <ProtectedRoute path="/upload/bulk" component={BulkUploadPage} />
           <ProtectedRoute path="/upload/screenshots" component={ScreenshotUploadPage} />
           <ProtectedRoute path="/upload-success" component={PostUploadSuccessPage} />
