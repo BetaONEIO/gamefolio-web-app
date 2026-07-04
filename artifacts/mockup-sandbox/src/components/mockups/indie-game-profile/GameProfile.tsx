@@ -136,6 +136,19 @@ export default function GameProfile() {
               </div>
             ))}
           </div>
+
+          <div className="flex items-center justify-center gap-4 flex-wrap mt-6 pt-6 border-t border-white/10 w-full">
+            {[
+              { name: 'Windows', icon: FaWindows, color: 'text-white/80' },
+              { name: 'PlayStation', icon: FaPlaystation, color: 'text-[#5a9fd4]' },
+              { name: 'Xbox', icon: FaXbox, color: 'text-[#4CA338]' },
+            ].map((platform, i) => (
+              <div key={i} className="flex items-center gap-1.5" style={{ color: brand.textMuted }}>
+                <platform.icon size={14} className={platform.color} />
+                <span className="text-xs font-medium">{platform.name}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -188,20 +201,6 @@ export default function GameProfile() {
               </div>
             </div>
 
-            <div>
-              <h2 className="text-2xl font-bold mb-4">Available Platforms</h2>
-              <div className="flex gap-4">
-                <div className="p-4 rounded-lg flex items-center justify-center" style={cardStyle}>
-                  <FaWindows size={32} className="text-white/80" />
-                </div>
-                <div className="p-4 rounded-lg flex items-center justify-center" style={cardStyle}>
-                  <FaPlaystation size={32} className="text-white/80" />
-                </div>
-                <div className="p-4 rounded-lg flex items-center justify-center" style={cardStyle}>
-                  <FaXbox size={32} className="text-white/80" />
-                </div>
-              </div>
-            </div>
           </div>
 
           <div className="space-y-6">
