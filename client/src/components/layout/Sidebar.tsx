@@ -254,9 +254,10 @@ const Sidebar = () => {
     return <ZapIconSvg active={false} className={className} />;
   };
 
+  const isIndieDev = user?.userType?.split(",").includes("indie_developer");
   const menuItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
-    ...(user ? [{ icon: GamefolioDashboardIcon, label: "Dashboard", href: "/dashboard" }] : []),
+    ...(user ? [{ icon: GamefolioDashboardIcon, label: "Dashboard", href: isIndieDev ? "/indie/dashboard" : "/dashboard" }] : []),
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },

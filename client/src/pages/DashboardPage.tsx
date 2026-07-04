@@ -945,6 +945,13 @@ export default function DashboardPage() {
     enabled: !!user?.id,
   });
 
+  // Redirect indie developers to their dedicated dashboard
+  useEffect(() => {
+    if (user?.userType?.split(",").includes("indie_developer")) {
+      setLocation("/indie/dashboard");
+    }
+  }, [user, setLocation]);
+
   // Redirect unauthenticated users
   useEffect(() => {
     if (!user && !isLoading) {

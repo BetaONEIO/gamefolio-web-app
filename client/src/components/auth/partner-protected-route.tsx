@@ -40,7 +40,8 @@ export function PartnerProtectedRoute({
     );
   }
 
-  const allowed = user.role === "admin" || isPartnerType(user, partnerType);
+  const isIndieDev = user.userType?.split(",").includes("indie_developer");
+  const allowed = user.role === "admin" || isPartnerType(user, partnerType) || (partnerType === "indie" && isIndieDev);
   if (!allowed) {
     return (
       <Route path={path}>

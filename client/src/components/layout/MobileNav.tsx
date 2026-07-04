@@ -53,9 +53,10 @@ const MobileNav = () => {
   // Hide navigation bar when keyboard is open so it doesn't overlap input fields.
   if (isKeyboardOpen) return null;
 
+  const isIndieDev = user?.userType?.split(",").includes("indie_developer");
   const navItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
-    ...(user ? [{ icon: GamefolioDashboardIcon, label: "Dash", href: "/dashboard" }] : []),
+    ...(user ? [{ icon: GamefolioDashboardIcon, label: "Dash", href: isIndieDev ? "/indie/dashboard" : "/dashboard" }] : []),
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: GamefolioUploadIcon, label: "", href: "/upload", isUpload: true },
     { label: "Trending", href: "/trending", isTrending: true },
