@@ -2,7 +2,8 @@ import { Link, useLocation } from "wouter";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera, Clock, Layers, X as XIcon } from "lucide-react";
+import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera, Clock, Layers, X as XIcon, Rocket, Radio } from "lucide-react";
+import { isPartnerType } from "@shared/partner-access";
 import {
   LevelTrackerIcon,
   ReferFriendIcon,
@@ -680,6 +681,24 @@ const Header = () => {
                     </DropdownMenuGroup>
 
                     <DropdownMenuSeparator />
+                    {(isPartnerType(user, "indie") || user.role === "admin") && (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/indie/dashboard")}
+                      >
+                        <Rocket className="mr-2 h-4 w-4" />
+                        Indie Dashboard
+                      </DropdownMenuItem>
+                    )}
+                    {(isPartnerType(user, "streamer") || user.role === "admin") && (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/streamer/dashboard")}
+                      >
+                        <Radio className="mr-2 h-4 w-4" />
+                        Streamer Dashboard
+                      </DropdownMenuItem>
+                    )}
                     {user.role === "admin" && (
                       <DropdownMenuItem
                         className="cursor-pointer"
