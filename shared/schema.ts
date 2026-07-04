@@ -172,6 +172,8 @@ export const users = pgTable("users", {
   gameReleaseDate: text("game_release_date"),
   gameSteamUrl: text("game_steam_url"),
   gameEpicUrl: text("game_epic_url"),
+  gameTrailerUrl: text("game_trailer_url"), // YouTube or direct video URL shown at the top of the Overview tab
+  gameScreenshotUrls: text("game_screenshot_urls").array(), // Steam-style screenshot gallery on the Overview tab
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

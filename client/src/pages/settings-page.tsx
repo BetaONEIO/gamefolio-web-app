@@ -911,8 +911,11 @@ export default function SettingsPage() {
     gameReleaseDate: (user as any)?.gameReleaseDate || "",
     gameSteamUrl: (user as any)?.gameSteamUrl || "",
     gameEpicUrl: (user as any)?.gameEpicUrl || "",
+    gameTrailerUrl: (user as any)?.gameTrailerUrl || "",
+    gameScreenshotUrls: ((user as any)?.gameScreenshotUrls || []) as string[],
   });
   const [newKeyFeature, setNewKeyFeature] = useState("");
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
   
   const [avatarBorderColor, setAvatarBorderColor] = useState<string>(user?.avatarBorderColor || '#B7FF1A');
   const [selectedBorderId, setSelectedBorderId] = useState<number | null>(user?.selectedAvatarBorderId ?? -1);
@@ -1254,7 +1257,9 @@ export default function SettingsPage() {
     normalizeValue(profileData.gameReleaseDate) !== normalizeValue((user as any)?.gameReleaseDate) ||
     normalizeValue(profileData.gameSteamUrl) !== normalizeValue((user as any)?.gameSteamUrl) ||
     normalizeValue(profileData.gameEpicUrl) !== normalizeValue((user as any)?.gameEpicUrl) ||
-    JSON.stringify(profileData.gameKeyFeatures) !== JSON.stringify((user as any)?.gameKeyFeatures || []);
+    normalizeValue(profileData.gameTrailerUrl) !== normalizeValue((user as any)?.gameTrailerUrl) ||
+    JSON.stringify(profileData.gameKeyFeatures) !== JSON.stringify((user as any)?.gameKeyFeatures || []) ||
+    JSON.stringify(profileData.gameScreenshotUrls) !== JSON.stringify((user as any)?.gameScreenshotUrls || []);
   
 
   // Handle crop complete callback
@@ -2896,6 +2901,89 @@ export default function SettingsPage() {
                           value={profileData.gameEpicUrl}
                           onChange={(e) => setProfileData(prev => ({ ...prev, gameEpicUrl: e.target.value }))}
                           placeholder="https://store.epicgames.com/..."
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="gameTrailerUrl">Video Trailer</Label>
+                      <Input
+                        id="gameTrailerUrl"
+                        value={profileData.gameTrailerUrl}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, gameTrailerUrl: e.target.value }))}
+                        placeholder="YouTube link or direct video URL"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Shown as the default video at the top of your Overview tab.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Screenshots</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Add screenshots of your game, shown in a gallery on your Overview tab.
+                      </p>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
+                        {profileData.gameScreenshotUrls.map((url, idx) => (
+                          <div key={idx} className="relative aspect-video rounded-md overflow-hidden group border border-border">
+                            <img src={url} alt={`Screenshot ${idx + 1}`} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              className="absolute top-1 right-1 bg-black/60 rounded-full p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => setProfileData(prev => ({
+                                ...prev,
+                                gameScreenshotUrls: prev.gameScreenshotUrls.filter((_, i) => i !== idx),
+                              }))}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                        <label
+                          htmlFor="gameScreenshotUpload"
+                          className="aspect-video rounded-md border border-dashed border-border flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-muted/50 transition-colors"
+                        >
+                          {uploadingScreenshot ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          ) : (
+                            <>
+                              <Plus className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-[10px] text-muted-foreground">Add</span>
+                            </>
+                          )}
+                        </label>
+                        <input
+                          id="gameScreenshotUpload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={uploadingScreenshot}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = '';
+                            if (!file) return;
+                            setUploadingScreenshot(true);
+                            try {
+                              const formData = new FormData();
+                              formData.append('screenshot', file);
+                              const response = await fetch('/api/upload/game-screenshot', {
+                                method: 'POST',
+                                body: formData,
+                              });
+                              if (!response.ok) throw new Error('Failed to upload screenshot');
+                              const data = await response.json();
+                              setProfileData(prev => ({ ...prev, gameScreenshotUrls: data.gameScreenshotUrls }));
+                              queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+                            } catch (err) {
+                              toast({
+                                title: "Upload failed",
+                                description: err instanceof Error ? err.message : "Failed to upload screenshot",
+                                variant: "destructive",
+                              });
+                            } finally {
+                              setUploadingScreenshot(false);
+                            }
+                          }}
                         />
                       </div>
                     </div>

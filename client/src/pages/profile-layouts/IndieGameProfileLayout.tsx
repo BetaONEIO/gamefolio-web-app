@@ -32,6 +32,16 @@ const MessageDialog = React.lazy(() =>
 
 const TABS = ['OVERVIEW', 'CLIPS', 'REELS', 'SCREENSHOTS', 'BOUNTIES'];
 
+function getVideoEmbedUrl(url: string): string | null {
+  const youtubeMatch = url.match(
+    /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+  );
+  if (youtubeMatch) {
+    return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
+  }
+  return null;
+}
+
 type BountyWithMeta = GameBounty & { participantCount?: number; gameName?: string; gameImageUrl?: string };
 
 interface IndieGameProfileLayoutProps {
@@ -229,12 +239,57 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
       {activeTab === 'OVERVIEW' && (
         <section className="py-16 px-6 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2 space-y-10">
+            <div className="aspect-video rounded-lg overflow-hidden" style={cardStyle}>
+              {profile.gameTrailerUrl ? (
+                getVideoEmbedUrl(profile.gameTrailerUrl) ? (
+                  <iframe
+                    src={getVideoEmbedUrl(profile.gameTrailerUrl)!}
+                    title={`${profile.displayName} trailer`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="w-full h-full"
+                  />
+                ) : (
+                  <video
+                    src={profile.gameTrailerUrl}
+                    controls
+                    className="w-full h-full object-cover"
+                  />
+                )
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-2" style={{ color: brand.textMuted }}>
+                  <Play size={32} color={brand.accent} />
+                  <span className="text-sm">No trailer added yet</span>
+                </div>
+              )}
+            </div>
+
             <div>
               <h2 className="text-2xl font-bold mb-4">Overview</h2>
               <p className="text-lg leading-relaxed" style={{ color: brand.textMuted }}>
                 {profile.gameDescription || profile.bio || `${profile.displayName} hasn't added a game description yet.`}
               </p>
             </div>
+
+            {profile.gameScreenshotUrls && profile.gameScreenshotUrls.length > 0 && (
+              <div>
+                <h2 className="text-2xl font-bold mb-4">Screenshots</h2>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {profile.gameScreenshotUrls.map((url, i) => (
+                    <a
+                      key={i}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="aspect-video rounded-lg overflow-hidden block"
+                      style={cardStyle}
+                    >
+                      <img src={url} alt={`${profile.displayName} screenshot ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {profile.gameKeyFeatures && profile.gameKeyFeatures.length > 0 && (
               <div>

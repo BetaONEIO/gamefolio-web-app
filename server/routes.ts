@@ -6014,6 +6014,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "streamPlatform", "streamChannelName", "showLiveOverlay",
         "gameDescription", "gameKeyFeatures", "studioFoundedYear", "studioTeamSize",
         "gameReleaseDate", "gameSteamUrl", "gameEpicUrl",
+        "gameTrailerUrl", "gameScreenshotUrls",
       ]);
       const safeBody = Object.fromEntries(
         Object.entries(req.body).filter(([key]) => ALLOWED_PROFILE_FIELDS.has(key))
@@ -10085,6 +10086,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Upload a game screenshot for the indie developer's Overview gallery
+  app.post("/api/upload/game-screenshot", upload.single('screenshot'), async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      if (!req.file.path || !fs.existsSync(req.file.path)) {
+        return res.status(400).json({ message: "Uploaded file not found" });
+      }
+      const sharpInstance = sharp(req.file.path);
+      const metadata = await sharpInstance.metadata();
+      if (!metadata.width || !metadata.height) {
+        return res.status(400).json({ message: "Invalid image file" });
+      }
+      const processedBuffer = await sharpInstance
+        .resize(1920, undefined, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+      const fileName = `game-screenshot-${req.user.id}-${Date.now()}.jpg`;
+      const { url: imageUrl } = await supabaseStorage.uploadBuffer(
+        processedBuffer,
+        fileName,
+        'image/jpeg',
+        'image',
+        req.user.id
+      );
+      const existingUser = await storage.getUser(req.user.id);
+      const existingUrls = (existingUser as any)?.gameScreenshotUrls || [];
+      const updatedUrls = [...existingUrls, imageUrl];
+      await storage.updateUser(req.user.id, { gameScreenshotUrls: updatedUrls } as any);
+      try { await fsPromises.unlink(req.file.path); } catch {}
+      res.json({ url: imageUrl, gameScreenshotUrls: updatedUrls, message: "Screenshot uploaded successfully" });
+    } catch (err) {
+      console.error("Error uploading game screenshot:", err);
+      return res.status(500).json({ message: "Error uploading game screenshot" });
+    }
+  });
 
   // Get user's uploaded banners
   app.get("/api/user/banners", async (req, res) => {
