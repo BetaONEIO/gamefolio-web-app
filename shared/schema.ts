@@ -120,7 +120,11 @@ export const users = pgTable("users", {
   gfTokenBalance: real("gf_token_balance").default(0).notNull(),
   // Gamefolio Pro subscription
   isPro: boolean("is_pro").default(false).notNull(), // Gamefolio Pro subscriber status
-  isPartner: boolean("is_partner").default(false).notNull(), // Official Gamefolio Partner
+  isPartner: boolean("is_partner").default(false).notNull(), // Has a partner entitlement (includes all Pro perks)
+  // Which paid partner subscription the user holds. NULL = not a partner.
+  // Distinct from user_type (self-selected onboarding personas): a "streamer"
+  // persona tag is NOT a paid Streamer Partner. Drives partner-only dashboards.
+  partnerType: text("partner_type"), // "streamer" | "indie" | null
   hideFromLeaderboard: boolean("hide_from_leaderboard").default(false).notNull(), // Admin-controlled leaderboard exclusion
   proSubscriptionType: text("pro_subscription_type"), // "yearly", "monthly", etc.
   proSubscriptionStartDate: timestamp("pro_subscription_start_date"), // When subscription started
