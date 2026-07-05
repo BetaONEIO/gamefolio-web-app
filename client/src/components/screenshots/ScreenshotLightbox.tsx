@@ -12,7 +12,8 @@ import { FireButton } from "@/components/engagement/FireButton";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { formatDistance } from "date-fns";
 import { Link } from "wouter";
-import { Eye, Clock, MessageSquare, User as UserIcon, UserPlus, UserCheck, ChevronLeft, ChevronRight, X, Maximize2, Minimize2 } from "lucide-react";
+import { Eye, Clock, MessageSquare, User as UserIcon, UserPlus, UserCheck, ChevronLeft, ChevronRight, X, Maximize2, Minimize2, ArrowLeft } from "lucide-react";
+import { ProBadge } from "@/components/ui/pro-badge";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import type { Game, Screenshot } from "@shared/schema";
 
@@ -308,9 +309,9 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
         <div className="flex items-center justify-start px-3 py-2 flex-shrink-0">
           <button
             onClick={handleClose}
-            className="rounded-sm opacity-70 transition-opacity hover:opacity-100 p-2 bg-black/30 backdrop-blur-sm hover:bg-black/50 flex items-center justify-center"
+            className="rounded-full opacity-70 transition-opacity hover:opacity-100 p-2.5 bg-black/40 backdrop-blur-sm hover:bg-black/60 flex items-center gap-1"
           >
-            <X className="h-5 w-5 text-white" />
+            <ArrowLeft className="h-5 w-5 text-white" />
           </button>
         </div>
 
@@ -340,7 +341,14 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
             </div>
 
             <button
-              onClick={() => setIsFullscreen(true)}
+              onClick={() => {
+                const el = scrollContainerRef.current;
+                if (el && el.requestFullscreen) {
+                  el.requestFullscreen().catch(() => {});
+                } else {
+                  setIsFullscreen(true);
+                }
+              }}
               className="absolute bottom-2 right-2 z-10 w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors flex items-center justify-center"
             >
               <Maximize2 className="h-4 w-4 text-white" />
@@ -417,6 +425,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                     {screenshot.user?.displayName || screenshot.user?.username || 'Unknown'}
                   </span>
                 </Link>
+                <ProBadge selectedVerificationBadgeId={(screenshot.user as any)?.selectedVerificationBadgeId} size="sm" />
               </div>
               {currentUserId && screenshotUser?.id && currentUserId !== screenshotUser.id && (
                 <Button
@@ -591,6 +600,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                       {screenshot.user?.displayName || screenshot.user?.username}
                     </div>
                   </Link>
+                  <ProBadge selectedVerificationBadgeId={(screenshot.user as any)?.selectedVerificationBadgeId} size="sm" />
                 </div>
                 {currentUserId && screenshotUser?.id && currentUserId !== screenshotUser.id && (
                   <Button

@@ -14,9 +14,10 @@ import CommentSection from "@/components/clips/CommentSection";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { PartnerBadge } from "@/components/ui/partner-badge";
+import { ProBadge } from "@/components/ui/pro-badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  ArrowLeft, BadgeCheck, Bookmark, BarChart2, MessageCircle,
+  ArrowLeft, Bookmark, BarChart2, MessageCircle,
   Gamepad2, ChevronDown, ImageOff, Maximize2, X, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useSignedUrl } from "@/hooks/use-signed-url";
@@ -37,6 +38,7 @@ interface ScreenshotWithUser {
     avatarUrl?: string;
     isPro?: boolean;
     isPartner?: boolean;
+    selectedVerificationBadgeId?: number | null;
   };
   game?: { id: number; name: string };
   _count?: { likes?: number; reactions?: number; comments?: number };
@@ -350,7 +352,7 @@ export const ScreenshotFeedCard: React.FC<{
                     {screenshot.user.displayName || screenshot.user.username}
                   </span>
                 </Link>
-                {isPro && <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#B7FF1A' }} />}
+                <ProBadge selectedVerificationBadgeId={screenshot.user.selectedVerificationBadgeId} size="sm" />
                 <PartnerBadge isPartner={(screenshot.user as any).isPartner} size="sm" />
               </div>
               <Link href={`/profile/${screenshot.user.username}`} className="no-underline">
