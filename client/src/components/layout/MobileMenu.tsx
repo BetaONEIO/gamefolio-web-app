@@ -383,6 +383,22 @@ const MobileMenu = () => {
                         <Bookmark className="h-3.5 w-3.5 shrink-0" />
                         Bookmarks
                       </Link>
+                      <button
+                        onClick={() => { setLocation(`/profile/${user.username}/followers`); handleClose(); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors"
+                      >
+                        <Users className="h-3.5 w-3.5 shrink-0" />
+                        <span className="font-semibold">{followerCount.toLocaleString()}</span>
+                        <span>Followers</span>
+                      </button>
+                      <button
+                        onClick={() => { setLocation(`/profile/${user.username}/followers?tab=following`); handleClose(); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors"
+                      >
+                        <Users className="h-3.5 w-3.5 shrink-0" />
+                        <span className="font-semibold">{followingCount.toLocaleString()}</span>
+                        <span>Following</span>
+                      </button>
                     </div>
                   )}
                 </li>
