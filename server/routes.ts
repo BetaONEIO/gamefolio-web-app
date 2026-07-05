@@ -13070,20 +13070,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const clipIds = bookmarkRows.filter(b => b.contentType === 'clip').map(b => b.contentId);
       const screenshotIds = bookmarkRows.filter(b => b.contentType === 'screenshot').map(b => b.contentId);
+      const gameIds = bookmarkRows.filter(b => b.contentType === 'game').map(b => b.contentId);
 
-      const [clipResults, screenshotResults] = await Promise.all([
+      const [clipResults, screenshotResults, gameResults] = await Promise.all([
         Promise.all(clipIds.map(id => storage.getClipById(id).catch(() => null))),
         Promise.all(screenshotIds.map(id => storage.getScreenshotWithUser(id).catch(() => null))),
+        Promise.all(gameIds.map(id => storage.getGame(id).catch(() => null))),
       ]);
 
       const clipMap = new Map(clipResults.filter(Boolean).map((c: any) => [c.id, c]));
       const screenshotMap = new Map(screenshotResults.filter(Boolean).map((s: any) => [s.id, s]));
+      const gameMap = new Map(gameResults.filter(Boolean).map((g: any) => [g.id, g]));
 
       const items = bookmarkRows
         .map(bookmark => {
           const content = bookmark.contentType === 'clip'
             ? clipMap.get(bookmark.contentId)
-            : screenshotMap.get(bookmark.contentId);
+            : bookmark.contentType === 'screenshot'
+            ? screenshotMap.get(bookmark.contentId)
+            : gameMap.get(bookmark.contentId);
           if (!content) return null;
           return {
             id: bookmark.id,
@@ -13111,7 +13116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
       });
 
-      if (validatedData.contentType !== 'clip' && validatedData.contentType !== 'screenshot') {
+      if (!['clip', 'screenshot', 'game'].includes(validatedData.contentType)) {
         return res.status(400).json({ message: "Invalid content type" });
       }
 
@@ -13133,7 +13138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { contentType } = req.params;
       const contentId = parseInt(req.params.contentId);
 
-      if (isNaN(contentId) || (contentType !== 'clip' && contentType !== 'screenshot')) {
+      if (isNaN(contentId) || !['clip', 'screenshot', 'game'].includes(contentType)) {
         return res.status(400).json({ message: "Invalid bookmark identifier" });
       }
 
@@ -13152,7 +13157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { contentType } = req.params;
       const contentId = parseInt(req.params.contentId);
 
-      if (isNaN(contentId) || (contentType !== 'clip' && contentType !== 'screenshot')) {
+      if (isNaN(contentId) || !['clip', 'screenshot', 'game'].includes(contentType)) {
         return res.status(400).json({ message: "Invalid bookmark identifier" });
       }
 

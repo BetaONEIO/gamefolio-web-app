@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 interface BookmarkButtonProps {
   contentId: number;
-  contentType: 'clip' | 'screenshot';
+  contentType: 'clip' | 'screenshot' | 'game';
   className?: string;
   iconClassName?: string;
   size?: number;

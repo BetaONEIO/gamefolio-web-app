@@ -645,11 +645,11 @@ export const nftWatchlist = pgTable("nft_watchlist", {
   uniqueWatchlist: unique().on(table.userId, table.nftId),
 }));
 
-// Bookmarks table - for users to save clips and screenshots (reels are clips)
+// Bookmarks table - for users to save clips, screenshots, and games (reels are clips)
 export const bookmarks = pgTable("bookmarks", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  contentType: text("content_type").notNull(), // "clip" or "screenshot"
+  contentType: text("content_type").notNull(), // "clip", "screenshot", or "game"
   contentId: integer("content_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({

@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, ArrowLeft, Play, TrendingUp, Camera, Users, Clock, Calendar, CalendarDays, X, Mail } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { ClipWithUser, Game } from "@shared/schema";
+import { BookmarkButton } from "@/components/engagement/BookmarkButton";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
@@ -286,7 +287,15 @@ const GamePage = () => {
           />
         </div>
         <div className={isMobile ? "flex-1 min-w-0" : ""}>
-          <h1 className={isMobile ? "text-xl font-bold mb-1" : "text-3xl font-bold mb-2"}>{game.name}</h1>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className={isMobile ? "text-xl font-bold" : "text-3xl font-bold mb-1"}>{game.name}</h1>
+            <BookmarkButton
+              contentId={game.id}
+              contentType="game"
+              size={isMobile ? 20 : 24}
+              className="shrink-0"
+            />
+          </div>
           <p className={isMobile ? "text-muted-foreground mb-2 text-sm" : "text-muted-foreground mb-4"}>
             Browse clips from the {game.name} community
           </p>
