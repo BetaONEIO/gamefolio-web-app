@@ -583,7 +583,7 @@ export const MobileScreenshotsViewer: React.FC<{
         >
           <button
             onClick={onBack}
-            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors pointer-events-auto"
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors pointer-events-auto bg-black/40 backdrop-blur-sm hover:bg-black/60"
             style={{ color: '#F5F7F2' }}
             aria-label="Back"
           >
