@@ -25,6 +25,7 @@ import DailyStreakOverlay from "@/components/gamification/DailyStreak";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AdminProtectedRoute } from "@/components/auth/admin-protected-route";
 import { OnboardingGuard } from "@/components/auth/onboarding-guard";
+import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { PageTransition } from "@/components/ui/page-transition";
 import { BannerSettings } from "@shared/schema";
 import { WebPlatformRedirect } from "@/components/WebPlatformRedirect";
@@ -366,6 +367,13 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
       <Header />
+
+      {/* Email Verification Banner - shown app-wide until the user verifies */}
+      {user && !user.emailVerified && (
+        <div className={`px-4 mt-2 relative z-20 ${!isMobile ? 'ml-64' : ''}`}>
+          <EmailVerificationBanner />
+        </div>
+      )}
 
       {/* Activity Scroll Banner - Only show on home page */}
       {location === "/" && <ActivityScrollBanner />}
