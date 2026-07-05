@@ -11860,7 +11860,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's notifications
   app.get("/api/notifications", authMiddleware, async (req, res) => {
     try {
-      const userId = req.user?.id ?? 0;
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const userId = req.user.id;
       const notifications = await storage.getNotificationsByUserId(userId);
       res.json(notifications);
     } catch (err) {
@@ -11872,7 +11875,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get unread notifications count
   app.get("/api/notifications/unread-count", authMiddleware, async (req, res) => {
     try {
-      const userId = req.user?.id ?? 0;
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const userId = req.user.id;
       const count = await storage.getUnreadNotificationsCount(userId);
       res.json(count);
     } catch (err) {
@@ -11884,7 +11890,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mark all notifications as read (must come before :id route)
   app.post("/api/notifications/mark-all-read", authMiddleware, async (req, res) => {
     try {
-      const userId = req.user?.id ?? 0;
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const userId = req.user.id;
       const success = await storage.markAllNotificationsAsRead(userId);
 
       if (!success) {
@@ -11901,7 +11910,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mark notification as read
   app.post("/api/notifications/:id/mark-read", authMiddleware, async (req, res) => {
     try {
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
       const notificationId = parseInt(req.params.id);
+      const userId = req.user.id;
+
+      // Verify the notification belongs to the requesting user before mutating it.
+      const notifications = await storage.getNotificationsByUserId(userId);
+      const notification = notifications.find(n => n.id === notificationId);
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found or does not belong to user" });
+      }
+
       const success = await storage.markNotificationAsRead(notificationId);
 
       if (!success) {
@@ -11918,7 +11939,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete all notifications for the authenticated user (must come before :id route)
   app.delete("/api/notifications/delete-all", authMiddleware, async (req, res) => {
     try {
-      const userId = req.user?.id ?? 0;
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const userId = req.user.id;
 
       const success = await storage.deleteAllNotifications(userId);
 
@@ -11936,8 +11960,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete notification
   app.delete("/api/notifications/:id", authMiddleware, async (req, res) => {
     try {
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
       const notificationId = parseInt(req.params.id);
-      const userId = req.user?.id ?? 0;
+      const userId = req.user.id;
 
       // First check if the notification belongs to the user
       const notifications = await storage.getNotificationsByUserId(userId);
