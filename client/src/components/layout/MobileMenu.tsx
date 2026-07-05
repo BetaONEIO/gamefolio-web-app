@@ -289,12 +289,12 @@ const MobileMenu = () => {
                 </Link>
               </li>
               <li>
-                <Link 
+                <Link
                   href="/trending"
                   onClick={handleClose}
                   className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                 >
-                  <ZapIconSvg className="mr-3 h-5 w-5" active={true} />
+                  <ZapIconSvg className="mr-3 h-5 w-5 text-primary" active={false} />
                   <span className="font-medium">Trending</span>
                 </Link>
               </li>
