@@ -418,7 +418,7 @@ const GamePage = () => {
             ))}
           </div>
         ) : displayData && displayData.length > 0 ? (
-          <div className={`${gridColsClass} pb-20`}>
+          <div className={`${gridColsClass} pb-24 md:pb-12`}>
             {contentType === 'screenshots' ? (
               displayData.map((screenshot: any) => (
                 <ScreenshotCard
@@ -454,7 +454,7 @@ const GamePage = () => {
             )}
           </div>
         ) : (
-          <div className="text-center py-12">
+          <div className="text-center py-12 pb-24 md:pb-12">
             <div className="h-24 w-24 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
               {contentType === 'screenshots' ? (
                 <Camera className="h-12 w-12 text-muted-foreground" />
