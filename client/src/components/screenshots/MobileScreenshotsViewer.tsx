@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -573,7 +574,7 @@ export const MobileScreenshotsViewer: React.FC<{
     }
   }, [startId, screenshots]);
 
-  return (
+  return createPortal(
     <>
       <div className="fixed inset-0 z-[9999]" style={{ background: '#081017' }}>
         {/* Back button — floats over the feed, no layout height consumed */}
@@ -645,6 +646,7 @@ export const MobileScreenshotsViewer: React.FC<{
           onClose={() => setFullscreenIndex(null)}
         />
       )}
-    </>
+    </>,
+    document.body
   );
 };
