@@ -18,8 +18,9 @@ import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { PartnerBadge } from "@/components/ui/partner-badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, BadgeCheck, Bookmark, BarChart2, MessageCircle, Gamepad2, Play, ChevronDown } from "lucide-react";
+import { ArrowLeft, BadgeCheck, BarChart2, MessageCircle, Gamepad2, Play, ChevronDown } from "lucide-react";
 import { useBlockedUsers } from "@/hooks/use-blocked-users";
+import { BookmarkButton } from "@/components/engagement/BookmarkButton";
 
 export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[]; isDesktop?: boolean }> = ({ clip, clips, isDesktop }) => {
   const { openClipDialog } = useClipDialog();
@@ -28,7 +29,6 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
   const { toast } = useToast();
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [localFollowing, setLocalFollowing] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [isInView, setIsInView] = useState(false);
@@ -271,13 +271,11 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
             <span className="text-[13px]">{fmt(views)}</span>
           </button>
 
-          <button
-            onClick={() => setBookmarked(v => !v)}
-            className="flex items-center justify-center flex-1 transition-colors"
-            style={{ color: bookmarked ? '#B7FF1A' : '#7E887A' }}
-          >
-            <Bookmark className={`h-[18px] w-[18px] ${bookmarked ? 'fill-current' : ''}`} />
-          </button>
+          <BookmarkButton
+            contentId={clip.id}
+            contentType="clip"
+            className="flex-1"
+          />
 
           <button
             onClick={(e) => { e.stopPropagation(); setShareOpen(true); }}

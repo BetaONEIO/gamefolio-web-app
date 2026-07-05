@@ -18,7 +18,7 @@ import { CreatorMilestoneService } from "./creator-milestone-service";
 import { BonusEventsService } from "./bonus-events-service";
 import { XPService } from "./xp-service";
 import { createInsertSchema } from "drizzle-zod";
-import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema } from "@shared/schema";
+import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema, insertBookmarkSchema } from "@shared/schema";
 import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { nanoid } from "nanoid";
@@ -13058,6 +13058,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error checking NFT watchlist status:", error);
       res.status(500).json({ error: "Failed to check watchlist status" });
+    }
+  });
+
+  // Get the current user's bookmarks, with the underlying content joined in.
+  // Reels are just clips, so contentType "clip" covers both regular clips and reels.
+  app.get("/api/bookmarks", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const bookmarkRows = await storage.getBookmarks(userId);
+
+      const clipIds = bookmarkRows.filter(b => b.contentType === 'clip').map(b => b.contentId);
+      const screenshotIds = bookmarkRows.filter(b => b.contentType === 'screenshot').map(b => b.contentId);
+
+      const [clipResults, screenshotResults] = await Promise.all([
+        Promise.all(clipIds.map(id => storage.getClipById(id).catch(() => null))),
+        Promise.all(screenshotIds.map(id => storage.getScreenshotWithUser(id).catch(() => null))),
+      ]);
+
+      const clipMap = new Map(clipResults.filter(Boolean).map((c: any) => [c.id, c]));
+      const screenshotMap = new Map(screenshotResults.filter(Boolean).map((s: any) => [s.id, s]));
+
+      const items = bookmarkRows
+        .map(bookmark => {
+          const content = bookmark.contentType === 'clip'
+            ? clipMap.get(bookmark.contentId)
+            : screenshotMap.get(bookmark.contentId);
+          if (!content) return null;
+          return {
+            id: bookmark.id,
+            contentType: bookmark.contentType,
+            contentId: bookmark.contentId,
+            createdAt: bookmark.createdAt,
+            content,
+          };
+        })
+        .filter(Boolean);
+
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching bookmarks:", error);
+      res.status(500).json({ error: "Failed to fetch bookmarks" });
+    }
+  });
+
+  // Add a bookmark
+  app.post("/api/bookmarks", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const validatedData = insertBookmarkSchema.parse({
+        ...req.body,
+        userId,
+      });
+
+      if (validatedData.contentType !== 'clip' && validatedData.contentType !== 'screenshot') {
+        return res.status(400).json({ message: "Invalid content type" });
+      }
+
+      const bookmark = await storage.addBookmark(validatedData);
+      res.json(bookmark);
+    } catch (error: any) {
+      if (error.code === '23505') {
+        return res.status(400).json({ message: "Already bookmarked" });
+      }
+      console.error("Error adding bookmark:", error);
+      res.status(500).json({ error: "Failed to add bookmark" });
+    }
+  });
+
+  // Remove a bookmark
+  app.delete("/api/bookmarks/:contentType/:contentId", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { contentType } = req.params;
+      const contentId = parseInt(req.params.contentId);
+
+      if (isNaN(contentId) || (contentType !== 'clip' && contentType !== 'screenshot')) {
+        return res.status(400).json({ message: "Invalid bookmark identifier" });
+      }
+
+      await storage.removeBookmark(userId, contentType, contentId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing bookmark:", error);
+      res.status(500).json({ error: "Failed to remove bookmark" });
+    }
+  });
+
+  // Check if a piece of content is bookmarked by the current user
+  app.get("/api/bookmarks/check/:contentType/:contentId", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { contentType } = req.params;
+      const contentId = parseInt(req.params.contentId);
+
+      if (isNaN(contentId) || (contentType !== 'clip' && contentType !== 'screenshot')) {
+        return res.status(400).json({ message: "Invalid bookmark identifier" });
+      }
+
+      const isBookmarked = await storage.isBookmarked(userId, contentType, contentId);
+      res.json({ isBookmarked });
+    } catch (error) {
+      console.error("Error checking bookmark status:", error);
+      res.status(500).json({ error: "Failed to check bookmark status" });
     }
   });
 

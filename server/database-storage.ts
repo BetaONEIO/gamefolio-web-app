@@ -33,6 +33,7 @@ import {
   CommentMention, InsertCommentMention,
   ScreenshotCommentMention, InsertScreenshotCommentMention,
   NftWatchlist, InsertNftWatchlist,
+  Bookmark, InsertBookmark,
   AssetReward, InsertAssetReward,
   AssetRewardClaim, InsertAssetRewardClaim,
   AssetRewardWithClaims,
@@ -88,6 +89,7 @@ import {
   uploadedBanners,
   clipMentions,
   nftWatchlist,
+  bookmarks,
   commentMentions,
   nameTags,
   userUnlockedNameTags,
@@ -4205,6 +4207,48 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(nftWatchlist.userId, userId),
         eq(nftWatchlist.nftId, nftId)
+      ))
+      .limit(1);
+    return !!result;
+  }
+
+  // Bookmark operations
+  async addBookmark(bookmarkData: InsertBookmark): Promise<Bookmark> {
+    const [result] = await db
+      .insert(bookmarks)
+      .values(bookmarkData)
+      .returning();
+    return result;
+  }
+
+  async removeBookmark(userId: number, contentType: string, contentId: number): Promise<boolean> {
+    await db
+      .delete(bookmarks)
+      .where(and(
+        eq(bookmarks.userId, userId),
+        eq(bookmarks.contentType, contentType),
+        eq(bookmarks.contentId, contentId)
+      ));
+    return true;
+  }
+
+  async getBookmarks(userId: number): Promise<Bookmark[]> {
+    const results = await db
+      .select()
+      .from(bookmarks)
+      .where(eq(bookmarks.userId, userId))
+      .orderBy(desc(bookmarks.createdAt));
+    return results;
+  }
+
+  async isBookmarked(userId: number, contentType: string, contentId: number): Promise<boolean> {
+    const [result] = await db
+      .select()
+      .from(bookmarks)
+      .where(and(
+        eq(bookmarks.userId, userId),
+        eq(bookmarks.contentType, contentType),
+        eq(bookmarks.contentId, contentId)
       ))
       .limit(1);
     return !!result;

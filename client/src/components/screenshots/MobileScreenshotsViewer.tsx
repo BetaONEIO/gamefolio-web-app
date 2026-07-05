@@ -18,10 +18,11 @@ import { PartnerBadge } from "@/components/ui/partner-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  ArrowLeft, Bookmark, BarChart2, MessageCircle,
+  ArrowLeft, BarChart2, MessageCircle,
   Gamepad2, ChevronDown, ImageOff, Maximize2, X, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useSignedUrl } from "@/hooks/use-signed-url";
+import { BookmarkButton } from "@/components/engagement/BookmarkButton";
 
 interface ScreenshotWithUser {
   id: number;
@@ -250,7 +251,6 @@ export const ScreenshotFeedCard: React.FC<{
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
   const [localFollowing, setLocalFollowing] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const [sheetMounted, setSheetMounted] = useState(false);
@@ -463,13 +463,11 @@ export const ScreenshotFeedCard: React.FC<{
             <span className="text-[13px]">{fmt(views)}</span>
           </button>
 
-          <button
-            onClick={() => setBookmarked(v => !v)}
-            className="flex items-center justify-center flex-1 transition-colors"
-            style={{ color: bookmarked ? '#B7FF1A' : '#7E887A' }}
-          >
-            <Bookmark className={`h-[18px] w-[18px] ${bookmarked ? 'fill-current' : ''}`} />
-          </button>
+          <BookmarkButton
+            contentId={screenshot.id}
+            contentType="screenshot"
+            className="flex-1"
+          />
 
           <button
             onClick={(e) => { e.stopPropagation(); setShareOpen(true); }}

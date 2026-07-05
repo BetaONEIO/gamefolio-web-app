@@ -1,7 +1,7 @@
 import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
   monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, userXPHistory, notifications, userBadges, contentFilterSettings, bannedWords,
-  heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist, assetRewards, assetRewardClaims,
+  heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist, bookmarks, assetRewards, assetRewardClaims,
   proLootboxGrants, nameTags, userUnlockedNameTags, userDailyFires, profileBorders, userUnlockedBorders, verificationBadges, userUnlockedVerificationBadges, xpSettings,
   type User, type InsertUser,
   type Game, type InsertGame,
@@ -29,6 +29,7 @@ import {
   type CommentMention, type InsertCommentMention,
   type ScreenshotCommentMention, type InsertScreenshotCommentMention,
   type NftWatchlist, type InsertNftWatchlist,
+  type Bookmark, type InsertBookmark,
   type AssetReward, type InsertAssetReward,
   type AssetRewardClaim, type InsertAssetRewardClaim,
   type AssetRewardWithClaims,
@@ -398,6 +399,12 @@ export interface IStorage {
   removeFromNftWatchlist(userId: number, nftId: number): Promise<boolean>;
   getNftWatchlist(userId: number): Promise<NftWatchlist[]>;
   isNftInWatchlist(userId: number, nftId: number): Promise<boolean>;
+
+  // Bookmark operations
+  addBookmark(bookmarkData: InsertBookmark): Promise<Bookmark>;
+  removeBookmark(userId: number, contentType: string, contentId: number): Promise<boolean>;
+  getBookmarks(userId: number): Promise<Bookmark[]>;
+  isBookmarked(userId: number, contentType: string, contentId: number): Promise<boolean>;
 
   // Leaderboard operations
   getEngagementLeaderboard(limit?: number): Promise<Array<{

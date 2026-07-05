@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { X, Plus, Gift, Users } from "lucide-react";
+import { X, Plus, Gift, Users, Bookmark } from "lucide-react";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
@@ -364,6 +364,18 @@ const MobileMenu = () => {
                   >
                     <GamefolioIcon glow={location === `/${user?.username}` || location === `/@${user?.username}`} className="mr-3 h-5 w-5 scale-[1.8] flex-shrink-0" />
                     <span className="font-medium">My Gamefolio</span>
+                  </Link>
+                </li>
+              )}
+              {user && (
+                <li>
+                  <Link
+                    href="/bookmarks"
+                    onClick={handleClose}
+                    className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
+                  >
+                    <Bookmark className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                    <span className="font-medium">Bookmarks</span>
                   </Link>
                 </li>
               )}

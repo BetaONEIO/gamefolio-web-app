@@ -147,6 +147,7 @@ const WatchlistPage = lazyWithRecovery(() => import("./pages/WatchlistPage"));
 const UserBattlesPage = lazyWithRecovery(() => import("./pages/UserBattlesPage"));
 const LevelTrackerPage = lazyWithRecovery(() => import("./pages/LevelTrackerPage"));
 const CollectionPage = lazyWithRecovery(() => import("./pages/CollectionPage"));
+const BookmarksPage = lazyWithRecovery(() => import("./pages/BookmarksPage"));
 const DebugWalletPage = lazyWithRecovery(() => import("./pages/DebugWalletPage"));
 const TwoFactorVerifyPage = lazyWithRecovery(() => import("./pages/TwoFactorVerifyPage"));
 const MintNFTPage = lazyWithRecovery(() => import("./pages/MintNFTPage"));
@@ -564,6 +565,7 @@ function Router() {
               sourced and uses no wallet provider at render time. Transaction
               actions (Quick Sell) are disabled on native — see MintedNftDetailScreen. */}
           <ProtectedRoute path="/collection" component={CollectionPage} />
+          <ProtectedRoute path="/bookmarks" component={BookmarksPage} />
           <Route path="/leaderboard/embed" component={LeaderboardEmbedPage} />
           <Route path="/debug/wallet" component={WALLET_UI_ENABLED ? DebugWalletPage : () => (
             <WebPlatformRedirect title="Wallet" />

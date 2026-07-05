@@ -645,6 +645,18 @@ export const nftWatchlist = pgTable("nft_watchlist", {
   uniqueWatchlist: unique().on(table.userId, table.nftId),
 }));
 
+// Bookmarks table - for users to save clips and screenshots (reels are clips)
+export const bookmarks = pgTable("bookmarks", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  contentType: text("content_type").notNull(), // "clip" or "screenshot"
+  contentId: integer("content_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  // Prevent duplicate bookmarks for the same user and content
+  uniqueBookmark: unique().on(table.userId, table.contentType, table.contentId),
+}));
+
 // Content filter settings and custom banned words table
 export const contentFilterSettings = pgTable("content_filter_settings", {
   id: serial("id").primaryKey(),
@@ -1424,6 +1436,16 @@ export const insertNftWatchlistSchema = createInsertSchema(nftWatchlist).omit({
 // Types for NFT watchlist
 export type NftWatchlist = typeof nftWatchlist.$inferSelect;
 export type InsertNftWatchlist = z.infer<typeof insertNftWatchlistSchema>;
+
+// Schema for inserting bookmarks
+export const insertBookmarkSchema = createInsertSchema(bookmarks).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for bookmarks
+export type Bookmark = typeof bookmarks.$inferSelect;
+export type InsertBookmark = z.infer<typeof insertBookmarkSchema>;
 
 // Extended types with relational data
 export type ClipWithUser = Clip & {
