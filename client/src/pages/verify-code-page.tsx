@@ -18,6 +18,19 @@ export default function VerifyCodePage() {
   const [cooldownTime, setCooldownTime] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Where to send the user once they're verified: back to onboarding if
+  // they haven't completed it yet, otherwise back to wherever they came
+  // from (falling back to home).
+  const getPostVerifyDestination = () => {
+    if (!user?.userType) return '/onboarding';
+    const params = new URLSearchParams(window.location.search);
+    const from = params.get('from');
+    if (from && from.startsWith('/') && !from.startsWith('/verify-code') && !from.startsWith('/onboarding')) {
+      return from;
+    }
+    return '/';
+  };
+
   // Redirect if user is already verified or not logged in
   useEffect(() => {
     if (!user) {
@@ -25,7 +38,7 @@ export default function VerifyCodePage() {
       return;
     }
     if (user.emailVerified) {
-      setLocation('/onboarding');
+      setLocation(getPostVerifyDestination());
       return;
     }
   }, [user, setLocation]);
