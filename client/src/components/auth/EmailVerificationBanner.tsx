@@ -14,7 +14,7 @@ interface EmailVerificationBannerProps {
 export function EmailVerificationBanner({ onDismiss, className }: EmailVerificationBannerProps) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [isResending, setIsResending] = useState(false);
   const [canResend, setCanResend] = useState(true);
   const [cooldownTime, setCooldownTime] = useState(0);
@@ -105,7 +105,7 @@ export function EmailVerificationBanner({ onDismiss, className }: EmailVerificat
 
       <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
         <Button
-          onClick={() => setLocation('/verify-code')}
+          onClick={() => setLocation(`/verify-code?from=${encodeURIComponent(location)}`)}
           variant="outline"
           size="sm"
           className="flex-1 sm:flex-none min-w-0 bg-[#0B1218] border-[#B7FF1A] text-white hover:bg-[#101923] hover:text-white hover:border-[#B7FF1A] disabled:opacity-50"
