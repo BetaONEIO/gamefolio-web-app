@@ -477,20 +477,21 @@ const ProfilePage = () => {
     refetchInterval: 2 * 60 * 1000,
   });
 
-  // Auto-expand stream embeds once profile data is ready
+  // Auto-expand stream embeds only for platforms that are currently live; stays hidden otherwise until clicked
   useEffect(() => {
     if (!profile || streamsAutoExpanded) return;
     const isStreamerProfile = !!(profile.userType?.split(',').map((t: string) => t.trim()).includes('streamer'));
     if (!isStreamerProfile) return;
+    if (!profileLiveStatus) return;
     const initial: Record<string, boolean> = {};
-    if ((profile as any).twitchShowOnProfile !== false && profile.twitchVerified) initial['twitch'] = true;
-    if ((profile as any).kickShowOnProfile !== false && profile.kickVerified) initial['kick'] = true;
-    if ((profile as any).youtubeShowOnProfile !== false && (profile as any).youtubeVerified) initial['youtube'] = true;
+    if ((profile as any).twitchShowOnProfile !== false && profile.twitchVerified && profileLiveStatus.twitchLive) initial['twitch'] = true;
+    if ((profile as any).kickShowOnProfile !== false && profile.kickVerified && profileLiveStatus.kickLive) initial['kick'] = true;
+    if ((profile as any).youtubeShowOnProfile !== false && (profile as any).youtubeVerified && profileLiveStatus.youtubeLive) initial['youtube'] = true;
     if (Object.keys(initial).length > 0) {
-      setExpandedStreams(initial);
-      setStreamsAutoExpanded(true);
+      setExpandedStreams(prev => ({ ...prev, ...initial }));
     }
-  }, [profile, streamsAutoExpanded]);
+    setStreamsAutoExpanded(true);
+  }, [profile, profileLiveStatus, streamsAutoExpanded]);
 
   const profileNftQueryKey = isOwnProfile ? "/api/nfts/owned" : `/api/nfts/user/${profile?.id}`;
   const { data: profileNftData, isLoading: profileNftsLoading, refetch: refetchProfileNfts } = useQuery<OwnedNftsData>({
