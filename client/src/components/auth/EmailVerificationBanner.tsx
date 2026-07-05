@@ -80,25 +80,35 @@ export function EmailVerificationBanner({ onDismiss, className }: EmailVerificat
 
   return (
     <div className={cn(
-      "bg-primary/10 border border-primary/20 rounded-lg p-4 mb-4 flex items-center justify-between",
+      "bg-primary/10 border border-primary/20 rounded-lg p-4 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
       className
     )}>
-      <div className="flex items-center space-x-3">
-        <Mail className="h-5 w-5 text-primary" />
-        <div>
+      <div className="flex items-start gap-3 min-w-0">
+        <Mail className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+        <div className="min-w-0">
           <p className="text-sm font-medium">Please verify your email address</p>
           <p className="text-xs text-muted-foreground">
             You need to verify your email before you can upload clips or interact with content.
           </p>
         </div>
+        {onDismiss && (
+          <Button
+            onClick={onDismiss}
+            variant="ghost"
+            size="sm"
+            className="ml-auto sm:hidden h-8 w-8 p-0 flex-shrink-0 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
         <Button
           onClick={() => setLocation('/verify-code')}
           variant="outline"
           size="sm"
-          className="text-amber-700 border-amber-300 hover:bg-amber-100 dark:text-amber-300 dark:border-amber-700 dark:hover:bg-amber-900/20"
+          className="flex-1 sm:flex-none min-w-0 text-amber-700 border-amber-300 hover:bg-amber-100 dark:text-amber-300 dark:border-amber-700 dark:hover:bg-amber-900/20"
         >
           Enter Code
         </Button>
@@ -108,7 +118,7 @@ export function EmailVerificationBanner({ onDismiss, className }: EmailVerificat
           disabled={isResending || !canResend}
           variant="outline"
           size="sm"
-          className="text-amber-700 border-amber-300 hover:bg-amber-100 dark:text-amber-300 dark:border-amber-700 dark:hover:bg-amber-900/20"
+          className="flex-1 sm:flex-none min-w-0 text-amber-700 border-amber-300 hover:bg-amber-100 dark:text-amber-300 dark:border-amber-700 dark:hover:bg-amber-900/20"
         >
           {isResending ? "Sending..." : !canResend ? `Wait ${cooldownTime}s` : "Resend Code"}
         </Button>
@@ -118,7 +128,7 @@ export function EmailVerificationBanner({ onDismiss, className }: EmailVerificat
             onClick={onDismiss}
             variant="ghost"
             size="sm"
-            className="text-muted-foreground hover:text-foreground"
+            className="hidden sm:inline-flex text-muted-foreground hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </Button>
