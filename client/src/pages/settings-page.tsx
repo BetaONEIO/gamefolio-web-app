@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video, Code, Eye, Coffee, Scroll } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video, Eye, Coffee, Scroll } from "lucide-react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -80,7 +80,6 @@ const GAMER_TAG_OPTIONS = [
   { id: "professional_gamer", label: "Pro Gamer", icon: Trophy },
   { id: "content_creator", label: "Content Creator", icon: Upload },
   { id: "streamer", label: "Streamer", icon: Video },
-  { id: "indie_developer", label: "Indie Developer", icon: Code },
   { id: "viewer", label: "Viewer", icon: Eye },
   { id: "filthy_casual", label: "Filthy Casual", icon: Coffee },
   { id: "doom_scroller", label: "Doom Scroller", icon: Scroll },

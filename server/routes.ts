@@ -4570,7 +4570,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'gamer': 'Gamer', 
         'professional_gamer': 'Pro Gamer',
         'content_creator': 'Creator',
-        'indie_developer': 'Indie Dev',
         'viewer': 'Viewer',
         'filthy_casual': 'Casual',
         'doom_scroller': 'Doom Scroller'

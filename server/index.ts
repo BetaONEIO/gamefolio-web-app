@@ -296,7 +296,7 @@ app.use((req, res, next) => {
         const userTypesArr = (profile.userType || '').split(',').map((t: string) => t.trim()).filter(Boolean);
         const typeLabels: Record<string, string> = {
           streamer: 'Streamer', gamer: 'Gamer', professional_gamer: 'Pro Gamer',
-          content_creator: 'Creator', indie_developer: 'Indie Dev', viewer: 'Viewer',
+          content_creator: 'Creator', viewer: 'Viewer',
           filthy_casual: 'Casual', doom_scroller: 'Doom Scroller'
         };
         const typePart = userTypesArr.map((t: string) => typeLabels[t] || t).slice(0, 2).join(' · ');

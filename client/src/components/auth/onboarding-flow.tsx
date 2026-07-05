@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop } from "lucide-react";
+import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
@@ -1243,7 +1243,6 @@ export default function OnboardingFlow({
                 { id: "gamer", label: "Gamer", icon: Gamepad2 },
                 { id: "professional_gamer", label: "Pro Gamer", icon: Trophy },
                 { id: "content_creator", label: "Content Creator", icon: Upload },
-                { id: "indie_developer", label: "Indie Developer", icon: Code },
                 { id: "viewer", label: "Viewer", icon: Eye },
                 { id: "filthy_casual", label: "Filthy Casual", icon: Coffee },
                 { id: "doom_scroller", label: "Doom Scroller", icon: Scroll },

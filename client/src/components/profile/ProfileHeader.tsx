@@ -14,7 +14,6 @@ import {
   Video,
   Gamepad2,
   Upload,
-  Code,
   Eye,
   Coffee,
   Scroll,
@@ -77,11 +76,6 @@ const userTypeConfig: Record<string, { label: string; icon: any; color: string }
   content_creator: {
     label: "Creator",
     icon: Upload,
-    color: "bg-primary/20 text-primary border-primary/30",
-  },
-  indie_developer: {
-    label: "Indie Dev",
-    icon: Code,
     color: "bg-primary/20 text-primary border-primary/30",
   },
   viewer: {
