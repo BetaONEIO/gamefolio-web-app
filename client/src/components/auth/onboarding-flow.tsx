@@ -1011,20 +1011,13 @@ export default function OnboardingFlow({
                 <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
                   Back
                 </Button>
-                <Button 
+                <Button
                   onClick={goToNextStep}
-                  disabled={selectedGames.length === 0}
                   className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold"
                 >
                   Next <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
-              <button
-                onClick={goToNextStep}
-                className="text-sm text-gray-500 hover:text-gray-300 transition-colors text-center py-1"
-              >
-                Skip for now
-              </button>
             </div>
           </div>
         );
