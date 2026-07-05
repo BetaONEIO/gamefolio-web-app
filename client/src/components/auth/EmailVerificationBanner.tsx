@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +14,7 @@ interface EmailVerificationBannerProps {
 export function EmailVerificationBanner({ onDismiss, className }: EmailVerificationBannerProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [isResending, setIsResending] = useState(false);
   const [canResend, setCanResend] = useState(true);
   const [cooldownTime, setCooldownTime] = useState(0);
@@ -38,8 +40,8 @@ export function EmailVerificationBanner({ onDismiss, className }: EmailVerificat
 
       if (response.ok) {
         toast({
-          title: 'Verification email sent',
-          description: 'Please check your inbox and click the verification link. Previous verification links are now invalid.',
+          title: 'Verification code sent',
+          description: 'Please check your inbox for the 6-digit code. Previous codes are now invalid.',
           variant: 'gamefolioSuccess',
         });
 
@@ -93,13 +95,22 @@ export function EmailVerificationBanner({ onDismiss, className }: EmailVerificat
 
       <div className="flex items-center space-x-2">
         <Button
+          onClick={() => setLocation('/verify-code')}
+          variant="outline"
+          size="sm"
+          className="text-amber-700 border-amber-300 hover:bg-amber-100 dark:text-amber-300 dark:border-amber-700 dark:hover:bg-amber-900/20"
+        >
+          Enter Code
+        </Button>
+
+        <Button
           onClick={handleResendEmail}
           disabled={isResending || !canResend}
           variant="outline"
           size="sm"
           className="text-amber-700 border-amber-300 hover:bg-amber-100 dark:text-amber-300 dark:border-amber-700 dark:hover:bg-amber-900/20"
         >
-          {isResending ? "Sending..." : !canResend ? `Wait ${cooldownTime}s` : "Resend Email"}
+          {isResending ? "Sending..." : !canResend ? `Wait ${cooldownTime}s` : "Resend Code"}
         </Button>
 
         {onDismiss && (

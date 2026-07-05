@@ -11,7 +11,6 @@ import BannerImage from "@assets/Untitled (1920 x 1080 px).png";
 import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 import LootboxBanner from "@assets/lootbox-banner-1_1770362095039.png";
 import { useLocation, Link } from "wouter";
-import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { LatestReelsCarousel } from "@/components/clips/LatestReelsCarousel";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
@@ -631,12 +630,6 @@ const HomePage = () => {
 
   return (
     <div className="pb-16 md:pb-8 hide-scrollbar">
-      {/* Email Verification Banner - Only for authenticated users */}
-      {user && (
-        <div className="mx-2 sm:mx-4 md:mx-6 mb-0">
-          <EmailVerificationBanner />
-        </div>
-      )}
       
       {/* Hero Banner — original HeroBannerSlideshow */}
       {/* Community Carousel commented out */}

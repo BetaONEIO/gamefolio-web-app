@@ -5,7 +5,6 @@ import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { MentionInput } from "@/components/ui/mention-input";
@@ -962,8 +961,6 @@ const UploadPage = () => {
         <h1 className="text-2xl font-bold">Upload Content</h1>
       </div>
       
-      <EmailVerificationBanner />
-
       {/* Upload Limits Display — unlimited uploads, capped by file size & duration */}
       {!limitsLoading && uploadLimits && !uploadLimits.isPro && showUploadSizeTip && (
         <Alert className="mb-4 relative pr-10">
