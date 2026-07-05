@@ -120,7 +120,7 @@ export default function BookmarksPage() {
         <VideoClipGridItem
           key={reel.id}
           clip={reel}
-          clipsList={reels}
+          reelsList={reels}
           onCardClick={(clipId, clipsList) => openClipDialog(clipId, clipsList)}
         />
       ))}
