@@ -4224,15 +4224,19 @@ const ProfilePage = () => {
                     <button
                       key={platform}
                       onClick={() => setExpandedStreams(prev => ({ ...prev, [platform]: !prev[platform] }))}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold text-xs transition-all hover:brightness-110 active:scale-95 select-none"
+                      className={`flex items-center gap-1.5 rounded-full font-semibold transition-all active:scale-95 select-none ${
+                        isLive
+                          ? 'px-3 py-1.5 text-xs hover:brightness-110'
+                          : 'px-2.5 py-1 text-[11px] opacity-50 grayscale hover:opacity-80'
+                      }`}
                       style={{
-                        background: color,
-                        color: platformTextColor(platform),
+                        background: isLive ? color : 'hsl(220,15%,25%)',
+                        color: isLive ? platformTextColor(platform) : 'hsl(220,10%,70%)',
                         outline: expanded ? `2px solid ${color}` : 'none',
                         outlineOffset: '2px',
                       }}
                     >
-                      <PlatformIcon platform={platform} className="w-4 h-4" />
+                      <PlatformIcon platform={platform} className={isLive ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
                       <span>{platformLabel(platform)}</span>
                       {isLive && (
                         <>
