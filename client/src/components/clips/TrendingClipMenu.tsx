@@ -4,8 +4,8 @@ import { useLocation } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import {
   MoreHorizontal,
@@ -17,6 +17,7 @@ import {
   Loader2,
   User,
   Flag,
+  Bookmark,
 } from "lucide-react";
 import { ReportDialog } from "@/components/content/ReportDialog";
 import {
@@ -106,6 +107,14 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
   const [showEditCaption, setShowEditCaption] = useState(false);
   const [editTitle, setEditTitle] = useState(clip.title);
   const [editDescription, setEditDescription] = useState((clip as any).description ?? "");
+
+  const { data: bookmarkStatus } = useQuery<{ isBookmarked: boolean }>({
+    queryKey: [`/api/bookmarks/check/${contentType}/${clip.id}`],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!user,
+    staleTime: 30000,
+  });
+  const isBookmarked = !!bookmarkStatus?.isBookmarked;
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -210,6 +219,22 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
     },
     onError: (err: Error) => {
       toast({ title: "Failed to update caption", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const bookmarkMutation = useMutation({
+    mutationFn: () => {
+      if (isBookmarked) {
+        return apiRequest("DELETE", `/api/bookmarks/${contentType}/${clip.id}`);
+      }
+      return apiRequest("POST", "/api/bookmarks", { contentType, contentId: clip.id });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/bookmarks/check/${contentType}/${clip.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bookmarks"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Bookmark failed", description: err.message, variant: "destructive" });
     },
   });
 
@@ -339,6 +364,20 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
       />
       <MenuDivider />
       <MenuItem
+        icon={
+          <Bookmark
+            className="h-4 w-4"
+            fill={isBookmarked ? "currentColor" : "none"}
+          />
+        }
+        label={isBookmarked ? "Remove Bookmark" : `Bookmark ${Noun}`}
+        onClick={() => {
+          close();
+          bookmarkMutation.mutate();
+        }}
+      />
+      <MenuDivider />
+      <MenuItem
         icon={<Flag className="h-4 w-4" />}
         label={`Report ${Noun}`}
         destructive
@@ -394,6 +433,19 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
           onClick={handleDownload}
         />
       )}
+      <MenuItem
+        icon={
+          <Bookmark
+            className="h-4 w-4"
+            fill={isBookmarked ? "currentColor" : "none"}
+          />
+        }
+        label={isBookmarked ? "Remove Bookmark" : `Bookmark ${Noun}`}
+        onClick={() => {
+          close();
+          bookmarkMutation.mutate();
+        }}
+      />
       <MenuDivider />
       <MenuItem
         icon={<Trash2 className="h-4 w-4" />}
