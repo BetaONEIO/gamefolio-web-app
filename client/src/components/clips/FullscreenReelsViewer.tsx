@@ -10,6 +10,7 @@ import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
 import { Link, useLocation } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
+import { BookmarkButton } from "@/components/engagement/BookmarkButton";
 import CommentSection from "@/components/clips/CommentSection";
 import ShareMenu from "@/components/clips/ShareMenu";
 import { useAuth } from "@/hooks/use-auth";
@@ -432,6 +433,17 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     {isDownloading ? '…' : 'Save'}
                   </span>
                 </button>
+                <div className="flex flex-col items-center gap-0.5">
+                  <BookmarkButton
+                    contentId={currentReel.id}
+                    contentType="clip"
+                    size={24}
+                    activeColor="#B7FF1A"
+                    inactiveColor="#ffffff"
+                    iconClassName="drop-shadow"
+                  />
+                  <span className="text-white text-[10px] font-semibold drop-shadow">Bookmark</span>
+                </div>
               </div>
             )}
 
@@ -662,6 +674,16 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                 {isDownloading ? '…' : 'Save'}
               </span>
             </button>
+            <div className="flex flex-col items-center gap-1">
+              <BookmarkButton
+                contentId={currentReel.id}
+                contentType="clip"
+                size={24}
+                activeColor="#B7FF1A"
+                inactiveColor="#ffffff99"
+              />
+              <span className="text-white/60 text-xs font-semibold">Bookmark</span>
+            </div>
           </div>
         </div>
       )}
