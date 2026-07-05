@@ -60,12 +60,19 @@ const GamePage = () => {
     enabled: !!game?.id,
   });
 
+  // "Ever" (all-time) is meant to show the full history for the game, not just
+  // the top-20-by-engagement — since most clips/reels/screenshots tend to have
+  // similar (often zero) engagement, the engagement-desc ordering ties back to
+  // most-recent-first, making "Ever" look identical to "Most Recent" when it's
+  // capped at the same small limit. Request a much larger page for "ever".
+  const trendingLimit = timePeriod === 'ever' ? '500' : '20';
+
   const { data: trendingClips, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/clips/trending', timePeriod, game?.id],
     queryFn: async () => {
       const params = new URLSearchParams({
         period: timePeriod,
-        limit: '20',
+        limit: trendingLimit,
         gameId: game?.id?.toString() || '',
       });
       const response = await fetch(`/api/clips/trending?${params}`);
@@ -80,7 +87,7 @@ const GamePage = () => {
     queryFn: async () => {
       const params = new URLSearchParams({
         period: timePeriod,
-        limit: '20',
+        limit: trendingLimit,
         gameId: game?.id?.toString() || '',
       });
       const response = await fetch(`/api/reels/trending?${params}`);
@@ -95,7 +102,7 @@ const GamePage = () => {
     queryFn: async () => {
       const params = new URLSearchParams({
         period: timePeriod,
-        limit: '20',
+        limit: trendingLimit,
         gameId: game?.id?.toString() || '',
       });
       const response = await fetch(`/api/screenshots?${params}`);
