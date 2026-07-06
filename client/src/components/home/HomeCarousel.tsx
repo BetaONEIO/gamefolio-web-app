@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useMobile } from "@/hooks/use-mobile";
@@ -323,7 +324,7 @@ export default function HomeCarousel() {
   const { data: clips } = useQuery<ClipWithUser[]>({
     queryKey: ["/api/clips/latest"],
     queryFn: async () => {
-      const res = await fetch("/api/clips/latest?limit=10", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/clips/latest?limit=10");
       if (!res.ok) return [];
       return res.json();
     },
@@ -333,7 +334,7 @@ export default function HomeCarousel() {
   const { data: leaderboard } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard"],
     queryFn: async () => {
-      const res = await fetch("/api/leaderboard?limit=5", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/leaderboard?limit=5");
       if (!res.ok) return [];
       return res.json();
     },
@@ -343,7 +344,7 @@ export default function HomeCarousel() {
   const { data: trendingGames } = useQuery<Game[]>({
     queryKey: ["/api/games/trending"],
     queryFn: async () => {
-      const res = await fetch("/api/games/trending?limit=5", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/games/trending?limit=5");
       if (!res.ok) return [];
       return res.json();
     },
@@ -353,7 +354,7 @@ export default function HomeCarousel() {
   const { data: featuredUsers } = useQuery<FeaturedUser[]>({
     queryKey: ["/api/featured-users"],
     queryFn: async () => {
-      const res = await fetch("/api/featured-users", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/featured-users");
       if (!res.ok) return [];
       return res.json();
     },

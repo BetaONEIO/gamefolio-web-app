@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useParams, useLocation, useSearch, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
@@ -61,7 +62,7 @@ export default function NFTDetailsPage() {
   }>({
     queryKey: ["/api/marketplace/listings"],
     queryFn: async () => {
-      const res = await fetch("/api/marketplace/listings", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/marketplace/listings");
       if (!res.ok) throw new Error("Failed to load listings");
       return res.json();
     },
@@ -82,7 +83,7 @@ export default function NFTDetailsPage() {
   const { data: ownedData, isLoading: isLoadingOwned } = useQuery<{ nfts: OwnedNftRow[] }>({
     queryKey: ["/api/nfts/owned"],
     queryFn: async () => {
-      const res = await fetch("/api/nfts/owned", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/nfts/owned");
       if (!res.ok) throw new Error("Failed to load owned NFTs");
       return res.json();
     },
@@ -92,7 +93,7 @@ export default function NFTDetailsPage() {
   const { data: tokenBalanceData } = useQuery<{ balance: string }>({
     queryKey: ["/api/token/balance"],
     queryFn: async () => {
-      const res = await fetch("/api/token/balance", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/token/balance");
       if (!res.ok) throw new Error("Failed to load token balance");
       return res.json();
     },

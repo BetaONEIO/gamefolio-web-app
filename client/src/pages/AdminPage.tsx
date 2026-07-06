@@ -1435,7 +1435,7 @@ const PendingGamesSection = () => {
   const { data: pendingGames = [], isLoading, refetch } = useQuery<PendingGame[]>({
     queryKey: ["/api/admin/games/pending"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/games/pending", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/admin/games/pending");
       if (!res.ok) throw new Error("Failed to fetch pending games");
       return res.json();
     },

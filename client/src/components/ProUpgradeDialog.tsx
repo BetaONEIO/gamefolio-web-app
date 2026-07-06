@@ -235,7 +235,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   const loadStripeInstance = useCallback(async () => {
     if (stripePromise) return;
     try {
-      const res = await fetch("/api/stripe/config", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/stripe/config");
       const data = await res.json();
       if (data.publishableKey) {
         setStripePromise(loadStripe(data.publishableKey));
@@ -273,7 +273,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/stripe/pro-pricing", { credentials: "include" });
+        const res = await apiRequest("GET", "/api/stripe/pro-pricing");
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled && data?.currency) {
