@@ -908,8 +908,66 @@ interface AdminOAuthClient {
   lastUsedAt: string | null;
 }
 
+interface AdminOAuthAuthorizedUser {
+  userId: number;
+  username: string | null;
+  scope: string;
+  lastUsedAt: string | null;
+  createdAt: string;
+}
+
+function OAuthAppUsersDialog({ clientId, clientName, onClose }: { clientId: number; clientName: string; onClose: () => void }) {
+  const { data, isLoading } = useQuery<{ authorizedUsers: AdminOAuthAuthorizedUser[] }>({
+    queryKey: [`/api/admin/oauth/clients/${clientId}`],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+
+  const authorizedUsers = data?.authorizedUsers || [];
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Authorized users — {clientName}</DialogTitle>
+        </DialogHeader>
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+          </div>
+        ) : authorizedUsers.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">No users currently have an active token for this app.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Scope</TableHead>
+                  <TableHead>Last used</TableHead>
+                  <TableHead>Authorized</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {authorizedUsers.map((u) => (
+                  <TableRow key={u.userId}>
+                    <TableCell>{u.username || `User #${u.userId}`}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{u.scope}</TableCell>
+                    <TableCell>{u.lastUsedAt ? new Date(u.lastUsedAt).toLocaleString() : 'Never'}</TableCell>
+                    <TableCell>{new Date(u.createdAt).toLocaleDateString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function OAuthAppsManagement() {
   const { toast } = useToast();
+  const [usersDialogClient, setUsersDialogClient] = useState<{ id: number; name: string } | null>(null);
   const { data, isLoading, refetch } = useQuery<{ clients: AdminOAuthClient[] }>({
     queryKey: ['/api/admin/oauth/clients'],
     queryFn: getQueryFn({ on401: "throw" }),
@@ -1024,6 +1082,14 @@ function OAuthAppsManagement() {
                           <Button
                             size="sm"
                             variant="outline"
+                            disabled={client.activeUserCount === 0}
+                            onClick={() => setUsersDialogClient({ id: client.id, name: client.name })}
+                          >
+                            View users
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
                             disabled={revokeAllMutation.isPending}
                             onClick={() => revokeAllMutation.mutate(client.id)}
                           >
@@ -1058,6 +1124,14 @@ function OAuthAppsManagement() {
           )}
         </CardContent>
       </Card>
+
+      {usersDialogClient && (
+        <OAuthAppUsersDialog
+          clientId={usersDialogClient.id}
+          clientName={usersDialogClient.name}
+          onClose={() => setUsersDialogClient(null)}
+        />
+      )}
     </div>
   );
 }
