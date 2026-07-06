@@ -134,6 +134,12 @@ const ViewContentPage = lazyWithRecovery(() => import("./pages/ViewContentPage")
 const PostUploadSuccessPage = lazyWithRecovery(() => import("./pages/PostUploadSuccessPage"));
 const VerifyEmailPage = lazyWithRecovery(() => import("./pages/verify-email"));
 const VerifyCodePage = lazyWithRecovery(() => import("./pages/verify-code-page"));
+const OAuthAuthorizePage = lazyWithRecovery(() => import("./pages/OAuthAuthorizePage"));
+const DeveloperHomePage = lazyWithRecovery(() => import("./pages/developer/DeveloperHomePage"));
+const MyAppsPage = lazyWithRecovery(() => import("./pages/developer/MyAppsPage"));
+const CreateAppPage = lazyWithRecovery(() => import("./pages/developer/CreateAppPage"));
+const AppDetailPage = lazyWithRecovery(() => import("./pages/developer/AppDetailPage"));
+const ConnectedAppsPage = lazyWithRecovery(() => import("./pages/ConnectedAppsPage"));
 const TermsPage = lazyWithRecovery(() => import("./pages/terms-page"));
 const PrivacyPage = lazyWithRecovery(() => import("./pages/privacy-page"));
 const ContactPage = lazyWithRecovery(() => import("./pages/contact-page"));
@@ -355,6 +361,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   const isAuthOrOnboarding = location.startsWith("/onboarding") ||
                            location.startsWith("/verify-email") ||
                            location.startsWith("/verify-code") ||
+                           location.startsWith("/oauth/consent") ||
                            location.startsWith("/embed/") ||
                            location.startsWith("/leaderboard/embed") ||
                            location.startsWith("/view/") ||
@@ -512,6 +519,12 @@ function Router() {
           <Route path="/onboarding" component={OnboardingPage} />
           <Route path="/verify-email" component={VerifyEmailPage} />
           <Route path="/verify-code" component={VerifyCodePage} />
+          <Route path="/oauth/consent" component={OAuthAuthorizePage} />
+          <Route path="/developer" component={DeveloperHomePage} />
+          <Route path="/developer/apps/new" component={CreateAppPage} />
+          <Route path="/developer/apps/:id" component={AppDetailPage} />
+          <Route path="/developer/apps" component={MyAppsPage} />
+          <Route path="/settings/connected-apps" component={ConnectedAppsPage} />
           <Route path="/2fa-verify" component={TwoFactorVerifyPage} />
           <Route path="/terms" component={TermsPage} />
           <Route path="/privacy" component={PrivacyPage} />

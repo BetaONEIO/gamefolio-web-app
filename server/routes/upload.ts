@@ -6,7 +6,7 @@ import fs from 'fs';
 import { supabaseTusStore } from '../tus-storage';
 import { supabaseStorage } from '../supabase-storage';
 import { storage } from '../storage';
-import { insertClipSchema, insertScreenshotSchema, type UploadLimits } from '@shared/schema';
+import { insertScreenshotSchema, type UploadLimits } from '@shared/schema';
 import { VideoProcessor } from '../video-processor';
 import sharp from 'sharp';
 import { nanoid } from 'nanoid';
@@ -16,6 +16,7 @@ import { hybridFullAccess } from '../middleware/hybrid-auth';
 import { LeaderboardService, POINT_VALUES } from '../leaderboard-service';
 import { BonusEventsService } from '../bonus-events-service';
 import { CreatorMilestoneService } from '../creator-milestone-service';
+import { processAndCreateClip, ClipProcessingError } from '../services/clip-processing';
 
 const router = express.Router();
 
@@ -37,7 +38,9 @@ const videoStorage = multer.diskStorage({
   }
 });
 
-const upload = multer({
+// Exported so server/routes/public-api-v1.ts (OAuth "post a clip" endpoint) can
+// reuse the exact same multer config instead of a second, divergent copy.
+export const upload = multer({
   storage: videoStorage,
   limits: {
     fileSize: 500 * 1024 * 1024, // 500MB max for videos
@@ -590,449 +593,25 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 
 // Video/Reel processing endpoint (called after TUS upload completes)
 router.post('/process-video', hybridFullAccess, async (req, res) => {
+  const { ageRestricted } = req.body;
+  console.log('🔞 Age Restriction Backend Debug:', {
+    ageRestricted,
+    ageRestrictedType: typeof ageRestricted,
+    rawBody: req.body,
+    evaluation: ageRestricted === true || ageRestricted === 'true'
+  });
+
   try {
-    const { uploadResult, title, description, gameId, tags, videoType = 'clip', ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd } = req.body;
-
-    console.log('🔞 Age Restriction Backend Debug:', {
-      ageRestricted,
-      ageRestrictedType: typeof ageRestricted,
-      rawBody: req.body,
-      evaluation: ageRestricted === true || ageRestricted === 'true'
-    });
-
-    if (!uploadResult || !title) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    if (!uploadResult.url || !uploadResult.path) {
-      return res.status(400).json({ error: 'Invalid upload result' });
-    }
-
-    // Validate video type
-    if (!['clip', 'reel'].includes(videoType)) {
-      return res.status(400).json({ error: 'Invalid video type. Must be "clip" or "reel"' });
-    }
-
-    // Check upload limits before processing (size already validated in /video-direct;
-    // duration is enforced after we have the actual video info below).
-    const limits = await storage.getUploadLimits(req.user!.id);
-    const isReel = videoType === 'reel';
-    const maxDurationSeconds = isReel ? limits.maxReelDurationSeconds : limits.maxClipDurationSeconds;
-    const maxSizeMB = isReel ? limits.maxReelSizeMB : limits.maxClipSizeMB;
-    const maxSizeBytes = maxSizeMB * 1024 * 1024;
-
-    // Handle game ID - ensure game exists in database
-    let finalGameId = null;
-    if (gameId) {
-      try {
-        const parsedGameId = parseInt(gameId);
-
-        // Check if game exists, if not create it
-        let game = await storage.getGame(parsedGameId);
-        if (!game) {
-          // Game doesn't exist, we need to fetch it from Twitch API and create it
-          console.log(`Game ${parsedGameId} not found in database, fetching from Twitch API`);
-          try {
-            // First, try to get the game by its Twitch ID
-            game = await storage.getGameByTwitchId(parsedGameId.toString());
-
-            if (!game) {
-              // Fetch from Twitch API to get game details
-              const { twitchApi } = await import('../services/twitch-api.js');
-              const gameData = await twitchApi.getGameById(parsedGameId.toString());
-
-              if (gameData) {
-                // Check if a game with this name already exists first
-                const existingGameByName = await storage.getGameByName(gameData.name);
-                if (existingGameByName) {
-                  console.log(`✅ Found existing game by name: ${gameData.name} (ID: ${existingGameByName.id})`);
-                  game = existingGameByName;
-                  finalGameId = existingGameByName.id;
-                } else {
-                  // Create the game in our database using Twitch data - use higher resolution for crisp display
-                  try {
-                    game = await storage.createGame({
-                      name: gameData.name,
-                      imageUrl: gameData.box_art_url ? 
-                        gameData.box_art_url.replace('{width}', '600').replace('{height}', '800') : '',
-                      twitchId: gameData.id
-                    });
-                    console.log(`✅ Created game: ${game.name} (ID: ${game.id}, Twitch ID: ${gameData.id})`);
-                    finalGameId = game.id;
-                  } catch (createError: any) {
-                    // Handle race condition where game was created by another request
-                    if (createError.code === '23505') { // Unique constraint violation
-                      console.log(`Game "${gameData.name}" was created by another request, fetching it`);
-                      const raceConditionGame = await storage.getGameByName(gameData.name);
-                      if (raceConditionGame) {
-                        game = raceConditionGame;
-                        finalGameId = raceConditionGame.id;
-                      } else {
-                        throw createError;
-                      }
-                    } else {
-                      throw createError;
-                    }
-                  }
-                }
-              } else {
-                console.warn(`❌ Game ${parsedGameId} not found in Twitch API`);
-                finalGameId = null;
-              }
-            } else {
-              console.log(`✅ Found existing game by Twitch ID: ${game.name} (ID: ${game.id})`);
-              finalGameId = game.id;
-            }
-          } catch (apiError) {
-            console.error('Error fetching from Twitch API:', apiError);
-            finalGameId = null;
-          }
-        } else {
-          finalGameId = parsedGameId;
-        }
-      } catch (error) {
-        console.warn('Invalid game ID provided:', gameId);
-        finalGameId = null;
-      }
-    }
-
-    // Prepare initial clip data
-    const initialClipData = {
-      userId: req.user!.id,
-      title,
-      description: description || '',
-      gameId: finalGameId,
-      tags: tags || [],
-      videoUrl: uploadResult.url,
-      videoType,
-      thumbnailUrl: '', // Will be generated
-      duration: 0, // Will be determined during processing
-      ageRestricted: ageRestricted === true || ageRestricted === 'true',
-    };
-
-    // Validate clip data with detailed error logging
-    let validatedData;
-    try {
-      validatedData = insertClipSchema.parse(initialClipData);
-    } catch (validationError: any) {
-      console.error('❌ Clip validation failed:', {
-        titleLength: title?.length,
-        descriptionLength: description?.length,
-        tagsCount: tags?.length,
-        error: validationError.errors || validationError.message
-      });
-      
-      return res.status(400).json({
-        error: 'Invalid clip data',
-        details: validationError.errors || validationError.message
-      });
-    }
-
-    // Process video (crop for reels, generate thumbnails)
-    let processedVideoUrl = uploadResult.url; // Default to original
-    let thumbnailUrl = '';
-    let actualDuration = 0; // Initialize actual duration
-
-    // Helper function to generate share code
-    const generateShareCode = () => {
-      return nanoid(8);
-    };
-
-    try {
-      // For TUS uploads, we need to download the video to process it locally
-      // In a production environment, you might want to use a separate worker queue
-      const tempVideoPath = path.join(tempDir, `video-${Date.now()}.mp4`);
-
-      // Download video from Supabase for processing (use signed URL for authenticated access)
-      let downloadUrl = uploadResult.url;
-      try {
-        const signedUrl = await supabaseStorage.convertToSignedUrl(uploadResult.url, 300);
-        if (signedUrl) {
-          downloadUrl = signedUrl;
-          console.log(`🔑 Using signed URL for video download`);
-        }
-      } catch (signError) {
-        console.warn('Could not generate signed URL, falling back to public URL:', signError);
-      }
-      console.log(`🎬 Downloading video for thumbnail generation from: ${downloadUrl.substring(0, 80)}...`);
-      const videoResponse = await fetch(downloadUrl);
-      console.log(`📥 Video download response: ${videoResponse.status} ${videoResponse.statusText}`);
-      
-      if (videoResponse.ok) {
-        const videoBuffer = await videoResponse.arrayBuffer();
-        console.log(`📦 Video downloaded: ${(videoBuffer.byteLength / (1024 * 1024)).toFixed(2)} MB`);
-
-        // Enforce per-tier size cap (defense in depth — also checked at upload time).
-        if (videoBuffer.byteLength > maxSizeBytes) {
-          // Best-effort cleanup of the orphaned Supabase object
-          try { await supabaseStorage.deleteFile(uploadResult.path); } catch {}
-          const actualSizeMB = (videoBuffer.byteLength / (1024 * 1024)).toFixed(1);
-          return res.status(403).json({
-            error: 'File size exceeds limit',
-            message: `Maximum ${isReel ? 'reel' : 'clip'} size is ${maxSizeMB}MB (your file is ${actualSizeMB}MB).${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`,
-            limits
-          });
-        }
-
-        await fs.promises.writeFile(tempVideoPath, Buffer.from(videoBuffer));
-
-        // Get actual video duration + codec first
-        let sourceVideoCodec = '';
-        let sourceAudioCodec: string | null = null;
-        try {
-          const videoInfo = await VideoProcessor.getVideoInfo(tempVideoPath);
-          actualDuration = Math.round(videoInfo.duration); // Round to nearest second
-          sourceVideoCodec = videoInfo.videoCodec;
-          sourceAudioCodec = videoInfo.audioCodec;
-          console.log(`📹 Video actual duration: ${actualDuration}s, codec: ${sourceVideoCodec || 'unknown'}/${sourceAudioCodec || 'none'}`);
-        } catch (durationError) {
-          console.warn('Failed to extract video info, using fallback:', durationError);
-          actualDuration = 60; // Fallback to 60 seconds if extraction fails
-        }
-
-        // Enforce per-tier duration cap (defense in depth — also checked at upload time).
-        if (actualDuration > maxDurationSeconds) {
-          fs.unlink(tempVideoPath, () => {});
-          return res.status(403).json({
-            error: 'Video duration exceeds limit',
-            message: `Maximum ${isReel ? 'reel' : 'clip'} duration is ${maxDurationSeconds} seconds (your video is ${actualDuration}s).${limits.isPro ? '' : ' Upgrade to Pro for longer videos.'}`,
-            limits
-          });
-        }
-
-        // Create a temporary clip ID for processing
-        const tempClipId = Date.now();
-
-        const requestedTrimStart = rawTrimStart !== undefined && rawTrimStart !== null ? parseInt(rawTrimStart) : 0;
-        const requestedTrimEnd = rawTrimEnd !== undefined && rawTrimEnd !== null ? parseInt(rawTrimEnd) : actualDuration;
-        const hasTrimming = requestedTrimStart > 0 || requestedTrimEnd < actualDuration;
-
-        if (videoType === 'reel') {
-          console.log(`🎬 Processing reel with 9:16 aspect ratio cropping (trim: ${requestedTrimStart}s - ${requestedTrimEnd}s)`);
-          const { videoUrl: croppedVideoUrl, thumbnailUrl: reelThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
-            tempVideoPath,
-            tempClipId,
-            requestedTrimStart,
-            requestedTrimEnd,
-            true,
-            req.user!.id,
-            'reel'
-          );
-          processedVideoUrl = croppedVideoUrl;
-          thumbnailUrl = reelThumbnailUrl || '';
-          actualDuration = processedDuration;
-          console.log(`✅ Reel processed successfully. Thumbnail: ${thumbnailUrl ? thumbnailUrl.substring(0, 60) + '...' : 'NONE'}`);
-        } else if (hasTrimming) {
-          console.log(`✂️ Trimming clip: ${requestedTrimStart}s - ${requestedTrimEnd}s`);
-          const { videoUrl: trimmedVideoUrl, thumbnailUrl: clipThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
-            tempVideoPath,
-            tempClipId,
-            requestedTrimStart,
-            requestedTrimEnd,
-            true,
-            req.user!.id,
-            'clip'
-          );
-          processedVideoUrl = trimmedVideoUrl;
-          thumbnailUrl = clipThumbnailUrl || '';
-          actualDuration = processedDuration;
-          console.log(`✅ Clip trimmed successfully. Duration: ${actualDuration}s`);
-        } else if (sourceVideoCodec && !VideoProcessor.isBrowserPlayable(sourceVideoCodec, sourceAudioCodec)) {
-          // Untrimmed clip, but its codec (e.g. HEVC/H.265, 10-bit, exotic audio)
-          // won't play in a standard <video> element. If we stored it as-is it
-          // would fail to play for viewers — the same reason its preview failed
-          // at upload time. Re-encode the full clip to H.264 + AAC.
-          console.log(`🔄 Re-encoding clip — source codec ${sourceVideoCodec}/${sourceAudioCodec || 'none'} is not browser-playable`);
-          const { videoUrl: reencodedUrl, thumbnailUrl: clipThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
-            tempVideoPath,
-            tempClipId,
-            0,
-            actualDuration,
-            true,
-            req.user!.id,
-            'clip'
-          );
-          processedVideoUrl = reencodedUrl;
-          thumbnailUrl = clipThumbnailUrl || '';
-          actualDuration = processedDuration;
-          console.log(`✅ Clip re-encoded to H.264. Duration: ${actualDuration}s`);
-        } else {
-          console.log('🖼️ Generating clip thumbnail (no trimming/re-encode needed)...');
-          thumbnailUrl = await VideoProcessor.generateAutoThumbnail(
-            tempVideoPath,
-            req.user!.id,
-            `${videoType}_thumb`
-          );
-          console.log(`✅ Clip thumbnail generated: ${thumbnailUrl ? thumbnailUrl.substring(0, 60) + '...' : 'NONE'}`);
-        }
-
-        // Clean up temp video file
-        fs.unlink(tempVideoPath, (err) => {
-          if (err) console.warn('Could not delete temp video file:', err);
-        });
-      } else {
-        console.warn('Could not download video for thumbnail generation, using fallback');
-        // Try to re-download with different approach for duration extraction
-        try {
-          console.log('Attempting alternative video download for duration extraction...');
-          const response = await fetch(downloadUrl);
-          if (response.ok) {
-            const videoBuffer = await response.arrayBuffer();
-            const retryTempPath = path.join(tempDir, `retry-video-${Date.now()}.mp4`);
-            await fs.promises.writeFile(retryTempPath, Buffer.from(videoBuffer));
-            
-            try {
-              const videoInfo = await VideoProcessor.getVideoInfo(retryTempPath);
-              actualDuration = Math.round(videoInfo.duration);
-              console.log(`📹 Successfully extracted duration on retry: ${actualDuration} seconds`);
-              
-              // Clean up retry temp file
-              fs.unlink(retryTempPath, (err) => {
-                if (err) console.warn('Could not delete retry temp file:', err);
-              });
-            } catch (retryDurationError) {
-              console.warn('Retry duration extraction also failed, using conservative fallback');
-              actualDuration = 30; // More conservative fallback than 60
-              
-              // Clean up retry temp file
-              fs.unlink(retryTempPath, (err) => {
-                if (err) console.warn('Could not delete retry temp file:', err);
-              });
-            }
-          } else {
-            throw new Error('Retry download failed');
-          }
-        } catch (retryError) {
-          console.warn('Could not extract duration with retry, using fallback');
-          actualDuration = 30; // Conservative fallback instead of inaccurate file size estimation
-        }
-
-        // Fallback: Create a basic thumbnail
-        const thumbnailBuffer = await sharp({
-          create: {
-            width: 1280,
-            height: 720,
-            channels: 3,
-            background: { r: 30, g: 30, b: 30 }
-          }
-        })
-        .jpeg({ quality: 80 })
-        .toBuffer();
-
-        // Upload fallback thumbnail
-        const thumbnailResult = await supabaseStorage.uploadBuffer(
-          thumbnailBuffer,
-          `fallback_thumb_${Date.now()}.jpg`,
-          'image/jpeg',
-          'thumbnail',
-          req.user!.id
-        );
-
-        thumbnailUrl = thumbnailResult.url;
-      }
-    } catch (thumbnailError) {
-      console.error('❌ Thumbnail generation failed:', thumbnailError);
-      // Try to create a fallback thumbnail instead of leaving it empty
-      try {
-        console.log('🔄 Creating fallback thumbnail...');
-        const fallbackBuffer = await sharp({
-          create: {
-            width: videoType === 'reel' ? 720 : 1280,
-            height: videoType === 'reel' ? 1280 : 720,
-            channels: 3,
-            background: { r: 30, g: 30, b: 30 }
-          }
-        })
-        .jpeg({ quality: 80 })
-        .toBuffer();
-
-        const fallbackResult = await supabaseStorage.uploadBuffer(
-          fallbackBuffer,
-          `fallback_thumb_${Date.now()}.jpg`,
-          'image/jpeg',
-          'thumbnail',
-          req.user!.id
-        );
-        thumbnailUrl = fallbackResult.url;
-        console.log(`✅ Fallback thumbnail created: ${thumbnailUrl.substring(0, 60)}...`);
-      } catch (fallbackError) {
-        console.error('❌ Even fallback thumbnail failed:', fallbackError);
-        thumbnailUrl = '';
-      }
-    }
-
-    // Generate consistent share code
-    const shareCode = generateShareCode(); // 8-character alphanumeric code
-
-    // Create the final clip data
-    const finalClipData = {
-      userId: req.user!.id,
-      title,
-      description: description || '',
-      gameId: finalGameId,
-      tags: tags || [],
-      videoUrl: processedVideoUrl, // Use processed (cropped) video URL for reels
-      videoType,
-      thumbnailUrl: thumbnailUrl,
-      duration: actualDuration || 60, // Use actual duration or fallback to 60
-      trimStart: rawTrimStart !== undefined && rawTrimStart !== null ? parseInt(rawTrimStart) : 0,
-      trimEnd: rawTrimEnd !== undefined && rawTrimEnd !== null ? parseInt(rawTrimEnd) : actualDuration,
-      ageRestricted: ageRestricted === true || ageRestricted === 'true',
-      shareCode: shareCode,
-    };
-
-    const validatedClipData = insertClipSchema.parse(finalClipData);
-
-    // Create the clip
-    const clip = await storage.createClip(validatedClipData);
-
-    // Award upload points to the user
-    await LeaderboardService.awardPoints(
-      req.user!.id,
-      'upload',
-      `Upload: ${videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`
-    );
-
-    // Generate QR code and sharing data
-    const baseUrl = 'https://app.gamefolio.com';
-
-    // Get username for URL and fetch updated user data with new XP/level
-    const user = await storage.getUser(req.user!.id);
-    console.log(`🎯 XP Debug - User after award: ID=${user?.id}, totalXP=${user?.totalXP}, level=${user?.level}`);
-    const username = user?.username || 'unknown';
-    const contentType = videoType === 'reel' ? 'reel' : 'clip';
-    const clipUrl = `${baseUrl}/@${username}/${contentType}/${clip.shareCode}`;
-    const qrCodeDataUrl = await QRCode.toDataURL(clipUrl);
-
-    const socialMediaLinks = {
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(clipUrl)}`,
-      twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out my ${videoType}!`)}&url=${encodeURIComponent(clipUrl)}`,
-      reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(clipUrl)}&title=${encodeURIComponent(`Check out this gaming ${videoType}!`)}`,
-      discord: clipUrl // User will copy this manually for Discord
-    };
-
-    const responseData = {
-      success: true,
-      clip: {
-        ...clip,
-        qrCode: qrCodeDataUrl,
-        shareUrl: clipUrl,
-        socialMediaLinks
-      },
-      xpGained: POINT_VALUES['upload'] ?? 200,
-      userXP: user?.totalXP || 0,
-      userLevel: user?.level || 1,
-      message: 'Video processed successfully'
-    };
-    
+    const responseData = await processAndCreateClip(req.user!.id, req.body);
     console.log(`🎯 XP Debug - Response data: xpGained=${responseData.xpGained}, userXP=${responseData.userXP}, userLevel=${responseData.userLevel}`);
-    
     res.json(responseData);
-
   } catch (error) {
+    if (error instanceof ClipProcessingError) {
+      return res.status(error.status).json(error.body);
+    }
     console.error('Video processing error:', error);
-    res.status(500).json({ 
-      error: error instanceof Error ? error.message : 'Video processing failed' 
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Video processing failed'
     });
   }
 });
