@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { oauthClients, oauthAuthorizationCodes, oauthAccessTokens, oauthRefreshTokens } from '@shared/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
 import {
   generateOpaqueToken,
@@ -10,6 +10,7 @@ import {
   parseScopes,
   areValidScopes,
   verifyPkce,
+  revokeAllTokensForClient,
 } from '../services/oauth-service';
 
 const router = Router();
@@ -22,16 +23,6 @@ async function findActiveClientByClientId(clientId: string) {
   const [client] = await db.select().from(oauthClients).where(eq(oauthClients.clientId, clientId));
   if (!client || !client.isActive) return null;
   return client;
-}
-
-// Revoke every access/refresh token issued for a client — used when a code is
-// replayed (signal of a leaked code) or a client secret is regenerated.
-async function revokeAllTokensForClient(clientDbId: number) {
-  const now = new Date();
-  await db.update(oauthAccessTokens).set({ revokedAt: now })
-    .where(and(eq(oauthAccessTokens.clientId, clientDbId), isNull(oauthAccessTokens.revokedAt)));
-  await db.update(oauthRefreshTokens).set({ revokedAt: now })
-    .where(and(eq(oauthRefreshTokens.clientId, clientDbId), isNull(oauthRefreshTokens.revokedAt)));
 }
 
 /**

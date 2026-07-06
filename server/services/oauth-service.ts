@@ -1,6 +1,8 @@
 import { randomBytes, scrypt, timingSafeEqual, createHash } from 'crypto';
 import { promisify } from 'util';
-import { VALID_OAUTH_SCOPES, type OAuthScope } from '@shared/schema';
+import { VALID_OAUTH_SCOPES, type OAuthScope, oauthAccessTokens, oauthRefreshTokens } from '@shared/schema';
+import { eq, and, isNull } from 'drizzle-orm';
+import { db } from '../db';
 
 const scryptAsync = promisify(scrypt);
 
@@ -60,4 +62,15 @@ export function isScopeSubset(required: string[], granted: string[]): boolean {
 export function verifyPkce(codeVerifier: string, codeChallenge: string): boolean {
   const computed = createHash('sha256').update(codeVerifier).digest('base64url');
   return computed === codeChallenge;
+}
+
+// Revoke every access/refresh token issued for a client — used when an
+// authorization code is replayed (signal of a leaked code), a client secret is
+// regenerated, or an admin kills a client's active sessions.
+export async function revokeAllTokensForClient(clientDbId: number): Promise<void> {
+  const now = new Date();
+  await db.update(oauthAccessTokens).set({ revokedAt: now })
+    .where(and(eq(oauthAccessTokens.clientId, clientDbId), isNull(oauthAccessTokens.revokedAt)));
+  await db.update(oauthRefreshTokens).set({ revokedAt: now })
+    .where(and(eq(oauthRefreshTokens.clientId, clientDbId), isNull(oauthRefreshTokens.revokedAt)));
 }

@@ -93,6 +93,7 @@ import oauthProviderRoutes from './routes/oauth-provider';
 import developerPortalRoutes from './routes/developer-portal';
 import publicApiV1Routes from './routes/public-api-v1';
 import oauthUserApiRoutes from './routes/oauth-user-api';
+import adminOAuthRoutes from './routes/admin-oauth';
 import { createOGMetaMiddleware } from './og-meta';
 import { storage } from './storage';
 import { LeaderboardService, loadXpSettingsFromDB } from './leaderboard-service';
@@ -260,6 +261,7 @@ app.use((req, res, next) => {
     app.use('/api/developer', developerPortalRoutes);
     app.use('/api/public/v1', publicApiV1Routes);
     app.use('/api/oauth', oauthUserApiRoutes);
+    app.use('/api/admin/oauth', adminOAuthRoutes);
 
     // Social media preview route - must be before Vite middleware
     app.get('/profile/:username', async (req, res, next) => {

@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
-import { oauthClients, insertOauthClientSchema, oauthAccessTokens, oauthRefreshTokens } from '@shared/schema';
+import { oauthClients, insertOauthClientSchema } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
-import { generateOpaqueToken, hashClientSecret } from '../services/oauth-service';
+import { generateOpaqueToken, hashClientSecret, revokeAllTokensForClient } from '../services/oauth-service';
 import { z } from 'zod';
 
 const router = Router();
@@ -134,9 +134,7 @@ router.post('/apps/:id/regenerate-secret', hybridAuth, async (req: Request, res:
 
     // Secret compromise is exactly when you want to force re-auth — revoke
     // everything issued under the old secret.
-    const now = new Date();
-    await db.update(oauthAccessTokens).set({ revokedAt: now }).where(eq(oauthAccessTokens.clientId, id));
-    await db.update(oauthRefreshTokens).set({ revokedAt: now }).where(eq(oauthRefreshTokens.clientId, id));
+    await revokeAllTokensForClient(id);
 
     return res.json({ clientSecret: rawSecret });
   } catch (error) {
@@ -156,6 +154,10 @@ router.patch('/apps/:id/deactivate', hybridAuth, async (req: Request, res: Respo
       .set({ isActive: false, updatedAt: new Date() })
       .where(eq(oauthClients.id, id))
       .returning();
+
+    // Deactivating means "kill it now" — don't let already-issued tokens
+    // keep working until they naturally expire.
+    await revokeAllTokensForClient(id);
 
     return res.json(toPublicClient(updated));
   } catch (error) {
