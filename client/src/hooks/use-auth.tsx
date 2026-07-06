@@ -40,6 +40,20 @@ type RegisterData = {
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
+// Set by OAuthAuthorizePage before bouncing an unauthenticated user to /auth, so
+// they land back on the consent screen (with its original query params) instead
+// of the default home/onboarding destination once they log in.
+const PENDING_OAUTH_REDIRECT_KEY = 'oauth_pending_redirect';
+function consumePendingOAuthRedirect(): string | null {
+  try {
+    const pending = sessionStorage.getItem(PENDING_OAUTH_REDIRECT_KEY);
+    if (pending) sessionStorage.removeItem(PENDING_OAUTH_REDIRECT_KEY);
+    return pending;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -138,6 +152,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         queryClient.setQueryData(["/api/user"], userData);
 
+        const pendingOAuthRedirect = consumePendingOAuthRedirect();
+
         if (userData.needsOnboarding) {
           if (userData.isNewGoogleUser) {
             toast({
@@ -152,14 +168,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               variant: "gamefolioSuccess",
             });
           }
-          setLocation("/onboarding");
+          setLocation(pendingOAuthRedirect || "/onboarding");
         } else {
           toast({
             title: "Welcome back!",
             description: `You're now signed in with Google.`,
             variant: "gamefolioSuccess",
           });
-          setLocation("/");
+          setLocation(pendingOAuthRedirect || "/");
         }
       } catch (error) {
         if (!mounted) return;
@@ -294,15 +310,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Check if user needs onboarding
       const needsOnboarding = !user.userType;
+      const pendingOAuthRedirect = consumePendingOAuthRedirect();
       if (needsOnboarding) {
         toast({
           title: "Complete your profile",
           description: "Finish setting up your gaming profile to continue.",
           variant: "gamefolioSuccess",
         });
-        setLocation("/onboarding");
+        setLocation(pendingOAuthRedirect || "/onboarding");
       } else {
-        setLocation("/");
+        setLocation(pendingOAuthRedirect || "/");
       }
     },
     // Error handling now done in the forms for contextual display
@@ -337,7 +354,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "gamefolioSuccess",
       });
 
-      // Redirect based on email verification status
+      // Redirect based on email verification status. A pending OAuth consent
+      // bounce-back is deliberately not restored here — a brand-new
+      // registration still needs to clear email verification/onboarding first.
       if (user.emailVerified) {
         // User is already verified (e.g., OAuth users), go directly to onboarding
         setLocation("/onboarding");

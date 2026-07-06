@@ -542,6 +542,85 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// OAuth2 provider — lets external developers register apps and get tokens to
+// read/write a consenting user's data ("Login with Gamefolio").
+export const VALID_OAUTH_SCOPES = [
+  'profile:read', 'profile:write',
+  'clips:read', 'clips:write',
+  'screenshots:read', 'screenshots:write',
+  'games:read',
+] as const;
+export type OAuthScope = typeof VALID_OAUTH_SCOPES[number];
+
+export const oauthClients = pgTable("oauth_clients", {
+  id: serial("id").primaryKey(),
+  clientId: uuid("client_id").defaultRandom().notNull().unique(),
+  clientSecretHash: text("client_secret_hash").notNull(), // scrypt hash.salt, same format as users.password
+  name: text("name").notNull(),
+  description: text("description"),
+  logoUrl: text("logo_url"),
+  ownerUserId: integer("owner_user_id").notNull().references(() => users.id),
+  redirectUris: text("redirect_uris").array().notNull(), // exact-match allow-list
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  ownerIdx: index("oauth_clients_owner_idx").on(table.ownerUserId),
+}));
+
+export const insertOauthClientSchema = createInsertSchema(oauthClients)
+  .omit({ id: true, clientId: true, clientSecretHash: true, ownerUserId: true, isActive: true, createdAt: true, updatedAt: true })
+  .extend({
+    name: z.string().min(1).max(100),
+    redirectUris: z.array(z.string().url()).min(1),
+  });
+
+// Short-lived authorization codes (Authorization Code grant, step 1). PKCE required.
+export const oauthAuthorizationCodes = pgTable("oauth_authorization_codes", {
+  id: serial("id").primaryKey(),
+  codeHash: text("code_hash").notNull().unique(),
+  clientId: integer("client_id").notNull().references(() => oauthClients.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  redirectUri: text("redirect_uri").notNull(), // must match what was sent to /oauth/token
+  scope: text("scope").notNull(), // space-separated OAuthScope values
+  codeChallenge: text("code_challenge").notNull(),
+  codeChallengeMethod: text("code_challenge_method").notNull(), // "S256"
+  expiresAt: timestamp("expires_at").notNull(), // now + 60s
+  usedAt: timestamp("used_at"), // replay detection: redeeming twice revokes descendant tokens
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Access tokens — opaque, hashed at rest (not JWTs) for O(1) revocation.
+export const oauthAccessTokens = pgTable("oauth_access_tokens", {
+  id: serial("id").primaryKey(),
+  tokenHash: text("token_hash").notNull().unique(),
+  clientId: integer("client_id").notNull().references(() => oauthClients.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  scope: text("scope").notNull(),
+  expiresAt: timestamp("expires_at").notNull(), // now + 1h
+  revokedAt: timestamp("revoked_at"),
+  lastUsedAt: timestamp("last_used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userClientIdx: index("oauth_access_tokens_user_client_idx").on(table.userId, table.clientId),
+}));
+
+// Refresh tokens — separate table so rotation doesn't touch access-token rows.
+export const oauthRefreshTokens = pgTable("oauth_refresh_tokens", {
+  id: serial("id").primaryKey(),
+  tokenHash: text("token_hash").notNull().unique(),
+  accessTokenId: integer("access_token_id").notNull().references(() => oauthAccessTokens.id, { onDelete: "cascade" }),
+  clientId: integer("client_id").notNull().references(() => oauthClients.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  scope: text("scope").notNull(),
+  expiresAt: timestamp("expires_at").notNull(), // now + 30d
+  revokedAt: timestamp("revoked_at"),
+  rotatedToId: integer("rotated_to_id"), // self-ref audit trail for rotation chains
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userClientIdx: index("oauth_refresh_tokens_user_client_idx").on(table.userId, table.clientId),
+}));
+
 // Emoji reactions table
 export const clipReactions = pgTable("clip_reactions", {
   id: serial("id").primaryKey(),
@@ -794,6 +873,12 @@ export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 export type PasswordResetRequest = z.infer<typeof passwordResetRequestSchema>;
 export type PasswordResetConfirm = z.infer<typeof passwordResetConfirmSchema>;
 export type EmailVerification = z.infer<typeof emailVerificationSchema>;
+
+export type OauthClient = typeof oauthClients.$inferSelect;
+export type InsertOauthClient = z.infer<typeof insertOauthClientSchema>;
+export type OauthAuthorizationCode = typeof oauthAuthorizationCodes.$inferSelect;
+export type OauthAccessToken = typeof oauthAccessTokens.$inferSelect;
+export type OauthRefreshToken = typeof oauthRefreshTokens.$inferSelect;
 
 // Schema for inserting a game
 export const insertGameSchema = createInsertSchema(games).omit({

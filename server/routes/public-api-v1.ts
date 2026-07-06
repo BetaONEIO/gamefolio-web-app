@@ -1,0 +1,152 @@
+import { Router, Request, Response } from 'express';
+import fs from 'fs';
+import { storage } from '../storage';
+import { supabaseStorage } from '../supabase-storage';
+import { VideoProcessor } from '../video-processor';
+import { requireOAuthScope } from '../middleware/oauth-auth';
+import { oauthRateLimiter } from '../oauth-rate-limiter';
+import { upload } from './upload';
+import { processAndCreateClip, ClipProcessingError } from '../services/clip-processing';
+
+const router = Router();
+
+/**
+ * GET /api/public/v1/me — profile:read
+ * Strict allow-list of fields; deliberately excludes email by default.
+ */
+router.get('/me', requireOAuthScope('profile:read'), oauthRateLimiter, async (req: Request, res: Response) => {
+  try {
+    const user = await storage.getUserById(req.oauthContext!.userId);
+    if (!user) return res.status(404).json({ error: 'not_found' });
+    return res.json({
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      bio: user.bio,
+    });
+  } catch (error) {
+    console.error('[Public API v1] GET /me error:', error);
+    return res.status(500).json({ error: 'server_error' });
+  }
+});
+
+/**
+ * GET /api/public/v1/clips — clips:read
+ * Only the authorizing user's own clips — public catalog browsing doesn't need OAuth.
+ */
+router.get('/clips', requireOAuthScope('clips:read'), oauthRateLimiter, async (req: Request, res: Response) => {
+  try {
+    const clips = await storage.getClipsByUserId(req.oauthContext!.userId);
+    return res.json({ clips });
+  } catch (error) {
+    console.error('[Public API v1] GET /clips error:', error);
+    return res.status(500).json({ error: 'server_error' });
+  }
+});
+
+router.get('/clips/:id', requireOAuthScope('clips:read'), oauthRateLimiter, async (req: Request, res: Response) => {
+  try {
+    const clip = await storage.getClipById(Number(req.params.id));
+    if (!clip || clip.userId !== req.oauthContext!.userId) {
+      return res.status(404).json({ error: 'not_found' });
+    }
+    return res.json({ clip });
+  } catch (error) {
+    console.error('[Public API v1] GET /clips/:id error:', error);
+    return res.status(500).json({ error: 'server_error' });
+  }
+});
+
+/**
+ * POST /api/public/v1/clips — clips:write
+ * Multipart: video file + title/gameId/videoType/description/tags. Uploads to
+ * Gamefolio's own storage (same as an in-app upload) and creates the clip via the
+ * shared processAndCreateClip pipeline — a single call does what the browser flow
+ * does in two (raw upload, then process) for a much better external API DX.
+ */
+router.post('/clips', requireOAuthScope('clips:write'), oauthRateLimiter, upload.single('file'), async (req: Request, res: Response) => {
+  const userId = req.oauthContext!.userId;
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'invalid_request', message: 'No video file provided' });
+  }
+
+  try {
+    const { title, description, gameId, tags, videoType = 'clip', ageRestricted, trimStart, trimEnd } = req.body;
+
+    if (!title) {
+      if (req.file.path) fs.unlink(req.file.path, () => {});
+      return res.status(400).json({ error: 'invalid_request', message: 'title is required' });
+    }
+
+    const limits = await storage.getUploadLimits(userId);
+    const isReel = videoType === 'reel';
+    const maxVideoSizeMB = isReel ? limits.maxReelSizeMB : limits.maxClipSizeMB;
+    const maxDurationSeconds = isReel ? limits.maxReelDurationSeconds : limits.maxClipDurationSeconds;
+
+    const fileSizeMB = req.file.size / (1024 * 1024);
+    if (fileSizeMB > maxVideoSizeMB) {
+      if (req.file.path) fs.unlink(req.file.path, () => {});
+      return res.status(403).json({
+        error: 'file_too_large',
+        message: `Maximum ${isReel ? 'reel' : 'clip'} size is ${maxVideoSizeMB}MB (your file is ${fileSizeMB.toFixed(1)}MB).${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`,
+        limits
+      });
+    }
+
+    try {
+      const videoInfo = await VideoProcessor.getVideoInfo(req.file.path);
+      const durationSeconds = Math.round(videoInfo.duration || 0);
+      if (durationSeconds > maxDurationSeconds) {
+        if (req.file.path) fs.unlink(req.file.path, () => {});
+        return res.status(403).json({
+          error: 'duration_too_long',
+          message: `Maximum ${isReel ? 'reel' : 'clip'} duration is ${maxDurationSeconds} seconds (your video is ${durationSeconds}s).${limits.isPro ? '' : ' Upgrade to Pro for longer videos.'}`,
+          limits
+        });
+      }
+    } catch (durationCheckError) {
+      console.warn('[Public API v1] Could not determine video duration before upload:', durationCheckError);
+    }
+
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const timestamp = Date.now();
+    const randomId = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const extension = req.file.originalname.includes('.') ? '.' + req.file.originalname.split('.').pop() : '';
+    const prefix = videoType === 'reel' ? 'reels' : 'videos';
+    const fileName = `${prefix}/${timestamp}-${randomId}${extension}`;
+
+    const uploadResult = await supabaseStorage.uploadBuffer(fileBuffer, fileName, req.file.mimetype, videoType, userId);
+    fs.unlink(req.file.path, (err) => {
+      if (err) console.warn('[Public API v1] Could not delete temp file:', err);
+    });
+
+    if (!uploadResult.url) {
+      throw new Error('Supabase upload failed - no URL returned');
+    }
+
+    const responseData = await processAndCreateClip(userId, {
+      uploadResult: { url: uploadResult.url, path: `users/${userId}/${fileName}` },
+      title,
+      description,
+      gameId,
+      tags: Array.isArray(tags) ? tags : typeof tags === 'string' ? tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+      videoType,
+      ageRestricted,
+      trimStart,
+      trimEnd,
+    });
+
+    return res.status(201).json(responseData);
+  } catch (error) {
+    if (req.file?.path) fs.unlink(req.file.path, () => {});
+    if (error instanceof ClipProcessingError) {
+      return res.status(error.status).json(error.body);
+    }
+    console.error('[Public API v1] POST /clips error:', error);
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'Upload failed' });
+  }
+});
+
+export default router;
