@@ -548,9 +548,9 @@ function Router() {
           <Route path="/verify-code" component={VerifyCodePage} />
           <Route path="/oauth/consent" component={OAuthAuthorizePage} />
           <Route path="/developer" component={DeveloperHomePage} />
-          <Route path="/developer/apps/new" component={CreateAppPage} />
-          <Route path="/developer/apps/:id" component={AppDetailPage} />
-          <Route path="/developer/apps" component={MyAppsPage} />
+          <ProtectedRoute path="/developer/apps/new" component={CreateAppPage} />
+          <ProtectedRoute path="/developer/apps/:id" component={AppDetailPage} />
+          <ProtectedRoute path="/developer/apps" component={MyAppsPage} />
           <Route path="/settings/connected-apps" component={ConnectedAppsPage} />
           <Route path="/2fa-verify" component={TwoFactorVerifyPage} />
           <Route path="/terms" component={TermsPage} />

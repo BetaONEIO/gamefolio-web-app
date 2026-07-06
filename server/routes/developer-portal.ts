@@ -3,10 +3,24 @@ import { db } from '../db';
 import { oauthClients, insertOauthClientSchema } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
+import { createRateLimiter } from '../middleware/rate-limit';
 import { generateOpaqueToken, hashClientSecret, revokeAllTokensForClient } from '../services/oauth-service';
 import { z } from 'zod';
 
 const router = Router();
+
+// Per-user: mounted after hybridAuth so req.user is populated. Caps app
+// creation rather than every /apps route — legit users may poll GET /apps
+// far more often than they ever create a new app.
+const createAppRateLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  keyFn: (req) => {
+    const userId = (req.user as any)?.id;
+    return userId ? `user:${userId}` : null;
+  },
+  message: 'Too many apps created recently. Please try again later.',
+});
 
 function isValidRedirectUri(uri: string): boolean {
   try {
@@ -30,7 +44,7 @@ async function getOwnedClient(id: number, ownerUserId: number) {
   return client ?? null;
 }
 
-router.post('/apps', hybridAuth, async (req: Request, res: Response) => {
+router.post('/apps', hybridAuth, createAppRateLimiter, async (req: Request, res: Response) => {
   try {
     const ownerUserId = (req.user as any).id;
     const parsed = insertOauthClientSchema.safeParse(req.body);

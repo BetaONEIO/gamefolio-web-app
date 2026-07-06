@@ -3,6 +3,7 @@ import { db } from '../db';
 import { oauthClients, oauthAuthorizationCodes, oauthAccessTokens, oauthRefreshTokens } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
+import { createRateLimiter, normalizedIp } from '../middleware/rate-limit';
 import {
   generateOpaqueToken,
   hashToken,
@@ -14,6 +15,22 @@ import {
 } from '../services/oauth-service';
 
 const router = Router();
+
+// IP-based: these endpoints run before (or are themselves) client/user auth,
+// so there's no clientId/userId yet to key off — unlike oauthRateLimiter.
+const authorizeRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 30,
+  keyFn: normalizedIp,
+  message: 'Too many authorization requests from this address. Please try again shortly.',
+});
+
+const tokenRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 20,
+  keyFn: normalizedIp,
+  message: 'Too many token requests from this address. Please try again shortly.',
+});
 
 const AUTH_CODE_TTL_MS = 60 * 1000; // 60s
 const ACCESS_TOKEN_TTL_MS = 60 * 60 * 1000; // 1h
@@ -31,7 +48,7 @@ async function findActiveClientByClientId(clientId: string) {
  * request server-side, then hands off to the SPA consent screen — Express never
  * renders the consent UI itself.
  */
-router.get('/oauth/authorize', async (req: Request, res: Response) => {
+router.get('/oauth/authorize', authorizeRateLimiter, async (req: Request, res: Response) => {
   const { client_id, redirect_uri, response_type, scope, state, code_challenge, code_challenge_method } = req.query;
 
   if (typeof client_id !== 'string' || typeof redirect_uri !== 'string' || typeof scope !== 'string') {
@@ -75,7 +92,7 @@ router.get('/oauth/authorize', async (req: Request, res: Response) => {
  * be logged in to Gamefolio. Re-validates everything server-side rather than
  * trusting what the SPA echoes back.
  */
-router.post('/oauth/authorize/decision', hybridAuth, async (req: Request, res: Response) => {
+router.post('/oauth/authorize/decision', authorizeRateLimiter, hybridAuth, async (req: Request, res: Response) => {
   try {
     const userId = (req.user as any)?.id;
     const { clientId, redirectUri, scope, state, decision, codeChallenge, codeChallengeMethod } = req.body || {};
@@ -133,7 +150,7 @@ router.post('/oauth/authorize/decision', hybridAuth, async (req: Request, res: R
  * Called by the developer's backend (not the browser). Supports
  * grant_type=authorization_code and grant_type=refresh_token.
  */
-router.post('/oauth/token', async (req: Request, res: Response) => {
+router.post('/oauth/token', tokenRateLimiter, async (req: Request, res: Response) => {
   try {
     const { grant_type } = req.body || {};
 
@@ -269,7 +286,7 @@ router.post('/oauth/token', async (req: Request, res: Response) => {
  * Always returns 200 whether or not the token existed, to avoid leaking token
  * validity through response differences.
  */
-router.post('/oauth/revoke', async (req: Request, res: Response) => {
+router.post('/oauth/revoke', tokenRateLimiter, async (req: Request, res: Response) => {
   try {
     let clientId = req.body?.client_id;
     let clientSecret = req.body?.client_secret;
