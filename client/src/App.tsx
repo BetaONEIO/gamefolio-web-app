@@ -357,6 +357,12 @@ function MainLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // developer.gamefolio.com is a dedicated developer-portal site — it keeps
+  // the Header (branding + login) and AuthModal so auth still works, but
+  // drops the consumer app's Sidebar/MobileNav/MobileMenu and promotional
+  // banners, none of which make sense outside the main app.
+  const isDeveloperSubdomain = window.location.hostname === 'developer.gamefolio.com';
+
   // Don't render layout for onboarding, verification, password reset, embed pages, and public view pages
   const isAuthOrOnboarding = location.startsWith("/onboarding") ||
                            location.startsWith("/verify-email") ||
@@ -377,17 +383,17 @@ function MainLayout({ children }: { children: React.ReactNode }) {
       <Header />
 
       {/* Email Verification Banner - shown app-wide until the user verifies */}
-      {user && !user.emailVerified && (
+      {!isDeveloperSubdomain && user && !user.emailVerified && (
         <div className={`px-4 mt-2 relative z-20 ${!isMobile ? 'ml-64' : ''}`}>
           <EmailVerificationBanner />
         </div>
       )}
 
       {/* Activity Scroll Banner - Only show on home page */}
-      {location === "/" && <ActivityScrollBanner />}
+      {!isDeveloperSubdomain && location === "/" && <ActivityScrollBanner />}
 
       {/* Dynamic Banner */}
-      {!isLoadingBanner && bannerSettings && bannerSettings.isEnabled && !isBannerDismissed && (
+      {!isDeveloperSubdomain && !isLoadingBanner && bannerSettings && bannerSettings.isEnabled && !isBannerDismissed && (
         <Alert className={`mx-4 mt-2 border-primary/30 bg-primary/10 backdrop-blur-sm relative z-20 ${!isMobile ? 'ml-64' : ''}`}>
           {bannerSettings.showIcon && <AlertTriangle className="h-4 w-4 text-primary" />}
           <AlertDescription className="text-foreground flex items-center justify-between">
@@ -423,14 +429,14 @@ function MainLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Mobile Menu Overlay */}
-      <MobileMenu />
+      {!isDeveloperSubdomain && <MobileMenu />}
 
       <div className="flex flex-1 min-h-0 relative z-10">
-        {!isMobile && <Sidebar />}
+        {!isDeveloperSubdomain && !isMobile && <Sidebar />}
 
         <main
           ref={mainScrollRef}
-          className={`flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide bg-background ${!isMobile ? 'ml-64' : ''}`}
+          className={`flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide bg-background ${!isDeveloperSubdomain && !isMobile ? 'ml-64' : ''}`}
           style={{
             ...(isMobile && keyboardHeight > 0 ? { paddingBottom: `${keyboardHeight}px` } : {}),
             overflowAnchor: 'none',
@@ -447,7 +453,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {isMobile && <MobileNav />}
+      {!isDeveloperSubdomain && isMobile && <MobileNav />}
       
       {/* Auth Modal */}
       <AuthModal 
