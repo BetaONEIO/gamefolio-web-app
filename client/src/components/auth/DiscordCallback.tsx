@@ -47,6 +47,22 @@ export function DiscordCallback() {
           avatar: discordUser.avatar
         });
 
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: 'Discord authentication failed' }));
+          // Check if blocked by developer portal
+          if (errorData.code === 'DEV_PORTAL_NO_REGISTRATION') {
+            toast({
+              title: "Registration not available",
+              description: "New registrations are not available on the developer portal. Please create an account on app.gamefolio.com first.",
+              variant: "destructive",
+            });
+            closeModal();
+            setLocation("/auth");
+            return;
+          }
+          throw new Error(errorData.message || `Server error: ${response.status}`);
+        }
+
         const userData = await response.json();
         queryClient.setQueryData(["/api/user"], userData);
 

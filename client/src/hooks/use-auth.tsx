@@ -138,6 +138,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (!mounted) return;
 
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: 'Google authentication failed' }));
+          if (errorData.code === 'DEV_PORTAL_NO_REGISTRATION') {
+            toast({
+              title: "Registration not available",
+              description: "New registrations are not available on the developer portal. Please create an account on app.gamefolio.com first.",
+              variant: "gamefolioError",
+            });
+            return;
+          }
+          throw new Error(errorData.message || `Server error: ${response.status}`);
+        }
+
         const userData = await response.json();
 
         if (!mounted) return;

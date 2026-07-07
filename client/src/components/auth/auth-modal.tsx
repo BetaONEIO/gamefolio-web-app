@@ -6,6 +6,8 @@ import ForgotPasswordForm from "@/components/auth/ForgotPasswordForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X } from "lucide-react";
 
+const isDeveloperSubdomain = typeof window !== "undefined" && window.location.hostname === 'developer.gamefolio.com';
+
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -219,7 +221,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
             className="w-full"
           >
             <TabsList
-              className="grid w-full grid-cols-2 gap-2 p-1.5 rounded-xl"
+              className={isDeveloperSubdomain ? "grid w-full grid-cols-1 p-1.5 rounded-xl" : "grid w-full grid-cols-2 gap-2 p-1.5 rounded-xl"}
               style={{ background: '#0B1218', marginBottom: keyboardOpen ? '1rem' : '1.5rem' }}
             >
               <TabsTrigger
@@ -230,18 +232,20 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                   : { backgroundColor: '#0B1218', color: '#B8C0AE' }}
                 data-testid="tab-login"
               >
-                Login
+                {isDeveloperSubdomain ? "Developer Sign In" : "Login"}
               </TabsTrigger>
-              <TabsTrigger
-                value="register"
-                className="rounded-lg font-semibold transition-all duration-150 data-[state=active]:shadow-none"
-                style={activeTab === "register"
-                  ? { backgroundColor: '#B7FF1A', color: '#000' }
-                  : { backgroundColor: '#0B1218', color: '#B8C0AE' }}
-                data-testid="tab-register"
-              >
-                Register
-              </TabsTrigger>
+              {!isDeveloperSubdomain && (
+                <TabsTrigger
+                  value="register"
+                  className="rounded-lg font-semibold transition-all duration-150 data-[state=active]:shadow-none"
+                  style={activeTab === "register"
+                    ? { backgroundColor: '#B7FF1A', color: '#000' }
+                    : { backgroundColor: '#0B1218', color: '#B8C0AE' }}
+                  data-testid="tab-register"
+                >
+                  Register
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="login" forceMount className={activeTab === "login" ? "block" : "hidden"}>
@@ -252,10 +256,28 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
               )}
             </TabsContent>
 
-            <TabsContent value="register" forceMount className={activeTab === "register" ? "block" : "hidden"}>
-              <RegisterForm onSuccess={() => setActiveTab("login")} />
-            </TabsContent>
+            {!isDeveloperSubdomain && (
+              <TabsContent value="register" forceMount className={activeTab === "register" ? "block" : "hidden"}>
+                <RegisterForm onSuccess={() => setActiveTab("login")} />
+              </TabsContent>
+            )}
           </Tabs>
+
+          {isDeveloperSubdomain && (
+            <div className="mt-4 p-3 rounded-lg text-center text-sm" style={{ background: '#0B1218', color: '#B8C0AE' }}>
+              New accounts must be created on{" "}
+              <a
+                href="https://app.gamefolio.com/auth"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold hover:underline"
+                style={{ color: '#B7FF1A' }}
+              >
+                app.gamefolio.com
+              </a>
+              . Sign in here with your existing account.
+            </div>
+          )}
 
           {!keyboardOpen && (
             <div className="mt-6 text-center">
