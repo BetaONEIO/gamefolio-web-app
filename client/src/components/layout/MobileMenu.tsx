@@ -458,7 +458,7 @@ const MobileMenu = () => {
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-border">
+          <div className="p-4">
             {user ? (
               <Button 
                 variant="default" 

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useMobile } from "@/hooks/use-mobile";
+import { apiRequest } from "@/lib/queryClient";
 import {
   ChevronLeft, ChevronRight, Eye, Heart, Video, Trophy,
   Zap, Radio, Star, Rocket, Compass, Gamepad2, Users,
@@ -141,6 +142,7 @@ function TrendingClipSlide({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const handlePlayPause = (e: React.MouseEvent) => {
@@ -329,83 +331,96 @@ function TrendingClipSlide({
         </div>
       </div>
 
-      {/* ── RIGHT: Game Sidebar ── */}
+      {/* ── RIGHT: Game Sidebar (collapsible) ── */}
       <div
-        className="flex-shrink-0 flex flex-col bg-[#060D12] border-l border-white/5"
-        style={{ width: "clamp(180px, 22%, 260px)" }}
+        className="flex-shrink-0 flex flex-row bg-[#060D12] border-l border-white/5 overflow-hidden transition-all duration-300"
+        style={{ width: sidebarCollapsed ? 32 : "clamp(180px, 22%, 260px)" }}
       >
-        {/* Game thumbnail */}
-        <div className="relative flex-1 overflow-hidden bg-[#0B1219]" style={{ minHeight: "160px" }}>
-          {clip.game?.imageUrl ? (
-            <img
-              src={clip.game.imageUrl}
-              alt={clip.game.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Gamepad2 className="w-12 h-12 text-white/20" />
-            </div>
-          )}
+        {/* Collapse toggle */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setSidebarCollapsed(c => !c); }}
+          className="flex-shrink-0 w-8 h-full flex items-center justify-center bg-[#0B1219] hover:bg-[#111D26] transition-colors"
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={sidebarCollapsed ? "Expand" : "Collapse"}
+        >
+          <ChevronRight className={`w-4 h-4 text-white/50 transition-transform duration-300 ${sidebarCollapsed ? "" : "rotate-180"}`} />
+        </button>
 
-          {/* Game name overlay */}
-          {clip.game?.name && (
-            <div className="absolute top-0 inset-x-0 px-2 pt-2 pb-4 bg-gradient-to-b from-black/80 to-transparent">
-              <span className="text-[10px] font-black uppercase tracking-wider text-white/80 line-clamp-1">
-                {clip.game.name}
-              </span>
-            </div>
-          )}
-
-          {/* Prev/Next game nav */}
-          <div className="absolute top-2 right-2 flex items-center gap-1">
-            <button
-              className="w-5 h-5 rounded-sm bg-black/60 hover:bg-black/90 flex items-center justify-center transition-colors"
-              onClick={(e) => { e.stopPropagation(); onPrev(); }}
-            >
-              <ChevronLeft className="w-3 h-3 text-white" />
-            </button>
-            <button
-              className="w-5 h-5 rounded-sm bg-black/60 hover:bg-black/90 flex items-center justify-center transition-colors"
-              onClick={(e) => { e.stopPropagation(); onNext(); }}
-            >
-              <ChevronRight className="w-3 h-3 text-white" />
-            </button>
-          </div>
-        </div>
-
-        {/* Stats row */}
-        <div className="px-3 py-2 border-t border-white/5">
-          <div className="grid grid-cols-4 gap-1 text-center">
-            {[
-              { icon: Clapperboard, label: "Clips", value: clip.views ? Math.max(1, Math.floor(clip.views / 120)) : 5 },
-              { icon: Video, label: "Reels", value: clip.likes ? Math.max(1, Math.floor(clip.likes / 40)) : 3 },
-              { icon: Camera, label: "", value: clip.views ? Math.max(1, Math.floor(clip.views / 200)) : 5 },
-              { icon: null, label: "Bounties", value: 3 },
-            ].map(({ icon: Icon, label, value }, i) => (
-              <div key={i} className="flex flex-col items-center gap-0.5">
-                <span className="text-white font-black text-sm">{value}</span>
-                <div className="flex items-center gap-0.5">
-                  {Icon && <Icon className="w-2.5 h-2.5 text-white/40" />}
-                  {label && <span className="text-[9px] text-white/40 font-medium">{label}</span>}
-                  {!Icon && !label && <span className="text-[9px] text-white/40">Bounties</span>}
-                </div>
+        {/* Sidebar content */}
+        <div className={`flex-col flex-1 min-w-0 transition-opacity duration-300 ${sidebarCollapsed ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
+          {/* Game thumbnail */}
+          <div className="relative flex-1 overflow-hidden bg-[#0B1219]" style={{ minHeight: "160px" }}>
+            {clip.game?.imageUrl ? (
+              <img
+                src={clip.game.imageUrl}
+                alt={clip.game.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Gamepad2 className="w-12 h-12 text-white/20" />
               </div>
-            ))}
-          </div>
-        </div>
+            )}
 
-        {/* Upload content button */}
-        <div className="px-3 pb-3">
-          <Link href="/upload">
-            <button
-              className="w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all hover:opacity-90 active:scale-[0.98]"
-              style={{ background: NEON, color: "#03080A" }}
-            >
-              <Upload className="w-3.5 h-3.5" />
-              Upload Content
-            </button>
-          </Link>
+            {/* Game name overlay */}
+            {clip.game?.name && (
+              <div className="absolute top-0 inset-x-0 px-2 pt-2 pb-4 bg-gradient-to-b from-black/80 to-transparent">
+                <span className="text-[10px] font-black uppercase tracking-wider text-white/80 line-clamp-1">
+                  {clip.game.name}
+                </span>
+              </div>
+            )}
+
+            {/* Prev/Next game nav */}
+            <div className="absolute top-2 right-2 flex items-center gap-1">
+              <button
+                className="w-5 h-5 rounded-sm bg-black/60 hover:bg-black/90 flex items-center justify-center transition-colors"
+                onClick={(e) => { e.stopPropagation(); onPrev(); }}
+              >
+                <ChevronLeft className="w-3 h-3 text-white" />
+              </button>
+              <button
+                className="w-5 h-5 rounded-sm bg-black/60 hover:bg-black/90 flex items-center justify-center transition-colors"
+                onClick={(e) => { e.stopPropagation(); onNext(); }}
+              >
+                <ChevronRight className="w-3 h-3 text-white" />
+              </button>
+            </div>
+          </div>
+
+          {/* Stats row */}
+          <div className="px-3 py-2 border-t border-white/5">
+            <div className="grid grid-cols-4 gap-1 text-center">
+              {[
+                { icon: Clapperboard, label: "Clips", value: clip.views ? Math.max(1, Math.floor(clip.views / 120)) : 5 },
+                { icon: Video, label: "Reels", value: clip.likes ? Math.max(1, Math.floor(clip.likes / 40)) : 3 },
+                { icon: Camera, label: "", value: clip.views ? Math.max(1, Math.floor(clip.views / 200)) : 5 },
+                { icon: null, label: "Bounties", value: 3 },
+              ].map(({ icon: Icon, label, value }, i) => (
+                <div key={i} className="flex flex-col items-center gap-0.5">
+                  <span className="text-white font-black text-sm">{value}</span>
+                  <div className="flex items-center gap-0.5">
+                    {Icon && <Icon className="w-2.5 h-2.5 text-white/40" />}
+                    {label && <span className="text-[9px] text-white/40 font-medium">{label}</span>}
+                    {!Icon && !label && <span className="text-[9px] text-white/40">Bounties</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Upload content button */}
+          <div className="px-3 pb-3">
+            <Link href="/upload">
+              <button
+                className="w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{ background: NEON, color: "#03080A" }}
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Upload Content
+              </button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -591,7 +606,7 @@ export default function HomeCarousel() {
   const { data: clips } = useQuery<ClipWithUser[]>({
     queryKey: ["/api/clips/latest"],
     queryFn: async () => {
-      const res = await fetch("/api/clips/latest?limit=10", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/clips/latest?limit=10");
       if (!res.ok) return [];
       return res.json();
     },
@@ -601,7 +616,7 @@ export default function HomeCarousel() {
   const { data: leaderboard } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard"],
     queryFn: async () => {
-      const res = await fetch("/api/leaderboard?limit=5", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/leaderboard?limit=5");
       if (!res.ok) return [];
       return res.json();
     },
@@ -611,7 +626,7 @@ export default function HomeCarousel() {
   const { data: trendingGames } = useQuery<Game[]>({
     queryKey: ["/api/games/trending"],
     queryFn: async () => {
-      const res = await fetch("/api/games/trending?limit=5", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/games/trending?limit=5");
       if (!res.ok) return [];
       return res.json();
     },
@@ -621,7 +636,7 @@ export default function HomeCarousel() {
   const { data: featuredUsers } = useQuery<FeaturedUser[]>({
     queryKey: ["/api/users/featured"],
     queryFn: async () => {
-      const res = await fetch("/api/users/featured", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/users/featured");
       if (!res.ok) return [];
       return res.json();
     },
