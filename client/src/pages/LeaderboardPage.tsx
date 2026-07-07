@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Trophy, Crown, Gem, Shield, Flame, TrendingUp, TrendingDown, Minus,
   Calendar, Clock, Users, Upload, Heart, MessageCircle, Star, Award,
@@ -177,177 +177,70 @@ const RANK_LABEL: Record<number, string> = {
   3: "🥉 3rd Place",
 };
 
-// ── Mobile card-stack swipe component ──────────────────────────────────────
+// ── Mobile podium: gold featured large, silver/bronze smaller on each side ──
 function MobilePodiumStack({ top3 }: { top3: TrendingEntry[] }) {
-  // Show rank 1 → 2 → 3 in mobile stack (rank 1 on top by default)
-  const cards = [top3[0], top3[1], top3[2]].filter(Boolean) as TrendingEntry[];
-  const ranks = [1, 2, 3];
+  const gold   = top3[0] as TrendingEntry | undefined;
+  const silver = top3[1] as TrendingEntry | undefined;
+  const bronze = top3[2] as TrendingEntry | undefined;
 
-  const [activeIdx, setActiveIdx] = useState(0);
-  const [dragX, setDragX] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [exitDir, setExitDir] = useState<null | "left" | "right">(null);
-  const touchStartX = useRef<number | null>(null);
-  const touchStartY = useRef<number | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const goldRef   = useRef<HTMLDivElement>(null);
 
-  const total = cards.length;
+  // Auto-centre the gold card on first render
+  useEffect(() => {
+    if (!scrollRef.current || !goldRef.current) return;
+    const container = scrollRef.current;
+    const card      = goldRef.current;
+    const offset    = card.offsetLeft - (container.clientWidth - card.offsetWidth) / 2;
+    container.scrollLeft = offset;
+  }, [gold]);
 
-  const advance = useCallback((dir: "left" | "right") => {
-    setExitDir(dir);
-    setTimeout(() => {
-      setActiveIdx(i => {
-        if (dir === "left") return (i + 1) % total;
-        return (i - 1 + total) % total;
-      });
-      setExitDir(null);
-      setDragX(0);
-    }, 280);
-  }, [total]);
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-    setIsDragging(true);
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX.current === null) return;
-    const dx = e.touches[0].clientX - touchStartX.current;
-    const dy = e.touches[0].clientY - (touchStartY.current ?? 0);
-    // Only track horizontal drag (ignore mostly-vertical scrolls)
-    if (Math.abs(dy) > Math.abs(dx)) return;
-    setDragX(dx);
-  };
-
-  const onTouchEnd = () => {
-    setIsDragging(false);
-    if (Math.abs(dragX) > 60) {
-      advance(dragX < 0 ? "left" : "right");
-    } else {
-      setDragX(0);
-    }
-    touchStartX.current = null;
-    touchStartY.current = null;
-  };
-
-  if (cards.length === 0) {
+  if (!gold) {
     return (
-      <div className="flex flex-col items-center pt-8 pb-4">
-        <Skeleton className="w-[200px] h-[340px] rounded-2xl bg-slate-800" />
+      <div className="flex items-end justify-center gap-3 pt-8 pb-4 px-4">
+        <Skeleton className="w-[130px] h-[260px] rounded-2xl bg-slate-800" />
+        <Skeleton className="w-[175px] h-[320px] rounded-2xl bg-slate-800" />
+        <Skeleton className="w-[130px] h-[260px] rounded-2xl bg-slate-800" />
       </div>
     );
   }
 
+  // Layout: [Silver] [Gold] [Bronze] — row order matches visual left→right
+  const items: { entry: TrendingEntry; rank: number; isGold: boolean }[] = [
+    ...(silver ? [{ entry: silver, rank: 2, isGold: false }] : []),
+    { entry: gold, rank: 1, isGold: true },
+    ...(bronze ? [{ entry: bronze, rank: 3, isGold: false }] : []),
+  ];
+
   return (
-    <div className="flex flex-col items-center pt-6 pb-2 select-none">
-      {/* Card stack */}
-      <div
-        ref={containerRef}
-        className="relative"
-        style={{ width: 210, height: 380 }}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      >
-        {/* Render all cards, back ones first so active is on top */}
-        {[...Array(total)].map((_, offsetFromActive) => {
-          // offsetFromActive: 0 = active, 1 = next behind, 2 = furthest behind
-          const cardIdx = (activeIdx + offsetFromActive) % total;
-          const rank = ranks[cardIdx];
-          const entry = cards[cardIdx];
-          const isActive = offsetFromActive === 0;
-          const isExiting = isActive && exitDir !== null;
-
-          // Stack peeking transforms
-          const peekY = offsetFromActive * 14;
-          const peekScale = 1 - offsetFromActive * 0.06;
-          const peekOpacity = 1 - offsetFromActive * 0.25;
-          const peekZ = total - offsetFromActive;
-
-          // Active card drag + exit animation
-          let tx = 0;
-          let rotate = 0;
-          if (isActive) {
-            tx = isDragging ? dragX : 0;
-            rotate = isDragging ? dragX * 0.04 : 0;
-          }
-          if (isExiting) {
-            tx = exitDir === "left" ? -380 : 380;
-            rotate = exitDir === "left" ? -18 : 18;
-          }
-
-          const transition = isDragging && isActive ? "none" : "transform 0.28s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.28s ease";
+    <div className="w-full overflow-x-auto mobile-podium-row pb-1" ref={scrollRef}
+      style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" as any }}>
+      <div className="flex items-end gap-3 px-4 pt-5" style={{ width: "max-content" }}>
+        {items.map(({ entry, rank, isGold }) => {
+          const cardW  = isGold ? 185 : 138;
+          const trophyW = isGold ? "w-[7.5rem]" : "w-[5rem]";
+          const marginTop = isGold ? 0 : 24; // side cards sit a bit lower
 
           return (
             <div
-              key={`${rank}-${cardIdx}`}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                zIndex: peekZ,
-                transform: `translateX(${tx}px) translateY(${peekY}px) scale(${peekScale}) rotate(${rotate}deg)`,
-                transformOrigin: "bottom center",
-                opacity: peekOpacity,
-                transition,
-                pointerEvents: isActive ? "auto" : "none",
-              }}
+              key={entry.userId}
+              ref={isGold ? goldRef : undefined}
+              className={`flex flex-col items-center flex-shrink-0 lb-card-${rank}`}
+              style={{ marginTop }}
             >
-              <div className={`flex flex-col items-center lb-card-${rank}`}>
-                <div style={{ filter: PODIUM_GLOW[rank], width: "100%" }}>
-                  <CreatorCard entry={entry} period="week" />
-                </div>
-                {isActive && (
-                  <img
-                    src={PODIUM_IMG[rank]}
-                    alt={`#${rank}`}
-                    className="w-36 object-contain -mt-1"
-                    draggable={false}
-                  />
-                )}
+              <div style={{ filter: PODIUM_GLOW[rank], width: cardW }}>
+                <CreatorCard entry={entry} period="week" />
               </div>
+              <img
+                src={PODIUM_IMG[rank]}
+                alt={`#${rank}`}
+                className={`${trophyW} object-contain -mt-1`}
+                draggable={false}
+              />
             </div>
           );
-        }).reverse() /* reverse so active card (index 0) paints last = on top */}
+        })}
       </div>
-
-      {/* Rank label */}
-      <div className="mt-2 text-sm font-black tracking-wide" style={{ color: RANK_ACCENT[ranks[activeIdx]] }}>
-        {cards[activeIdx] && (
-          <>
-            {RANK_LABEL[ranks[activeIdx]]}
-            {" — "}<span className="text-white/70 font-semibold">{cards[activeIdx].user.displayName || cards[activeIdx].user.username}</span>
-          </>
-        )}
-      </div>
-
-      {/* Dot indicators */}
-      <div className="flex items-center gap-2 mt-3">
-        {cards.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => {
-              const dir = i > activeIdx ? "left" : "right";
-              advance(dir);
-            }}
-            style={{
-              width: i === activeIdx ? 20 : 7,
-              height: 7,
-              borderRadius: 4,
-              background: i === activeIdx ? RANK_ACCENT[ranks[activeIdx]] : "rgba(255,255,255,0.2)",
-              border: "none",
-              padding: 0,
-              cursor: "pointer",
-              transition: "all 0.25s ease",
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Swipe hint */}
-      <p className="text-white/25 text-[10px] mt-2">Swipe to see more</p>
     </div>
   );
 }
@@ -1320,10 +1213,7 @@ const RS_STYLES = `
 .rs-hero-trophy { animation: rs-float 3.5s ease-in-out infinite; }
 .rs-section-divider { background: linear-gradient(90deg, transparent, rgba(183,255,26,0.2), transparent); height:1px; margin:0 1rem 2rem; }
 /* Mobile podium horizontal scroll */
-@media (max-width: 639px) {
-  .rs-podium-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .rs-podium-scroll::-webkit-scrollbar { display: none; }
-}
+.mobile-podium-row::-webkit-scrollbar { display: none; }
 `;
 
 export default function LeaderboardPage() {
