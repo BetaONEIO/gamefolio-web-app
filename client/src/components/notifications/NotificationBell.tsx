@@ -263,10 +263,16 @@ export function NotificationBell() {
       markAsReadMutation.mutate(notification.id);
     }
     setIsOpen(false);
-    
-    // Navigate to action URL if provided using client-side routing
+
     if (notification.actionUrl) {
-      setLocation(notification.actionUrl);
+      // developer.gamefolio.com only hosts the developer portal — send the
+      // user to the main app for a notification's actual destination instead
+      // of client-side routing them to a nonexistent page on this subdomain.
+      if (window.location.hostname === 'developer.gamefolio.com') {
+        window.location.href = `https://app.gamefolio.com${notification.actionUrl}`;
+      } else {
+        setLocation(notification.actionUrl);
+      }
     }
   };
 
