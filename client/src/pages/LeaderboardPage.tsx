@@ -177,23 +177,24 @@ const RANK_LABEL: Record<number, string> = {
   3: "🥉 3rd Place",
 };
 
-// ── Mobile podium: gold featured large, silver/bronze smaller on each side ──
+// ── Mobile podium: gold centred first, scroll right → silver → bronze ──
 function MobilePodiumStack({ top3 }: { top3: TrendingEntry[] }) {
   const gold   = top3[0] as TrendingEntry | undefined;
   const silver = top3[1] as TrendingEntry | undefined;
   const bronze = top3[2] as TrendingEntry | undefined;
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const goldRef   = useRef<HTMLDivElement>(null);
+  const [containerW, setContainerW] = useState(0);
 
-  // Auto-centre the gold card on first render
+  // Measure container width so we can compute snap padding
   useEffect(() => {
-    if (!scrollRef.current || !goldRef.current) return;
-    const container = scrollRef.current;
-    const card      = goldRef.current;
-    const offset    = card.offsetLeft - (container.clientWidth - card.offsetWidth) / 2;
-    container.scrollLeft = offset;
-  }, [gold]);
+    const el = scrollRef.current;
+    if (!el) return;
+    setContainerW(el.clientWidth);
+    const ro = new ResizeObserver(() => setContainerW(el.clientWidth));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   if (!gold) {
     return (
@@ -205,28 +206,44 @@ function MobilePodiumStack({ top3 }: { top3: TrendingEntry[] }) {
     );
   }
 
-  // Layout: [Silver] [Gold] [Bronze] — row order matches visual left→right
+  // Layout: [Gold] [Silver] [Bronze] — scroll right to reveal silver then bronze
   const items: { entry: TrendingEntry; rank: number; isGold: boolean }[] = [
-    ...(silver ? [{ entry: silver, rank: 2, isGold: false }] : []),
     { entry: gold, rank: 1, isGold: true },
+    ...(silver ? [{ entry: silver, rank: 2, isGold: false }] : []),
     ...(bronze ? [{ entry: bronze, rank: 3, isGold: false }] : []),
   ];
 
+  const GOLD_W   = 185;
+  const SIDE_W   = 138;
+  // Padding so the first (gold) and last (bronze/silver) card can snap to centre
+  const padLeft  = containerW ? Math.max(0, (containerW - GOLD_W) / 2) : 16;
+  const lastW    = items.length > 1 ? SIDE_W : GOLD_W;
+  const padRight = containerW ? Math.max(0, (containerW - lastW) / 2) : 16;
+
   return (
-    <div className="w-full overflow-x-auto mobile-podium-row pb-1" ref={scrollRef}
-      style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" as any }}>
-      <div className="flex items-end gap-3 px-4 pt-5" style={{ width: "max-content" }}>
+    <div
+      ref={scrollRef}
+      className="w-full overflow-x-auto mobile-podium-row pb-1"
+      style={{
+        scrollbarWidth: "none",
+        WebkitOverflowScrolling: "touch" as any,
+        scrollSnapType: "x mandatory",
+      }}
+    >
+      <div
+        className="flex items-end gap-3 pt-5"
+        style={{ width: "max-content", paddingLeft: padLeft, paddingRight: padRight }}
+      >
         {items.map(({ entry, rank, isGold }) => {
-          const cardW  = isGold ? 185 : 138;
-          const trophyW = isGold ? "w-[7.5rem]" : "w-[5rem]";
-          const marginTop = isGold ? 0 : 24; // side cards sit a bit lower
+          const cardW    = isGold ? GOLD_W : SIDE_W;
+          const trophyW  = isGold ? "w-[7.5rem]" : "w-[5rem]";
+          const marginTop = isGold ? 0 : 24;
 
           return (
             <div
               key={entry.userId}
-              ref={isGold ? goldRef : undefined}
               className={`flex flex-col items-center flex-shrink-0 lb-card-${rank}`}
-              style={{ marginTop }}
+              style={{ marginTop, scrollSnapAlign: "center" }}
             >
               <div style={{ filter: PODIUM_GLOW[rank], width: cardW }}>
                 <CreatorCard entry={entry} period="week" />
