@@ -174,7 +174,7 @@ function SeasonHero({ top3 }: { top3: TrendingEntry[] }) {
   };
 
   return (
-    <div className="relative" style={{ minHeight: 560 }}>
+    <div className="relative min-h-[420px] sm:min-h-[560px]">
       <div
         className="absolute inset-0"
         style={{ backgroundImage: "url('/electrical-bg.webp')", backgroundSize: "cover", backgroundPosition: "center" }}
@@ -183,11 +183,11 @@ function SeasonHero({ top3 }: { top3: TrendingEntry[] }) {
       <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,rgba(5,9,13,0.50) 0%,rgba(8,14,24,0.55) 45%,rgba(5,9,13,0.88) 100%)" }} />
 
       {/* Gold glow orb behind rank-1 */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-96 h-48 blur-3xl opacity-25 pointer-events-none"
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-96 h-48 blur-3xl opacity-25 pointer-events-none hidden sm:block"
         style={{ background: "radial-gradient(ellipse,#FFD700,transparent 70%)" }} />
 
       {/* Three-column podium */}
-      <div className="relative flex items-end justify-center gap-6 sm:gap-10 lg:gap-16 px-4 pt-10 pb-0">
+      <div className="rs-podium-scroll relative flex items-end justify-start sm:justify-center gap-6 sm:gap-10 lg:gap-16 px-4 pt-6 sm:pt-10 pb-0">
         {top3.length === 0 ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex flex-col items-center">
@@ -1129,6 +1129,11 @@ const RS_STYLES = `
 @keyframes rs-glow-pulse { 0%,100%{opacity:.6;} 50%{opacity:1;} }
 .rs-hero-trophy { animation: rs-float 3.5s ease-in-out infinite; }
 .rs-section-divider { background: linear-gradient(90deg, transparent, rgba(183,255,26,0.2), transparent); height:1px; margin:0 1rem 2rem; }
+/* Mobile podium horizontal scroll */
+@media (max-width: 639px) {
+  .rs-podium-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .rs-podium-scroll::-webkit-scrollbar { display: none; }
+}
 `;
 
 export default function LeaderboardPage() {
