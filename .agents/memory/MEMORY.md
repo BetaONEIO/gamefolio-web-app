@@ -3,3 +3,4 @@
 - [@assets alias requires public copy](assets-alias-public-copy.md) — `@assets` resolves to `client/public/attached_assets`; files attached to chat may land only in root `attached_assets/` and need manual copy before imports work.
 - [Gamefolio dev DB schema drift](gamefolio-dev-db-schema-drift.md) — dev Supabase DB can silently lag `shared/schema.ts` (missing columns); diagnose with an information_schema diff before assuming a feature bug.
 - [Profile layoutStyle branch pattern](gamefolio-profile-layout-style.md) — alternate profile designs are graduated as early-return components keyed on `users.layoutStyle`, inserted in ProfilePage.tsx right before the main return (after all hooks).
+- [HomeCarousel.tsx is dead code](homecarousel-dead-file.md) — HomeCarousel.tsx exports a component that is never imported anywhere; the actual home hero slider is LatestContentSlider.tsx rendered inside HomePageSimple.tsx.

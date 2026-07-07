@@ -329,25 +329,32 @@ function TrendingClipSlide({
             </div>
           </div>
         </div>
+
       </div>
 
-      {/* ── RIGHT: Game Sidebar (collapsible) ── */}
-      <div
-        className="flex-shrink-0 flex flex-row bg-[#060D12] border-l border-white/5 overflow-hidden transition-all duration-300"
-        style={{ width: sidebarCollapsed ? 32 : "clamp(180px, 22%, 260px)" }}
-      >
-        {/* Collapse toggle */}
+      {/* ── RIGHT: Game Sidebar — toggle strip + collapsible content ── */}
+      {/* Hidden on mobile (flex-col stacks it below), shown as a row on md+ */}
+      <div className="hidden md:flex flex-row flex-shrink-0 bg-[#060D12] border-l border-white/5">
+
+        {/* Toggle strip — always visible, 20px wide */}
         <button
           onClick={(e) => { e.stopPropagation(); setSidebarCollapsed(c => !c); }}
-          className="flex-shrink-0 w-8 h-full flex items-center justify-center bg-[#0B1219] hover:bg-[#111D26] transition-colors"
-          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={sidebarCollapsed ? "Expand" : "Collapse"}
+          className="flex-shrink-0 flex items-center justify-center transition-colors hover:bg-[#0f1e2a] active:bg-[#0a1520]"
+          style={{ width: 20, background: "rgba(6,13,18,0.95)", borderRight: "1px solid rgba(183,255,24,0.3)" }}
+          aria-label={sidebarCollapsed ? "Show game panel" : "Hide game panel"}
+          title={sidebarCollapsed ? "Show game panel" : "Hide game panel"}
         >
-          <ChevronRight className={`w-4 h-4 text-white/50 transition-transform duration-300 ${sidebarCollapsed ? "" : "rotate-180"}`} />
+          <ChevronRight
+            className={`w-3 h-3 transition-transform duration-300 ${sidebarCollapsed ? "" : "rotate-180"}`}
+            style={{ color: "#B7FF18" }}
+          />
         </button>
 
-        {/* Sidebar content */}
-        <div className={`flex-col flex-1 min-w-0 transition-opacity duration-300 ${sidebarCollapsed ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
+        {/* Collapsible content */}
+        <div
+          className="overflow-hidden transition-all duration-300 flex flex-col"
+          style={{ width: sidebarCollapsed ? 0 : "clamp(160px, 20%, 240px)" }}
+        >
           {/* Game thumbnail */}
           <div className="relative flex-1 overflow-hidden bg-[#0B1219]" style={{ minHeight: "160px" }}>
             {clip.game?.imageUrl ? (

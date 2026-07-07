@@ -21,6 +21,7 @@ export default function LatestContentSlider() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
@@ -335,69 +336,68 @@ export default function LatestContentSlider() {
           </div>
         </div>
 
-        {/* RIGHT PANEL */}
-        <div
-          key={`panel-${activeIndex}-${mode}`}
-          className="flex-shrink-0 flex flex-col gap-2.5"
-          style={{ width: "22%", animation: "gFadeIn 0.35s ease-out" }}
-        >
-          {/* — GAME — divider */}
-          <div className="w-full flex items-center gap-1.5">
-            <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.12)" }} />
-            <span className="text-[9px] font-black tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>Game</span>
-            <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.12)" }} />
-          </div>
-
-          {/* Game thumbnail */}
-          <div className="w-full rounded-2xl overflow-hidden flex-shrink-0"
-            style={{ maxHeight: 220 }}>
-            {gameImage ? (
-              <img src={gameImage} alt={gameName} className="w-full h-auto object-contain" style={{ maxHeight: 220 }} />
-            ) : (
-              <div className="w-full h-28 bg-white/10 flex items-center justify-center">
-                <span className="text-white/20 text-2xl font-black">{gameName?.[0] ?? "?"}</span>
-              </div>
+        {/* RIGHT PANEL — always-visible toggle strip + collapsible content */}
+        <div className="flex flex-row flex-shrink-0 items-stretch" style={{ minWidth: 20 }}>
+          <button
+            onClick={() => setSidebarCollapsed(c => !c)}
+            className="flex-shrink-0 flex items-center justify-center rounded-l-xl transition-colors hover:bg-white/5"
+            style={{ width: 20, background: "rgba(7,16,19,0.85)", border: "1px solid rgba(183,255,26,0.28)", borderRight: "none" }}
+            aria-label={sidebarCollapsed ? "Show game panel" : "Hide game panel"}
+          >
+            <ChevronRight
+              className={`transition-transform duration-300 ${sidebarCollapsed ? "" : "rotate-180"}`}
+              style={{ width: 11, height: 11, color: NEON }}
+            />
+          </button>
+          <div
+            className="overflow-hidden transition-all duration-300 flex flex-col gap-2.5"
+            style={{ width: sidebarCollapsed ? 0 : "22vw", maxWidth: sidebarCollapsed ? 0 : 260, minWidth: 0, opacity: sidebarCollapsed ? 0 : 1 }}
+          >
+            <div className="w-full flex items-center gap-1.5">
+              <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.12)" }} />
+              <span className="text-[9px] font-black tracking-widest uppercase" style={{ color: "rgba(255,255,255,0.35)" }}>Game</span>
+              <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.12)" }} />
+            </div>
+            <div className="w-full rounded-2xl overflow-hidden flex-shrink-0" style={{ maxHeight: 220 }}>
+              {gameImage ? (
+                <img src={gameImage} alt={gameName} className="w-full h-auto object-contain" style={{ maxHeight: 220 }} />
+              ) : (
+                <div className="w-full h-28 bg-white/10 flex items-center justify-center">
+                  <span className="text-white/20 text-2xl font-black">{gameName?.[0] ?? "?"}</span>
+                </div>
+              )}
+            </div>
+            {gameName && (
+              <span className="text-[10px] font-black text-white/60 text-center leading-tight line-clamp-1 w-full">{gameName}</span>
             )}
+            <div className="w-full grid grid-cols-3 rounded-xl py-2 flex-shrink-0" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              {[
+                { icon: Film,      label: "CLIPS",  value: contentCounts?.clips },
+                { icon: Video,     label: "REELS",  value: contentCounts?.reels },
+                { icon: ImageIcon, label: "SHOTS",  value: contentCounts?.screenshots },
+              ].map(({ icon: Icon, label, value }) => (
+                <div key={label} className="flex flex-col items-center gap-0.5 px-1">
+                  <Icon className="w-3 h-3" style={{ color: NEON }} />
+                  <span className="text-sm font-black leading-tight text-white">{fmt(value)}</span>
+                  <span className="text-[7px] font-bold tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>{label}</span>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={handleBounties}
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-black transition-all hover:opacity-90 active:scale-95"
+              style={{ background: "#071013", color: NEON, border: `1px solid ${NEON}40` }}>
+              <Sword className="w-3.5 h-3.5" />
+              Bounties
+            </button>
+            <button
+              onClick={handleUpload}
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-[10px] font-black transition-all hover:opacity-90 active:scale-95"
+              style={{ background: "#071013", color: NEON, border: `1px solid ${NEON}40` }}>
+              <Upload className="w-3 h-3" />
+              Upload Content
+            </button>
           </div>
-
-          {/* Game name */}
-          {gameName && (
-            <span className="text-[10px] font-black text-white/60 text-center leading-tight line-clamp-1 w-full">{gameName}</span>
-          )}
-
-          {/* Content stats — styled like CreatorCard stats box */}
-          <div className="w-full grid grid-cols-3 rounded-xl py-2 flex-shrink-0"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            {[
-              { icon: Film,      label: "CLIPS",  value: contentCounts?.clips },
-              { icon: Video,     label: "REELS",  value: contentCounts?.reels },
-              { icon: ImageIcon, label: "SHOTS",  value: contentCounts?.screenshots },
-            ].map(({ icon: Icon, label, value }) => (
-              <div key={label} className="flex flex-col items-center gap-0.5 px-1">
-                <Icon className="w-3 h-3" style={{ color: NEON }} />
-                <span className="text-sm font-black leading-tight text-white">{fmt(value)}</span>
-                <span className="text-[7px] font-bold tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>{label}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Bounties button */}
-          <button
-            onClick={handleBounties}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-[11px] font-black transition-all hover:opacity-90 active:scale-95"
-            style={{ background: "#071013", color: NEON, border: `1px solid ${NEON}40` }}>
-            <Sword className="w-3.5 h-3.5" />
-            Bounties
-          </button>
-
-          {/* Upload button */}
-          <button
-            onClick={handleUpload}
-            className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl text-[10px] font-black transition-all hover:opacity-90 active:scale-95"
-            style={{ background: "#071013", color: NEON, border: `1px solid ${NEON}40` }}>
-            <Upload className="w-3 h-3" />
-            Upload Content
-          </button>
         </div>
 
       </div>
