@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   Trophy, Crown, Gem, Shield, Flame, TrendingUp, TrendingDown, Minus,
   Calendar, Clock, Users, Upload, Heart, MessageCircle, Star, Award,
@@ -165,6 +165,193 @@ const PODIUM_IMG_W: Record<number, string> = {
   3: "w-32",
 };
 
+const RANK_ACCENT: Record<number, string> = {
+  1: "#FFD700",
+  2: "#C0C0C0",
+  3: "#CD7F32",
+};
+
+const RANK_LABEL: Record<number, string> = {
+  1: "🥇 1st Place",
+  2: "🥈 2nd Place",
+  3: "🥉 3rd Place",
+};
+
+// ── Mobile card-stack swipe component ──────────────────────────────────────
+function MobilePodiumStack({ top3 }: { top3: TrendingEntry[] }) {
+  // Show rank 1 → 2 → 3 in mobile stack (rank 1 on top by default)
+  const cards = [top3[0], top3[1], top3[2]].filter(Boolean) as TrendingEntry[];
+  const ranks = [1, 2, 3];
+
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [dragX, setDragX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [exitDir, setExitDir] = useState<null | "left" | "right">(null);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const total = cards.length;
+
+  const advance = useCallback((dir: "left" | "right") => {
+    setExitDir(dir);
+    setTimeout(() => {
+      setActiveIdx(i => {
+        if (dir === "left") return (i + 1) % total;
+        return (i - 1 + total) % total;
+      });
+      setExitDir(null);
+      setDragX(0);
+    }, 280);
+  }, [total]);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    setIsDragging(true);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - (touchStartY.current ?? 0);
+    // Only track horizontal drag (ignore mostly-vertical scrolls)
+    if (Math.abs(dy) > Math.abs(dx)) return;
+    setDragX(dx);
+  };
+
+  const onTouchEnd = () => {
+    setIsDragging(false);
+    if (Math.abs(dragX) > 60) {
+      advance(dragX < 0 ? "left" : "right");
+    } else {
+      setDragX(0);
+    }
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
+
+  if (cards.length === 0) {
+    return (
+      <div className="flex flex-col items-center pt-8 pb-4">
+        <Skeleton className="w-[200px] h-[340px] rounded-2xl bg-slate-800" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center pt-6 pb-2 select-none">
+      {/* Card stack */}
+      <div
+        ref={containerRef}
+        className="relative"
+        style={{ width: 210, height: 380 }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        {/* Render all cards, back ones first so active is on top */}
+        {[...Array(total)].map((_, offsetFromActive) => {
+          // offsetFromActive: 0 = active, 1 = next behind, 2 = furthest behind
+          const cardIdx = (activeIdx + offsetFromActive) % total;
+          const rank = ranks[cardIdx];
+          const entry = cards[cardIdx];
+          const isActive = offsetFromActive === 0;
+          const isExiting = isActive && exitDir !== null;
+
+          // Stack peeking transforms
+          const peekY = offsetFromActive * 14;
+          const peekScale = 1 - offsetFromActive * 0.06;
+          const peekOpacity = 1 - offsetFromActive * 0.25;
+          const peekZ = total - offsetFromActive;
+
+          // Active card drag + exit animation
+          let tx = 0;
+          let rotate = 0;
+          if (isActive) {
+            tx = isDragging ? dragX : 0;
+            rotate = isDragging ? dragX * 0.04 : 0;
+          }
+          if (isExiting) {
+            tx = exitDir === "left" ? -380 : 380;
+            rotate = exitDir === "left" ? -18 : 18;
+          }
+
+          const transition = isDragging && isActive ? "none" : "transform 0.28s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.28s ease";
+
+          return (
+            <div
+              key={`${rank}-${cardIdx}`}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                zIndex: peekZ,
+                transform: `translateX(${tx}px) translateY(${peekY}px) scale(${peekScale}) rotate(${rotate}deg)`,
+                transformOrigin: "bottom center",
+                opacity: peekOpacity,
+                transition,
+                pointerEvents: isActive ? "auto" : "none",
+              }}
+            >
+              <div className={`flex flex-col items-center lb-card-${rank}`}>
+                <div style={{ filter: PODIUM_GLOW[rank], width: "100%" }}>
+                  <CreatorCard entry={entry} period="week" />
+                </div>
+                {isActive && (
+                  <img
+                    src={PODIUM_IMG[rank]}
+                    alt={`#${rank}`}
+                    className="w-36 object-contain -mt-1"
+                    draggable={false}
+                  />
+                )}
+              </div>
+            </div>
+          );
+        }).reverse() /* reverse so active card (index 0) paints last = on top */}
+      </div>
+
+      {/* Rank label */}
+      <div className="mt-2 text-sm font-black tracking-wide" style={{ color: RANK_ACCENT[ranks[activeIdx]] }}>
+        {cards[activeIdx] && (
+          <>
+            {RANK_LABEL[ranks[activeIdx]]}
+            {" — "}<span className="text-white/70 font-semibold">{cards[activeIdx].user.displayName || cards[activeIdx].user.username}</span>
+          </>
+        )}
+      </div>
+
+      {/* Dot indicators */}
+      <div className="flex items-center gap-2 mt-3">
+        {cards.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => {
+              const dir = i > activeIdx ? "left" : "right";
+              advance(dir);
+            }}
+            style={{
+              width: i === activeIdx ? 20 : 7,
+              height: 7,
+              borderRadius: 4,
+              background: i === activeIdx ? RANK_ACCENT[ranks[activeIdx]] : "rgba(255,255,255,0.2)",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              transition: "all 0.25s ease",
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Swipe hint */}
+      <p className="text-white/25 text-[10px] mt-2">Swipe to see more</p>
+    </div>
+  );
+}
+
 function SeasonHero({ top3 }: { top3: TrendingEntry[] }) {
   // Podium order: 2nd left · 1st centre · 3rd right
   const ordered = [top3[1], top3[0], top3[2]].filter(Boolean) as TrendingEntry[];
@@ -186,8 +373,13 @@ function SeasonHero({ top3 }: { top3: TrendingEntry[] }) {
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-96 h-48 blur-3xl opacity-25 pointer-events-none hidden sm:block"
         style={{ background: "radial-gradient(ellipse,#FFD700,transparent 70%)" }} />
 
-      {/* Three-column podium */}
-      <div className="rs-podium-scroll relative flex items-end justify-start sm:justify-center gap-6 sm:gap-10 lg:gap-16 px-4 pt-6 sm:pt-10 pb-0">
+      {/* ── MOBILE: card stack ── */}
+      <div className="relative sm:hidden">
+        <MobilePodiumStack top3={top3} />
+      </div>
+
+      {/* ── DESKTOP: three-column podium ── */}
+      <div className="hidden sm:flex relative items-end justify-center gap-10 lg:gap-16 px-4 pt-10 pb-0">
         {top3.length === 0 ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex flex-col items-center">
@@ -204,16 +396,14 @@ function SeasonHero({ top3 }: { top3: TrendingEntry[] }) {
             return (
               <div
                 key={entry.userId}
-                className={`flex flex-col items-center flex-shrink-0 ${isCenter ? "" : "mt-10 sm:mt-14"} lb-card-${rank}`}
+                className={`flex flex-col items-center flex-shrink-0 ${isCenter ? "" : "mt-14"} lb-card-${rank}`}
               >
-                {/* Creator card */}
                 <div
-                  className={`${isCenter ? "w-[185px] sm:w-[215px]" : "w-[160px] sm:w-[185px]"}`}
+                  className={`${isCenter ? "w-[215px]" : "w-[185px]"}`}
                   style={{ filter: PODIUM_GLOW[rank] }}
                 >
                   <CreatorCard entry={entry} period="week" />
                 </div>
-                {/* Rank trophy image */}
                 <img
                   src={PODIUM_IMG[rank]}
                   alt={`#${rank}`}
