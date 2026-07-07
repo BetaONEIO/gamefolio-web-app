@@ -114,7 +114,7 @@ const faqData: FAQItem[] = [
   {
     id: 'pro-subscription',
     question: 'What benefits do Pro subscribers get?',
-    answer: 'Gamefolio Pro unlocks premium features including: larger file size allowances (clips up to 500MB / 10 min, reels up to 250MB / 3 min, screenshots up to 50MB), an exclusive Pro badge on your profile, access to all avatar borders, a free lootbox reward upon subscribing, a monthly bonus lootbox reward, early access to new features and tools, and priority support. Pro subscribers help support the platform while enjoying enhanced visibility in the community. Subscribe through your account settings.',
+    answer: 'Gamefolio Pro unlocks premium features including: larger file size allowances (clips up to 500MB / 10 min, reels up to 250MB / 3 min, screenshots up to 50MB), unlimited uploads with no daily quotas, animated profile customization with custom banners, neon effects and animated GIF avatars, exclusive avatar borders and premium visual themes, a Pro badge on your profile, a free welcome lootbox reward upon subscribing, monthly bonus lootbox rewards, and store discounts of up to 20% on name tags, borders and other exclusive items. Subscribe through your account settings.',
     category: 'Subscription',
     keywords: ['pro', 'premium', 'subscription', 'benefits', 'upgrade', 'paid', 'features', 'unlimited', 'lootbox', 'rewards']
   },
