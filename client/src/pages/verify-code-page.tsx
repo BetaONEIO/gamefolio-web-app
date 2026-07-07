@@ -5,7 +5,32 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 import { Loader2, Mail, RefreshCw } from 'lucide-react';
+
+// apiRequest throws Error(`${status}: ${bodyText}`) on non-2xx responses, or a
+// plain (non-numeric-prefixed) Error on a genuine network failure — pull the
+// status/JSON message back out so callers can distinguish the two, same as
+// the raw-fetch response.ok / catch split this replaces.
+function parseApiError(error: unknown): { status: number; message: string; retryAfterSeconds?: number } {
+  if (error instanceof Error) {
+    const match = error.message.match(/^(\d+):\s*([\s\S]*)$/);
+    if (match) {
+      const status = parseInt(match[1], 10);
+      const jsonStart = match[2].indexOf('{');
+      if (jsonStart !== -1) {
+        try {
+          const parsed = JSON.parse(match[2].slice(jsonStart));
+          return { status, message: parsed.message || error.message, retryAfterSeconds: parsed.retryAfterSeconds };
+        } catch {
+          // fall through
+        }
+      }
+      return { status, message: match[2] || error.message };
+    }
+  }
+  return { status: 0, message: 'Network error. Please check your connection and try again.' };
+}
 
 export default function VerifyCodePage() {
   const [, setLocation] = useLocation();
@@ -72,33 +97,20 @@ export default function VerifyCodePage() {
     setIsVerifying(true);
 
     try {
-      const response = await fetch('/api/auth/verify-code', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ code }),
-        credentials: 'include',
+      await apiRequest('POST', '/api/auth/verify-code', { code });
+
+      setErrorMessage('');
+      toast({
+        title: "Email Verified!",
+        description: "Your email has been successfully verified.",
+        variant: "gamefolioSuccess",
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setErrorMessage('');
-        toast({
-          title: "Email Verified!",
-          description: "Your email has been successfully verified.",
-          variant: "gamefolioSuccess",
-        });
-        
-        await refreshUser();
-      } else {
-        const msg = data.message || "Invalid or expired verification code. Please try again.";
-        setErrorMessage(msg);
-      }
+      await refreshUser();
     } catch (error) {
       console.error('Verification error:', error);
-      setErrorMessage('Network error. Please check your connection and try again.');
+      const { message } = parseApiError(error);
+      setErrorMessage(message || 'Invalid or expired verification code. Please try again.');
     } finally {
       setIsVerifying(false);
     }
@@ -110,52 +122,44 @@ export default function VerifyCodePage() {
     setIsResending(true);
 
     try {
-      const response = await fetch('/api/auth/resend-verification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
+      await apiRequest('POST', '/api/auth/resend-verification');
+
+      toast({
+        title: 'Verification code sent',
+        description: 'A new 6-digit code has been sent to your email.',
+        variant: 'gamefolioSuccess',
       });
 
-      const data = await response.json();
+      // Start 60-second cooldown to match server
+      setCanResend(false);
+      setCooldownTime(60);
+      setCode(''); // Clear the input
+    } catch (error) {
+      const { status, message, retryAfterSeconds } = parseApiError(error);
 
-      if (response.ok) {
-        toast({
-          title: 'Verification code sent',
-          description: 'A new 6-digit code has been sent to your email.',
-          variant: 'gamefolioSuccess',
-        });
-
-        // Start 60-second cooldown to match server
-        setCanResend(false);
-        setCooldownTime(60);
-        setCode(''); // Clear the input
-      } else if (response.status === 429) {
+      if (status === 429) {
         // Handle cooldown response from server
-        const retryAfterSeconds = data.retryAfterSeconds || 60;
+        const retry = retryAfterSeconds || 60;
         toast({
           title: "Please wait",
-          description: data.message || `Please wait ${retryAfterSeconds} seconds before requesting another code.`,
+          description: message || `Please wait ${retry} seconds before requesting another code.`,
           variant: "gamefolioError",
         });
-        
-        // Set cooldown based on server response
         setCanResend(false);
-        setCooldownTime(retryAfterSeconds);
-      } else {
+        setCooldownTime(retry);
+      } else if (status > 0) {
         toast({
           title: "Failed to send code",
-          description: data.message || "Please try again later.",
+          description: message || "Please try again later.",
+          variant: "gamefolioError",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Unable to send verification code. Please try again.",
           variant: "gamefolioError",
         });
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Unable to send verification code. Please try again.",
-        variant: "gamefolioError",
-      });
     } finally {
       setIsResending(false);
     }
