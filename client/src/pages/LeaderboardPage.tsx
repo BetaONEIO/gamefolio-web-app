@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Trophy, Crown, Gem, Shield, Flame, TrendingUp, TrendingDown, Minus,
   Calendar, Clock, Users, Upload, Heart, MessageCircle, Star, Award,
-  Play, Camera, Image as ImageIcon, Gamepad2, ChevronRight, Sparkles,
+  Play, Camera, Image as ImageIcon, Gamepad2, ChevronRight, ChevronLeft, Sparkles,
   ArrowUp, ArrowDown, Medal, Zap, Target,
 } from "lucide-react";
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
@@ -224,51 +224,72 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
   return (
     <div
       className="relative w-full select-none"
-      style={{ overflow: "hidden", height: 400 }}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* ── Cards ── */}
-      {entries.map((entry, idx) => {
-        const offset   = idx - activeIdx;
-        if (Math.abs(offset) > 2) return null; // only render ±2 from active
+      {/* ── Card sliding area — tall enough to never clip the card ── */}
+      <div className="relative w-full overflow-hidden" style={{ height: 460 }}>
 
-        const isActive = offset === 0;
-        const scale    = isActive ? 1 : 0.91;
-        const opacity  = isActive ? 1 : 0.35;
-        const tx       = offset * CAROUSEL_STEP;
-        const topPx    = isActive ? 12 : 32;
+        {/* Cards */}
+        {entries.map((entry, idx) => {
+          const offset   = idx - activeIdx;
+          if (Math.abs(offset) > 2) return null;
 
-        return (
-          <div
-            key={entry.userId}
-            onClick={() => !isActive && goTo(idx)}
-            style={{
-              position:       "absolute",
-              top:            topPx,
-              left:           "50%",
-              width:          CAROUSEL_CARD_W,
-              marginLeft:     -CAROUSEL_CARD_W / 2,
-              transform:      `translateX(${tx}px) scale(${scale})`,
-              opacity,
-              transition:     "transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease",
-              zIndex:         isActive ? 10 : 4 - Math.abs(offset),
-              transformOrigin:"top center",
-              cursor:         isActive ? "default" : "pointer",
-            }}
-          >
-            <div style={{ filter: isActive ? glowFilter : "none" }}>
-              <CreatorCard entry={entry} period="week" />
+          const isActive = offset === 0;
+          const scale    = isActive ? 1 : 0.91;
+          const opacity  = isActive ? 1 : 0.35;
+          const tx       = offset * CAROUSEL_STEP;
+
+          return (
+            <div
+              key={entry.userId}
+              onClick={() => !isActive && goTo(idx)}
+              style={{
+                position:        "absolute",
+                top:             12,
+                left:            "50%",
+                width:           CAROUSEL_CARD_W,
+                marginLeft:      -CAROUSEL_CARD_W / 2,
+                transform:       `translateX(${tx}px) scale(${scale})`,
+                opacity,
+                transition:      "transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease",
+                zIndex:          isActive ? 10 : 4 - Math.abs(offset),
+                transformOrigin: "top center",
+                cursor:          isActive ? "default" : "pointer",
+              }}
+            >
+              <div style={{ filter: isActive ? glowFilter : "none" }}>
+                <CreatorCard entry={entry} period="week" />
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
 
-      {/* ── Podium trophy — updates with active card ── */}
-      <div
-        className="absolute left-1/2 bottom-3 -translate-x-1/2 pointer-events-none"
-        style={{ transition: "opacity 0.25s ease" }}
-      >
+        {/* ── Left arrow ── */}
+        <button
+          onClick={() => goTo(activeIdx - 1)}
+          disabled={activeIdx === 0}
+          aria-label="Previous"
+          style={{ position: "absolute", left: 10, top: "45%", transform: "translateY(-50%)", zIndex: 20 }}
+          className="w-9 h-9 rounded-full bg-black/70 border border-white/20 flex items-center justify-center text-white transition-opacity disabled:opacity-20"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+
+        {/* ── Right arrow ── */}
+        <button
+          onClick={() => goTo(activeIdx + 1)}
+          disabled={activeIdx >= entries.length - 1}
+          aria-label="Next"
+          style={{ position: "absolute", right: 10, top: "45%", transform: "translateY(-50%)", zIndex: 20 }}
+          className="w-9 h-9 rounded-full bg-black/70 border border-white/20 flex items-center justify-center text-white transition-opacity disabled:opacity-20"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* ── Podium trophy — sits below the card area, no clipping ── */}
+      <div className="flex justify-center -mt-4 pointer-events-none">
         {podiumSrc && (
           <img
             key={activeRank}
@@ -282,7 +303,7 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
 
       {/* ── Dot pagination ── */}
       {entries.length > 1 && (
-        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1.5 pointer-events-none">
+        <div className="flex justify-center gap-1.5 mt-2 pb-3">
           {entries.slice(0, 15).map((_, i) => (
             <div
               key={i}
