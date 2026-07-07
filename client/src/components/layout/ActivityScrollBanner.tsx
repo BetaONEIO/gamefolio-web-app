@@ -73,7 +73,7 @@ export function ActivityScrollBanner() {
         .banner-track {
           display: flex;
           width: max-content;
-          animation: banner-marquee 90s linear infinite;
+          animation: banner-marquee 160s linear infinite;
           will-change: transform;
         }
         .banner-track:hover {
