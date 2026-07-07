@@ -468,22 +468,16 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
 // developer.gamefolio.com is meant to be a dedicated developer-portal site
 // (sign up, register an app, use the OAuth API) rather than the consumer home
-// feed — send its root path straight to /developer. Every other route (login,
+// feed — render the developer portal directly at its root path rather than
+// navigating to /developer, so the URL bar doesn't show the redundant-looking
+// "developer.gamefolio.com/developer". Every other route (login,
 // /oauth/authorize, /api/public/v1/*, etc.) behaves identically regardless of
 // hostname, since Express/wouter don't otherwise branch on it.
 const DEVELOPER_SUBDOMAIN_HOSTNAME = 'developer.gamefolio.com';
 
 function RootRoute() {
-  const [, setLocation] = useLocation();
   const isDeveloperSubdomain = window.location.hostname === DEVELOPER_SUBDOMAIN_HOSTNAME;
-
-  React.useEffect(() => {
-    if (isDeveloperSubdomain) {
-      setLocation('/developer');
-    }
-  }, [isDeveloperSubdomain, setLocation]);
-
-  if (isDeveloperSubdomain) return null;
+  if (isDeveloperSubdomain) return <DeveloperHomePage />;
   return <HomePage />;
 }
 
