@@ -5,6 +5,25 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, X, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
+
+// apiRequest throws Error(`${status}: ${bodyText}`) on non-2xx responses —
+// pull the JSON message back out so the toast shows the server's real reason
+// instead of a generic fallback.
+function parseApiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) {
+    const jsonStart = error.message.indexOf('{');
+    if (jsonStart !== -1) {
+      try {
+        const parsed = JSON.parse(error.message.slice(jsonStart));
+        if (parsed?.message) return parsed.message;
+      } catch {
+        // fall through
+      }
+    }
+  }
+  return fallback;
+}
 
 interface EmailVerificationBannerProps {
   onDismiss?: () => void;
@@ -28,49 +47,32 @@ export function EmailVerificationBanner({ onDismiss, className }: EmailVerificat
     setIsResending(true);
 
     try {
-      const response = await fetch('/api/auth/resend-verification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: user.email }),
+      await apiRequest('POST', '/api/auth/resend-verification', { email: user.email });
+
+      toast({
+        title: 'Verification code sent',
+        description: 'Please check your inbox for the 6-digit code. Previous codes are now invalid.',
+        variant: 'gamefolioSuccess',
       });
 
-      const data = await response.json();
+      // Start 60-second cooldown
+      setCanResend(false);
+      setCooldownTime(60);
 
-      if (response.ok) {
-        toast({
-          title: 'Verification code sent',
-          description: 'Please check your inbox for the 6-digit code. Previous codes are now invalid.',
-          variant: 'gamefolioSuccess',
+      const interval = setInterval(() => {
+        setCooldownTime((prev) => {
+          if (prev <= 1) {
+            setCanResend(true);
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
         });
-
-        // Start 60-second cooldown
-        setCanResend(false);
-        setCooldownTime(60);
-
-        const interval = setInterval(() => {
-          setCooldownTime((prev) => {
-            if (prev <= 1) {
-              setCanResend(true);
-              clearInterval(interval);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-
-      } else {
-        toast({
-          title: "Failed to send email",
-          description: "Please try again later or contact support.",
-          variant: "destructive",
-        });
-      }
+      }, 1000);
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Unable to send verification email. Please try again.",
+        title: "Failed to send email",
+        description: parseApiErrorMessage(error, "Please try again later or contact support."),
         variant: "destructive",
       });
     } finally {
