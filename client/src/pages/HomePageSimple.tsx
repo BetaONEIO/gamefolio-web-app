@@ -143,7 +143,16 @@ const LEADERBOARD_STYLES = `
 .lb-spark:nth-child(4) { animation: lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#FFD700; top:50%; left:50%; margin:-3px; animation-delay:-2.25s,-0.9s; }
 .lb-spark:nth-child(5) { animation: lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#B7FF18; top:50%; left:50%; margin:-3px; animation-delay:-3s,-1.1s; }
 .lb-spark:nth-child(6) { animation: lb-orbit 6.5s linear infinite, lb-sparkle 1.8s ease-in-out infinite; background:#fff; top:50%; left:50%; margin:-3px; animation-delay:-3.75s,-1.4s; }
-`;
+/* Mobile: horizontal scroll podium */
+@media (max-width: 639px) {
+  .lb-podium-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .lb-podium-scroll::-webkit-scrollbar { display: none; }
+  .lb-divider { display: none !important; }
+}
+@media (min-width: 640px) {
+  .lb-podium-scale { transform: scale(0.96); transform-origin: center center; }
+}
+`
 
 interface TrendingContentCarouselProps {
   clips: ClipWithUser[] | undefined;
@@ -534,13 +543,13 @@ const HomePage = () => {
                         <div className="relative h-full flex flex-col">
 
                           {/* ── HEADER — centred above both columns ── */}
-                          <div className="flex-shrink-0 pt-4 pb-2 px-4 flex items-center justify-between">
-                            <h2 className="text-xl sm:text-2xl font-bold">Leaderboard</h2>
-                            <div className="flex items-center gap-3">
-                              <span className="text-[10px] text-white/40">⏱ Resets in: <span className="font-bold text-white/70">{resetCountdown.days}d {resetCountdown.hours}h</span></span>
+                          <div className="flex-shrink-0 pt-2 pb-1 sm:pt-4 sm:pb-2 px-3 sm:px-4 flex items-center justify-between">
+                            <h2 className="text-lg sm:text-2xl font-bold">Leaderboard</h2>
+                            <div className="flex items-center gap-1.5 sm:gap-3">
+                              <span className="text-[9px] sm:text-[10px] text-white/40">⏱ <span className="hidden sm:inline">Resets in: </span><span className="font-bold text-white/70">{resetCountdown.days}d {resetCountdown.hours}h</span></span>
                               <button
                                 onClick={() => setLocation('/leaderboard')}
-                                className="inline-flex items-center gap-1 text-[10px] font-black px-3 py-1 rounded-lg transition-all hover:opacity-90 active:scale-95"
+                                className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-black px-2 sm:px-3 py-1 rounded-lg transition-all hover:opacity-90 active:scale-95"
                                 style={{ background:'#B7FF18', color:'#0B1319' }}>
                                 View All →
                               </button>
@@ -548,13 +557,14 @@ const HomePage = () => {
                           </div>
 
                           {/* ── COLUMNS row ── */}
-                          <div className="flex flex-row flex-1 min-h-0">
+                          <div className="flex flex-col sm:flex-row flex-1 min-h-0">
 
                           {/* ── LEFT: podium ── */}
-                          <div className="flex flex-col items-center py-2 px-3 sm:px-5" style={{ width:'63%', flexShrink:0 }}>
+                          <div className="flex flex-col items-center py-2 px-3 sm:px-5 w-full sm:w-[63%]" style={{ flexShrink: 0 }}>
                             {/* Podium — 2nd · 1st · 3rd, vertically centred in column */}
-                            <div className="relative w-full flex items-center justify-center" style={{ flex:'1 1 0', minHeight:0 }}>
-                              <div style={{ transform:'scale(0.96)', transformOrigin:'center center', display:'flex', alignItems:'flex-end', gap:'16px' }}>
+                            <div className="lb-podium-scroll relative w-full flex items-center justify-start sm:justify-center" style={{ flex:'1 1 0', minHeight:0 }}>
+                              <div className="lb-podium-scale flex items-end flex-shrink-0"
+                                style={{ gap: '16px' }}>
                                 {(() => {
                                   const top3 = weeklyTop3 ?? [];
 
@@ -650,7 +660,7 @@ const HomePage = () => {
                           </div>
 
                           {/* ── Divider ── */}
-                          <div className="self-stretch w-px my-6 flex-shrink-0" style={{ background:'rgba(183,255,26,0.08)' }} />
+                          <div className="lb-divider self-stretch w-px my-6 flex-shrink-0" style={{ background:'rgba(183,255,26,0.08)' }} />
 
                           {/* ── RIGHT: Top 10 list ── */}
                           <div className="flex-1 flex flex-col py-4 px-4 sm:px-5 overflow-hidden rounded-xl mx-2 my-2" style={{ background:'rgb(11,19,25)', border:'1px solid rgba(183,255,26,0.10)' }}>
