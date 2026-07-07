@@ -178,8 +178,8 @@ const RANK_LABEL: Record<number, string> = {
 };
 
 // ── Mobile carousel: premium swipeable hero card carousel ──
-const CAROUSEL_CARD_W = 200;
-const CAROUSEL_STEP   = CAROUSEL_CARD_W + 20; // px between card centres
+const CAROUSEL_CARD_W = 182;                   // ~9% smaller than before
+const CAROUSEL_STEP   = CAROUSEL_CARD_W + 20;  // px between card centres
 
 function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
   const [activeIdx, setActiveIdx]   = useState(0);
@@ -227,8 +227,21 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
+      {/* ── Page heading ── */}
+      <div className="text-center pt-5 pb-3 px-4">
+        <p className="text-[#B7FF1A] text-[10px] tracking-[0.22em] uppercase font-bold mb-1">
+          Season Rankings
+        </p>
+        <h1 className="text-2xl font-black text-white tracking-widest uppercase leading-none">
+          Leaderboard
+        </h1>
+        <p className="text-slate-400 text-[11px] tracking-wide mt-1">
+          Compete in Ranked Seasons
+        </p>
+      </div>
+
       {/* ── Card sliding area — tall enough to never clip the card ── */}
-      <div className="relative w-full overflow-hidden" style={{ height: 460 }}>
+      <div className="relative w-full overflow-hidden" style={{ height: 430 }}>
 
         {/* Cards */}
         {entries.map((entry, idx) => {
@@ -288,8 +301,8 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
         </button>
       </div>
 
-      {/* ── Podium trophy — sits below the card area, no clipping ── */}
-      <div className="flex justify-center -mt-4 pointer-events-none">
+      {/* ── Podium trophy — sits below the card area, visually connected ── */}
+      <div className="flex justify-center -mt-10 pointer-events-none">
         {podiumSrc && (
           <img
             key={activeRank}
@@ -333,7 +346,7 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
   };
 
   return (
-    <div className="relative min-h-[420px] sm:min-h-[560px]">
+    <div className="relative min-h-[620px] sm:min-h-[580px]">
       <div
         className="absolute inset-0"
         style={{ backgroundImage: "url('/electrical-bg.webp')", backgroundSize: "cover", backgroundPosition: "center" }}
@@ -345,13 +358,26 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-96 h-48 blur-3xl opacity-25 pointer-events-none hidden sm:block"
         style={{ background: "radial-gradient(ellipse,#FFD700,transparent 70%)" }} />
 
+      {/* ── DESKTOP: page title — upper-left of hero ── */}
+      <div className="absolute top-8 left-8 z-10 hidden sm:block max-w-xs lg:max-w-sm">
+        <p className="text-[#B7FF1A] text-[10px] tracking-[0.22em] uppercase font-bold mb-2">
+          Season Rankings
+        </p>
+        <h1 className="text-4xl lg:text-5xl font-black text-white tracking-tight uppercase leading-none mb-3">
+          Leaderboard
+        </h1>
+        <p className="text-slate-400 text-sm leading-relaxed">
+          Compete in ranked seasons, climb the rankings and become a Gamefolio Champion.
+        </p>
+      </div>
+
       {/* ── MOBILE: premium swipeable carousel ── */}
       <div className="relative sm:hidden">
         <MobileCarousel entries={entries} />
       </div>
 
       {/* ── DESKTOP: three-column podium (unchanged) ── */}
-      <div className="hidden sm:flex relative items-end justify-center gap-10 lg:gap-16 px-4 pt-10 pb-0">
+      <div className="hidden sm:flex relative items-end justify-center gap-10 lg:gap-16 px-4 pt-14 pb-0">
         {top3.length === 0 ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex flex-col items-center">
