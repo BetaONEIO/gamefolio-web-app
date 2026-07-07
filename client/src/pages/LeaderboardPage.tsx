@@ -240,8 +240,13 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
         </p>
       </div>
 
-      {/* ── Card sliding area — tall enough to never clip the card ── */}
-      <div className="relative w-full overflow-hidden" style={{ height: 430 }}>
+      {/* ── Card sliding area ──
+           overflowX:clip clips side cards; overflowY:visible lets the
+           drop-shadow glow bleed past the top/bottom edges without clipping ── */}
+      <div
+        className="relative w-full"
+        style={{ overflowX: "clip", overflowY: "visible", height: 430 }}
+      >
 
         {/* Cards */}
         {entries.map((entry, idx) => {
@@ -262,8 +267,8 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
                 top:             12,
                 left:            "50%",
                 width:           CAROUSEL_CARD_W,
-                marginLeft:      -CAROUSEL_CARD_W / 2,
-                transform:       `translateX(${tx}px) scale(${scale})`,
+                /* calc centres the card exactly at 50% regardless of width */
+                transform:       `translateX(calc(${tx}px - 50%)) scale(${scale})`,
                 opacity,
                 transition:      "transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease",
                 zIndex:          isActive ? 10 : 4 - Math.abs(offset),
@@ -301,8 +306,11 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
         </button>
       </div>
 
-      {/* ── Podium trophy — sits below the card area, visually connected ── */}
-      <div className="flex justify-center -mt-10 pointer-events-none">
+      {/* ── Podium trophy — visually connected to card, z-index above card ── */}
+      <div
+        className="flex justify-center -mt-10 pointer-events-none"
+        style={{ position: "relative", zIndex: 30 }}
+      >
         {podiumSrc && (
           <img
             key={activeRank}
