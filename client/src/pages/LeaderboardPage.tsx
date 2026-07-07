@@ -177,92 +177,133 @@ const RANK_LABEL: Record<number, string> = {
   3: "🥉 3rd Place",
 };
 
-// ── Mobile podium: gold centred first, scroll right → silver → bronze ──
-function MobilePodiumStack({ top3 }: { top3: TrendingEntry[] }) {
-  const gold   = top3[0] as TrendingEntry | undefined;
-  const silver = top3[1] as TrendingEntry | undefined;
-  const bronze = top3[2] as TrendingEntry | undefined;
+// ── Mobile carousel: premium swipeable hero card carousel ──
+const CAROUSEL_CARD_W = 200;
+const CAROUSEL_STEP   = CAROUSEL_CARD_W + 20; // px between card centres
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [containerW, setContainerW] = useState(0);
+function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
+  const [activeIdx, setActiveIdx]   = useState(0);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const swiping     = useRef(false);
 
-  // Measure container width so we can compute snap padding
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setContainerW(el.clientWidth);
-    const ro = new ResizeObserver(() => setContainerW(el.clientWidth));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+  const active     = entries[activeIdx];
+  const activeRank = active?.rank ?? activeIdx + 1;
+  const podiumSrc  = PODIUM_IMG[activeRank]   ?? null;
+  const podiumW    = PODIUM_IMG_W[activeRank] ?? "w-24";
+  const glowFilter = PODIUM_GLOW[activeRank]  ?? "none";
 
-  if (!gold) {
+  const goTo = (i: number) =>
+    setActiveIdx(Math.max(0, Math.min(i, entries.length - 1)));
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+    swiping.current = true;
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (!swiping.current) return;
+    swiping.current = false;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    if (Math.abs(dx) < Math.abs(dy) || Math.abs(dx) < 36) return;
+    goTo(dx < 0 ? activeIdx + 1 : activeIdx - 1);
+  };
+
+  if (!active) {
     return (
       <div className="flex items-end justify-center gap-3 pt-8 pb-4 px-4">
         <Skeleton className="w-[130px] h-[260px] rounded-2xl bg-slate-800" />
-        <Skeleton className="w-[175px] h-[320px] rounded-2xl bg-slate-800" />
+        <Skeleton className="w-[200px] h-[310px] rounded-2xl bg-slate-800" />
         <Skeleton className="w-[130px] h-[260px] rounded-2xl bg-slate-800" />
       </div>
     );
   }
 
-  // Layout: [Gold] [Silver] [Bronze] — scroll right to reveal silver then bronze
-  const items: { entry: TrendingEntry; rank: number; isGold: boolean }[] = [
-    { entry: gold, rank: 1, isGold: true },
-    ...(silver ? [{ entry: silver, rank: 2, isGold: false }] : []),
-    ...(bronze ? [{ entry: bronze, rank: 3, isGold: false }] : []),
-  ];
-
-  const GOLD_W   = 185;
-  const SIDE_W   = 138;
-  // Padding so the first (gold) and last (bronze/silver) card can snap to centre
-  const padLeft  = containerW ? Math.max(0, (containerW - GOLD_W) / 2) : 16;
-  const lastW    = items.length > 1 ? SIDE_W : GOLD_W;
-  const padRight = containerW ? Math.max(0, (containerW - lastW) / 2) : 16;
-
   return (
     <div
-      ref={scrollRef}
-      className="w-full overflow-x-auto mobile-podium-row pb-1"
-      style={{
-        scrollbarWidth: "none",
-        WebkitOverflowScrolling: "touch" as any,
-        scrollSnapType: "x mandatory",
-      }}
+      className="relative w-full select-none"
+      style={{ overflow: "hidden", height: 400 }}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
     >
-      <div
-        className="flex items-end gap-3 pt-5"
-        style={{ width: "max-content", paddingLeft: padLeft, paddingRight: padRight }}
-      >
-        {items.map(({ entry, rank, isGold }) => {
-          const cardW    = isGold ? GOLD_W : SIDE_W;
-          const trophyW  = isGold ? "w-[7.5rem]" : "w-[5rem]";
-          const marginTop = isGold ? 0 : 24;
+      {/* ── Cards ── */}
+      {entries.map((entry, idx) => {
+        const offset   = idx - activeIdx;
+        if (Math.abs(offset) > 2) return null; // only render ±2 from active
 
-          return (
-            <div
-              key={entry.userId}
-              className={`flex flex-col items-center flex-shrink-0 lb-card-${rank}`}
-              style={{ marginTop, scrollSnapAlign: "center" }}
-            >
-              <div style={{ filter: PODIUM_GLOW[rank], width: cardW }}>
-                <CreatorCard entry={entry} period="week" />
-              </div>
-              <img
-                src={PODIUM_IMG[rank]}
-                alt={`#${rank}`}
-                className={`${trophyW} object-contain -mt-1`}
-                draggable={false}
-              />
+        const isActive = offset === 0;
+        const scale    = isActive ? 1 : 0.91;
+        const opacity  = isActive ? 1 : 0.35;
+        const tx       = offset * CAROUSEL_STEP;
+        const topPx    = isActive ? 12 : 32;
+
+        return (
+          <div
+            key={entry.userId}
+            onClick={() => !isActive && goTo(idx)}
+            style={{
+              position:       "absolute",
+              top:            topPx,
+              left:           "50%",
+              width:          CAROUSEL_CARD_W,
+              marginLeft:     -CAROUSEL_CARD_W / 2,
+              transform:      `translateX(${tx}px) scale(${scale})`,
+              opacity,
+              transition:     "transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease",
+              zIndex:         isActive ? 10 : 4 - Math.abs(offset),
+              transformOrigin:"top center",
+              cursor:         isActive ? "default" : "pointer",
+            }}
+          >
+            <div style={{ filter: isActive ? glowFilter : "none" }}>
+              <CreatorCard entry={entry} period="week" />
             </div>
-          );
-        })}
+          </div>
+        );
+      })}
+
+      {/* ── Podium trophy — updates with active card ── */}
+      <div
+        className="absolute left-1/2 bottom-3 -translate-x-1/2 pointer-events-none"
+        style={{ transition: "opacity 0.25s ease" }}
+      >
+        {podiumSrc && (
+          <img
+            key={activeRank}
+            src={podiumSrc}
+            alt={`#${activeRank} podium`}
+            className={`${podiumW} object-contain`}
+            draggable={false}
+          />
+        )}
       </div>
+
+      {/* ── Dot pagination ── */}
+      {entries.length > 1 && (
+        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1.5 pointer-events-none">
+          {entries.slice(0, 15).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                width:        i === activeIdx ? 18 : 5,
+                height:       3,
+                borderRadius: 2,
+                background:   i === activeIdx ? "#B7FF1A" : "rgba(255,255,255,0.18)",
+                transition:   "width 0.3s ease, background 0.3s ease",
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function SeasonHero({ top3 }: { top3: TrendingEntry[] }) {
+function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
+  // Desktop uses top 3 only; mobile gets all entries for the carousel
+  const top3 = entries.slice(0, 3);
   // Podium order: 2nd left · 1st centre · 3rd right
   const ordered = [top3[1], top3[0], top3[2]].filter(Boolean) as TrendingEntry[];
   const podiumRank = (entry: TrendingEntry) => {
@@ -283,12 +324,12 @@ function SeasonHero({ top3 }: { top3: TrendingEntry[] }) {
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-96 h-48 blur-3xl opacity-25 pointer-events-none hidden sm:block"
         style={{ background: "radial-gradient(ellipse,#FFD700,transparent 70%)" }} />
 
-      {/* ── MOBILE: card stack ── */}
+      {/* ── MOBILE: premium swipeable carousel ── */}
       <div className="relative sm:hidden">
-        <MobilePodiumStack top3={top3} />
+        <MobileCarousel entries={entries} />
       </div>
 
-      {/* ── DESKTOP: three-column podium ── */}
+      {/* ── DESKTOP: three-column podium (unchanged) ── */}
       <div className="hidden sm:flex relative items-end justify-center gap-10 lg:gap-16 px-4 pt-10 pb-0">
         {top3.length === 0 ? (
           Array.from({ length: 3 }).map((_, i) => (
@@ -1236,10 +1277,10 @@ const RS_STYLES = `
 export default function LeaderboardPage() {
   const { user } = useAuth();
 
-  // Top 3 enriched entries for the banner podium
+  // Top entries for the banner carousel (mobile shows up to 20, desktop uses first 3)
   const { data: top3Data } = useQuery<TrendingEntry[]>({
     queryKey: ["/api/trending-gamefolios/banner"],
-    queryFn: () => fetch("/api/trending-gamefolios?period=week&limit=3").then(r => r.json()),
+    queryFn: () => fetch("/api/trending-gamefolios?period=week&limit=20").then(r => r.json()),
   });
 
   // Weekly leaderboard (large limit) for rival + competitive overview
@@ -1262,8 +1303,8 @@ export default function LeaderboardPage() {
     <div className="min-h-screen bg-[#0B1218] overflow-y-auto">
       <style>{RS_STYLES}{CREATOR_CARD_STYLES}</style>
 
-      {/* Banner — electrical bg + top 3 creator cards */}
-      <SeasonHero top3={top3} />
+      {/* Banner — electrical bg + creator cards carousel */}
+      <SeasonHero entries={top3} />
 
       {/* Season info bar — below the banner image */}
       <SeasonInfoBar playerCount={playerCount} />
