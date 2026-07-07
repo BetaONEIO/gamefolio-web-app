@@ -742,8 +742,8 @@ const HomePage = () => {
                       </div>
                     ) : isLatestContentSlide ? (
                       /* ── Latest Clips & Reels slider slide ── */
-                      <div className="absolute inset-0 overflow-hidden bg-[#040C10] flex flex-col">
-                        <div className="flex-1 min-h-0 overflow-hidden px-4 sm:px-8 py-4">
+                      <div className="absolute inset-0 overflow-hidden bg-black flex flex-col">
+                        <div className="flex-1 min-h-0 overflow-hidden px-2 sm:px-8 py-3 sm:py-4">
                           <LatestContentSlider />
                         </div>
                       </div>

@@ -21,7 +21,10 @@ export default function LatestContentSlider() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Collapse the game sidebar by default on mobile so the clip fills the slide
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth < 640
+  );
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
@@ -212,7 +215,7 @@ export default function LatestContentSlider() {
           <div
             ref={containerRef}
             className="relative rounded-2xl overflow-hidden flex-1 min-h-0 cursor-pointer group"
-            style={{ background: "#0B1218" }}
+            style={{ background: "#000" }}
             onClick={handlePlayClick}
             onWheel={handleVideoWheel}
           >
