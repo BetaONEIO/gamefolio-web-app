@@ -12,6 +12,7 @@ import {
   areValidScopes,
   verifyPkce,
   revokeAllTokensForClient,
+  isValidUuid,
 } from '../services/oauth-service';
 
 const router = Router();
@@ -37,6 +38,7 @@ const ACCESS_TOKEN_TTL_MS = 60 * 60 * 1000; // 1h
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30d
 
 async function findActiveClientByClientId(clientId: string) {
+  if (!isValidUuid(clientId)) return null;
   const [client] = await db.select().from(oauthClients).where(eq(oauthClients.clientId, clientId));
   if (!client || !client.isActive) return null;
   return client;

@@ -3,6 +3,7 @@ import { db } from '../db';
 import { oauthClients, oauthAccessTokens, oauthRefreshTokens } from '@shared/schema';
 import { eq, and, isNull, inArray } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
+import { isValidUuid } from '../services/oauth-service';
 
 const router = Router();
 
@@ -13,20 +14,25 @@ const router = Router();
  */
 router.get('/client-info', async (req: Request, res: Response) => {
   const clientId = req.query.client_id;
-  if (typeof clientId !== 'string') {
+  if (typeof clientId !== 'string' || !isValidUuid(clientId)) {
     return res.status(400).json({ error: 'invalid_request' });
   }
 
-  const [client] = await db.select().from(oauthClients).where(eq(oauthClients.clientId, clientId));
-  if (!client || !client.isActive) {
-    return res.status(404).json({ error: 'not_found' });
-  }
+  try {
+    const [client] = await db.select().from(oauthClients).where(eq(oauthClients.clientId, clientId));
+    if (!client || !client.isActive) {
+      return res.status(404).json({ error: 'not_found' });
+    }
 
-  return res.json({
-    name: client.name,
-    description: client.description,
-    logoUrl: client.logoUrl,
-  });
+    return res.json({
+      name: client.name,
+      description: client.description,
+      logoUrl: client.logoUrl,
+    });
+  } catch (error) {
+    console.error('[OAuth] client-info error:', error);
+    return res.status(500).json({ error: 'server_error' });
+  }
 });
 
 /**
