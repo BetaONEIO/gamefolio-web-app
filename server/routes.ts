@@ -88,6 +88,7 @@ import { initializeRealtimeNotificationService } from './realtime-notification-s
 import { adminMiddleware } from "./middleware/admin";
 import { optionalHybridAuth } from "./middleware/optional-hybrid-auth";
 import { hybridAuth, hybridEmailVerification } from "./middleware/hybrid-auth";
+import { isDeveloperSubdomainRequest } from "./middleware/subdomain-check";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
 import { contentFilterService } from "./services/content-filter";
@@ -957,6 +958,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let user = await storage.getUserByEmail?.(email);
 
       if (!user) {
+        // Block new registrations on developer.gamefolio.com
+        if (isDeveloperSubdomainRequest(req)) {
+          return res.status(403).json({
+            message: 'New registrations are not available on the developer portal. Please create an account on app.gamefolio.com first, then sign in here.',
+            code: 'DEV_PORTAL_NO_REGISTRATION',
+          });
+        }
         // Validate display name for inappropriate content before creating user
         const fallbackDisplayName = displayName || email.split('@')[0];
         const displayNameValidation = await contentFilterService.validateDisplayName(fallbackDisplayName);
@@ -1265,6 +1273,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let user = await storage.getUserByEmail?.(email);
 
       if (!user) {
+        // Block new registrations on developer.gamefolio.com
+        if (isDeveloperSubdomainRequest(req)) {
+          return res.status(403).json({
+            message: 'New registrations are not available on the developer portal. Please create an account on app.gamefolio.com first, then sign in here.',
+            code: 'DEV_PORTAL_NO_REGISTRATION',
+          });
+        }
         // Validate display name for inappropriate content before creating user
         const displayName = `${username}#${discriminator}`;
         const displayNameValidation = await contentFilterService.validateDisplayName(displayName);
@@ -1545,6 +1560,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let user = await storage.getUserByExternalId?.(xuid, "xbox");
 
       if (!user) {
+        // Block new registrations on developer.gamefolio.com
+        if (isDeveloperSubdomainRequest(req)) {
+          return res.status(403).json({
+            message: 'New registrations are not available on the developer portal. Please create an account on app.gamefolio.com first, then sign in here.',
+            code: 'DEV_PORTAL_NO_REGISTRATION',
+          });
+        }
         // New user — create account from their Xbox profile
         const timestamp = Date.now().toString().slice(-6);
         const tempUsername = `temp_xbox_${xuid.substring(0, 8)}_${timestamp}`;
@@ -1958,6 +1980,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register route
   app.post("/api/register", async (req, res) => {
     try {
+      // Block new registrations on developer.gamefolio.com
+      if (isDeveloperSubdomainRequest(req)) {
+        return res.status(403).json({
+          message: 'New registrations are not available on the developer portal. Please create an account on app.gamefolio.com first, then sign in here.',
+          code: 'DEV_PORTAL_NO_REGISTRATION',
+        });
+      }
       // Extract the referral code the new user typed at signup — separate from their own future referral code
       const usedReferralCode: string | undefined = typeof req.body.referralCode === 'string' && req.body.referralCode.trim()
         ? req.body.referralCode.trim().toUpperCase()

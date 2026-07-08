@@ -34,8 +34,8 @@ interface ProUpgradeDialogProps {
 
 const premiumBenefits = [
   {
-    title: "Unlimited upload space",
-    description: "Share clips without limits or storage restrictions",
+    title: "Larger uploads",
+    description: "Clips 500MB / 10 min, reels 250MB / 3 min, screenshots 50MB",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M12 16V8M12 8L9 11M12 8L15 11" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -44,8 +44,19 @@ const premiumBenefits = [
     ),
   },
   {
-    title: "Animated profile customization",
-    description: "Custom banners, borders & neon effects",
+    title: "Unlimited uploads",
+    description: "No daily quotas or storage caps",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M17 8L12 3L7 8" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 3V15" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    title: "Animated profiles",
+    description: "Custom banners, neon effects & animated GIF avatars",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M9 3.5V2M15 3.5V2M9 21.5V20M15 21.5V20M20.5 9H22M20.5 15H22M3.5 9H2M3.5 15H2M12 8L13.5 11H16L14 13.5L15 17L12 15L9 17L10 13.5L8 11H10.5L12 8Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -53,32 +64,45 @@ const premiumBenefits = [
     ),
   },
   {
-    title: "100s of exclusive assets",
-    description: "Premium stickers, badges & unique themes",
+    title: "Exclusive borders",
+    description: "Premium avatar borders, visual themes & Pro badge",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 21C12 21 3 13.5 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 12 5C12.09 3.81 13.76 3 15.5 3C18.58 3 21 5.42 21 8.5C21 13.5 12 21 12 21Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 15C15.866 15 19 11.866 19 8C19 4.13401 15.866 1 12 1C8.13401 1 5 4.13401 5 8C5 11.866 8.13401 15 12 15Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M8.21 13.89L7 23L12 20L17 23L15.79 13.88" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    title: "Welcome lootbox",
+    description: "Free bonus reward when you first subscribe",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 12V22H4V12" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M22 7H2V12H22V7Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 22V7" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 7H7.5C6.83696 7 6.20107 6.73661 5.73223 6.26777C5.26339 5.79893 5 5.16304 5 4.5C5 3.83696 5.26339 3.20107 5.73223 2.73223C6.20107 2.26339 6.83696 2 7.5 2C11 2 12 7 12 7Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 7H16.5C17.163 7 17.7989 6.73661 18.2678 6.26777C18.7366 5.79893 19 5.16304 19 4.5C19 3.83696 18.7366 3.20107 18.2678 2.73223C17.7989 2.26339 17.163 2 16.5 2C13 2 12 7 12 7Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    title: "Monthly lootboxes",
+    description: "Fresh bonus rewards every month",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 8V12L15 15" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
   },
   {
     title: "Store discounts",
-    description: "Save up to 20% on games and merchandise",
+    description: "Up to 20% off name tags, borders & exclusive items",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M9 15L15 9M21.41 11.41L12.58 2.58C12.21 2.21 11.7 2 11.17 2H4C2.9 2 2 2.9 2 4V11.17C2 11.7 2.21 12.21 2.59 12.58L11.41 21.41C12.19 22.2 13.45 22.2 14.24 21.41L21.41 14.24C22.2 13.45 22.2 12.19 21.41 11.41Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         <circle cx="7" cy="7" r="1.5" fill="#B7FF1A"/>
-      </svg>
-    ),
-  },
-  {
-    title: "Ad-free experience",
-    description: "Pro subscribers are exempt from all video ads",
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22Z" stroke="#B7FF1A" strokeWidth="1.5"/>
-        <path d="M4 4L20 20" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round"/>
-        <path d="M10 9V15L15 12L10 9Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
   },
@@ -235,7 +259,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   const loadStripeInstance = useCallback(async () => {
     if (stripePromise) return;
     try {
-      const res = await fetch("/api/stripe/config", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/stripe/config");
       const data = await res.json();
       if (data.publishableKey) {
         setStripePromise(loadStripe(data.publishableKey));
@@ -273,7 +297,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/stripe/pro-pricing", { credentials: "include" });
+        const res = await apiRequest("GET", "/api/stripe/pro-pricing");
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled && data?.currency) {

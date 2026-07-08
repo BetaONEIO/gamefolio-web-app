@@ -6,6 +6,7 @@ import { storage } from '../storage';
 import { StreakService } from '../streak-service';
 import { getDemoUser } from '../demo-user';
 import { verifyAppleIdentityToken } from '../services/apple-auth';
+import { isDeveloperSubdomainRequest } from '../middleware/subdomain-check';
 import { scrypt, timingSafeEqual, randomBytes } from 'crypto';
 import { promisify } from 'util';
 
@@ -374,6 +375,14 @@ router.post('/auth/mobile/google', async (req: Request, res: Response) => {
 
     // 3. Create a new user if no match found
     if (!user) {
+      // Block new registrations on developer.gamefolio.com
+      if (isDeveloperSubdomainRequest(req)) {
+        return res.status(403).json({
+          success: false,
+          message: 'New registrations are not available on the developer portal. Please create an account on app.gamefolio.com first, then sign in here.',
+          code: 'DEV_PORTAL_NO_REGISTRATION',
+        });
+      }
       isNewUser = true;
       const timestamp = Date.now().toString().slice(-6);
       const tempUsername = `temp_${uid.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8)}_${timestamp}`.toLowerCase();
@@ -541,6 +550,14 @@ router.post('/auth/mobile/apple', async (req: Request, res: Response) => {
 
     // 3. Create a new user if neither lookup matched.
     if (!user) {
+      // Block new registrations on developer.gamefolio.com
+      if (isDeveloperSubdomainRequest(req)) {
+        return res.status(403).json({
+          success: false,
+          message: 'New registrations are not available on the developer portal. Please create an account on app.gamefolio.com first, then sign in here.',
+          code: 'DEV_PORTAL_NO_REGISTRATION',
+        });
+      }
       isNewUser = true;
       const timestamp = Date.now().toString().slice(-6);
       const tempUsername = `temp_${sub.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8)}_${timestamp}`.toLowerCase();
@@ -730,12 +747,20 @@ router.get('/auth/mobile/discord/callback', async (req: Request, res: Response) 
     let isNewUser = false;
 
     if (!user) {
+      // Block new registrations on developer.gamefolio.com
+      if (isDeveloperSubdomainRequest(req)) {
+        return res.status(403).json({
+          success: false,
+          message: 'New registrations are not available on the developer portal. Please create an account on app.gamefolio.com first, then sign in here.',
+          code: 'DEV_PORTAL_NO_REGISTRATION',
+        });
+      }
       isNewUser = true;
       // Create new user with Discord data
       const displayName = discriminator ? `${username}#${discriminator}` : username;
       const timestamp = Date.now().toString().slice(-6);
       const tempUsername = `temp_${id.substring(0, 8)}_${timestamp}`;
-      const avatarUrl = avatar 
+      const avatarUrl = avatar
         ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.png`
         : '/attached_assets/gamefolio-logo-green.png';
 
@@ -928,6 +953,14 @@ router.get('/auth/mobile/xbox/callback', async (req: Request, res: Response) => 
     let isNewUser = false;
 
     if (!user) {
+      // Block new registrations on developer.gamefolio.com
+      if (isDeveloperSubdomainRequest(req)) {
+        return res.redirect(
+          `${appScheme}auth/error?code=DEV_PORTAL_NO_REGISTRATION&message=${encodeURIComponent(
+            'New registrations are not available on the developer portal. Please create an account on app.gamefolio.com first, then sign in here.'
+          )}`
+        );
+      }
       isNewUser = true;
       const timestamp = Date.now().toString().slice(-6);
       const tempUsername = `temp_xbox_${xuid.substring(0, 8)}_${timestamp}`;
