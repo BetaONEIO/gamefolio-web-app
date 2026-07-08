@@ -556,7 +556,46 @@ export default function SettingsPage() {
   const { customerInfo, refreshCustomerInfo } = useRevenueCat();
   
   const updateProfile = useUpdateProfile();
-  
+
+  const { data: steamVerification } = useQuery<{
+    verified: boolean;
+    steamVerifiedAppId: string | null;
+    steamVerifiedAt: string | null;
+    pending: { steamAppId: string; code: string; expiresAt: string } | null;
+  }>({
+    queryKey: ['/api/indie/steam/status'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!user,
+  });
+
+  const startSteamVerificationMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/indie/steam/start-verification');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/indie/steam/status'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Could not start verification', description: error.message, variant: 'gamefolioError' });
+    },
+  });
+
+  const verifySteamMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/indie/steam/verify');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/indie/steam/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      toast({ title: 'Steam ownership verified!', description: 'Your game details have been updated from Steam.', variant: 'gamefolioSuccess' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Verification failed', description: error.message, variant: 'gamefolioError' });
+    },
+  });
+
   const [showAddPlatform, setShowAddPlatform] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformKey | null>(null);
   const [platformHandle, setPlatformHandle] = useState('');
@@ -2903,6 +2942,46 @@ export default function SettingsPage() {
                           placeholder="https://store.epicgames.com/..."
                         />
                       </div>
+                    </div>
+
+                    <div className="space-y-2 border rounded-lg p-3">
+                      {steamVerification?.verified ? (
+                        <div className="flex items-center gap-2 text-sm text-primary">
+                          <Check className="h-4 w-4" />
+                          <span>Verified owner of this Steam store page</span>
+                        </div>
+                      ) : steamVerification?.pending ? (
+                        <div className="space-y-2">
+                          <p className="text-sm">
+                            Add this code to your game's Steam store page description (Steamworks &gt; Store Page), save it, then verify:
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <code className="text-foreground bg-muted rounded px-2 py-1 text-sm font-mono">{steamVerification.pending.code}</code>
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={verifySteamMutation.isPending}
+                              onClick={() => verifySteamMutation.mutate()}
+                            >
+                              {verifySteamMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "I've added it — Verify"}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Code expires 15 minutes after starting.</p>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm text-muted-foreground">Prove you own this Steam store page to get a verified badge and auto-fill your game details.</p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={startSteamVerificationMutation.isPending || !profileData.gameSteamUrl}
+                            onClick={() => startSteamVerificationMutation.mutate()}
+                          >
+                            {startSteamVerificationMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><FaSteam className="h-4 w-4 mr-2" />Verify ownership</>}
+                          </Button>
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-2">

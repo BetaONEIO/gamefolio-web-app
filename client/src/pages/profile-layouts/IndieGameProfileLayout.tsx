@@ -369,6 +369,12 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
                   >
                     <SiSteam size={24} className="text-[#66c0f4]" />
                     <span className="font-semibold text-[#c7d5e0]">Steam</span>
+                    {profile.steamVerifiedAt && (
+                      <span className="ml-auto flex items-center gap-1 text-xs font-semibold text-[#66c0f4]">
+                        <CheckCircle2 size={14} />
+                        Verified
+                      </span>
+                    )}
                   </a>
                 )}
 
