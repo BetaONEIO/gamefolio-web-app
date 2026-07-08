@@ -40,6 +40,14 @@ export async function verifyClientSecret(secret: string, stored: string | null |
   }
 }
 
+// oauthClients.clientId is a Postgres `uuid` column — querying it with a
+// non-UUID string throws "invalid input syntax for type uuid" rather than
+// just returning no rows, so callers must check this before querying.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export function isValidUuid(value: string): boolean {
+  return UUID_RE.test(value);
+}
+
 export function parseScopes(scope: string): string[] {
   return scope.split(' ').map(s => s.trim()).filter(Boolean);
 }
