@@ -42,9 +42,30 @@ const API_ENDPOINTS = [
     path: '/api/public/v1/clips',
     scope: 'clips:write',
     description: 'Uploads a video and creates a clip on the user\'s behalf. Multipart form: file (required), title (required), description, gameId, tags, videoType, ageRestricted, trimStart, trimEnd.',
-    response: `201 Created — the newly created clip`,
+    response: `201 Created
+{
+  "clip": {
+    "id": 1,
+    "title": "...",
+    "videoUrl": "https://....supabase.co/storage/v1/object/sign/...",
+    "thumbnailUrl": "https://....supabase.co/storage/v1/object/sign/...",
+    "shareUrl": "https://app.gamefolio.com/@username/clip/<shareCode>",
+    ...
+  }
+}`,
   },
 ];
+
+// videoUrl/thumbnailUrl on every clip response above are short-lived signed
+// URLs (~1h expiry, matching server/routes/public-api-v1.ts's signClipMediaUrls)
+// — re-fetch the clip if a URL has expired rather than caching it long-term.
+const TOKEN_RESPONSE_EXAMPLE = `{
+  "access_token": "...",
+  "refresh_token": "...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "scope": "profile:read clips:read"
+}`;
 
 const SCOPES = [
   { scope: 'profile:read', label: 'View your public profile (username, display name, avatar, bio)' },
@@ -102,6 +123,16 @@ export default function DeveloperHomePage() {
 
       <Card>
         <CardHeader>
+          <CardTitle>POST /oauth/token response</CardTitle>
+          <CardDescription>Same shape for both <code className="text-foreground">authorization_code</code> and <code className="text-foreground">refresh_token</code> grants.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <pre className="text-xs bg-muted rounded-md p-2 overflow-x-auto"><code>{TOKEN_RESPONSE_EXAMPLE}</code></pre>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Available scopes</CardTitle>
           <CardDescription>Request only the scopes your app needs — the consent screen shows these to the user by name.</CardDescription>
         </CardHeader>
@@ -120,7 +151,10 @@ export default function DeveloperHomePage() {
       <Card>
         <CardHeader>
           <CardTitle>API reference</CardTitle>
-          <CardDescription>All endpoints live under <code className="text-foreground">/api/public/v1</code> and require <code className="text-foreground">Authorization: Bearer &lt;access_token&gt;</code>.</CardDescription>
+          <CardDescription>
+            All endpoints live under <code className="text-foreground">/api/public/v1</code> and require <code className="text-foreground">Authorization: Bearer &lt;access_token&gt;</code>.
+            {' '}<code className="text-foreground">videoUrl</code>/<code className="text-foreground">thumbnailUrl</code> are signed URLs that expire after 1 hour — re-fetch the clip rather than caching them long-term.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {API_ENDPOINTS.map((e) => (

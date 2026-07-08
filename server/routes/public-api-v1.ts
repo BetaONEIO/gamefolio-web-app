@@ -10,6 +10,25 @@ import { processAndCreateClip, ClipProcessingError } from '../services/clip-proc
 
 const router = Router();
 
+// clips.videoUrl/thumbnailUrl are stored as Supabase "public" URLs, but the
+// gamefolio-media bucket is private — those URLs 400 with "Bucket not found"
+// unless converted to a signed URL first. Mirrors the signClipUrls helper in
+// server/routes.ts (kept separate rather than shared since that one also
+// touches first-party-only fields this API doesn't expose).
+async function signMediaUrl(url: string | null | undefined): Promise<string | null | undefined> {
+  if (!url || !url.includes('supabase.co/storage')) return url;
+  const signed = await supabaseStorage.convertToSignedUrl(url, 3600);
+  return signed ?? url;
+}
+
+async function signClipMediaUrls<T extends { thumbnailUrl?: string | null; videoUrl?: string | null }>(clip: T): Promise<T> {
+  const [thumbnailUrl, videoUrl] = await Promise.all([
+    signMediaUrl(clip.thumbnailUrl),
+    signMediaUrl(clip.videoUrl),
+  ]);
+  return { ...clip, thumbnailUrl, videoUrl };
+}
+
 /**
  * GET /api/public/v1/me — profile:read
  * Strict allow-list of fields; deliberately excludes email by default.
@@ -38,7 +57,8 @@ router.get('/me', requireOAuthScope('profile:read'), oauthRateLimiter, async (re
 router.get('/clips', requireOAuthScope('clips:read'), oauthRateLimiter, async (req: Request, res: Response) => {
   try {
     const clips = await storage.getClipsByUserId(req.oauthContext!.userId);
-    return res.json({ clips });
+    const signedClips = await Promise.all(clips.map(signClipMediaUrls));
+    return res.json({ clips: signedClips });
   } catch (error) {
     console.error('[Public API v1] GET /clips error:', error);
     return res.status(500).json({ error: 'server_error' });
@@ -51,7 +71,7 @@ router.get('/clips/:id', requireOAuthScope('clips:read'), oauthRateLimiter, asyn
     if (!clip || clip.userId !== req.oauthContext!.userId) {
       return res.status(404).json({ error: 'not_found' });
     }
-    return res.json({ clip });
+    return res.json({ clip: await signClipMediaUrls(clip) });
   } catch (error) {
     console.error('[Public API v1] GET /clips/:id error:', error);
     return res.status(500).json({ error: 'server_error' });
@@ -138,7 +158,10 @@ router.post('/clips', requireOAuthScope('clips:write'), oauthRateLimiter, upload
       trimEnd,
     });
 
-    return res.status(201).json(responseData);
+    return res.status(201).json({
+      ...responseData,
+      clip: await signClipMediaUrls(responseData.clip),
+    });
   } catch (error) {
     if (req.file?.path) fs.unlink(req.file.path, () => {});
     if (error instanceof ClipProcessingError) {
