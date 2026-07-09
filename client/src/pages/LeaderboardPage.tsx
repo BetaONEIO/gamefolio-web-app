@@ -1214,7 +1214,7 @@ function HallOfChampions() {
                 </div>
 
                 {/* Top 3 list */}
-                <div className="flex-1 px-4 py-4 space-y-3">
+                <div className="flex-1 px-4 py-4 space-y-4">
                   {!season.top3 || season.top3.length === 0 ? (
                     <div className="text-xs text-slate-600 text-center py-4">No data</div>
                   ) : (
@@ -1228,7 +1228,7 @@ function HallOfChampions() {
                               <img
                                 src={t.img}
                                 alt={`${p.rank} place`}
-                                className="absolute -bottom-1.5 -right-1.5 h-5 w-auto object-contain select-none"
+                                className="absolute -bottom-0.5 -right-1.5 h-5 w-auto object-contain select-none"
                                 style={{ filter: `drop-shadow(0 1px 3px rgba(0,0,0,0.8))` }}
                               />
                             </div>
