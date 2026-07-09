@@ -178,8 +178,8 @@ const RANK_LABEL: Record<number, string> = {
 };
 
 // ── Mobile carousel: premium swipeable hero card carousel ──
-const CAROUSEL_CARD_W = 182;                   // ~9% smaller than before
-const CAROUSEL_STEP   = CAROUSEL_CARD_W + 20;  // px between card centres
+const CAROUSEL_CARD_W = 170;                   // compact for mobile screens
+const CAROUSEL_STEP   = CAROUSEL_CARD_W + 18;  // px between card centres
 
 function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
   const [activeIdx, setActiveIdx]   = useState(0);
@@ -245,7 +245,7 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
            drop-shadow glow bleed past the top/bottom edges without clipping ── */}
       <div
         className="relative w-full"
-        style={{ overflowX: "clip", overflowY: "visible", height: 430 }}
+        style={{ overflowX: "clip", overflowY: "visible", height: 380 }}
       >
 
         {/* Cards */}
@@ -254,7 +254,7 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
           if (Math.abs(offset) > 2) return null;
 
           const isActive = offset === 0;
-          const scale    = isActive ? 1 : 0.91;
+          const scale    = isActive ? 0.82 : 0.74;
           const opacity  = isActive ? 1 : 0.35;
           const tx       = offset * CAROUSEL_STEP;
 
@@ -264,7 +264,7 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
               onClick={() => !isActive && goTo(idx)}
               style={{
                 position:        "absolute",
-                top:             12,
+                top:             10,
                 left:            "50%",
                 width:           CAROUSEL_CARD_W,
                 /* calc centres the card exactly at 50% regardless of width */
@@ -308,7 +308,7 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
 
       {/* ── Podium trophy — visually connected to card, z-index above card ── */}
       <div
-        className="flex justify-center -mt-10 pointer-events-none"
+        className="flex justify-center -mt-6 pointer-events-none"
         style={{ position: "relative", zIndex: 30 }}
       >
         {podiumSrc && (
@@ -316,7 +316,7 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
             key={activeRank}
             src={podiumSrc}
             alt={`#${activeRank} podium`}
-            className={`${podiumW} object-contain`}
+            className="w-28 object-contain"
             draggable={false}
           />
         )}
@@ -354,7 +354,7 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
   };
 
   return (
-    <div className="relative min-h-[620px] sm:min-h-[580px]">
+    <div className="relative min-h-[520px] sm:min-h-[580px]">
       <div
         className="absolute inset-0"
         style={{ backgroundImage: "url('/electrical-bg.webp')", backgroundSize: "cover", backgroundPosition: "center" }}
