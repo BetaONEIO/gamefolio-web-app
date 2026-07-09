@@ -23,7 +23,8 @@ import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
 import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
 import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
-import { CreatorCard, CREATOR_CARD_STYLES, TrendingEntry } from "@/components/home/CreatorCard";
+import { CreatorCard } from "@/components/home/CreatorCard";
+import { CREATOR_CARD_STYLES, TrendingEntry } from "@/components/home/creator-card-utils";
 
 import { Trophy } from "lucide-react";
 import LatestContentSlider from "@/components/home/LatestContentSlider";

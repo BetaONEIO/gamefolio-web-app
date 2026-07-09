@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GamefolioTrendingIcon } from "@/components/icons/GamefolioTrendingIcon";
-import { CreatorCard, TrendingEntry, CREATOR_CARD_STYLES } from "@/components/home/CreatorCard";
+import { CreatorCard } from "@/components/home/CreatorCard";
+import { TrendingEntry, CREATOR_CARD_STYLES } from "@/components/home/creator-card-utils";
 
 type Period = 'week' | 'month' | 'alltime';
 

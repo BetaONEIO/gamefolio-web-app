@@ -12,7 +12,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { CreatorCard, TrendingEntry, CREATOR_CARD_STYLES } from "@/components/home/CreatorCard";
+import { CreatorCard } from "@/components/home/CreatorCard";
+import { TrendingEntry, CREATOR_CARD_STYLES } from "@/components/home/creator-card-utils";
 import goldBannerImg from "@assets/goldr-flat-banner-_1783016208886.png";
 import silverBannerImg from "@assets/silver-flat-banne-_1783016206432.png";
 import bronzeBannerImg from "@assets/bronze-flat-banner_(1)_1783016211069.png";
@@ -266,8 +267,8 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
                 position:   "absolute",
                 top:        4,
                 left:       "50%",
-                width:      CAROUSEL_CARD_W,
-                transform:  `translateX(calc(${tx}px - 50%))`,
+                width:      0,
+                transform:  `translateX(${tx}px)`,
                 opacity,
                 transition: "transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease",
                 zIndex:     isActive ? 10 : 4 - Math.abs(offset),
@@ -275,12 +276,13 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
               }}
             >
               <div style={{
+                position:        "absolute",
+                left:            0,
+                width:           CAROUSEL_CARD_W,
                 filter:          isActive ? glowFilter : "none",
-                transform:         `scale(${scale})`,
+                transform:       `translateX(-${CAROUSEL_CARD_W / 2}px) scale(${scale})`,
                 transformOrigin: "top center",
-                transition:      "transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94)",
-                display:         "flex",
-                justifyContent:  "center",
+                transition:      "transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94), filter 0.35s ease",
               }}>
                 <CreatorCard entry={entry} period="week" />
               </div>
