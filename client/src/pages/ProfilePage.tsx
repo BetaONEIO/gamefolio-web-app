@@ -3428,7 +3428,7 @@ const ProfilePage = () => {
                         <div
                           key={stat.label}
                           className="flex flex-1 items-center"
-                          onClick={stat.label !== 'Uploads' ? () => setLocation(`/profile/${profile.username}/${stat.label.toLowerCase()}`) : undefined}
+                          onClick={stat.label === 'Followers' ? () => setLocation(`/profile/${profile.username}/followers`) : stat.label === 'Following' ? () => setLocation(`/profile/${profile.username}/followers?tab=following`) : undefined}
                           style={stat.label !== 'Uploads' ? { cursor: 'pointer' } : undefined}
                         >
                           <div className="flex flex-col items-center gap-1 flex-1 py-1">
@@ -3451,7 +3451,7 @@ const ProfilePage = () => {
                         <div
                           key={stat.label}
                           className="flex flex-1 items-center"
-                          onClick={stat.label !== 'Uploads' ? () => setLocation(`/profile/${profile.username}/${stat.label.toLowerCase()}`) : undefined}
+                          onClick={stat.label === 'Followers' ? () => setLocation(`/profile/${profile.username}/followers`) : stat.label === 'Following' ? () => setLocation(`/profile/${profile.username}/followers?tab=following`) : undefined}
                           style={stat.label !== 'Uploads' ? { cursor: 'pointer' } : undefined}
                         >
                           <div className="flex flex-col items-center gap-1 flex-1 py-1">
