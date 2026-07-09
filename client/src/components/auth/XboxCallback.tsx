@@ -58,7 +58,7 @@ export function XboxCallback() {
           });
 
           closeModal();
-          setLocation("/settings");
+          setLocation("/settings/profile");
         } else {
           const response = await apiRequest("POST", "/api/auth/xbox", {
             xuid: xboxUser.xuid,
@@ -105,7 +105,7 @@ export function XboxCallback() {
           variant: "destructive"
         });
         closeModal();
-        setLocation(isConnectMode ? "/settings" : "/auth");
+        setLocation(isConnectMode ? "/settings/profile" : "/auth");
       }
     };
 

@@ -982,7 +982,14 @@ const UploadPage = () => {
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               Upload as many as you like.
-              <a href="/pro" className="text-primary ml-1 underline">Upgrade to Pro</a> for larger files and longer videos.
+              <button
+                type="button"
+                onClick={() => setShowProUpgrade(true)}
+                className="text-primary ml-1 underline"
+              >
+                Upgrade to Pro
+              </button>{" "}
+              for larger files and longer videos.
             </p>
           </AlertDescription>
         </Alert>
