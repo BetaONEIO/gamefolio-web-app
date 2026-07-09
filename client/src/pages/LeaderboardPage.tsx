@@ -440,7 +440,7 @@ function SeasonInfoBar({ playerCount }: { playerCount: number }) {
   const { days, hours, minutes, seconds } = useCountdown(seasonEnd);
 
   return (
-    <div className="bg-[#0a141e] border-b border-white/6 py-8 px-4 text-center">
+    <div className="bg-[#05090d] py-8 px-4 text-center">
       {/* Season badge */}
       <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#B7FF1A]/30 bg-[#B7FF1A]/10 mb-4">
         <Trophy className="w-4 h-4 text-[#B7FF1A]" />
@@ -916,11 +916,12 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
 
   return (
     <section
-      className="mb-0 relative rounded-2xl pt-5 pb-2 overflow-hidden"
+      className="mb-0 relative pt-5 pb-2 overflow-hidden"
       style={{ backgroundColor: "#05090d" }}
     >
+      {/* ── Mesh background ── */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute -top-10 inset-x-0 bottom-0 pointer-events-none"
         style={{
           backgroundImage: [
             "repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(255,255,255,0.05) 12px, rgba(255,255,255,0.05) 13px)",
@@ -1372,7 +1373,7 @@ export default function LeaderboardPage() {
       <SeasonInfoBar playerCount={playerCount} />
 
       {/* ── Live Leaderboard — directly under Summer Showdown ── */}
-      <div className="w-full border-b border-white/5 pt-8 pb-6 bg-[#060c12]">
+      <div className="w-full border-b border-white/5 pt-0 pb-6">
         <LiveLeaderboard userId={user?.id} />
       </div>
 
