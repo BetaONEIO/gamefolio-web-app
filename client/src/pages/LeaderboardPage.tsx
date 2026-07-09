@@ -178,8 +178,8 @@ const RANK_LABEL: Record<number, string> = {
 };
 
 // ── Mobile carousel: premium swipeable hero card carousel ──
-const CAROUSEL_CARD_W = 170;                   // compact for mobile screens
-const CAROUSEL_STEP   = CAROUSEL_CARD_W + 18;  // px between card centres
+const CAROUSEL_CARD_W = 228;                   // matches CreatorCard native width
+const CAROUSEL_STEP   = 200;                   // px between card centres
 
 function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
   const [activeIdx, setActiveIdx]   = useState(0);
@@ -245,7 +245,7 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
            drop-shadow glow bleed past the top/bottom edges without clipping ── */}
       <div
         className="relative w-full"
-        style={{ overflowX: "clip", overflowY: "visible", height: 380 }}
+        style={{ overflowX: "clip", overflowY: "visible", height: 355 }}
       >
 
         {/* Cards */}
@@ -263,20 +263,25 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
               key={entry.userId}
               onClick={() => !isActive && goTo(idx)}
               style={{
-                position:        "absolute",
-                top:             10,
-                left:            "50%",
-                width:           CAROUSEL_CARD_W,
-                /* calc centres the card exactly at 50% regardless of width */
-                transform:       `translateX(calc(${tx}px - 50%)) scale(${scale})`,
+                position:   "absolute",
+                top:        4,
+                left:       "50%",
+                width:      CAROUSEL_CARD_W,
+                transform:  `translateX(calc(${tx}px - 50%))`,
                 opacity,
-                transition:      "transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease",
-                zIndex:          isActive ? 10 : 4 - Math.abs(offset),
-                transformOrigin: "top center",
-                cursor:          isActive ? "default" : "pointer",
+                transition: "transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease",
+                zIndex:     isActive ? 10 : 4 - Math.abs(offset),
+                cursor:     isActive ? "default" : "pointer",
               }}
             >
-              <div style={{ filter: isActive ? glowFilter : "none" }}>
+              <div style={{
+                filter:          isActive ? glowFilter : "none",
+                transform:         `scale(${scale})`,
+                transformOrigin: "top center",
+                transition:      "transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94)",
+                display:         "flex",
+                justifyContent:  "center",
+              }}>
                 <CreatorCard entry={entry} period="week" />
               </div>
             </div>

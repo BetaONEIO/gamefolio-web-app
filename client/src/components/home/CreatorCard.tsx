@@ -138,8 +138,28 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
     <Link href={`/profile/${user.username}`} className={className}>
       <div
         className="flex-shrink-0 cursor-pointer transition-transform duration-200 hover:scale-[1.03] hover:-translate-y-2 fire-card"
-        style={{ width: 228, height: 408, borderRadius: 16 }}
+        style={{ width: 228, height: 408, borderRadius: 16, position: 'relative' }}
       >
+        {/* ── Floating badge row (outside overflow-hidden background) ── */}
+        <div
+          className="absolute top-0 left-0 right-0 flex items-start justify-between px-2 pt-1"
+          style={{ zIndex: 5 }}
+        >
+          <div
+            className="flex items-center gap-1 text-[11px] font-bold px-2 py-0 rounded-full"
+            style={{ background: 'rgba(0,0,0,0.65)', color: entry.rank <= 3 ? (['#FFD700','#C0C0C0','#CD7F32'] as const)[entry.rank - 1] : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}
+          >
+            #{entry.rank}
+          </div>
+          <div
+            className="flex items-center gap-0.5 text-[11px] font-bold px-2 py-0.5 rounded-full"
+            style={{ background: 'rgba(0,0,0,0.65)', color: '#B7FF1A', border: '1px solid rgba(183,255,26,0.3)', backdropFilter: 'blur(4px)' }}
+          >
+            <Zap className="w-3 h-3" />
+            {fmt(entry.totalPoints)}
+          </div>
+        </div>
+
         <div
           className="absolute inset-0 rounded-[inherit] overflow-hidden"
           style={{ zIndex: 2, ...theme.style, backdropFilter: theme.hasCustomBg ? undefined : 'blur(8px)' }}
@@ -156,24 +176,8 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
             />
           )}
 
-          <div className="relative flex flex-col h-full" style={{ zIndex: 3 }}>
-            <div className="flex-shrink-0 flex items-center justify-between px-2 pt-2">
-              <div
-                className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full"
-                style={{ background: 'rgba(0,0,0,0.65)', color: entry.rank <= 3 ? (['#FFD700','#C0C0C0','#CD7F32'] as const)[entry.rank - 1] : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}
-              >
-                #{entry.rank}
-              </div>
-              <div
-                className="flex items-center gap-0.5 text-[11px] font-bold px-2 py-0.5 rounded-full"
-                style={{ background: 'rgba(0,0,0,0.65)', color: '#B7FF1A', border: '1px solid rgba(183,255,26,0.3)', backdropFilter: 'blur(4px)' }}
-              >
-                <Zap className="w-3 h-3" />
-                {fmt(entry.totalPoints)}
-              </div>
-            </div>
-
-            <div className="relative flex-shrink-0 mx-2 mt-1 rounded-lg overflow-hidden" style={{ height: 70 }}>
+          <div className="relative flex flex-col h-full pt-7" style={{ zIndex: 3 }}>
+            <div className="relative flex-shrink-0 mx-2 rounded-lg overflow-hidden" style={{ height: 66 }}>
               {hasBanner ? (
                 <>
                   <img src={user.bannerUrl!} alt="" className="w-full h-full object-cover" onError={() => setBannerError(true)} />
