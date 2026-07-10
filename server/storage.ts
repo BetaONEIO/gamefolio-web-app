@@ -59,7 +59,9 @@ import {
   adminAlertSettings,
   type AdminAlertSettings, type InsertAdminAlertSettings,
   type PushToken, type InsertPushToken,
-  type PushBroadcast, type PushAudience
+  type PushBroadcast, type PushAudience,
+  type IndieGameProfile, type InsertIndieGameProfile,
+  type IndieGameFieldOverride
 } from "@shared/schema";
 
 export interface IStorage {
@@ -542,6 +544,13 @@ export interface IStorage {
   getXpSettings(): Promise<XpSetting[]>;
   updateXpSetting(key: string, value: number, updatedBy?: number): Promise<XpSetting>;
   upsertXpSetting(setting: InsertXpSetting): Promise<XpSetting>;
+
+  // Indie game profile operations
+  getIndieGameProfile(userId: number): Promise<IndieGameProfile | null>;
+  upsertIndieGameProfile(userId: number, patch: Partial<InsertIndieGameProfile>): Promise<IndieGameProfile>;
+  getIndieFieldMeta(userId: number): Promise<Record<string, IndieGameFieldOverride>>;
+  upsertIndieFieldMeta(userId: number, fieldName: string, patch: Partial<Omit<IndieGameFieldOverride, "id" | "userId" | "fieldName" | "createdAt">>): Promise<void>;
+  getIndieGameProfileByUsername(username: string): Promise<{ profile: IndieGameProfile | null; user: User } | null>;
 }
 
 // Use DatabaseStorage with Supabase - no fallback to in-memory storage

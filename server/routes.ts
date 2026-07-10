@@ -10131,36 +10131,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ─── Indie Game Profile API ──────────────────────────────────────────────────
 
   // Internal helpers for indie profile
+  // Indie helpers delegate to storage layer for proper architecture separation
   async function _indieGetOrCreate(userId: number) {
-    const { indieGameProfiles } = await import("@shared/schema");
-    const { db } = await import("./db");
-    const { eq } = await import("drizzle-orm");
-    const rows = await db.select().from(indieGameProfiles).where(eq(indieGameProfiles.userId, userId));
-    if (rows.length > 0) return rows[0];
-    const ins = await db.insert(indieGameProfiles).values({ userId }).returning();
-    return ins[0];
+    const existing = await storage.getIndieGameProfile(userId);
+    if (existing) return existing;
+    return storage.upsertIndieGameProfile(userId, {});
   }
 
   async function _indieFieldMetaMap(userId: number) {
-    const { indieGameFieldOverrides } = await import("@shared/schema");
-    const { db } = await import("./db");
-    const { eq } = await import("drizzle-orm");
-    const rows = await db.select().from(indieGameFieldOverrides).where(eq(indieGameFieldOverrides.userId, userId));
-    const map: Record<string, typeof rows[0]> = {};
-    for (const r of rows) map[r.fieldName] = r;
-    return map;
+    return storage.getIndieFieldMeta(userId);
   }
 
   async function _indieUpsertMeta(userId: number, fieldName: string, patch: Partial<{ importedValue: string; importSource: string; isManualOverride: boolean; lastImportedAt: Date; lastEditedAt: Date }>) {
-    const { indieGameFieldOverrides } = await import("@shared/schema");
-    const { db } = await import("./db");
-    const { eq, and } = await import("drizzle-orm");
-    const ex = await db.select().from(indieGameFieldOverrides).where(and(eq(indieGameFieldOverrides.userId, userId), eq(indieGameFieldOverrides.fieldName, fieldName)));
-    if (ex.length > 0) {
-      await db.update(indieGameFieldOverrides).set(patch as any).where(eq(indieGameFieldOverrides.id, ex[0].id));
-    } else {
-      await db.insert(indieGameFieldOverrides).values({ userId, fieldName, ...patch } as any);
-    }
+    return storage.upsertIndieFieldMeta(userId, fieldName, patch);
   }
 
   function _stripHtml(html: string): string {
@@ -10210,9 +10193,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "websiteUrl","twitterUrl","discordUrl",
   ];
 
-  // GET /api/indie/profile — owner: full profile + field meta
+  // GET /api/indie/profile — owner: full profile + field meta (partner access only)
   app.get("/api/indie/profile", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
     try {
       const profile = await _indieGetOrCreate(req.user.id);
       const fieldMeta = await _indieFieldMetaMap(req.user.id);
@@ -10551,19 +10535,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/games/indie/:username — public enriched indie profile
+  // GET /api/games/indie/:username — public enriched indie profile (no auth required)
   app.get("/api/games/indie/:username", async (req, res) => {
     try {
-      const { indieGameProfiles } = await import("@shared/schema");
-      const { db } = await import("./db");
-      const { eq } = await import("drizzle-orm");
-      const user = await storage.getUserByUsername(req.params.username);
-      if (!user) return res.status(404).json({ error: "User not found" });
-      if (user.partnerType !== "indie") return res.status(404).json({ error: "Not an indie developer" });
-      const rows = await db.select().from(indieGameProfiles).where(eq(indieGameProfiles.userId, user.id));
+      const result = await storage.getIndieGameProfileByUsername(req.params.username);
+      if (!result) return res.status(404).json({ error: "Indie game profile not found" });
+      const { user, profile } = result;
       res.json({
         user: { id: user.id, username: user.username, displayName: user.displayName, avatarUrl: user.avatarUrl, bio: user.bio, level: user.level, totalXP: user.totalXP, currentStreak: user.currentStreak },
-        profile: rows[0] || null,
+        profile,
       });
     } catch (err) {
       console.error("GET /api/games/indie/:username error:", err);

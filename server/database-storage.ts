@@ -116,7 +116,9 @@ import {
   PushToken, InsertPushToken,
   PushBroadcast, PushAudience,
   pushTokens,
-  pushBroadcasts
+  pushBroadcasts,
+  indieGameProfiles, IndieGameProfile, InsertIndieGameProfile,
+  indieGameFieldOverrides, IndieGameFieldOverride
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, lte, gt, sql, arrayContains, ne, inArray, notInArray, isNotNull, getTableColumns } from "drizzle-orm";
@@ -6273,5 +6275,50 @@ export class DatabaseStorage implements IStorage {
       .from(pushBroadcasts)
       .orderBy(desc(pushBroadcasts.createdAt))
       .limit(limit);
+  }
+
+  // ─── Indie Game Profile Operations ────────────────────────────────────────────
+
+  async getIndieGameProfile(userId: number): Promise<IndieGameProfile | null> {
+    const rows = await db.select().from(indieGameProfiles).where(eq(indieGameProfiles.userId, userId));
+    return rows[0] ?? null;
+  }
+
+  async upsertIndieGameProfile(userId: number, patch: Partial<InsertIndieGameProfile>): Promise<IndieGameProfile> {
+    const existing = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, userId));
+    if (existing.length > 0) {
+      const [updated] = await db.update(indieGameProfiles).set({ ...patch, updatedAt: new Date() }).where(eq(indieGameProfiles.userId, userId)).returning();
+      return updated;
+    }
+    const [inserted] = await db.insert(indieGameProfiles).values({ userId, ...patch }).returning();
+    return inserted;
+  }
+
+  async getIndieFieldMeta(userId: number): Promise<Record<string, IndieGameFieldOverride>> {
+    const rows = await db.select().from(indieGameFieldOverrides).where(eq(indieGameFieldOverrides.userId, userId));
+    const map: Record<string, IndieGameFieldOverride> = {};
+    for (const row of rows) map[row.fieldName] = row;
+    return map;
+  }
+
+  async upsertIndieFieldMeta(
+    userId: number,
+    fieldName: string,
+    patch: Partial<Omit<IndieGameFieldOverride, "id" | "userId" | "fieldName" | "createdAt">>
+  ): Promise<void> {
+    const existing = await db.select({ id: indieGameFieldOverrides.id }).from(indieGameFieldOverrides)
+      .where(and(eq(indieGameFieldOverrides.userId, userId), eq(indieGameFieldOverrides.fieldName, fieldName)));
+    if (existing.length > 0) {
+      await db.update(indieGameFieldOverrides).set(patch as any).where(eq(indieGameFieldOverrides.id, existing[0].id));
+    } else {
+      await db.insert(indieGameFieldOverrides).values({ userId, fieldName, ...patch } as any);
+    }
+  }
+
+  async getIndieGameProfileByUsername(username: string): Promise<{ profile: IndieGameProfile | null; user: User } | null> {
+    const user = await this.getUserByUsername(username);
+    if (!user || user.partnerType !== "indie") return null;
+    const profile = await this.getIndieGameProfile(user.id);
+    return { user, profile };
   }
 }
