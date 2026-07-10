@@ -17,6 +17,7 @@ import { TrendingEntry, CREATOR_CARD_STYLES } from "@/components/home/creator-ca
 import goldBannerImg from "@assets/goldr-flat-banner-_1783016208886.png";
 import silverBannerImg from "@assets/silver-flat-banne-_1783016206432.png";
 import bronzeBannerImg from "@assets/bronze-flat-banner_(1)_1783016211069.png";
+import imgLootboxBanner from "@assets/lootbox-banner-1_1770362095039.png";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -1063,6 +1064,7 @@ function RivalSection({ leaderboard, userId }: { leaderboard: LeaderboardEntry[]
 
 // ─── Section: Season Rewards ───────────────────────────────────────────────
 
+
 function SeasonRewards() {
   return (
     <section className="px-4 mb-8">
@@ -1070,8 +1072,21 @@ function SeasonRewards() {
         <Medal className="w-5 h-5 text-[#B7FF1A]" />
         <h2 className="text-xl font-black text-white">Season Rewards</h2>
       </div>
-      <div className="rounded-2xl border border-white/10 bg-[#0d1520] p-8 text-center">
-        <span className="text-sm font-black text-slate-400 tracking-wide uppercase">Revealed soon</span>
+      <div className="relative rounded-2xl border border-white/10 bg-[#0d1520] overflow-hidden" style={{ minHeight: 180 }}>
+        {/* Background image — blurred */}
+        <img
+          src={imgLootboxBanner}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ filter: "blur(18px) brightness(0.45)", transform: "scale(1.1)" }}
+        />
+        {/* Darkening overlay */}
+        <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.35)" }} />
+        {/* Center text */}
+        <div className="relative z-10 flex flex-col items-center justify-center py-12 px-6">
+          <span className="text-lg font-black text-white/90 tracking-widest uppercase">Revealing soon</span>
+          <span className="text-xs text-slate-500 mt-1.5">Check back at the end of the season</span>
+        </div>
       </div>
     </section>
   );
