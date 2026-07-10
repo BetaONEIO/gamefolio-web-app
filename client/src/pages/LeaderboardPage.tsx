@@ -496,12 +496,7 @@ function SeasonInfoBar({ playerCount }: { playerCount: number }) {
 function CompetitiveOverview({ leaderboard, userId }: { leaderboard: LeaderboardEntry[]; userId: number }) {
   const myEntry = leaderboard.find(e => e.userId === userId);
   if (!myEntry) {
-    return (
-      <div className="mx-4 mb-6 p-6 rounded-2xl border border-[#B7FF1A]/20 bg-[#B7FF1A]/5 text-center">
-        <Target className="w-8 h-8 text-[#B7FF1A] mx-auto mb-2 opacity-60" />
-        <p className="text-slate-400 text-sm">Upload content or engage with posts this week to appear on the ranked leaderboard.</p>
-      </div>
-    );
+    return null;
   }
   const league = getLeague(myEntry.rank);
   const nextRankEntry = leaderboard.find(e => e.rank === myEntry.rank - 1);
@@ -1068,58 +1063,15 @@ function RivalSection({ leaderboard, userId }: { leaderboard: LeaderboardEntry[]
 
 // ─── Section: Season Rewards ───────────────────────────────────────────────
 
-const REWARDS = [
-  {
-    rank: 1, label: "1st Place", icon: "🥇", color: "#FFD700", bg: "from-yellow-400/20 to-amber-500/5", border: "border-yellow-400/30",
-    items: ["Exclusive Champion Trophy", "Animated Gold Medal", "Champion Badge", "Exclusive Profile Banner", "2,500 GFT", "Legendary Loot Box"],
-  },
-  {
-    rank: 2, label: "2nd Place", icon: "🥈", color: "#C0C0C0", bg: "from-gray-300/20 to-gray-400/5", border: "border-gray-300/30",
-    items: ["Silver Medal", "Exclusive Badge", "1,500 GFT", "Epic Loot Box"],
-  },
-  {
-    rank: 3, label: "3rd Place", icon: "🥉", color: "#CD7F32", bg: "from-orange-600/20 to-orange-700/5", border: "border-orange-600/30",
-    items: ["Bronze Medal", "Exclusive Badge", "750 GFT", "Rare Loot Box"],
-  },
-  {
-    rank: 0, label: "Diamond League", icon: "👑", color: "#A8EDFF", bg: "from-cyan-400/20 to-blue-500/5", border: "border-cyan-400/30",
-    items: ["Diamond Crown Badge", "Exclusive Diamond Banner", "500 GFT", "Season Profile Frame"],
-  },
-  {
-    rank: 0, label: "Gold League", icon: "🥇", color: "#FFD700", bg: "from-yellow-400/15 to-amber-500/5", border: "border-yellow-400/20",
-    items: ["Gold League Badge", "Season Profile Frame", "200 GFT"],
-  },
-  {
-    rank: 0, label: "Silver League", icon: "🥈", color: "#C0C0C0", bg: "from-gray-300/15 to-gray-400/5", border: "border-gray-300/20",
-    items: ["Silver League Badge", "75 GFT"],
-  },
-];
-
 function SeasonRewards() {
   return (
     <section className="px-4 mb-8">
       <div className="flex items-center gap-2 mb-4">
         <Medal className="w-5 h-5 text-[#B7FF1A]" />
         <h2 className="text-xl font-black text-white">Season Rewards</h2>
-        <span className="ml-auto text-xs text-slate-500 italic">Awarded at season end</span>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {REWARDS.map(r => (
-          <div key={r.label} className={`rounded-2xl border bg-gradient-to-br ${r.bg} ${r.border} p-4`}>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-2xl">{r.icon}</span>
-              <span className="font-black text-sm" style={{ color: r.color }}>{r.label}</span>
-            </div>
-            <ul className="space-y-1">
-              {r.items.map(item => (
-                <li key={item} className="flex items-center gap-2 text-xs text-slate-300">
-                  <span className="w-1 h-1 rounded-full bg-current flex-shrink-0" style={{ color: r.color }} />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+      <div className="rounded-2xl border border-white/10 bg-[#0d1520] p-8 text-center">
+        <span className="text-sm font-black text-slate-400 tracking-wide uppercase">Revealed soon</span>
       </div>
     </section>
   );
@@ -1285,40 +1237,6 @@ function SeasonCategories() {
   );
 }
 
-// ─── Section: Achievement Cabinet ─────────────────────────────────────────
-
-const ACHIEVEMENTS = [
-  { icon: "🏆", label: "Weekly Champion",     count: "×1 awarded" },
-  { icon: "🥇", label: "Monthly Champion",    count: "×1 awarded" },
-  { icon: "🔥", label: "50 Day Streak",       count: "Keep going!" },
-  { icon: "🎥", label: "500 Clips",           count: "Upload milestone" },
-  { icon: "📱", label: "250 Reels",           count: "Upload milestone" },
-  { icon: "💰", label: "20 Bounties",         count: "Bounty hunter" },
-  { icon: "⭐", label: "Level 100",           count: "Max level" },
-  { icon: "👑", label: "Diamond League",      count: "Top 10 finish" },
-];
-
-function AchievementCabinet() {
-  return (
-    <section className="px-4 mb-8">
-      <div className="flex items-center gap-2 mb-2">
-        <Award className="w-5 h-5 text-[#B7FF1A]" />
-        <h2 className="text-xl font-black text-white">Achievement Cabinet</h2>
-      </div>
-      <p className="text-slate-500 text-xs mb-4 ml-7">Permanent achievements earned through competition — visible on your profile.</p>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {ACHIEVEMENTS.map(a => (
-          <div key={a.label} className="rounded-xl border border-white/8 bg-white/3 px-4 py-4 flex flex-col items-center text-center gap-1.5 opacity-50">
-            <span className="text-2xl">{a.icon}</span>
-            <div className="font-semibold text-white text-xs">{a.label}</div>
-            <div className="text-[10px] text-slate-500">{a.count}</div>
-          </div>
-        ))}
-      </div>
-      <p className="text-slate-600 text-[10px] mt-3 ml-1">Achievements shown above are unlocked by reaching these milestones in the competition.</p>
-    </section>
-  );
-}
 
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
@@ -1417,8 +1335,6 @@ export default function LeaderboardPage() {
         <SeasonCategories />
         <div className="rs-section-divider" />
 
-        {/* Achievement Cabinet */}
-        <AchievementCabinet />
       </div>
     </div>
   );
