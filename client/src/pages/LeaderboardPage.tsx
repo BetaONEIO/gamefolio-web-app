@@ -1214,7 +1214,7 @@ function HallOfChampions() {
                 </div>
 
                 {/* Top 3 list */}
-                <div className="flex-1 px-4 py-4 space-y-4">
+                <div className="flex-1 px-4 py-4 space-y-7">
                   {!season.top3 || season.top3.length === 0 ? (
                     <div className="text-xs text-slate-600 text-center py-4">No data</div>
                   ) : (
@@ -1242,12 +1242,6 @@ function HallOfChampions() {
                   )}
                 </div>
 
-                {/* View Season button */}
-                <div className="px-4 pb-4">
-                  <button className="w-full py-2 rounded-lg border border-[#B7FF1A]/40 text-[#B7FF1A] text-xs font-black tracking-widest uppercase hover:bg-[#B7FF1A]/10 transition-colors">
-                    View Season
-                  </button>
-                </div>
               </div>
             );
           })}
