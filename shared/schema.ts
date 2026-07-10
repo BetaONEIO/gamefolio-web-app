@@ -174,6 +174,8 @@ export const users = pgTable("users", {
   gameEpicUrl: text("game_epic_url"),
   gameTrailerUrl: text("game_trailer_url"), // YouTube or direct video URL shown at the top of the Overview tab
   gameScreenshotUrls: text("game_screenshot_urls").array(), // Steam-style screenshot gallery on the Overview tab
+  steamVerifiedAppId: text("steam_verified_app_id"), // Set once the dev proves ownership of this Steam store page
+  steamVerifiedAt: timestamp("steam_verified_at"), // null = not verified
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -573,6 +575,21 @@ export const emailVerificationTokens = pgTable("email_verification_tokens", {
   // Allow multiple codes per user but only track the most recent one
 });
 
+// One-time codes for proving ownership of a Steam store page — dev pastes the
+// code into their store description, we check it via Steam's public appdetails
+// API. Deleted once verification succeeds (see steamVerifiedAppId/steamVerifiedAt
+// on the users table for the permanent record).
+export const steamVerificationCodes = pgTable("steam_verification_codes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .references(() => users.id)
+    .notNull(),
+  steamAppId: text("steam_app_id").notNull(),
+  code: text("code").notNull(), // 6-digit, same generator as email verification
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Password reset tokens table
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: serial("id").primaryKey(),
@@ -819,6 +836,8 @@ export const emailVerificationSchema = z.object({
 // Types
 export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect;
 export type InsertEmailVerificationToken = typeof emailVerificationTokens.$inferInsert;
+export type SteamVerificationCode = typeof steamVerificationCodes.$inferSelect;
+export type InsertSteamVerificationCode = typeof steamVerificationCodes.$inferInsert;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 export type PasswordResetRequest = z.infer<typeof passwordResetRequestSchema>;

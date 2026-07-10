@@ -448,7 +448,14 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
                     className="w-full flex items-center gap-3 p-3 rounded-md bg-[#171a21] hover:bg-[#2a303c] transition-colors border border-white/5">
                     <SiSteam size={24} className="text-[#66c0f4]" />
                     <span className="font-semibold text-[#c7d5e0]">Steam</span>
-                    <ExternalLink size={12} className="ml-auto opacity-40" />
+                    {profile.steamVerifiedAt ? (
+                      <span className="ml-auto flex items-center gap-1 text-xs font-semibold text-[#66c0f4]">
+                        <CheckCircle2 size={14} />
+                        Verified
+                      </span>
+                    ) : (
+                      <ExternalLink size={12} className="ml-auto opacity-40" />
+                    )}
                   </a>
                 )}
                 {igEpicUrl && (
