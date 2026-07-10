@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight, Eye, Heart, Video, Trophy,
   Zap, Radio, Star, Rocket, Compass, Gamepad2, Users,
   ArrowRight, Clapperboard, Flame, Play, Pause, Volume2, VolumeX,
-  Upload, Camera, Image,
+  Upload, Camera, Image, Info, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -142,7 +142,7 @@ function TrendingClipSlide({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [progress, setProgress] = useState(0);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const handlePlayPause = (e: React.MouseEvent) => {
@@ -278,6 +278,85 @@ function TrendingClipSlide({
             <ChevronLeft className="h-4 w-4" />
           </button>
 
+          {/* Game info overlay — shown when info button is active */}
+          {showInfo && clip.game && (
+            <div className="absolute inset-0 z-30 flex items-end justify-end pointer-events-none">
+              {/* Tap-to-close backdrop */}
+              <div
+                className="absolute inset-0 pointer-events-auto"
+                onClick={(e) => { e.stopPropagation(); setShowInfo(false); }}
+              />
+              {/* Panel */}
+              <div
+                className="relative pointer-events-auto m-3 rounded-xl overflow-hidden flex flex-col"
+                style={{
+                  width: "clamp(150px, 42%, 210px)",
+                  background: "rgba(3,8,10,0.88)",
+                  backdropFilter: "blur(14px)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  animation: "fadeSlideUp 0.18s ease",
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Game artwork */}
+                <div className="relative flex-shrink-0 overflow-hidden" style={{ height: 90 }}>
+                  {clip.game.imageUrl ? (
+                    <img src={clip.game.imageUrl} alt={clip.game.name} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#0A1117" }}>
+                      <Gamepad2 className="w-7 h-7 text-white/15" />
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 inset-x-0 px-2 py-1.5" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 100%)" }}>
+                    <p className="text-[10px] font-black uppercase tracking-wide text-white line-clamp-1">{clip.game.name}</p>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowInfo(false); }}
+                    className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/60 hover:bg-black/85 flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                </div>
+                {/* Stats */}
+                <div className="px-3 pt-2.5 pb-2 flex flex-col gap-1.5">
+                  {[
+                    { icon: Clapperboard, label: "Clips",    value: clip.views ? Math.max(1, Math.floor(clip.views / 120)) : 5 },
+                    { icon: Video,        label: "Reels",    value: clip.likes ? Math.max(1, Math.floor(clip.likes / 40))  : 3 },
+                    { icon: Camera,       label: "Shots",    value: clip.views ? Math.max(1, Math.floor(clip.views / 200)) : 5 },
+                    { icon: null,         label: "Bounties", value: 3 },
+                  ].map(({ icon: Icon, label, value }, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        {Icon && <Icon className="w-3 h-3 text-white/60" />}
+                        <span className="text-[11px] text-white/70">{label}</span>
+                      </div>
+                      <span className="text-[11px] font-bold text-white">{formatNumber(value)}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Upload CTA */}
+                <div className="px-3 pb-3">
+                  <Link href="/upload">
+                    <button
+                      className="w-full py-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
+                      style={{ background: NEON, color: "#03080A" }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Upload className="w-3 h-3" />
+                      Upload
+                    </button>
+                  </Link>
+                </div>
+              </div>
+              <style>{`
+                @keyframes fadeSlideUp {
+                  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+                  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+                }
+              `}</style>
+            </div>
+          )}
+
           {/* Bottom bar: title, dots, mute */}
           <div className="absolute bottom-0 inset-x-0 z-20 px-4 pb-2">
             <div className="flex items-end justify-between gap-2">
@@ -291,16 +370,29 @@ function TrendingClipSlide({
                 </Link>
               </div>
 
-              {/* Mute button */}
-              <button
-                onClick={handleMute}
-                className="flex-shrink-0 p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors"
-              >
-                {isMuted
-                  ? <VolumeX className="w-4 h-4" />
-                  : <Volume2 className="w-4 h-4" />
-                }
-              </button>
+              {/* Info + Mute buttons */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {clip.game && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowInfo(v => !v); }}
+                    className="p-1.5 rounded-full transition-all"
+                    style={{
+                      background: showInfo ? NEON : "rgba(0,0,0,0.60)",
+                      backdropFilter: "blur(6px)",
+                    }}
+                    aria-label="Game info"
+                  >
+                    <Info className="w-4 h-4" style={{ color: showInfo ? "#03080A" : "white" }} />
+                  </button>
+                )}
+                <button
+                  onClick={handleMute}
+                  className="flex-shrink-0 p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors"
+                  style={{ backdropFilter: "blur(6px)" }}
+                >
+                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             {/* Dot indicators */}
@@ -332,104 +424,6 @@ function TrendingClipSlide({
 
       </div>
 
-      {/* ── RIGHT: Game Sidebar — toggle strip + collapsible content ── */}
-      {/* Hidden on mobile (flex-col stacks it below), shown as a row on md+ */}
-      <div className="hidden md:flex flex-row flex-shrink-0 bg-[#060D12] border-l border-white/5">
-
-        {/* Toggle strip — always visible, 20px wide */}
-        <button
-          onClick={(e) => { e.stopPropagation(); setSidebarCollapsed(c => !c); }}
-          className="flex-shrink-0 flex items-center justify-center transition-colors hover:bg-[#0f1e2a] active:bg-[#0a1520]"
-          style={{ width: 20, background: "rgba(6,13,18,0.95)", borderRight: "1px solid rgba(183,255,24,0.3)" }}
-          aria-label={sidebarCollapsed ? "Show game panel" : "Hide game panel"}
-          title={sidebarCollapsed ? "Show game panel" : "Hide game panel"}
-        >
-          <ChevronRight
-            className={`w-3 h-3 transition-transform duration-300 ${sidebarCollapsed ? "" : "rotate-180"}`}
-            style={{ color: "#B7FF18" }}
-          />
-        </button>
-
-        {/* Collapsible content */}
-        <div
-          className="overflow-hidden transition-all duration-300 flex flex-col"
-          style={{ width: sidebarCollapsed ? 0 : "clamp(160px, 20%, 240px)" }}
-        >
-          {/* Game thumbnail */}
-          <div className="relative flex-1 overflow-hidden bg-[#0B1219]" style={{ minHeight: "160px" }}>
-            {clip.game?.imageUrl ? (
-              <img
-                src={clip.game.imageUrl}
-                alt={clip.game.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Gamepad2 className="w-12 h-12 text-white/20" />
-              </div>
-            )}
-
-            {/* Game name overlay */}
-            {clip.game?.name && (
-              <div className="absolute top-0 inset-x-0 px-2 pt-2 pb-4 bg-gradient-to-b from-black/80 to-transparent">
-                <span className="text-[10px] font-black uppercase tracking-wider text-white/80 line-clamp-1">
-                  {clip.game.name}
-                </span>
-              </div>
-            )}
-
-            {/* Prev/Next game nav */}
-            <div className="absolute top-2 right-2 flex items-center gap-1">
-              <button
-                className="w-5 h-5 rounded-sm bg-black/60 hover:bg-black/90 flex items-center justify-center transition-colors"
-                onClick={(e) => { e.stopPropagation(); onPrev(); }}
-              >
-                <ChevronLeft className="w-3 h-3 text-white" />
-              </button>
-              <button
-                className="w-5 h-5 rounded-sm bg-black/60 hover:bg-black/90 flex items-center justify-center transition-colors"
-                onClick={(e) => { e.stopPropagation(); onNext(); }}
-              >
-                <ChevronRight className="w-3 h-3 text-white" />
-              </button>
-            </div>
-          </div>
-
-          {/* Stats row */}
-          <div className="px-3 py-2 border-t border-white/5">
-            <div className="grid grid-cols-4 gap-1 text-center">
-              {[
-                { icon: Clapperboard, label: "Clips", value: clip.views ? Math.max(1, Math.floor(clip.views / 120)) : 5 },
-                { icon: Video, label: "Reels", value: clip.likes ? Math.max(1, Math.floor(clip.likes / 40)) : 3 },
-                { icon: Camera, label: "", value: clip.views ? Math.max(1, Math.floor(clip.views / 200)) : 5 },
-                { icon: null, label: "Bounties", value: 3 },
-              ].map(({ icon: Icon, label, value }, i) => (
-                <div key={i} className="flex flex-col items-center gap-0.5">
-                  <span className="text-white font-black text-sm">{value}</span>
-                  <div className="flex items-center gap-0.5">
-                    {Icon && <Icon className="w-2.5 h-2.5 text-white/40" />}
-                    {label && <span className="text-[9px] text-white/40 font-medium">{label}</span>}
-                    {!Icon && !label && <span className="text-[9px] text-white/40">Bounties</span>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Upload content button */}
-          <div className="px-3 pb-3">
-            <Link href="/upload">
-              <button
-                className="w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all hover:opacity-90 active:scale-[0.98]"
-                style={{ background: NEON, color: "#03080A" }}
-              >
-                <Upload className="w-3.5 h-3.5" />
-                Upload Content
-              </button>
-            </Link>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

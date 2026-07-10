@@ -3,12 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import {
   Flame, ChevronLeft, ChevronRight, Play, Pause,
-  Volume2, VolumeX, Upload, Clapperboard, Video, Camera, Gamepad2,
+  Volume2, VolumeX, Upload, Clapperboard, Video, Camera, Info, X,
 } from "lucide-react";
 
 const NEON = "#B7FF18";
 const AUTO_ADVANCE_MS = 7000;
-const THUMB_H = 110;
 
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
@@ -35,12 +34,8 @@ interface GameCounts {
   bounties?: number;
 }
 
-/* ── Right panel ── */
-function GameSidebar({ clip, onPrev, onNext }: {
-  clip: Clip;
-  onPrev: () => void;
-  onNext: () => void;
-}) {
+/* ── Info overlay — shown when info button is active ── */
+function GameInfoOverlay({ clip, onClose }: { clip: Clip; onClose: () => void }) {
   const gameId = clip.game?.id ?? clip.gameId;
 
   const { data: counts } = useQuery<GameCounts>({
@@ -63,77 +58,94 @@ function GameSidebar({ clip, onPrev, onNext }: {
 
   return (
     <div
-      className="flex-shrink-0 flex flex-col overflow-hidden"
-      style={{ width: "clamp(160px, 22%, 240px)" }}
+      className="absolute inset-0 z-30 flex items-end justify-end pointer-events-none"
     >
-      {/* Game thumbnail — fixed height */}
-      <div className="relative flex-shrink-0 overflow-hidden" style={{ height: THUMB_H }}>
-        {clip.game?.imageUrl ? (
-          <img
-            src={clip.game.imageUrl}
-            alt={clip.game?.name ?? "Game"}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-[#0A1117] flex items-center justify-center">
-            <Gamepad2 className="w-8 h-8 text-white/15" />
-          </div>
-        )}
-        <div
-          className="absolute bottom-0 inset-x-0 px-2 py-1.5"
-          style={{ background: "linear-gradient(to top, rgba(0,0,0,0.80) 0%, transparent 100%)" }}
-        >
-          {clip.game?.name && (
-            <p className="text-[9px] font-black uppercase tracking-wide text-white line-clamp-1">
-              {clip.game.name}
-            </p>
-          )}
-        </div>
-        <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 z-10">
-          <button
-            onPointerDown={(e) => { e.stopPropagation(); onPrev(); }}
-            onClick={(e) => e.stopPropagation()}
-            className="w-5 h-5 rounded-sm bg-black/60 hover:bg-black/85 flex items-center justify-center transition-colors"
-          >
-            <ChevronLeft className="w-3 h-3 text-white" />
-          </button>
-          <button
-            onPointerDown={(e) => { e.stopPropagation(); onNext(); }}
-            onClick={(e) => e.stopPropagation()}
-            className="w-5 h-5 rounded-sm bg-black/60 hover:bg-black/85 flex items-center justify-center transition-colors"
-          >
-            <ChevronRight className="w-3 h-3 text-white" />
-          </button>
-        </div>
-      </div>
+      {/* Backdrop tap-to-close */}
+      <div
+        className="absolute inset-0 pointer-events-auto"
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
+      />
 
-      {/* Stats — vertical, full white */}
-      <div className="flex-1 px-3 pt-3 pb-2 flex flex-col justify-center gap-2">
-        {stats.map(({ icon: Icon, label, value }, i) => (
-          <div key={i} className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              {Icon && <Icon className="w-3 h-3 text-white" />}
-              <span className="text-[11px] text-white">{label}</span>
+      {/* Info panel */}
+      <div
+        className="relative pointer-events-auto m-3 rounded-xl overflow-hidden flex flex-col"
+        style={{
+          width: "clamp(150px, 42%, 210px)",
+          background: "rgba(3,8,10,0.88)",
+          backdropFilter: "blur(14px)",
+          border: "1px solid rgba(255,255,255,0.1)",
+          animation: "fadeSlideUp 0.18s ease",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Game artwork header */}
+        <div className="relative flex-shrink-0 overflow-hidden" style={{ height: 90 }}>
+          {clip.game?.imageUrl ? (
+            <img
+              src={clip.game.imageUrl}
+              alt={clip.game?.name ?? "Game"}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#0A1117" }}>
+              <Clapperboard className="w-7 h-7 text-white/15" />
             </div>
-            <span className="text-[11px] font-bold text-white">
-              {typeof value === "number" ? formatNumber(value) : value}
-            </span>
+          )}
+          <div
+            className="absolute bottom-0 inset-x-0 px-2 py-1.5"
+            style={{ background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 100%)" }}
+          >
+            {clip.game?.name && (
+              <p className="text-[10px] font-black uppercase tracking-wide text-white line-clamp-1">
+                {clip.game.name}
+              </p>
+            )}
           </div>
-        ))}
+          {/* Close button */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/60 hover:bg-black/85 flex items-center justify-center transition-colors"
+          >
+            <X className="w-3 h-3 text-white" />
+          </button>
+        </div>
+
+        {/* Stats */}
+        <div className="px-3 pt-2.5 pb-2 flex flex-col gap-1.5">
+          {stats.map(({ icon: Icon, label, value }, i) => (
+            <div key={i} className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                {Icon && <Icon className="w-3 h-3 text-white/60" />}
+                <span className="text-[11px] text-white/70">{label}</span>
+              </div>
+              <span className="text-[11px] font-bold text-white">
+                {typeof value === "number" ? formatNumber(value) : value}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Upload CTA */}
+        <div className="px-3 pb-3">
+          <Link href="/upload">
+            <button
+              className="w-full py-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
+              style={{ background: NEON, color: "#03080A" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Upload className="w-3 h-3" />
+              Upload
+            </button>
+          </Link>
+        </div>
       </div>
 
-      {/* Upload button */}
-      <div className="flex-shrink-0 px-3 pb-3">
-        <Link href="/upload">
-          <button
-            className="w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
-            style={{ background: NEON, color: "#03080A" }}
-          >
-            <Upload className="w-3.5 h-3.5" />
-            Upload Content
-          </button>
-        </Link>
-      </div>
+      <style>{`
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(8px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0)    scale(1);    }
+        }
+      `}</style>
     </div>
   );
 }
@@ -150,16 +162,15 @@ export default function TrendingHeroSlide({
   const [isMuted, setIsMuted] = useState(true);
   const [progress, setProgress] = useState(0);
   const [videoReady, setVideoReady] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isInteracting = useRef(false);
-  // Track recent wheel/scroll events to suppress accidental clicks from trackpad gestures
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [, setLocation] = useLocation();
 
   const { data: clips = [] } = useQuery<Clip[]>({
-    // Include the full URL path in the key so each endpoint+params has its own cache slot
     queryKey: contentType === "reels"
       ? ["/api/clips/reels/trending", "ever"]
       : ["/api/clips/trending", "all"],
@@ -183,7 +194,11 @@ export default function TrendingHeroSlide({
     setCurrentIndex(0);
     setIsPlaying(false);
     setProgress(0);
+    setShowInfo(false);
   }, [contentType]);
+
+  // Close info panel when slide changes
+  useEffect(() => { setShowInfo(false); }, [currentIndex]);
 
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -200,9 +215,6 @@ export default function TrendingHeroSlide({
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [startTimer, currentIndex]);
 
-  /* Trigger playback whenever the displayed clip changes.
-     Key rule: do NOT call v.load() — each clip has a unique key so React
-     already creates a fresh <video> element. */
   useEffect(() => {
     setProgress(0);
     isInteracting.current = false;
@@ -215,13 +227,10 @@ export default function TrendingHeroSlide({
     if (!v || !clip?.videoUrl) return;
 
     v.muted = true;
-
-    // Attempt 1: play immediately (works when video already has data)
     v.play()
       .then(() => { setIsPlaying(true); onPlayingChange?.(true); })
-      .catch(() => { /* video not ready yet — retry below */ });
+      .catch(() => {});
 
-    // Attempt 2: retry after 500 ms (covers freshly-mounted video still buffering)
     const retry = setTimeout(() => {
       const vid = videoRef.current;
       if (!vid || !vid.paused) return;
@@ -251,25 +260,17 @@ export default function TrendingHeroSlide({
   }, [total, startTimer]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
-    // Mark as scrolling regardless of direction — suppress all navigation during scroll
     isScrollingRef.current = true;
     if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
-    scrollTimeoutRef.current = setTimeout(() => {
-      isScrollingRef.current = false;
-    }, 500);
-    // Let vertical scroll pass through to the page naturally
-    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-      // vertical — don't preventDefault so page still scrolls
-      return;
-    }
-    // horizontal — prevent default to stop browser back/forward navigation
+    scrollTimeoutRef.current = setTimeout(() => { isScrollingRef.current = false; }, 500);
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
     e.preventDefault();
   }, []);
 
   const handlePlayPause = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Ignore clicks that are actually touchpad scroll gestures
     if (isScrollingRef.current) return;
+    if (showInfo) { setShowInfo(false); return; }
     const vid = videoRef.current;
     if (!vid) {
       if (clip) setLocation(`/clips/${clip.id}`);
@@ -314,14 +315,10 @@ export default function TrendingHeroSlide({
     setProgress((vid.currentTime / vid.duration) * 100);
   };
 
-  /* Fill the full slide area */
   return (
-    <div
-      className="absolute inset-0 flex bg-[#03080A]"
-      onWheel={handleWheel}
-    >
-      {/* ── LEFT: Video ── */}
-      <div className="relative flex-1 min-w-0 overflow-hidden bg-black">
+    <div className="absolute inset-0 bg-[#03080A]" onWheel={handleWheel}>
+      {/* ── Full-width video ── */}
+      <div className="relative w-full h-full overflow-hidden bg-black">
         {/* Header */}
         <div
           className="absolute top-0 inset-x-0 z-20 flex items-center gap-3 px-4 pt-3 pb-8"
@@ -353,7 +350,6 @@ export default function TrendingHeroSlide({
         {clip ? (
           clip.videoUrl ? (
             <div className="absolute inset-0">
-              {/* Thumbnail shown immediately as background while video buffers */}
               {clip.thumbnailUrl && (
                 <img
                   src={clip.thumbnailUrl}
@@ -405,7 +401,7 @@ export default function TrendingHeroSlide({
             />
           ) : (
             <div className="absolute inset-0 bg-[#060D12] flex items-center justify-center">
-              <Gamepad2 className="w-16 h-16 text-white/10" />
+              <Clapperboard className="w-16 h-16 text-white/10" />
             </div>
           )
         ) : (
@@ -418,7 +414,7 @@ export default function TrendingHeroSlide({
           style={{ height: "45%", background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, transparent 100%)" }}
         />
 
-        {/* Play/Pause overlay */}
+        {/* Play/Pause overlay (behind info panel) */}
         <button
           onClick={handlePlayPause}
           className="absolute inset-0 w-full h-full z-10 flex items-center justify-center group"
@@ -437,7 +433,7 @@ export default function TrendingHeroSlide({
           </div>
         </button>
 
-        {/* Left arrow — centered on slide */}
+        {/* Left arrow */}
         <button
           onClick={(e) => { e.stopPropagation(); if (!isScrollingRef.current) goPrev(); }}
           className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-sm flex items-center justify-center text-white transition-colors shadow-lg"
@@ -446,7 +442,7 @@ export default function TrendingHeroSlide({
           <ChevronLeft className="w-6 h-6" />
         </button>
 
-        {/* Right arrow — centered on slide */}
+        {/* Right arrow */}
         <button
           onClick={(e) => { e.stopPropagation(); if (!isScrollingRef.current) goNext(); }}
           className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/60 hover:bg-black/85 backdrop-blur-sm flex items-center justify-center text-white transition-colors shadow-lg"
@@ -474,13 +470,34 @@ export default function TrendingHeroSlide({
                 </>
               )}
             </div>
-            <button
-              onClick={handleMute}
-              className="flex-shrink-0 w-7 h-7 rounded-full bg-black/60 hover:bg-black/85 flex items-center justify-center text-white transition-colors"
-            >
-              {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-            </button>
+
+            {/* Right-side controls: info button + mute */}
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {/* ⓘ Info button */}
+              {clip && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowInfo((v) => !v); }}
+                  className="w-7 h-7 rounded-full flex items-center justify-center transition-all"
+                  style={{
+                    background: showInfo ? NEON : "rgba(0,0,0,0.60)",
+                    backdropFilter: "blur(6px)",
+                  }}
+                  aria-label="Game info"
+                >
+                  <Info className="w-3.5 h-3.5" style={{ color: showInfo ? "#03080A" : "white" }} />
+                </button>
+              )}
+              {/* Mute */}
+              <button
+                onClick={handleMute}
+                className="w-7 h-7 rounded-full bg-black/60 hover:bg-black/85 flex items-center justify-center text-white transition-colors"
+                style={{ backdropFilter: "blur(6px)" }}
+              >
+                {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+              </button>
+            </div>
           </div>
+
           {/* Progress bar */}
           <div className="h-[2px] w-full rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.15)" }}>
             <div
@@ -493,10 +510,12 @@ export default function TrendingHeroSlide({
             />
           </div>
         </div>
-      </div>
 
-      {/* ── RIGHT: Game sidebar ── */}
-      {clip && <GameSidebar clip={clip} onPrev={goPrev} onNext={goNext} />}
+        {/* ── Info overlay (shown when showInfo is true) ── */}
+        {showInfo && clip && (
+          <GameInfoOverlay clip={clip} onClose={() => setShowInfo(false)} />
+        )}
+      </div>
     </div>
   );
 }
