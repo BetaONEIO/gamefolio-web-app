@@ -1346,6 +1346,10 @@ export default function LeaderboardPage() {
       <div className="max-w-3xl mx-auto pb-20">
         <div className="rs-section-divider" />
 
+        {/* Season Rewards */}
+        <SeasonRewards />
+        <div className="rs-section-divider" />
+
         {/* Season Categories */}
         <SeasonCategories />
         <div className="rs-section-divider" />
