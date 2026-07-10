@@ -3,13 +3,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import {
   Rocket, Trophy, Users, Eye, Key, Zap, Inbox, Sparkles,
-  Plus, ListChecks, ClipboardCheck, KeyRound, BarChart3, Loader2, Gamepad2,
+  Plus, ListChecks, ClipboardCheck, KeyRound, BarChart3, Loader2, Gamepad2, Gamepad,
 } from "lucide-react";
 import CreateBountyWizard from "./indie-dashboard/CreateBountyWizard";
 import ActiveBountiesTab from "./indie-dashboard/ActiveBountiesTab";
 import SubmissionReviewTab from "./indie-dashboard/SubmissionReviewTab";
 import KeyManagementTab from "./indie-dashboard/KeyManagementTab";
 import AnalyticsTab from "./indie-dashboard/AnalyticsTab";
+import GameProfileTab from "./indie-dashboard/GameProfileTab";
 
 export const NEON = "#c1ff00";
 export const CARD_BG = "rgba(255,255,255,0.04)";
@@ -18,6 +19,7 @@ export const PAGE_BG = "#070b10";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: BarChart3 },
+  { id: "game-profile", label: "Game Profile", icon: Gamepad },
   { id: "create", label: "Create Bounty", icon: Plus },
   { id: "bounties", label: "Active Bounties", icon: ListChecks },
   { id: "review", label: "Submission Review", icon: ClipboardCheck },
@@ -222,6 +224,7 @@ export default function IndieDashboardPage() {
         </div>
 
         {tab === "overview" && <OverviewTab onNavigate={setTab} />}
+        {tab === "game-profile" && <GameProfileTab />}
         {tab === "create" && <CreateBountyWizard onCreated={() => setTab("bounties")} />}
         {tab === "bounties" && <ActiveBountiesTab onCreateNew={() => setTab("create")} />}
         {tab === "review" && <SubmissionReviewTab />}

@@ -1958,3 +1958,22 @@ export const usedPaymentHashes = pgTable("used_payment_hashes", {
   itemId: text("item_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// Indie game per-field import/override metadata
+// Tracks where each field value came from (store import vs manual edit)
+export const indieGameFieldOverrides = pgTable("indie_game_field_overrides", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  fieldName: text("field_name").notNull(), // e.g. "gameDescription", "gameKeyFeatures"
+  importedValue: text("imported_value"),   // JSON-encoded value from last store import
+  importSource: text("import_source"),     // "steam" | "epic" | "itch"
+  manualOverride: text("manual_override"), // JSON-encoded manual override value (when isOverride=true)
+  isOverride: boolean("is_override").default(false).notNull(), // true = user manual value wins
+  lastImportedAt: timestamp("last_imported_at"),
+  lastEditedAt: timestamp("last_edited_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertIndieGameFieldOverrideSchema = createInsertSchema(indieGameFieldOverrides).omit({ id: true, createdAt: true });
+export type IndieGameFieldOverride = typeof indieGameFieldOverrides.$inferSelect;
+export type InsertIndieGameFieldOverride = z.infer<typeof insertIndieGameFieldOverrideSchema>;
