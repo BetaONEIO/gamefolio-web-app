@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop, Zap, Star, Target, Gift, Tv, Globe, Swords, Users, Flame, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop, Zap, Star, Target, Gift, Tv, Globe, Swords, Users, Flame, ChevronLeft, ChevronRight, X, ExternalLink } from "lucide-react";
+import { SiSteam, SiItchdotio } from "react-icons/si";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
@@ -330,10 +331,12 @@ export default function OnboardingFlow({
     genre: '',
     releaseStatus: '',
     steamLink: '',
+    itchLink: '',
     epicLink: '',
     websiteLink: '',
     description: '',
   });
+  const [platformExpanded, setPlatformExpanded] = useState<{ steam: boolean; itch: boolean }>({ steam: false, itch: false });
 
   // Wallet state
   const { walletAddress: sequenceWalletAddress, isReady: isWalletReady, isConnecting: isCreatingWallet, connect: connectWallet } = useWallet();
@@ -1513,10 +1516,96 @@ export default function OnboardingFlow({
                   </SelectContent>
                 </Select>
               </div>
+              {/* Platform Connect Buttons */}
               <div>
-                <Label className="text-gray-400 text-sm mb-1.5 block">Steam Link</Label>
-                <Input value={indieGameData.steamLink} onChange={(e) => setIndieGameData({ ...indieGameData, steamLink: e.target.value })} placeholder="https://store.steampowered.com/app/..." className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                <Label className="text-gray-400 text-sm mb-2 block">Connect Store Pages</Label>
+                <div className="flex gap-2 mb-2">
+                  {/* Steam */}
+                  <button
+                    type="button"
+                    onClick={() => setPlatformExpanded(p => ({ ...p, steam: !p.steam }))}
+                    className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl font-bold text-sm transition-all border"
+                    style={indieGameData.steamLink
+                      ? { background: "rgba(183,255,26,0.08)", border: "1px solid rgba(183,255,26,0.40)", color: "#B7FF1A" }
+                      : { background: "#1b2838", border: "1px solid rgba(255,255,255,0.10)", color: "white" }
+                    }
+                  >
+                    <SiSteam className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left text-xs">
+                      {indieGameData.steamLink ? "Steam ✓" : "Connect Steam"}
+                    </span>
+                    {indieGameData.steamLink && (
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setIndieGameData(d => ({ ...d, steamLink: '' })); setPlatformExpanded(p => ({ ...p, steam: false })); }}>
+                        <X className="w-3 h-3 opacity-60 hover:opacity-100" />
+                      </button>
+                    )}
+                  </button>
+
+                  {/* Itch.io */}
+                  <button
+                    type="button"
+                    onClick={() => setPlatformExpanded(p => ({ ...p, itch: !p.itch }))}
+                    className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl font-bold text-sm transition-all border"
+                    style={indieGameData.itchLink
+                      ? { background: "rgba(183,255,26,0.08)", border: "1px solid rgba(183,255,26,0.40)", color: "#B7FF1A" }
+                      : { background: "#1c1a20", border: "1px solid rgba(255,255,255,0.10)", color: "white" }
+                    }
+                  >
+                    <SiItchdotio className="w-4 h-4 flex-shrink-0" style={{ color: indieGameData.itchLink ? undefined : "#FA5C5C" }} />
+                    <span className="flex-1 text-left text-xs">
+                      {indieGameData.itchLink ? "Itch.io ✓" : "Connect Itch.io"}
+                    </span>
+                    {indieGameData.itchLink && (
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setIndieGameData(d => ({ ...d, itchLink: '' })); setPlatformExpanded(p => ({ ...p, itch: false })); }}>
+                        <X className="w-3 h-3 opacity-60 hover:opacity-100" />
+                      </button>
+                    )}
+                  </button>
+                </div>
+
+                {/* Steam URL input (expanded) */}
+                {platformExpanded.steam && (
+                  <div className="mb-2 flex gap-2 items-center">
+                    <Input
+                      autoFocus
+                      value={indieGameData.steamLink}
+                      onChange={(e) => setIndieGameData({ ...indieGameData, steamLink: e.target.value })}
+                      placeholder="https://store.steampowered.com/app/..."
+                      className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPlatformExpanded(p => ({ ...p, steam: false }))}
+                      className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
+                      style={{ background: "rgba(255,255,255,0.06)" }}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Itch.io URL input (expanded) */}
+                {platformExpanded.itch && (
+                  <div className="mb-2 flex gap-2 items-center">
+                    <Input
+                      autoFocus
+                      value={indieGameData.itchLink}
+                      onChange={(e) => setIndieGameData({ ...indieGameData, itchLink: e.target.value })}
+                      placeholder="https://yourname.itch.io/your-game"
+                      className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPlatformExpanded(p => ({ ...p, itch: false }))}
+                      className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
+                      style={{ background: "rgba(255,255,255,0.06)" }}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
+
               <div>
                 <Label className="text-gray-400 text-sm mb-1.5 block">Epic Games Link</Label>
                 <Input value={indieGameData.epicLink} onChange={(e) => setIndieGameData({ ...indieGameData, epicLink: e.target.value })} placeholder="https://store.epicgames.com/..." className="bg-[#0B1218] border-[#1B2A33] text-white" />
