@@ -14,6 +14,8 @@ import { MediaSection } from "./edit-profile/MediaSection";
 import { PlatformsSection } from "./edit-profile/PlatformsSection";
 import { StoreLinksSection } from "./edit-profile/StoreLinksSection";
 import { SocialSection } from "./edit-profile/SocialSection";
+import { StoreSpecificSection } from "./edit-profile/StoreSpecificSection";
+import { SyncSettingsSection } from "./edit-profile/SyncSettingsSection";
 import { StoreImportPanel } from "./edit-profile/StoreImportPanel";
 import { SyncPanel } from "./edit-profile/SyncPanel";
 
@@ -27,6 +29,8 @@ const SECTION_FIELDS: Record<string, string[]> = {
   platforms: ["platforms"],
   stores: ["steamAppId", "steamUrl", "epicSlug", "epicUrl", "itchUrl"],
   social: ["websiteUrl", "twitterUrl", "discordUrl"],
+  "store-specific": ["ageRating", "supportedLanguages", "contentDescriptors"],
+  "sync-settings": ["autoSyncEnabled", "preferredSyncSource"],
 };
 
 export default function GameProfileTab() {
@@ -146,6 +150,8 @@ export default function GameProfileTab() {
       <PlatformsSection {...sharedProps} open={openSections.has("platforms")} onToggle={() => toggleSection("platforms")} filledCount={sectionFilled("platforms")} totalCount={sectionTotal("platforms")} />
       <StoreLinksSection {...sharedProps} open={openSections.has("stores")} onToggle={() => toggleSection("stores")} filledCount={sectionFilled("stores")} totalCount={sectionTotal("stores")} />
       <SocialSection {...sharedProps} open={openSections.has("social")} onToggle={() => toggleSection("social")} filledCount={sectionFilled("social")} totalCount={sectionTotal("social")} />
+      <StoreSpecificSection {...sharedProps} open={openSections.has("store-specific")} onToggle={() => toggleSection("store-specific")} filledCount={sectionFilled("store-specific")} totalCount={sectionTotal("store-specific")} />
+      <SyncSettingsSection {...sharedProps} open={openSections.has("sync-settings")} onToggle={() => toggleSection("sync-settings")} filledCount={sectionFilled("sync-settings")} totalCount={sectionTotal("sync-settings")} />
     </div>
   );
 }

@@ -509,6 +509,18 @@ const IndieGamePage = () => {
     enabled: !!gameSlug,
   });
 
+  // Fetch the developer's Indie Game Profile for enriched public data
+  const { data: indieProfileData } = useQuery<{ profile: any; user: any } | null>({
+    queryKey: ["/api/games/indie", gameSlug],
+    queryFn: async () => {
+      if (!gameSlug) return null;
+      const r = await fetch(`/api/games/indie/${gameSlug}`, { credentials: "include" });
+      if (!r.ok) return null;
+      return r.json();
+    },
+    enabled: !!gameSlug,
+  });
+
   const { data: clips } = useQuery<ClipWithUser[]>({
     queryKey: ["/api/games", game?.id, "clips"],
     queryFn: async () => {
@@ -667,22 +679,23 @@ const IndieGamePage = () => {
     }
   };
 
-  // Mock indie metadata for UI (until backend supports it)
-  const meta: IndieGameMeta = game?.indieMeta ?? {
-    developerName: "Indie Developer",
-    description: "An exciting indie game featured on Gamefolio. Join the community to discover clips, reels, and bounties created by passionate players.",
-    developerDescription: "A passionate indie developer creating unique gaming experiences.",
-    releaseDate: "2024",
-    genres: ["Indie", "Action", "Adventure"],
-    platforms: ["steam", "pc"],
-    features: ["Singleplayer", "Co-op", "Multiplayer", "PvP", "Open World"],
-    website: "",
-    discordUrl: "",
-    steamUrl: "",
-    verifiedDeveloper: false,
-    trailerUrl: undefined,
-    followers: 0,
-    publisher: "Indie Publisher",
+  // Merge indie game profile data (from store integration) into meta, giving profile data priority
+  const igp = indieProfileData?.profile ?? null;
+  const meta: IndieGameMeta = {
+    developerName: igp?.studioName ?? game?.indieMeta?.developerName ?? "Indie Developer",
+    description: igp?.fullDescription ?? igp?.shortDescription ?? game?.indieMeta?.description ?? "An exciting indie game featured on Gamefolio.",
+    developerDescription: game?.indieMeta?.developerDescription ?? "A passionate indie developer creating unique gaming experiences.",
+    releaseDate: igp?.releaseDate ?? game?.indieMeta?.releaseDate ?? "TBA",
+    genres: (igp?.genres?.length ? igp.genres : game?.indieMeta?.genres) ?? ["Indie"],
+    platforms: (igp?.platforms?.length ? igp.platforms : game?.indieMeta?.platforms) ?? ["pc"],
+    features: (igp?.keyFeatures?.length ? igp.keyFeatures : game?.indieMeta?.features) ?? [],
+    website: igp?.websiteUrl ?? game?.indieMeta?.website ?? "",
+    discordUrl: igp?.discordUrl ?? game?.indieMeta?.discordUrl ?? "",
+    steamUrl: igp?.steamUrl ?? game?.indieMeta?.steamUrl ?? "",
+    verifiedDeveloper: game?.indieMeta?.verifiedDeveloper ?? false,
+    trailerUrl: igp?.trailerUrl ?? game?.indieMeta?.trailerUrl,
+    followers: game?.indieMeta?.followers ?? 0,
+    publisher: game?.indieMeta?.publisher ?? "Indie",
   };
 
   if (!match || !gameSlug) return <div className="p-8 text-center text-gray-400">Indie game not found</div>;

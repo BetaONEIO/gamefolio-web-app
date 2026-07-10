@@ -10194,13 +10194,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   ];
 
   // GET /api/indie/profile — owner: full profile + field meta (partner access only)
+  // Resolution model: when useImported is true for a field, the resolved profile value
+  // should reflect the importedValue rather than the manually-edited value.
   app.get("/api/indie/profile", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
     try {
       const profile = await _indieGetOrCreate(req.user.id);
       const fieldMeta = await _indieFieldMetaMap(req.user.id);
-      res.json({ profile, fieldMeta });
+
+      // Apply useImported resolution: for each field that has useImported=true,
+      // return the importedValue as the effective field value in a resolvedProfile.
+      const resolvedProfile: Record<string, any> = { ...(profile as any) };
+      for (const [fieldName, meta] of Object.entries(fieldMeta)) {
+        if ((meta as any).useImported && (meta as any).importedValue) {
+          try {
+            resolvedProfile[fieldName] = JSON.parse((meta as any).importedValue);
+          } catch {
+            resolvedProfile[fieldName] = (meta as any).importedValue;
+          }
+        }
+      }
+
+      res.json({ profile: resolvedProfile, fieldMeta });
     } catch (err) {
       console.error("GET /api/indie/profile error:", err);
       res.status(500).json({ error: "Failed to fetch profile" });

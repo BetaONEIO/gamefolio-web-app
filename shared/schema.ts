@@ -1964,7 +1964,7 @@ export const usedPaymentHashes = pgTable("used_payment_hashes", {
 // Canonical per-developer game profile — one row per indie developer user
 export const indieGameProfiles = pgTable("indie_game_profiles", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().unique(),
+  userId: integer("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
 
   // Section 1: Basic Info
   gameName: text("game_name"),
@@ -2010,6 +2010,15 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
   twitterUrl: text("twitter_url"),
   discordUrl: text("discord_url"),
 
+  // Section 9: Store-Specific Info
+  ageRating: text("age_rating"),
+  supportedLanguages: text("supported_languages").array(),
+  contentDescriptors: text("content_descriptors").array(),
+
+  // Section 10: Sync Settings
+  autoSyncEnabled: boolean("auto_sync_enabled").default(false),
+  preferredSyncSource: text("preferred_sync_source"), // "steam" | "epic" | "itch"
+
   // Store import tracking
   steamLastImportedAt: timestamp("steam_last_imported_at"),
   epicLastImportedAt: timestamp("epic_last_imported_at"),
@@ -2022,7 +2031,7 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
 // Per-field import/override metadata — tracks source of truth for each field
 export const indieGameFieldOverrides = pgTable("indie_game_field_overrides", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   fieldName: text("field_name").notNull(),
   importedValue: text("imported_value"),   // JSON string of last imported value
   importSource: text("import_source"),     // "steam" | "epic" | "itch"

@@ -76,3 +76,11 @@ CREATE TABLE IF NOT EXISTS "indie_game_field_overrides" (
 );
 
 CREATE INDEX IF NOT EXISTS "indie_game_field_overrides_user_id_idx" ON "indie_game_field_overrides" ("user_id");
+
+-- Add new columns idempotently (for existing deployments)
+ALTER TABLE "indie_game_profiles" ADD COLUMN IF NOT EXISTS "age_rating" text;
+ALTER TABLE "indie_game_profiles" ADD COLUMN IF NOT EXISTS "supported_languages" text[];
+ALTER TABLE "indie_game_profiles" ADD COLUMN IF NOT EXISTS "content_descriptors" text[];
+ALTER TABLE "indie_game_profiles" ADD COLUMN IF NOT EXISTS "auto_sync_enabled" boolean DEFAULT false;
+ALTER TABLE "indie_game_profiles" ADD COLUMN IF NOT EXISTS "preferred_sync_source" text;
+ALTER TABLE "indie_game_field_overrides" ADD COLUMN IF NOT EXISTS "use_imported" boolean DEFAULT false NOT NULL;

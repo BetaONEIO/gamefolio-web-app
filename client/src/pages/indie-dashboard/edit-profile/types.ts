@@ -21,11 +21,13 @@ export interface SectionWrapperProps extends SharedFieldProps {
   totalCount: number;
 }
 
-export const ESSENTIAL_FIELDS = ["gameName", "shortDescription", "releaseDate", "keyFeatures", "screenshotUrls"];
+// Essential fields reflect the minimum for a useful public-facing profile
+export const ESSENTIAL_FIELDS = ["gameName", "shortDescription", "headerImageUrl", "steamUrl", "epicUrl", "itchUrl"];
 export const OPTIONAL_FIELDS = [
-  "fullDescription", "studioName", "studioFoundedYear", "studioTeamSize", "studioWebsite",
-  "studioCountry", "genres", "tags", "platforms", "headerImageUrl", "capsuleImageUrl",
-  "trailerUrl", "steamUrl", "epicUrl", "itchUrl", "websiteUrl", "twitterUrl", "discordUrl", "price",
+  "fullDescription", "releaseDate", "studioName", "studioFoundedYear", "studioTeamSize", "studioWebsite",
+  "studioCountry", "genres", "tags", "platforms", "capsuleImageUrl", "trailerUrl", "screenshotUrls",
+  "keyFeatures", "websiteUrl", "twitterUrl", "discordUrl", "price",
+  "ageRating", "supportedLanguages", "contentDescriptors",
 ];
 
 export const PLATFORM_OPTIONS = [
