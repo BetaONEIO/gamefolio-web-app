@@ -10332,6 +10332,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/indie/import — apply selected fields from a store preview into indie_game_profiles
+  // Manual overrides (isManualOverride=true) are ALWAYS preserved — import cannot overwrite them.
+  // The importedValue for each field is updated in the meta table regardless, so the user can
+  // later choose to revert to it via the Revert button or sync-apply.
   app.post("/api/indie/import", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const { source, fields, steamAppId: reqAppId, epicSlug: reqSlug, itchGameUrl } = req.body;
@@ -10341,10 +10344,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
       const now = new Date();
+
+      // Fetch current override state BEFORE building patch — manual overrides must not be overwritten
+      const existingMeta = await _indieFieldMetaMap(req.user.id);
+
       const patch: Record<string, any> = {};
+      const protected_fields: string[] = [];  // fields skipped due to manual override
+
       for (const key of INDIE_ALLOWED_FIELDS) {
-        if (key in fields && fields[key] !== undefined && fields[key] !== null) patch[key] = fields[key];
+        if (!(key in fields) || fields[key] === undefined || fields[key] === null) continue;
+        if (existingMeta[key]?.isManualOverride) {
+          // User has manually edited this field — preserve their value, only update importedValue metadata
+          protected_fields.push(key);
+        } else {
+          patch[key] = fields[key];
+        }
       }
+
+      // Always update source-specific IDs + timestamps regardless of field protection
       if (source === "steam") {
         if (reqAppId) { patch.steamAppId = reqAppId; patch.steamUrl = `https://store.steampowered.com/app/${reqAppId}/`; }
         patch.steamLastImportedAt = now;
@@ -10356,6 +10373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         patch.itchLastImportedAt = now;
       }
       patch.updatedAt = now;
+
       const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
       let profile;
       if (ex.length > 0) {
@@ -10365,12 +10383,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const ins = await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch }).returning();
         profile = ins[0];
       }
+
+      // Update metadata for ALL incoming fields (including protected ones) so the user can see
+      // the latest importedValue and choose to revert to it if they wish.
       for (const key of Object.keys(fields)) {
         if (!INDIE_ALLOWED_FIELDS.includes(key) || key === "updatedAt") continue;
-        await _indieUpsertMeta(req.user.id, key, { importedValue: JSON.stringify(fields[key]), importSource: source, isManualOverride: false, lastImportedAt: now });
+        const wasProtected = protected_fields.includes(key);
+        // For protected fields: update importedValue/importSource but keep isManualOverride=true
+        // For applied fields: clear isManualOverride so source badge shows the store source
+        await _indieUpsertMeta(req.user.id, key, {
+          importedValue: JSON.stringify(fields[key]),
+          importSource: source,
+          isManualOverride: wasProtected ? true : false,  // preserve override flag for protected fields
+          lastImportedAt: now,
+        });
       }
+
       const fieldMeta = await _indieFieldMetaMap(req.user.id);
-      res.json({ profile, fieldMeta, imported: Object.keys(fields).length });
+      res.json({
+        profile,
+        fieldMeta,
+        imported: Object.keys(patch).length - 2,  // subtract updatedAt + timestamp fields
+        protected: protected_fields,
+        message: protected_fields.length
+          ? `${Object.keys(fields).length - protected_fields.length} fields imported. ${protected_fields.length} field${protected_fields.length !== 1 ? "s" : ""} preserved (manual override active): ${protected_fields.join(", ")}.`
+          : `${Object.keys(fields).length} fields imported successfully.`,
+      });
     } catch (err) {
       console.error("POST /api/indie/import error:", err);
       res.status(500).json({ error: "Failed to apply import" });

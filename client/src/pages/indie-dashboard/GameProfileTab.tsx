@@ -379,8 +379,12 @@ function StoreImportPanel({ profile, fieldMeta, onImported }: {
         ...(previewSource === "itch" && selectedItchGame ? { itchGameUrl: selectedItchGame.url } : {}),
       });
     },
-    onSuccess: async () => {
-      toast({ description: `${selectedFields.size} field${selectedFields.size !== 1 ? "s" : ""} imported.` });
+    onSuccess: async (data: any) => {
+      const protectedFields: string[] = data.protected ?? [];
+      const msg = protectedFields.length > 0
+        ? `${data.imported ?? 0} field${data.imported !== 1 ? "s" : ""} imported. ${protectedFields.length} preserved (manual override active): ${protectedFields.map(formatFieldName).join(", ")}.`
+        : `${data.imported ?? selectedFields.size} field${(data.imported ?? selectedFields.size) !== 1 ? "s" : ""} imported.`;
+      toast({ description: msg, duration: protectedFields.length > 0 ? 6000 : 3000 });
       await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       setPreviewData(null); setSelectedFields(new Set()); onImported();
     },
@@ -559,21 +563,32 @@ function StoreImportPanel({ profile, fieldMeta, onImported }: {
 
 // ─── Sync Panel ───────────────────────────────────────────────────────────────
 
+// Per-field sync decision: "keep" = don't apply, "use" = apply, "defer" = skip for now
+type SyncDecision = "keep" | "use" | "defer";
+
 function SyncPanel({ profile, onSynced }: { profile: Profile | null; onSynced: () => void }) {
   const { toast } = useToast();
   const [changes, setChanges] = useState<SyncChange[]>([]);
   const [source, setSource] = useState("");
   const [checked, setChecked] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Per-field decision: "keep" (manual wins), "use" (take store value), "defer" (skip for now)
+  const [decisions, setDecisions] = useState<Record<string, SyncDecision>>({});
   const [isChecking, setIsChecking] = useState(false);
+
+  const setDecision = useCallback((fieldName: string, d: SyncDecision) => {
+    setDecisions(prev => ({ ...prev, [fieldName]: d }));
+  }, []);
 
   const doCheck = async () => {
     setIsChecking(true);
     try {
       const data = await apiRequest("POST", "/api/indie/sync-check");
-      setChanges(data.changes ?? []); setSource(data.source ?? ""); setChecked(true);
-      const autoSelect = (data.changes ?? []).filter((c: SyncChange) => !c.hasOverride).map((c: SyncChange) => c.fieldName);
-      setSelected(new Set(autoSelect));
+      const incoming: SyncChange[] = data.changes ?? [];
+      setChanges(incoming); setSource(data.source ?? ""); setChecked(true);
+      // Default decisions: overrides → keep, others → use
+      const auto: Record<string, SyncDecision> = {};
+      for (const c of incoming) auto[c.fieldName] = c.hasOverride ? "keep" : "use";
+      setDecisions(auto);
       if (!data.hasChanges) toast({ description: "Profile is up to date — no changes found." });
     } catch (err: any) {
       toast({ description: err?.message || "Could not check for updates. Add a Steam App ID or Epic slug first.", variant: "gamefolioError" });
@@ -582,19 +597,27 @@ function SyncPanel({ profile, onSynced }: { profile: Profile | null; onSynced: (
 
   const applyMutation = useMutation({
     mutationFn: async () => {
-      const fields = changes.filter(c => selected.has(c.fieldName)).map(c => ({ fieldName: c.fieldName, newValue: c.newValue }));
+      const fields = changes
+        .filter(c => decisions[c.fieldName] === "use")
+        .map(c => ({ fieldName: c.fieldName, newValue: c.newValue }));
       return apiRequest("POST", "/api/indie/sync-apply", { fields, source });
     },
     onSuccess: async (data: any) => {
       const n = data.applied?.length ?? 0;
       const sk = data.skipped?.length ?? 0;
-      toast({ description: `${n} field${n !== 1 ? "s" : ""} updated.${sk ? ` ${sk} manual override${sk !== 1 ? "s" : ""} preserved.` : ""}` });
+      const deferred = changes.filter(c => decisions[c.fieldName] === "defer").length;
+      const parts: string[] = [];
+      if (n > 0) parts.push(`${n} field${n !== 1 ? "s" : ""} updated from store`);
+      if (sk > 0) parts.push(`${sk} manual override${sk !== 1 ? "s" : ""} preserved`);
+      if (deferred > 0) parts.push(`${deferred} deferred`);
+      toast({ description: parts.join(", ") + "." });
       await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
-      setChecked(false); setChanges([]); onSynced();
+      setChecked(false); setChanges([]); setDecisions({}); onSynced();
     },
     onError: () => toast({ description: "Sync failed.", variant: "gamefolioError" }),
   });
 
+  const useCount = changes.filter(c => decisions[c.fieldName] === "use").length;
   const hasStore = !!(profile?.steamAppId || profile?.epicSlug);
   if (!hasStore) return <p className="text-xs text-white/40 text-center py-3">Add a Steam App ID or Epic slug in Store Links to enable sync.</p>;
 
@@ -616,35 +639,82 @@ function SyncPanel({ profile, onSynced }: { profile: Profile | null; onSynced: (
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-bold text-white/70">{changes.length} update{changes.length !== 1 ? "s" : ""} found on {source}</p>
-        <button onClick={() => setSelected(new Set(changes.filter(c => !c.hasOverride).map(c => c.fieldName)))}
-          className="text-[10px] text-white/50 hover:text-white">Auto-select</button>
+        <p className="text-xs font-bold text-white/70">{changes.length} update{changes.length !== 1 ? "s" : ""} from {source}</p>
+        <div className="flex gap-2">
+          <button onClick={() => { const d: Record<string, SyncDecision> = {}; for (const c of changes) d[c.fieldName] = c.hasOverride ? "keep" : "use"; setDecisions(d); }}
+            className="text-[10px] text-white/50 hover:text-white">Auto</button>
+          <button onClick={() => { const d: Record<string, SyncDecision> = {}; for (const c of changes) d[c.fieldName] = "keep"; setDecisions(d); }}
+            className="text-[10px] text-white/50 hover:text-white">Keep all</button>
+        </div>
       </div>
-      <div className="space-y-1.5 max-h-56 overflow-y-auto">
-        {changes.map(c => (
-          <label key={c.fieldName} className="flex items-start gap-2 p-2 rounded cursor-pointer hover:bg-white/5"
-            style={{ opacity: c.hasOverride ? 0.6 : 1 }}>
-            <input type="checkbox" checked={selected.has(c.fieldName)} disabled={c.hasOverride}
-              onChange={() => { const s = new Set(selected); s.has(c.fieldName) ? s.delete(c.fieldName) : s.add(c.fieldName); setSelected(s); }}
-              className="mt-0.5 accent-[#c1ff00]" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-white">{formatFieldName(c.fieldName)}</span>
-                {c.hasOverride && <span className="text-[9px] text-yellow-400 flex items-center gap-0.5"><AlertTriangle size={9} /> Override — preserved</span>}
+
+      {/* Column headers */}
+      <div className="grid grid-cols-[1fr_1fr_80px] gap-2 px-2">
+        <span className="text-[9px] text-white/30 uppercase tracking-wider">Current</span>
+        <span className="text-[9px] text-white/30 uppercase tracking-wider">Store update</span>
+        <span className="text-[9px] text-white/30 uppercase tracking-wider text-right">Action</span>
+      </div>
+
+      <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+        {changes.map(c => {
+          const dec = decisions[c.fieldName] ?? (c.hasOverride ? "keep" : "use");
+          const isLocked = c.hasOverride && dec === "keep";
+          return (
+            <div key={c.fieldName} className="rounded-lg overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+              {/* Field name row */}
+              <div className="flex items-center gap-1.5 px-2 py-1" style={{ background: "rgba(255,255,255,0.04)" }}>
+                <span className="text-[10px] font-bold text-white/70">{formatFieldName(c.fieldName)}</span>
+                {c.hasOverride && (
+                  <span className="flex items-center gap-0.5 text-[9px] text-yellow-400 ml-1">
+                    <AlertTriangle size={8} /> manual override
+                  </span>
+                )}
               </div>
-              <div className="text-[10px] text-white/35 truncate">{formatValue(c.newValue)}</div>
+              {/* Side-by-side current vs new */}
+              <div className="grid grid-cols-2 divide-x divide-white/10">
+                <div className="p-2" style={{ background: dec === "keep" ? "rgba(193,255,0,0.06)" : "transparent" }}>
+                  <div className="text-[9px] text-white/30 mb-0.5 uppercase tracking-wider">Current</div>
+                  <div className="text-[11px] text-white/55 break-words line-clamp-2">{formatValue(c.currentValue) || <span className="italic text-white/25">empty</span>}</div>
+                </div>
+                <div className="p-2" style={{ background: dec === "use" ? "rgba(193,255,0,0.06)" : "transparent" }}>
+                  <div className="text-[9px] text-white/30 mb-0.5 uppercase tracking-wider">Store</div>
+                  <div className="text-[11px] text-white/80 break-words line-clamp-2">{formatValue(c.newValue)}</div>
+                </div>
+              </div>
+              {/* Decision buttons */}
+              <div className="flex items-center gap-1 p-1.5 border-t border-white/5">
+                {(["keep", "use", "defer"] as const).map(d => {
+                  const labels: Record<SyncDecision, string> = { keep: "Keep current", use: "Use store", defer: "Review later" };
+                  const active = dec === d;
+                  const disabled = d === "use" && isLocked;
+                  return (
+                    <button key={d} disabled={disabled}
+                      onClick={() => !disabled && setDecision(c.fieldName, d)}
+                      className="flex-1 py-1 rounded text-[10px] font-bold transition-all"
+                      style={{
+                        background: active ? (d === "use" ? NEON : d === "keep" ? "rgba(255,255,255,0.12)" : "rgba(255,200,0,0.15)") : "transparent",
+                        color: active ? (d === "use" ? "#070b10" : d === "keep" ? "white" : "#fbbf24") : "rgba(255,255,255,0.35)",
+                        opacity: disabled ? 0.3 : 1,
+                        border: active ? "none" : "1px solid rgba(255,255,255,0.08)",
+                      }}>
+                      {labels[d]}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </label>
-        ))}
+          );
+        })}
       </div>
-      <div className="flex gap-2">
-        <button onClick={() => applyMutation.mutate()} disabled={applyMutation.isPending || selected.size === 0}
+
+      <div className="flex gap-2 pt-1">
+        <button onClick={() => applyMutation.mutate()} disabled={applyMutation.isPending}
           className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-bold"
-          style={{ background: NEON, color: "#070b10", opacity: selected.size === 0 ? 0.4 : 1 }}>
+          style={{ background: NEON, color: "#070b10" }}>
           {applyMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-          Apply {selected.size} change{selected.size !== 1 ? "s" : ""}
+          Apply decisions{useCount > 0 ? ` (${useCount} store)` : ""}
         </button>
-        <button onClick={() => { setChecked(false); setChanges([]); }}
+        <button onClick={() => { setChecked(false); setChanges([]); setDecisions({}); }}
           className="px-4 py-2 rounded text-xs font-bold text-white/60 border border-white/15 hover:text-white">Cancel</button>
       </div>
     </div>
