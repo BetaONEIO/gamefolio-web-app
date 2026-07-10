@@ -371,13 +371,14 @@ function StoreImportPanel({ profile, fieldMeta, onImported }: {
     mutationFn: async () => {
       const fields: Record<string, any> = {};
       const data = previewData?.fields ?? {};
-      for (const k of selectedFields) { if (k in data) fields[k] = data[k]; }
-      return apiRequest("POST", "/api/indie/import", {
+      for (const k of Array.from(selectedFields)) { if (k in data) fields[k] = data[k]; }
+      const res = await apiRequest("POST", "/api/indie/import", {
         source: previewSource, fields,
         ...(previewSource === "steam" && previewAppId ? { steamAppId: previewAppId } : {}),
         ...(previewSource === "epic" && previewSlug ? { epicSlug: previewSlug } : {}),
         ...(previewSource === "itch" && selectedItchGame ? { itchGameUrl: selectedItchGame.url } : {}),
       });
+      return res.json();
     },
     onSuccess: async (data: any) => {
       const protectedFields: string[] = data.protected ?? [];
@@ -396,7 +397,7 @@ function StoreImportPanel({ profile, fieldMeta, onImported }: {
     if (!appId) return toast({ description: "Enter a Steam App ID", variant: "gamefolioError" });
     setIsPreviewing(true);
     try {
-      const data = await apiRequest("GET", `/api/indie/steam/preview?appId=${appId}`);
+      const data = await (await apiRequest("GET", `/api/indie/steam/preview?appId=${appId}`)).json();
       setPreviewData(data); setPreviewSource("steam"); setPreviewAppId(appId);
       setSelectedFields(new Set(Object.keys(data.fields ?? {}).filter((k: string) => (data.fields as any)[k] !== null && (data.fields as any)[k] !== undefined)));
     } catch { toast({ description: "Steam app not found. Check the App ID.", variant: "gamefolioError" }); }
@@ -407,7 +408,7 @@ function StoreImportPanel({ profile, fieldMeta, onImported }: {
     if (!epicInput.trim()) return toast({ description: "Enter an Epic slug", variant: "gamefolioError" });
     setIsPreviewing(true);
     try {
-      const data = await apiRequest("GET", `/api/indie/epic/preview?slug=${encodeURIComponent(epicInput.trim())}`);
+      const data = await (await apiRequest("GET", `/api/indie/epic/preview?slug=${encodeURIComponent(epicInput.trim())}`)).json();
       setPreviewData(data); setPreviewSource("epic"); setPreviewSlug(epicInput.trim());
       setSelectedFields(new Set(Object.keys(data.fields ?? {}).filter((k: string) => (data.fields as any)[k] !== null)));
     } catch { toast({ description: "Epic product not found. Check the slug.", variant: "gamefolioError" }); }
@@ -418,7 +419,7 @@ function StoreImportPanel({ profile, fieldMeta, onImported }: {
     if (!itchKey.trim()) return toast({ description: "Enter your itch.io API key", variant: "gamefolioError" });
     setIsFetchingItch(true);
     try {
-      const data = await apiRequest("POST", "/api/indie/itch/preview", { apiKey: itchKey });
+      const data = await (await apiRequest("POST", "/api/indie/itch/preview", { apiKey: itchKey })).json();
       setItchGames(data.games ?? []);
     } catch { toast({ description: "Invalid itch.io API key or no games found.", variant: "gamefolioError" }); }
     finally { setIsFetchingItch(false); }
@@ -582,7 +583,7 @@ function SyncPanel({ profile, onSynced }: { profile: Profile | null; onSynced: (
   const doCheck = async () => {
     setIsChecking(true);
     try {
-      const data = await apiRequest("POST", "/api/indie/sync-check");
+      const data = await (await apiRequest("POST", "/api/indie/sync-check")).json();
       const incoming: SyncChange[] = data.changes ?? [];
       setChanges(incoming); setSource(data.source ?? ""); setChecked(true);
       // Default decisions: overrides → keep, others → use
@@ -600,7 +601,7 @@ function SyncPanel({ profile, onSynced }: { profile: Profile | null; onSynced: (
       const fields = changes
         .filter(c => decisions[c.fieldName] === "use")
         .map(c => ({ fieldName: c.fieldName, newValue: c.newValue }));
-      return apiRequest("POST", "/api/indie/sync-apply", { fields, source });
+      return (await apiRequest("POST", "/api/indie/sync-apply", { fields, source })).json();
     },
     onSuccess: async (data: any) => {
       const n = data.applied?.length ?? 0;
