@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation, Link } from 'wouter';
-import { UserWithStats, ClipWithUser, Screenshot, GameBounty } from '@shared/schema';
+import { UserWithStats, ClipWithUser, Screenshot, GameBounty, IndieGameProfile } from '@shared/schema';
 import { queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import PlatformConnections from '@/components/profile/PlatformConnections';
-import { SiSteam, SiEpicgames } from 'react-icons/si';
+import { SiSteam, SiEpicgames, SiItchdotio } from 'react-icons/si';
 import {
   Users,
   Eye,
@@ -24,6 +24,13 @@ import {
   Sword,
   Key,
   Clock,
+  Globe,
+  Twitter,
+  Monitor,
+  Gamepad2,
+  Smartphone,
+  ExternalLink,
+  Tag,
 } from 'lucide-react';
 
 const MessageDialog = React.lazy(() =>
@@ -92,6 +99,34 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
   const { data: bounties } = useQuery<BountyWithMeta[]>({
     queryKey: [`/api/users/${profile.username}/bounties`],
   });
+
+  const { data: indieGameData } = useQuery<{ profile: IndieGameProfile } | null>({
+    queryKey: [`/api/games/indie/${profile.username}`],
+    retry: false,
+  });
+  const ig = (indieGameData?.profile ?? null) as IndieGameProfile | null;
+
+  // Enriched fields: prefer indie_game_profiles table data, fall back to legacy user columns
+  const igTrailerUrl = ig?.trailerUrl || (profile as any).gameTrailerUrl || null;
+  const igDescription = ig?.fullDescription || ig?.shortDescription || (profile as any).gameDescription || null;
+  const igScreenshots: string[] = (ig?.screenshotUrls?.length ? ig.screenshotUrls : (profile as any).gameScreenshotUrls) ?? [];
+  const igKeyFeatures: string[] = (ig?.keyFeatures?.length ? ig.keyFeatures : (profile as any).gameKeyFeatures) ?? [];
+  const igSteamUrl = ig?.steamUrl || (profile as any).gameSteamUrl || null;
+  const igEpicUrl = ig?.epicUrl || (profile as any).gameEpicUrl || null;
+  const igItchUrl = ig?.itchUrl || null;
+  const igReleaseDate = ig?.releaseDate || (profile as any).gameReleaseDate || null;
+  const igStudioName = ig?.studioName || null;
+  const igStudioFounded = ig?.studioFoundedYear || (profile as any).studioFoundedYear || null;
+  const igStudioSize = ig?.studioTeamSize || (profile as any).studioTeamSize || null;
+  const igStudioWebsite = ig?.studioWebsite || null;
+  const igStudioCountry = ig?.studioCountry || null;
+  const igWebsiteUrl = ig?.websiteUrl || null;
+  const igTwitterUrl = ig?.twitterUrl || null;
+  const igDiscordUrl = ig?.discordUrl || null;
+  const igGenres: string[] = ig?.genres ?? [];
+  const igPlatforms: string[] = ig?.platforms ?? [];
+  const igPrice = ig?.price || null;
+  const igReleaseStatus = ig?.releaseStatus || null;
 
   const isFollowing = followStatus?.status === 'following';
   const isRequested = followStatus?.status === 'requested';
@@ -239,22 +274,19 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
       {activeTab === 'OVERVIEW' && (
         <section className="py-16 px-6 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2 space-y-10">
+            {/* Trailer */}
             <div className="aspect-video rounded-lg overflow-hidden" style={cardStyle}>
-              {profile.gameTrailerUrl ? (
-                getVideoEmbedUrl(profile.gameTrailerUrl) ? (
+              {igTrailerUrl ? (
+                getVideoEmbedUrl(igTrailerUrl) ? (
                   <iframe
-                    src={getVideoEmbedUrl(profile.gameTrailerUrl)!}
+                    src={getVideoEmbedUrl(igTrailerUrl)!}
                     title={`${profile.displayName} trailer`}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                     className="w-full h-full"
                   />
                 ) : (
-                  <video
-                    src={profile.gameTrailerUrl}
-                    controls
-                    className="w-full h-full object-cover"
-                  />
+                  <video src={igTrailerUrl} controls className="w-full h-full object-cover" />
                 )
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center gap-2" style={{ color: brand.textMuted }}>
@@ -264,38 +296,61 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
               )}
             </div>
 
+            {/* Description */}
             <div>
               <h2 className="text-2xl font-bold mb-4">Overview</h2>
               <p className="text-lg leading-relaxed" style={{ color: brand.textMuted }}>
-                {profile.gameDescription || profile.bio || `${profile.displayName} hasn't added a game description yet.`}
+                {igDescription || (profile as any).bio || `${profile.displayName} hasn't added a game description yet.`}
               </p>
             </div>
 
-            {profile.gameScreenshotUrls && profile.gameScreenshotUrls.length > 0 && (
+            {/* Genres + Platforms */}
+            {(igGenres.length > 0 || igPlatforms.length > 0) && (
+              <div className="flex flex-wrap gap-2">
+                {igGenres.map((g, i) => (
+                  <span key={`genre-${i}`} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+                    style={{ background: `rgba(183,255,24,0.1)`, border: `1px solid rgba(183,255,24,0.25)`, color: brand.accent }}>
+                    <Tag size={11} />{g}
+                  </span>
+                ))}
+                {igPlatforms.map((p, i) => {
+                  const Icon = p === 'windows' || p === 'mac' || p === 'linux' ? Monitor
+                    : p === 'ios' || p === 'android' ? Smartphone : Gamepad2;
+                  const label = p === 'windows' ? 'Windows' : p === 'mac' ? 'macOS' : p === 'linux' ? 'Linux'
+                    : p === 'ps5' ? 'PlayStation' : p === 'xbox' ? 'Xbox' : p === 'switch' ? 'Switch'
+                    : p === 'ios' ? 'iOS' : p === 'android' ? 'Android' : p;
+                  return (
+                    <span key={`plat-${i}`} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)' }}>
+                      <Icon size={11} />{label}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Screenshots */}
+            {igScreenshots.length > 0 && (
               <div>
                 <h2 className="text-2xl font-bold mb-4">Screenshots</h2>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  {profile.gameScreenshotUrls.map((url, i) => (
-                    <a
-                      key={i}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="aspect-video rounded-lg overflow-hidden block"
-                      style={cardStyle}
-                    >
-                      <img src={url} alt={`${profile.displayName} screenshot ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+                  {igScreenshots.map((url, i) => (
+                    <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                      className="aspect-video rounded-lg overflow-hidden block" style={cardStyle}>
+                      <img src={url} alt={`${profile.displayName} screenshot ${i + 1}`}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
                     </a>
                   ))}
                 </div>
               </div>
             )}
 
-            {profile.gameKeyFeatures && profile.gameKeyFeatures.length > 0 && (
+            {/* Key Features */}
+            {igKeyFeatures.length > 0 && (
               <div>
                 <h2 className="text-2xl font-bold mb-4">Key Features</h2>
                 <div className="grid sm:grid-cols-2 gap-4">
-                  {profile.gameKeyFeatures.map((feature, i) => (
+                  {igKeyFeatures.map((feature, i) => (
                     <div key={i} className="flex items-start gap-3 p-4 rounded-lg" style={cardStyle}>
                       <CheckCircle2 color={brand.accent} size={20} className="shrink-0 mt-0.5" />
                       <span className="text-sm font-medium">{feature}</span>
@@ -305,6 +360,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
               </div>
             )}
 
+            {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
                 { label: 'Level', value: profile.level ?? 1, icon: Star },
@@ -321,66 +377,121 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
             </div>
           </div>
 
+          {/* Sidebar */}
           <div className="space-y-6">
-            <div className="p-6 space-y-6" style={{ ...cardStyle, boxShadow: `0 0 20px rgba(183, 255, 24, 0.15)` }}>
+            {/* Studio / Game Info Card */}
+            <div className="p-6 space-y-5" style={{ ...cardStyle, boxShadow: `0 0 20px rgba(183, 255, 24, 0.15)` }}>
               <div>
                 <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Developer</div>
                 <div className="text-xl font-bold text-white flex items-center gap-2">
                   <Terminal size={18} color={brand.accent} />
-                  {profile.displayName}
+                  {igStudioName || profile.displayName}
                 </div>
               </div>
 
-              {(profile.studioFoundedYear || profile.studioTeamSize) && (
+              {(igStudioFounded || igStudioSize || igStudioCountry) && (
                 <div className="grid grid-cols-2 gap-4">
-                  {profile.studioFoundedYear && (
+                  {igStudioFounded && (
                     <div>
                       <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Founded</div>
-                      <div className="font-medium">{profile.studioFoundedYear}</div>
+                      <div className="font-medium">{igStudioFounded}</div>
                     </div>
                   )}
-                  {profile.studioTeamSize && (
+                  {igStudioSize && (
                     <div>
                       <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Team Size</div>
-                      <div className="font-medium">{profile.studioTeamSize}</div>
+                      <div className="font-medium">{igStudioSize}</div>
+                    </div>
+                  )}
+                  {igStudioCountry && (
+                    <div className="col-span-2">
+                      <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Country</div>
+                      <div className="font-medium">{igStudioCountry}</div>
                     </div>
                   )}
                 </div>
               )}
 
-              {profile.gameReleaseDate && (
-                <div className="pt-4 border-t border-white/10">
-                  <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Release Date</div>
-                  <div className="text-lg font-bold text-white">{profile.gameReleaseDate}</div>
+              {(igReleaseDate || igReleaseStatus || igPrice) && (
+                <div className="pt-4 border-t border-white/10 space-y-2">
+                  {igReleaseStatus && (
+                    <div>
+                      <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Status</div>
+                      <span className="text-xs font-bold px-2 py-1 rounded-full"
+                        style={{ background: `rgba(183,255,24,0.12)`, color: brand.accent, border: `1px solid rgba(183,255,24,0.25)` }}>
+                        {igReleaseStatus === 'coming_soon' ? 'Coming Soon' : igReleaseStatus === 'early_access' ? 'Early Access' : 'Released'}
+                      </span>
+                    </div>
+                  )}
+                  {igReleaseDate && (
+                    <div>
+                      <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Release Date</div>
+                      <div className="text-lg font-bold text-white">{igReleaseDate}</div>
+                    </div>
+                  )}
+                  {igPrice && (
+                    <div>
+                      <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Price</div>
+                      <div className="font-bold text-white">{igPrice}</div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {(profile.gameSteamUrl || profile.gameEpicUrl) && (
-              <div className="p-6 space-y-4" style={cardStyle}>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-white/50 mb-2">Store Links</h3>
-
-                {profile.gameSteamUrl && (
-                  <a
-                    href={profile.gameSteamUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full flex items-center gap-3 p-3 rounded-md bg-[#171a21] hover:bg-[#2a303c] transition-colors border border-white/5 group"
-                  >
+            {/* Store Links */}
+            {(igSteamUrl || igEpicUrl || igItchUrl) && (
+              <div className="p-6 space-y-3" style={cardStyle}>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white/50 mb-3">Get the Game</h3>
+                {igSteamUrl && (
+                  <a href={igSteamUrl} target="_blank" rel="noopener noreferrer"
+                    className="w-full flex items-center gap-3 p-3 rounded-md bg-[#171a21] hover:bg-[#2a303c] transition-colors border border-white/5">
                     <SiSteam size={24} className="text-[#66c0f4]" />
                     <span className="font-semibold text-[#c7d5e0]">Steam</span>
+                    <ExternalLink size={12} className="ml-auto opacity-40" />
                   </a>
                 )}
-
-                {profile.gameEpicUrl && (
-                  <a
-                    href={profile.gameEpicUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full flex items-center gap-3 p-3 rounded-md bg-[#121212] hover:bg-[#2a2a2a] transition-colors border border-white/5 group"
-                  >
+                {igEpicUrl && (
+                  <a href={igEpicUrl} target="_blank" rel="noopener noreferrer"
+                    className="w-full flex items-center gap-3 p-3 rounded-md bg-[#121212] hover:bg-[#2a2a2a] transition-colors border border-white/5">
                     <SiEpicgames size={24} className="text-white" />
                     <span className="font-semibold text-white">Epic Games</span>
+                    <ExternalLink size={12} className="ml-auto opacity-40" />
+                  </a>
+                )}
+                {igItchUrl && (
+                  <a href={igItchUrl} target="_blank" rel="noopener noreferrer"
+                    className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-white/5 transition-colors border border-white/5"
+                    style={{ background: 'rgba(250,92,92,0.08)' }}>
+                    <SiItchdotio size={24} className="text-[#fa5c5c]" />
+                    <span className="font-semibold text-white">itch.io</span>
+                    <ExternalLink size={12} className="ml-auto opacity-40" />
+                  </a>
+                )}
+              </div>
+            )}
+
+            {/* Social / Links */}
+            {(igWebsiteUrl || igTwitterUrl || igDiscordUrl || igStudioWebsite) && (
+              <div className="p-6 space-y-3" style={cardStyle}>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white/50 mb-3">Links</h3>
+                {(igWebsiteUrl || igStudioWebsite) && (
+                  <a href={igWebsiteUrl ?? igStudioWebsite!} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm hover:underline" style={{ color: brand.accent }}>
+                    <Globe size={15} /> Website
+                  </a>
+                )}
+                {igTwitterUrl && (
+                  <a href={igTwitterUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-white/70 hover:text-white hover:underline">
+                    <Twitter size={15} /> Twitter / X
+                  </a>
+                )}
+                {igDiscordUrl && (
+                  <a href={igDiscordUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-white/70 hover:text-white hover:underline">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" className="text-[#5865F2]"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.059.102 18.061.104 18.063a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+                    Discord
                   </a>
                 )}
               </div>

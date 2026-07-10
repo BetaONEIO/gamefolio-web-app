@@ -1,475 +1,555 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useCallback } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { IndieGameProfile, IndieGameFieldOverride } from "@shared/schema";
+import { NEON, CARD_BG, CARD_BORDER } from "../IndieDashboardPage";
 import {
-  Pencil, Check, X, RefreshCw, Info, UploadCloud,
-  ExternalLink, ChevronDown, ChevronUp, Loader2,
-  ScanSearch, Store, CircleCheck, AlertCircle,
+  ChevronDown, ChevronRight, Edit2, Check, X, RefreshCw, RotateCcw,
+  Loader2, Plus, Trash2, AlertTriangle, ExternalLink, CheckCircle2,
+  Monitor, Smartphone, Globe, Gamepad2,
 } from "lucide-react";
 import { SiSteam, SiEpicgames, SiItchdotio } from "react-icons/si";
-import { NEON, CARD_BG, CARD_BORDER } from "@/pages/IndieDashboardPage";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-interface FieldOverride {
-  id: number;
-  userId: number;
-  fieldName: string;
-  importedValue: string | null;
-  importSource: string | null;
-  manualOverride: string | null;
-  isOverride: boolean;
-  lastImportedAt: string | null;
-  lastEditedAt: string | null;
-}
+type Profile = IndieGameProfile;
+type FieldMeta = Record<string, IndieGameFieldOverride & { isManualOverride: boolean }>;
+type SyncChange = { fieldName: string; currentValue: any; newValue: any; hasOverride: boolean };
 
-interface GameProfileData {
-  fields: {
-    gameDescription: string | null;
-    gameKeyFeatures: string[];
-    studioFoundedYear: string | null;
-    studioTeamSize: string | null;
-    gameReleaseDate: string | null;
-    gameSteamUrl: string | null;
-    gameEpicUrl: string | null;
-    gameTrailerUrl: string | null;
-    gameScreenshotUrls: string[];
-  };
-  overrides: Record<string, FieldOverride>;
-}
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-interface StorePreview {
-  source: string;
-  gameName: string;
-  headerImage?: string;
-  preview: Record<string, { value: any; label: string }>;
-}
-
-// ─── Field Definitions ───────────────────────────────────────────────────────
-
-const FIELDS: Array<{
-  key: keyof GameProfileData["fields"];
-  label: string;
-  type: "text" | "textarea" | "array" | "url";
-  placeholder: string;
-  completeness: boolean;
-}> = [
-  { key: "gameDescription", label: "Game Description", type: "textarea", placeholder: "Describe your game in a few sentences…", completeness: true },
-  { key: "gameKeyFeatures", label: "Key Features", type: "array", placeholder: "Add a feature (press Enter)", completeness: true },
-  { key: "studioFoundedYear", label: "Studio Founded Year", type: "text", placeholder: "e.g. 2021", completeness: true },
-  { key: "studioTeamSize", label: "Team Size", type: "text", placeholder: "e.g. 4 Members", completeness: true },
-  { key: "gameReleaseDate", label: "Release Date", type: "text", placeholder: "e.g. Q3 2025 or Coming Soon", completeness: true },
-  { key: "gameSteamUrl", label: "Steam URL", type: "url", placeholder: "https://store.steampowered.com/app/…", completeness: false },
-  { key: "gameEpicUrl", label: "Epic Games URL", type: "url", placeholder: "https://store.epicgames.com/en-US/p/…", completeness: false },
-  { key: "gameTrailerUrl", label: "Trailer URL", type: "url", placeholder: "YouTube or video URL", completeness: true },
-  { key: "gameScreenshotUrls", label: "Screenshots", type: "array", placeholder: "Paste image URL", completeness: true },
+const ESSENTIAL_FIELDS = ["gameName", "shortDescription", "releaseDate", "keyFeatures", "screenshotUrls"];
+const OPTIONAL_FIELDS = [
+  "fullDescription", "studioName", "studioFoundedYear", "studioTeamSize", "studioWebsite",
+  "studioCountry", "genres", "tags", "platforms", "headerImageUrl", "capsuleImageUrl",
+  "trailerUrl", "steamUrl", "epicUrl", "itchUrl", "websiteUrl", "twitterUrl", "discordUrl", "price",
 ];
 
-const COMPLETENESS_FIELDS = FIELDS.filter(f => f.completeness).map(f => f.key);
+const PLATFORM_OPTIONS = [
+  { id: "windows", label: "Windows", icon: Monitor },
+  { id: "mac", label: "macOS", icon: Monitor },
+  { id: "linux", label: "Linux", icon: Globe },
+  { id: "ps5", label: "PlayStation", icon: Gamepad2 },
+  { id: "xbox", label: "Xbox", icon: Gamepad2 },
+  { id: "switch", label: "Switch", icon: Gamepad2 },
+  { id: "ios", label: "iOS", icon: Smartphone },
+  { id: "android", label: "Android", icon: Smartphone },
+];
 
-// ─── Source Badge ────────────────────────────────────────────────────────────
+const RELEASE_STATUS_OPTIONS = [
+  { value: "coming_soon", label: "Coming Soon" },
+  { value: "early_access", label: "Early Access" },
+  { value: "released", label: "Released" },
+];
 
-function SourceBadge({ override, fieldKey }: { override?: FieldOverride; fieldKey: string }) {
-  if (!override) return null;
-  if (override.isOverride) {
+const SOURCE_COLORS: Record<string, string> = {
+  steam: "#66c0f4",
+  epic: "#a855f7",
+  itch: "#fa5c5c",
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function isFieldFilled(profile: Profile | null, field: string): boolean {
+  if (!profile) return false;
+  const val = (profile as any)[field];
+  if (Array.isArray(val)) return val.length > 0;
+  if (typeof val === "boolean") return true;
+  return val !== null && val !== undefined && val !== "";
+}
+
+function formatFieldName(key: string): string {
+  return key
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (s) => s.toUpperCase())
+    .replace(/Url$/, " URL")
+    .replace(/Id$/, " ID")
+    .trim();
+}
+
+function formatValue(val: any): string {
+  if (val === null || val === undefined || val === "") return "—";
+  if (Array.isArray(val)) return val.length === 0 ? "—" : val.slice(0, 3).join(", ") + (val.length > 3 ? ` +${val.length - 3}` : "");
+  if (typeof val === "boolean") return val ? "Yes" : "No";
+  const s = String(val);
+  return s.length > 80 ? s.slice(0, 77) + "…" : s;
+}
+
+// ─── Source Badge ─────────────────────────────────────────────────────────────
+
+function SourceBadge({ fieldName, fieldMeta }: { fieldName: string; fieldMeta: FieldMeta }) {
+  const meta = fieldMeta[fieldName];
+  if (!meta) return null;
+  if (meta.isManualOverride) {
     return (
-      <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
-            style={{ background: "rgba(193,255,0,0.15)", color: NEON }}>
-        <Pencil size={9} /> Manual
+      <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
+        style={{ background: `${NEON}22`, color: NEON, border: `1px solid ${NEON}44` }}>
+        Manual
       </span>
     );
   }
-  if (override.importSource) {
-    const src = override.importSource;
+  if (meta.importSource) {
+    const color = SOURCE_COLORS[meta.importSource] ?? "#aaa";
     return (
-      <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
-            style={{ background: "rgba(102,192,244,0.15)", color: "#66c0f4" }}>
-        {src === "steam" && <SiSteam size={9} />}
-        {src === "epic" && <SiEpicgames size={9} />}
-        {src === "itch" && <SiItchdotio size={9} />}
-        {src === "steam" ? "Steam" : src === "epic" ? "Epic" : "itch.io"}
+      <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
+        style={{ background: `${color}22`, color, border: `1px solid ${color}44` }}>
+        {meta.importSource}
       </span>
     );
   }
   return null;
 }
 
-// ─── Field Editor ────────────────────────────────────────────────────────────
+// ─── Tag Array Editor ─────────────────────────────────────────────────────────
 
-function FieldEditor({
-  fieldDef,
-  currentValue,
-  override,
-  onSave,
-  onClearOverride,
-}: {
-  fieldDef: typeof FIELDS[0];
-  currentValue: any;
-  override?: FieldOverride;
-  onSave: (key: string, value: any) => Promise<void>;
-  onClearOverride: (key: string) => Promise<void>;
-}) {
+function TagArrayEditor({ values, onChange }: { values: string[]; onChange: (v: string[]) => void }) {
+  const [input, setInput] = useState("");
+  const add = () => { const t = input.trim(); if (t && !values.includes(t)) onChange([...values, t]); setInput(""); };
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5 min-h-[28px]">
+        {values.map((v, i) => (
+          <span key={i} className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
+            style={{ background: "rgba(255,255,255,0.08)", border: `1px solid ${CARD_BORDER}` }}>
+            {v}
+            <button onClick={() => onChange(values.filter((_, j) => j !== i))} className="opacity-50 hover:opacity-100 ml-0.5"><X size={10} /></button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+          placeholder="Type and press Enter"
+          className="flex-1 bg-transparent border rounded px-2 py-1 text-sm text-white outline-none"
+          style={{ borderColor: "rgba(255,255,255,0.2)" }} />
+        <button onClick={add} className="px-2 py-1 rounded text-xs font-bold"
+          style={{ background: `${NEON}22`, color: NEON, border: `1px solid ${NEON}44` }}>Add</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── URL Array Editor ─────────────────────────────────────────────────────────
+
+function UrlArrayEditor({ values, onChange }: { values: string[]; onChange: (v: string[]) => void }) {
+  const [input, setInput] = useState("");
+  const add = () => { const t = input.trim(); if (t && !values.includes(t)) onChange([...values, t]); setInput(""); };
+  return (
+    <div className="space-y-1.5">
+      {values.map((v, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <input value={v} onChange={e => { const c = [...values]; c[i] = e.target.value; onChange(c); }}
+            className="flex-1 bg-transparent border rounded px-2 py-1 text-xs text-white outline-none font-mono"
+            style={{ borderColor: "rgba(255,255,255,0.15)" }} />
+          <button onClick={() => onChange(values.filter((_, j) => j !== i))} className="text-red-400 opacity-60 hover:opacity-100">
+            <Trash2 size={12} />
+          </button>
+        </div>
+      ))}
+      <div className="flex gap-2">
+        <input value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+          placeholder="https://..."
+          className="flex-1 bg-transparent border rounded px-2 py-1 text-xs text-white outline-none font-mono"
+          style={{ borderColor: "rgba(255,255,255,0.2)" }} />
+        <button onClick={add} className="px-2 py-1 rounded text-xs font-bold"
+          style={{ background: `${NEON}22`, color: NEON, border: `1px solid ${NEON}44` }}>
+          <Plus size={12} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Field Row ────────────────────────────────────────────────────────────────
+
+interface FieldRowProps {
+  fieldName: string;
+  label: string;
+  profile: Profile | null;
+  fieldMeta: FieldMeta;
+  type: "text" | "textarea" | "url" | "select" | "tag-array" | "url-array" | "platform-select";
+  selectOptions?: { value: string; label: string }[];
+  onSave: (fieldName: string, value: any) => void;
+  onRevert: (fieldName: string) => void;
+  isSaving: boolean;
+}
+
+function FieldRow({ fieldName, label, profile, fieldMeta, type, selectOptions, onSave, onRevert, isSaving }: FieldRowProps) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState<any>(null);
-  const [saving, setSaving] = useState(false);
-  const [tagInput, setTagInput] = useState("");
-
-  const displayValue = currentValue;
-  const hasImported = !!override?.importedValue;
+  const [editVal, setEditVal] = useState<any>(null);
+  const meta = fieldMeta[fieldName];
+  const currentVal = (profile as any)?.[fieldName] ?? (type.includes("array") || type === "platform-select" ? [] : null);
+  const canRevert = meta?.isManualOverride && !!(meta?.importedValue);
 
   const startEdit = () => {
-    setDraft(
-      fieldDef.type === "array"
-        ? Array.isArray(displayValue) ? [...displayValue] : []
-        : displayValue ?? ""
-    );
+    setEditVal(type.includes("array") || type === "platform-select" ? [...(Array.isArray(currentVal) ? currentVal : [])] : (currentVal ?? ""));
     setEditing(true);
   };
-
-  const cancel = () => { setEditing(false); setDraft(null); setTagInput(""); };
-
-  const save = async () => {
-    setSaving(true);
-    try { await onSave(fieldDef.key, draft); setEditing(false); setDraft(null); }
-    finally { setSaving(false); }
-  };
-
-  const isEmpty = Array.isArray(displayValue)
-    ? !displayValue || displayValue.length === 0
-    : !displayValue;
+  const cancelEdit = () => { setEditing(false); setEditVal(null); };
+  const saveEdit = () => { onSave(fieldName, editVal); setEditing(false); setEditVal(null); };
 
   return (
-    <div className="rounded-2xl p-4" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-      <div className="flex items-center justify-between mb-2 gap-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-bold text-white uppercase tracking-wider">{fieldDef.label}</span>
-          <SourceBadge override={override} fieldKey={fieldDef.key} />
+    <div className="py-3" style={{ borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-white/50">{label}</span>
+          <SourceBadge fieldName={fieldName} fieldMeta={fieldMeta} />
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {override?.isOverride && hasImported && (
-            <button
-              onClick={() => onClearOverride(fieldDef.key)}
-              title="Revert to imported value"
-              className="text-[10px] font-bold px-2 py-1 rounded-lg text-gray-400 hover:text-white transition-colors"
-              style={{ background: "rgba(255,255,255,0.06)" }}
-            >
-              <RefreshCw size={10} className="inline mr-1" />Revert
+        <div className="flex items-center gap-1">
+          {canRevert && !editing && (
+            <button onClick={() => onRevert(fieldName)} disabled={isSaving} title="Revert to imported value"
+              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded opacity-60 hover:opacity-100 transition-opacity"
+              style={{ color: SOURCE_COLORS[(meta as any).importSource ?? ""] ?? "#aaa", border: "1px solid currentColor" }}>
+              <RotateCcw size={9} /> Revert
             </button>
           )}
           {!editing && (
-            <button
-              onClick={startEdit}
-              className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg transition-colors"
-              style={{ background: "rgba(193,255,0,0.12)", color: NEON }}
-            >
-              <Pencil size={11} /> Edit
+            <button onClick={startEdit}
+              className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded opacity-60 hover:opacity-100 transition-opacity text-white"
+              style={{ border: "1px solid rgba(255,255,255,0.15)" }}>
+              <Edit2 size={9} /> Edit
             </button>
           )}
         </div>
       </div>
 
       {!editing ? (
-        <div className="min-h-[28px]">
-          {isEmpty ? (
-            <span className="text-xs text-gray-500 italic">Not set — click Edit to add</span>
-          ) : fieldDef.type === "array" ? (
-            <div className="flex flex-wrap gap-1.5">
-              {(displayValue as string[]).map((v, i) => (
-                <span key={i} className="text-xs px-2.5 py-1 rounded-full bg-white/8 text-gray-300 border border-white/10">{v}</span>
-              ))}
-            </div>
-          ) : fieldDef.type === "url" ? (
-            <a href={displayValue} target="_blank" rel="noreferrer"
-               className="text-sm text-blue-400 hover:underline flex items-center gap-1 break-all">
-              {displayValue} <ExternalLink size={11} />
+        <div className="text-sm text-white/70 break-words">
+          {type === "url-array" ? (
+            Array.isArray(currentVal) && currentVal.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {(currentVal as string[]).map((u, i) => (
+                  <a key={i} href={u} target="_blank" rel="noopener noreferrer"
+                    className="text-xs flex items-center gap-1 opacity-70 hover:opacity-100" style={{ color: NEON }}>
+                    <ExternalLink size={10} /> Screenshot {i + 1}
+                  </a>
+                ))}
+              </div>
+            ) : <span className="opacity-30 italic text-sm">Not set</span>
+          ) : type === "tag-array" ? (
+            Array.isArray(currentVal) && currentVal.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {(currentVal as string[]).map((t, i) => (
+                  <span key={i} className="px-2 py-0.5 rounded-full text-xs font-medium"
+                    style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${CARD_BORDER}` }}>{t}</span>
+                ))}
+              </div>
+            ) : <span className="opacity-30 italic text-sm">Not set</span>
+          ) : type === "platform-select" ? (
+            Array.isArray(currentVal) && currentVal.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {(currentVal as string[]).map(p => {
+                  const opt = PLATFORM_OPTIONS.find(o => o.id === p);
+                  const Icon = opt?.icon ?? Gamepad2;
+                  return (
+                    <span key={p} className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
+                      style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${CARD_BORDER}` }}>
+                      <Icon size={11} />{opt?.label ?? p}
+                    </span>
+                  );
+                })}
+              </div>
+            ) : <span className="opacity-30 italic text-sm">Not set</span>
+          ) : type === "select" ? (
+            currentVal ? <span>{selectOptions?.find(o => o.value === currentVal)?.label ?? currentVal}</span> : <span className="opacity-30 italic">Not set</span>
+          ) : type === "url" && currentVal ? (
+            <a href={currentVal} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1 hover:underline text-sm" style={{ color: NEON }}>
+              {(currentVal as string).length > 60 ? (currentVal as string).slice(0, 57) + "…" : currentVal}
+              <ExternalLink size={10} />
             </a>
-          ) : (
-            <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{displayValue}</p>
-          )}
+          ) : currentVal ? (
+            <span className="whitespace-pre-wrap text-sm">
+              {String(currentVal).length > 300 ? String(currentVal).slice(0, 297) + "…" : String(currentVal)}
+            </span>
+          ) : <span className="opacity-30 italic text-sm">Not set</span>}
         </div>
       ) : (
         <div className="space-y-2">
-          {fieldDef.type === "textarea" ? (
-            <textarea
-              className="w-full rounded-xl p-3 text-sm text-white outline-none resize-none"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", minHeight: 100 }}
-              value={draft ?? ""}
-              onChange={e => setDraft(e.target.value)}
-              placeholder={fieldDef.placeholder}
-            />
-          ) : fieldDef.type === "array" ? (
-            <div>
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {(draft as string[]).map((v, i) => (
-                  <span key={i} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-white/8 text-gray-300 border border-white/10">
-                    {v}
-                    <button onClick={() => setDraft((draft as string[]).filter((_: any, j: number) => j !== i))}>
-                      <X size={10} className="text-gray-500 hover:text-white" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <input
-                  className="flex-1 rounded-xl px-3 py-2 text-sm text-white outline-none"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
-                  value={tagInput}
-                  onChange={e => setTagInput(e.target.value)}
-                  placeholder={fieldDef.placeholder}
-                  onKeyDown={e => {
-                    if (e.key === "Enter" && tagInput.trim()) {
-                      setDraft([...(draft as string[]), tagInput.trim()]);
-                      setTagInput("");
-                    }
-                  }}
-                />
-                <button
-                  onClick={() => { if (tagInput.trim()) { setDraft([...(draft as string[]), tagInput.trim()]); setTagInput(""); } }}
-                  className="px-3 py-2 rounded-xl text-xs font-bold"
-                  style={{ background: NEON, color: "#0a0f1c" }}
-                >Add</button>
-              </div>
+          {type === "textarea" ? (
+            <textarea value={editVal ?? ""} onChange={e => setEditVal(e.target.value)} rows={5}
+              className="w-full bg-transparent border rounded px-3 py-2 text-sm text-white outline-none resize-none"
+              style={{ borderColor: `${NEON}66` }} />
+          ) : type === "tag-array" ? (
+            <TagArrayEditor values={editVal ?? []} onChange={setEditVal} />
+          ) : type === "url-array" ? (
+            <UrlArrayEditor values={editVal ?? []} onChange={setEditVal} />
+          ) : type === "platform-select" ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {PLATFORM_OPTIONS.map(opt => {
+                const selected = (editVal ?? []).includes(opt.id);
+                const Icon = opt.icon;
+                return (
+                  <button key={opt.id}
+                    onClick={() => setEditVal(selected ? (editVal ?? []).filter((p: string) => p !== opt.id) : [...(editVal ?? []), opt.id])}
+                    className="flex items-center gap-1.5 px-2 py-1.5 rounded text-xs font-medium transition-all"
+                    style={{ background: selected ? `${NEON}22` : "rgba(255,255,255,0.04)", border: `1px solid ${selected ? NEON : CARD_BORDER}`, color: selected ? NEON : "rgba(255,255,255,0.6)" }}>
+                    <Icon size={12} />{opt.label}
+                  </button>
+                );
+              })}
             </div>
+          ) : type === "select" ? (
+            <select value={editVal ?? ""} onChange={e => setEditVal(e.target.value)}
+              className="w-full bg-[#0d1117] border rounded px-3 py-2 text-sm text-white outline-none"
+              style={{ borderColor: `${NEON}66` }}>
+              {selectOptions?.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
           ) : (
-            <input
-              className="w-full rounded-xl px-3 py-2 text-sm text-white outline-none"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
-              value={draft ?? ""}
-              onChange={e => setDraft(e.target.value)}
-              placeholder={fieldDef.placeholder}
-              type={fieldDef.type === "url" ? "url" : "text"}
-            />
+            <input type="text" value={editVal ?? ""} onChange={e => setEditVal(e.target.value)}
+              className="w-full bg-transparent border rounded px-3 py-2 text-sm text-white outline-none"
+              style={{ borderColor: `${NEON}66` }} />
           )}
-          <div className="flex gap-2 justify-end">
-            <button onClick={cancel} className="px-3 py-1.5 rounded-xl text-xs font-bold text-gray-400 hover:text-white"
-                    style={{ background: "rgba(255,255,255,0.06)" }}>
-              Cancel
+          <div className="flex gap-2">
+            <button onClick={saveEdit} disabled={isSaving}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold"
+              style={{ background: NEON, color: "#070b10" }}>
+              {isSaving ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />} Save
             </button>
-            <button onClick={save} disabled={saving} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold"
-                    style={{ background: NEON, color: "#0a0f1c" }}>
-              {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-              Save
+            <button onClick={cancelEdit}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold text-white/60 hover:text-white border border-white/15">
+              <X size={11} /> Cancel
             </button>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Accordion Section ────────────────────────────────────────────────────────
+
+function Section({ id, title, children, filledCount, totalCount, open, onToggle }: {
+  id: string; title: string; children: React.ReactNode;
+  filledCount: number; totalCount: number; open: boolean; onToggle: () => void;
+}) {
+  const pct = totalCount > 0 ? Math.round((filledCount / totalCount) * 100) : 0;
+  return (
+    <div className="rounded-xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+      <button className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors" onClick={onToggle}>
+        <div className="flex items-center gap-3">
+          {open ? <ChevronDown size={16} className="text-white/50" /> : <ChevronRight size={16} className="text-white/50" />}
+          <span className="font-bold text-white text-sm">{title}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold" style={{ color: pct === 100 ? NEON : "rgba(255,255,255,0.3)" }}>
+            {filledCount}/{totalCount}
+          </span>
+          <div className="w-16 h-1 rounded-full bg-white/10 overflow-hidden">
+            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: pct === 100 ? NEON : "#fff4" }} />
+          </div>
+        </div>
+      </button>
+      {open && <div className="px-5 pb-4">{children}</div>}
     </div>
   );
 }
 
 // ─── Store Import Panel ───────────────────────────────────────────────────────
 
-type StoreId = "steam" | "epic" | "itch";
-
-function StoreImportPanel({ onImported }: { onImported: () => void }) {
-  const [activeStore, setActiveStore] = useState<StoreId>("steam");
-  const [identifier, setIdentifier] = useState("");
-  const [itchKey, setItchKey] = useState("");
-  const [preview, setPreview] = useState<StorePreview | null>(null);
-  const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(false);
-  const [applying, setApplying] = useState(false);
+function StoreImportPanel({ profile, fieldMeta, onImported }: {
+  profile: Profile | null; fieldMeta: FieldMeta; onImported: () => void;
+}) {
   const { toast } = useToast();
+  const [tab, setTab] = useState<"steam" | "epic" | "itch">("steam");
+  const [steamInput, setSteamInput] = useState(profile?.steamAppId ?? "");
+  const [epicInput, setEpicInput] = useState(profile?.epicSlug ?? "");
+  const [itchKey, setItchKey] = useState("");
+  const [itchGames, setItchGames] = useState<any[]>([]);
+  const [selectedItchGame, setSelectedItchGame] = useState<any>(null);
+  const [previewData, setPreviewData] = useState<any>(null);
+  const [previewSource, setPreviewSource] = useState("");
+  const [previewAppId, setPreviewAppId] = useState("");
+  const [previewSlug, setPreviewSlug] = useState("");
+  const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set());
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isFetchingItch, setIsFetchingItch] = useState(false);
 
-  const stores: Array<{ id: StoreId; label: string; icon: any; color: string; placeholder: string; hint: string }> = [
-    {
-      id: "steam",
-      label: "Steam",
-      icon: SiSteam,
-      color: "#66c0f4",
-      placeholder: "App ID or Steam store URL",
-      hint: "Find your App ID in your Steam store URL (e.g. store.steampowered.com/app/1234567)",
-    },
-    {
-      id: "epic",
-      label: "Epic Games",
-      icon: SiEpicgames,
-      color: "#ffffff",
-      placeholder: "Product slug from Epic store URL",
-      hint: "Copy the slug from your Epic Games store URL (e.g. store.epicgames.com/en-US/p/my-game-slug)",
-    },
-    {
-      id: "itch",
-      label: "itch.io",
-      icon: SiItchdotio,
-      color: "#fa5c5c",
-      placeholder: "Game title or itch.io URL slug",
-      hint: "Requires your itch.io API key. The key proves ownership and is never stored.",
-    },
-  ];
-
-  const currentStore = stores.find(s => s.id === activeStore)!;
-
-  const handlePreview = async () => {
-    if (!identifier.trim()) return;
-    setLoading(true);
-    setPreview(null);
-    try {
-      const body: any = { store: activeStore, identifier: identifier.trim() };
-      if (activeStore === "itch") body.apiKey = itchKey.trim();
-      const res = await apiRequest("POST", "/api/indie/store-import/preview", body);
-      const data = await res.json();
-      if (!res.ok) { toast({ title: "Import failed", description: data.message, variant: "destructive" }); return; }
-      setPreview(data);
-      // Pre-select all fields that have values
-      const initial = new Set(
-        Object.entries(data.preview)
-          .filter(([, v]) => (v as any).value !== null && (v as any).value !== undefined)
-          .map(([k]) => k)
-      );
-      setSelectedFields(initial);
-    } catch {
-      toast({ title: "Network error", description: "Could not reach store API. Try again.", variant: "destructive" });
-    } finally { setLoading(false); }
-  };
-
-  const handleApply = async () => {
-    if (!preview) return;
-    setApplying(true);
-    try {
+  const importMutation = useMutation({
+    mutationFn: async () => {
       const fields: Record<string, any> = {};
-      for (const key of selectedFields) {
-        const val = preview.preview[key]?.value;
-        if (val !== null && val !== undefined) fields[key] = val;
-      }
-      const res = await apiRequest("POST", "/api/indie/store-import/apply", { source: preview.source, fields });
-      const data = await res.json();
-      if (!res.ok) { toast({ title: "Apply failed", description: data.message, variant: "destructive" }); return; }
-      toast({ title: "Import applied!", description: `${data.updatedFields?.length ?? 0} field(s) updated.` });
-      setPreview(null);
-      setIdentifier("");
-      onImported();
-    } finally { setApplying(false); }
+      const data = previewData?.fields ?? {};
+      for (const k of selectedFields) { if (k in data) fields[k] = data[k]; }
+      return apiRequest("POST", "/api/indie/import", {
+        source: previewSource, fields,
+        ...(previewSource === "steam" && previewAppId ? { steamAppId: previewAppId } : {}),
+        ...(previewSource === "epic" && previewSlug ? { epicSlug: previewSlug } : {}),
+        ...(previewSource === "itch" && selectedItchGame ? { itchGameUrl: selectedItchGame.url } : {}),
+      });
+    },
+    onSuccess: async () => {
+      toast({ description: `${selectedFields.size} field${selectedFields.size !== 1 ? "s" : ""} imported.` });
+      await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+      setPreviewData(null); setSelectedFields(new Set()); onImported();
+    },
+    onError: () => toast({ description: "Import failed.", variant: "gamefolioError" }),
+  });
+
+  const fetchSteam = async () => {
+    const appId = steamInput.replace(/\D/g, "");
+    if (!appId) return toast({ description: "Enter a Steam App ID", variant: "gamefolioError" });
+    setIsPreviewing(true);
+    try {
+      const data = await apiRequest("GET", `/api/indie/steam/preview?appId=${appId}`);
+      setPreviewData(data); setPreviewSource("steam"); setPreviewAppId(appId);
+      setSelectedFields(new Set(Object.keys(data.fields ?? {}).filter((k: string) => (data.fields as any)[k] !== null && (data.fields as any)[k] !== undefined)));
+    } catch { toast({ description: "Steam app not found. Check the App ID.", variant: "gamefolioError" }); }
+    finally { setIsPreviewing(false); }
   };
 
-  const toggleField = (key: string) => {
-    setSelectedFields(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
+  const fetchEpic = async () => {
+    if (!epicInput.trim()) return toast({ description: "Enter an Epic slug", variant: "gamefolioError" });
+    setIsPreviewing(true);
+    try {
+      const data = await apiRequest("GET", `/api/indie/epic/preview?slug=${encodeURIComponent(epicInput.trim())}`);
+      setPreviewData(data); setPreviewSource("epic"); setPreviewSlug(epicInput.trim());
+      setSelectedFields(new Set(Object.keys(data.fields ?? {}).filter((k: string) => (data.fields as any)[k] !== null)));
+    } catch { toast({ description: "Epic product not found. Check the slug.", variant: "gamefolioError" }); }
+    finally { setIsPreviewing(false); }
   };
+
+  const fetchItch = async () => {
+    if (!itchKey.trim()) return toast({ description: "Enter your itch.io API key", variant: "gamefolioError" });
+    setIsFetchingItch(true);
+    try {
+      const data = await apiRequest("POST", "/api/indie/itch/preview", { apiKey: itchKey });
+      setItchGames(data.games ?? []);
+    } catch { toast({ description: "Invalid itch.io API key or no games found.", variant: "gamefolioError" }); }
+    finally { setIsFetchingItch(false); }
+  };
+
+  const selectItchGame = (game: any) => {
+    setSelectedItchGame(game);
+    const fields: Record<string, any> = {};
+    if (game.title) fields.gameName = game.title;
+    if (game.shortText) fields.shortDescription = game.shortText;
+    if (game.url) fields.itchUrl = game.url;
+    if (game.coverUrl) fields.headerImageUrl = game.coverUrl;
+    setPreviewData({ source: "itch", fields }); setPreviewSource("itch");
+    setSelectedFields(new Set(Object.keys(fields)));
+  };
+
+  const toggleField = (k: string) => {
+    const next = new Set(selectedFields);
+    if (next.has(k)) next.delete(k); else next.add(k);
+    setSelectedFields(next);
+  };
+
+  const previewFields = previewData?.fields ?? {};
+  const previewEntries = Object.entries(previewFields).filter(([, v]) => v !== null && v !== undefined);
 
   return (
-    <div className="rounded-2xl p-5 space-y-4" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-      <div className="flex items-center gap-2 mb-1">
-        <Store size={16} style={{ color: NEON }} />
-        <h3 className="text-sm font-black text-white uppercase tracking-wider">Import from Store</h3>
+    <div className="space-y-4">
+      <div className="flex gap-1 p-1 rounded-lg" style={{ background: "rgba(255,255,255,0.04)" }}>
+        {(["steam", "epic", "itch"] as const).map(t => (
+          <button key={t} onClick={() => { setTab(t); setPreviewData(null); setSelectedFields(new Set()); }}
+            className="flex-1 flex items-center justify-center gap-2 py-1.5 rounded text-xs font-bold transition-all"
+            style={{ background: tab === t ? CARD_BG : "transparent", border: tab === t ? `1px solid ${CARD_BORDER}` : "1px solid transparent", color: tab === t ? "white" : "rgba(255,255,255,0.4)" }}>
+            {t === "steam" && <SiSteam size={13} className="text-[#66c0f4]" />}
+            {t === "epic" && <SiEpicgames size={13} />}
+            {t === "itch" && <SiItchdotio size={13} className="text-[#fa5c5c]" />}
+            {t === "steam" ? "Steam" : t === "epic" ? "Epic Games" : "itch.io"}
+          </button>
+        ))}
       </div>
 
-      {/* Store Selector */}
-      <div className="flex gap-2">
-        {stores.map(s => {
-          const active = activeStore === s.id;
-          return (
-            <button
-              key={s.id}
-              onClick={() => { setActiveStore(s.id); setPreview(null); }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors"
-              style={{
-                background: active ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.04)",
-                border: `1px solid ${active ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)"}`,
-                color: active ? s.color : "rgba(255,255,255,0.5)",
-              }}
-            >
-              <s.icon size={13} />
-              {s.label}
+      {!previewData && tab === "steam" && (
+        <div className="space-y-2">
+          <label className="text-xs text-white/50">Steam App ID <span className="opacity-50">(numbers from the store URL: .../app/730/...)</span></label>
+          <div className="flex gap-2">
+            <input value={steamInput} onChange={e => setSteamInput(e.target.value)} onKeyDown={e => e.key === "Enter" && fetchSteam()}
+              placeholder="e.g. 730" className="flex-1 bg-transparent border rounded px-3 py-2 text-sm text-white outline-none"
+              style={{ borderColor: "rgba(255,255,255,0.2)" }} />
+            <button onClick={fetchSteam} disabled={isPreviewing} className="px-4 py-2 rounded text-xs font-bold flex items-center gap-1.5" style={{ background: NEON, color: "#070b10" }}>
+              {isPreviewing ? <Loader2 size={13} className="animate-spin" /> : "Preview"}
             </button>
-          );
-        })}
-      </div>
+          </div>
+        </div>
+      )}
 
-      {/* Input */}
-      <div className="space-y-2">
-        <input
-          className="w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none"
-          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
-          placeholder={currentStore.placeholder}
-          value={identifier}
-          onChange={e => setIdentifier(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && handlePreview()}
-        />
-        {activeStore === "itch" && (
-          <input
-            className="w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none"
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
-            placeholder="itch.io API key (from itch.io → Account settings → API keys)"
-            value={itchKey}
-            onChange={e => setItchKey(e.target.value)}
-            type="password"
-          />
-        )}
-        <p className="text-[11px] text-gray-500 flex items-start gap-1">
-          <Info size={11} className="shrink-0 mt-0.5" />{currentStore.hint}
-        </p>
-      </div>
+      {!previewData && tab === "epic" && (
+        <div className="space-y-2">
+          <label className="text-xs text-white/50">Epic Games slug <span className="opacity-50">(from store URL: .../p/your-game-slug)</span></label>
+          <div className="flex gap-2">
+            <input value={epicInput} onChange={e => setEpicInput(e.target.value)} onKeyDown={e => e.key === "Enter" && fetchEpic()}
+              placeholder="e.g. fortnite" className="flex-1 bg-transparent border rounded px-3 py-2 text-sm text-white outline-none"
+              style={{ borderColor: "rgba(255,255,255,0.2)" }} />
+            <button onClick={fetchEpic} disabled={isPreviewing} className="px-4 py-2 rounded text-xs font-bold flex items-center gap-1.5" style={{ background: NEON, color: "#070b10" }}>
+              {isPreviewing ? <Loader2 size={13} className="animate-spin" /> : "Preview"}
+            </button>
+          </div>
+        </div>
+      )}
 
-      <button
-        onClick={handlePreview}
-        disabled={loading || !identifier.trim()}
-        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-opacity disabled:opacity-40"
-        style={{ background: NEON, color: "#0a0f1c" }}
-      >
-        {loading ? <Loader2 size={14} className="animate-spin" /> : <ScanSearch size={14} />}
-        {loading ? "Fetching…" : "Fetch & Preview"}
-      </button>
-
-      {/* Preview */}
-      {preview && (
-        <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-          <div className="flex items-center gap-3 mb-2">
-            {preview.headerImage && (
-              <img src={preview.headerImage} alt={preview.gameName} className="h-12 rounded-lg object-cover" />
-            )}
-            <div>
-              <div className="text-sm font-black text-white">{preview.gameName}</div>
-              <div className="text-[11px] text-gray-400">Select the fields to import:</div>
+      {!previewData && tab === "itch" && (
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <label className="text-xs text-white/50">itch.io API key <span className="opacity-50">(get it at itch.io/user/settings/api-keys — proves you own the game)</span></label>
+            <div className="flex gap-2">
+              <input value={itchKey} onChange={e => setItchKey(e.target.value)} type="password" onKeyDown={e => e.key === "Enter" && fetchItch()}
+                placeholder="Your itch.io API key" className="flex-1 bg-transparent border rounded px-3 py-2 text-sm text-white outline-none"
+                style={{ borderColor: "rgba(255,255,255,0.2)" }} />
+              <button onClick={fetchItch} disabled={isFetchingItch} className="px-4 py-2 rounded text-xs font-bold flex items-center gap-1.5" style={{ background: NEON, color: "#070b10" }}>
+                {isFetchingItch ? <Loader2 size={13} className="animate-spin" /> : "Fetch"}
+              </button>
             </div>
           </div>
-
-          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-            {Object.entries(preview.preview).map(([key, { value, label }]) => {
-              if (value === null || value === undefined) return null;
-              const selected = selectedFields.has(key);
-              const displayVal = Array.isArray(value)
-                ? value.slice(0, 3).join(", ") + (value.length > 3 ? `… +${value.length - 3}` : "")
-                : String(value).slice(0, 120);
-              return (
-                <label key={key}
-                  className="flex items-start gap-3 p-2.5 rounded-xl cursor-pointer transition-colors"
-                  style={{ background: selected ? "rgba(193,255,0,0.07)" : "rgba(255,255,255,0.03)" }}
-                >
-                  <div className="mt-0.5 w-4 h-4 rounded flex items-center justify-center shrink-0"
-                       style={{ background: selected ? NEON : "rgba(255,255,255,0.1)", border: selected ? "none" : "1px solid rgba(255,255,255,0.2)" }}>
-                    {selected && <Check size={10} color="#0a0f1c" />}
+          {itchGames.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs text-white/50">Select your game:</p>
+              {itchGames.map(g => (
+                <button key={g.id} onClick={() => selectItchGame(g)}
+                  className="w-full flex items-center gap-3 p-2.5 rounded hover:bg-white/5 transition-colors text-left"
+                  style={{ border: `1px solid ${CARD_BORDER}` }}>
+                  {g.coverUrl && <img src={g.coverUrl} alt="" className="w-10 h-10 rounded object-cover shrink-0" />}
+                  <div>
+                    <div className="text-sm font-bold text-white">{g.title}</div>
+                    {g.shortText && <div className="text-xs text-white/50 line-clamp-1">{g.shortText}</div>}
                   </div>
-                  <input type="checkbox" className="sr-only" checked={selected}
-                         onChange={() => toggleField(key)} />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {previewData && previewEntries.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold text-white/70">Select fields to import ({selectedFields.size} selected)</p>
+            <div className="flex gap-2">
+              <button onClick={() => setSelectedFields(new Set(previewEntries.map(([k]) => k)))} className="text-[10px] text-white/50 hover:text-white">All</button>
+              <button onClick={() => setSelectedFields(new Set())} className="text-[10px] text-white/50 hover:text-white">None</button>
+            </div>
+          </div>
+          <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
+            {previewEntries.map(([k, v]) => {
+              const hasOverride = fieldMeta[k]?.isManualOverride;
+              return (
+                <label key={k} className="flex items-start gap-2.5 p-2 rounded cursor-pointer hover:bg-white/5 transition-colors">
+                  <input type="checkbox" checked={selectedFields.has(k)} onChange={() => toggleField(k)} className="mt-0.5 accent-[#c1ff00]" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">{label}</div>
-                    <div className="text-xs text-gray-300 truncate mt-0.5">{displayVal}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-white">{formatFieldName(k)}</span>
+                      {hasOverride && <span className="flex items-center gap-0.5 text-[9px] text-yellow-400"><AlertTriangle size={9} /> has manual edit</span>}
+                    </div>
+                    <div className="text-[11px] text-white/40 truncate">{formatValue(v)}</div>
                   </div>
                 </label>
               );
             })}
           </div>
-
           <div className="flex gap-2 pt-1">
-            <button onClick={() => setPreview(null)}
-              className="px-3 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white"
-              style={{ background: "rgba(255,255,255,0.06)" }}>
-              Cancel
+            <button onClick={() => importMutation.mutate()} disabled={importMutation.isPending || selectedFields.size === 0}
+              className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-bold"
+              style={{ background: NEON, color: "#070b10", opacity: selectedFields.size === 0 ? 0.4 : 1 }}>
+              {importMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+              Apply {selectedFields.size} field{selectedFields.size !== 1 ? "s" : ""}
             </button>
-            <button
-              onClick={handleApply}
-              disabled={applying || selectedFields.size === 0}
-              className="flex items-center gap-1.5 flex-1 justify-center px-3 py-2 rounded-xl text-xs font-bold disabled:opacity-40"
-              style={{ background: NEON, color: "#0a0f1c" }}
-            >
-              {applying ? <Loader2 size={12} className="animate-spin" /> : <UploadCloud size={12} />}
-              Apply {selectedFields.size} Field{selectedFields.size !== 1 ? "s" : ""}
-            </button>
+            <button onClick={() => { setPreviewData(null); setSelectedFields(new Set()); setSelectedItchGame(null); }}
+              className="px-4 py-2 rounded text-xs font-bold text-white/60 border border-white/15 hover:text-white">Back</button>
           </div>
         </div>
       )}
@@ -477,145 +557,287 @@ function StoreImportPanel({ onImported }: { onImported: () => void }) {
   );
 }
 
-// ─── Profile Completeness ─────────────────────────────────────────────────────
+// ─── Sync Panel ───────────────────────────────────────────────────────────────
 
-function CompletenessBar({ fields }: { fields: GameProfileData["fields"] }) {
-  const filled = COMPLETENESS_FIELDS.filter(k => {
-    const v = fields[k];
-    return Array.isArray(v) ? v.length > 0 : !!v;
-  }).length;
-  const pct = Math.round((filled / COMPLETENESS_FIELDS.length) * 100);
+function SyncPanel({ profile, onSynced }: { profile: Profile | null; onSynced: () => void }) {
+  const { toast } = useToast();
+  const [changes, setChanges] = useState<SyncChange[]>([]);
+  const [source, setSource] = useState("");
+  const [checked, setChecked] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [isChecking, setIsChecking] = useState(false);
+
+  const doCheck = async () => {
+    setIsChecking(true);
+    try {
+      const data = await apiRequest("POST", "/api/indie/sync-check");
+      setChanges(data.changes ?? []); setSource(data.source ?? ""); setChecked(true);
+      const autoSelect = (data.changes ?? []).filter((c: SyncChange) => !c.hasOverride).map((c: SyncChange) => c.fieldName);
+      setSelected(new Set(autoSelect));
+      if (!data.hasChanges) toast({ description: "Profile is up to date — no changes found." });
+    } catch (err: any) {
+      toast({ description: err?.message || "Could not check for updates. Add a Steam App ID or Epic slug first.", variant: "gamefolioError" });
+    } finally { setIsChecking(false); }
+  };
+
+  const applyMutation = useMutation({
+    mutationFn: async () => {
+      const fields = changes.filter(c => selected.has(c.fieldName)).map(c => ({ fieldName: c.fieldName, newValue: c.newValue }));
+      return apiRequest("POST", "/api/indie/sync-apply", { fields, source });
+    },
+    onSuccess: async (data: any) => {
+      const n = data.applied?.length ?? 0;
+      const sk = data.skipped?.length ?? 0;
+      toast({ description: `${n} field${n !== 1 ? "s" : ""} updated.${sk ? ` ${sk} manual override${sk !== 1 ? "s" : ""} preserved.` : ""}` });
+      await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+      setChecked(false); setChanges([]); onSynced();
+    },
+    onError: () => toast({ description: "Sync failed.", variant: "gamefolioError" }),
+  });
+
+  const hasStore = !!(profile?.steamAppId || profile?.epicSlug);
+  if (!hasStore) return <p className="text-xs text-white/40 text-center py-3">Add a Steam App ID or Epic slug in Store Links to enable sync.</p>;
+
+  if (!checked) {
+    return (
+      <button onClick={doCheck} disabled={isChecking}
+        className="w-full flex items-center justify-center gap-2 py-2.5 rounded text-sm font-bold transition-all"
+        style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${CARD_BORDER}`, color: "white" }}>
+        {isChecking ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+        {isChecking ? "Checking for updates…" : `Check ${profile?.steamAppId ? "Steam" : "Epic"} for updates`}
+      </button>
+    );
+  }
+
+  if (changes.length === 0) {
+    return <p className="text-xs text-white/50 text-center py-3 flex items-center justify-center gap-1.5"><CheckCircle2 size={14} style={{ color: NEON }} /> Profile is up to date</p>;
+  }
 
   return (
-    <div className="rounded-2xl p-5" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          {pct === 100
-            ? <CircleCheck size={16} style={{ color: NEON }} />
-            : <AlertCircle size={16} className="text-yellow-400" />}
-          <span className="text-sm font-black text-white uppercase tracking-wider">Profile Completeness</span>
-        </div>
-        <span className="text-lg font-black" style={{ color: pct === 100 ? NEON : "white" }}>{pct}%</span>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold text-white/70">{changes.length} update{changes.length !== 1 ? "s" : ""} found on {source}</p>
+        <button onClick={() => setSelected(new Set(changes.filter(c => !c.hasOverride).map(c => c.fieldName)))}
+          className="text-[10px] text-white/50 hover:text-white">Auto-select</button>
       </div>
-      <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
-        <div
-          className="h-full rounded-full transition-all duration-700"
-          style={{
-            width: `${pct}%`,
-            background: pct === 100 ? NEON : `linear-gradient(90deg, ${NEON}, #66c0f4)`,
-            boxShadow: pct > 0 ? `0 0 12px ${NEON}55` : "none",
-          }}
-        />
+      <div className="space-y-1.5 max-h-56 overflow-y-auto">
+        {changes.map(c => (
+          <label key={c.fieldName} className="flex items-start gap-2 p-2 rounded cursor-pointer hover:bg-white/5"
+            style={{ opacity: c.hasOverride ? 0.6 : 1 }}>
+            <input type="checkbox" checked={selected.has(c.fieldName)} disabled={c.hasOverride}
+              onChange={() => { const s = new Set(selected); s.has(c.fieldName) ? s.delete(c.fieldName) : s.add(c.fieldName); setSelected(s); }}
+              className="mt-0.5 accent-[#c1ff00]" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold text-white">{formatFieldName(c.fieldName)}</span>
+                {c.hasOverride && <span className="text-[9px] text-yellow-400 flex items-center gap-0.5"><AlertTriangle size={9} /> Override — preserved</span>}
+              </div>
+              <div className="text-[10px] text-white/35 truncate">{formatValue(c.newValue)}</div>
+            </div>
+          </label>
+        ))}
       </div>
-      <div className="text-[11px] text-gray-500 mt-2">
-        {filled} of {COMPLETENESS_FIELDS.length} key fields filled — complete your profile to attract more creators
+      <div className="flex gap-2">
+        <button onClick={() => applyMutation.mutate()} disabled={applyMutation.isPending || selected.size === 0}
+          className="flex items-center gap-1.5 px-4 py-2 rounded text-xs font-bold"
+          style={{ background: NEON, color: "#070b10", opacity: selected.size === 0 ? 0.4 : 1 }}>
+          {applyMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+          Apply {selected.size} change{selected.size !== 1 ? "s" : ""}
+        </button>
+        <button onClick={() => { setChecked(false); setChanges([]); }}
+          className="px-4 py-2 rounded text-xs font-bold text-white/60 border border-white/15 hover:text-white">Cancel</button>
       </div>
     </div>
   );
 }
 
-// ─── Main GameProfileTab ──────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function GameProfileTab() {
-  const qc = useQueryClient();
   const { toast } = useToast();
-  const [showImport, setShowImport] = useState(true);
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set(["basic"]));
+  const [importOpen, setImportOpen] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
 
-  const { data, isLoading } = useQuery<GameProfileData>({
-    queryKey: ["/api/indie/game-profile"],
+  const { data, isLoading } = useQuery<{ profile: Profile; fieldMeta: FieldMeta }>({
+    queryKey: ["/api/indie/profile"],
   });
+
+  const profile = (data?.profile ?? null) as Profile | null;
+  const fieldMeta = (data?.fieldMeta ?? {}) as FieldMeta;
 
   const saveMutation = useMutation({
-    mutationFn: ({ fieldName, value }: { fieldName: string; value: any }) =>
-      apiRequest("PUT", `/api/indie/field-override/${fieldName}`, { value }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/indie/game-profile"] });
-      qc.invalidateQueries({ queryKey: ["/api/user"] });
-    },
-    onError: () => toast({ title: "Save failed", variant: "destructive" }),
+    mutationFn: async ({ fieldName, value }: { fieldName: string; value: any }) =>
+      apiRequest("PUT", "/api/indie/profile", { [fieldName]: value }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] }); toast({ description: "Saved." }); },
+    onError: () => toast({ description: "Save failed.", variant: "gamefolioError" }),
   });
 
-  const clearMutation = useMutation({
-    mutationFn: (fieldName: string) =>
-      apiRequest("PUT", `/api/indie/field-override/${fieldName}`, { clearOverride: true }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/indie/game-profile"] });
-      qc.invalidateQueries({ queryKey: ["/api/user"] });
+  const revertMutation = useMutation({
+    mutationFn: async ({ fieldName }: { fieldName: string }) => {
+      const meta = fieldMeta[fieldName] as any;
+      const imported = meta?.importedValue ? JSON.parse(meta.importedValue) : null;
+      return apiRequest("POST", "/api/indie/sync-apply", {
+        fields: [{ fieldName, newValue: imported }],
+        source: meta?.importSource ?? "store",
+      });
     },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] }); toast({ description: "Reverted to imported value." }); },
+    onError: () => toast({ description: "Revert failed.", variant: "gamefolioError" }),
   });
 
-  const handleSave = async (fieldName: string, value: any) => {
-    await saveMutation.mutateAsync({ fieldName, value });
-    toast({ title: "Saved", description: `${FIELDS.find(f => f.key === fieldName)?.label} updated.` });
+  const handleSave = useCallback((fieldName: string, value: any) => saveMutation.mutate({ fieldName, value }), [saveMutation]);
+  const handleRevert = useCallback((fieldName: string) => revertMutation.mutate({ fieldName }), [revertMutation]);
+  const toggleSection = (id: string) => setOpenSections(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const SECTION_FIELDS: Record<string, string[]> = {
+    basic: ["gameName", "releaseStatus", "releaseDate", "price"],
+    studio: ["studioName", "studioFoundedYear", "studioTeamSize", "studioWebsite", "studioCountry"],
+    description: ["shortDescription", "fullDescription"],
+    features: ["keyFeatures", "genres", "tags"],
+    media: ["headerImageUrl", "trailerUrl", "screenshotUrls"],
+    platforms: ["platforms"],
+    stores: ["steamAppId", "steamUrl", "epicSlug", "epicUrl", "itchUrl"],
+    social: ["websiteUrl", "twitterUrl", "discordUrl"],
   };
 
-  const handleClearOverride = async (fieldName: string) => {
-    await clearMutation.mutateAsync(fieldName);
-    toast({ title: "Override cleared", description: "Field reverted to imported value." });
-  };
+  const sectionFilled = (id: string) => (SECTION_FIELDS[id] ?? []).filter(f => isFieldFilled(profile, f)).length;
+  const essentialFilled = ESSENTIAL_FIELDS.filter(f => isFieldFilled(profile, f)).length;
+  const optionalFilled = OPTIONAL_FIELDS.filter(f => isFieldFilled(profile, f)).length;
+  const essentialPct = Math.round((essentialFilled / ESSENTIAL_FIELDS.length) * 100);
+  const missingEssential = ESSENTIAL_FIELDS.filter(f => !isFieldFilled(profile, f));
+
+  const fp = { profile, fieldMeta, onSave: handleSave, onRevert: handleRevert, isSaving: saveMutation.isPending || revertMutation.isPending };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="w-6 h-6 animate-spin" style={{ color: NEON }} />
-      </div>
-    );
+    return <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-white/30" /></div>;
   }
 
-  const profileData = data ?? { fields: {
-    gameDescription: null, gameKeyFeatures: [], studioFoundedYear: null,
-    studioTeamSize: null, gameReleaseDate: null, gameSteamUrl: null,
-    gameEpicUrl: null, gameTrailerUrl: null, gameScreenshotUrls: [],
-  }, overrides: {} };
-
   return (
-    <div className="space-y-5 pb-10">
-      {/* Completeness */}
-      <CompletenessBar fields={profileData.fields} />
+    <div className="space-y-4 max-w-3xl">
 
-      {/* Store Import (collapsible) */}
-      <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
-        <button
-          onClick={() => setShowImport(v => !v)}
-          className="w-full flex items-center justify-between px-5 py-4"
-          style={{ background: CARD_BG }}
-        >
-          <div className="flex items-center gap-2">
-            <Store size={15} style={{ color: NEON }} />
-            <span className="text-sm font-black text-white uppercase tracking-wider">Store Import</span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
-                  style={{ background: "rgba(193,255,0,0.15)", color: NEON }}>
-              Steam · Epic · itch.io
-            </span>
+      {/* Completeness card */}
+      <div className="rounded-xl p-5 space-y-3" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-bold text-white">Profile Completeness</span>
+          <span className="text-xs font-bold" style={{ color: essentialPct === 100 ? NEON : "rgba(255,255,255,0.5)" }}>
+            {essentialFilled}/{ESSENTIAL_FIELDS.length} essential · {optionalFilled}/{OPTIONAL_FIELDS.length} optional
+          </span>
+        </div>
+        <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${essentialPct}%`, background: essentialPct === 100 ? NEON : "linear-gradient(90deg,#fff4,#fff8)" }} />
+        </div>
+        {missingEssential.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {missingEssential.map(f => (
+              <span key={f} className="text-[10px] px-2 py-0.5 rounded-full text-yellow-400"
+                style={{ background: "rgba(250,204,21,0.08)", border: "1px solid rgba(250,204,21,0.2)" }}>
+                {formatFieldName(f)} missing
+              </span>
+            ))}
           </div>
-          {showImport ? <ChevronUp size={15} className="text-gray-500" /> : <ChevronDown size={15} className="text-gray-500" />}
-        </button>
-        {showImport && (
-          <div className="px-5 pb-5 pt-1" style={{ background: CARD_BG }}>
-            <StoreImportPanel onImported={() => qc.invalidateQueries({ queryKey: ["/api/indie/game-profile"] })} />
-          </div>
+        )}
+        {essentialPct === 100 && (
+          <p className="text-xs flex items-center gap-1.5" style={{ color: NEON }}>
+            <CheckCircle2 size={13} /> All essential fields complete — your public profile looks great!
+          </p>
         )}
       </div>
 
-      {/* Field-by-field editing */}
-      <div>
-        <div className="flex items-center gap-2 mb-3 px-1">
-          <Pencil size={14} style={{ color: NEON }} />
-          <span className="text-sm font-black text-white uppercase tracking-wider">Edit Fields</span>
-        </div>
-        <div className="space-y-3">
-          {FIELDS.map(fieldDef => (
-            <FieldEditor
-              key={fieldDef.key}
-              fieldDef={fieldDef}
-              currentValue={profileData.fields[fieldDef.key]}
-              override={profileData.overrides[fieldDef.key]}
-              onSave={handleSave}
-              onClearOverride={handleClearOverride}
-            />
-          ))}
-        </div>
+      {/* Toolbar */}
+      <div className="flex gap-2 flex-wrap">
+        <button onClick={() => { setImportOpen(p => !p); setSyncOpen(false); }}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all"
+          style={{ background: importOpen ? `${NEON}22` : CARD_BG, border: `1px solid ${importOpen ? NEON : CARD_BORDER}`, color: importOpen ? NEON : "white" }}>
+          <SiSteam size={14} /> Import from Store
+        </button>
+        <button onClick={() => { setSyncOpen(p => !p); setImportOpen(false); }}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all"
+          style={{ background: syncOpen ? "rgba(99,102,241,0.15)" : CARD_BG, border: `1px solid ${syncOpen ? "#6366f1" : CARD_BORDER}`, color: syncOpen ? "#818cf8" : "white" }}>
+          <RefreshCw size={14} /> Check for Updates
+        </button>
       </div>
+
+      {importOpen && (
+        <div className="rounded-xl p-5" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+          <h3 className="text-sm font-bold text-white mb-4">Import from Store</h3>
+          <StoreImportPanel profile={profile} fieldMeta={fieldMeta} onImported={() => setImportOpen(false)} />
+        </div>
+      )}
+
+      {syncOpen && (
+        <div className="rounded-xl p-5" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+          <h3 className="text-sm font-bold text-white mb-4">Sync with Store</h3>
+          <SyncPanel profile={profile} onSynced={() => setSyncOpen(false)} />
+        </div>
+      )}
+
+      {/* Section 1: Basic Info */}
+      <Section id="basic" title="Basic Info" open={openSections.has("basic")} onToggle={() => toggleSection("basic")}
+        filledCount={sectionFilled("basic")} totalCount={SECTION_FIELDS.basic.length}>
+        <FieldRow {...fp} fieldName="gameName" label="Game Name" type="text" />
+        <FieldRow {...fp} fieldName="releaseStatus" label="Release Status" type="select" selectOptions={RELEASE_STATUS_OPTIONS} />
+        <FieldRow {...fp} fieldName="releaseDate" label="Release Date" type="text" />
+        <FieldRow {...fp} fieldName="price" label="Price" type="text" />
+      </Section>
+
+      {/* Section 2: Studio */}
+      <Section id="studio" title="Studio" open={openSections.has("studio")} onToggle={() => toggleSection("studio")}
+        filledCount={sectionFilled("studio")} totalCount={SECTION_FIELDS.studio.length}>
+        <FieldRow {...fp} fieldName="studioName" label="Studio Name" type="text" />
+        <FieldRow {...fp} fieldName="studioFoundedYear" label="Founded Year" type="text" />
+        <FieldRow {...fp} fieldName="studioTeamSize" label="Team Size" type="text" />
+        <FieldRow {...fp} fieldName="studioWebsite" label="Studio Website" type="url" />
+        <FieldRow {...fp} fieldName="studioCountry" label="Country" type="text" />
+      </Section>
+
+      {/* Section 3: Description */}
+      <Section id="description" title="Description" open={openSections.has("description")} onToggle={() => toggleSection("description")}
+        filledCount={sectionFilled("description")} totalCount={SECTION_FIELDS.description.length}>
+        <FieldRow {...fp} fieldName="shortDescription" label="Short Description" type="textarea" />
+        <FieldRow {...fp} fieldName="fullDescription" label="Full Description" type="textarea" />
+      </Section>
+
+      {/* Section 4: Features & Genre */}
+      <Section id="features" title="Features & Genre" open={openSections.has("features")} onToggle={() => toggleSection("features")}
+        filledCount={sectionFilled("features")} totalCount={SECTION_FIELDS.features.length}>
+        <FieldRow {...fp} fieldName="keyFeatures" label="Key Features" type="tag-array" />
+        <FieldRow {...fp} fieldName="genres" label="Genres" type="tag-array" />
+        <FieldRow {...fp} fieldName="tags" label="Tags" type="tag-array" />
+      </Section>
+
+      {/* Section 5: Media */}
+      <Section id="media" title="Media" open={openSections.has("media")} onToggle={() => toggleSection("media")}
+        filledCount={sectionFilled("media")} totalCount={SECTION_FIELDS.media.length}>
+        <FieldRow {...fp} fieldName="headerImageUrl" label="Header Image URL" type="url" />
+        <FieldRow {...fp} fieldName="trailerUrl" label="Trailer URL" type="url" />
+        <FieldRow {...fp} fieldName="screenshotUrls" label="Screenshot URLs" type="url-array" />
+      </Section>
+
+      {/* Section 6: Platforms */}
+      <Section id="platforms" title="Platforms" open={openSections.has("platforms")} onToggle={() => toggleSection("platforms")}
+        filledCount={sectionFilled("platforms")} totalCount={SECTION_FIELDS.platforms.length}>
+        <FieldRow {...fp} fieldName="platforms" label="Supported Platforms" type="platform-select" />
+      </Section>
+
+      {/* Section 7: Store Links */}
+      <Section id="stores" title="Store Links" open={openSections.has("stores")} onToggle={() => toggleSection("stores")}
+        filledCount={sectionFilled("stores")} totalCount={SECTION_FIELDS.stores.length}>
+        <FieldRow {...fp} fieldName="steamAppId" label="Steam App ID" type="text" />
+        <FieldRow {...fp} fieldName="steamUrl" label="Steam Store URL" type="url" />
+        <FieldRow {...fp} fieldName="epicSlug" label="Epic Games Slug" type="text" />
+        <FieldRow {...fp} fieldName="epicUrl" label="Epic Store URL" type="url" />
+        <FieldRow {...fp} fieldName="itchUrl" label="itch.io URL" type="url" />
+      </Section>
+
+      {/* Section 8: Social & Contact */}
+      <Section id="social" title="Social & Contact" open={openSections.has("social")} onToggle={() => toggleSection("social")}
+        filledCount={sectionFilled("social")} totalCount={SECTION_FIELDS.social.length}>
+        <FieldRow {...fp} fieldName="websiteUrl" label="Website URL" type="url" />
+        <FieldRow {...fp} fieldName="twitterUrl" label="Twitter / X URL" type="url" />
+        <FieldRow {...fp} fieldName="discordUrl" label="Discord URL" type="url" />
+      </Section>
     </div>
   );
 }

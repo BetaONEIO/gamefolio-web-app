@@ -1959,20 +1959,82 @@ export const usedPaymentHashes = pgTable("used_payment_hashes", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Indie game per-field import/override metadata
-// Tracks where each field value came from (store import vs manual edit)
+// ─── Indie Game Profile System ───────────────────────────────────────────────
+
+// Canonical per-developer game profile — one row per indie developer user
+export const indieGameProfiles = pgTable("indie_game_profiles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().unique(),
+
+  // Section 1: Basic Info
+  gameName: text("game_name"),
+  releaseStatus: text("release_status").default("coming_soon"), // coming_soon | early_access | released
+  releaseDate: text("release_date"),
+  price: text("price"),
+  isFree: boolean("is_free").default(false),
+
+  // Section 2: Studio
+  studioName: text("studio_name"),
+  studioFoundedYear: text("studio_founded_year"),
+  studioTeamSize: text("studio_team_size"),
+  studioWebsite: text("studio_website"),
+  studioCountry: text("studio_country"),
+
+  // Section 3: Description
+  shortDescription: text("short_description"),
+  fullDescription: text("full_description"),
+
+  // Section 4: Features & Genre
+  keyFeatures: text("key_features").array(),
+  genres: text("genres").array(),
+  tags: text("tags").array(),
+
+  // Section 5: Media
+  headerImageUrl: text("header_image_url"),
+  capsuleImageUrl: text("capsule_image_url"),
+  trailerUrl: text("trailer_url"),
+  screenshotUrls: text("screenshot_urls").array(),
+
+  // Section 6: Platforms
+  platforms: text("platforms").array(), // windows, mac, linux, ps5, xbox, switch, ios, android
+
+  // Section 7: Store Links
+  steamUrl: text("steam_url"),
+  steamAppId: text("steam_app_id"),
+  epicUrl: text("epic_url"),
+  epicSlug: text("epic_slug"),
+  itchUrl: text("itch_url"),
+
+  // Section 8: Social & Contact
+  websiteUrl: text("website_url"),
+  twitterUrl: text("twitter_url"),
+  discordUrl: text("discord_url"),
+
+  // Store import tracking
+  steamLastImportedAt: timestamp("steam_last_imported_at"),
+  epicLastImportedAt: timestamp("epic_last_imported_at"),
+  itchLastImportedAt: timestamp("itch_last_imported_at"),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Per-field import/override metadata — tracks source of truth for each field
 export const indieGameFieldOverrides = pgTable("indie_game_field_overrides", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
-  fieldName: text("field_name").notNull(), // e.g. "gameDescription", "gameKeyFeatures"
-  importedValue: text("imported_value"),   // JSON-encoded value from last store import
+  fieldName: text("field_name").notNull(),
+  importedValue: text("imported_value"),   // JSON string of last imported value
   importSource: text("import_source"),     // "steam" | "epic" | "itch"
-  manualOverride: text("manual_override"), // JSON-encoded manual override value (when isOverride=true)
-  isOverride: boolean("is_override").default(false).notNull(), // true = user manual value wins
+  isManualOverride: boolean("is_manual_override").default(false).notNull(),
   lastImportedAt: timestamp("last_imported_at"),
   lastEditedAt: timestamp("last_edited_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const insertIndieGameProfileSchema = createInsertSchema(indieGameProfiles).omit({ id: true, createdAt: true, updatedAt: true });
+export type IndieGameProfile = typeof indieGameProfiles.$inferSelect;
+export type InsertIndieGameProfile = z.infer<typeof insertIndieGameProfileSchema>;
 
 export const insertIndieGameFieldOverrideSchema = createInsertSchema(indieGameFieldOverrides).omit({ id: true, createdAt: true });
 export type IndieGameFieldOverride = typeof indieGameFieldOverrides.$inferSelect;
