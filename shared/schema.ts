@@ -2027,6 +2027,7 @@ export const indieGameFieldOverrides = pgTable("indie_game_field_overrides", {
   importedValue: text("imported_value"),   // JSON string of last imported value
   importSource: text("import_source"),     // "steam" | "epic" | "itch"
   isManualOverride: boolean("is_manual_override").default(false).notNull(),
+  useImported: boolean("use_imported").default(false).notNull(),
   lastImportedAt: timestamp("last_imported_at"),
   lastEditedAt: timestamp("last_edited_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

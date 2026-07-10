@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS "indie_game_field_overrides" (
   "imported_value" text,
   "import_source" text,
   "is_manual_override" boolean DEFAULT false NOT NULL,
+  "use_imported" boolean DEFAULT false NOT NULL,
   "last_imported_at" timestamp,
   "last_edited_at" timestamp,
   "created_at" timestamp DEFAULT now() NOT NULL,
