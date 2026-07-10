@@ -1214,7 +1214,7 @@ function HallOfChampions() {
                 </div>
 
                 {/* Top 3 list */}
-                <div className="flex-1 px-4 py-4 space-y-7">
+                <div className="flex-1 px-4 py-5 space-y-5">
                   {!season.top3 || season.top3.length === 0 ? (
                     <div className="text-xs text-slate-600 text-center py-4">No data</div>
                   ) : (
@@ -1222,13 +1222,13 @@ function HallOfChampions() {
                       const t = RANK_TROPHY[p.rank] ?? RANK_TROPHY[3];
                       return (
                         <Link key={p.userId} href={`/@${p.user.username}`}>
-                          <div className="flex items-center gap-3 cursor-pointer group">
+                          <div className="flex items-center gap-3 cursor-pointer group py-2">
                             <div className="relative flex-shrink-0">
                               <UserAvatar user={p.user} size="md" />
                               <img
                                 src={t.img}
                                 alt={`${p.rank} place`}
-                                className="absolute -bottom-0.5 -right-1.5 h-5 w-auto object-contain select-none"
+                                className="absolute -bottom-1 -right-1.5 h-6 w-auto object-contain select-none"
                                 style={{ filter: `drop-shadow(0 1px 3px rgba(0,0,0,0.8))` }}
                               />
                             </div>
