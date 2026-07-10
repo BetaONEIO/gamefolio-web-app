@@ -744,16 +744,13 @@ export default function GameProfileTab() {
   });
 
   const revertMutation = useMutation({
-    mutationFn: async ({ fieldName }: { fieldName: string }) => {
-      const meta = fieldMeta[fieldName] as any;
-      const imported = meta?.importedValue ? JSON.parse(meta.importedValue) : null;
-      return apiRequest("POST", "/api/indie/sync-apply", {
-        fields: [{ fieldName, newValue: imported }],
-        source: meta?.importSource ?? "store",
-      });
+    mutationFn: async ({ fieldName }: { fieldName: string }) =>
+      apiRequest("POST", "/api/indie/field-revert", { fieldName }),
+    onSuccess: (_data: any, { fieldName }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+      toast({ description: `${formatFieldName(fieldName)} reverted to store value.` });
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] }); toast({ description: "Reverted to imported value." }); },
-    onError: () => toast({ description: "Revert failed.", variant: "gamefolioError" }),
+    onError: (err: any) => toast({ description: err?.message ?? "Revert failed.", variant: "gamefolioError" }),
   });
 
   const handleSave = useCallback((fieldName: string, value: any) => saveMutation.mutate({ fieldName, value }), [saveMutation]);

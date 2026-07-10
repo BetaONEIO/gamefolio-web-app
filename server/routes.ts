@@ -10226,6 +10226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PUT /api/indie/profile — owner: manually update profile fields
   app.put("/api/indie/profile", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
     try {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
@@ -10261,6 +10262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/indie/steam/preview?appId= — preview Steam data without saving
   app.get("/api/indie/steam/preview", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
     const appId = (req.query.appId as string || "").replace(/\D/g, "");
     if (!appId) return res.status(400).json({ error: "Valid numeric appId required" });
     try {
@@ -10279,6 +10281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/indie/epic/preview?slug= — preview Epic Games data without saving
   app.get("/api/indie/epic/preview", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
     const slug = (req.query.slug as string || "").trim().toLowerCase();
     if (!slug) return res.status(400).json({ error: "slug required (from Epic store URL)" });
     try {
@@ -10313,6 +10316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/indie/itch/preview — list dev's itch.io games (API key proves ownership)
   app.post("/api/indie/itch/preview", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
     const { apiKey } = req.body;
     if (!apiKey) return res.status(400).json({ error: "apiKey required" });
     try {
@@ -10337,6 +10341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // later choose to revert to it via the Revert button or sync-apply.
   app.post("/api/indie/import", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
     const { source, fields, steamAppId: reqAppId, epicSlug: reqSlug, itchGameUrl } = req.body;
     if (!source || !fields || typeof fields !== "object") return res.status(400).json({ error: "source and fields object required" });
     try {
@@ -10418,6 +10423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/indie/sync-check — diff current profile vs live store data
   app.post("/api/indie/sync-check", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
     try {
       const profile = await _indieGetOrCreate(req.user.id);
       const fieldMeta = await _indieFieldMetaMap(req.user.id);
@@ -10456,22 +10462,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/indie/sync-apply — apply sync changes, skipping manual overrides
+  // POST /api/indie/sync-apply — apply explicit user field decisions (keep/use/defer).
+  // The client sends only the fields the user chose "use" for — server trusts that selection
+  // and always applies them, clearing isManualOverride so the field tracks the store source.
   app.post("/api/indie/sync-apply", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
     const { fields, source } = req.body;
     if (!Array.isArray(fields)) return res.status(400).json({ error: "fields array required" });
     try {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
-      const fieldMeta = await _indieFieldMetaMap(req.user.id);
       const patch: Record<string, any> = {};
       const applied: string[] = [];
-      const skipped: string[] = [];
       const now = new Date();
       for (const { fieldName, newValue } of fields) {
-        if (fieldMeta[fieldName]?.isManualOverride) { skipped.push(fieldName); continue; }
+        if (!INDIE_ALLOWED_FIELDS.includes(fieldName)) continue;
         patch[fieldName] = newValue;
         applied.push(fieldName);
       }
@@ -10480,16 +10487,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
         if (ex.length > 0) { await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.userId, req.user.id)); }
         else { await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch }); }
+        // Clear isManualOverride for applied fields — they now track the store source
         for (const fieldName of applied) {
-          await _indieUpsertMeta(req.user.id, fieldName, { importedValue: JSON.stringify(patch[fieldName]), importSource: source || "store", isManualOverride: false, lastImportedAt: now });
+          await _indieUpsertMeta(req.user.id, fieldName, {
+            importedValue: JSON.stringify(patch[fieldName]),
+            importSource: source || "store",
+            isManualOverride: false,
+            lastImportedAt: now,
+          });
         }
       }
       const profile = await _indieGetOrCreate(req.user.id);
       const fieldMetaNew = await _indieFieldMetaMap(req.user.id);
-      res.json({ profile, fieldMeta: fieldMetaNew, applied, skipped });
+      res.json({ profile, fieldMeta: fieldMetaNew, applied, skipped: [] });
     } catch (err) {
       console.error("POST /api/indie/sync-apply error:", err);
       res.status(500).json({ error: "Sync apply failed" });
+    }
+  });
+
+  // POST /api/indie/field-revert — reset one field to its last imported value and clear manual override.
+  // This is the "Revert to store value" button action. Unlike sync-apply which trusts batch decisions,
+  // this is a single-field explicit revert that always succeeds if there is an importedValue.
+  app.post("/api/indie/field-revert", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    const { fieldName } = req.body;
+    if (!fieldName || typeof fieldName !== "string" || !INDIE_ALLOWED_FIELDS.includes(fieldName)) {
+      return res.status(400).json({ error: "Valid fieldName required" });
+    }
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const fieldMeta = await _indieFieldMetaMap(req.user.id);
+      const meta = fieldMeta[fieldName];
+      if (!meta?.importedValue) {
+        return res.status(404).json({ error: `No imported value to revert to for field "${fieldName}"` });
+      }
+      const importedValue = JSON.parse(meta.importedValue);
+      const now = new Date();
+      const patch: Record<string, any> = { [fieldName]: importedValue, updatedAt: now };
+      const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      if (ex.length > 0) {
+        await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.userId, req.user.id));
+      } else {
+        await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch });
+      }
+      // Clear the manual override — field now uses the imported (store) value
+      await _indieUpsertMeta(req.user.id, fieldName, {
+        isManualOverride: false,
+        importedValue: meta.importedValue,
+        importSource: meta.importSource ?? "store",
+        lastImportedAt: meta.lastImportedAt ? new Date(meta.lastImportedAt) : now,
+        lastEditedAt: now,
+      });
+      const profile = await _indieGetOrCreate(req.user.id);
+      const fieldMetaNew = await _indieFieldMetaMap(req.user.id);
+      res.json({ profile, fieldMeta: fieldMetaNew, reverted: fieldName, value: importedValue });
+    } catch (err) {
+      console.error("POST /api/indie/field-revert error:", err);
+      res.status(500).json({ error: "Revert failed" });
     }
   });
 
