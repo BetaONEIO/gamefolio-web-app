@@ -1,6 +1,7 @@
 import express from 'express';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
+import { Pool } from 'pg';
 
 const router = express.Router();
 
@@ -31,15 +32,22 @@ function requireAdmin(req: any, res: any, next: any) {
 // ─────────────────────────────────────────────
 
 export async function ensureBountyMarketplaceTables() {
-  try {
-    // Extend campaign_participants with more status tracking
-    await db.execute(sql`
-      ALTER TABLE campaign_participants
-        ADD COLUMN IF NOT EXISTS deadline TIMESTAMP,
-        ADD COLUMN IF NOT EXISTS notes TEXT
-    `);
+  // Use raw pg pool for DDL — drizzle's sql template can silently drop ALTER errors
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const run = (q: string) => pool.query(q).catch((e: any) => {
+    if (!e.message?.includes('already exists') && !e.message?.includes('does not exist')) {
+      console.warn('Migration warning:', e.message);
+    }
+  });
 
-    await db.execute(sql`
+  try {
+    await run(`ALTER TABLE campaign_instances ALTER COLUMN developer_user_id DROP NOT NULL`);
+    await run(`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS gamefolio_managed BOOLEAN DEFAULT false`);
+    await run(`ALTER TABLE campaign_templates ADD COLUMN IF NOT EXISTS gamefolio_managed BOOLEAN DEFAULT false`);
+    await run(`ALTER TABLE campaign_template_bounties ADD COLUMN IF NOT EXISTS xp_reward INTEGER DEFAULT 500`);
+    await run(`ALTER TABLE campaign_participants ADD COLUMN IF NOT EXISTS deadline TIMESTAMP`);
+    await run(`ALTER TABLE campaign_participants ADD COLUMN IF NOT EXISTS notes TEXT`);
+    await run(`
       CREATE TABLE IF NOT EXISTS bounty_submissions (
         id SERIAL PRIMARY KEY,
         instance_id INTEGER NOT NULL REFERENCES campaign_instances(id) ON DELETE CASCADE,
@@ -57,9 +65,183 @@ export async function ensureBountyMarketplaceTables() {
         reviewed_at TIMESTAMP
       )
     `);
-  } catch (err) {
-    console.error('Failed to ensure bounty marketplace tables:', err);
+
+    // Seed Gamefolio-managed campaigns if none exist
+    const { rows: existing } = await pool.query(
+      `SELECT id FROM campaign_instances WHERE gamefolio_managed = true LIMIT 1`
+    );
+    if (existing.length === 0) {
+      await seedGamefolioCampaignsWithPool(pool);
+    } else {
+      console.log(`✅ Gamefolio bounty campaigns already seeded (${existing[0].id})`);
+    }
+  } finally {
+    await pool.end();
   }
+}
+
+// ─────────────────────────────────────────────
+// GAMEFOLIO-MANAGED CAMPAIGN SEED DATA
+// ─────────────────────────────────────────────
+
+const GF_CAMPAIGNS = [
+  {
+    template: {
+      name: 'Content Creator Sprint',
+      slug: 'gf-content-creator-sprint',
+      category: 'content',
+      description: 'Upload gameplay clips and screenshots to your Gamefolio profile. Show the community what you\'re playing and build your gaming portfolio.',
+      best_use_case: 'Great for anyone who wants to start building a gaming presence on Gamefolio.',
+      duration: 30,
+      participant_capacity: 9999,
+      demo_keys_required: 0,
+      full_keys_required: 0,
+      completion_reward: 'xp_badge',
+      completion_reward_description: '1,500 XP + Creator Starter badge on your profile',
+      estimated_clips: 3,
+      estimated_screenshots: 5,
+      estimated_feedback: 0,
+      featured: true,
+      recommended: true,
+    },
+    bounties: [
+      { title: 'Upload 3 Gameplay Clips', description: 'Record and upload at least 3 gameplay clips to your Gamefolio profile.', mandatory: true, quantity: 3, content_type: 'clip', xp_reward: 300, completion_order: 1 },
+      { title: 'Upload 5 Screenshots', description: 'Capture and upload at least 5 screenshots from any game.', mandatory: true, quantity: 5, content_type: 'screenshot', xp_reward: 200, completion_order: 2 },
+      { title: 'Create a Highlight Reel', description: 'Edit your best moments into a highlight reel and share it.', mandatory: false, quantity: 1, content_type: 'reel', xp_reward: 1000, completion_order: 3 },
+    ],
+    instance: {
+      game_name: 'Gamefolio Platform',
+      game_artwork_url: null,
+    },
+  },
+  {
+    template: {
+      name: 'Streamer Spotlight',
+      slug: 'gf-streamer-spotlight',
+      category: 'community',
+      description: 'Support the Gamefolio streaming community. Follow streamers, engage with their content, and help grow the platform.',
+      best_use_case: 'Perfect for gamers who love watching and supporting live streams.',
+      duration: 30,
+      participant_capacity: 9999,
+      demo_keys_required: 0,
+      full_keys_required: 0,
+      completion_reward: 'xp_badge',
+      completion_reward_description: '800 XP + Community badge on your profile',
+      estimated_clips: 0,
+      estimated_screenshots: 0,
+      estimated_feedback: 1,
+      featured: true,
+      recommended: true,
+    },
+    bounties: [
+      { title: 'Follow 3 Streamers', description: 'Discover and follow at least 3 streamers on Gamefolio. Paste their profile URLs below.', mandatory: true, quantity: 3, content_type: 'feedback', xp_reward: 150, completion_order: 1 },
+      { title: 'Clip a Stream Moment', description: 'Upload a clip from a stream you watched and enjoyed.', mandatory: true, quantity: 1, content_type: 'clip', xp_reward: 300, completion_order: 2 },
+      { title: 'Share a Streamer\'s Content', description: 'Share a clip or screenshot from a Gamefolio streamer to your profile.', mandatory: false, quantity: 1, content_type: 'screenshot', xp_reward: 350, completion_order: 3 },
+    ],
+    instance: {
+      game_name: 'Gamefolio Platform',
+      game_artwork_url: null,
+    },
+  },
+  {
+    template: {
+      name: 'Game Reviewer',
+      slug: 'gf-game-reviewer',
+      category: 'feedback',
+      description: 'Share your honest thoughts on games you\'ve played. Your reviews help other gamers discover great titles and help developers improve.',
+      best_use_case: 'For experienced gamers who want to share their knowledge with the community.',
+      duration: 30,
+      participant_capacity: 9999,
+      demo_keys_required: 0,
+      full_keys_required: 0,
+      completion_reward: 'xp_badge',
+      completion_reward_description: '1,000 XP + Reviewer badge on your profile',
+      estimated_clips: 1,
+      estimated_screenshots: 2,
+      estimated_feedback: 2,
+      featured: false,
+      recommended: true,
+    },
+    bounties: [
+      { title: 'Write 2 Game Reviews', description: 'Write a review for 2 different games you\'ve played. Include a screenshot and your honest rating. Paste your Gamefolio profile review links.', mandatory: true, quantity: 2, content_type: 'feedback', xp_reward: 400, completion_order: 1 },
+      { title: 'Upload Review Screenshots', description: 'Include at least 2 screenshots with your reviews to illustrate your points.', mandatory: true, quantity: 2, content_type: 'screenshot', xp_reward: 200, completion_order: 2 },
+      { title: 'Record a Video Review', description: 'Go the extra mile — record a video review or analysis clip.', mandatory: false, quantity: 1, content_type: 'clip', xp_reward: 400, completion_order: 3 },
+    ],
+    instance: {
+      game_name: 'Gamefolio Platform',
+      game_artwork_url: null,
+    },
+  },
+  {
+    template: {
+      name: 'Indie Discovery',
+      slug: 'gf-indie-discovery',
+      category: 'discovery',
+      description: 'Explore the world of indie games. Play something new, capture your experience, and share it with the Gamefolio community.',
+      best_use_case: 'For adventurous gamers looking to explore beyond the mainstream.',
+      duration: 30,
+      participant_capacity: 9999,
+      demo_keys_required: 0,
+      full_keys_required: 0,
+      completion_reward: 'xp_badge',
+      completion_reward_description: '1,200 XP + Indie Explorer badge on your profile',
+      estimated_clips: 2,
+      estimated_screenshots: 3,
+      estimated_feedback: 1,
+      featured: false,
+      recommended: false,
+    },
+    bounties: [
+      { title: 'Play an Indie Game', description: 'Pick any indie game and play it. Upload your first session clip as proof.', mandatory: true, quantity: 1, content_type: 'clip', xp_reward: 300, completion_order: 1 },
+      { title: 'Capture Indie Screenshots', description: 'Share 3 screenshots from the indie game you played.', mandatory: true, quantity: 3, content_type: 'screenshot', xp_reward: 300, completion_order: 2 },
+      { title: 'Submit Feedback to the Developer', description: 'Leave a review or feedback for the indie developer. Paste the link or write your thoughts below.', mandatory: true, quantity: 1, content_type: 'feedback', xp_reward: 400, completion_order: 3 },
+      { title: 'Create a Full Gameplay Reel', description: 'Edit your indie game footage into a highlight reel.', mandatory: false, quantity: 1, content_type: 'reel', xp_reward: 200, completion_order: 4 },
+    ],
+    instance: {
+      game_name: 'Gamefolio Platform',
+      game_artwork_url: null,
+    },
+  },
+];
+
+async function seedGamefolioCampaignsWithPool(pool: Pool) {
+  for (const camp of GF_CAMPAIGNS) {
+    const { template: t, bounties, instance: inst } = camp;
+
+    const { rows: [template] } = await pool.query(`
+      INSERT INTO campaign_templates
+        (name, slug, category, description, best_use_case, duration,
+         participant_capacity, demo_keys_required, full_keys_required,
+         completion_reward, completion_reward_description,
+         estimated_clips, estimated_screenshots, estimated_feedback,
+         featured, recommended, status, gamefolio_managed)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,0,0,$8,$9,$10,$11,0,$12,$13,'available',true)
+      ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
+      RETURNING id
+    `, [t.name, t.slug, t.category, t.description, t.best_use_case, t.duration,
+        t.participant_capacity, t.completion_reward, t.completion_reward_description,
+        t.estimated_clips, t.estimated_screenshots, t.featured, t.recommended]);
+
+    const templateId = template.id;
+
+    for (const b of bounties) {
+      await pool.query(`
+        INSERT INTO campaign_template_bounties
+          (template_id, title, description, mandatory, quantity, content_type, xp_reward, completion_order)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      `, [templateId, b.title, b.description, b.mandatory, b.quantity, b.content_type, b.xp_reward, b.completion_order]);
+    }
+
+    await pool.query(`
+      INSERT INTO campaign_instances
+        (template_id, developer_user_id, game_name, game_artwork_url,
+         status, actual_start, gamefolio_managed, start_type)
+      VALUES ($1, NULL, $2, $3, 'live', NOW(), true, 'asap')
+    `, [templateId, inst.game_name, inst.game_artwork_url]);
+
+    console.log(`  ✓ Seeded: ${t.name}`);
+  }
+  console.log('✅ Gamefolio-managed bounty campaigns seeded');
 }
 
 // ─────────────────────────────────────────────
@@ -103,6 +285,7 @@ router.get('/', async (req, res) => {
         t.estimated_views_max,
         t.featured,
         t.recommended,
+        COALESCE(ci.gamefolio_managed, false) AS gamefolio_managed,
         (SELECT COUNT(*) FROM campaign_participants cp WHERE cp.instance_id = ci.id) AS participant_count,
         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo' AND gk.status = 'available') AS demo_keys_remaining,
         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full' AND gk.status = 'available') AS full_keys_remaining,
@@ -111,7 +294,7 @@ router.get('/', async (req, res) => {
       JOIN campaign_templates t ON t.id = ci.template_id
       WHERE ${statusCondition}
         AND t.status != 'inactive'
-      ORDER BY t.recommended DESC, t.featured DESC, ci.actual_start DESC
+      ORDER BY COALESCE(ci.gamefolio_managed, false) DESC, t.recommended DESC, t.featured DESC, ci.actual_start DESC
     `);
 
     let rows = toRows(campaigns);
@@ -153,6 +336,7 @@ router.get('/:instanceId', async (req, res) => {
         t.estimated_views_max,
         t.featured,
         t.recommended,
+        COALESCE(ci.gamefolio_managed, false) AS gamefolio_managed,
         (SELECT COUNT(*) FROM campaign_participants cp WHERE cp.instance_id = ci.id) AS participant_count,
         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo' AND gk.status = 'available') AS demo_keys_remaining,
         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full' AND gk.status = 'available') AS full_keys_remaining,

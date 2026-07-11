@@ -5,9 +5,9 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import {
   Target, ShieldCheck, Clock, Users, Key, ChevronRight, ChevronLeft,
-  Zap, Copy, Check, ArrowUpRight, Loader2, Lock, Unlock,
-  Film, Camera, MessageSquare, Star, TrendingUp, AlertCircle,
-  Trophy, Gift, RefreshCw,
+  Zap, Copy, Check, Loader2, Lock,
+  Film, Camera, MessageSquare, Star, AlertCircle,
+  Trophy, Gift,
 } from "lucide-react";
 import { SiSteam } from "react-icons/si";
 
@@ -54,34 +54,47 @@ function timeRemaining(endDate: string | null) {
 }
 
 function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => void }) {
+  const isGF = !!campaign.gamefolio_managed;
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
   const fullLeft = Number(campaign.full_keys_remaining ?? 0);
   const spots = Number(campaign.participant_capacity) - Number(campaign.participant_count ?? 0);
   const bounties: any[] = campaign.bounties ?? [];
+  const totalXp = bounties.reduce((a: number, b: any) => a + Number(b.xp_reward ?? 0), 0);
 
   return (
     <div
       className="rounded-2xl overflow-hidden cursor-pointer group transition-all hover:scale-[1.01]"
-      style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}
+      style={{ background: CARD_BG, border: `1px solid ${isGF ? "rgba(183,255,24,0.18)" : CARD_BORDER}` }}
       onClick={onClick}
     >
-      {/* Artwork banner */}
+      {/* Artwork / Banner */}
       <div className="relative h-28 overflow-hidden">
         {campaign.game_artwork_url ? (
           <img src={campaign.game_artwork_url} alt={campaign.game_name} className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity" />
+        ) : isGF ? (
+          <div className="w-full h-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, rgba(183,255,24,0.10) 0%, rgba(183,255,24,0.03) 100%)" }}>
+            <Target size={32} color="rgba(183,255,24,0.25)" />
+          </div>
         ) : (
-          <div className="w-full h-full flex items-center justify-center" style={{ background: "rgba(183,255,24,0.06)" }}>
-            <Target size={28} color="rgba(183,255,24,0.3)" />
+          <div className="w-full h-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.02)" }}>
+            <Target size={28} color="rgba(255,255,255,0.1)" />
           </div>
         )}
         <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,16,0.9) 0%, transparent 60%)" }} />
 
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-wrap gap-1">
-          <span className="flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full"
-            style={{ color: "#070b10", background: NEON }}>
-            <ShieldCheck size={8} /> GF Verified
-          </span>
+          {isGF ? (
+            <span className="flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full"
+              style={{ color: "#070b10", background: NEON }}>
+              <Target size={8} /> Gamefolio
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full"
+              style={{ color: "#070b10", background: NEON }}>
+              <ShieldCheck size={8} /> GF Verified
+            </span>
+          )}
           {campaign.recommended && (
             <span className="flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full"
               style={{ color: "#f59e0b", background: "rgba(245,158,11,0.18)" }}>
@@ -90,40 +103,61 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
           )}
         </div>
 
-        {/* Time remaining */}
+        {/* Duration / ongoing */}
         <div className="absolute bottom-2 right-2 text-[10px] font-bold text-white/60 flex items-center gap-1">
           <Clock size={9} />
-          {campaign.end_date ? timeRemaining(campaign.end_date) : `${campaign.duration}d campaign`}
+          {isGF ? "Always open" : campaign.end_date ? timeRemaining(campaign.end_date) : `${campaign.duration}d campaign`}
         </div>
       </div>
 
       <div className="p-4 space-y-3">
         {/* Title */}
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-0.5">{campaign.game_name}</div>
+          {!isGF && <div className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-0.5">{campaign.game_name}</div>}
           <div className="text-base font-black text-white leading-tight">{campaign.template_name}</div>
           {campaign.description && (
             <div className="text-[11px] text-white/50 mt-1 line-clamp-2">{campaign.description}</div>
           )}
         </div>
 
-        {/* Key availability pills */}
+        {/* Rewards row */}
         <div className="flex flex-wrap gap-1.5">
-          <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
-            style={{ color: demoLeft > 0 ? NEON : "#6b7280", background: demoLeft > 0 ? "rgba(183,255,24,0.1)" : "rgba(107,114,128,0.1)" }}>
-            <Key size={9} /> {demoLeft > 0 ? `${demoLeft} demo keys` : "No demo keys"}
-          </span>
-          <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
-            style={{ color: fullLeft > 0 ? "#4ade80" : "#6b7280", background: fullLeft > 0 ? "rgba(74,222,128,0.1)" : "rgba(107,114,128,0.1)" }}>
-            <Gift size={9} /> {fullLeft > 0 ? `${fullLeft} full-game keys` : "No full keys"}
-          </span>
-          <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
-            style={{ color: "#94a3b8", background: "rgba(148,163,184,0.08)" }}>
-            <Users size={9} /> {Math.max(0, spots)} places
-          </span>
+          {isGF ? (
+            <>
+              {totalXp > 0 && (
+                <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
+                  style={{ color: NEON, background: "rgba(183,255,24,0.1)" }}>
+                  <Zap size={9} /> {totalXp.toLocaleString()} XP
+                </span>
+              )}
+              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
+                style={{ color: "#a78bfa", background: "rgba(167,139,250,0.1)" }}>
+                <Trophy size={9} /> Badge reward
+              </span>
+              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
+                style={{ color: "#94a3b8", background: "rgba(148,163,184,0.08)" }}>
+                <Users size={9} /> Open to all
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
+                style={{ color: demoLeft > 0 ? NEON : "#6b7280", background: demoLeft > 0 ? "rgba(183,255,24,0.1)" : "rgba(107,114,128,0.1)" }}>
+                <Key size={9} /> {demoLeft > 0 ? `${demoLeft} demo keys` : "No demo keys"}
+              </span>
+              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
+                style={{ color: fullLeft > 0 ? "#4ade80" : "#6b7280", background: fullLeft > 0 ? "rgba(74,222,128,0.1)" : "rgba(107,114,128,0.1)" }}>
+                <Gift size={9} /> {fullLeft > 0 ? `${fullLeft} full-game keys` : "No full keys"}
+              </span>
+              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
+                style={{ color: "#94a3b8", background: "rgba(148,163,184,0.08)" }}>
+                <Users size={9} /> {Math.max(0, spots)} places
+              </span>
+            </>
+          )}
         </div>
 
-        {/* Bounties summary */}
+        {/* Bounty type chips */}
         {bounties.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {[...new Set(bounties.map((b: any) => b.content_type).filter(Boolean))].slice(0, 4).map((ct: any) => {
@@ -141,10 +175,14 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
         {/* CTA */}
         <button
           className="w-full py-2.5 rounded-xl text-sm font-black flex items-center justify-center gap-1.5 transition-all hover:brightness-110"
-          style={{ background: demoLeft > 0 ? NEON : "rgba(255,255,255,0.08)", color: demoLeft > 0 ? "#070b10" : "rgba(255,255,255,0.5)" }}
+          style={{ background: NEON, color: "#070b10" }}
           onClick={(e) => { e.stopPropagation(); onClick(); }}
         >
-          {demoLeft > 0 ? <><Key size={14} /> View & Join</> : <><ChevronRight size={14} /> View Campaign</>}
+          {isGF
+            ? <><Zap size={14} /> Join & Earn XP</>
+            : demoLeft > 0
+              ? <><Key size={14} /> View & Join</>
+              : <><ChevronRight size={14} /> View Campaign</>}
         </button>
       </div>
     </div>
@@ -156,11 +194,15 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const { toast } = useToast();
   const qc = useQueryClient();
   const [accepted, setAccepted] = useState(false);
-  const [copiedKey, setCopiedKey] = useState(false);
 
+  const isGF = !!campaign.gamefolio_managed;
   const bounties: any[] = campaign.bounties ?? [];
   const mandatory = bounties.filter((b: any) => b.mandatory);
   const optional = bounties.filter((b: any) => !b.mandatory);
+  const totalXp = bounties.reduce((acc: number, b: any) => acc + Number(b.xp_reward ?? 0), 0);
+  const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
+  const fullLeft = Number(campaign.full_keys_remaining ?? 0);
+  const spots = Number(campaign.participant_capacity) - Number(campaign.participant_count ?? 0);
 
   const joinMutation = useMutation({
     mutationFn: () => apiRequest("POST", `/api/bounties/${campaign.id}/join`, {}),
@@ -176,11 +218,6 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
     },
   });
 
-  const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
-  const fullLeft = Number(campaign.full_keys_remaining ?? 0);
-  const spots = Number(campaign.participant_capacity) - Number(campaign.participant_count ?? 0);
-  const totalXp = bounties.reduce((acc: number, b: any) => acc + Number(b.xp_reward ?? 0), 0);
-
   return (
     <div className="min-h-screen" style={{ background: PAGE_BG }}>
       {/* Back button */}
@@ -192,65 +229,113 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
       <div className="relative h-48 overflow-hidden">
         {campaign.game_artwork_url ? (
           <img src={campaign.game_artwork_url} alt={campaign.game_name} className="w-full h-full object-cover opacity-40" />
+        ) : isGF ? (
+          <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(183,255,24,0.08) 0%, rgba(183,255,24,0.02) 100%)" }} />
         ) : (
-          <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(183,255,24,0.06) 0%, transparent 100%)" }} />
+          <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(96,165,250,0.06) 0%, transparent 100%)" }} />
         )}
         <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #070b10 0%, transparent 50%)" }} />
         <div className="absolute bottom-4 left-4">
           <div className="flex items-center gap-2 mb-1">
-            <span className="flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded-full"
-              style={{ color: "#070b10", background: NEON }}>
-              <ShieldCheck size={8} /> Gamefolio Verified
-            </span>
+            {isGF ? (
+              <span className="flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded-full"
+                style={{ color: "#070b10", background: NEON }}>
+                <Target size={8} /> Gamefolio Bounty
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded-full"
+                style={{ color: "#070b10", background: NEON }}>
+                <ShieldCheck size={8} /> Gamefolio Verified
+              </span>
+            )}
           </div>
-          <div className="text-white/50 text-xs font-bold mb-0.5">{campaign.game_name}</div>
+          {!isGF && <div className="text-white/50 text-xs font-bold mb-0.5">{campaign.game_name}</div>}
           <div className="text-2xl font-black text-white">{campaign.template_name}</div>
         </div>
       </div>
 
       <div className="px-4 pb-8 space-y-5 max-w-2xl mx-auto">
-        {/* Stats row */}
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: "Demo Keys", value: demoLeft, icon: Key, color: NEON },
-            { label: "Full Keys", value: fullLeft, icon: Gift, color: "#4ade80" },
-            { label: "Places Left", value: Math.max(0, spots), icon: Users, color: "#60a5fa" },
-          ].map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="rounded-xl p-3 text-center" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-              <Icon size={16} color={color} className="mx-auto mb-1" />
-              <div className="text-lg font-black" style={{ color }}>{value}</div>
-              <div className="text-[10px] text-white/40 font-bold">{label}</div>
-            </div>
-          ))}
-        </div>
+        {/* Stats row — different for GF-managed vs indie */}
+        {isGF ? (
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "XP Reward", value: totalXp > 0 ? `${totalXp.toLocaleString()} XP` : "XP", icon: Zap, color: NEON },
+              { label: "Bounties", value: bounties.length, icon: Target, color: "#60a5fa" },
+              { label: "Open to", value: "All", icon: Users, color: "#a78bfa" },
+            ].map(({ label, value, icon: Icon, color }) => (
+              <div key={label} className="rounded-xl p-3 text-center" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+                <Icon size={16} color={color} className="mx-auto mb-1" />
+                <div className="text-sm font-black" style={{ color }}>{value}</div>
+                <div className="text-[10px] text-white/40 font-bold">{label}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "Demo Keys", value: demoLeft, icon: Key, color: NEON },
+              { label: "Full Keys", value: fullLeft, icon: Gift, color: "#4ade80" },
+              { label: "Places Left", value: Math.max(0, spots), icon: Users, color: "#60a5fa" },
+            ].map(({ label, value, icon: Icon, color }) => (
+              <div key={label} className="rounded-xl p-3 text-center" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+                <Icon size={16} color={color} className="mx-auto mb-1" />
+                <div className="text-lg font-black" style={{ color }}>{value}</div>
+                <div className="text-[10px] text-white/40 font-bold">{label}</div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* About */}
         {campaign.description && (
           <div className="rounded-xl p-4" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
             <div className="text-xs font-bold uppercase tracking-wider text-white/40 mb-2">About this Campaign</div>
             <div className="text-sm text-white/70">{campaign.description}</div>
+            {campaign.best_use_case && (
+              <div className="mt-2 text-xs text-white/40 italic">{campaign.best_use_case}</div>
+            )}
           </div>
         )}
 
         {/* Reward structure */}
         <div className="rounded-xl p-4 space-y-3" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
           <div className="text-xs font-bold uppercase tracking-wider text-white/40">Reward Structure</div>
-          <div className="rounded-lg p-3 space-y-1" style={{ background: "rgba(183,255,24,0.06)", border: "1px solid rgba(183,255,24,0.15)" }}>
-            <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: NEON }}>Access Reward</div>
-            <div className="text-sm text-white font-bold flex items-center gap-2"><Key size={14} color={NEON} /> 1 Steam demo key when you join</div>
-          </div>
-          <div className="rounded-lg p-3 space-y-1" style={{ background: "rgba(74,222,128,0.06)", border: "1px solid rgba(74,222,128,0.15)" }}>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-green-400">Completion Reward</div>
-            <div className="text-sm text-white font-bold flex items-center gap-2">
-              <Gift size={14} className="text-green-400" />
-              {campaign.completion_reward_description ?? "1 full-game key after all mandatory bounties are verified"}
-            </div>
-          </div>
-          {totalXp > 0 && (
-            <div className="rounded-lg p-3 space-y-1" style={{ background: "rgba(96,165,250,0.06)", border: "1px solid rgba(96,165,250,0.15)" }}>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-blue-400">Additional Rewards</div>
-              <div className="text-sm text-white font-bold flex items-center gap-2"><Zap size={14} className="text-blue-400" /> {totalXp.toLocaleString()} XP total</div>
-            </div>
+          {isGF ? (
+            <>
+              {totalXp > 0 && (
+                <div className="rounded-lg p-3 space-y-1" style={{ background: "rgba(183,255,24,0.06)", border: "1px solid rgba(183,255,24,0.15)" }}>
+                  <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: NEON }}>XP Reward</div>
+                  <div className="text-sm text-white font-bold flex items-center gap-2"><Zap size={14} color={NEON} /> {totalXp.toLocaleString()} XP total across all bounties</div>
+                </div>
+              )}
+              <div className="rounded-lg p-3 space-y-1" style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.15)" }}>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Completion Reward</div>
+                <div className="text-sm text-white font-bold flex items-center gap-2">
+                  <Trophy size={14} className="text-purple-400" />
+                  {campaign.completion_reward_description ?? "Profile badge on completion"}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="rounded-lg p-3 space-y-1" style={{ background: "rgba(183,255,24,0.06)", border: "1px solid rgba(183,255,24,0.15)" }}>
+                <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: NEON }}>Access Reward</div>
+                <div className="text-sm text-white font-bold flex items-center gap-2"><Key size={14} color={NEON} /> 1 Steam demo key when you join</div>
+              </div>
+              <div className="rounded-lg p-3 space-y-1" style={{ background: "rgba(74,222,128,0.06)", border: "1px solid rgba(74,222,128,0.15)" }}>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-green-400">Completion Reward</div>
+                <div className="text-sm text-white font-bold flex items-center gap-2">
+                  <Gift size={14} className="text-green-400" />
+                  {campaign.completion_reward_description ?? "1 full-game key after all mandatory bounties are verified"}
+                </div>
+              </div>
+              {totalXp > 0 && (
+                <div className="rounded-lg p-3 space-y-1" style={{ background: "rgba(96,165,250,0.06)", border: "1px solid rgba(96,165,250,0.15)" }}>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-blue-400">Additional Rewards</div>
+                  <div className="text-sm text-white font-bold flex items-center gap-2"><Zap size={14} className="text-blue-400" /> {totalXp.toLocaleString()} XP total</div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -315,13 +400,18 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
               </span>
             </label>
             <button
-              disabled={!accepted || joinMutation.isPending || demoLeft === 0}
+              disabled={!accepted || joinMutation.isPending || (!isGF && demoLeft === 0)}
               onClick={() => joinMutation.mutate()}
               className="w-full py-4 rounded-xl text-base font-black flex items-center justify-center gap-2 transition-all disabled:opacity-50 hover:brightness-110"
               style={{ background: NEON, color: "#070b10" }}
             >
-              {joinMutation.isPending ? <><Loader2 size={18} className="animate-spin" /> Joining...</> :
-                demoLeft === 0 ? "No Demo Keys Available" : <><Key size={18} /> Join Campaign & Claim Demo Key</>}
+              {joinMutation.isPending
+                ? <><Loader2 size={18} className="animate-spin" /> Joining...</>
+                : isGF
+                  ? <><Zap size={18} /> Join & Start Earning XP</>
+                  : demoLeft === 0
+                    ? "No Demo Keys Available"
+                    : <><Key size={18} /> Join Campaign & Claim Demo Key</>}
             </button>
           </>
         ) : (
@@ -767,12 +857,16 @@ export default function BountiesPage() {
 
   const FILTERS = [
     { key: "all",          label: "All" },
+    { key: "gamefolio",    label: "🎮 Gamefolio" },
     { key: "recommended",  label: "Recommended" },
+    { key: "indie",        label: "Indie Games" },
     { key: "demo_available", label: "Demo Available" },
     { key: "full_game",    label: "Full-Game Reward" },
   ];
 
   const filtered = filter === "all" ? campaigns :
+    filter === "gamefolio" ? campaigns.filter((c: any) => c.gamefolio_managed) :
+    filter === "indie" ? campaigns.filter((c: any) => !c.gamefolio_managed) :
     filter === "recommended" ? campaigns.filter((c: any) => c.recommended) :
     filter === "demo_available" ? campaigns.filter((c: any) => Number(c.demo_keys_remaining) > 0) :
     filter === "full_game" ? campaigns.filter((c: any) => c.completion_reward === "full_game_key") :
