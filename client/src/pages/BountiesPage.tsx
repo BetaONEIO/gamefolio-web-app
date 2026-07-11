@@ -53,6 +53,27 @@ function timeRemaining(endDate: string | null) {
   return `${hours}h left`;
 }
 
+// ── Build requirement checklist from bounties ────────────────────────────────────────────────────
+function bountyRequirements(bounties: any[]): string[] {
+  const reqs: string[] = [];
+  const seen = new Set<string>();
+  for (const b of bounties) {
+    const qty = Number(b.quantity ?? 1);
+    const ct = b.content_type as string;
+    if (seen.has(ct)) continue;
+    seen.add(ct);
+    if (ct === "clip")       reqs.push(`Upload ${qty} Gameplay Clip${qty !== 1 ? "s" : ""}`);
+    else if (ct === "screenshot") reqs.push(`Upload ${qty} Screenshot${qty !== 1 ? "s" : ""}`);
+    else if (ct === "feedback")   reqs.push("Submit Feedback");
+    else if (ct === "reel")       reqs.push(`Upload ${qty} Reel${qty !== 1 ? "s" : ""}`);
+    else if (ct === "stream")     reqs.push("Go Live on Stream");
+    else if (ct === "session")    reqs.push("Complete a Play Session");
+    else if (ct === "bug")        reqs.push(`File ${qty} Bug Report${qty !== 1 ? "s" : ""}`);
+    else reqs.push(ct.charAt(0).toUpperCase() + ct.slice(1));
+  }
+  return reqs;
+}
+
 // ── Reward column ─────────────────────────────────────────────────────────
 function RewardCol({ emoji, label, value, active }: { emoji: string; label: string; value: string; active: boolean }) {
   return (
@@ -71,6 +92,7 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
   const fullLeft  = Number(campaign.full_keys_remaining ?? 0);
   const bounties: any[] = campaign.bounties ?? [];
   const totalXp   = bounties.reduce((a: number, b: any) => a + Number(b.xp_reward ?? 0), 0);
+  const reqs = bountyRequirements(bounties);
 
   return (
     <div
@@ -111,6 +133,21 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
             </p>
           )}
         </div>
+
+        {/* Requirements checklist */}
+        {reqs.length > 0 && (
+          <div className="space-y-2">
+            {reqs.map((req, i) => (
+              <div key={i} className="flex items-center gap-2.5">
+                <span className="flex-shrink-0 w-[6px] h-[6px] rounded-full"
+                  style={{ background: NEON, boxShadow: "0 0 6px rgba(184,255,27,0.55)" }} />
+                <span className="text-[12px] font-medium leading-snug" style={{ color: "rgba(255,255,255,0.75)" }}>
+                  {req}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Rewards — 4 equal columns */}
         <div className="grid grid-cols-4 gap-2">
