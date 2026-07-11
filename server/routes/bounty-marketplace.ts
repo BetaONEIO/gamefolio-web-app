@@ -537,6 +537,36 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/bounties/my/content-picker?contentType=clip — user's existing content for submission
+router.get('/my/content-picker', requireAuth, async (req, res) => {
+  const userId = req.user!.id;
+  const contentType = (req.query.contentType as string) || 'clip';
+  try {
+    let items: any[] = [];
+    if (contentType === 'clip' || contentType === 'reel') {
+      const result = await db.execute(sql`
+        SELECT id, title, thumbnail_url AS "thumbnailUrl", created_at AS "createdAt"
+        FROM clips WHERE user_id = ${userId}
+        ORDER BY created_at DESC LIMIT 36
+      `);
+      items = toRows(result);
+    } else if (contentType === 'screenshot') {
+      const result = await db.execute(sql`
+        SELECT id, title,
+          COALESCE(thumbnail_url, image_url) AS "thumbnailUrl",
+          created_at AS "createdAt"
+        FROM screenshots WHERE user_id = ${userId}
+        ORDER BY created_at DESC LIMIT 36
+      `);
+      items = toRows(result);
+    }
+    res.json({ items, contentType, count: items.length });
+  } catch (err) {
+    console.error('GET /api/bounties/my/content-picker error:', err);
+    res.status(500).json({ error: 'Failed to fetch content' });
+  }
+});
+
 // GET /api/bounties/my/:instanceId — progress on one campaign
 router.get('/my/:instanceId', requireAuth, async (req, res) => {
   try {
