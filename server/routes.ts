@@ -10552,6 +10552,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/indie/upload/image — upload header or capsule image for indie profile
+  app.post("/api/indie/upload/image", upload.single('image'), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    const field = req.body?.field === 'capsule' ? 'capsuleImageUrl' : 'headerImageUrl';
+    try {
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+      const sharpInstance = sharp(req.file.path);
+      const meta = await sharpInstance.metadata();
+      if (!meta.width || !meta.height) return res.status(400).json({ error: "Invalid image" });
+      const processedBuffer = await sharpInstance
+        .resize(field === 'headerImageUrl' ? 1920 : 600, undefined, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+      const slug = field === 'headerImageUrl' ? 'header' : 'capsule';
+      const fileName = `indie-${slug}-${req.user.id}-${Date.now()}.jpg`;
+      const { url: imageUrl } = await supabaseStorage.uploadBuffer(processedBuffer, fileName, 'image/jpeg', 'image', req.user.id);
+      try { await fsPromises.unlink(req.file.path); } catch {}
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      if (ex.length > 0) {
+        await db.update(indieGameProfiles).set({ [field]: imageUrl, updatedAt: new Date() }).where(eq(indieGameProfiles.userId, req.user.id));
+      } else {
+        await db.insert(indieGameProfiles).values({ userId: req.user.id, [field]: imageUrl });
+      }
+      await _indieUpsertMeta(req.user.id, field, { isManualOverride: true, lastEditedAt: new Date() });
+      res.json({ url: imageUrl, field });
+    } catch (err) {
+      console.error("POST /api/indie/upload/image error:", err);
+      try { if (req.file?.path) await fsPromises.unlink(req.file.path); } catch {}
+      res.status(500).json({ error: "Upload failed" });
+    }
+  });
+
+  // POST /api/indie/upload/screenshot — upload and append a screenshot
+  app.post("/api/indie/upload/screenshot", upload.single('screenshot'), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    try {
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+      const sharpInstance = sharp(req.file.path);
+      const processedBuffer = await sharpInstance
+        .resize(1920, undefined, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 88 })
+        .toBuffer();
+      const fileName = `indie-screenshot-${req.user.id}-${Date.now()}.jpg`;
+      const { url: imageUrl } = await supabaseStorage.uploadBuffer(processedBuffer, fileName, 'image/jpeg', 'image', req.user.id);
+      try { await fsPromises.unlink(req.file.path); } catch {}
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, sql } = await import("drizzle-orm");
+      const ex = await db.select({ screenshotUrls: indieGameProfiles.screenshotUrls }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      const existing = ex[0]?.screenshotUrls ?? [];
+      const updated = [...existing, imageUrl].slice(0, 20);
+      if (ex.length > 0) {
+        await db.update(indieGameProfiles).set({ screenshotUrls: updated, updatedAt: new Date() }).where(eq(indieGameProfiles.userId, req.user.id));
+      } else {
+        await db.insert(indieGameProfiles).values({ userId: req.user.id, screenshotUrls: updated });
+      }
+      await _indieUpsertMeta(req.user.id, 'screenshotUrls', { isManualOverride: true, lastEditedAt: new Date() });
+      res.json({ url: imageUrl, screenshotUrls: updated });
+    } catch (err) {
+      console.error("POST /api/indie/upload/screenshot error:", err);
+      try { if (req.file?.path) await fsPromises.unlink(req.file.path); } catch {}
+      res.status(500).json({ error: "Upload failed" });
+    }
+  });
+
+  // DELETE /api/indie/screenshot — remove a screenshot URL from the array
+  app.delete("/api/indie/screenshot", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    const { url } = req.body;
+    if (!url || typeof url !== 'string') return res.status(400).json({ error: "url required" });
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const ex = await db.select({ screenshotUrls: indieGameProfiles.screenshotUrls }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      const existing = ex[0]?.screenshotUrls ?? [];
+      const updated = existing.filter((u: string) => u !== url);
+      if (ex.length > 0) {
+        await db.update(indieGameProfiles).set({ screenshotUrls: updated, updatedAt: new Date() }).where(eq(indieGameProfiles.userId, req.user.id));
+      }
+      res.json({ screenshotUrls: updated });
+    } catch (err) {
+      console.error("DELETE /api/indie/screenshot error:", err);
+      res.status(500).json({ error: "Failed to remove screenshot" });
+    }
+  });
+
   // GET /api/games/indie/:username — public enriched indie profile (no auth required)
   app.get("/api/games/indie/:username", async (req, res) => {
     try {

@@ -31,6 +31,7 @@ import {
   Smartphone,
   ExternalLink,
   Tag,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 const MessageDialog = React.lazy(() =>
@@ -252,7 +253,18 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
             <p className="max-w-2xl text-white/70 mb-8">{profile.bio}</p>
           )}
 
-          {!isOwnProfile && (
+          {isOwnProfile ? (
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+              <a
+                href="/studio-dashboard"
+                className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-lg font-bold text-black transition-all hover:scale-105"
+                style={{ background: brand.accent }}
+              >
+                <SlidersHorizontal size={18} />
+                Game Dashboard
+              </a>
+            </div>
+          ) : (
             <div className="flex flex-wrap items-center justify-center gap-4 mb-8 w-full sm:w-auto">
               <button
                 onClick={handleFollowClick}
