@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { getQueryFn } from "@/lib/queryClient";
 import {
   Loader2, Clock, Users, Key, Target, ChevronRight,
   ShieldCheck, AlertCircle, CheckCircle, Pause, XCircle,
@@ -158,6 +159,7 @@ function CampaignCard({ campaign, onViewDetails }: { campaign: any; onViewDetail
 export default function MyCampaignsTab({ onBrowseLibrary }: { onBrowseLibrary: () => void }) {
   const { data: campaigns = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/campaigns/instances"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   if (isLoading) {

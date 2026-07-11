@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { getQueryFn } from "@/lib/queryClient";
 import {
   Loader2, ShieldCheck, Star, TrendingUp, Clock, Users, Key,
   Target, Film, Camera, MessageSquare, Zap, ChevronRight, X,
@@ -297,6 +298,7 @@ export default function CampaignLibraryTab({ onRunCampaign }: { onRunCampaign: (
 
   const { data: templates = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/campaigns/templates"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   const filtered = category === "all" ? templates : templates.filter(t => t.category === category);

@@ -442,7 +442,7 @@ router.get('/templates', async (req, res) => {
       WHERE t.status != 'inactive'
       ORDER BY t.display_order ASC
     `);
-    res.json(templates.rows);
+    res.json(toRows(templates));
   } catch (err) {
     console.error('GET /api/campaigns/templates error:', err);
     res.status(500).json({ error: 'Failed to load campaign templates' });
@@ -453,11 +453,11 @@ router.get('/templates', async (req, res) => {
 router.get('/templates/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const [template] = (await db.execute(sql`
+    const [template] = toRows(await db.execute(sql`
       SELECT t.*,
         (SELECT json_agg(b ORDER BY b.completion_order) FROM campaign_template_bounties b WHERE b.template_id = t.id) AS bounties
       FROM campaign_templates t WHERE t.id = ${Number(id)}
-    `)).rows;
+    `));
     if (!template) return res.status(404).json({ error: 'Template not found' });
     res.json(template);
   } catch (err) {
@@ -485,7 +485,7 @@ router.get('/overview', requirePartner, async (req, res) => {
       FROM campaign_instances ci
       WHERE ci.developer_user_id = ${userId}
     `);
-    const row = (stats.rows[0] as any) ?? {};
+    const row = (toRows(stats)[0] as any) ?? {};
 
     const recent = await db.execute(sql`
       SELECT ci.id, ci.status, ci.game_name, ci.game_artwork_url, ci.created_at,
@@ -505,7 +505,7 @@ router.get('/overview', requirePartner, async (req, res) => {
       totalParticipants: Number(row.total_participants ?? 0),
       demoKeysRemaining: Number(row.demo_keys_remaining ?? 0),
       fullKeysRemaining: Number(row.full_keys_remaining ?? 0),
-      recentCampaigns: recent.rows,
+      recentCampaigns: toRows(recent),
     });
   } catch (err) {
     console.error('GET /api/campaigns/overview error:', err);
@@ -532,7 +532,7 @@ router.get('/instances', requirePartner, async (req, res) => {
       WHERE ci.developer_user_id = ${userId}
       ORDER BY ci.created_at DESC
     `);
-    res.json(instances.rows);
+    res.json(toRows(instances));
   } catch (err) {
     console.error('GET /api/campaigns/instances error:', err);
     res.status(500).json({ error: 'Failed to load campaigns' });
@@ -550,10 +550,10 @@ router.post('/instances', requirePartner, async (req, res) => {
 
     if (!templateId) return res.status(400).json({ error: 'templateId is required' });
 
-    const [tmpl] = (await db.execute(sql`SELECT id FROM campaign_templates WHERE id = ${Number(templateId)}`)).rows;
+    const [tmpl] = toRows(await db.execute(sql`SELECT id FROM campaign_templates WHERE id = ${Number(templateId)}`));
     if (!tmpl) return res.status(404).json({ error: 'Campaign template not found' });
 
-    const [instance] = (await db.execute(sql`
+    const [instance] = toRows(await db.execute(sql`
       INSERT INTO campaign_instances
         (template_id, developer_user_id, game_id, game_name, game_artwork_url,
          game_steam_app_id, game_itch_url, game_epic_slug,
@@ -563,7 +563,7 @@ router.post('/instances', requirePartner, async (req, res) => {
          ${gameSteamAppId ?? null}, ${gameItchUrl ?? null}, ${gameEpicSlug ?? null},
          ${artworkUrl ?? null}, ${startType ?? 'asap'}, ${scheduledStart ?? null}, 'draft')
       RETURNING *
-    `)).rows as any[];
+    `) as any[]);
 
     res.status(201).json(instance);
   } catch (err) {
@@ -582,9 +582,9 @@ router.patch('/instances/:id', requirePartner, async (req, res) => {
       startType, scheduledStart, artworkUrl, status,
     } = req.body;
 
-    const [existing] = (await db.execute(sql`
+    const [existing] = toRows(await db.execute(sql`
       SELECT id, developer_user_id, status FROM campaign_instances WHERE id = ${instanceId}
-    `)).rows as any[];
+    `)) as any[];
     if (!existing) return res.status(404).json({ error: 'Campaign not found' });
     if (existing.developer_user_id !== userId) return res.status(403).json({ error: 'Forbidden' });
     if (existing.status === 'live') return res.status(400).json({ error: 'Cannot modify a live campaign' });
@@ -609,7 +609,7 @@ router.patch('/instances/:id', requirePartner, async (req, res) => {
       WHERE id = ${instanceId}
     `);
 
-    const [updated] = (await db.execute(sql`SELECT * FROM campaign_instances WHERE id = ${instanceId}`)).rows;
+    const [updated] = toRows(await db.execute(sql`SELECT * FROM campaign_instances WHERE id = ${instanceId}`));
     res.json(updated);
   } catch (err) {
     console.error('PATCH /api/campaigns/instances/:id error:', err);
@@ -627,9 +627,9 @@ router.post('/instances/:id/keys', requirePartner, async (req, res) => {
     if (!keyType || !['demo', 'full'].includes(keyType)) return res.status(400).json({ error: 'keyType must be demo or full' });
     if (!Array.isArray(keys) || keys.length === 0) return res.status(400).json({ error: 'keys array is required' });
 
-    const [instance] = (await db.execute(sql`
+    const [instance] = toRows(await db.execute(sql`
       SELECT id, developer_user_id, status FROM campaign_instances WHERE id = ${instanceId}
-    `)).rows as any[];
+    `)) as any[];
     if (!instance) return res.status(404).json({ error: 'Campaign not found' });
     if (instance.developer_user_id !== userId) return res.status(403).json({ error: 'Forbidden' });
 
@@ -642,16 +642,16 @@ router.post('/instances/:id/keys', requirePartner, async (req, res) => {
     const existingKeysRes = await db.execute(sql`
       SELECT key_value FROM game_keys WHERE instance_id = ${instanceId} AND key_type = ${keyType}
     `);
-    const existingSet = new Set((existingKeysRes.rows as any[]).map(r => r.key_value));
+    const existingSet = new Set((toRows(existingKeysRes) as any[]).map(r => r.key_value));
     const newKeys = cleaned.filter(k => !existingSet.has(k));
     const alreadyExists = cleaned.length - newKeys.length;
 
     // Create batch
-    const [batch] = (await db.execute(sql`
+    const [batch] = toRows(await db.execute(sql`
       INSERT INTO game_key_batches (instance_id, key_type, total_keys, valid_keys, duplicate_keys, invalid_keys)
       VALUES (${instanceId}, ${keyType}, ${total}, ${newKeys.length}, ${duplicates + alreadyExists}, 0)
       RETURNING id
-    `)).rows as any[];
+    `)) as any[];
 
     // Insert individual keys
     for (const keyValue of newKeys) {
@@ -680,9 +680,9 @@ router.post('/instances/:id/submit', requirePartner, async (req, res) => {
     const userId = req.user!.id;
     const instanceId = Number(req.params.id);
 
-    const [instance] = (await db.execute(sql`
+    const [instance] = toRows(await db.execute(sql`
       SELECT * FROM campaign_instances WHERE id = ${instanceId}
-    `)).rows as any[];
+    `)) as any[];
     if (!instance) return res.status(404).json({ error: 'Campaign not found' });
     if (instance.developer_user_id !== userId) return res.status(403).json({ error: 'Forbidden' });
     if (!['draft', 'changes_requested'].includes(instance.status)) {
@@ -720,7 +720,7 @@ router.get('/admin/instances', requireAdmin, async (req, res) => {
       WHERE 1=1 ${statusFilter}
       ORDER BY ci.submitted_at DESC NULLS LAST, ci.created_at DESC
     `);
-    res.json(instances.rows);
+    res.json(toRows(instances));
   } catch (err) {
     res.status(500).json({ error: 'Failed to load admin instances' });
   }

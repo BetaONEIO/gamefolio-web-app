@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
+import { getQueryFn } from "@/lib/queryClient";
 import {
   Rocket, Users, Eye, Key, Zap, Inbox, Target, BarChart3,
   Gamepad, ListChecks, ClipboardCheck, KeyRound, Loader2,
@@ -76,10 +77,12 @@ const STATUS_COLORS: Record<string, string> = {
 function OverviewTab({ onNavigate, onRunCampaign }: { onNavigate: (t: TabId) => void; onRunCampaign: () => void }) {
   const { data, isLoading } = useQuery<OverviewData>({
     queryKey: ["/api/campaigns/overview"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   const { data: templates = [] } = useQuery<any[]>({
     queryKey: ["/api/campaigns/templates"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   if (isLoading) {
