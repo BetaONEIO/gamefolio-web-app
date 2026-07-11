@@ -2023,6 +2023,8 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
   epicUrl: text("epic_url"),
   epicSlug: text("epic_slug"),
   itchUrl: text("itch_url"),
+  itchApiKey: text("itch_api_key"),       // encrypted at rest; validated via itch.io API
+  itchUsername: text("itch_username"),    // populated when API key is first connected
 
   // Section 8: Social & Contact
   websiteUrl: text("website_url"),

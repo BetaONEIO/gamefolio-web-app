@@ -10317,7 +10317,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/indie/itch/preview — list dev's itch.io games (API key proves ownership)
   app.post("/api/indie/itch/preview", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
     const { apiKey } = req.body;
     if (!apiKey) return res.status(400).json({ error: "apiKey required" });
     try {
@@ -10333,6 +10332,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("POST /api/indie/itch/preview error:", err);
       res.status(502).json({ error: "Failed to fetch from itch.io" });
+    }
+  });
+
+  // POST /api/indie/itch/connect — validate API key, save to profile, return username + games
+  app.post("/api/indie/itch/connect", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { apiKey } = req.body;
+    if (!apiKey || typeof apiKey !== "string") return res.status(400).json({ error: "apiKey required" });
+    try {
+      // First verify the key is valid and fetch the user's profile
+      const meRes = await fetch("https://api.itch.io/profile", {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (meRes.status === 401 || meRes.status === 403) return res.status(401).json({ error: "Invalid itch.io API key" });
+      if (!meRes.ok) return res.status(502).json({ error: "itch.io API unavailable" });
+      const meJson = await meRes.json() as any;
+      const itchUsername = meJson.user?.username || meJson.user?.display_name || null;
+
+      // Fetch their games
+      const gamesRes = await fetch("https://api.itch.io/profile/games", {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(10000),
+      });
+      const gamesJson = gamesRes.ok ? (await gamesRes.json() as any) : { games: [] };
+      const games = (gamesJson.games || []).map((g: any) => ({
+        id: g.id, title: g.title, shortText: g.short_text, coverUrl: g.cover_url,
+        url: g.url, published: g.published, classification: g.classification,
+      }));
+
+      // Save the API key and username to indie_game_profiles
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const existing = await db.select({ id: indieGameProfiles.id })
+        .from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      const patch = { itchApiKey: apiKey, itchUsername, updatedAt: new Date() };
+      if (existing.length > 0) {
+        await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.userId, req.user.id));
+      } else {
+        await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch });
+      }
+
+      res.json({ connected: true, itchUsername, games });
+    } catch (err) {
+      console.error("POST /api/indie/itch/connect error:", err);
+      res.status(502).json({ error: "Failed to connect itch.io account" });
+    }
+  });
+
+  // GET /api/indie/itch/status — returns itch.io connection status for the current user
+  app.get("/api/indie/itch/status", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const [profile] = await db.select({ itchApiKey: indieGameProfiles.itchApiKey, itchUsername: indieGameProfiles.itchUsername, itchUrl: indieGameProfiles.itchUrl })
+        .from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      const connected = !!(profile?.itchApiKey);
+
+      if (!connected) return res.json({ connected: false });
+
+      // If connected, also return their games from itch.io (best-effort)
+      let games: any[] = [];
+      try {
+        const gamesRes = await fetch("https://api.itch.io/profile/games", {
+          headers: { Authorization: `Bearer ${profile.itchApiKey}` },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (gamesRes.ok) {
+          const gamesJson = await gamesRes.json() as any;
+          games = (gamesJson.games || []).map((g: any) => ({
+            id: g.id, title: g.title, shortText: g.short_text, coverUrl: g.cover_url,
+            url: g.url, published: g.published,
+          }));
+        }
+      } catch { /* key may have been revoked — still return connected=true */ }
+
+      res.json({ connected: true, itchUsername: profile.itchUsername, itchUrl: profile.itchUrl, games });
+    } catch (err) {
+      console.error("GET /api/indie/itch/status error:", err);
+      res.status(500).json({ error: "server_error" });
+    }
+  });
+
+  // DELETE /api/indie/itch/disconnect — remove saved itch.io API key
+  app.delete("/api/indie/itch/disconnect", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      await db.update(indieGameProfiles)
+        .set({ itchApiKey: null, itchUsername: null, updatedAt: new Date() })
+        .where(eq(indieGameProfiles.userId, req.user.id));
+      res.json({ connected: false });
+    } catch (err) {
+      console.error("DELETE /api/indie/itch/disconnect error:", err);
+      res.status(500).json({ error: "server_error" });
     }
   });
 

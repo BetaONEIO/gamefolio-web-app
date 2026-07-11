@@ -9,7 +9,8 @@ import {
   ExternalLink, Save, RefreshCw, ChevronRight, X, Plus, CheckCircle2,
   Layers, Info, BookText, Store, Link2, ArrowLeft, Sparkles, Loader2,
   SlidersHorizontal, Camera, Film, Tag, Users, Calendar, DollarSign,
-  Monitor, Smartphone, Cpu,
+  Monitor, Smartphone, Cpu, Copy, Check, ShieldCheck, ShieldAlert,
+  KeyRound, LogOut, ExternalLink as ExtLink,
 } from "lucide-react";
 import { SiSteam, SiEpicgames, SiItchdotio } from "react-icons/si";
 import { Button } from "@/components/ui/button";
@@ -239,6 +240,117 @@ export default function IndieGameDashboard() {
   const [steamPreviewData, setSteamPreviewData] = useState<any>(null);
   const [steamPreviewLoading, setSteamPreviewLoading] = useState(false);
   const [steamSelectedFields, setSteamSelectedFields] = useState<Set<string>>(new Set());
+
+  // Steam ownership verification
+  const { data: steamVerifStatus, refetch: refetchSteamStatus } = useQuery<any>({
+    queryKey: ["/api/indie/steam/status"],
+    enabled: !!user,
+  });
+  const [steamVerifLoading, setSteamVerifLoading] = useState(false);
+  const [steamVerifStep, setSteamVerifStep] = useState<"idle" | "code" | "checking">("idle");
+  const [steamVerifCode, setSteamVerifCode] = useState<{ code: string; steamAppId: string; expiresAt: string } | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  const startSteamVerification = async () => {
+    setSteamVerifLoading(true);
+    try {
+      const res = await fetch("/api/indie/steam/start-verification", { method: "POST", credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: data.message || "Could not start verification", variant: "destructive" });
+        return;
+      }
+      setSteamVerifCode(data);
+      setSteamVerifStep("code");
+    } catch {
+      toast({ title: "Verification start failed", variant: "destructive" });
+    } finally {
+      setSteamVerifLoading(false);
+    }
+  };
+
+  const checkSteamVerification = async () => {
+    setSteamVerifStep("checking");
+    try {
+      const res = await fetch("/api/indie/steam/verify", { method: "POST", credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: data.message || "Code not found yet — try again after saving on Steam", variant: "destructive" });
+        setSteamVerifStep("code");
+        return;
+      }
+      toast({ title: "Steam ownership verified! ✅", description: `App ID ${data.steamVerifiedAppId} confirmed.` });
+      setSteamVerifStep("idle");
+      setSteamVerifCode(null);
+      refetchSteamStatus();
+      qc.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+    } catch {
+      toast({ title: "Verification check failed", variant: "destructive" });
+      setSteamVerifStep("code");
+    }
+  };
+
+  const copyCode = async (code: string) => {
+    await navigator.clipboard.writeText(code);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  // itch.io connection
+  const { data: itchStatus, refetch: refetchItchStatus } = useQuery<any>({
+    queryKey: ["/api/indie/itch/status"],
+    enabled: !!user,
+  });
+  const [itchKeyInput, setItchKeyInput] = useState("");
+  const [itchConnectLoading, setItchConnectLoading] = useState(false);
+  const [itchGames, setItchGames] = useState<any[]>([]);
+  const [itchSelectedGame, setItchSelectedGame] = useState<any>(null);
+  const [showItchKeyInput, setShowItchKeyInput] = useState(false);
+
+  const connectItch = async () => {
+    if (!itchKeyInput.trim()) return;
+    setItchConnectLoading(true);
+    try {
+      const res = await fetch("/api/indie/itch/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ apiKey: itchKeyInput.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: data.error || "Failed to connect itch.io", variant: "destructive" });
+        return;
+      }
+      toast({ title: `itch.io connected as @${data.itchUsername}!` });
+      setItchGames(data.games || []);
+      setItchKeyInput("");
+      setShowItchKeyInput(false);
+      refetchItchStatus();
+    } catch {
+      toast({ title: "itch.io connection failed", variant: "destructive" });
+    } finally {
+      setItchConnectLoading(false);
+    }
+  };
+
+  const disconnectItch = async () => {
+    try {
+      await fetch("/api/indie/itch/disconnect", { method: "DELETE", credentials: "include" });
+      setItchGames([]);
+      setItchSelectedGame(null);
+      refetchItchStatus();
+      toast({ title: "itch.io disconnected" });
+    } catch {
+      toast({ title: "Disconnect failed", variant: "destructive" });
+    }
+  };
+
+  const selectItchGame = async (game: any) => {
+    setItchSelectedGame(game);
+    set("itchUrl", game.url);
+    await saveSection(["itchUrl"]);
+  };
 
   const fetchSteamPreview = async () => {
     const appId = steamPreviewAppId.trim().replace(/\D/g, "");
@@ -718,8 +830,11 @@ export default function IndieGameDashboard() {
         {/* ── STORE LINKS ── */}
         {activeTab === "store" && (
           <div className="space-y-4">
+
+            {/* ── Steam ── */}
             <SectionCard title="Steam" icon={SiSteam as any}>
-              <div className="space-y-4">
+              <div className="space-y-5">
+                {/* Store URL fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <FieldRow label="Steam App ID">
                     <Input value={form.steamAppId ?? ""} onChange={e => set("steamAppId", e.target.value)}
@@ -732,9 +847,111 @@ export default function IndieGameDashboard() {
                       className="bg-white/5 border-white/10 text-white placeholder:text-white/30" />
                   </FieldRow>
                 </div>
+
+                {/* Ownership verification */}
+                <div className="rounded-lg p-4 space-y-3" style={{ background: "rgba(102,192,244,0.06)", border: "1px solid rgba(102,192,244,0.2)" }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck size={15} className="text-[#66c0f4]" />
+                      <span className="text-xs font-bold uppercase tracking-widest text-[#66c0f4]">Ownership Verification</span>
+                    </div>
+                    {steamVerifStatus?.verified ? (
+                      <span className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full"
+                        style={{ background: "rgba(183,255,24,0.12)", color: NEON, border: `1px solid ${NEON}40` }}>
+                        <CheckCircle2 size={12} /> Verified · App {steamVerifStatus.steamVerifiedAppId}
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full"
+                        style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                        <ShieldAlert size={12} /> Not verified
+                      </span>
+                    )}
+                  </div>
+
+                  {!steamVerifStatus?.verified && steamVerifStep === "idle" && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-white/50">
+                        Prove you own this game on Steam by adding a short code to your store page description. Add your Steam App ID above first, then click Verify.
+                      </p>
+                      <Button size="sm" onClick={startSteamVerification}
+                        disabled={steamVerifLoading || !form.steamAppId}
+                        className="h-8 text-xs font-bold"
+                        style={{ background: "#66c0f4", color: "#000" }}>
+                        {steamVerifLoading ? <Loader2 size={13} className="animate-spin mr-1" /> : <SiSteam size={13} className="mr-1" />}
+                        Verify Steam Ownership
+                      </Button>
+                    </div>
+                  )}
+
+                  {!steamVerifStatus?.verified && (steamVerifStep === "code" || steamVerifStep === "checking") && steamVerifCode && (
+                    <div className="space-y-3">
+                      <p className="text-xs text-white/60">
+                        <strong className="text-white">Step 1:</strong> Copy this code and paste it anywhere in your Steam store page description (About the Game or Short Description), then save.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 font-mono text-sm font-bold px-3 py-2 rounded-md select-all"
+                          style={{ background: "rgba(255,255,255,0.08)", color: NEON, border: `1px solid ${NEON}30`, letterSpacing: "0.1em" }}>
+                          {steamVerifCode.code}
+                        </div>
+                        <Button size="sm" variant="ghost" onClick={() => copyCode(steamVerifCode.code)}
+                          className="h-9 w-9 p-0 border border-white/10 hover:border-white/30">
+                          {copiedCode ? <Check size={14} style={{ color: NEON }} /> : <Copy size={14} className="text-white/50" />}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-white/60">
+                        <strong className="text-white">Step 2:</strong> After saving on Steam, click below. We'll check that the code appears on your public store page.
+                      </p>
+                      <div className="flex gap-2">
+                        {form.steamUrl && (
+                          <Button size="sm" variant="ghost" asChild className="h-8 text-xs border border-white/10">
+                            <a href={form.steamUrl} target="_blank" rel="noopener noreferrer">
+                              Open Store Page <ExternalLink size={11} className="ml-1" />
+                            </a>
+                          </Button>
+                        )}
+                        <Button size="sm" onClick={checkSteamVerification}
+                          disabled={steamVerifStep === "checking"}
+                          className="h-8 text-xs font-bold"
+                          style={{ background: NEON, color: "#000" }}>
+                          {steamVerifStep === "checking" ? <Loader2 size={13} className="animate-spin mr-1" /> : <Check size={13} className="mr-1" />}
+                          Check Verification
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => { setSteamVerifStep("idle"); setSteamVerifCode(null); }}
+                          className="h-8 text-xs text-white/40 hover:text-white/70">
+                          Cancel
+                        </Button>
+                      </div>
+                      <p className="text-[10px] text-white/30">
+                        Code expires {new Date(steamVerifCode.expiresAt).toLocaleTimeString()}. You can remove the code after verification succeeds.
+                      </p>
+                    </div>
+                  )}
+
+                  {steamVerifStatus?.verified && (
+                    <div className="space-y-1">
+                      <p className="text-xs text-white/50">
+                        Ownership of App ID <span className="text-white font-mono">{steamVerifStatus.steamVerifiedAppId}</span> verified{steamVerifStatus.steamVerifiedAt ? ` on ${new Date(steamVerifStatus.steamVerifiedAt).toLocaleDateString()}` : ""}.
+                      </p>
+                      <Button size="sm" variant="ghost" onClick={startSteamVerification}
+                        disabled={steamVerifLoading || !form.steamAppId}
+                        className="h-7 text-[11px] text-white/40 hover:text-white/70 px-2">
+                        Re-verify a different App ID
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end">
+                  <Button size="sm" onClick={() => saveSection(["steamAppId","steamUrl"])}
+                    disabled={saving} style={{ background: NEON, color: "#000" }} className="font-bold text-xs h-8">
+                    {saving ? <Loader2 size={14} className="animate-spin mr-1" /> : <Save size={13} className="mr-1" />}
+                    Save Steam Links
+                  </Button>
+                </div>
               </div>
             </SectionCard>
 
+            {/* ── Epic Games ── */}
             <SectionCard title="Epic Games" icon={SiEpicgames as any}>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -749,24 +966,154 @@ export default function IndieGameDashboard() {
                       className="bg-white/5 border-white/10 text-white placeholder:text-white/30" />
                   </FieldRow>
                 </div>
+                <div className="flex justify-end">
+                  <Button size="sm" onClick={() => saveSection(["epicUrl","epicSlug"])}
+                    disabled={saving} style={{ background: NEON, color: "#000" }} className="font-bold text-xs h-8">
+                    {saving ? <Loader2 size={14} className="animate-spin mr-1" /> : <Save size={13} className="mr-1" />}
+                    Save Epic Links
+                  </Button>
+                </div>
               </div>
             </SectionCard>
 
+            {/* ── itch.io ── */}
             <SectionCard title="itch.io" icon={SiItchdotio as any}>
-              <FieldRow label="itch.io URL">
-                <Input value={form.itchUrl ?? ""} onChange={e => set("itchUrl", e.target.value)}
-                  placeholder="https://yourname.itch.io/game"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30" />
-              </FieldRow>
+              <div className="space-y-4">
+                {/* Connection status banner */}
+                {itchStatus?.connected ? (
+                  <div className="flex items-center justify-between rounded-lg px-4 py-3"
+                    style={{ background: "rgba(255,99,58,0.08)", border: "1px solid rgba(255,99,58,0.25)" }}>
+                    <div className="flex items-center gap-2.5">
+                      <SiItchdotio size={16} style={{ color: "#ff633a" }} />
+                      <div>
+                        <div className="text-xs font-bold text-white">Connected as <span style={{ color: "#ff633a" }}>@{itchStatus.itchUsername}</span></div>
+                        <div className="text-[11px] text-white/40">{(itchStatus.games?.length ?? 0)} game{itchStatus.games?.length !== 1 ? "s" : ""} found on your account</div>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={disconnectItch}
+                      className="h-7 text-[11px] text-white/40 hover:text-red-400 gap-1 px-2">
+                      <LogOut size={11} /> Disconnect
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="rounded-lg p-4 space-y-3" style={{ background: "rgba(255,99,58,0.06)", border: "1px solid rgba(255,99,58,0.2)" }}>
+                    <div className="flex items-center gap-2">
+                      <KeyRound size={14} style={{ color: "#ff633a" }} />
+                      <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "#ff633a" }}>Connect itch.io Account</span>
+                    </div>
+                    <p className="text-xs text-white/50">
+                      Connect your itch.io developer account using an API key. This lets us list your games so you can link the right one — your key is stored securely and never shared.
+                    </p>
+                    {!showItchKeyInput ? (
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={() => setShowItchKeyInput(true)}
+                          className="h-8 text-xs font-bold" style={{ background: "#ff633a", color: "#fff" }}>
+                          <SiItchdotio size={13} className="mr-1" /> Connect itch.io
+                        </Button>
+                        <Button size="sm" variant="ghost" asChild className="h-8 text-xs border border-white/10">
+                          <a href="https://itch.io/user/settings/api-keys" target="_blank" rel="noopener noreferrer">
+                            Get API Key <ExternalLink size={11} className="ml-1" />
+                          </a>
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <Input
+                            type="password"
+                            value={itchKeyInput}
+                            onChange={e => setItchKeyInput(e.target.value)}
+                            placeholder="Paste your itch.io API key…"
+                            className="bg-white/5 border-white/10 text-white placeholder:text-white/30 font-mono text-sm"
+                            onKeyDown={e => e.key === "Enter" && connectItch()}
+                          />
+                          <Button onClick={connectItch} disabled={itchConnectLoading || !itchKeyInput.trim()}
+                            className="shrink-0 font-bold" style={{ background: "#ff633a", color: "#fff" }}>
+                            {itchConnectLoading ? <Loader2 size={14} className="animate-spin" /> : "Connect"}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => { setShowItchKeyInput(false); setItchKeyInput(""); }}
+                            className="shrink-0 text-white/40 hover:text-white/70">
+                            Cancel
+                          </Button>
+                        </div>
+                        <a href="https://itch.io/user/settings/api-keys" target="_blank" rel="noopener noreferrer"
+                          className="text-[11px] text-white/30 hover:text-white/60 flex items-center gap-1">
+                          <ExternalLink size={10} /> itch.io → Account Settings → API Keys → Generate new API key
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Game picker — shown once connected (from status query or after fresh connect) */}
+                {(() => {
+                  const games: any[] = itchGames.length > 0 ? itchGames : (itchStatus?.games ?? []);
+                  if (!itchStatus?.connected && itchGames.length === 0) return null;
+                  return (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold text-white/50 uppercase tracking-wider">Your itch.io Games</label>
+                        {form.itchUrl && (
+                          <span className="text-[11px] text-white/40">
+                            Linked: <a href={form.itchUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-white/70" style={{ color: "#ff633a" }}>{form.itchUrl}</a>
+                          </span>
+                        )}
+                      </div>
+                      {games.length === 0 ? (
+                        <p className="text-xs text-white/30 py-2">No games found on this itch.io account.</p>
+                      ) : (
+                        <div className="grid gap-2 max-h-72 overflow-y-auto pr-1">
+                          {games.map((g: any) => {
+                            const isLinked = form.itchUrl === g.url;
+                            return (
+                              <button key={g.id} onClick={() => selectItchGame(g)}
+                                className="flex items-center gap-3 w-full text-left rounded-lg px-3 py-2.5 transition-all"
+                                style={{
+                                  background: isLinked ? "rgba(255,99,58,0.15)" : "rgba(255,255,255,0.04)",
+                                  border: `1px solid ${isLinked ? "rgba(255,99,58,0.5)" : "rgba(255,255,255,0.08)"}`,
+                                }}>
+                                {g.coverUrl ? (
+                                  <img src={g.coverUrl} alt="" className="w-10 h-10 object-cover rounded shrink-0" />
+                                ) : (
+                                  <div className="w-10 h-10 rounded shrink-0 flex items-center justify-center"
+                                    style={{ background: "rgba(255,99,58,0.15)" }}>
+                                    <SiItchdotio size={16} style={{ color: "#ff633a" }} />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-semibold text-white truncate">{g.title}</div>
+                                  <div className="text-[11px] text-white/40 truncate">{g.url}</div>
+                                </div>
+                                {isLinked && (
+                                  <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                                    style={{ background: "rgba(255,99,58,0.25)", color: "#ff633a" }}>
+                                    Linked
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* Manual URL override */}
+                <FieldRow label="itch.io URL (manual override)">
+                  <div className="flex gap-2">
+                    <Input value={form.itchUrl ?? ""} onChange={e => set("itchUrl", e.target.value)}
+                      placeholder="https://yourname.itch.io/game"
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/30" />
+                    <Button size="sm" onClick={() => saveSection(["itchUrl"])}
+                      disabled={saving} style={{ background: NEON, color: "#000" }} className="font-bold shrink-0">
+                      <Save size={14} />
+                    </Button>
+                  </div>
+                </FieldRow>
+              </div>
             </SectionCard>
 
-            <div className="flex justify-end pt-2">
-              <Button onClick={() => saveSection(["steamAppId","steamUrl","epicUrl","epicSlug","itchUrl"])}
-                disabled={saving} style={{ background: NEON, color: "#000" }} className="font-bold">
-                {saving ? <Loader2 size={16} className="animate-spin mr-2" /> : <Save size={15} className="mr-2" />}
-                Save Store Links
-              </Button>
-            </div>
           </div>
         )}
 
