@@ -58,6 +58,7 @@ import authRouter from "./routes/auth-routes";
 import tokenAuthRouter from "./routes/token-auth";
 import { JWTService } from "./services/jwt-service";
 import uploadRouter from "./routes/upload";
+import aiVodClipsRouter from "./routes/ai-vod-clips";
 import migrationRouter from "./routes/migration";
 import viewRouter from "./routes/view";
 import supportRouter from "./routes/support";
@@ -11375,6 +11376,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mount upload routes
   app.use('/api/upload', uploadRouter);
+
+  // Mount AI VOD-clip generation routes (POC)
+  app.use('/api/ai-vod-clips', aiVodClipsRouter);
 
   // Mount mint NFT routes
   app.use(mintNftRouter);

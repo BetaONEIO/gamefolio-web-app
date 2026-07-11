@@ -7,11 +7,12 @@ import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 import { ContentFilterService } from '../services/content-filter';
-import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides, insertAdminAlertSettingsSchema, KNOWN_ADMIN_ALERT_TYPES } from '@shared/schema';
+import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides, insertAdminAlertSettingsSchema, KNOWN_ADMIN_ALERT_TYPES, insertAiClipSettingsSchema } from '@shared/schema';
 import { sendAdminAlert, postSlack, sendAdminEmail, sendSms, postPagerDuty } from '../admin-alert-service';
 import { POINT_VALUES, XP_SETTINGS_DEFINITION, updatePointValue } from '../leaderboard-service';
 import { z } from 'zod';
 import { supabaseStorage } from '../supabase-storage';
+import { cancelJob, cancelAllQueued } from '../services/ai-vod-clip-jobs';
 
 // Temporary directory for processing
 const tempDir = path.join(process.cwd(), "temp");
@@ -1189,6 +1190,63 @@ adminRouter.post("/content-filter/validate", async (req: Request, res: Response)
   } catch (err) {
     console.error("Error validating content:", err);
     res.status(500).json({ message: "Error validating content" });
+  }
+});
+
+// GET /api/admin/ai-clip-settings - AI VOD-clip generation on/off control + job stats
+adminRouter.get("/ai-clip-settings", async (req: Request, res: Response) => {
+  try {
+    const settings = await storage.getAiClipSettings();
+    const stats = await storage.getAiClipJobStats();
+    res.json({
+      settings: settings || { id: null, isEnabled: true, disabledMessage: null, updatedBy: null, updatedAt: null, createdAt: null },
+      stats,
+    });
+  } catch (err) {
+    console.error("Error fetching AI clip settings:", err);
+    res.status(500).json({ message: "Error fetching AI clip settings" });
+  }
+});
+
+// PUT /api/admin/ai-clip-settings - Update AI VOD-clip generation on/off control
+adminRouter.put("/ai-clip-settings", async (req: Request, res: Response) => {
+  try {
+    const updateSchema = insertAiClipSettingsSchema.pick({ isEnabled: true, disabledMessage: true }).partial();
+    const validatedData = updateSchema.parse(req.body);
+    const settings = await storage.updateAiClipSettings({ ...validatedData, updatedBy: req.user!.id });
+    res.json(settings);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ message: "Invalid input", errors: err.errors });
+    }
+    console.error("Error updating AI clip settings:", err);
+    res.status(500).json({ message: "Error updating AI clip settings" });
+  }
+});
+
+// POST /api/admin/ai-clip-jobs/:jobId/cancel - Cancel a single job (queued or in-progress)
+adminRouter.post("/ai-clip-jobs/:jobId/cancel", async (req: Request, res: Response) => {
+  try {
+    const jobId = parseInt(req.params.jobId, 10);
+    const job = await cancelJob(jobId);
+    res.json({ job });
+  } catch (err: any) {
+    if (err?.status) {
+      return res.status(err.status).json({ message: err.message });
+    }
+    console.error("Error cancelling AI clip job:", err);
+    res.status(500).json({ message: "Error cancelling AI clip job" });
+  }
+});
+
+// POST /api/admin/ai-clip-jobs/cancel-queued - Clear the backlog of not-yet-started jobs
+adminRouter.post("/ai-clip-jobs/cancel-queued", async (req: Request, res: Response) => {
+  try {
+    const result = await cancelAllQueued();
+    res.json(result);
+  } catch (err) {
+    console.error("Error cancelling AI clip job queue:", err);
+    res.status(500).json({ message: "Error cancelling AI clip job queue" });
   }
 });
 

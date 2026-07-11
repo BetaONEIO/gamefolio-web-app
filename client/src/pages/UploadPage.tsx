@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useAiClipsStatus } from "@/hooks/use-ai-vod-clips";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,7 +40,8 @@ import {
   StopCircle,
   Pause,
   RotateCcw,
-  X
+  X,
+  Sparkles
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -90,6 +92,7 @@ const UploadPage = () => {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { data: aiClipsStatus } = useAiClipsStatus();
   
   // Content type selection
   const [contentType, setContentType] = useState<'clips' | 'reels' | 'screenshots'>('clips');
@@ -960,7 +963,21 @@ const UploadPage = () => {
       <div className="flex items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Upload Content</h1>
       </div>
-      
+
+      {user?.twitchVerified && aiClipsStatus?.enabled !== false && (
+        <Link href="/ai-clips">
+          <div className="mb-4 rounded-xl border border-[#9146FF]/30 bg-[#9146FF]/5 px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-[#9146FF]/10 transition-colors">
+            <div className="w-8 h-8 rounded-lg bg-[#9146FF]/15 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-4 h-4 text-[#9146FF]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-slate-200">Generate AI clips from a past stream</div>
+              <div className="text-xs text-slate-400 mt-0.5">Let Claude find the highlight moments in a Twitch VOD and cut them for you</div>
+            </div>
+          </div>
+        </Link>
+      )}
+
       {/* Upload Limits Display — unlimited uploads, capped by file size & duration */}
       {!limitsLoading && uploadLimits && !uploadLimits.isPro && showUploadSizeTip && (
         <Alert className="mb-4 relative pr-10">

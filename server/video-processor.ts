@@ -280,6 +280,92 @@ export class VideoProcessor {
     });
   }
 
+  /**
+   * Mux a remote HLS playlist (e.g. a Twitch VOD's signed usher.ttvnw.net
+   * m3u8 URL) straight to a local MP4 without re-encoding. ffmpeg's HLS
+   * demuxer handles segment fetching/ordering itself — no manual playlist
+   * parsing needed.
+   */
+  static async downloadHlsToFile(hlsUrl: string, outputPath: string): Promise<void> {
+    await this.ensureDirectories();
+    return new Promise((resolve, reject) => {
+      console.log(`Downloading HLS source to ${outputPath}`);
+      ffmpeg(hlsUrl)
+        .outputOptions(['-c copy', '-bsf:a aac_adtstoasc'])
+        .output(outputPath)
+        .on('start', (commandLine: string) => {
+          console.log('FFmpeg HLS download command:', commandLine);
+        })
+        .on('progress', (progress: any) => {
+          if (progress.timemark) console.log(`HLS download progress: ${progress.timemark}`);
+        })
+        .on('end', () => {
+          console.log(`HLS source downloaded: ${outputPath}`);
+          resolve();
+        })
+        .on('error', (error: any) => {
+          console.error('Error downloading HLS source:', error);
+          reject(error);
+        })
+        .run();
+    });
+  }
+
+  /**
+   * Extract the audio track as 16kHz mono WAV — the input format Whisper
+   * expects, and much smaller/faster to pass around than the source video.
+   */
+  static async extractAudioTrack(inputPath: string, outputWavPath: string): Promise<void> {
+    await this.ensureDirectories();
+    return new Promise((resolve, reject) => {
+      console.log(`Extracting audio track from ${inputPath}`);
+      ffmpeg(inputPath)
+        .noVideo()
+        .audioChannels(1)
+        .audioFrequency(16000)
+        .output(outputWavPath)
+        .on('start', (commandLine: string) => {
+          console.log('FFmpeg audio extraction command:', commandLine);
+        })
+        .on('end', () => {
+          console.log(`Audio track extracted: ${outputWavPath}`);
+          resolve();
+        })
+        .on('error', (error: any) => {
+          console.error('Error extracting audio track:', error);
+          reject(error);
+        })
+        .run();
+    });
+  }
+
+  /**
+   * Cut a single highlight segment out of a longer source video. Thin public
+   * wrapper around the existing trim logic used by manual clip processing.
+   */
+  static async trimSegment(
+    inputPath: string,
+    outputPath: string,
+    startTime: number,
+    endTime: number
+  ): Promise<void> {
+    return this.trimVideo(inputPath, outputPath, startTime, endTime);
+  }
+
+  /**
+   * Grab a single thumbnail frame at an arbitrary offset into a video. Thin
+   * public wrapper around the existing thumbnail logic used by manual clip
+   * processing.
+   */
+  static async captureThumbnailAt(
+    videoPath: string,
+    outputPath: string,
+    timeOffset: number,
+    videoType: 'clip' | 'reel' = 'clip'
+  ): Promise<void> {
+    return this.generateThumbnail(videoPath, outputPath, timeOffset, videoType);
+  }
+
   private static async trimVideo(
     inputPath: string,
     outputPath: string,

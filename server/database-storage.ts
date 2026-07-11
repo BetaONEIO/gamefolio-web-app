@@ -28,6 +28,7 @@ import {
   BannedWord, InsertBannedWord,
   BannerSettings, InsertBannerSettings,
   UploadedBanner, InsertUploadedBanner,
+  AiClipSettings, InsertAiClipSettings,
   HeroTextSettings, InsertHeroTextSettings,
   ClipMention, InsertClipMention,
   CommentMention, InsertCommentMention,
@@ -87,6 +88,8 @@ import {
   bannerSettings,
   adminAlertSettings,
   uploadedBanners,
+  aiClipSettings,
+  aiClipJobs,
   clipMentions,
   nftWatchlist,
   bookmarks,
@@ -4800,6 +4803,71 @@ export class DatabaseStorage implements IStorage {
       console.error('Error updating banner settings:', error);
       return null;
     }
+  }
+
+  // AI VOD-clip generation on/off control
+  async getAiClipSettings(): Promise<AiClipSettings | null> {
+    try {
+      const [settings] = await db.select().from(aiClipSettings).limit(1);
+      return settings || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async updateAiClipSettings(settings: Partial<InsertAiClipSettings>): Promise<AiClipSettings> {
+    const existing = await this.getAiClipSettings();
+    if (existing) {
+      const [updated] = await db
+        .update(aiClipSettings)
+        .set({ ...settings, updatedAt: new Date() })
+        .where(eq(aiClipSettings.id, existing.id))
+        .returning();
+      return updated;
+    }
+    const [created] = await db
+      .insert(aiClipSettings)
+      .values({ isEnabled: true, ...settings })
+      .returning();
+    return created;
+  }
+
+  async getAiClipJobStats() {
+    const rows = await db.select({ status: aiClipJobs.status, count: sql<number>`count(*)::int` })
+      .from(aiClipJobs)
+      .groupBy(aiClipJobs.status);
+    const statusCounts: Record<string, number> = {};
+    for (const row of rows) statusCounts[row.status] = row.count;
+
+    const recent = await db.select({
+      id: aiClipJobs.id,
+      userId: aiClipJobs.userId,
+      username: users.username,
+      vodTitle: aiClipJobs.vodTitle,
+      status: aiClipJobs.status,
+      candidateCount: aiClipJobs.candidateCount,
+      createdAt: aiClipJobs.createdAt,
+    })
+      .from(aiClipJobs)
+      .innerJoin(users, eq(aiClipJobs.userId, users.id))
+      .orderBy(desc(aiClipJobs.createdAt))
+      .limit(10);
+
+    const queue = await db.select({
+      id: aiClipJobs.id,
+      userId: aiClipJobs.userId,
+      username: users.username,
+      vodTitle: aiClipJobs.vodTitle,
+      status: aiClipJobs.status,
+      stageProgress: aiClipJobs.stageProgress,
+      createdAt: aiClipJobs.createdAt,
+    })
+      .from(aiClipJobs)
+      .innerJoin(users, eq(aiClipJobs.userId, users.id))
+      .where(notInArray(aiClipJobs.status, ['completed', 'failed', 'cancelled']))
+      .orderBy(asc(aiClipJobs.createdAt));
+
+    return { statusCounts, recentJobs: recent, queue };
   }
 
   // Admin alert destination settings

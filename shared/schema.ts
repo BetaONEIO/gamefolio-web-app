@@ -196,8 +196,71 @@ export const clips = pgTable("clips", {
   ageRestricted: boolean("age_restricted").default(false).notNull(),
   shareCode: text("share_code").unique(),
   pinnedAt: timestamp("pinned_at"),
+  // Provenance: "upload" (default, manual), "twitch_clip_import", "ai_vod_highlight".
+  source: text("source").default("upload"),
+  // Set only for source="ai_vod_highlight" — the job that generated this clip.
+  // References ai_clip_jobs, declared below; the lazy closure means declaration
+  // order in this file doesn't matter (Drizzle resolves it on first use, not
+  // at module-init time).
+  aiJobId: integer("ai_job_id").references((): any => aiClipJobs.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// AI VOD-clip generation jobs — one per "generate clips from this VOD" run.
+export const aiClipJobs = pgTable("ai_clip_jobs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  twitchVodId: text("twitch_vod_id").notNull(),
+  vodTitle: text("vod_title").notNull(),
+  vodDurationSeconds: integer("vod_duration_seconds").notNull(),
+  vodThumbnailUrl: text("vod_thumbnail_url"),
+  // queued | downloading | transcribing | analyzing | cutting | completed | failed
+  status: text("status").default("queued").notNull(),
+  stageProgress: integer("stage_progress").default(0).notNull(), // coarse 0-100 within current stage
+  errorReason: text("error_reason"),
+  candidateCount: integer("candidate_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+// Candidate highlight clips produced by a job, staged for user review before
+// (optionally) being published into the real `clips` table.
+export const aiClipCandidates = pgTable("ai_clip_candidates", {
+  id: serial("id").primaryKey(),
+  jobId: integer("job_id").notNull().references(() => aiClipJobs.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  reasoning: text("reasoning"), // Claude's rationale for why this moment was picked
+  startTime: real("start_time").notNull(), // seconds into the source VOD
+  endTime: real("end_time").notNull(),
+  durationSeconds: real("duration_seconds").notNull(),
+  rank: integer("rank").default(0).notNull(), // ordering by confidence, best first
+  draftVideoPath: text("draft_video_path").notNull(), // staging path in gamefolio-media
+  draftVideoUrl: text("draft_video_url").notNull(),
+  draftThumbnailPath: text("draft_thumbnail_path"),
+  draftThumbnailUrl: text("draft_thumbnail_url"),
+  status: text("status").default("pending").notNull(), // pending | published | discarded | expired
+  publishedClipId: integer("published_clip_id").references((): any => clips.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  // Draft storage is temporary, not a permanent home for generated clips —
+  // unpublished candidates past this timestamp get their staged files
+  // deleted and status flipped to "expired" by a cleanup sweep, so storage
+  // doesn't accumulate from abandoned/forgotten jobs.
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
+// Admin on/off control for AI VOD-clip generation (e.g. to pause new job
+// creation if the local Whisper/Claude pipeline is overloaded). Singleton
+// row, same shape convention as bannerSettings.
+export const aiClipSettings = pgTable("ai_clip_settings", {
+  id: serial("id").primaryKey(),
+  isEnabled: boolean("is_enabled").default(true).notNull(),
+  disabledMessage: text("disabled_message"), // shown to users when isEnabled=false
+  updatedBy: integer("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Likes table
@@ -898,6 +961,25 @@ export const insertClipSchema = createInsertSchema(clips).omit({
   tags: z.array(z.string().max(50, "Each tag must be 50 characters or less")).max(20, "Maximum 20 tags allowed").optional(),
 });
 
+// Schema for creating an AI VOD-clip job
+export const insertAiClipJobSchema = createInsertSchema(aiClipJobs).omit({
+  id: true,
+  status: true,
+  stageProgress: true,
+  errorReason: true,
+  candidateCount: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true,
+});
+
+// Schema for creating/updating AI VOD-clip settings
+export const insertAiClipSettingsSchema = createInsertSchema(aiClipSettings).omit({
+  id: true,
+  updatedAt: true,
+  createdAt: true,
+});
+
 // Schema for inserting a like
 export const insertLikeSchema = createInsertSchema(likes).omit({
   id: true,
@@ -1414,6 +1496,11 @@ export type InsertGame = z.infer<typeof insertGameSchema>;
 
 export type Clip = typeof clips.$inferSelect;
 export type InsertClip = z.infer<typeof insertClipSchema>;
+export type AiClipJob = typeof aiClipJobs.$inferSelect;
+export type InsertAiClipJob = z.infer<typeof insertAiClipJobSchema>;
+export type AiClipCandidate = typeof aiClipCandidates.$inferSelect;
+export type AiClipSettings = typeof aiClipSettings.$inferSelect;
+export type InsertAiClipSettings = z.infer<typeof insertAiClipSettingsSchema>;
 
 export type Like = typeof likes.$inferSelect;
 export type InsertLike = z.infer<typeof insertLikeSchema>;

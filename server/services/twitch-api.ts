@@ -39,6 +39,38 @@ export interface TwitchStream {
   is_mature: boolean;
 }
 
+// Interface for a past broadcast (Helix Get Videos, type=archive), used by
+// the AI VOD-clip picker.
+export interface TwitchVod {
+  id: string;
+  title: string;
+  url: string;
+  thumbnailUrl: string;
+  durationSeconds: number;
+  createdAt: string;
+  viewCount: number;
+}
+
+// Twitch's public web client-id. Helix exposes no official VOD-download
+// endpoint, so the actual media is fetched via Twitch's GraphQL API, which
+// mints a short-lived signed playback token for a video id (see
+// getVodDownloadUrl). This is the same anonymous client-id the Twitch web
+// player uses, and the same one the (parked) clip-import feature uses for
+// clip MP4s — VODs use a distinct GQL field and Usher param names.
+const TWITCH_GQL_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko';
+
+// Twitch VOD ids are numeric; validated before being interpolated into the
+// GraphQL query as a defensive measure.
+const VOD_ID_RE = /^\d+$/;
+
+// Parses Helix's ISO-8601 duration-ish string ("1h2m3s") into seconds.
+function parseTwitchDuration(duration: string): number {
+  const match = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/.exec(duration || '');
+  if (!match) return 0;
+  const [, h, m, s] = match;
+  return (parseInt(h || '0', 10) * 3600) + (parseInt(m || '0', 10) * 60) + parseInt(s || '0', 10);
+}
+
 // Resolve Twitch box art URL to a specific size, handling all URL formats:
 // 1. Template {width}x{height} → e.g. "...Game-{width}x{height}.jpg"
 // 2. Separate {width} / {height} tokens
@@ -371,6 +403,118 @@ class TwitchApiService {
     } catch (error) {
       console.error('Error checking Twitch live status:', error);
       return false;
+    }
+  }
+
+  /**
+   * List a broadcaster's past broadcasts ("archive" VODs — as opposed to
+   * highlights/uploads), most recent first. Uses the app access token; VOD
+   * metadata for a public channel needs no user OAuth scope.
+   */
+  async getUserVods(twitchUserId: string, limit: number = 20): Promise<TwitchVod[]> {
+    if (!this.isConfigured()) {
+      throw new Error('Twitch API credentials not configured');
+    }
+    if (!twitchUserId) return [];
+
+    try {
+      const token = await this.getAccessToken();
+      const response = await axios.get('https://api.twitch.tv/helix/videos', {
+        headers: {
+          'Client-ID': this.clientId,
+          'Authorization': `Bearer ${token}`,
+        },
+        params: {
+          user_id: twitchUserId,
+          type: 'archive',
+          first: Math.min(Math.max(limit, 1), 100),
+        },
+      });
+      return (response.data.data || []).map((v: any): TwitchVod => ({
+        id: v.id,
+        title: v.title || 'Untitled stream',
+        url: v.url,
+        thumbnailUrl: (v.thumbnail_url || '').replace('%{width}', '440').replace('%{height}', '248'),
+        durationSeconds: parseTwitchDuration(v.duration),
+        createdAt: v.created_at,
+        viewCount: v.view_count || 0,
+      }));
+    } catch (error) {
+      logTwitchError('Error fetching Twitch VODs', error);
+      throw new Error('Failed to fetch VODs from Twitch API');
+    }
+  }
+
+  /**
+   * Re-resolve a single VOD by id server-side (used to re-validate duration
+   * against fresh Helix data at job-creation time, rather than trusting a
+   * client-supplied duration).
+   */
+  async getVodById(vodId: string): Promise<TwitchVod | null> {
+    if (!this.isConfigured() || !vodId) return null;
+    try {
+      const token = await this.getAccessToken();
+      const response = await axios.get('https://api.twitch.tv/helix/videos', {
+        headers: {
+          'Client-ID': this.clientId,
+          'Authorization': `Bearer ${token}`,
+        },
+        params: { id: vodId },
+      });
+      const v = (response.data.data || [])[0];
+      if (!v) return null;
+      return {
+        id: v.id,
+        title: v.title || 'Untitled stream',
+        url: v.url,
+        thumbnailUrl: (v.thumbnail_url || '').replace('%{width}', '440').replace('%{height}', '248'),
+        durationSeconds: parseTwitchDuration(v.duration),
+        createdAt: v.created_at,
+        viewCount: v.view_count || 0,
+      };
+    } catch (error) {
+      logTwitchError('Error fetching Twitch VOD by id', error);
+      return null;
+    }
+  }
+
+  /**
+   * Resolve a VOD's directly-playable HLS (m3u8) URL via Twitch's GraphQL
+   * API, the same anonymous-GQL approach the clip importer uses for clip
+   * MP4s, but with the VOD-specific field/params: `videoPlaybackAccessToken`
+   * (vs. `clip.playbackAccessToken`) and Usher's `nauth`/`nauthsig` query
+   * params (vs. clips' `token`/`sig`). Twitch VODs are HLS, not a single
+   * MP4, so the caller (ffmpeg) consumes this master playlist URL directly
+   * rather than fetching one file. Returns null if the VOD can't be
+   * resolved. The URL is short-lived — fetch it promptly, server-side.
+   */
+  async getVodDownloadUrl(vodId: string): Promise<string | null> {
+    if (!vodId || !VOD_ID_RE.test(vodId)) return null;
+    try {
+      const query = `{
+  videoPlaybackAccessToken(id: "${vodId}", params: {platform: "web", playerBackend: "mediaplayer", playerType: "site"}) {
+    signature
+    value
+  }
+}`;
+      const resp = await axios.post(
+        'https://gql.twitch.tv/gql',
+        { query },
+        { headers: { 'Client-ID': TWITCH_GQL_CLIENT_ID, 'Content-Type': 'application/json' }, timeout: 10000 },
+      );
+      const token = resp.data?.data?.videoPlaybackAccessToken;
+      if (!token?.signature || !token?.value) return null;
+      const params = new URLSearchParams({
+        nauth: token.value,
+        nauthsig: token.signature,
+        allow_source: 'true',
+        allow_audio_only: 'true',
+        player: 'twitchweb',
+      });
+      return `https://usher.ttvnw.net/vod/${vodId}.m3u8?${params.toString()}`;
+    } catch (err: any) {
+      logTwitchError('Twitch GQL VOD playback lookup failed', err);
+      return null;
     }
   }
 }

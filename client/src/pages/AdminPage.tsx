@@ -3,6 +3,7 @@ import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { AlertSettings } from "@/components/admin/AlertSettings";
 import { PushBroadcastPanel } from "@/components/admin/PushBroadcastPanel";
+import { AiClipsPanel } from "@/components/admin/AiClipsPanel";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
@@ -3234,6 +3235,7 @@ const AdminPage = () => {
           <TabsTrigger value="games" className="text-xs px-3 py-1.5">Games</TabsTrigger>
           <TabsTrigger value="alerts" className="text-xs px-3 py-1.5">Alerts</TabsTrigger>
           <TabsTrigger value="push" className="text-xs px-3 py-1.5">Push</TabsTrigger>
+          <TabsTrigger value="ai-clips" className="text-xs px-3 py-1.5">AI Clips</TabsTrigger>
           <TabsTrigger value="oauth-apps" className="text-xs px-3 py-1.5">Developer</TabsTrigger>
         </TabsList>
 
@@ -3244,6 +3246,10 @@ const AdminPage = () => {
 
         <TabsContent value="push" className="space-y-4">
           <PushBroadcastPanel />
+        </TabsContent>
+
+        <TabsContent value="ai-clips" className="space-y-4">
+          <AiClipsPanel />
         </TabsContent>
 
         {/* Dashboard Tab */}

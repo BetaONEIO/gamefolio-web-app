@@ -398,14 +398,17 @@ app.use((req, res, next) => {
       serveStatic(app);
     }
 
-    // ALWAYS serve the app on port 5000
-    // this serves both the API and the client.
-    // It is the only port that is not firewalled.
-    const port = 5000;
+    // Production (Replit) always serves on port 5000 — the only port that
+    // isn't firewalled. Local dev allows a PORT override since 5000 collides
+    // with macOS AirPlay Receiver, and reusePort is skipped outside prod
+    // since it throws ENOTSUP on some local Node/macOS combinations and buys
+    // nothing for a single dev process.
+    const isDev = app.get("env") === "development";
+    const port = isDev && process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
     server.listen({
       port,
       host: "0.0.0.0",
-      reusePort: true,
+      ...(isDev ? {} : { reusePort: true }),
     }, () => {
       log(`serving on port ${port}`);
 
@@ -471,6 +474,31 @@ app.use((req, res, next) => {
         setTimeout(tick, 2 * 60 * 1000);
         setInterval(tick, SYNC_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule platform sync:', err));
+
+      // AI VOD-clip generation (POC): single sequential in-process worker,
+      // picks up one queued job per tick. No queue system — matches the
+      // app's existing "one long-lived Node process + polling timers"
+      // pattern, since job volume is expected to be low at POC scale.
+      import('./services/ai-vod-clip-jobs').then(({ processNextQueuedJob, expireStaleCandidates }) => {
+        const POLL_INTERVAL_MS = 20 * 1000;
+        const tick = () => {
+          processNextQueuedJob().catch((err) => console.error('ai-vod-clip-jobs poll failed:', err));
+        };
+        setTimeout(tick, 30 * 1000);
+        setInterval(tick, POLL_INTERVAL_MS);
+
+        // Draft clip storage is temporary, not permanent — sweep expired
+        // (unpublished, past-TTL) candidates every 6h so abandoned
+        // generations don't accumulate in Supabase storage indefinitely.
+        const EXPIRY_SWEEP_INTERVAL_MS = 6 * 60 * 60 * 1000;
+        const expiryTick = () => {
+          expireStaleCandidates()
+            .then((r) => { if (r.expired > 0) log(`ai-vod-clips expiry sweep: expired=${r.expired}`); })
+            .catch((err) => console.error('ai-vod-clips expiry sweep failed:', err));
+        };
+        setTimeout(expiryTick, 3 * 60 * 1000);
+        setInterval(expiryTick, EXPIRY_SWEEP_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule AI VOD clip job poller:', err));
     });
   } catch (error) {
     console.error("Fatal server error:", error);

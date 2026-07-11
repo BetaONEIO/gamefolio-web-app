@@ -18,9 +18,11 @@
     "cap:sync": "cap sync"
   },
   "dependencies": {
+    "0xsequence": "^2.3.39",
     "@0xsequence/connect": "^5.4.8",
     "@0xsequence/hooks": "^5.4.8",
     "@0xsequence/waas": "^2.3.39",
+    "@anthropic-ai/sdk": "^0.111.0",
     "@capacitor-community/apple-sign-in": "^6.0.0",
     "@capacitor-firebase/authentication": "^6.3.1",
     "@capacitor-firebase/messaging": "^6.3.1",
@@ -39,6 +41,7 @@
     "@firebase/auth": "^1.10.6",
     "@getbrevo/brevo": "^6.0.1",
     "@hookform/resolvers": "^5.2.2",
+    "@huggingface/transformers": "^4.2.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@playwright/test": "^1.55.0",
     "@radix-ui/react-accordion": "^1.2.4",
@@ -87,7 +90,6 @@
     "@types/memoizee": "^0.4.12",
     "@types/multer": "^1.4.12",
     "@types/qrcode": "^1.5.6",
-    "0xsequence": "^2.3.39",
     "axios": "^1.15.2",
     "bad-words": "^4.0.0",
     "class-variance-authority": "^0.7.1",
@@ -147,6 +149,7 @@
     "vaul": "^1.1.2",
     "viem": "^2.50.4",
     "wagmi": "^2.19.5",
+    "wavefile": "^11.0.0",
     "wouter": "^3.3.5",
     "ws": "^8.20.1",
     "zod": "^3.24.2",
@@ -243,5 +246,8 @@
     "@types/request": {
       "form-data": "^4.0.6"
     }
-  }
+  },
+  "trustedDependencies": [
+    "onnxruntime-node"
+  ]
 }
