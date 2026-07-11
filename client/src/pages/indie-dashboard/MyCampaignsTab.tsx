@@ -4,7 +4,7 @@ import {
   ShieldCheck, AlertCircle, CheckCircle, Pause, XCircle,
   Calendar, BarChart3, Gamepad2, FileText,
 } from "lucide-react";
-import { NEON, CARD_BG, CARD_BORDER } from "../IndieDashboardPage";
+import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
   draft:              { label: "Draft",                  color: "#94a3b8", bg: "rgba(148,163,184,0.12)", icon: FileText },

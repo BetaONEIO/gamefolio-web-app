@@ -353,14 +353,24 @@ const TEMPLATES = [
   },
 ];
 
+function toRows(result: any): any[] {
+  // drizzle-orm/postgres-js returns a RowList (array-like), not { rows: [] }
+  // drizzle-orm/node-postgres returns { rows: [] }
+  // Support both shapes.
+  if (Array.isArray(result)) return result as any[];
+  if (result && Array.isArray(result.rows)) return result.rows;
+  return [];
+}
+
 async function seedCampaignTemplates() {
   try {
     const existing = await db.execute(sql`SELECT COUNT(*) as count FROM campaign_templates`);
-    const count = Number((existing.rows[0] as any).count);
+    const existingRows = toRows(existing);
+    const count = Number((existingRows[0] as any)?.count ?? 0);
     if (count > 0) return; // already seeded
 
     for (const t of TEMPLATES) {
-      const [inserted] = (await db.execute(sql`
+      const insertedRows = toRows(await db.execute(sql`
         INSERT INTO campaign_templates
           (name, slug, category, description, best_use_case, duration, participant_capacity,
            demo_keys_required, full_keys_required, completion_reward, completion_reward_description,
@@ -375,7 +385,8 @@ async function seedCampaignTemplates() {
            ${t.estimatedViewsMin}, ${t.estimatedViewsMax},
            ${t.status}, ${t.featured}, ${t.recommended}, ${t.displayOrder})
         RETURNING id
-      `)).rows as any[];
+      `));
+      const inserted = insertedRows[0] as any;
 
       const templateId = inserted.id;
       for (const b of t.bounties) {

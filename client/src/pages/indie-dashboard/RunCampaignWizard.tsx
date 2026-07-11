@@ -7,7 +7,7 @@ import {
   Gamepad2, ShieldCheck, Calendar, Key, Image as ImageIcon,
   ClipboardCheck, Target, Upload, AlertTriangle, Plus, Trash2,
 } from "lucide-react";
-import { NEON, CARD_BG, CARD_BORDER } from "../IndieDashboardPage";
+import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 
 const STEPS = [
   { id: 1, label: "Select Game" },

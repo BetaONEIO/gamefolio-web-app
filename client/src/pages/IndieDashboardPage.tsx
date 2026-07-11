@@ -14,10 +14,7 @@ import AnalyticsTab from "./indie-dashboard/AnalyticsTab";
 import GameProfileTab from "./indie-dashboard/GameProfileTab";
 import RunCampaignWizard from "./indie-dashboard/RunCampaignWizard";
 
-export const NEON = "#B7FF18";
-export const CARD_BG = "rgba(255,255,255,0.04)";
-export const CARD_BORDER = "rgba(255,255,255,0.09)";
-export const PAGE_BG = "#070b10";
+export { NEON, CARD_BG, CARD_BORDER, PAGE_BG } from "./indie-dashboard/constants";
 
 const TABS = [
   { id: "overview",   label: "Overview",          icon: BarChart3 },

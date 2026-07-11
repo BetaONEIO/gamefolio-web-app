@@ -5,7 +5,7 @@ import {
   Target, Film, Camera, MessageSquare, Zap, ChevronRight, X,
 } from "lucide-react";
 import { SiSteam } from "react-icons/si";
-import { NEON, CARD_BG, CARD_BORDER, PAGE_BG } from "../IndieDashboardPage";
+import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 
 const CATEGORY_LABELS: Record<string, string> = {
   all: "All Campaigns",
