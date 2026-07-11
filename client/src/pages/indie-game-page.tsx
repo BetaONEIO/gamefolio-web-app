@@ -854,7 +854,16 @@ const IndieGamePage = () => {
 
           {/* Dev + status badge */}
           <div className="flex items-center gap-3 mb-8 flex-wrap justify-center">
-            <span className="text-sm font-semibold text-white/60">{meta.developerName}</span>
+            {indieProfileData?.user?.username ? (
+              <a
+                href={`/studio/${indieProfileData.user.username}`}
+                className="text-sm font-semibold text-white/60 hover:text-white transition-colors underline-offset-2 hover:underline"
+              >
+                {meta.developerName}
+              </a>
+            ) : (
+              <span className="text-sm font-semibold text-white/60">{meta.developerName}</span>
+            )}
             <span className="w-1 h-1 rounded-full bg-white/30" />
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md"
               style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.12)" }}>

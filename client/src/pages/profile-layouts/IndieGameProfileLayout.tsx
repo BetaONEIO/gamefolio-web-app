@@ -523,6 +523,18 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
               </div>
             )}
 
+            {/* Game Community page link */}
+            <div className="pt-4 border-t border-white/10">
+              <a
+                href={`/indie-games/${profile.username}`}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-bold transition-colors"
+                style={{ background: 'rgba(183,255,24,0.08)', border: '1px solid rgba(183,255,24,0.2)', color: brand.accent }}
+              >
+                <Video size={15} />
+                View Game Community
+              </a>
+            </div>
+
             {/* Social / Links */}
             {(igWebsiteUrl || igTwitterUrl || igDiscordUrl || igStudioWebsite) && (
               <div className="p-6 space-y-3" style={cardStyle}>

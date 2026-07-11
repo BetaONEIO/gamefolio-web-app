@@ -158,6 +158,7 @@ const TwoFactorVerifyPage = lazyWithRecovery(() => import("./pages/TwoFactorVeri
 const MintNFTPage = lazyWithRecovery(() => import("./pages/MintNFTPage"));
 const NFTDetailsPage = lazyWithRecovery(() => import("./pages/NFTDetailsPage"));
 const IndieGamePage = lazyWithRecovery(() => import("./pages/indie-game-page"));
+const IndieGameProfilePage = lazyWithRecovery(() => import("./pages/IndieGameProfilePage"));
 
 // Loading component for lazy-loaded routes
 function RouteLoader() {
@@ -484,6 +485,7 @@ function Router() {
           <Route path="/explore" component={ExplorePage} />
           <Route path="/games/:gameSlug" component={GamePage} />
           <Route path="/indie-games/:slug" component={IndieGamePage} />
+          <Route path="/studio/:username" component={IndieGameProfilePage} />
           <Route path="/games/:gameId/clips" component={GameClipsPage} />
           <ProtectedRoute path="/hashtag/:hashtag" component={HashtagPage} />
           <ProtectedRoute path="/upload" component={UploadPage} />
