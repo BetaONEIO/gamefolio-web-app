@@ -710,69 +710,211 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
               </div>
             </div>
 
-            {/* Objective checklist */}
-            <div className="px-7 space-y-2 flex-1">
-              {mandatory.map((b: any, idx: number) => {
-                const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
-                return (
-                  <div key={b.id} className="flex items-start gap-4 rounded-2xl px-4 py-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                    {/* Unchecked circle */}
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full mt-0.5 flex items-center justify-center" style={{ border: "2px solid rgba(255,255,255,0.20)" }}>
-                      <span className="text-[10px] font-black text-white/30">{idx + 1}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <Icon size={13} className="text-white/50 flex-shrink-0" />
-                        <span className="text-sm font-black text-white/85">{objectiveLabel(b)}</span>
-                      </div>
-                      {b.description && <div className="text-[11px] text-white/35 leading-snug mt-0.5">{b.description}</div>}
-                    </div>
-                    {b.xp_reward > 0 && (
-                      <div className="flex-shrink-0 text-xs font-black px-2 py-1 rounded-lg" style={{ background: "rgba(184,255,27,0.10)", color: NEON }}>+{b.xp_reward} XP</div>
-                    )}
-                  </div>
-                );
-              })}
+            {/* ── Mini quest card grid ── */}
+            <div className="px-5 pb-2 flex-1">
+              <div className="grid grid-cols-2 gap-3">
+                {mandatory.map((b: any, idx: number) => {
+                  const ct = b.content_type as string;
+                  const qty = Number(b.quantity ?? 1);
+                  const Icon = CONTENT_TYPE_ICON[ct] ?? Target;
 
-              {/* Bonus objectives */}
-              {optional.length > 0 && (
-                <div className="pt-2">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-white/25 mb-2 px-1">Bonus Objectives</div>
-                  {optional.map((b: any) => {
-                    const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
-                    return (
-                      <div key={b.id} className="flex items-start gap-4 rounded-2xl px-4 py-3.5 mb-2" style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)" }}>
-                        <div className="flex-shrink-0 w-6 h-6 rounded-full mt-0.5 flex items-center justify-center" style={{ border: "1.5px dashed rgba(255,255,255,0.14)" }}>
-                          <Star size={10} className="text-white/25" />
+                  /* Per-type artwork (SVG) */
+                  const artwork = ct === "clip" || ct === "reel" ? (
+                    <svg width="100%" height="100%" viewBox="0 0 180 100" fill="none" preserveAspectRatio="xMidYMid slice">
+                      <rect width="180" height="100" fill="url(#clipGrad)"/>
+                      <defs><radialGradient id="clipGrad" cx="50%" cy="50%" r="70%"><stop offset="0%" stopColor="rgba(184,255,27,0.18)"/><stop offset="100%" stopColor="rgba(7,11,16,0)"/></radialGradient></defs>
+                      <rect x="52" y="22" width="76" height="56" rx="8" fill="rgba(14,21,32,0.90)" stroke="rgba(184,255,27,0.30)" strokeWidth="1.5"/>
+                      <circle cx="90" cy="50" r="14" fill="rgba(184,255,27,0.15)" stroke="rgba(184,255,27,0.50)" strokeWidth="1.5"/>
+                      <polygon points="86,44 86,56 98,50" fill={NEON}/>
+                      <rect x="130" y="30" width="10" height="8" rx="2" fill="rgba(184,255,27,0.40)"/>
+                      <line x1="140" y1="34" x2="148" y2="30" stroke="rgba(184,255,27,0.40)" strokeWidth="2" strokeLinecap="round"/>
+                      <line x1="140" y1="34" x2="148" y2="38" stroke="rgba(184,255,27,0.40)" strokeWidth="2" strokeLinecap="round"/>
+                      <rect x="56" y="68" width="10" height="2" rx="1" fill="rgba(255,255,255,0.15)"/>
+                      <rect x="70" y="68" width="6" height="2" rx="1" fill="rgba(255,255,255,0.10)"/>
+                    </svg>
+                  ) : ct === "screenshot" ? (
+                    <svg width="100%" height="100%" viewBox="0 0 180 100" fill="none" preserveAspectRatio="xMidYMid slice">
+                      <rect width="180" height="100" fill="url(#ssGrad)"/>
+                      <defs><radialGradient id="ssGrad" cx="50%" cy="40%" r="60%"><stop offset="0%" stopColor="rgba(184,255,27,0.14)"/><stop offset="100%" stopColor="rgba(7,11,16,0)"/></radialGradient></defs>
+                      <rect x="50" y="24" width="80" height="52" rx="6" fill="rgba(14,21,32,0.85)" stroke="rgba(184,255,27,0.25)" strokeWidth="1.5"/>
+                      <rect x="56" y="30" width="68" height="38" rx="3" fill="rgba(184,255,27,0.06)"/>
+                      <circle cx="90" cy="49" r="10" fill="none" stroke="rgba(184,255,27,0.50)" strokeWidth="1.5"/>
+                      <circle cx="90" cy="49" r="3" fill={NEON}/>
+                      <line x1="90" y1="36" x2="90" y2="40" stroke="rgba(184,255,27,0.50)" strokeWidth="1.5" strokeLinecap="round"/>
+                      <line x1="90" y1="58" x2="90" y2="62" stroke="rgba(184,255,27,0.50)" strokeWidth="1.5" strokeLinecap="round"/>
+                      <line x1="77" y1="49" x2="81" y2="49" stroke="rgba(184,255,27,0.50)" strokeWidth="1.5" strokeLinecap="round"/>
+                      <line x1="99" y1="49" x2="103" y2="49" stroke="rgba(184,255,27,0.50)" strokeWidth="1.5" strokeLinecap="round"/>
+                      <rect x="56" y="72" width="14" height="2" rx="1" fill="rgba(255,255,255,0.15)"/>
+                    </svg>
+                  ) : ct === "feedback" ? (
+                    <svg width="100%" height="100%" viewBox="0 0 180 100" fill="none" preserveAspectRatio="xMidYMid slice">
+                      <rect width="180" height="100" fill="url(#fbGrad)"/>
+                      <defs><radialGradient id="fbGrad" cx="50%" cy="50%" r="65%"><stop offset="0%" stopColor="rgba(184,255,27,0.12)"/><stop offset="100%" stopColor="rgba(7,11,16,0)"/></radialGradient></defs>
+                      <rect x="48" y="18" width="64" height="64" rx="8" fill="rgba(14,21,32,0.90)" stroke="rgba(184,255,27,0.25)" strokeWidth="1.5"/>
+                      <rect x="56" y="30" width="36" height="3" rx="1.5" fill="rgba(184,255,27,0.60)"/>
+                      <rect x="56" y="38" width="28" height="2.5" rx="1.25" fill="rgba(255,255,255,0.20)"/>
+                      <rect x="56" y="45" width="32" height="2.5" rx="1.25" fill="rgba(255,255,255,0.20)"/>
+                      <rect x="56" y="52" width="22" height="2.5" rx="1.25" fill="rgba(255,255,255,0.15)"/>
+                      <path d="M116 44 L128 38 L140 44 L128 56 Z" fill="rgba(14,21,32,0.90)" stroke="rgba(184,255,27,0.40)" strokeWidth="1.5"/>
+                      <circle cx="128" cy="47" r="4" fill={NEON}/>
+                    </svg>
+                  ) : ct === "stream" ? (
+                    <svg width="100%" height="100%" viewBox="0 0 180 100" fill="none" preserveAspectRatio="xMidYMid slice">
+                      <rect width="180" height="100" fill="url(#stGrad)"/>
+                      <defs><radialGradient id="stGrad" cx="50%" cy="50%" r="65%"><stop offset="0%" stopColor="rgba(239,68,68,0.15)"/><stop offset="100%" stopColor="rgba(7,11,16,0)"/></radialGradient></defs>
+                      <rect x="46" y="22" width="88" height="56" rx="8" fill="rgba(14,21,32,0.85)" stroke="rgba(239,68,68,0.30)" strokeWidth="1.5"/>
+                      <circle cx="65" cy="36" r="5" fill="rgba(239,68,68,0.90)"/>
+                      <rect x="74" y="33" width="24" height="3" rx="1.5" fill="rgba(255,255,255,0.25)"/>
+                      <rect x="56" y="48" width="68" height="2.5" rx="1.25" fill="rgba(255,255,255,0.12)"/>
+                      <rect x="56" y="55" width="50" height="2.5" rx="1.25" fill="rgba(255,255,255,0.08)"/>
+                      <text x="65" y="39" fill="rgba(239,68,68,0.90)" fontSize="5" fontWeight="900" fontFamily="sans-serif">LIVE</text>
+                    </svg>
+                  ) : ct === "bug" ? (
+                    <svg width="100%" height="100%" viewBox="0 0 180 100" fill="none" preserveAspectRatio="xMidYMid slice">
+                      <rect width="180" height="100" fill="url(#bugGrad)"/>
+                      <defs><radialGradient id="bugGrad" cx="50%" cy="50%" r="60%"><stop offset="0%" stopColor="rgba(251,146,60,0.14)"/><stop offset="100%" stopColor="rgba(7,11,16,0)"/></radialGradient></defs>
+                      <circle cx="90" cy="50" r="26" fill="rgba(14,21,32,0.85)" stroke="rgba(251,146,60,0.35)" strokeWidth="1.5"/>
+                      <line x1="75" y1="50" x2="105" y2="50" stroke="rgba(251,146,60,0.40)" strokeWidth="1.5"/>
+                      <line x1="90" y1="35" x2="90" y2="65" stroke="rgba(251,146,60,0.40)" strokeWidth="1.5"/>
+                      <circle cx="90" cy="50" r="8" fill="none" stroke="rgba(251,146,60,0.70)" strokeWidth="2"/>
+                      <circle cx="90" cy="50" r="3" fill="rgb(251,146,60)"/>
+                    </svg>
+                  ) : (
+                    /* session / default */
+                    <svg width="100%" height="100%" viewBox="0 0 180 100" fill="none" preserveAspectRatio="xMidYMid slice">
+                      <rect width="180" height="100" fill="url(#sesGrad)"/>
+                      <defs><radialGradient id="sesGrad" cx="50%" cy="50%" r="65%"><stop offset="0%" stopColor="rgba(184,255,27,0.12)"/><stop offset="100%" stopColor="rgba(7,11,16,0)"/></radialGradient></defs>
+                      <rect x="55" y="32" width="70" height="42" rx="12" fill="rgba(14,21,32,0.90)" stroke="rgba(184,255,27,0.28)" strokeWidth="1.5"/>
+                      <circle cx="79" cy="53" r="5" fill="none" stroke="rgba(184,255,27,0.50)" strokeWidth="1.5"/>
+                      <circle cx="101" cy="53" r="5" fill="none" stroke="rgba(184,255,27,0.50)" strokeWidth="1.5"/>
+                      <rect x="86" y="45" width="2" height="8" rx="1" fill="rgba(184,255,27,0.50)"/>
+                      <rect x="82" y="49" width="8" height="2" rx="1" fill="rgba(184,255,27,0.50)"/>
+                      <circle cx="98" cy="50" r="1.5" fill={NEON}/>
+                      <circle cx="104" cy="50" r="1.5" fill="rgba(184,255,27,0.40)"/>
+                    </svg>
+                  );
+
+                  const accentColor = (ct === "stream") ? "rgba(239,68,68,0.80)" : (ct === "bug") ? "rgba(251,146,60,0.80)" : NEON;
+                  const accentBg    = (ct === "stream") ? "rgba(239,68,68,0.10)"  : (ct === "bug") ? "rgba(251,146,60,0.10)"  : "rgba(184,255,27,0.10)";
+
+                  return (
+                    <div
+                      key={b.id}
+                      className="rounded-2xl flex flex-col overflow-hidden group cursor-default transition-all duration-300"
+                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.border = `1px solid ${accentColor.replace("0.80","0.35")}`; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLDivElement).style.boxShadow = `0 8px 24px rgba(0,0,0,0.30)`; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.border = "1px solid rgba(255,255,255,0.08)"; (e.currentTarget as HTMLDivElement).style.transform = ""; (e.currentTarget as HTMLDivElement).style.boxShadow = ""; }}
+                    >
+                      {/* Artwork zone ~40% height */}
+                      <div className="relative overflow-hidden flex-shrink-0" style={{ height: 100 }}>
+                        {artwork}
+                        {/* Step number badge */}
+                        <div className="absolute top-2.5 left-2.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black" style={{ background: "rgba(7,11,16,0.80)", color: accentColor, border: `1px solid ${accentColor.replace("0.80","0.35")}` }}>
+                          {idx + 1}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <Icon size={12} className="text-white/30 flex-shrink-0" />
-                            <span className="text-sm font-bold text-white/45">{objectiveLabel(b)}</span>
+                        {/* XP badge */}
+                        {b.xp_reward > 0 && (
+                          <div className="absolute top-2.5 right-2.5 text-[10px] font-black px-2 py-0.5 rounded-full" style={{ background: accentBg, color: accentColor, border: `1px solid ${accentColor.replace("0.80","0.30")}` }}>
+                            +{b.xp_reward} XP
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Content zone */}
+                      <div className="p-3.5 flex flex-col gap-2.5 flex-1">
+                        {/* Icon + title */}
+                        <div className="flex items-start gap-2">
+                          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: accentBg }}>
+                            <Icon size={14} style={{ color: accentColor }} />
+                          </div>
+                          <span className="text-sm font-black text-white leading-snug">{objectiveLabel(b)}</span>
+                        </div>
+
+                        {/* Description */}
+                        {b.description ? (
+                          <p className="text-[11px] text-white/40 leading-snug line-clamp-2">{b.description}</p>
+                        ) : (
+                          <p className="text-[11px] text-white/30 leading-snug">
+                            {ct === "clip" ? `Record ${qty} gameplay clip${qty !== 1 ? "s" : ""} from your session` :
+                             ct === "screenshot" ? `Capture ${qty} in-game screenshot${qty !== 1 ? "s" : ""}` :
+                             ct === "feedback" ? "Share your first impressions of the game" :
+                             ct === "reel" ? `Create ${qty} highlight reel${qty !== 1 ? "s" : ""}` :
+                             ct === "stream" ? "Go live and stream your gameplay session" :
+                             ct === "bug" ? `Document ${qty} bug${qty !== 1 ? "s" : ""} you encounter` :
+                             ct === "session" ? "Complete a full play session" :
+                             "Complete this objective"}
+                          </p>
+                        )}
+
+                        {/* Individual progress bar */}
+                        <div className="mt-auto pt-1">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[10px] text-white/30 font-bold">0 / {qty} Complete</span>
+                          </div>
+                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+                            <div className="h-full rounded-full" style={{ width: "0%", background: accentColor, boxShadow: `0 0 6px ${accentColor}` }} />
                           </div>
                         </div>
-                        {b.xp_reward > 0 && <div className="flex-shrink-0 text-xs font-bold text-white/25">+{b.xp_reward}</div>}
                       </div>
-                    );
-                  })}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* ── Bonus objectives ── */}
+              {optional.length > 0 && (
+                <div className="mt-5">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-white/25 mb-3 px-1">Bonus Objectives</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {optional.map((b: any) => {
+                      const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
+                      const qty = Number(b.quantity ?? 1);
+                      return (
+                        <div
+                          key={b.id}
+                          className="rounded-2xl flex flex-col overflow-hidden"
+                          style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)", opacity: 0.75 }}
+                        >
+                          {/* Muted header band */}
+                          <div className="h-14 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px dashed rgba(255,255,255,0.06)" }}>
+                            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.06)" }}>
+                              <Icon size={18} className="text-white/35" />
+                            </div>
+                          </div>
+                          <div className="p-3 flex flex-col gap-1.5">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-xs font-black text-white/45 leading-tight">{objectiveLabel(b)}</span>
+                              {b.xp_reward > 0 && <span className="text-[10px] font-black text-white/25 flex-shrink-0">+{b.xp_reward}</span>}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Star size={9} className="text-white/20 flex-shrink-0" />
+                              <span className="text-[10px] text-white/25">Bonus · 0 / {qty}</span>
+                            </div>
+                            <div className="h-1 rounded-full overflow-hidden mt-1" style={{ background: "rgba(255,255,255,0.05)" }}>
+                              <div className="h-full" style={{ width: "0%", background: "rgba(255,255,255,0.15)" }} />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Progress bar */}
-            <div className="px-7 pb-7 pt-6">
-              <div className="rounded-2xl p-5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <div className="flex items-center justify-between mb-3">
+            {/* Overall campaign progress */}
+            <div className="px-5 pb-6 pt-5">
+              <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                <div className="flex items-center justify-between mb-2.5">
                   <span className="text-xs font-black text-white/50">Campaign Progress</span>
                   <span className="text-xs font-black" style={{ color: NEON }}>0%</span>
                 </div>
-                {/* Track */}
-                <div className="relative h-3 rounded-full overflow-hidden mb-3" style={{ background: "rgba(255,255,255,0.07)" }}>
-                  <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-700" style={{ width: "0%", background: `linear-gradient(90deg, ${NEON} 0%, rgba(184,255,27,0.60) 100%)`, boxShadow: `0 0 8px ${NEON}` }} />
+                <div className="relative h-2.5 rounded-full overflow-hidden mb-2.5" style={{ background: "rgba(255,255,255,0.07)" }}>
+                  <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: "0%", background: `linear-gradient(90deg, ${NEON}, rgba(184,255,27,0.60))`, boxShadow: `0 0 8px ${NEON}` }} />
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] text-white/35">0 of {mandatory.length} objective{mandatory.length !== 1 ? "s" : ""} complete</span>
-                  <div className="flex items-center gap-1 text-[11px] text-white/35">
+                  <div className="flex items-center gap-1 text-[11px] text-white/30">
                     <Clock size={10} />
                     <span>Est. {bounties.length <= 2 ? "1–2 hrs" : bounties.length <= 4 ? "2–4 hrs" : "4+ hrs"}</span>
                   </div>
