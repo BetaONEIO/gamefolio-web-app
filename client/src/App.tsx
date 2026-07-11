@@ -160,6 +160,7 @@ const NFTDetailsPage = lazyWithRecovery(() => import("./pages/NFTDetailsPage"));
 const IndieGamePage = lazyWithRecovery(() => import("./pages/indie-game-page"));
 const IndieGameProfilePage = lazyWithRecovery(() => import("./pages/IndieGameProfilePage"));
 const IndieGameDashboard = lazyWithRecovery(() => import("./pages/IndieGameDashboard"));
+const BountiesPage = lazyWithRecovery(() => import("./pages/BountiesPage"));
 
 // Loading component for lazy-loaded routes
 function RouteLoader() {
@@ -493,6 +494,7 @@ function Router() {
           <ProtectedRoute path="/upload" component={UploadPage} />
           <ProtectedRoute path="/scheduled-posts" component={ScheduledPostsPage} />
           <PartnerProtectedRoute path="/indie/dashboard" partnerType="indie" component={IndieDashboardPage} />
+          <Route path="/bounties" component={BountiesPage} />
           <Route path="/streamer/dashboard" component={StreamerDashboardPage} />
           <ProtectedRoute path="/upload/bulk" component={BulkUploadPage} />
           <ProtectedRoute path="/upload/screenshots" component={ScreenshotUploadPage} />
