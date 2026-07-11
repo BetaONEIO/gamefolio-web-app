@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -243,27 +243,69 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
 }
 
 // ── Featured bounty (cinematic hero) ──────────────────────────────────────
-function FeaturedBounty({ campaign, onClick }: { campaign: any; onClick: () => void }) {
+function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (c: any) => void }) {
+  const [idx, setIdx] = useState(0);
+  const [fading, setFading] = useState(false);
+
+  const goTo = useCallback((next: number) => {
+    setFading(true);
+    setTimeout(() => {
+      setIdx(next);
+      setFading(false);
+    }, 220);
+  }, []);
+
+  const prev = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    goTo((idx - 1 + campaigns.length) % campaigns.length);
+  }, [idx, campaigns.length, goTo]);
+
+  const next = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    goTo((idx + 1) % campaigns.length);
+  }, [idx, campaigns.length, goTo]);
+
+  useEffect(() => {
+    if (campaigns.length < 2) return;
+    const t = setInterval(() => {
+      setFading(true);
+      setTimeout(() => {
+        setIdx(i => (i + 1) % campaigns.length);
+        setFading(false);
+      }, 220);
+    }, 5000);
+    return () => clearInterval(t);
+  }, [campaigns.length]);
+
+  if (campaigns.length === 0) return null;
+  const campaign = campaigns[idx];
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
   const bounties: any[] = campaign.bounties ?? [];
   const totalXP = campaign.total_campaign_xp ?? bounties.reduce((a: number, b: any) => a + Number(b.xp_reward ?? 0), 0);
   const fullLeft = Number(campaign.full_keys_remaining ?? 0);
 
   return (
-    <div className="relative overflow-hidden cursor-pointer group" style={{ height: 380 }} onClick={onClick}>
-      {campaign.game_artwork_url ? (
-        <img src={campaign.game_artwork_url} alt={campaign.game_name}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-          style={{ opacity: 0.60 }} />
-      ) : (
-        <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(184,255,27,0.12) 0%, rgba(7,11,16,1) 100%)" }} />
-      )}
-      {/* Gradients */}
+    <div className="relative overflow-hidden cursor-pointer group" style={{ height: 380 }}
+      onClick={() => onSelect(campaign)}>
+
+      {/* Background image — fades between slides */}
+      <div className="absolute inset-0 transition-opacity duration-300" style={{ opacity: fading ? 0 : 1 }}>
+        {campaign.game_artwork_url ? (
+          <img src={campaign.game_artwork_url} alt={campaign.game_name}
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+            style={{ opacity: 0.60 }} />
+        ) : (
+          <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(184,255,27,0.12) 0%, rgba(7,11,16,1) 100%)" }} />
+        )}
+      </div>
+
+      {/* Gradients (always on) */}
       <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #070b10 0%, rgba(7,11,16,0.60) 50%, transparent 100%)" }} />
       <div className="absolute inset-0" style={{ background: "linear-gradient(to right, #070b10 0%, transparent 70%)" }} />
 
-      <div className="absolute inset-0 flex flex-col justify-end px-8 pb-7">
-        {/* Labels */}
+      {/* Slide content */}
+      <div className="absolute inset-0 flex flex-col justify-end px-8 pb-7 transition-opacity duration-300"
+        style={{ opacity: fading ? 0 : 1 }}>
         <div className="flex items-center gap-2 mb-3">
           <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm"
             style={{ color: NEON, background: "rgba(184,255,27,0.12)", border: "1px solid rgba(184,255,27,0.25)" }}>
@@ -287,7 +329,6 @@ function FeaturedBounty({ campaign, onClick }: { campaign: any; onClick: () => v
           </p>
         )}
 
-        {/* Reward preview inline */}
         <div className="flex items-center gap-4 mb-5">
           {demoLeft > 0 && (
             <div className="flex items-center gap-1.5">
@@ -317,7 +358,7 @@ function FeaturedBounty({ campaign, onClick }: { campaign: any; onClick: () => v
           <button
             className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
             style={{ background: NEON, color: "#070b10" }}
-            onClick={e => { e.stopPropagation(); onClick(); }}>
+            onClick={e => { e.stopPropagation(); onSelect(campaign); }}>
             <ShieldCheck size={16} /> Accept Mission
           </button>
           <span className="text-xs text-white/40 font-bold">
@@ -325,6 +366,41 @@ function FeaturedBounty({ campaign, onClick }: { campaign: any; onClick: () => v
           </span>
         </div>
       </div>
+
+      {/* Prev / Next arrows */}
+      {campaigns.length > 1 && (
+        <>
+          <button
+            className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 rounded-full transition-all hover:scale-110"
+            style={{ background: "rgba(0,0,0,0.50)", border: "1px solid rgba(255,255,255,0.15)" }}
+            onClick={prev}>
+            <ChevronLeft size={18} className="text-white" />
+          </button>
+          <button
+            className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 rounded-full transition-all hover:scale-110"
+            style={{ background: "rgba(0,0,0,0.50)", border: "1px solid rgba(255,255,255,0.15)" }}
+            onClick={next}>
+            <ChevronRight size={18} className="text-white" />
+          </button>
+        </>
+      )}
+
+      {/* Dot indicators */}
+      {campaigns.length > 1 && (
+        <div className="absolute bottom-5 right-8 flex items-center gap-2">
+          {campaigns.map((_, i) => (
+            <button key={i}
+              className="rounded-full transition-all duration-300"
+              style={{
+                width: i === idx ? 20 : 6,
+                height: 6,
+                background: i === idx ? NEON : "rgba(255,255,255,0.30)",
+              }}
+              onClick={e => { e.stopPropagation(); goTo(i); }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1319,11 +1395,16 @@ export default function BountiesPage() {
 
   const activeFilterCount = activeFilters.size;
 
-  // Derived lists for carousels / featured
-  const featuredCampaign = useMemo(() => {
-    const pinned = indieCampaigns.find((c: any) => c.is_featured);
-    if (pinned) return pinned;
-    return [...indieCampaigns].sort((a: any, b: any) => Number(b.participant_count ?? 0) - Number(a.participant_count ?? 0))[0] ?? null;
+  // Top 3 trending campaigns for the hero slider
+  const featuredSlides = useMemo(() => {
+    const sorted = [...indieCampaigns].sort(
+      (a: any, b: any) => Number(b.participant_count ?? 0) - Number(a.participant_count ?? 0),
+    );
+    // Pinned featured campaign always first
+    const pinned = sorted.find((c: any) => c.is_featured);
+    const rest = sorted.filter((c: any) => !c.is_featured);
+    const ordered = pinned ? [pinned, ...rest] : sorted;
+    return ordered.slice(0, 3);
   }, [indieCampaigns]);
 
 
@@ -1332,9 +1413,9 @@ export default function BountiesPage() {
   return (
     <div className="min-h-screen" style={{ background: PAGE_BG }}>
 
-      {/* ── Featured Bounty (full-width cinematic) ── */}
-      {mainTab === "marketplace" && !isLoading && featuredCampaign && (
-        <FeaturedBounty campaign={featuredCampaign} onClick={() => openDetail(featuredCampaign)} />
+      {/* ── Featured Slider (top 3 trending, auto-rotating) ── */}
+      {mainTab === "marketplace" && !isLoading && featuredSlides.length > 0 && (
+        <FeaturedSlider campaigns={featuredSlides} onSelect={openDetail} />
       )}
 
       {/* ── Community Stats strip ── */}
