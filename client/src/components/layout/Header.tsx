@@ -681,16 +681,25 @@ const Header = () => {
                     </DropdownMenuGroup>
 
                     <DropdownMenuSeparator />
+                    {(user.userType?.split(",").includes("indie_developer") || isPartnerType(user, "indie") || user.role === "admin") && (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/studio-dashboard")}
+                      >
+                        <Rocket className="mr-2 h-4 w-4" />
+                        Game Dashboard
+                      </DropdownMenuItem>
+                    )}
                     {(isPartnerType(user, "indie") || user.role === "admin") && (
                       <DropdownMenuItem
                         className="cursor-pointer"
                         onClick={() => setLocation("/indie/dashboard")}
                       >
                         <Rocket className="mr-2 h-4 w-4" />
-                        Indie Dashboard
+                        Indie Partner Dashboard
                       </DropdownMenuItem>
                     )}
-                    {(isPartnerType(user, "streamer") || user.role === "admin") && (
+                    {(user.userType?.split(",").includes("streamer") || isPartnerType(user, "streamer") || user.role === "admin") && (
                       <DropdownMenuItem
                         className="cursor-pointer"
                         onClick={() => setLocation("/streamer/dashboard")}

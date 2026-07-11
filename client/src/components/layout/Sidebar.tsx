@@ -258,9 +258,11 @@ const Sidebar = () => {
   };
 
   const isIndieDev = user?.userType?.split(",").includes("indie_developer");
+  const isStreamerType = user?.userType?.split(",").includes("streamer");
+  const dashboardHref = isIndieDev ? "/studio-dashboard" : isStreamerType ? "/streamer/dashboard" : "/dashboard";
   const menuItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
-    ...(user ? [{ icon: GamefolioDashboardIcon, label: "Dashboard", href: isIndieDev ? "/indie/dashboard" : "/dashboard" }] : []),
+    ...(user ? [{ icon: GamefolioDashboardIcon, label: "Dashboard", href: dashboardHref }] : []),
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },

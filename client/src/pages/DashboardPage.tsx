@@ -945,10 +945,13 @@ export default function DashboardPage() {
     enabled: !!user?.id,
   });
 
-  // Redirect indie developers to their dedicated dashboard
+  // Redirect users to their profile-type dashboard based on onboarding selection
   useEffect(() => {
-    if (user?.userType?.split(",").includes("indie_developer")) {
-      setLocation("/indie/dashboard");
+    const types = user?.userType?.split(",") ?? [];
+    if (types.includes("indie_developer")) {
+      setLocation("/studio-dashboard");
+    } else if (types.includes("streamer")) {
+      setLocation("/streamer/dashboard");
     }
   }, [user, setLocation]);
 

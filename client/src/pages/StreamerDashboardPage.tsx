@@ -1,4 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
+import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,13 +12,22 @@ import {
   DollarSign,
 } from "lucide-react";
 
-// Scaffold for the Streamer Partner dashboard.
-// Gated by PartnerProtectedRoute(partnerType="streamer"); sections are
-// placeholders to be wired up as the Streamer Partner programme ships.
-// NOTE: access is the PAID Streamer Partner entitlement — NOT the self-selected
-// "streamer" persona tag or a connected Twitch/Kick channel.
 export default function StreamerDashboardPage() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
+
+  // Only allow users who selected streamer in onboarding OR hold the paid Streamer Partner entitlement
+  const hasAccess =
+    user?.userType?.split(",").includes("streamer") ||
+    user?.partnerType === "streamer" ||
+    user?.role === "admin";
+
+  useEffect(() => {
+    if (user === null) setLocation("/auth");
+    else if (user && !hasAccess) setLocation("/dashboard");
+  }, [user, hasAccess, setLocation]);
+
+  if (!user || !hasAccess) return null;
 
   const stats = [
     { label: "Followers", value: "—", icon: Users },
