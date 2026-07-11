@@ -6,7 +6,7 @@ import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import {
   Target, ShieldCheck, Clock, Users, Key, ChevronRight, ChevronLeft,
   Zap, Copy, Check, Loader2, Lock,
-  Film, Camera, MessageSquare, Star, AlertCircle,
+  Film, Camera, MessageSquare, Star, AlertCircle, Upload, Plus,
   Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown, Store,
 } from "lucide-react";
 import { SiSteam } from "react-icons/si";
@@ -606,6 +606,78 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
     },
   });
 
+  // ── Mission Workspace state ──
+  const [activePanel, setActivePanel] = useState<{ bounty: any } | null>(null);
+  const [selectedItems, setSelectedItems] = useState<Record<number, any[]>>({});
+  const [submittedItems, setSubmittedItems] = useState<Record<number, any[]>>({});
+  const [hasJoined, setHasJoined] = useState(false);
+  const [panelSubmitting, setPanelSubmitting] = useState(false);
+
+  const activePanelCt = activePanel?.bounty?.content_type ?? "none";
+  const { data: pickerData, isLoading: pickerLoading } = useQuery<any>({
+    queryKey: ["/api/bounties/my/content-picker", activePanelCt],
+    queryFn: async () => {
+      if (!activePanel || !user) return { items: [], count: 0 };
+      const ct = activePanel.bounty.content_type;
+      const res = await fetch(`/api/bounties/my/content-picker?contentType=${encodeURIComponent(ct)}`, { credentials: "include" });
+      if (!res.ok) return { items: [], count: 0 };
+      return res.json();
+    },
+    enabled: !!user && !!activePanel,
+    staleTime: 30_000,
+  });
+
+  const getProgress = (bountyId: number) => selectedItems[bountyId]?.length ?? 0;
+  const isObjectiveDone = (b: any) => getProgress(b.id) >= Number(b.quantity ?? 1);
+  const completedMandatoryCount = mandatory.filter(isObjectiveDone).length;
+  const overallPct = mandatory.length > 0 ? Math.round(completedMandatoryCount / mandatory.length * 100) : 0;
+
+  function toggleItem(bountyId: number, item: any, qty: number) {
+    setSelectedItems(prev => {
+      const current = prev[bountyId] ?? [];
+      const exists = current.some((i: any) => i.id === item.id);
+      if (exists) return { ...prev, [bountyId]: current.filter((i: any) => i.id !== item.id) };
+      if (current.length >= qty) return prev;
+      return { ...prev, [bountyId]: [...current, item] };
+    });
+  }
+
+  async function handleConfirmSelection(bounty: any) {
+    if (!user) return;
+    const items = selectedItems[bounty.id] ?? [];
+    if (items.length === 0) { setActivePanel(null); return; }
+    setPanelSubmitting(true);
+    try {
+      if (!hasJoined) {
+        const joinRes = await apiRequest("POST", `/api/bounties/${campaign.id}/join`, {});
+        if (!joinRes.ok) {
+          const err = await joinRes.json().catch(() => ({}));
+          toast({ title: "Could not join", description: (err as any).error ?? "Join failed", variant: "destructive" });
+          setPanelSubmitting(false);
+          return;
+        }
+        setHasJoined(true);
+        qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
+      }
+      const ct = bounty.content_type;
+      for (const item of items) {
+        const body: any = { contentType: ct };
+        if (ct === "clip" || ct === "reel") body.clipId = item.id;
+        else if (ct === "screenshot") body.screenshotId = item.id;
+        else body.contentUrl = item.url ?? "";
+        await apiRequest("POST", `/api/bounties/my/${campaign.id}/submit/${bounty.id}`, body);
+      }
+      setSubmittedItems(prev => ({ ...prev, [bounty.id]: [...(prev[bounty.id] ?? []), ...items] }));
+      setSelectedItems(prev => ({ ...prev, [bounty.id]: [] }));
+      toast({ title: "✅ Objective Submitted!", description: `${items.length} item${items.length !== 1 ? "s" : ""} submitted for review.` });
+      setActivePanel(null);
+    } catch (e: any) {
+      toast({ title: "Submission failed", description: e.message, variant: "destructive" });
+    } finally {
+      setPanelSubmitting(false);
+    }
+  }
+
   function objectiveLabel(b: any) {
     const qty = Number(b.quantity ?? 1);
     const ct = b.content_type as string;
@@ -696,27 +768,37 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-10">
 
-          {/* ══ LEFT: Mission Objectives ══ */}
+          {/* ══ LEFT: Mission Workspace ══ */}
           <div className="rounded-3xl flex flex-col" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
 
             {/* Card header */}
             <div className="flex items-center justify-between px-7 pt-7 pb-5">
               <div>
-                <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: NEON }}>Mission Objectives</div>
-                <div className="text-xl font-black text-white">What You Need To Do</div>
+                <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: NEON }}>Mission Workspace</div>
+                <div className="text-xl font-black text-white">Your Creator Dashboard</div>
               </div>
-              <div className="text-xs font-bold px-3 py-1.5 rounded-full" style={{ background: "rgba(184,255,27,0.10)", color: NEON }}>
-                {mandatory.length} Required
+              <div className="flex items-center gap-2">
+                {completedMandatoryCount > 0 && (
+                  <div className="text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 transition-all duration-500" style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>
+                    <Check size={10} /> {completedMandatoryCount}/{mandatory.length}
+                  </div>
+                )}
+                <div className="text-xs font-bold px-3 py-1.5 rounded-full" style={{ background: "rgba(184,255,27,0.10)", color: NEON }}>
+                  {mandatory.length} Required
+                </div>
               </div>
             </div>
 
-            {/* ── Mini quest card grid ── */}
-            <div className="px-5 pb-2 flex-1">
+            {/* ── Interactive quest card grid ── */}
+            <div className="px-5 pb-5 flex-1">
               <div className="grid grid-cols-2 gap-3">
                 {mandatory.map((b: any, idx: number) => {
                   const ct = b.content_type as string;
                   const qty = Number(b.quantity ?? 1);
                   const Icon = CONTENT_TYPE_ICON[ct] ?? Target;
+                  const prog = getProgress(b.id);
+                  const done = prog >= qty;
+                  const subItems = submittedItems[b.id] ?? [];
 
                   /* Per-type artwork (SVG) */
                   const artwork = ct === "clip" || ct === "reel" ? (
@@ -794,35 +876,39 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                     </svg>
                   );
 
-                  const accentColor = (ct === "stream") ? "rgba(239,68,68,0.80)" : (ct === "bug") ? "rgba(251,146,60,0.80)" : NEON;
-                  const accentBg    = (ct === "stream") ? "rgba(239,68,68,0.10)"  : (ct === "bug") ? "rgba(251,146,60,0.10)"  : "rgba(184,255,27,0.10)";
+                  const baseAccent = ct === "stream" ? "rgba(239,68,68,0.85)" : ct === "bug" ? "rgba(251,146,60,0.85)" : NEON;
+                  const baseBg    = ct === "stream" ? "rgba(239,68,68,0.10)" : ct === "bug" ? "rgba(251,146,60,0.10)" : "rgba(184,255,27,0.10)";
+                  const accentColor = done ? "#22c55e" : baseAccent;
+                  const accentBg    = done ? "rgba(34,197,94,0.10)" : baseBg;
 
                   return (
                     <div
                       key={b.id}
-                      className="rounded-2xl flex flex-col overflow-hidden group cursor-default transition-all duration-300"
-                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.border = `1px solid ${accentColor.replace("0.80","0.35")}`; (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLDivElement).style.boxShadow = `0 8px 24px rgba(0,0,0,0.30)`; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.border = "1px solid rgba(255,255,255,0.08)"; (e.currentTarget as HTMLDivElement).style.transform = ""; (e.currentTarget as HTMLDivElement).style.boxShadow = ""; }}
+                      className="rounded-2xl flex flex-col overflow-hidden transition-all duration-500"
+                      style={{ background: done ? "rgba(34,197,94,0.05)" : "rgba(255,255,255,0.03)", border: done ? "1px solid rgba(34,197,94,0.28)" : "1px solid rgba(255,255,255,0.08)", boxShadow: done ? "0 0 20px rgba(34,197,94,0.08)" : "none" }}
                     >
-                      {/* Artwork zone ~40% height */}
-                      <div className="relative overflow-hidden flex-shrink-0" style={{ height: 100 }}>
+                      {/* Artwork zone */}
+                      <div className="relative overflow-hidden flex-shrink-0" style={{ height: 96 }}>
                         {artwork}
-                        {/* Step number badge */}
-                        <div className="absolute top-2.5 left-2.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black" style={{ background: "rgba(7,11,16,0.80)", color: accentColor, border: `1px solid ${accentColor.replace("0.80","0.35")}` }}>
-                          {idx + 1}
+                        {done && (
+                          <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(34,197,94,0.22)" }}>
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "#22c55e", boxShadow: "0 0 24px rgba(34,197,94,0.60)" }}>
+                              <Check size={18} color="white" strokeWidth={3} />
+                            </div>
+                          </div>
+                        )}
+                        <div className="absolute top-2.5 left-2.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black" style={{ background: "rgba(7,11,16,0.85)", color: accentColor, border: "1px solid rgba(255,255,255,0.12)" }}>
+                          {done ? <Check size={9} strokeWidth={3} /> : idx + 1}
                         </div>
-                        {/* XP badge */}
                         {b.xp_reward > 0 && (
-                          <div className="absolute top-2.5 right-2.5 text-[10px] font-black px-2 py-0.5 rounded-full" style={{ background: accentBg, color: accentColor, border: `1px solid ${accentColor.replace("0.80","0.30")}` }}>
+                          <div className="absolute top-2.5 right-2.5 text-[10px] font-black px-2 py-0.5 rounded-full" style={{ background: accentBg, color: accentColor, border: "1px solid rgba(255,255,255,0.10)" }}>
                             +{b.xp_reward} XP
                           </div>
                         )}
                       </div>
 
                       {/* Content zone */}
-                      <div className="p-3.5 flex flex-col gap-2.5 flex-1">
-                        {/* Icon + title */}
+                      <div className="p-3.5 flex flex-col gap-2 flex-1">
                         <div className="flex items-start gap-2">
                           <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: accentBg }}>
                             <Icon size={14} style={{ color: accentColor }} />
@@ -830,31 +916,67 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                           <span className="text-sm font-black text-white leading-snug">{objectiveLabel(b)}</span>
                         </div>
 
-                        {/* Description */}
-                        {b.description ? (
-                          <p className="text-[11px] text-white/40 leading-snug line-clamp-2">{b.description}</p>
-                        ) : (
-                          <p className="text-[11px] text-white/30 leading-snug">
-                            {ct === "clip" ? `Record ${qty} gameplay clip${qty !== 1 ? "s" : ""} from your session` :
-                             ct === "screenshot" ? `Capture ${qty} in-game screenshot${qty !== 1 ? "s" : ""}` :
-                             ct === "feedback" ? "Share your first impressions of the game" :
-                             ct === "reel" ? `Create ${qty} highlight reel${qty !== 1 ? "s" : ""}` :
-                             ct === "stream" ? "Go live and stream your gameplay session" :
-                             ct === "bug" ? `Document ${qty} bug${qty !== 1 ? "s" : ""} you encounter` :
-                             ct === "session" ? "Complete a full play session" :
-                             "Complete this objective"}
-                          </p>
+                        <p className="text-[11px] leading-snug line-clamp-2" style={{ color: "rgba(255,255,255,0.36)" }}>
+                          {b.description ?? (ct === "clip" ? `Record ${qty} gameplay clip${qty !== 1 ? "s" : ""}` :
+                            ct === "screenshot" ? `Capture ${qty} in-game screenshot${qty !== 1 ? "s" : ""}` :
+                            ct === "feedback" ? "Share your impressions of the game" :
+                            ct === "reel" ? `Create ${qty} highlight reel${qty !== 1 ? "s" : ""}` :
+                            ct === "stream" ? "Go live and stream your gameplay" :
+                            ct === "bug" ? `Document ${qty} bug${qty !== 1 ? "s" : ""}` : "Complete this objective")}
+                        </p>
+
+                        {/* Submitted items with awaiting verification status */}
+                        {subItems.length > 0 && (
+                          <div className="rounded-xl p-2.5 space-y-1.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                            <div className="text-[9px] font-black uppercase tracking-widest text-white/25">Submitted</div>
+                            <div className="flex gap-1 flex-wrap">
+                              {subItems.map((item: any) => (
+                                <div key={item.id} className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0" style={{ border: "1px solid rgba(34,197,94,0.45)" }}>
+                                  {item.thumbnailUrl
+                                    ? <img src={item.thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                                    : <div className="w-full h-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.06)" }}><Icon size={11} className="text-white/35" /></div>}
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[10px] font-bold" style={{ color: "rgba(251,191,36,0.85)" }}>
+                              <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse flex-shrink-0" />
+                              Awaiting Verification
+                            </div>
+                          </div>
                         )}
 
-                        {/* Individual progress bar */}
-                        <div className="mt-auto pt-1">
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] text-white/30 font-bold">0 / {qty} Complete</span>
+                        {/* Progress bar */}
+                        <div className="mt-auto">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] font-bold transition-colors duration-500" style={{ color: done ? "#22c55e" : "rgba(255,255,255,0.28)" }}>
+                              {prog} / {qty}{done ? " ✓" : ""}
+                            </span>
+                            {!done && prog > 0 && <span className="text-[10px] text-white/22">{Math.round(prog / qty * 100)}%</span>}
                           </div>
                           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
-                            <div className="h-full rounded-full" style={{ width: "0%", background: accentColor, boxShadow: `0 0 6px ${accentColor}` }} />
+                            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(prog / qty * 100, 100)}%`, background: done ? "#22c55e" : accentColor, boxShadow: done ? "0 0 8px rgba(34,197,94,0.50)" : "none" }} />
                           </div>
                         </div>
+
+                        {/* Dynamic action button */}
+                        <button
+                          onClick={() => !done && user ? setActivePanel({ bounty: b }) : undefined}
+                          disabled={done || !user}
+                          className="w-full py-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all duration-200 hover:brightness-110 disabled:cursor-default"
+                          style={done
+                            ? { background: "rgba(34,197,94,0.10)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.22)" }
+                            : !user
+                            ? { background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.22)", border: "1px solid rgba(255,255,255,0.07)" }
+                            : { background: accentBg, color: accentColor, border: `1px solid ${ct === "stream" ? "rgba(239,68,68,0.22)" : ct === "bug" ? "rgba(251,146,60,0.22)" : "rgba(184,255,27,0.22)"}` }}
+                        >
+                          {done
+                            ? <><Check size={11} strokeWidth={3} /> Submitted for Review</>
+                            : !user
+                            ? <><Lock size={11} /> Sign in to Submit</>
+                            : prog > 0
+                            ? <><Plus size={11} /> Continue ({prog}/{qty})</>
+                            : <><Upload size={11} /> {ct === "clip" ? "Add Clips" : ct === "screenshot" ? "Add Screenshots" : ct === "reel" ? "Add Reels" : ct === "feedback" ? "Write Feedback" : ct === "stream" ? "Go Live" : ct === "bug" ? "Report Bugs" : "Add Content"}</>}
+                        </button>
                       </div>
                     </div>
                   );
@@ -869,30 +991,33 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                     {optional.map((b: any) => {
                       const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
                       const qty = Number(b.quantity ?? 1);
+                      const prog = getProgress(b.id);
+                      const done = prog >= qty;
                       return (
-                        <div
-                          key={b.id}
-                          className="rounded-2xl flex flex-col overflow-hidden"
-                          style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)", opacity: 0.75 }}
-                        >
-                          {/* Muted header band */}
-                          <div className="h-14 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px dashed rgba(255,255,255,0.06)" }}>
-                            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.06)" }}>
-                              <Icon size={18} className="text-white/35" />
+                        <div key={b.id} className="rounded-2xl flex flex-col overflow-hidden transition-all duration-500"
+                          style={{ background: done ? "rgba(34,197,94,0.04)" : "rgba(255,255,255,0.02)", border: done ? "1px solid rgba(34,197,94,0.20)" : "1px dashed rgba(255,255,255,0.08)", opacity: done ? 1 : 0.72 }}>
+                          <div className="h-14 flex items-center justify-center relative" style={{ background: "rgba(255,255,255,0.03)", borderBottom: "1px dashed rgba(255,255,255,0.06)" }}>
+                            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: done ? "rgba(34,197,94,0.12)" : "rgba(255,255,255,0.06)" }}>
+                              <Icon size={18} style={{ color: done ? "#22c55e" : "rgba(255,255,255,0.30)" }} />
                             </div>
+                            {done && <div className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: "#22c55e" }}><Check size={9} color="white" strokeWidth={3} /></div>}
                           </div>
                           <div className="p-3 flex flex-col gap-1.5">
                             <div className="flex items-center justify-between gap-1">
-                              <span className="text-xs font-black text-white/45 leading-tight">{objectiveLabel(b)}</span>
-                              {b.xp_reward > 0 && <span className="text-[10px] font-black text-white/25 flex-shrink-0">+{b.xp_reward}</span>}
+                              <span className="text-xs font-black leading-tight" style={{ color: done ? "#22c55e" : "rgba(255,255,255,0.40)" }}>{objectiveLabel(b)}</span>
+                              {b.xp_reward > 0 && <span className="text-[10px] font-black text-white/22 flex-shrink-0">+{b.xp_reward}</span>}
                             </div>
                             <div className="flex items-center gap-1">
                               <Star size={9} className="text-white/20 flex-shrink-0" />
-                              <span className="text-[10px] text-white/25">Bonus · 0 / {qty}</span>
+                              <span className="text-[10px] text-white/22">Bonus · {prog}/{qty}</span>
                             </div>
-                            <div className="h-1 rounded-full overflow-hidden mt-1" style={{ background: "rgba(255,255,255,0.05)" }}>
-                              <div className="h-full" style={{ width: "0%", background: "rgba(255,255,255,0.15)" }} />
+                            <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
+                              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(prog / qty * 100, 100)}%`, background: done ? "#22c55e" : "rgba(255,255,255,0.18)" }} />
                             </div>
+                            <button onClick={() => user && !done && setActivePanel({ bounty: b })} disabled={done || !user} className="w-full mt-0.5 py-1.5 rounded-lg text-[11px] font-black flex items-center justify-center gap-1 transition-all"
+                              style={{ background: done ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.04)", color: done ? "#22c55e" : "rgba(255,255,255,0.28)", border: done ? "1px solid rgba(34,197,94,0.18)" : "1px dashed rgba(255,255,255,0.09)" }}>
+                              {done ? <><Check size={10} strokeWidth={3} /> Done</> : <><Plus size={10} /> Add</>}
+                            </button>
                           </div>
                         </div>
                       );
@@ -900,26 +1025,6 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Overall campaign progress */}
-            <div className="px-5 pb-6 pt-5">
-              <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-xs font-black text-white/50">Campaign Progress</span>
-                  <span className="text-xs font-black" style={{ color: NEON }}>0%</span>
-                </div>
-                <div className="relative h-2.5 rounded-full overflow-hidden mb-2.5" style={{ background: "rgba(255,255,255,0.07)" }}>
-                  <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: "0%", background: `linear-gradient(90deg, ${NEON}, rgba(184,255,27,0.60))`, boxShadow: `0 0 8px ${NEON}` }} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-white/35">0 of {mandatory.length} objective{mandatory.length !== 1 ? "s" : ""} complete</span>
-                  <div className="flex items-center gap-1 text-[11px] text-white/30">
-                    <Clock size={10} />
-                    <span>Est. {bounties.length <= 2 ? "1–2 hrs" : bounties.length <= 4 ? "2–4 hrs" : "4+ hrs"}</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -985,26 +1090,112 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
             <div className="px-7 pb-7 pt-6">
               {user ? (
                 <div className="space-y-3">
-                  <button
-                    disabled={!canAccept}
-                    onClick={() => setShowModal(true)}
-                    className="w-full py-4 rounded-2xl text-base font-black flex items-center justify-center gap-2.5 transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
-                    style={{ background: NEON, color: "#070b10", boxShadow: `0 0 24px rgba(184,255,27,0.35)` }}
-                  >
-                    {!canAccept
-                      ? <><Lock size={18} /> No Keys Available</>
-                      : <><ShieldCheck size={18} /> Accept Mission</>}
-                  </button>
-                  <p className="text-[11px] text-white/25 text-center leading-relaxed">
-                    Accept = use key yourself · genuine content · follow{" "}
-                    <span style={{ color: "rgba(184,255,27,0.6)" }}>Community Guidelines</span>
-                  </p>
+                  {completedMandatoryCount === mandatory.length && mandatory.length > 0 ? (
+                    /* All objectives complete — celebrate */
+                    <div className="rounded-2xl p-5 text-center space-y-2" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.28)", boxShadow: "0 0 30px rgba(34,197,94,0.08)" }}>
+                      <div className="text-2xl">🎉</div>
+                      <div className="text-base font-black text-white">Mission Complete!</div>
+                      <div className="text-xs text-white/45">Your submissions are being reviewed by the developer. Rewards will be distributed once verified.</div>
+                      <div className="flex items-center justify-center gap-1.5 text-xs font-bold mt-1" style={{ color: "#22c55e" }}>
+                        <Check size={12} strokeWidth={3} /> All {mandatory.length} objectives submitted
+                      </div>
+                    </div>
+                  ) : hasJoined ? (
+                    /* Joined, in progress */
+                    <button
+                      onClick={() => mandatory.find((b: any) => !isObjectiveDone(b)) && setActivePanel({ bounty: mandatory.find((b: any) => !isObjectiveDone(b)) })}
+                      className="w-full py-4 rounded-2xl text-base font-black flex items-center justify-center gap-2.5 transition-all hover:brightness-110 active:scale-[0.99]"
+                      style={{ background: NEON, color: "#070b10", boxShadow: `0 0 24px rgba(184,255,27,0.35)` }}
+                    >
+                      <Upload size={18} /> Keep Going! Submit Content
+                    </button>
+                  ) : (
+                    /* Not yet joined */
+                    <button
+                      disabled={!canAccept}
+                      onClick={() => setShowModal(true)}
+                      className="w-full py-4 rounded-2xl text-base font-black flex items-center justify-center gap-2.5 transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
+                      style={{ background: NEON, color: "#070b10", boxShadow: `0 0 24px rgba(184,255,27,0.35)` }}
+                    >
+                      {!canAccept
+                        ? <><Lock size={18} /> No Keys Available</>
+                        : <><ShieldCheck size={18} /> Accept Mission</>}
+                    </button>
+                  )}
+                  {!hasJoined && canAccept && (
+                    <p className="text-[11px] text-white/25 text-center leading-relaxed">
+                      Accept = use key yourself · genuine content · follow{" "}
+                      <span style={{ color: "rgba(184,255,27,0.6)" }}>Community Guidelines</span>
+                    </p>
+                  )}
+                  {hasJoined && completedMandatoryCount < mandatory.length && (
+                    <p className="text-[11px] text-center leading-relaxed" style={{ color: "rgba(184,255,27,0.55)" }}>
+                      {completedMandatoryCount}/{mandatory.length} objectives submitted · keep creating!
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="rounded-2xl p-5 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
                   <Lock size={22} className="mx-auto mb-2.5 text-white/25" />
                   <div className="text-sm font-bold text-white/50 mb-2">Sign in to accept this mission</div>
                   <a href="/auth" className="text-sm font-black" style={{ color: NEON }}>Sign In →</a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── FULL-WIDTH CAMPAIGN PROGRESS ── */}
+        <div className="mb-8 rounded-3xl overflow-hidden transition-all duration-700"
+          style={{ background: CARD_BG, border: `1px solid ${overallPct > 0 ? "rgba(184,255,27,0.25)" : CARD_BORDER}`, boxShadow: overallPct > 0 ? "0 0 40px rgba(184,255,27,0.07)" : "none" }}>
+          <div className="p-6 sm:p-8">
+            {/* Header row */}
+            <div className="flex items-start justify-between mb-6">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: overallPct > 0 ? NEON : "rgba(255,255,255,0.28)" }}>Campaign Progress</div>
+                <div className="text-2xl font-black text-white">
+                  {completedMandatoryCount === mandatory.length && mandatory.length > 0
+                    ? "🎉 Mission Complete!"
+                    : `${completedMandatoryCount} of ${mandatory.length} Objectives Complete`}
+                </div>
+              </div>
+              <div className="text-4xl font-black transition-all duration-700 tabular-nums" style={{ color: overallPct > 0 ? NEON : "rgba(255,255,255,0.14)", textShadow: overallPct > 0 ? `0 0 30px rgba(184,255,27,0.40)` : "none" }}>
+                {overallPct}%
+              </div>
+            </div>
+
+            {/* Large animated progress track */}
+            <div className="relative h-6 rounded-full overflow-hidden mb-5" style={{ background: "rgba(255,255,255,0.06)" }}>
+              <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out"
+                style={{ width: `${overallPct}%`, background: overallPct === 100 ? "linear-gradient(90deg,#22c55e,rgba(34,197,94,0.70))" : `linear-gradient(90deg,${NEON} 0%,rgba(184,255,27,0.65) 100%)`, boxShadow: overallPct > 0 ? `0 0 24px ${overallPct === 100 ? "rgba(34,197,94,0.50)" : "rgba(184,255,27,0.45)"}` : "none" }} />
+              {overallPct > 2 && overallPct < 100 && (
+                <div className="absolute inset-y-0" style={{ left: `${overallPct}%`, width: 3, background: "rgba(255,255,255,0.70)", boxShadow: "0 0 8px rgba(255,255,255,0.80)", transform: "translateX(-1px)" }} />
+              )}
+              {mandatory.length > 1 && mandatory.map((_: any, i: number) => i > 0 && (
+                <div key={i} className="absolute inset-y-0 w-px" style={{ left: `${(i / mandatory.length) * 100}%`, background: "rgba(0,0,0,0.20)" }} />
+              ))}
+            </div>
+
+            {/* Info footer row */}
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-5 flex-wrap">
+                <div className="text-sm text-white/50">
+                  <span className="font-black text-white text-base">{completedMandatoryCount}</span>
+                  {" / "}{mandatory.length} objectives complete
+                </div>
+                <div className="flex items-center gap-1.5 text-sm text-white/32">
+                  <Clock size={13} />
+                  <span>Est. {bounties.length <= 2 ? "1–2 hrs" : bounties.length <= 4 ? "2–4 hrs" : "4+ hrs"}</span>
+                </div>
+              </div>
+              {completedMandatoryCount < mandatory.length && mandatory[completedMandatoryCount]?.xp_reward > 0 && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs" style={{ background: "rgba(184,255,27,0.08)", border: "1px solid rgba(184,255,27,0.18)", color: NEON }}>
+                  <Zap size={11} /><span className="font-black">Next reward: +{mandatory[completedMandatoryCount].xp_reward} XP</span>
+                </div>
+              )}
+              {completedMandatoryCount === mandatory.length && mandatory.length > 0 && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs" style={{ background: "rgba(34,197,94,0.10)", border: "1px solid rgba(34,197,94,0.25)", color: "#22c55e" }}>
+                  <Check size={11} strokeWidth={3} /><span className="font-black">All objectives complete!</span>
                 </div>
               )}
             </div>
@@ -1042,6 +1233,109 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         {/* bottom spacer */}
         <div className="pb-8" />
       </div>
+
+      {/* ── CONTENT PICKER PANEL ── */}
+      {activePanel && (
+        <div className="fixed inset-0 z-50 flex items-end" style={{ background: "rgba(0,0,0,0.82)" }}
+          onClick={() => !panelSubmitting && setActivePanel(null)}>
+          <div className="w-full rounded-t-3xl flex flex-col" style={{ background: "#0e1520", border: "1px solid rgba(184,255,27,0.16)", maxHeight: "80vh" }}
+            onClick={e => e.stopPropagation()}>
+
+            {/* Panel header */}
+            <div className="flex items-start justify-between px-5 pt-5 pb-4 flex-shrink-0" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest mb-0.5" style={{ color: NEON }}>
+                  {activePanel.bounty.content_type === "screenshot" ? "Your Screenshots" : "Your Gameplay Clips"}
+                </div>
+                <div className="text-base font-black text-white">{objectiveLabel(activePanel.bounty)}</div>
+                <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>
+                  Select up to {Number(activePanel.bounty.quantity ?? 1)} item{Number(activePanel.bounty.quantity ?? 1) !== 1 ? "s" : ""}
+                  {(selectedItems[activePanel.bounty.id] ?? []).length > 0 && <span style={{ color: NEON }}> · {(selectedItems[activePanel.bounty.id] ?? []).length} selected</span>}
+                </div>
+              </div>
+              <button onClick={() => setActivePanel(null)} className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ml-4"
+                style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.50)" }}>
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Content grid */}
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              {pickerLoading ? (
+                <div className="flex flex-col items-center justify-center py-14 gap-3">
+                  <Loader2 size={24} className="animate-spin" style={{ color: NEON }} />
+                  <span className="text-xs text-white/35">Finding your content…</span>
+                </div>
+              ) : (pickerData?.items ?? []).length === 0 ? (
+                <div className="text-center py-12 space-y-2">
+                  <div className="text-3xl">🎮</div>
+                  <div className="text-sm font-bold text-white/40">No existing content found</div>
+                  <div className="text-xs text-white/25 max-w-xs mx-auto">Upload {activePanel.bounty.content_type === "screenshot" ? "screenshots" : "clips"} to your Gamefolio profile first, then return here to submit them</div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl mb-4" style={{ background: "rgba(184,255,27,0.06)", border: "1px solid rgba(184,255,27,0.14)" }}>
+                    <Zap size={12} style={{ color: NEON }} />
+                    <span className="text-xs font-bold" style={{ color: NEON }}>
+                      Gamefolio found {pickerData.count} {activePanel.bounty.content_type === "screenshot" ? "screenshot" : "clip"}{pickerData.count !== 1 ? "s" : ""} · tap to select
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    {(pickerData.items ?? []).map((item: any) => {
+                      const isSelected = (selectedItems[activePanel.bounty.id] ?? []).some((i: any) => i.id === item.id);
+                      const qty = Number(activePanel.bounty.quantity ?? 1);
+                      const atMax = (selectedItems[activePanel.bounty.id] ?? []).length >= qty && !isSelected;
+                      const Ic = CONTENT_TYPE_ICON[activePanel.bounty.content_type] ?? Target;
+                      return (
+                        <button key={item.id} onClick={() => !atMax && toggleItem(activePanel.bounty.id, item, qty)} disabled={atMax}
+                          className="relative rounded-xl overflow-hidden transition-all duration-200 aspect-video"
+                          style={{ border: isSelected ? "2px solid #22c55e" : "1px solid rgba(255,255,255,0.08)", opacity: atMax ? 0.28 : 1, boxShadow: isSelected ? "0 0 14px rgba(34,197,94,0.35)" : "none" }}>
+                          {item.thumbnailUrl
+                            ? <img src={item.thumbnailUrl} alt={item.title ?? ""} className="w-full h-full object-cover" />
+                            : <div className="w-full h-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.05)" }}><Ic size={18} className="text-white/25" /></div>}
+                          {isSelected && (
+                            <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(34,197,94,0.28)" }}>
+                              <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "#22c55e" }}>
+                                <Check size={14} color="white" strokeWidth={3} />
+                              </div>
+                            </div>
+                          )}
+                          {item.title && (
+                            <div className="absolute bottom-0 left-0 right-0 px-1.5 py-1 text-[9px] font-bold text-white truncate"
+                              style={{ background: "linear-gradient(to top, rgba(0,0,0,0.82), transparent)" }}>
+                              {item.title}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Panel footer */}
+            <div className="px-5 pb-6 pt-3 flex-shrink-0" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+              <button
+                onClick={() => handleConfirmSelection(activePanel.bounty)}
+                disabled={panelSubmitting || (selectedItems[activePanel.bounty.id] ?? []).length === 0}
+                className="w-full py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: NEON, color: "#070b10", boxShadow: `0 0 24px rgba(184,255,27,0.32)` }}>
+                {panelSubmitting
+                  ? <><Loader2 size={16} className="animate-spin" /> Submitting…</>
+                  : (selectedItems[activePanel.bounty.id] ?? []).length === 0
+                  ? "Select items to continue"
+                  : <><Check size={16} /> Submit {(selectedItems[activePanel.bounty.id] ?? []).length} Item{(selectedItems[activePanel.bounty.id] ?? []).length !== 1 ? "s" : ""} to Campaign</>}
+              </button>
+              {!hasJoined && (
+                <p className="text-center text-[11px] mt-2" style={{ color: "rgba(255,255,255,0.24)" }}>
+                  Accepting the mission happens automatically on your first submission
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── CONFIRMATION MODAL ── */}
       {showModal && (
