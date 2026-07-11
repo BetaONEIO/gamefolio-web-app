@@ -82,19 +82,19 @@ title = "futuristic lootbox crate icon"
 id = "Is5yBR_fDk3rNzBBpEdTj"
 uri = "file://client/public/icons/demo-key-icon.png"
 type = "image"
-title = "demo key neon icon"
+title = "generated_image"
 
 [[generated]]
 id = "v6fYxJaIuimxGh8erJ2xb"
 uri = "file://client/public/icons/full-game-icon.png"
 type = "image"
-title = "full game trophy icon"
+title = "generated_image"
 
 [[generated]]
 id = "lIYkBAC0jjVI5VZ-ijpAe"
 uri = "file://client/public/icons/token-icon.png"
 type = "image"
-title = "GFT token neon icon"
+title = "generated_image"
 
 [[outputs]]
 id = "uRHLdEQZY0LBFpOcTQuXt"
