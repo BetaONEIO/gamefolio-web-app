@@ -78,6 +78,24 @@ uri = "file://client/src/assets/challenge-icons/open-lootbox.png"
 type = "image"
 title = "futuristic lootbox crate icon"
 
+[[generated]]
+id = "Is5yBR_fDk3rNzBBpEdTj"
+uri = "file://client/public/icons/demo-key-icon.png"
+type = "image"
+title = "demo key neon icon"
+
+[[generated]]
+id = "v6fYxJaIuimxGh8erJ2xb"
+uri = "file://client/public/icons/full-game-icon.png"
+type = "image"
+title = "full game trophy icon"
+
+[[generated]]
+id = "lIYkBAC0jjVI5VZ-ijpAe"
+uri = "file://client/public/icons/token-icon.png"
+type = "image"
+title = "GFT token neon icon"
+
 [[outputs]]
 id = "uRHLdEQZY0LBFpOcTQuXt"
 uri = "file://attached_assets/angular_heart_icon_nobg.png"

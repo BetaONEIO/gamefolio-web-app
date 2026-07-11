@@ -75,11 +75,11 @@ function bountyRequirements(bounties: any[]): string[] {
 }
 
 // ── Reward column ─────────────────────────────────────────────────────────
-function RewardCol({ emoji, label, value, active }: { emoji: string; label: string; value: string; active: boolean }) {
+function RewardCol({ icon, label, value, active }: { icon: any; label: string; value: string; active: boolean }) {
   return (
     <div className="flex flex-col items-center gap-1.5 py-3 rounded-xl"
       style={{ background: active ? "rgba(184,255,27,0.07)" : "rgba(255,255,255,0.04)", border: `1px solid ${active ? "rgba(184,255,27,0.20)" : "rgba(255,255,255,0.07)"}` }}>
-      <span className="text-xl leading-none select-none" style={{ filter: active ? "drop-shadow(0 0 5px rgba(184,255,27,0.55))" : "none" }}>{emoji}</span>
+      <div className="w-6 h-6 flex items-center justify-center">{icon}</div>
       <span className="text-[11px] font-black leading-tight text-center px-1" style={{ color: active ? NEON : "rgba(255,255,255,0.85)" }}>{value}</span>
       <span className="text-[9px] leading-tight text-center px-1" style={{ color: "rgba(255,255,255,0.32)" }}>{label}</span>
     </div>
@@ -161,10 +161,10 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
 
         {/* Rewards — 4 equal columns */}
         <div className="grid grid-cols-4 gap-2">
-          <RewardCol emoji="🎮" label="Demo Key"  value={demoLeft  > 0 ? `${demoLeft}`  : "—"} active={demoLeft  > 0} />
-          <RewardCol emoji="🏆" label="Full Game" value={fullLeft  > 0 ? `${fullLeft}`  : "—"} active={fullLeft  > 0} />
-          <RewardCol emoji="⚡" label="Total XP"  value={totalXP > 0 ? `${totalXP.toLocaleString()}` : "—"} active={totalXP > 0} />
-          <RewardCol emoji="💎" label="GFT / SKL" value="—" active={false} />
+          <RewardCol icon={<img src="/icons/demo-key-icon.png" alt="Demo" className="w-5 h-5 object-contain" style={{ filter: demoLeft > 0 ? "drop-shadow(0 0 4px rgba(184,255,27,0.5))" : "grayscale(0.6) brightness(0.7)" }} />} label="Demo Key"  value={demoLeft  > 0 ? `${demoLeft}`  : "—"} active={demoLeft  > 0} />
+          <RewardCol icon={<img src="/icons/full-game-icon.png" alt="Full" className="w-5 h-5 object-contain" style={{ filter: fullLeft > 0 ? "drop-shadow(0 0 4px rgba(255,215,0,0.4))" : "grayscale(0.6) brightness(0.7)" }} />} label="Full Game" value={fullLeft  > 0 ? `${fullLeft}`  : "—"} active={fullLeft  > 0} />
+          <RewardCol icon={<Zap size={20} color={totalXP > 0 ? NEON : "rgba(255,255,255,0.35)"} />} label="Total XP"  value={totalXP > 0 ? `${totalXP.toLocaleString()}` : "—"} active={totalXP > 0} />
+          <RewardCol icon={<img src="/icons/token-icon.png" alt="Token" className="w-5 h-5 object-contain" style={{ filter: "grayscale(0.6) brightness(0.7)" }} />} label="GFT / SKL" value="—" active={false} />
         </div>
 
         {/* CTA */}
