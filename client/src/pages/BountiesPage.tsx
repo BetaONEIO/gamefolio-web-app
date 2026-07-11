@@ -53,136 +53,130 @@ function timeRemaining(endDate: string | null) {
   return `${hours}h left`;
 }
 
+// ── helpers for mission-card requirements ────────────────────────────────
+function bountyRequirements(bounties: any[], hasDemoKey: boolean): string[] {
+  const reqs: string[] = [];
+  if (hasDemoKey) reqs.push("Play the Demo");
+  const seen = new Set<string>();
+  for (const b of bounties) {
+    const qty = Number(b.quantity ?? 1);
+    const ct = b.content_type as string;
+    if (seen.has(ct)) continue;
+    seen.add(ct);
+    if (ct === "clip")       reqs.push(`Upload ${qty} Gameplay Clip${qty !== 1 ? "s" : ""}`);
+    else if (ct === "screenshot") reqs.push(`Upload ${qty} Screenshot${qty !== 1 ? "s" : ""}`);
+    else if (ct === "feedback")   reqs.push("Submit First Impressions");
+    else if (ct === "reel")       reqs.push(`Upload ${qty} Reel${qty !== 1 ? "s" : ""}`);
+    else if (ct === "stream")     reqs.push("Go Live on Stream");
+    else if (ct === "session")    reqs.push("Complete a Play Session");
+    else if (ct === "bug")        reqs.push(`File ${qty} Bug Report${qty !== 1 ? "s" : ""}`);
+    else reqs.push(ct.charAt(0).toUpperCase() + ct.slice(1));
+  }
+  return reqs;
+}
+
+// ── 3-D reward icon boxes ─────────────────────────────────────────────────
+function RewardBox({ emoji, label, value, active }: { emoji: string; label: string; value: string; active?: boolean }) {
+  return (
+    <div className="flex-1 flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl"
+      style={{ background: active ? "rgba(183,255,24,0.07)" : "rgba(255,255,255,0.04)", border: `1px solid ${active ? "rgba(183,255,24,0.18)" : "rgba(255,255,255,0.07)"}` }}>
+      <div className="text-2xl leading-none select-none" style={{ filter: active ? "drop-shadow(0 0 6px rgba(183,255,24,0.5))" : "none" }}>{emoji}</div>
+      <div className="text-[10px] font-black text-center leading-tight" style={{ color: active ? NEON : "rgba(255,255,255,0.9)" }}>{value}</div>
+      <div className="text-[9px] text-center leading-tight" style={{ color: "rgba(255,255,255,0.35)" }}>{label}</div>
+    </div>
+  );
+}
+
 function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => void }) {
   const isGF = !!campaign.gamefolio_managed;
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
   const fullLeft = Number(campaign.full_keys_remaining ?? 0);
-  const spots = Number(campaign.participant_capacity) - Number(campaign.participant_count ?? 0);
   const bounties: any[] = campaign.bounties ?? [];
   const totalXp = bounties.reduce((a: number, b: any) => a + Number(b.xp_reward ?? 0), 0);
+  const reqs = bountyRequirements(bounties, demoLeft > 0 || isGF);
 
   return (
     <div
-      className="rounded-2xl overflow-hidden cursor-pointer group transition-all hover:scale-[1.01]"
-      style={{ background: CARD_BG, border: `1px solid ${isGF ? "rgba(183,255,24,0.18)" : CARD_BORDER}` }}
+      className="rounded-2xl overflow-hidden cursor-pointer group transition-all duration-200 hover:translate-y-[-2px] hover:shadow-2xl"
+      style={{
+        background: "#0e1520",
+        border: `1px solid ${isGF ? "rgba(183,255,24,0.22)" : "rgba(255,255,255,0.10)"}`,
+        boxShadow: isGF ? "0 0 0 0 rgba(183,255,24,0)" : undefined,
+      }}
       onClick={onClick}
     >
-      {/* Artwork / Banner */}
-      <div className="relative h-28 overflow-hidden">
+      {/* ① Banner */}
+      <div className="relative h-44 overflow-hidden rounded-t-2xl">
         {campaign.game_artwork_url ? (
-          <img src={campaign.game_artwork_url} alt={campaign.game_name} className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity" />
-        ) : isGF ? (
-          <div className="w-full h-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, rgba(183,255,24,0.10) 0%, rgba(183,255,24,0.03) 100%)" }}>
-            <Target size={32} color="rgba(183,255,24,0.25)" />
-          </div>
+          <img
+            src={campaign.game_artwork_url}
+            alt={campaign.game_name}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
         ) : (
-          <div className="w-full h-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.02)" }}>
-            <Target size={28} color="rgba(255,255,255,0.1)" />
+          <div className="w-full h-full flex items-center justify-center"
+            style={{ background: isGF
+              ? "linear-gradient(135deg, #0e2a0a 0%, #0a1f1a 50%, #07100a 100%)"
+              : "linear-gradient(135deg, #0d1624 0%, #0a1020 100%)" }}>
+            <Target size={40} color="rgba(183,255,24,0.15)" />
           </div>
         )}
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,16,0.9) 0%, transparent 60%)" }} />
-
-        {/* Badges */}
-        <div className="absolute top-2 left-2 flex flex-wrap gap-1">
-          {isGF ? (
-            <span className="flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full"
-              style={{ color: "#070b10", background: NEON }}>
-              <Target size={8} /> Gamefolio
-            </span>
-          ) : (
-            <span className="flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full"
-              style={{ color: "#070b10", background: NEON }}>
-              <ShieldCheck size={8} /> GF Verified
-            </span>
-          )}
-          {campaign.recommended && (
-            <span className="flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full"
-              style={{ color: "#f59e0b", background: "rgba(245,158,11,0.18)" }}>
-              <Star size={8} /> Recommended
-            </span>
-          )}
-        </div>
-
-        {/* Duration / ongoing */}
-        <div className="absolute bottom-2 right-2 text-[10px] font-bold text-white/60 flex items-center gap-1">
-          <Clock size={9} />
-          {isGF ? "Always open" : campaign.end_date ? timeRemaining(campaign.end_date) : `${campaign.duration}d campaign`}
+        {/* scrim */}
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #0e1520 0%, rgba(14,21,32,0.3) 55%, transparent 100%)" }} />
+        {/* badge */}
+        <div className="absolute top-3 left-3">
+          <span className="flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-full"
+            style={{ color: "#070b10", background: NEON, letterSpacing: "0.02em" }}>
+            <ShieldCheck size={10} /> {isGF ? "Gamefolio" : "GF Verified"}
+          </span>
         </div>
       </div>
 
-      <div className="p-4 space-y-3">
-        {/* Title */}
+      <div className="px-5 pb-5 pt-4 space-y-5">
+
+        {/* ② Title */}
         <div>
-          {!isGF && <div className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-0.5">{campaign.game_name}</div>}
-          <div className="text-base font-black text-white leading-tight">{campaign.template_name}</div>
+          {!isGF && campaign.game_name && (
+            <div className="text-[10px] font-bold uppercase tracking-[0.12em] mb-1" style={{ color: "rgba(183,255,24,0.6)" }}>
+              {campaign.game_name}
+            </div>
+          )}
+          <div className="text-xl font-black text-white leading-tight tracking-tight">{campaign.template_name}</div>
           {campaign.description && (
-            <div className="text-[11px] text-white/50 mt-1 line-clamp-2">{campaign.description}</div>
+            <div className="text-[12px] mt-1.5 line-clamp-1 leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
+              {campaign.description}
+            </div>
           )}
         </div>
 
-        {/* Rewards row */}
-        <div className="flex flex-wrap gap-1.5">
-          {isGF ? (
-            <>
-              {totalXp > 0 && (
-                <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
-                  style={{ color: NEON, background: "rgba(183,255,24,0.1)" }}>
-                  <Zap size={9} /> {totalXp.toLocaleString()} XP
-                </span>
-              )}
-              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
-                style={{ color: "#a78bfa", background: "rgba(167,139,250,0.1)" }}>
-                <Trophy size={9} /> Badge reward
-              </span>
-              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
-                style={{ color: "#94a3b8", background: "rgba(148,163,184,0.08)" }}>
-                <Users size={9} /> Open to all
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
-                style={{ color: demoLeft > 0 ? NEON : "#6b7280", background: demoLeft > 0 ? "rgba(183,255,24,0.1)" : "rgba(107,114,128,0.1)" }}>
-                <Key size={9} /> {demoLeft > 0 ? `${demoLeft} demo keys` : "No demo keys"}
-              </span>
-              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
-                style={{ color: fullLeft > 0 ? "#4ade80" : "#6b7280", background: fullLeft > 0 ? "rgba(74,222,128,0.1)" : "rgba(107,114,128,0.1)" }}>
-                <Gift size={9} /> {fullLeft > 0 ? `${fullLeft} full-game keys` : "No full keys"}
-              </span>
-              <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
-                style={{ color: "#94a3b8", background: "rgba(148,163,184,0.08)" }}>
-                <Users size={9} /> {Math.max(0, spots)} places
-              </span>
-            </>
-          )}
-        </div>
-
-        {/* Bounty type chips */}
-        {bounties.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {[...new Set(bounties.map((b: any) => b.content_type).filter(Boolean))].slice(0, 4).map((ct: any) => {
-              const Icon = CONTENT_TYPE_ICON[ct] ?? Target;
-              return (
-                <span key={ct} className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-md font-bold"
-                  style={{ color: "rgba(255,255,255,0.5)", background: "rgba(255,255,255,0.06)" }}>
-                  <Icon size={8} /> {CONTENT_TYPE_LABEL[ct] ?? ct}
-                </span>
-              );
-            })}
+        {/* ③ Requirements */}
+        {reqs.length > 0 && (
+          <div className="space-y-1.5">
+            {reqs.map((req, i) => (
+              <div key={i} className="flex items-center gap-2.5 text-sm">
+                <span className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black"
+                  style={{ background: "rgba(183,255,24,0.15)", color: NEON }}>✓</span>
+                <span style={{ color: "rgba(255,255,255,0.75)" }}>{req}</span>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* CTA */}
+        {/* ④ Rewards */}
+        <div className="flex gap-2">
+          <RewardBox emoji="🎮" label="Demo Key"    value={demoLeft > 0 ? `${demoLeft} left` : isGF ? "Instant" : "—"} active={demoLeft > 0 || isGF} />
+          <RewardBox emoji="🏆" label="Full Game"   value={fullLeft > 0 ? `${fullLeft} left` : "—"} active={fullLeft > 0} />
+          <RewardBox emoji="⚡" label="XP Reward"   value={totalXp > 0 ? `${totalXp.toLocaleString()} XP` : "—"} active={totalXp > 0} />
+          <RewardBox emoji="💎" label="GFT Tokens"  value="—" active={false} />
+        </div>
+
+        {/* ⑤ CTA */}
         <button
-          className="w-full py-2.5 rounded-xl text-sm font-black flex items-center justify-center gap-1.5 transition-all hover:brightness-110"
+          className="w-full py-3.5 rounded-xl text-sm font-black tracking-wide flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]"
           style={{ background: NEON, color: "#070b10" }}
           onClick={(e) => { e.stopPropagation(); onClick(); }}
         >
-          {isGF
-            ? <><Zap size={14} /> Join & Earn XP</>
-            : demoLeft > 0
-              ? <><Key size={14} /> View & Join</>
-              : <><ChevronRight size={14} /> View Campaign</>}
+          <Zap size={15} /> Start Bounty
         </button>
       </div>
     </div>
