@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Loader2, KeyRound, Plus } from "lucide-react";
-import { NEON, CARD_BG, CARD_BORDER } from "../IndieDashboardPage";
+import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 
 interface IndieBounty {
   id: number;

@@ -15,6 +15,7 @@ import GameProfileTab from "./indie-dashboard/GameProfileTab";
 import RunCampaignWizard from "./indie-dashboard/RunCampaignWizard";
 
 export { NEON, CARD_BG, CARD_BORDER, PAGE_BG } from "./indie-dashboard/constants";
+import { NEON, CARD_BG, CARD_BORDER, PAGE_BG } from "./indie-dashboard/constants";
 
 const TABS = [
   { id: "overview",   label: "Overview",          icon: BarChart3 },

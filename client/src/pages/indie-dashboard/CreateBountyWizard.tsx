@@ -7,7 +7,7 @@ import {
   Loader2, Plus, Check, Gamepad2, Search, X,
   Upload, Video, Camera, Radio, Sparkles, Film, ImagePlus,
 } from "lucide-react";
-import { NEON, CARD_BG, CARD_BORDER } from "../IndieDashboardPage";
+import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 
 async function uploadBountyMedia(file: File): Promise<{ url: string; type: string }> {
   const formData = new FormData();

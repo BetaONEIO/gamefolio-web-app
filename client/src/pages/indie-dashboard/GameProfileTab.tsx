@@ -4,7 +4,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, RefreshCw, CheckCircle2 } from "lucide-react";
 import { SiSteam } from "react-icons/si";
-import { NEON, CARD_BG, CARD_BORDER } from "../IndieDashboardPage";
+import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 import { ESSENTIAL_FIELDS, OPTIONAL_FIELDS, formatFieldName, isFieldFilled, type Profile, type FieldMeta } from "./edit-profile/types";
 import { BasicInfoSection } from "./edit-profile/BasicInfoSection";
 import { StudioSection } from "./edit-profile/StudioSection";

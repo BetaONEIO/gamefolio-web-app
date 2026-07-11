@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, BarChart3, TrendingUp, Users, Trophy } from "lucide-react";
-import { NEON, CARD_BG, CARD_BORDER } from "../IndieDashboardPage";
+import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 
 interface AnalyticsData {
   joinsOverTime: Array<{ date: string; joins: number }>;

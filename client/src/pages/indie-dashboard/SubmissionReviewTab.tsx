@@ -5,7 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 import {
   Loader2, ClipboardCheck, Check, X, Gamepad2, Video, Camera,
 } from "lucide-react";
-import { NEON, CARD_BG, CARD_BORDER } from "../IndieDashboardPage";
+import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 
 interface IndieBounty {
   id: number;

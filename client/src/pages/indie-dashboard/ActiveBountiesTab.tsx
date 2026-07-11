@@ -6,7 +6,7 @@ import {
   Gamepad2, Users, Key, Zap, Plus, Pause, Play, Square, Copy,
   Loader2, Sword, Clock,
 } from "lucide-react";
-import { NEON, CARD_BG, CARD_BORDER } from "../IndieDashboardPage";
+import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 
 interface IndieBounty {
   id: number;
