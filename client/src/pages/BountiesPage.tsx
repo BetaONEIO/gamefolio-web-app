@@ -284,119 +284,125 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
   const totalXP = campaign.total_campaign_xp ?? bounties.reduce((a: number, b: any) => a + Number(b.xp_reward ?? 0), 0);
   const fullLeft = Number(campaign.full_keys_remaining ?? 0);
 
+  /* Arrow button shared style */
+  const arrowBtn = "flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full transition-all hover:scale-110 hover:brightness-125";
+  const arrowStyle = { background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)" };
+
   return (
-    <div className="relative overflow-hidden cursor-pointer group rounded-2xl" style={{ height: 420 }}
-      onClick={() => onSelect(campaign)}>
+    <div className="space-y-3">
+      {/* Row: arrow | slide | arrow */}
+      <div className="flex items-center gap-3">
+        {/* Prev arrow — outside the slide */}
+        {campaigns.length > 1 ? (
+          <button className={arrowBtn} style={arrowStyle} onClick={prev}>
+            <ChevronLeft size={18} className="text-white" />
+          </button>
+        ) : <div className="w-10 flex-shrink-0" />}
 
-      {/* Background image — fades between slides */}
-      <div className="absolute inset-0 transition-opacity duration-300" style={{ opacity: fading ? 0 : 1 }}>
-        {campaign.game_artwork_url ? (
-          <img src={campaign.game_artwork_url} alt={campaign.game_name}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-            style={{ opacity: 0.60 }} />
-        ) : (
-          <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(184,255,27,0.12) 0%, rgba(7,11,16,1) 100%)" }} />
-        )}
-      </div>
+        {/* Slide */}
+        <div className="relative flex-1 overflow-hidden cursor-pointer group rounded-2xl" style={{ height: 420 }}
+          onClick={() => onSelect(campaign)}>
 
-      {/* Gradients (always on) */}
-      <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #070b10 0%, rgba(7,11,16,0.60) 50%, transparent 100%)" }} />
-      <div className="absolute inset-0" style={{ background: "linear-gradient(to right, #070b10 0%, transparent 70%)" }} />
+          {/* Background */}
+          <div className="absolute inset-0 transition-opacity duration-300" style={{ opacity: fading ? 0 : 1 }}>
+            {campaign.game_artwork_url ? (
+              <img src={campaign.game_artwork_url} alt={campaign.game_name}
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                style={{ opacity: 0.60 }} />
+            ) : (
+              <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(184,255,27,0.12) 0%, rgba(7,11,16,1) 100%)" }} />
+            )}
+          </div>
 
-      {/* Slide content */}
-      <div className="absolute inset-0 flex flex-col justify-end px-8 pb-7 transition-opacity duration-300"
-        style={{ opacity: fading ? 0 : 1 }}>
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm"
-            style={{ color: NEON, background: "rgba(184,255,27,0.12)", border: "1px solid rgba(184,255,27,0.25)" }}>
-            ⭐ Featured Campaign
-          </span>
-          <span className="flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full"
-            style={{ background: NEON, color: "#070b10" }}>
-            <ShieldCheck size={9} /> GF Verified
-          </span>
-        </div>
+          {/* Gradients */}
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #070b10 0%, rgba(7,11,16,0.60) 50%, transparent 100%)" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to right, #070b10 0%, transparent 70%)" }} />
 
-        {campaign.game_name && (
-          <div className="text-sm font-bold mb-0.5" style={{ color: "rgba(255,255,255,0.50)" }}>{campaign.game_name}</div>
-        )}
-        <h2 className="text-4xl font-black text-white leading-tight tracking-tight mb-2 max-w-lg">
-          {campaign.template_name}
-        </h2>
-        {campaign.description && (
-          <p className="text-sm mb-4 max-w-md line-clamp-1" style={{ color: "rgba(255,255,255,0.55)" }}>
-            {campaign.description}
-          </p>
-        )}
-
-        <div className="flex items-center gap-4 mb-5">
-          {demoLeft > 0 && (
-            <div className="flex items-center gap-1.5">
-              <img src="/icons/demo-key-icon.png" alt="" className="w-5 h-5 object-contain" />
-              <span className="text-xs font-black" style={{ color: NEON }}>Demo Key</span>
+          {/* Content */}
+          <div className="absolute inset-0 flex flex-col justify-end px-8 pb-8 transition-opacity duration-300"
+            style={{ opacity: fading ? 0 : 1 }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm"
+                style={{ color: NEON, background: "rgba(184,255,27,0.12)", border: "1px solid rgba(184,255,27,0.25)" }}>
+                ⭐ Featured Campaign
+              </span>
+              <span className="flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full"
+                style={{ background: NEON, color: "#070b10" }}>
+                <ShieldCheck size={9} /> GF Verified
+              </span>
             </div>
-          )}
-          {fullLeft > 0 && (
-            <div className="flex items-center gap-1.5">
-              <img src="/icons/full-game-icon.png" alt="" className="w-5 h-5 object-contain" />
-              <span className="text-xs font-bold text-white/70">Full Game</span>
+
+            {campaign.game_name && (
+              <div className="text-sm font-bold mb-0.5" style={{ color: "rgba(255,255,255,0.50)" }}>{campaign.game_name}</div>
+            )}
+            <h2 className="text-4xl font-black text-white leading-tight tracking-tight mb-2 max-w-lg">
+              {campaign.template_name}
+            </h2>
+            {campaign.description && (
+              <p className="text-sm mb-4 max-w-md line-clamp-1" style={{ color: "rgba(255,255,255,0.55)" }}>
+                {campaign.description}
+              </p>
+            )}
+
+            <div className="flex items-center gap-4 mb-5">
+              {demoLeft > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <img src="/icons/demo-key-icon.png" alt="" className="w-5 h-5 object-contain" />
+                  <span className="text-xs font-black" style={{ color: NEON }}>Demo Key</span>
+                </div>
+              )}
+              {fullLeft > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <img src="/icons/full-game-icon.png" alt="" className="w-5 h-5 object-contain" />
+                  <span className="text-xs font-bold text-white/70">Full Game</span>
+                </div>
+              )}
+              {totalXP > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <Zap size={16} color={NEON} />
+                  <span className="text-xs font-bold text-white/70">{totalXP.toLocaleString()} XP</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5">
+                <img src="/icons/token-icon.png" alt="" className="w-5 h-5 object-contain" />
+                <span className="text-xs font-bold text-white/70">GFT</span>
+              </div>
             </div>
-          )}
-          {totalXP > 0 && (
-            <div className="flex items-center gap-1.5">
-              <Zap size={16} color={NEON} />
-              <span className="text-xs font-bold text-white/70">{totalXP.toLocaleString()} XP</span>
+
+            <div className="flex items-center gap-3">
+              <button
+                className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
+                style={{ background: NEON, color: "#070b10" }}
+                onClick={e => { e.stopPropagation(); onSelect(campaign); }}>
+                <ShieldCheck size={16} /> Accept Mission
+              </button>
+              <span className="text-xs text-white/40 font-bold">
+                {demoLeft > 0 ? `${demoLeft} demo keys remaining` : "Open campaign"}
+              </span>
             </div>
-          )}
-          <div className="flex items-center gap-1.5">
-            <img src="/icons/token-icon.png" alt="" className="w-5 h-5 object-contain" />
-            <span className="text-xs font-bold text-white/70">GFT</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
-            style={{ background: NEON, color: "#070b10" }}
-            onClick={e => { e.stopPropagation(); onSelect(campaign); }}>
-            <ShieldCheck size={16} /> Accept Mission
-          </button>
-          <span className="text-xs text-white/40 font-bold">
-            {demoLeft > 0 ? `${demoLeft} demo keys remaining` : "Open campaign"}
-          </span>
-        </div>
-      </div>
-
-      {/* Prev / Next arrows */}
-      {campaigns.length > 1 && (
-        <>
-          <button
-            className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 rounded-full transition-all hover:scale-110"
-            style={{ background: "rgba(0,0,0,0.50)", border: "1px solid rgba(255,255,255,0.15)" }}
-            onClick={prev}>
-            <ChevronLeft size={18} className="text-white" />
-          </button>
-          <button
-            className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 rounded-full transition-all hover:scale-110"
-            style={{ background: "rgba(0,0,0,0.50)", border: "1px solid rgba(255,255,255,0.15)" }}
-            onClick={next}>
+        {/* Next arrow — outside the slide */}
+        {campaigns.length > 1 ? (
+          <button className={arrowBtn} style={arrowStyle} onClick={next}>
             <ChevronRight size={18} className="text-white" />
           </button>
-        </>
-      )}
+        ) : <div className="w-10 flex-shrink-0" />}
+      </div>
 
-      {/* Dot indicators */}
+      {/* Dot indicators below the slide row */}
       {campaigns.length > 1 && (
-        <div className="absolute bottom-5 right-8 flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           {campaigns.map((_, i) => (
             <button key={i}
               className="rounded-full transition-all duration-300"
               style={{
-                width: i === idx ? 20 : 6,
+                width: i === idx ? 24 : 6,
                 height: 6,
-                background: i === idx ? NEON : "rgba(255,255,255,0.30)",
+                background: i === idx ? NEON : "rgba(255,255,255,0.25)",
               }}
-              onClick={e => { e.stopPropagation(); goTo(i); }}
+              onClick={() => goTo(i)}
             />
           ))}
         </div>
@@ -1374,6 +1380,19 @@ export default function BountiesPage() {
     return list;
   }, [indieCampaigns, search, activeFilters]);
 
+  // Top 3 trending campaigns for the hero slider — must be before early returns
+  const featuredSlides = useMemo(() => {
+    const sorted = [...indieCampaigns].sort(
+      (a: any, b: any) => Number(b.participant_count ?? 0) - Number(a.participant_count ?? 0),
+    );
+    const pinned = sorted.find((c: any) => c.is_featured);
+    const rest = sorted.filter((c: any) => !c.is_featured);
+    const ordered = pinned ? [pinned, ...rest] : sorted;
+    return ordered.slice(0, 3);
+  }, [indieCampaigns]);
+
+  const openDetail = (c: any) => { setSelectedCampaign(c); setView("detail"); };
+
   // ── Sub-views ──────────────────────────────────────────────────────────
   if (view === "detail" && selectedCampaign) {
     return (
@@ -1394,21 +1413,6 @@ export default function BountiesPage() {
   }
 
   const activeFilterCount = activeFilters.size;
-
-  // Top 3 trending campaigns for the hero slider
-  const featuredSlides = useMemo(() => {
-    const sorted = [...indieCampaigns].sort(
-      (a: any, b: any) => Number(b.participant_count ?? 0) - Number(a.participant_count ?? 0),
-    );
-    // Pinned featured campaign always first
-    const pinned = sorted.find((c: any) => c.is_featured);
-    const rest = sorted.filter((c: any) => !c.is_featured);
-    const ordered = pinned ? [pinned, ...rest] : sorted;
-    return ordered.slice(0, 3);
-  }, [indieCampaigns]);
-
-
-  const openDetail = (c: any) => { setSelectedCampaign(c); setView("detail"); };
 
   return (
     <div className="min-h-screen" style={{ background: PAGE_BG }}>
