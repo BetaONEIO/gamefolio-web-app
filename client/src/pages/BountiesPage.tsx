@@ -7,8 +7,7 @@ import {
   Target, ShieldCheck, Clock, Users, Key, ChevronRight, ChevronLeft,
   Zap, Copy, Check, Loader2, Lock,
   Film, Camera, MessageSquare, Star, AlertCircle,
-  Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown,
-  Flame, TrendingUp, Sparkles, ArrowRight, Play,
+  Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown, Store,
 } from "lucide-react";
 import { SiSteam } from "react-icons/si";
 
@@ -339,22 +338,24 @@ function CommunityStats({ campaigns }: { campaigns: any[] }) {
     const remaining = Number(c.demo_keys_remaining ?? 0);
     return a + Math.max(0, total - remaining);
   }, 0);
-  const totalXP = campaigns.reduce((a, c) => a + Number(c.total_campaign_xp ?? 0), 0);
+  const clipsSubmitted = campaigns.reduce((a, c) => a + Number(c.total_submissions ?? 0), 0);
+  const completedCampaigns = campaigns.reduce((a, c) => a + Number(c.completed_count ?? 0), 0);
 
   const stats = [
-    { icon: <Target size={16} color={NEON} />, label: "Active Campaigns", value: activeCampaigns.toLocaleString() },
-    { icon: <Users size={16} color={NEON} />, label: "Creators Playing", value: creatorsPlaying.toLocaleString() },
-    { icon: <img src="/icons/demo-key-icon.png" alt="" className="w-4 h-4 object-contain" />, label: "Keys Claimed", value: demoKeysClaimed.toLocaleString() },
-    { icon: <Zap size={16} color={NEON} />, label: "Total XP Pool", value: totalXP > 0 ? `${(totalXP / 1000).toFixed(0)}K` : "—" },
+    { icon: <Target size={15} color={NEON} />, label: "Active Campaigns", value: activeCampaigns.toLocaleString() },
+    { icon: <Users size={15} color={NEON} />, label: "Creators Playing", value: creatorsPlaying.toLocaleString() },
+    { icon: <Film size={15} color={NEON} />, label: "Clips Submitted", value: clipsSubmitted > 0 ? clipsSubmitted.toLocaleString() : "—" },
+    { icon: <img src="/icons/demo-key-icon.png" alt="" className="w-3.5 h-3.5 object-contain" />, label: "Demo Keys Claimed", value: demoKeysClaimed.toLocaleString() },
+    { icon: <Trophy size={15} color={NEON} />, label: "Campaigns Completed", value: completedCampaigns > 0 ? completedCampaigns.toLocaleString() : "—" },
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 mx-0" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
+    <div className="flex overflow-x-auto" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
       {stats.map((s, i) => (
-        <div key={s.label} className="flex items-center gap-3 px-6 py-4" style={{ borderRight: i < stats.length - 1 ? "1px solid rgba(255,255,255,0.06)" : undefined }}>
+        <div key={s.label} className="flex items-center gap-2.5 px-6 py-4 flex-1 min-w-[160px]" style={{ borderRight: i < stats.length - 1 ? "1px solid rgba(255,255,255,0.06)" : undefined }}>
           <div className="flex-shrink-0">{s.icon}</div>
           <div>
-            <div className="text-base font-black text-white leading-none">{s.value}</div>
+            <div className="text-sm font-black text-white leading-none">{s.value}</div>
             <div className="text-[10px] font-bold mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{s.label}</div>
           </div>
         </div>
@@ -363,187 +364,35 @@ function CommunityStats({ campaigns }: { campaigns: any[] }) {
   );
 }
 
-// ── Compact card for carousels ─────────────────────────────────────────────
-function CampaignCardCompact({ campaign, onClick }: { campaign: any; onClick: () => void }) {
-  const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
-  const fullLeft = Number(campaign.full_keys_remaining ?? 0);
-  const bounties: any[] = campaign.bounties ?? [];
-  const totalXP = campaign.total_campaign_xp ?? bounties.reduce((a: number, b: any) => a + Number(b.xp_reward ?? 0), 0);
-  const nearlyFull = demoLeft > 0 && demoLeft <= 5;
-
-  const seen = new Set<string>();
-  const reqIcons: { ct: string; qty: number }[] = [];
-  for (const b of bounties) {
-    if (!seen.has(b.content_type)) {
-      seen.add(b.content_type);
-      reqIcons.push({ ct: b.content_type, qty: Number(b.quantity ?? 1) });
-    }
-  }
-
-  return (
-    <div
-      className="flex-shrink-0 w-72 rounded-2xl overflow-hidden cursor-pointer group transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/60"
-      style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}
-      onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(184,255,27,0.28)")}
-      onMouseLeave={e => (e.currentTarget.style.borderColor = CARD_BORDER)}
-      onClick={onClick}
-    >
-      {/* Cinematic artwork — same layered gradient treatment as FeaturedBounty */}
-      <div className="relative overflow-hidden" style={{ height: 180 }}>
-        {campaign.game_artwork_url ? (
-          <img
-            src={campaign.game_artwork_url}
-            alt={campaign.game_name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
-            style={{ opacity: 0.70 }}
-          />
-        ) : (
-          <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(184,255,27,0.10) 0%, #070b10 100%)" }} />
-        )}
-        {/* Bottom-to-top gradient */}
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #0e1520 0%, rgba(14,21,32,0.30) 55%, transparent 100%)" }} />
-        {/* Left-to-right gradient */}
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(14,21,32,0.70) 0%, transparent 70%)" }} />
-
-        {/* Top badges */}
-        <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-          <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full"
-            style={{ background: NEON, color: "#070b10" }}>
-            <ShieldCheck size={8} /> GF Verified
-          </span>
-        </div>
-        {nearlyFull && (
-          <div className="absolute top-3 right-3">
-            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full"
-              style={{ background: "rgba(245,158,11,0.90)", color: "#070b10" }}>
-              ⚡ {demoLeft} Left
-            </span>
-          </div>
-        )}
-
-        {/* Title overlaid at bottom of artwork */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-          {campaign.game_name && (
-            <div className="text-[10px] font-bold mb-0.5" style={{ color: "rgba(255,255,255,0.45)" }}>
-              {campaign.game_name}
-            </div>
-          )}
-          <div className="text-sm font-black text-white leading-tight line-clamp-1">
-            {campaign.template_name || campaign.game_name}
-          </div>
-        </div>
-      </div>
-
-      {/* Body */}
-      <div className="px-4 pb-4 pt-3 space-y-3">
-        {/* Description */}
-        {campaign.description && (
-          <p className="text-[11px] leading-snug line-clamp-1" style={{ color: "rgba(255,255,255,0.45)" }}>
-            {campaign.description}
-          </p>
-        )}
-
-        {/* Requirement icons only — no text labels */}
-        {reqIcons.length > 0 && (
-          <div className="flex items-center gap-2">
-            {reqIcons.slice(0, 4).map(({ ct, qty }) => {
-              const Icon = REQ_ICON[ct] ?? Target;
-              return (
-                <div key={ct} className="flex items-center gap-1 text-[11px] font-bold"
-                  style={{ color: "rgba(255,255,255,0.50)" }}>
-                  <Icon size={12} />
-                  <span>×{qty}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Reward preview row — mini icons like FeaturedBounty */}
-        <div className="flex items-center gap-3 flex-wrap">
-          {demoLeft > 0 && (
-            <div className="flex items-center gap-1">
-              <img src="/icons/demo-key-icon.png" alt="" className="w-4 h-4 object-contain" />
-              <span className="text-[10px] font-bold" style={{ color: NEON }}>Demo</span>
-            </div>
-          )}
-          {fullLeft > 0 && (
-            <div className="flex items-center gap-1">
-              <img src="/icons/full-game-icon.png" alt="" className="w-4 h-4 object-contain" />
-              <span className="text-[10px] font-bold text-white/55">Full Game</span>
-            </div>
-          )}
-          {totalXP > 0 && (
-            <div className="flex items-center gap-1">
-              <Zap size={12} color={NEON} />
-              <span className="text-[10px] font-bold text-white/55">{totalXP.toLocaleString()} XP</span>
-            </div>
-          )}
-          <div className="flex items-center gap-1">
-            <img src="/icons/token-icon.png" alt="" className="w-4 h-4 object-contain" />
-            <span className="text-[10px] font-bold text-white/40">GFT</span>
-          </div>
-        </div>
-
-        {/* Accept Mission CTA */}
-        <button
-          className="w-full py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all hover:brightness-110 hover:scale-[1.01] active:scale-[0.98]"
-          style={{ background: NEON, color: "#070b10" }}
-          onClick={e => { e.stopPropagation(); onClick(); }}
-        >
-          <ShieldCheck size={13} /> Accept Mission
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ── Horizontal carousel section ────────────────────────────────────────────
-function CarouselSection({ title, icon, campaigns, onSelect }: {
-  title: string; icon: any; campaigns: any[];
-  onSelect: (c: any) => void;
-}) {
-  if (campaigns.length === 0) return null;
-  const Icon = icon;
-  return (
-    <div className="mb-2">
-      <div className="flex items-center gap-2 mb-3 px-6">
-        <Icon size={18} color={NEON} />
-        <span className="text-base font-black text-white">{title}</span>
-        <span className="text-xs font-bold text-white/30 ml-1">{campaigns.length}</span>
-      </div>
-      <div className="flex gap-3 overflow-x-auto px-6 pb-3 scrollbar-hide" style={{ scrollSnapType: "x mandatory" }}>
-        {campaigns.map((c: any) => (
-          <div key={c.id} style={{ scrollSnapAlign: "start" }}>
-            <CampaignCardCompact campaign={c} onClick={() => onSelect(c)} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Filter sidebar data ────────────────────────────────────────────────────
 const FILTER_GROUPS = [
   {
+    key: "status", label: "Campaign Status",
+    options: [
+      { key: "status_demo",     label: "Demo Available" },
+      { key: "status_nearly",   label: "Nearly Full" },
+      { key: "status_ending",   label: "Ending Soon" },
+      { key: "status_new",      label: "New" },
+      { key: "status_featured", label: "Featured" },
+    ],
+  },
+  {
     key: "rewards", label: "Rewards",
     options: [
-      { key: "demo",    label: "Demo Available" },
-      { key: "full",    label: "Full Game Reward" },
+      { key: "demo",    label: "Demo Key" },
+      { key: "full",    label: "Full Game" },
       { key: "xp",      label: "XP" },
       { key: "gft",     label: "GFT" },
-      { key: "skl",     label: "SKL" },
-      { key: "badge",   label: "Badge Rewards" },
+      { key: "badge",   label: "Badge" },
     ],
   },
   {
     key: "requirements", label: "Requirements",
     options: [
       { key: "clip",       label: "Gameplay Clips" },
-      { key: "reel",       label: "Reels" },
       { key: "screenshot", label: "Screenshots" },
+      { key: "reel",       label: "Reels" },
       { key: "stream",     label: "Livestream" },
-      { key: "review",     label: "Review" },
       { key: "feedback",   label: "Feedback" },
       { key: "bug",        label: "Bug Testing" },
     ],
@@ -551,32 +400,23 @@ const FILTER_GROUPS = [
   {
     key: "genres", label: "Genres",
     options: [
-      { key: "action",    label: "Action" },
-      { key: "adventure", label: "Adventure" },
+      { key: "fps",       label: "FPS" },
       { key: "horror",    label: "Horror" },
       { key: "rpg",       label: "RPG" },
+      { key: "racing",    label: "Racing" },
       { key: "strategy",  label: "Strategy" },
       { key: "survival",  label: "Survival" },
-      { key: "racing",    label: "Racing" },
       { key: "puzzle",    label: "Puzzle" },
-      { key: "sandbox",   label: "Sandbox" },
-      { key: "fps",       label: "FPS" },
+      { key: "action",    label: "Action" },
+      { key: "adventure", label: "Adventure" },
     ],
   },
   {
-    key: "platforms", label: "Platforms",
+    key: "difficulty", label: "Campaign Difficulty",
     options: [
-      { key: "steam",  label: "Steam" },
-      { key: "epic",   label: "Epic Games" },
-      { key: "itch",   label: "itch.io" },
-    ],
-  },
-  {
-    key: "difficulty", label: "Difficulty",
-    options: [
-      { key: "quick",  label: "Quick" },
-      { key: "medium", label: "Medium" },
-      { key: "long",   label: "Long" },
+      { key: "quick",    label: "Quick" },
+      { key: "standard", label: "Standard" },
+      { key: "premium",  label: "Premium" },
     ],
   },
 ] as const;
@@ -1417,14 +1257,28 @@ export default function BountiesPage() {
     }
 
     if (activeFilters.size > 0) {
+      const now = Date.now();
       list = list.filter((c: any) => {
         const bounties: any[] = c.bounties ?? [];
         const contentTypes = new Set(bounties.map((b: any) => b.content_type));
         const totalXp = bounties.reduce((a: number, b: any) => a + Number(b.xp_reward ?? 0), 0);
         const demoLeft = Number(c.demo_keys_remaining ?? 0);
         const fullLeft = Number(c.full_keys_remaining ?? 0);
+        const totalSlots = Number(c.demo_key_total ?? 0) + Number(c.full_key_total ?? 0);
+        const totalTaken = totalSlots - demoLeft - fullLeft;
+        const fillPct = totalSlots > 0 ? totalTaken / totalSlots : 0;
+        const endMs = c.end_date ? new Date(c.end_date).getTime() : null;
+        const daysLeft = endMs ? (endMs - now) / 86400000 : Infinity;
+        const ageMs = c.created_at ? now - new Date(c.created_at).getTime() : Infinity;
+        const agedays = ageMs / 86400000;
 
         for (const f of activeFilters) {
+          // Campaign Status
+          if (f === "status_demo"     && demoLeft === 0) return false;
+          if (f === "status_nearly"   && fillPct < 0.75) return false;
+          if (f === "status_ending"   && daysLeft > 7)   return false;
+          if (f === "status_new"      && agedays > 14)   return false;
+          if (f === "status_featured" && !c.is_featured) return false;
           // Rewards
           if (f === "demo"  && demoLeft  === 0) return false;
           if (f === "full"  && fullLeft  === 0) return false;
@@ -1472,17 +1326,6 @@ export default function BountiesPage() {
     return [...indieCampaigns].sort((a: any, b: any) => Number(b.participant_count ?? 0) - Number(a.participant_count ?? 0))[0] ?? null;
   }, [indieCampaigns]);
 
-  const trendingCampaigns = useMemo(() =>
-    [...indieCampaigns]
-      .sort((a: any, b: any) => Number(b.participant_count ?? 0) - Number(a.participant_count ?? 0))
-      .slice(0, 8),
-    [indieCampaigns]);
-
-  const newCampaigns = useMemo(() =>
-    [...indieCampaigns]
-      .sort((a: any, b: any) => Number(b.id) - Number(a.id))
-      .slice(0, 8),
-    [indieCampaigns]);
 
   const openDetail = (c: any) => { setSelectedCampaign(c); setView("detail"); };
 
@@ -1533,32 +1376,14 @@ export default function BountiesPage() {
         </div>
       </div>
 
-      {/* ── Trending + New carousels (marketplace tab only) ── */}
-      {mainTab === "marketplace" && !isLoading && (
-        <div className="pb-2 space-y-6">
-          <CarouselSection
-            title="Trending Bounties"
-            icon={Flame}
-            campaigns={trendingCampaigns}
-            onSelect={openDetail}
-          />
-          <CarouselSection
-            title="New Bounties"
-            icon={Sparkles}
-            campaigns={newCampaigns}
-            onSelect={openDetail}
-          />
-        </div>
-      )}
-
-      {/* ── Browse All + grid ── */}
+      {/* ── Marketplace grid ── */}
       <div className="px-6 pb-10 mt-2">
         {mainTab === "marketplace" ? (
           <>
-            {/* Browse All header + search */}
+            {/* Marketplace header + search */}
             <div className="flex items-center gap-3 mb-4">
-              <TrendingUp size={16} color={NEON} />
-              <span className="text-base font-black text-white">Browse All Bounties</span>
+              <Store size={16} color={NEON} />
+              <span className="text-base font-black text-white">Marketplace</span>
             </div>
             <div className="relative mb-5">
               <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "rgba(255,255,255,0.35)" }} />
