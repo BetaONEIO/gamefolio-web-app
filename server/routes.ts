@@ -10568,6 +10568,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/steam/app-info/:appId — public Steam Store proxy (no auth needed)
+  // Returns mapped game data for a given Steam App ID. Responses are cached in-process
+  // for 10 minutes to avoid hammering the Steam API on every profile page view.
+  const _steamCache = new Map<string, { data: any; ts: number }>();
+  const STEAM_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+  app.get("/api/steam/app-info/:appId", async (req, res) => {
+    const appId = (req.params.appId || "").replace(/\D/g, "");
+    if (!appId) return res.status(400).json({ error: "Invalid appId" });
+    const cached = _steamCache.get(appId);
+    if (cached && Date.now() - cached.ts < STEAM_CACHE_TTL) {
+      return res.json(cached.data);
+    }
+    try {
+      const steamRes = await fetch(
+        `https://store.steampowered.com/api/appdetails?appids=${appId}&l=english`,
+        { signal: AbortSignal.timeout(10000) }
+      );
+      if (!steamRes.ok) return res.status(502).json({ error: "Steam API unavailable" });
+      const json = await steamRes.json() as any;
+      const entry = json[appId];
+      if (!entry?.success || !entry.data) return res.status(404).json({ error: "Steam app not found" });
+      const fields = _mapSteamData(entry.data);
+      const result = {
+        appId,
+        steamUrl: `https://store.steampowered.com/app/${appId}/`,
+        name: entry.data.name || null,
+        headerImageUrl: entry.data.header_image || null,
+        capsuleImageUrl: entry.data.capsule_image || null,
+        developerName: (entry.data.developers || [])[0] || null,
+        publisherName: (entry.data.publishers || [])[0] || null,
+        website: entry.data.website || null,
+        fields,
+      };
+      _steamCache.set(appId, { data: result, ts: Date.now() });
+      return res.json(result);
+    } catch (err) {
+      console.error("GET /api/steam/app-info/:appId error:", err);
+      return res.status(502).json({ error: "Failed to fetch from Steam" });
+    }
+  });
+
   // ─── End Indie Game Profile API ───────────────────────────────────────────────
 
   // Legacy redirect: old endpoint now returns 410 Gone

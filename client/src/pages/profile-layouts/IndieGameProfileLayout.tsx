@@ -106,27 +106,59 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
   });
   const ig = (indieGameData?.profile ?? null) as IndieGameProfile | null;
 
-  // Enriched fields: prefer indie_game_profiles table data, fall back to legacy user columns
-  const igTrailerUrl = ig?.trailerUrl || (profile as any).gameTrailerUrl || null;
-  const igDescription = ig?.fullDescription || ig?.shortDescription || (profile as any).gameDescription || null;
-  const igScreenshots: string[] = (ig?.screenshotUrls?.length ? ig.screenshotUrls : (profile as any).gameScreenshotUrls) ?? [];
+  // Resolve the Steam App ID from any available source
+  const steamAppId: string | null =
+    ig?.steamAppId ||
+    (profile as any).steamVerifiedAppId ||
+    (() => {
+      const url: string | null = ig?.steamUrl || (profile as any).gameSteamUrl || null;
+      if (!url) return null;
+      const m = url.match(/store\.steampowered\.com\/app\/(\d+)/);
+      return m ? m[1] : null;
+    })();
+
+  // Live Steam data — fetched automatically when a Steam App ID is linked.
+  // Profile DB data always takes precedence; Steam fills in any empty fields.
+  const { data: steamLive } = useQuery<{
+    appId: string;
+    steamUrl: string;
+    name: string | null;
+    headerImageUrl: string | null;
+    capsuleImageUrl: string | null;
+    developerName: string | null;
+    publisherName: string | null;
+    website: string | null;
+    fields: Record<string, any>;
+  } | null>({
+    queryKey: ['/api/steam/app-info', steamAppId],
+    enabled: !!steamAppId,
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  });
+  const st = steamLive?.fields ?? null;
+
+  // Enriched fields: prefer indie_game_profiles table data, fall back to live Steam, then legacy user columns
+  const igTrailerUrl = ig?.trailerUrl || st?.trailerUrl || (profile as any).gameTrailerUrl || null;
+  const igDescription = ig?.fullDescription || ig?.shortDescription || st?.fullDescription || st?.shortDescription || (profile as any).gameDescription || null;
+  const igScreenshots: string[] = (ig?.screenshotUrls?.length ? ig.screenshotUrls : (st?.screenshotUrls?.length ? st.screenshotUrls : (profile as any).gameScreenshotUrls)) ?? [];
   const igKeyFeatures: string[] = (ig?.keyFeatures?.length ? ig.keyFeatures : (profile as any).gameKeyFeatures) ?? [];
-  const igSteamUrl = ig?.steamUrl || (profile as any).gameSteamUrl || null;
+  const igSteamUrl = ig?.steamUrl || steamLive?.steamUrl || (profile as any).gameSteamUrl || null;
   const igEpicUrl = ig?.epicUrl || (profile as any).gameEpicUrl || null;
   const igItchUrl = ig?.itchUrl || null;
-  const igReleaseDate = ig?.releaseDate || (profile as any).gameReleaseDate || null;
-  const igStudioName = ig?.studioName || null;
+  const igReleaseDate = ig?.releaseDate || st?.releaseDate || (profile as any).gameReleaseDate || null;
+  const igStudioName = ig?.studioName || steamLive?.developerName || null;
   const igStudioFounded = ig?.studioFoundedYear || (profile as any).studioFoundedYear || null;
   const igStudioSize = ig?.studioTeamSize || (profile as any).studioTeamSize || null;
-  const igStudioWebsite = ig?.studioWebsite || null;
+  const igStudioWebsite = ig?.studioWebsite || steamLive?.website || null;
   const igStudioCountry = ig?.studioCountry || null;
-  const igWebsiteUrl = ig?.websiteUrl || null;
+  const igWebsiteUrl = ig?.websiteUrl || steamLive?.website || null;
   const igTwitterUrl = ig?.twitterUrl || null;
   const igDiscordUrl = ig?.discordUrl || null;
-  const igGenres: string[] = ig?.genres ?? [];
-  const igPlatforms: string[] = ig?.platforms ?? [];
-  const igPrice = ig?.price || null;
-  const igReleaseStatus = ig?.releaseStatus || null;
+  const igGenres: string[] = ig?.genres?.length ? ig.genres : (st?.genres ?? []);
+  const igPlatforms: string[] = ig?.platforms?.length ? ig.platforms : (st?.platforms ?? []);
+  const igPrice = ig?.price || st?.price || null;
+  const igReleaseStatus = ig?.releaseStatus || st?.releaseStatus || null;
+  const igHeaderImageUrl = ig?.headerImageUrl || steamLive?.headerImageUrl || null;
 
   const isFollowing = followStatus?.status === 'following';
   const isRequested = followStatus?.status === 'requested';
@@ -172,7 +204,20 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
         className="relative w-full pt-32 pb-16 px-6 md:px-12 flex flex-col items-center justify-center border-b border-white/5"
         style={{ background: 'linear-gradient(135deg, #0B1319 0%, #1a0b30 50%, #0d1f2d 100%)' }}
       >
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.15)_0%,transparent_50%)] pointer-events-none"></div>
+        {igHeaderImageUrl && (
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <img
+              src={igHeaderImageUrl}
+              alt=""
+              className="w-full h-full object-cover object-center opacity-20"
+              style={{ filter: 'blur(2px) saturate(1.4)', transform: 'scale(1.05)' }}
+            />
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(11,19,25,0.85) 0%, rgba(26,11,48,0.80) 50%, rgba(13,31,45,0.85) 100%)' }} />
+          </div>
+        )}
+        {!igHeaderImageUrl && (
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.15)_0%,transparent_50%)] pointer-events-none"></div>
+        )}
 
         <div className="relative z-20 max-w-5xl w-full mx-auto flex flex-col items-center text-center">
           {profile.avatarUrl && (
