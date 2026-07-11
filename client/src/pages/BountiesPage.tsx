@@ -285,7 +285,7 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
   const fullLeft = Number(campaign.full_keys_remaining ?? 0);
 
   return (
-    <div className="relative overflow-hidden cursor-pointer group" style={{ height: 380 }}
+    <div className="relative overflow-hidden cursor-pointer group rounded-2xl" style={{ height: 420 }}
       onClick={() => onSelect(campaign)}>
 
       {/* Background image — fades between slides */}
@@ -1412,20 +1412,20 @@ export default function BountiesPage() {
 
   return (
     <div className="min-h-screen" style={{ background: PAGE_BG }}>
+      <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
 
-      {/* ── Featured Slider (top 3 trending, auto-rotating) ── */}
-      {mainTab === "marketplace" && !isLoading && featuredSlides.length > 0 && (
-        <FeaturedSlider campaigns={featuredSlides} onSelect={openDetail} />
-      )}
+        {/* ── Featured Slider (top 3 trending, auto-rotating) ── */}
+        {mainTab === "marketplace" && !isLoading && featuredSlides.length > 0 && (
+          <FeaturedSlider campaigns={featuredSlides} onSelect={openDetail} />
+        )}
 
-      {/* ── Community Stats strip ── */}
-      {mainTab === "marketplace" && !isLoading && indieCampaigns.length > 0 && (
-        <CommunityStats campaigns={indieCampaigns} />
-      )}
+        {/* ── Community Stats strip ── */}
+        {mainTab === "marketplace" && !isLoading && indieCampaigns.length > 0 && (
+          <CommunityStats campaigns={indieCampaigns} />
+        )}
 
-      {/* ── Page header + tabs + search ── */}
-      <div className="px-6 pt-6 pb-0">
-        <div className="flex items-center justify-between mb-5">
+        {/* ── Tabs row ── */}
+        <div className="flex items-center justify-between">
           <div className="flex gap-0.5 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.05)" }}>
             {([
               { key: "marketplace", label: "Bounty Hub" },
@@ -1455,18 +1455,17 @@ export default function BountiesPage() {
             </button>
           )}
         </div>
-      </div>
 
-      {/* ── Marketplace grid ── */}
-      <div className="px-6 pb-10 mt-2">
+        {/* ── Marketplace / My Campaigns ── */}
+        <div className="pb-10">
         {mainTab === "marketplace" ? (
           <>
             {/* Marketplace header + search */}
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-6">
               <Store size={16} color={NEON} />
               <span className="text-base font-black text-white">Marketplace</span>
             </div>
-            <div className="relative mb-5">
+            <div className="relative mb-8">
               <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "rgba(255,255,255,0.35)" }} />
               <input
                 value={search}
@@ -1571,6 +1570,7 @@ export default function BountiesPage() {
             onViewProgress={(c) => { setProgressCampaign(c); setView("progress"); }}
           />
         )}
+        </div>
       </div>
     </div>
   );
