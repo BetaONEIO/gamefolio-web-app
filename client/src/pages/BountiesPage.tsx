@@ -91,8 +91,8 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
   const demoLeft  = Number(campaign.demo_keys_remaining ?? 0);
   const fullLeft  = Number(campaign.full_keys_remaining ?? 0);
   const bounties: any[] = campaign.bounties ?? [];
-  const totalXp   = bounties.reduce((a: number, b: any) => a + Number(b.xp_reward ?? 0), 0);
   const reqs = bountyRequirements(bounties);
+  const totalXP = campaign.total_campaign_xp ?? 0;
 
   return (
     <div
@@ -149,11 +149,21 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
           </div>
         )}
 
+        {/* Big XP badge */}
+        {totalXP > 0 && (
+          <div className="flex items-center gap-2">
+            <Zap size={16} color={NEON} />
+            <span className="text-sm font-black" style={{ color: NEON }}>
+              Earn up to {totalXP.toLocaleString()} XP
+            </span>
+          </div>
+        )}
+
         {/* Rewards — 4 equal columns */}
         <div className="grid grid-cols-4 gap-2">
           <RewardCol emoji="🎮" label="Demo Key"  value={demoLeft  > 0 ? `${demoLeft}`  : "—"} active={demoLeft  > 0} />
           <RewardCol emoji="🏆" label="Full Game" value={fullLeft  > 0 ? `${fullLeft}`  : "—"} active={fullLeft  > 0} />
-          <RewardCol emoji="⚡" label="XP"        value={totalXp  > 0 ? `${totalXp.toLocaleString()}` : "—"} active={totalXp > 0} />
+          <RewardCol emoji="⚡" label="Total XP"  value={totalXP > 0 ? `${totalXP.toLocaleString()}` : "—"} active={totalXP > 0} />
           <RewardCol emoji="💎" label="GFT / SKL" value="—" active={false} />
         </div>
 

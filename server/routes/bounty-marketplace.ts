@@ -2,6 +2,18 @@ import express from 'express';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 import { Pool } from 'pg';
+import {
+  getXPProfile,
+  getTierFromDuration,
+  computeCampaignTotalXP,
+  computeCompletionBonus,
+  computeBountyXP,
+  awardCampaignXP,
+  listAllProfiles,
+  updateProfile,
+  type XPTier,
+  type XPProfile,
+} from '../bounty-xp-service';
 
 const router = express.Router();
 
@@ -285,6 +297,8 @@ router.get('/', async (req, res) => {
         t.estimated_views_max,
         t.featured,
         t.recommended,
+        COALESCE(t.xp_tier, 'standard') AS xp_tier,
+        COALESCE(ci.xp_event_multiplier, 1.0) AS xp_event_multiplier,
         COALESCE(ci.gamefolio_managed, false) AS gamefolio_managed,
         (SELECT COUNT(*) FROM campaign_participants cp WHERE cp.instance_id = ci.id) AS participant_count,
         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo' AND gk.status = 'available') AS demo_keys_remaining,
@@ -298,6 +312,18 @@ router.get('/', async (req, res) => {
     `);
 
     let rows = toRows(campaigns);
+
+    // Attach computed XP to each campaign
+    rows = rows.map((r: any) => {
+      const tier = (r.xp_tier || 'standard') as XPTier;
+      const mult = Number(r.xp_event_multiplier ?? 1.0);
+      return {
+        ...r,
+        total_campaign_xp: computeCampaignTotalXP(tier, mult),
+        completion_bonus_xp: computeCompletionBonus(tier, mult),
+        xp_tier: tier,
+      };
+    });
 
     // Apply client-side filters
     if (filter === 'recommended') rows = rows.filter((r: any) => r.recommended);
@@ -336,6 +362,8 @@ router.get('/:instanceId', async (req, res) => {
         t.estimated_views_max,
         t.featured,
         t.recommended,
+        COALESCE(t.xp_tier, 'standard') AS xp_tier,
+        COALESCE(ci.xp_event_multiplier, 1.0) AS xp_event_multiplier,
         COALESCE(ci.gamefolio_managed, false) AS gamefolio_managed,
         (SELECT COUNT(*) FROM campaign_participants cp WHERE cp.instance_id = ci.id) AS participant_count,
         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo' AND gk.status = 'available') AS demo_keys_remaining,
@@ -348,7 +376,15 @@ router.get('/:instanceId', async (req, res) => {
     `));
 
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
-    res.json(campaign);
+
+    const tier = (campaign.xp_tier || 'standard') as XPTier;
+    const mult = Number(campaign.xp_event_multiplier ?? 1.0);
+    res.json({
+      ...campaign,
+      total_campaign_xp: computeCampaignTotalXP(tier, mult),
+      completion_bonus_xp: computeCompletionBonus(tier, mult),
+      xp_tier: tier,
+    });
   } catch (err) {
     res.status(500).json({ error: 'Failed to load campaign' });
   }
@@ -433,10 +469,20 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
         (${instanceId}, ${userId}, 'demo_key_claimed', ${demoKeyId}, NOW(), ${deadline.toISOString()})
     `);
 
+    // Award join XP
+    const [template] = toRows(await db.execute(sql`SELECT COALESCE(xp_tier, 'standard') AS xp_tier FROM campaign_templates WHERE id = (SELECT template_id FROM campaign_instances WHERE id = ${instanceId})`)) as any[];
+    const tier2 = (template?.xp_tier || 'standard') as XPTier;
+    const profile = getXPProfile(tier2);
+    await awardCampaignXP(userId, profile.joinXP, 'campaign_join', `Joined campaign #${instanceId}`, instanceId);
+    if (demoKeyValue) {
+      await awardCampaignXP(userId, profile.demoClaimXP, 'campaign_demo_claim', `Claimed demo key for campaign #${instanceId}`, instanceId);
+    }
+
     res.json({
       success: true,
       demoKey: demoKeyValue,
       deadline: deadline.toISOString(),
+      xpAwarded: profile.joinXP + (demoKeyValue ? profile.demoClaimXP : 0),
       message: demoKeyValue ? 'Demo key assigned. Play the game and complete the bounties!' : 'Joined campaign successfully!',
     });
   } catch (err: any) {
@@ -573,9 +619,9 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
     if (!participation) return res.status(403).json({ error: 'You are not participating in this campaign' });
     if (participation.status === 'completed') return res.status(400).json({ error: 'Campaign is already completed' });
 
-    // Load bounty definition
+    // Load bounty definition + campaign tier
     const [bounty] = toRows(await db.execute(sql`
-      SELECT b.*, t.id AS template_id
+      SELECT b.*, t.id AS template_id, COALESCE(t.xp_tier, 'standard') AS xp_tier
       FROM campaign_template_bounties b
       JOIN campaign_templates t ON t.id = b.template_id
       JOIN campaign_instances ci ON ci.template_id = t.id
@@ -589,15 +635,29 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
       clipId, screenshotId, reelId,
     } = req.body;
 
+    // Compute XP for this submission (deferred until approval, but compute now for preview)
+    const tier = (bounty.xp_tier || 'standard') as XPTier;
+    const profile = getXPProfile(tier);
+    const ct = bounty.content_type as string;
+    // Count prior submissions of same type for bonus calculation
+    const [prior] = toRows(await db.execute(sql`
+      SELECT COUNT(*) AS qty FROM bounty_submissions
+      WHERE participant_id = ${userId} AND instance_id = ${instanceId}
+        AND bounty_id IN (SELECT id FROM campaign_template_bounties WHERE template_id = ${bounty.template_id} AND content_type = ${ct})
+        AND status IN ('pending','under_review','approved')
+    `)) as any[];
+    const isFirst = Number(prior?.qty ?? 0) === 0;
+    const xpPreview = computeBountyXP(profile, ct, isFirst, bounty.quantity ?? 1, Number(prior?.qty ?? 0));
+
     // Insert submission
     const [submission] = toRows(await db.execute(sql`
       INSERT INTO bounty_submissions
-        (instance_id, participant_id, bounty_id, content_type, clip_id, screenshot_id, reel_id, content_url, content_data, status, submitted_at)
+        (instance_id, participant_id, bounty_id, content_type, clip_id, screenshot_id, reel_id, content_url, content_data, status, submitted_at, xp_awarded)
       VALUES
         (${instanceId}, ${userId}, ${bountyId}, ${contentType ?? bounty.content_type},
          ${clipId ?? null}, ${screenshotId ?? null}, ${reelId ?? null},
          ${contentUrl ?? null}, ${contentData ? JSON.stringify(contentData) : null},
-         'pending', NOW())
+         'pending', NOW(), 0)
       RETURNING *
     `)) as any[];
 
@@ -623,7 +683,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
       `);
     }
 
-    res.status(201).json({ submission, allMandatorySubmitted });
+    res.status(201).json({ submission, allMandatorySubmitted, xpPreview });
   } catch (err) {
     console.error('POST /api/bounties/my/:instanceId/submit/:bountyId error:', err);
     res.status(500).json({ error: 'Failed to submit content' });
@@ -688,7 +748,19 @@ router.post('/my/:instanceId/claim-full-key', requireAuth, async (req, res) => {
       WHERE instance_id = ${instanceId} AND user_id = ${userId}
     `);
 
-    res.json({ success: true, fullKey: key.key_value });
+    // Award completion bonus XP
+    const [tierRow] = toRows(await db.execute(sql`
+      SELECT COALESCE(t.xp_tier, 'standard') AS xp_tier, COALESCE(ci.xp_event_multiplier, 1.0) AS mult
+      FROM campaign_instances ci
+      JOIN campaign_templates t ON t.id = ci.template_id
+      WHERE ci.id = ${instanceId}
+    `)) as any[];
+    const tier3 = (tierRow?.xp_tier || 'standard') as XPTier;
+    const mult3 = Number(tierRow?.mult ?? 1.0);
+    const bonusXP = computeCompletionBonus(tier3, mult3);
+    await awardCampaignXP(userId, bonusXP, 'campaign_completion', `Completed campaign #${instanceId}`, instanceId);
+
+    res.json({ success: true, fullKey: key.key_value, xpAwarded: bonusXP });
   } catch (err) {
     console.error('POST /api/bounties/my/:instanceId/claim-full-key error:', err);
     res.status(500).json({ error: 'Failed to claim full-game key' });
@@ -757,12 +829,97 @@ router.patch('/admin/submissions/:id/review', requireAdmin, async (req, res) => 
               AND status NOT IN ('completed', 'full_game_awarded')
           `);
         }
+
+        // Award XP for this approved submission
+        const [tierRow2] = toRows(await db.execute(sql`
+          SELECT COALESCE(t.xp_tier, 'standard') AS xp_tier, COALESCE(ci.xp_event_multiplier, 1.0) AS mult
+          FROM campaign_instances ci
+          JOIN campaign_templates t ON t.id = ci.template_id
+          WHERE ci.id = ${sub.instance_id}
+        `)) as any[];
+        const tier4 = (tierRow2?.xp_tier || 'standard') as XPTier;
+        const profile4 = getXPProfile(tier4);
+        const mult4 = Number(tierRow2?.mult ?? 1.0);
+
+        // Load bounty details to compute XP
+        const [bountyInfo] = toRows(await db.execute(sql`
+          SELECT b.content_type, b.quantity FROM campaign_template_bounties b
+          JOIN bounty_submissions bs ON bs.bounty_id = b.id
+          WHERE bs.id = ${submissionId}
+        `)) as any[];
+        if (bountyInfo) {
+          // Count prior approved submissions of same type for bonus
+          const [priorApproved] = toRows(await db.execute(sql`
+            SELECT COUNT(*) AS qty FROM bounty_submissions
+            WHERE participant_id = ${sub.participant_id} AND instance_id = ${sub.instance_id}
+              AND bounty_id IN (SELECT id FROM campaign_template_bounties WHERE template_id = (SELECT template_id FROM campaign_instances WHERE id = ${sub.instance_id}) AND content_type = ${bountyInfo.content_type})
+              AND status = 'approved' AND id != ${submissionId}
+          `)) as any[];
+          const isFirst2 = Number(priorApproved?.qty ?? 0) === 0;
+          const bountyXP = computeBountyXP(profile4, bountyInfo.content_type, isFirst2, bountyInfo.quantity ?? 1, Number(priorApproved?.qty ?? 0));
+          const totalXP = Math.round(bountyXP * mult4);
+          await awardCampaignXP(sub.participant_id, totalXP, 'bounty_approved', `Bounty approved in campaign #${sub.instance_id}`, sub.instance_id);
+          await db.execute(sql`UPDATE bounty_submissions SET xp_awarded = ${totalXP} WHERE id = ${submissionId}`);
+        }
       }
     }
 
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to review submission' });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────
+// ADMIN — XP PROFILE MANAGER
+// ──────────────────────────────────────────────────────────────
+
+router.get('/admin/xp-profiles', requireAdmin, async (_req, res) => {
+  try {
+    const profiles = listAllProfiles();
+    res.json(profiles);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load XP profiles' });
+  }
+});
+
+router.patch('/admin/xp-profiles/:tier', requireAdmin, async (req, res) => {
+  try {
+    const tier = req.params.tier as XPTier;
+    if (!['quick', 'standard', 'premium', 'featured'].includes(tier)) {
+      return res.status(400).json({ error: 'Invalid tier' });
+    }
+    const allowed = [
+      'totalXP','completionBonus','joinXP','demoClaimXP','playDemoXP',
+      'firstClipXP','perClipXP','clipBonusQty','clipBonusXP',
+      'firstScreenshotXP','perScreenshotXP','screenshotBonusQty','screenshotBonusXP',
+      'firstFeedbackXP','perFeedbackXP','reelXP','bugReportXP','streamXP',
+    ];
+    const patch: Partial<XPProfile> = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) {
+        (patch as any)[key] = Number(req.body[key]);
+      }
+    }
+    updateProfile(tier, patch);
+    res.json({ success: true, tier, patch });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update XP profile' });
+  }
+});
+
+router.post('/admin/xp-events/:instanceId', requireAdmin, async (req, res) => {
+  try {
+    const instanceId = Number(req.params.instanceId);
+    const { multiplier, reason } = req.body;
+    await db.execute(sql`
+      UPDATE campaign_instances
+      SET xp_event_multiplier = ${Number(multiplier) ?? 1.0}
+      WHERE id = ${instanceId}
+    `);
+    res.json({ success: true, instanceId, multiplier, reason });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to set event multiplier' });
   }
 });
 
