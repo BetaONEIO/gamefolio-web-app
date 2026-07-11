@@ -268,7 +268,7 @@ const Sidebar = () => {
     { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
 
-    ...(user ? [{ icon: Target, label: "Bounties", href: "/bounties" }] : []),
+    ...(user ? [{ icon: Target, label: "Bounty Hub", href: "/bounties" }] : []),
 
     // Store stays on native but renders a crypto-free cosmetics catalogue.
     { icon: GamefolioStoreIcon, label: "Store", href: "/store" },

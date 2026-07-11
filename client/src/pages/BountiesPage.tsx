@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -7,14 +7,14 @@ import {
   Target, ShieldCheck, Clock, Users, Key, ChevronRight, ChevronLeft,
   Zap, Copy, Check, Loader2, Lock,
   Film, Camera, MessageSquare, Star, AlertCircle,
-  Trophy, Gift,
+  Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown,
 } from "lucide-react";
 import { SiSteam } from "react-icons/si";
 
-const NEON = "#B7FF18";
+const NEON = "#B8FF1B";
 const PAGE_BG = "#070b10";
-const CARD_BG = "rgba(255,255,255,0.04)";
-const CARD_BORDER = "rgba(255,255,255,0.09)";
+const CARD_BG = "#0e1520";
+const CARD_BORDER = "rgba(255,255,255,0.10)";
 
 type View = "marketplace" | "detail" | "progress";
 type MyTab = "active" | "submitted" | "completed" | "expired";
@@ -53,132 +53,211 @@ function timeRemaining(endDate: string | null) {
   return `${hours}h left`;
 }
 
-// ── helpers for mission-card requirements ────────────────────────────────
-function bountyRequirements(bounties: any[], hasDemoKey: boolean): string[] {
-  const reqs: string[] = [];
-  if (hasDemoKey) reqs.push("Play the Demo");
-  const seen = new Set<string>();
-  for (const b of bounties) {
-    const qty = Number(b.quantity ?? 1);
-    const ct = b.content_type as string;
-    if (seen.has(ct)) continue;
-    seen.add(ct);
-    if (ct === "clip")       reqs.push(`Upload ${qty} Gameplay Clip${qty !== 1 ? "s" : ""}`);
-    else if (ct === "screenshot") reqs.push(`Upload ${qty} Screenshot${qty !== 1 ? "s" : ""}`);
-    else if (ct === "feedback")   reqs.push("Submit First Impressions");
-    else if (ct === "reel")       reqs.push(`Upload ${qty} Reel${qty !== 1 ? "s" : ""}`);
-    else if (ct === "stream")     reqs.push("Go Live on Stream");
-    else if (ct === "session")    reqs.push("Complete a Play Session");
-    else if (ct === "bug")        reqs.push(`File ${qty} Bug Report${qty !== 1 ? "s" : ""}`);
-    else reqs.push(ct.charAt(0).toUpperCase() + ct.slice(1));
-  }
-  return reqs;
-}
-
-// ── 3-D reward icon boxes ─────────────────────────────────────────────────
-function RewardBox({ emoji, label, value, active }: { emoji: string; label: string; value: string; active?: boolean }) {
+// ── Reward column ─────────────────────────────────────────────────────────
+function RewardCol({ emoji, label, value, active }: { emoji: string; label: string; value: string; active: boolean }) {
   return (
-    <div className="flex-1 flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl"
-      style={{ background: active ? "rgba(183,255,24,0.07)" : "rgba(255,255,255,0.04)", border: `1px solid ${active ? "rgba(183,255,24,0.18)" : "rgba(255,255,255,0.07)"}` }}>
-      <div className="text-2xl leading-none select-none" style={{ filter: active ? "drop-shadow(0 0 6px rgba(183,255,24,0.5))" : "none" }}>{emoji}</div>
-      <div className="text-[10px] font-black text-center leading-tight" style={{ color: active ? NEON : "rgba(255,255,255,0.9)" }}>{value}</div>
-      <div className="text-[9px] text-center leading-tight" style={{ color: "rgba(255,255,255,0.35)" }}>{label}</div>
+    <div className="flex flex-col items-center gap-1.5 py-3 rounded-xl"
+      style={{ background: active ? "rgba(184,255,27,0.07)" : "rgba(255,255,255,0.04)", border: `1px solid ${active ? "rgba(184,255,27,0.20)" : "rgba(255,255,255,0.07)"}` }}>
+      <span className="text-xl leading-none select-none" style={{ filter: active ? "drop-shadow(0 0 5px rgba(184,255,27,0.55))" : "none" }}>{emoji}</span>
+      <span className="text-[11px] font-black leading-tight text-center px-1" style={{ color: active ? NEON : "rgba(255,255,255,0.85)" }}>{value}</span>
+      <span className="text-[9px] leading-tight text-center px-1" style={{ color: "rgba(255,255,255,0.32)" }}>{label}</span>
     </div>
   );
 }
 
+// ── Campaign card ─────────────────────────────────────────────────────────
 function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => void }) {
-  const isGF = !!campaign.gamefolio_managed;
-  const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
-  const fullLeft = Number(campaign.full_keys_remaining ?? 0);
+  const demoLeft  = Number(campaign.demo_keys_remaining ?? 0);
+  const fullLeft  = Number(campaign.full_keys_remaining ?? 0);
   const bounties: any[] = campaign.bounties ?? [];
-  const totalXp = bounties.reduce((a: number, b: any) => a + Number(b.xp_reward ?? 0), 0);
-  const reqs = bountyRequirements(bounties, demoLeft > 0 || isGF);
+  const totalXp   = bounties.reduce((a: number, b: any) => a + Number(b.xp_reward ?? 0), 0);
 
   return (
     <div
-      className="rounded-2xl overflow-hidden cursor-pointer group transition-all duration-200 hover:translate-y-[-2px] hover:shadow-2xl"
-      style={{
-        background: "#0e1520",
-        border: `1px solid ${isGF ? "rgba(183,255,24,0.22)" : "rgba(255,255,255,0.10)"}`,
-        boxShadow: isGF ? "0 0 0 0 rgba(183,255,24,0)" : undefined,
-      }}
+      className="rounded-2xl overflow-hidden cursor-pointer group transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-black/40"
+      style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}
       onClick={onClick}
     >
-      {/* ① Banner */}
-      <div className="relative h-44 overflow-hidden rounded-t-2xl">
+      {/* Hero artwork */}
+      <div className="relative h-48 overflow-hidden">
         {campaign.game_artwork_url ? (
-          <img
-            src={campaign.game_artwork_url}
-            alt={campaign.game_name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
+          <img src={campaign.game_artwork_url} alt={campaign.game_name}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
         ) : (
           <div className="w-full h-full flex items-center justify-center"
-            style={{ background: isGF
-              ? "linear-gradient(135deg, #0e2a0a 0%, #0a1f1a 50%, #07100a 100%)"
-              : "linear-gradient(135deg, #0d1624 0%, #0a1020 100%)" }}>
-            <Target size={40} color="rgba(183,255,24,0.15)" />
+            style={{ background: "linear-gradient(135deg, #0d1624 0%, #0a1020 100%)" }}>
+            <Target size={44} color="rgba(184,255,27,0.12)" />
           </div>
         )}
-        {/* scrim */}
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #0e1520 0%, rgba(14,21,32,0.3) 55%, transparent 100%)" }} />
-        {/* badge */}
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #0e1520 0%, rgba(14,21,32,0.18) 60%, transparent 100%)" }} />
         <div className="absolute top-3 left-3">
-          <span className="flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-full"
-            style={{ color: "#070b10", background: NEON, letterSpacing: "0.02em" }}>
-            <ShieldCheck size={10} /> {isGF ? "Gamefolio" : "GF Verified"}
+          <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full"
+            style={{ background: NEON, color: "#070b10" }}>
+            <ShieldCheck size={9} /> GF Verified
           </span>
         </div>
       </div>
 
-      <div className="px-5 pb-5 pt-4 space-y-5">
-
-        {/* ② Title */}
+      {/* Body */}
+      <div className="px-5 pb-5 pt-4 space-y-4">
+        {/* Title */}
         <div>
-          {!isGF && campaign.game_name && (
-            <div className="text-[10px] font-bold uppercase tracking-[0.12em] mb-1" style={{ color: "rgba(183,255,24,0.6)" }}>
-              {campaign.game_name}
-            </div>
-          )}
-          <div className="text-xl font-black text-white leading-tight tracking-tight">{campaign.template_name}</div>
+          <h3 className="text-lg font-black text-white leading-tight tracking-tight">
+            {campaign.game_name || campaign.template_name}
+          </h3>
           {campaign.description && (
-            <div className="text-[12px] mt-1.5 line-clamp-1 leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
+            <p className="text-[12px] mt-1 line-clamp-1" style={{ color: "rgba(255,255,255,0.45)" }}>
               {campaign.description}
-            </div>
+            </p>
           )}
         </div>
 
-        {/* ③ Requirements */}
-        {reqs.length > 0 && (
-          <div className="space-y-1.5">
-            {reqs.map((req, i) => (
-              <div key={i} className="flex items-center gap-2.5 text-sm">
-                <span className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black"
-                  style={{ background: "rgba(183,255,24,0.15)", color: NEON }}>✓</span>
-                <span style={{ color: "rgba(255,255,255,0.75)" }}>{req}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* ④ Rewards */}
-        <div className="flex gap-2">
-          <RewardBox emoji="🎮" label="Demo Key"    value={demoLeft > 0 ? `${demoLeft} left` : isGF ? "Instant" : "—"} active={demoLeft > 0 || isGF} />
-          <RewardBox emoji="🏆" label="Full Game"   value={fullLeft > 0 ? `${fullLeft} left` : "—"} active={fullLeft > 0} />
-          <RewardBox emoji="⚡" label="XP Reward"   value={totalXp > 0 ? `${totalXp.toLocaleString()} XP` : "—"} active={totalXp > 0} />
-          <RewardBox emoji="💎" label="GFT Tokens"  value="—" active={false} />
+        {/* Rewards — 4 equal columns */}
+        <div className="grid grid-cols-4 gap-2">
+          <RewardCol emoji="🎮" label="Demo Key"  value={demoLeft  > 0 ? `${demoLeft}`  : "—"} active={demoLeft  > 0} />
+          <RewardCol emoji="🏆" label="Full Game" value={fullLeft  > 0 ? `${fullLeft}`  : "—"} active={fullLeft  > 0} />
+          <RewardCol emoji="⚡" label="XP"        value={totalXp  > 0 ? `${totalXp.toLocaleString()}` : "—"} active={totalXp > 0} />
+          <RewardCol emoji="💎" label="GFT / SKL" value="—" active={false} />
         </div>
 
-        {/* ⑤ CTA */}
+        {/* CTA */}
         <button
-          className="w-full py-3.5 rounded-xl text-sm font-black tracking-wide flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]"
+          className="w-full py-3 rounded-xl text-sm font-black tracking-wide flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.98]"
           style={{ background: NEON, color: "#070b10" }}
-          onClick={(e) => { e.stopPropagation(); onClick(); }}
+          onClick={e => { e.stopPropagation(); onClick(); }}
         >
-          <Zap size={15} /> Start Bounty
+          Start Bounty
         </button>
       </div>
+    </div>
+  );
+}
+
+// ── Filter sidebar data ────────────────────────────────────────────────────
+const FILTER_GROUPS = [
+  {
+    key: "rewards", label: "Rewards",
+    options: [
+      { key: "demo",    label: "Demo Available" },
+      { key: "full",    label: "Full Game Reward" },
+      { key: "xp",      label: "XP" },
+      { key: "gft",     label: "GFT" },
+      { key: "skl",     label: "SKL" },
+      { key: "badge",   label: "Badge Rewards" },
+    ],
+  },
+  {
+    key: "requirements", label: "Requirements",
+    options: [
+      { key: "clip",       label: "Gameplay Clips" },
+      { key: "reel",       label: "Reels" },
+      { key: "screenshot", label: "Screenshots" },
+      { key: "stream",     label: "Livestream" },
+      { key: "review",     label: "Review" },
+      { key: "feedback",   label: "Feedback" },
+      { key: "bug",        label: "Bug Testing" },
+    ],
+  },
+  {
+    key: "genres", label: "Genres",
+    options: [
+      { key: "action",    label: "Action" },
+      { key: "adventure", label: "Adventure" },
+      { key: "horror",    label: "Horror" },
+      { key: "rpg",       label: "RPG" },
+      { key: "strategy",  label: "Strategy" },
+      { key: "survival",  label: "Survival" },
+      { key: "racing",    label: "Racing" },
+      { key: "puzzle",    label: "Puzzle" },
+      { key: "sandbox",   label: "Sandbox" },
+      { key: "fps",       label: "FPS" },
+    ],
+  },
+  {
+    key: "platforms", label: "Platforms",
+    options: [
+      { key: "steam",  label: "Steam" },
+      { key: "epic",   label: "Epic Games" },
+      { key: "itch",   label: "itch.io" },
+    ],
+  },
+  {
+    key: "difficulty", label: "Difficulty",
+    options: [
+      { key: "quick",  label: "Quick" },
+      { key: "medium", label: "Medium" },
+      { key: "long",   label: "Long" },
+    ],
+  },
+] as const;
+
+function FilterSidebar({
+  active, onChange,
+}: {
+  active: Set<string>;
+  onChange: (next: Set<string>) => void;
+}) {
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const toggle = (key: string) => {
+    const next = new Set(active);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    onChange(next);
+  };
+  const toggleGroup = (g: string) => {
+    setCollapsed(prev => {
+      const s = new Set(prev);
+      if (s.has(g)) s.delete(g); else s.add(g);
+      return s;
+    });
+  };
+
+  return (
+    <div className="space-y-1">
+      {active.size > 0 && (
+        <button
+          onClick={() => onChange(new Set())}
+          className="w-full flex items-center justify-center gap-1.5 py-2 mb-3 rounded-xl text-xs font-bold transition-all hover:brightness-110"
+          style={{ background: "rgba(184,255,27,0.10)", color: NEON, border: `1px solid rgba(184,255,27,0.20)` }}>
+          <X size={11} /> Clear filters
+        </button>
+      )}
+      {FILTER_GROUPS.map(group => {
+        const isOpen = !collapsed.has(group.key);
+        return (
+          <div key={group.key} className="rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <button
+              className="w-full flex items-center justify-between px-4 py-3 text-xs font-black uppercase tracking-wider text-white/60 hover:text-white/90 transition-colors"
+              onClick={() => toggleGroup(group.key)}>
+              {group.label}
+              <ChevronDown size={12} className={`transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+            </button>
+            {isOpen && (
+              <div className="px-3 pb-3 space-y-1">
+                {group.options.map(opt => {
+                  const on = active.has(opt.key);
+                  return (
+                    <button key={opt.key}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-left transition-all"
+                      style={{
+                        background: on ? "rgba(184,255,27,0.10)" : "transparent",
+                        color: on ? NEON : "rgba(255,255,255,0.55)",
+                        fontWeight: on ? 700 : 500,
+                      }}
+                      onClick={() => toggle(opt.key)}>
+                      <span className="w-3.5 h-3.5 rounded flex items-center justify-center flex-shrink-0 border transition-all"
+                        style={{ borderColor: on ? NEON : "rgba(255,255,255,0.25)", background: on ? NEON : "transparent" }}>
+                        {on && <Check size={9} color="#070b10" strokeWidth={3} />}
+                      </span>
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -216,7 +295,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
     <div className="min-h-screen" style={{ background: PAGE_BG }}>
       {/* Back button */}
       <button onClick={onBack} className="flex items-center gap-2 p-4 text-white/50 hover:text-white transition-colors text-sm font-bold">
-        <ChevronLeft size={16} /> Back to Marketplace
+        <ChevronLeft size={16} /> Back to Bounty Hub
       </button>
 
       {/* Hero */}
@@ -838,35 +917,67 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
 }
 
 export default function BountiesPage() {
-  const [mainTab, setMainTab] = useState<MainTab>("marketplace");
-  const [view, setView] = useState<View>("marketplace");
+  const [mainTab, setMainTab]               = useState<MainTab>("marketplace");
+  const [view, setView]                     = useState<View>("marketplace");
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [progressCampaign, setProgressCampaign] = useState<any>(null);
-  const [filter, setFilter] = useState("all");
+  const [search, setSearch]                 = useState("");
+  const [activeFilters, setActiveFilters]   = useState<Set<string>>(new Set());
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  const { data: campaigns = [], isLoading } = useQuery<any[]>({
+  const { data: allCampaigns = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/bounties"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
-  const FILTERS = [
-    { key: "all",          label: "All" },
-    { key: "gamefolio",    label: "🎮 Gamefolio" },
-    { key: "recommended",  label: "Recommended" },
-    { key: "indie",        label: "Indie Games" },
-    { key: "demo_available", label: "Demo Available" },
-    { key: "full_game",    label: "Full-Game Reward" },
-  ];
+  // Bounty Hub = indie only (Gamefolio-managed campaigns live elsewhere)
+  const indieCampaigns = useMemo(
+    () => allCampaigns.filter((c: any) => !c.gamefolio_managed),
+    [allCampaigns],
+  );
 
-  const filtered = filter === "all" ? campaigns :
-    filter === "gamefolio" ? campaigns.filter((c: any) => c.gamefolio_managed) :
-    filter === "indie" ? campaigns.filter((c: any) => !c.gamefolio_managed) :
-    filter === "recommended" ? campaigns.filter((c: any) => c.recommended) :
-    filter === "demo_available" ? campaigns.filter((c: any) => Number(c.demo_keys_remaining) > 0) :
-    filter === "full_game" ? campaigns.filter((c: any) => c.completion_reward === "full_game_key") :
-    campaigns;
+  // Apply search + filters
+  const filtered = useMemo(() => {
+    let list = indieCampaigns;
 
-  // Campaign Detail view
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((c: any) =>
+        (c.game_name ?? "").toLowerCase().includes(q) ||
+        (c.template_name ?? "").toLowerCase().includes(q) ||
+        (c.description ?? "").toLowerCase().includes(q),
+      );
+    }
+
+    if (activeFilters.size > 0) {
+      list = list.filter((c: any) => {
+        const bounties: any[] = c.bounties ?? [];
+        const contentTypes = new Set(bounties.map((b: any) => b.content_type));
+        const totalXp = bounties.reduce((a: number, b: any) => a + Number(b.xp_reward ?? 0), 0);
+        const demoLeft = Number(c.demo_keys_remaining ?? 0);
+        const fullLeft = Number(c.full_keys_remaining ?? 0);
+
+        for (const f of activeFilters) {
+          // Rewards
+          if (f === "demo"  && demoLeft  === 0) return false;
+          if (f === "full"  && fullLeft  === 0) return false;
+          if (f === "xp"    && totalXp   === 0) return false;
+          // Requirements
+          if (f === "clip"       && !contentTypes.has("clip"))       return false;
+          if (f === "reel"       && !contentTypes.has("reel"))       return false;
+          if (f === "screenshot" && !contentTypes.has("screenshot")) return false;
+          if (f === "stream"     && !contentTypes.has("stream"))     return false;
+          if (f === "feedback"   && !contentTypes.has("feedback"))   return false;
+          if (f === "bug"        && !contentTypes.has("bug"))        return false;
+        }
+        return true;
+      });
+    }
+
+    return list;
+  }, [indieCampaigns, search, activeFilters]);
+
+  // ── Sub-views ──────────────────────────────────────────────────────────
   if (view === "detail" && selectedCampaign) {
     return (
       <CampaignDetail
@@ -876,8 +987,6 @@ export default function BountiesPage() {
       />
     );
   }
-
-  // Campaign Progress view
   if (view === "progress" && progressCampaign) {
     return (
       <CampaignProgress
@@ -887,94 +996,169 @@ export default function BountiesPage() {
     );
   }
 
+  const activeFilterCount = activeFilters.size;
+
   return (
     <div className="min-h-screen" style={{ background: PAGE_BG }}>
-      {/* Header */}
-      <div className="px-4 pt-6 pb-4">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(183,255,24,0.12)" }}>
-            <Target size={20} color={NEON} />
+
+      {/* ── Hero ── */}
+      <div className="px-6 pt-8 pb-0">
+        <div className="flex items-start gap-4 mb-5">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 mt-0.5"
+            style={{ background: "rgba(184,255,27,0.10)", border: "1px solid rgba(184,255,27,0.18)" }}>
+            <Target size={22} color={NEON} />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-white">Bounties</h1>
-            <div className="text-xs text-white/40">Play games. Complete bounties. Earn rewards.</div>
+            <h1 className="text-3xl font-black text-white tracking-tight leading-none">Bounty Hub</h1>
+            <p className="mt-1.5 text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
+              Discover indie game campaigns, earn rewards and help developers grow their games.
+            </p>
           </div>
         </div>
-      </div>
 
-      {/* Main Tabs */}
-      <div className="px-4 mb-4">
-        <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ background: "rgba(255,255,255,0.04)" }}>
-          {[
-            { key: "marketplace", label: "Marketplace" },
-            { key: "my",          label: "My Campaigns" },
-          ].map(t => (
-            <button key={t.key} onClick={() => setMainTab(t.key as MainTab)}
-              className="px-5 py-2 rounded-lg text-sm font-bold transition-all"
-              style={mainTab === t.key
-                ? { background: NEON, color: "#070b10" }
-                : { color: "rgba(255,255,255,0.5)" }}>
-              {t.label}
+        {/* Search */}
+        <div className="relative mb-6">
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "rgba(255,255,255,0.35)" }} />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search games..."
+            className="w-full pl-10 pr-4 py-3 rounded-xl text-sm text-white placeholder:text-white/30 outline-none transition-all focus:ring-1"
+            style={{
+              background: "#111820",
+              border: "1px solid rgba(255,255,255,0.10)",
+              fontFamily: "inherit",
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.40)"}
+            onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"}
+          />
+          {search && (
+            <button onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-white/10 transition-colors">
+              <X size={13} style={{ color: "rgba(255,255,255,0.35)" }} />
             </button>
-          ))}
+          )}
+        </div>
+
+        {/* Main tabs */}
+        <div className="flex items-center justify-between mb-0">
+          <div className="flex gap-0.5 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.05)" }}>
+            {([
+              { key: "marketplace", label: "Bounty Hub" },
+              { key: "my",         label: "My Campaigns" },
+            ] as { key: MainTab; label: string }[]).map(t => (
+              <button key={t.key} onClick={() => setMainTab(t.key)}
+                className="px-5 py-2 rounded-lg text-sm font-bold transition-all"
+                style={mainTab === t.key
+                  ? { background: NEON, color: "#070b10" }
+                  : { color: "rgba(255,255,255,0.50)" }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Mobile filter toggle */}
+          {mainTab === "marketplace" && (
+            <button
+              className="lg:hidden flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold transition-all"
+              style={{
+                background: activeFilterCount > 0 ? "rgba(184,255,27,0.12)" : "rgba(255,255,255,0.06)",
+                color: activeFilterCount > 0 ? NEON : "rgba(255,255,255,0.60)",
+                border: `1px solid ${activeFilterCount > 0 ? "rgba(184,255,27,0.25)" : "rgba(255,255,255,0.10)"}`,
+              }}
+              onClick={() => setShowMobileFilters(v => !v)}>
+              <SlidersHorizontal size={14} />
+              Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="px-4 pb-8">
+      {/* ── Content ── */}
+      <div className="px-6 pb-10 mt-5">
         {mainTab === "marketplace" ? (
-          <>
-            {/* Filter chips */}
-            <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide mb-4">
-              {FILTERS.map(f => (
-                <button key={f.key} onClick={() => setFilter(f.key)}
-                  className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all"
-                  style={filter === f.key
-                    ? { background: NEON, color: "#070b10" }
-                    : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", border: `1px solid ${CARD_BORDER}` }}>
-                  {f.label}
-                </button>
-              ))}
-            </div>
+          <div className="flex gap-6 items-start">
 
-            {isLoading ? (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 size={28} className="animate-spin text-white/30" />
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 space-y-4 text-center">
-                <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "rgba(183,255,24,0.08)" }}>
-                  <Target size={28} color="rgba(183,255,24,0.4)" />
-                </div>
-                <div>
-                  <div className="text-white font-black text-lg mb-1">No live campaigns yet</div>
-                  <div className="text-white/40 text-sm max-w-xs">
-                    Gamefolio Bounty Campaigns are created by indie developers and verified by Gamefolio.
-                    Check back soon — campaigns are being added regularly.
+            {/* Filter sidebar — desktop */}
+            <aside className="hidden lg:block w-52 flex-shrink-0 sticky top-6">
+              <FilterSidebar active={activeFilters} onChange={setActiveFilters} />
+            </aside>
+
+            {/* Mobile filter drawer */}
+            {showMobileFilters && (
+              <div className="lg:hidden fixed inset-0 z-50 flex">
+                <div className="absolute inset-0 bg-black/60" onClick={() => setShowMobileFilters(false)} />
+                <div className="relative ml-auto w-72 h-full overflow-y-auto py-6 px-4"
+                  style={{ background: "#0d1420", borderLeft: "1px solid rgba(255,255,255,0.10)" }}>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-sm font-black text-white">Filters</span>
+                    <button onClick={() => setShowMobileFilters(false)}
+                      className="p-1 rounded-lg hover:bg-white/10 transition-colors">
+                      <X size={16} style={{ color: "rgba(255,255,255,0.50)" }} />
+                    </button>
                   </div>
+                  <FilterSidebar active={activeFilters} onChange={setActiveFilters} />
                 </div>
-                <div className="rounded-xl p-4 max-w-xs text-left space-y-2" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-white/30">How it works</div>
-                  {["Join a campaign and claim a free demo key", "Complete the required bounties (clips, screenshots, feedback)", "Get verified by Gamefolio and earn a full-game key + XP"].map((s, i) => (
-                    <div key={i} className="flex items-start gap-2 text-xs text-white/60">
-                      <span className="w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center flex-shrink-0 mt-0.5"
-                        style={{ background: "rgba(183,255,24,0.15)", color: NEON }}>{i + 1}</span>
-                      {s}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {filtered.map((c: any) => (
-                  <CampaignCard
-                    key={c.id}
-                    campaign={c}
-                    onClick={() => { setSelectedCampaign(c); setView("detail"); }}
-                  />
-                ))}
               </div>
             )}
-          </>
+
+            {/* Cards */}
+            <div className="flex-1 min-w-0">
+              {/* Result count */}
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs font-bold" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  {isLoading ? "Loading…" : `${filtered.length} campaign${filtered.length !== 1 ? "s" : ""}`}
+                </span>
+                {activeFilterCount > 0 && (
+                  <button onClick={() => setActiveFilters(new Set())}
+                    className="text-xs font-bold flex items-center gap-1 transition-colors hover:opacity-80"
+                    style={{ color: NEON }}>
+                    <X size={10} /> Clear all
+                  </button>
+                )}
+              </div>
+
+              {isLoading ? (
+                <div className="flex items-center justify-center py-24">
+                  <Loader2 size={30} className="animate-spin" style={{ color: "rgba(255,255,255,0.20)" }} />
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 text-center space-y-4">
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                    style={{ background: "rgba(184,255,27,0.07)", border: "1px solid rgba(184,255,27,0.14)" }}>
+                    <Target size={28} color="rgba(184,255,27,0.40)" />
+                  </div>
+                  <div>
+                    <div className="text-white font-black text-lg mb-1">
+                      {search || activeFilterCount > 0 ? "No matching campaigns" : "No campaigns yet"}
+                    </div>
+                    <div className="text-sm max-w-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                      {search || activeFilterCount > 0
+                        ? "Try different search terms or clear your filters."
+                        : "Indie developers are launching campaigns soon. Check back shortly."}
+                    </div>
+                  </div>
+                  {(search || activeFilterCount > 0) && (
+                    <button onClick={() => { setSearch(""); setActiveFilters(new Set()); }}
+                      className="px-4 py-2 rounded-xl text-sm font-bold transition-all hover:brightness-110"
+                      style={{ background: NEON, color: "#070b10" }}>
+                      Clear search & filters
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-5">
+                  {filtered.map((c: any) => (
+                    <CampaignCard
+                      key={c.id}
+                      campaign={c}
+                      onClick={() => { setSelectedCampaign(c); setView("detail"); }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         ) : (
           <MyCampaigns
             onViewProgress={(c) => { setProgressCampaign(c); setView("progress"); }}
