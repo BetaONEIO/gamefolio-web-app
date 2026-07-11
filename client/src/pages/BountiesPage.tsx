@@ -666,60 +666,218 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         </div>
       </div>
 
-      {/* Description — below hero, no card */}
-      {campaign.description && (
-        <div className="px-6 pt-5 pb-1 max-w-3xl mx-auto">
-          <p className="text-sm text-white/60 leading-relaxed">{campaign.description}</p>
-        </div>
-      )}
+      {/* ── MISSION BRIEFING (3-column cards) ── */}
+      <div className="px-4 sm:px-6 lg:px-8 pt-8 pb-4 max-w-[1400px] mx-auto">
 
-      <div className="px-5 pb-14 mt-8 space-y-10 max-w-3xl mx-auto">
+        {campaign.description && (
+          <p className="text-sm text-white/55 leading-relaxed mb-8 max-w-2xl">{campaign.description}</p>
+        )}
 
-        {/* ── 3. WHAT YOU'LL EARN ── */}
-        <section>
-          <div className="text-xl font-black text-white mb-4">What You'll Earn</div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="rounded-2xl p-4 flex flex-col items-center text-center gap-2.5" style={{ background: CARD_BG, border: "1px solid rgba(184,255,27,0.22)" }}>
-              <img src="/icons/demo-key-icon.png" alt="Demo Key" className="w-16 h-16 object-contain" />
-              <div className="text-sm font-black text-white">Demo Key</div>
-              <div className="text-[11px] text-white/45 leading-snug">Receive immediately after accepting</div>
+        {/* Three equal briefing cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+
+          {/* ── Card 1: Mission Objectives ── */}
+          <div className="rounded-3xl flex flex-col overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+            {/* Illustration zone */}
+            <div className="flex items-center justify-center py-8" style={{ background: "rgba(184,255,27,0.04)", borderBottom: `1px solid ${CARD_BORDER}` }}>
+              <svg width="96" height="96" viewBox="0 0 96 96" fill="none">
+                <rect x="18" y="10" width="60" height="76" rx="8" fill="#0e1520" stroke="rgba(184,255,27,0.25)" strokeWidth="1.5"/>
+                <rect x="34" y="4" width="28" height="14" rx="5" fill="#B8FF1B"/>
+                <rect x="28" y="34" width="28" height="4" rx="2" fill="rgba(184,255,27,0.60)"/>
+                <rect x="28" y="46" width="22" height="4" rx="2" fill="rgba(255,255,255,0.25)"/>
+                <rect x="28" y="58" width="25" height="4" rx="2" fill="rgba(255,255,255,0.25)"/>
+                <circle cx="22" cy="36" r="4" fill="#B8FF1B"/>
+                <circle cx="22" cy="48" r="4" fill="rgba(255,255,255,0.20)"/>
+                <circle cx="22" cy="60" r="4" fill="rgba(255,255,255,0.20)"/>
+                <path d="M20 36 L21.5 37.5 L24 34.5" stroke="#070b10" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
-            <div className="rounded-2xl p-4 flex flex-col items-center text-center gap-2.5" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-              <img src="/icons/full-game-icon.png" alt="Full Game" className="w-16 h-16 object-contain" />
-              <div className="text-sm font-black text-white">Full Game</div>
-              <div className="text-[11px] text-white/45 leading-snug">Unlocked after completing the campaign</div>
-            </div>
-            <div className="rounded-2xl p-4 flex flex-col items-center text-center gap-2.5" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-              <div className="w-16 h-16 flex items-center justify-center rounded-2xl" style={{ background: "rgba(184,255,27,0.10)" }}>
-                <Zap size={34} color={NEON} />
+            {/* Content */}
+            <div className="p-6 flex flex-col gap-4 flex-1">
+              <div className="text-xs font-black uppercase tracking-widest" style={{ color: NEON }}>Mission Objectives</div>
+              <div className="space-y-3">
+                {mandatory.length > 0 ? mandatory.slice(0, 4).map((b: any) => (
+                  <div key={b.id} className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,255,27,0.12)" }}>
+                      {(() => { const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target; return <Icon size={12} color={NEON} />; })()}
+                    </div>
+                    <span className="text-sm font-bold text-white/80 leading-snug">{objectiveLabel(b)}</span>
+                  </div>
+                )) : (
+                  <div className="text-sm text-white/40">No objectives defined</div>
+                )}
+                {optional.length > 0 && (
+                  <div className="flex items-center gap-3 pt-1" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,255,255,0.06)" }}>
+                      <Star size={11} className="text-white/40" />
+                    </div>
+                    <span className="text-xs text-white/40">{optional.length} bonus objective{optional.length !== 1 ? "s" : ""}</span>
+                  </div>
+                )}
               </div>
-              <div className="text-sm font-black text-white">{totalXp > 0 ? `${totalXp.toLocaleString()} XP` : "XP"}</div>
-              <div className="text-[11px] text-white/45 leading-snug">Awarded throughout the campaign</div>
-            </div>
-            <div className="rounded-2xl p-4 flex flex-col items-center text-center gap-2.5" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-              <img src="/icons/token-icon.png" alt="GFT" className="w-16 h-16 object-contain" />
-              <div className="text-sm font-black text-white">GFT / SKL</div>
-              <div className="text-[11px] text-white/45 leading-snug">Completion reward</div>
+              <div className="mt-auto pt-3 flex items-center gap-2" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+                <Clock size={12} style={{ color: "rgba(255,255,255,0.35)" }} />
+                <span className="text-xs text-white/35">Est. {bounties.length <= 2 ? "1–2 hrs" : bounties.length <= 4 ? "2–4 hrs" : "4+ hrs"} to complete</span>
+              </div>
             </div>
           </div>
-        </section>
 
-        {/* ── 4. MISSION OBJECTIVES ── */}
+          {/* ── Card 2: Rewards (hero card) ── */}
+          <div className="rounded-3xl flex flex-col overflow-hidden" style={{ background: CARD_BG, border: "1px solid rgba(184,255,27,0.28)", boxShadow: "0 0 32px rgba(184,255,27,0.08)" }}>
+            {/* Illustration zone */}
+            <div className="flex items-center justify-center py-8 relative" style={{ background: "rgba(184,255,27,0.07)", borderBottom: "1px solid rgba(184,255,27,0.18)" }}>
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-32 h-32 rounded-full" style={{ background: "rgba(184,255,27,0.08)", filter: "blur(24px)" }} />
+              </div>
+              <svg width="96" height="96" viewBox="0 0 96 96" fill="none">
+                <rect x="14" y="44" width="68" height="42" rx="7" fill="#0e1520" stroke="rgba(184,255,27,0.35)" strokeWidth="1.5"/>
+                <path d="M14 56 L82 56" stroke="rgba(184,255,27,0.35)" strokeWidth="1.5"/>
+                <rect x="36" y="44" width="24" height="12" rx="3" fill="#B8FF1B"/>
+                <path d="M20 34 Q48 10 76 34" stroke="rgba(184,255,27,0.40)" strokeWidth="2" strokeLinecap="round"/>
+                <circle cx="48" cy="68" r="8" fill="rgba(184,255,27,0.20)" stroke="#B8FF1B" strokeWidth="1.5"/>
+                <path d="M45 68 L47 70 L51 66" stroke="#B8FF1B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="28" cy="70" r="4" fill="rgba(184,255,27,0.12)"/>
+                <circle cx="68" cy="70" r="4" fill="rgba(184,255,27,0.12)"/>
+              </svg>
+            </div>
+            {/* Content */}
+            <div className="p-6 flex flex-col gap-4 flex-1">
+              <div className="text-xs font-black uppercase tracking-widest" style={{ color: NEON }}>Rewards</div>
+              <div className="space-y-3">
+                {demoLeft > 0 && (
+                  <div className="flex items-center gap-3">
+                    <img src="/icons/demo-key-icon.png" alt="" className="w-7 h-7 object-contain flex-shrink-0" />
+                    <div>
+                      <div className="text-sm font-black" style={{ color: NEON }}>Demo Key</div>
+                      <div className="text-[11px] text-white/40">Immediately on accept</div>
+                    </div>
+                  </div>
+                )}
+                {fullLeft > 0 && (
+                  <div className="flex items-center gap-3">
+                    <img src="/icons/full-game-icon.png" alt="" className="w-7 h-7 object-contain flex-shrink-0" />
+                    <div>
+                      <div className="text-sm font-black text-white">Full Game</div>
+                      <div className="text-[11px] text-white/40">On campaign completion</div>
+                    </div>
+                  </div>
+                )}
+                {totalXp > 0 && (
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,255,27,0.12)" }}>
+                      <Zap size={14} color={NEON} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-black text-white">{totalXp.toLocaleString()} XP</div>
+                      <div className="text-[11px] text-white/40">Across all objectives</div>
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-center gap-3">
+                  <img src="/icons/token-icon.png" alt="" className="w-7 h-7 object-contain flex-shrink-0" />
+                  <div>
+                    <div className="text-sm font-black text-white">GFT</div>
+                    <div className="text-[11px] text-white/40">Completion bonus</div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-auto">
+                <button
+                  disabled={!canAccept}
+                  onClick={() => setShowModal(true)}
+                  className="w-full py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-40"
+                  style={{ background: NEON, color: "#070b10" }}
+                >
+                  <ShieldCheck size={15} /> Accept Mission
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Card 3: Campaign Overview ── */}
+          <div className="rounded-3xl flex flex-col overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+            {/* Illustration zone */}
+            <div className="flex items-center justify-center py-8" style={{ background: "rgba(255,255,255,0.02)", borderBottom: `1px solid ${CARD_BORDER}` }}>
+              <svg width="96" height="96" viewBox="0 0 96 96" fill="none">
+                <circle cx="48" cy="48" r="34" stroke="rgba(255,255,255,0.10)" strokeWidth="1.5"/>
+                <circle cx="48" cy="48" r="24" stroke="rgba(184,255,27,0.20)" strokeWidth="1.5"/>
+                <circle cx="48" cy="48" r="14" stroke="rgba(184,255,27,0.40)" strokeWidth="1.5"/>
+                <circle cx="48" cy="48" r="4" fill="#B8FF1B"/>
+                <line x1="48" y1="14" x2="48" y2="24" stroke="rgba(255,255,255,0.20)" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="48" y1="72" x2="48" y2="82" stroke="rgba(255,255,255,0.20)" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="14" y1="48" x2="24" y2="48" stroke="rgba(255,255,255,0.20)" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="72" y1="48" x2="82" y2="48" stroke="rgba(255,255,255,0.20)" strokeWidth="1.5" strokeLinecap="round"/>
+                <line x1="48" y1="48" x2="62" y2="32" stroke="#B8FF1B" strokeWidth="2" strokeLinecap="round"/>
+                <line x1="48" y1="48" x2="56" y2="48" stroke="rgba(255,255,255,0.60)" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            </div>
+            {/* Content */}
+            <div className="p-6 flex flex-col gap-4 flex-1">
+              <div className="text-xs font-black uppercase tracking-widest" style={{ color: NEON }}>Campaign Overview</div>
+              <div className="space-y-3">
+                {[
+                  { label: "Demo Keys Left", value: demoLeft > 0 ? String(demoLeft) : "—", hi: demoLeft > 0 },
+                  { label: "Full Game Keys", value: fullLeft > 0 ? String(fullLeft) : "—", hi: false },
+                  { label: "Creators Joined", value: String(campaign.participant_count ?? 0), hi: false },
+                  { label: "Time Remaining", value: timeLeft, hi: false },
+                  { label: "Platform", value: campaign.platform ?? "PC", hi: false },
+                ].map(row => (
+                  <div key={row.label} className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-white/45">{row.label}</span>
+                    <span className="text-sm font-black" style={{ color: row.hi ? NEON : "rgba(255,255,255,0.85)" }}>{row.value}</span>
+                  </div>
+                ))}
+              </div>
+              {!isGF && demoLeft <= 3 && demoLeft > 0 && (
+                <div className="mt-auto rounded-xl px-3 py-2 text-xs font-black text-center" style={{ background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.25)", color: "#f59e0b" }}>
+                  ⚡ Only {demoLeft} key{demoLeft !== 1 ? "s" : ""} remaining
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── MISSION ROADMAP ── */}
+        <div className="mb-8">
+          <div className="text-[11px] font-black uppercase tracking-widest text-white/35 mb-4">Mission Roadmap</div>
+          <div className="flex items-center gap-0">
+            {([
+              { icon: <ShieldCheck size={18} color={NEON} />, label: "Accept" },
+              { icon: <img src="/icons/demo-key-icon.png" alt="" className="w-5 h-5 object-contain" />, label: "Get Key" },
+              { icon: <Target size={18} color={NEON} />, label: "Complete" },
+              { icon: <Trophy size={18} color={NEON} />, label: "Unlock" },
+            ] as const).map((step, i, arr) => (
+              <div key={step.label} className="flex items-center flex-1">
+                <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
+                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "rgba(184,255,27,0.10)", border: "1px solid rgba(184,255,27,0.20)" }}>
+                    {step.icon}
+                  </div>
+                  <div className="text-[10px] font-bold text-white/45">{step.label}</div>
+                </div>
+                {i < arr.length - 1 && (
+                  <div className="flex-1 h-px mx-2" style={{ background: "rgba(184,255,27,0.18)" }} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── DETAILED OBJECTIVES ── */}
         {mandatory.length > 0 && (
-          <section>
-            <div className="text-xl font-black text-white mb-4">Mission Objectives</div>
+          <div className="mb-8">
+            <div className="text-[11px] font-black uppercase tracking-widest text-white/35 mb-4">Detailed Objectives</div>
             <div className="space-y-2">
-              {mandatory.map((b: any, idx: number) => {
+              {mandatory.map((b: any, i: number) => {
                 const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
                 return (
                   <div key={b.id} className="flex items-center gap-4 rounded-2xl px-5 py-4" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-                    <div className="text-base font-black w-5 flex-shrink-0 text-center" style={{ color: NEON }}>{idx + 1}</div>
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,255,27,0.10)" }}>
-                      <Icon size={17} color={NEON} />
+                    <div className="text-sm font-black w-5 flex-shrink-0 text-center" style={{ color: NEON }}>{i + 1}</div>
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,255,27,0.10)" }}>
+                      <Icon size={16} color={NEON} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-black text-white">{objectiveLabel(b)}</div>
-                      {b.description && <div className="text-[11px] text-white/40 mt-0.5 truncate">{b.description}</div>}
+                      {b.description && <div className="text-[11px] text-white/40 mt-0.5">{b.description}</div>}
                     </div>
                     {b.xp_reward > 0 && (
                       <div className="text-xs font-black flex-shrink-0" style={{ color: NEON }}>+{b.xp_reward} XP</div>
@@ -727,85 +885,35 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                   </div>
                 );
               })}
-            </div>
-            {optional.length > 0 && (
-              <div className="mt-5">
-                <div className="text-[11px] font-black uppercase tracking-widest text-white/35 mb-3">Bonus Objectives</div>
-                <div className="space-y-2">
+              {optional.length > 0 && (
+                <div className="pt-3">
+                  <div className="text-[11px] font-black uppercase tracking-widest text-white/30 mb-2">Bonus</div>
                   {optional.map((b: any) => {
                     const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
                     return (
                       <div key={b.id} className="flex items-center gap-4 rounded-2xl px-5 py-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,255,255,0.05)" }}>
-                          <Icon size={17} className="text-white/35" />
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,255,255,0.05)" }}>
+                          <Icon size={16} className="text-white/35" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-bold text-white/65">{objectiveLabel(b)}</div>
+                          <div className="text-sm font-bold text-white/60">{objectiveLabel(b)}</div>
                           {b.description && <div className="text-[11px] text-white/30 mt-0.5">{b.description}</div>}
                         </div>
-                        {b.xp_reward > 0 && (
-                          <div className="text-xs font-bold flex-shrink-0 text-white/35">+{b.xp_reward} XP</div>
-                        )}
+                        {b.xp_reward > 0 && <div className="text-xs font-bold text-white/35 flex-shrink-0">+{b.xp_reward} XP</div>}
                       </div>
                     );
                   })}
                 </div>
-              </div>
-            )}
-          </section>
+              )}
+            </div>
+          </div>
         )}
 
-        {/* ── 5. CAMPAIGN SUMMARY ── */}
-        <section>
-          <div className="text-xl font-black text-white mb-4">Campaign Summary</div>
-          <div className="rounded-2xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-            {([
-              { label: "Demo Keys Remaining", value: `${demoLeft}`, icon: <img src="/icons/demo-key-icon.png" alt="" className="w-8 h-8 object-contain" />, hi: demoLeft > 0 },
-              { label: "Full Game Keys Remaining", value: `${fullLeft}`, icon: <img src="/icons/full-game-icon.png" alt="" className="w-8 h-8 object-contain" />, hi: false },
-              { label: "Creators Joined", value: String(campaign.participant_count ?? 0), icon: <Users size={20} color={NEON} />, hi: false },
-              { label: "Time Remaining", value: timeLeft, icon: <Clock size={20} color={NEON} />, hi: false },
-            ] as const).map((row, i, arr) => (
-              <div key={row.label} className="flex items-center gap-4 px-5 py-4" style={{ borderBottom: i < arr.length - 1 ? `1px solid ${CARD_BORDER}` : undefined }}>
-                <div className="w-9 h-9 flex items-center justify-center flex-shrink-0">{row.icon}</div>
-                <div className="flex-1 text-sm font-bold text-white/55">{row.label}</div>
-                <div className="text-sm font-black" style={{ color: row.hi ? NEON : "white" }}>{row.value}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ── 6. HOW IT WORKS ── */}
-        <section>
-          <div className="text-xl font-black text-white mb-4">How It Works</div>
-          <div className="grid grid-cols-4 gap-2">
-            {([
-              { icon: <ShieldCheck size={22} color={NEON} />, label: "Accept Mission" },
-              { icon: <img src="/icons/demo-key-icon.png" alt="" className="w-6 h-6 object-contain" />, label: "Receive Demo Key" },
-              { icon: <Target size={22} color={NEON} />, label: "Complete Objectives" },
-              { icon: <Trophy size={22} color={NEON} />, label: "Unlock Rewards" },
-            ] as const).map((step, i, arr) => (
-              <div key={step.label} className="flex flex-col items-center text-center gap-2">
-                <div className="relative w-full flex items-center justify-center">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "rgba(184,255,27,0.10)", border: "1px solid rgba(184,255,27,0.18)" }}>
-                    {step.icon}
-                  </div>
-                  {i < arr.length - 1 && (
-                    <div className="absolute left-full top-1/2 -translate-y-1/2 w-full flex items-center justify-center pointer-events-none" style={{ zIndex: 0 }}>
-                      <ChevronRight size={14} className="text-white/20" style={{ marginLeft: "-50%" }} />
-                    </div>
-                  )}
-                </div>
-                <div className="text-[11px] font-bold text-white/60 leading-tight">{step.label}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ── 7+8. AGREEMENT + CTA ── */}
+        {/* ── AGREEMENT + CTA ── */}
         {user ? (
-          <section className="space-y-4">
+          <div className="space-y-4 pb-14">
             <p className="text-[12px] text-white/35 leading-relaxed">
-              By accepting this mission you agree to: use the demo key yourself · submit genuine gameplay content · follow the{" "}
+              By accepting this mission you agree to use the demo key yourself · submit genuine gameplay content · follow the{" "}
               <span style={{ color: NEON }} className="font-bold">Gamefolio Community Guidelines</span>.
             </p>
             <button
@@ -820,9 +928,9 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                   ? <><Zap size={20} /> Accept Mission</>
                   : <><ShieldCheck size={20} /> Accept Mission</>}
             </button>
-          </section>
+          </div>
         ) : (
-          <div className="rounded-2xl p-6 text-center" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+          <div className="rounded-2xl p-6 text-center mb-14" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
             <Lock size={24} className="mx-auto mb-3 text-white/25" />
             <div className="text-sm font-bold text-white/55 mb-2">Sign in to accept this mission</div>
             <a href="/auth" className="text-sm font-black" style={{ color: NEON }}>Sign In →</a>
