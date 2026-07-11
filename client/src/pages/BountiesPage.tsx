@@ -366,66 +366,133 @@ function CommunityStats({ campaigns }: { campaigns: any[] }) {
 // ── Compact card for carousels ─────────────────────────────────────────────
 function CampaignCardCompact({ campaign, onClick }: { campaign: any; onClick: () => void }) {
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
+  const fullLeft = Number(campaign.full_keys_remaining ?? 0);
   const bounties: any[] = campaign.bounties ?? [];
   const totalXP = campaign.total_campaign_xp ?? bounties.reduce((a: number, b: any) => a + Number(b.xp_reward ?? 0), 0);
+  const nearlyFull = demoLeft > 0 && demoLeft <= 5;
 
   const seen = new Set<string>();
-  const pills: { ct: string; qty: number }[] = [];
+  const reqIcons: { ct: string; qty: number }[] = [];
   for (const b of bounties) {
     if (!seen.has(b.content_type)) {
       seen.add(b.content_type);
-      pills.push({ ct: b.content_type, qty: Number(b.quantity ?? 1) });
+      reqIcons.push({ ct: b.content_type, qty: Number(b.quantity ?? 1) });
     }
   }
 
   return (
     <div
-      className="flex-shrink-0 w-64 rounded-2xl overflow-hidden cursor-pointer group transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/50"
+      className="flex-shrink-0 w-72 rounded-2xl overflow-hidden cursor-pointer group transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/60"
       style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}
-      onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(184,255,27,0.25)")}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(184,255,27,0.28)")}
       onMouseLeave={e => (e.currentTarget.style.borderColor = CARD_BORDER)}
       onClick={onClick}
     >
-      <div className="relative h-32 overflow-hidden">
+      {/* Cinematic artwork — same layered gradient treatment as FeaturedBounty */}
+      <div className="relative overflow-hidden" style={{ height: 180 }}>
         {campaign.game_artwork_url ? (
-          <img src={campaign.game_artwork_url} alt={campaign.game_name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.06]" />
+          <img
+            src={campaign.game_artwork_url}
+            alt={campaign.game_name}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+            style={{ opacity: 0.70 }}
+          />
         ) : (
-          <div className="w-full h-full" style={{ background: "linear-gradient(135deg, #0d1624, #0a1020)" }} />
+          <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(184,255,27,0.10) 0%, #070b10 100%)" }} />
         )}
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #0e1520 0%, transparent 70%)" }} />
-        {demoLeft > 0 && demoLeft <= 5 && (
-          <div className="absolute top-2 right-2">
-            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full" style={{ background: "rgba(245,158,11,0.90)", color: "#070b10" }}>
+        {/* Bottom-to-top gradient */}
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #0e1520 0%, rgba(14,21,32,0.30) 55%, transparent 100%)" }} />
+        {/* Left-to-right gradient */}
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(14,21,32,0.70) 0%, transparent 70%)" }} />
+
+        {/* Top badges */}
+        <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+          <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full"
+            style={{ background: NEON, color: "#070b10" }}>
+            <ShieldCheck size={8} /> GF Verified
+          </span>
+        </div>
+        {nearlyFull && (
+          <div className="absolute top-3 right-3">
+            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full"
+              style={{ background: "rgba(245,158,11,0.90)", color: "#070b10" }}>
               ⚡ {demoLeft} Left
             </span>
           </div>
         )}
-      </div>
-      <div className="px-4 pb-4 pt-3 space-y-2">
-        <div className="text-sm font-black text-white leading-tight line-clamp-1">
-          {campaign.game_name || campaign.template_name}
+
+        {/* Title overlaid at bottom of artwork */}
+        <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
+          {campaign.game_name && (
+            <div className="text-[10px] font-bold mb-0.5" style={{ color: "rgba(255,255,255,0.45)" }}>
+              {campaign.game_name}
+            </div>
+          )}
+          <div className="text-sm font-black text-white leading-tight line-clamp-1">
+            {campaign.template_name || campaign.game_name}
+          </div>
         </div>
-        {pills.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {pills.slice(0, 3).map(({ ct, qty }) => {
+      </div>
+
+      {/* Body */}
+      <div className="px-4 pb-4 pt-3 space-y-3">
+        {/* Description */}
+        {campaign.description && (
+          <p className="text-[11px] leading-snug line-clamp-1" style={{ color: "rgba(255,255,255,0.45)" }}>
+            {campaign.description}
+          </p>
+        )}
+
+        {/* Requirement icons only — no text labels */}
+        {reqIcons.length > 0 && (
+          <div className="flex items-center gap-2">
+            {reqIcons.slice(0, 4).map(({ ct, qty }) => {
               const Icon = REQ_ICON[ct] ?? Target;
               return (
-                <span key={ct} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md"
-                  style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.60)" }}>
-                  <Icon size={9} /> {reqPillLabel(ct, qty)}
-                </span>
+                <div key={ct} className="flex items-center gap-1 text-[11px] font-bold"
+                  style={{ color: "rgba(255,255,255,0.50)" }}>
+                  <Icon size={12} />
+                  <span>×{qty}</span>
+                </div>
               );
             })}
           </div>
         )}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[11px]">
-            {demoLeft > 0 && <span style={{ color: NEON }} className="font-bold">{demoLeft} keys</span>}
-            {totalXP > 0 && <span className="text-white/40 flex items-center gap-0.5"><Zap size={10} color={NEON} />{totalXP.toLocaleString()}</span>}
+
+        {/* Reward preview row — mini icons like FeaturedBounty */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {demoLeft > 0 && (
+            <div className="flex items-center gap-1">
+              <img src="/icons/demo-key-icon.png" alt="" className="w-4 h-4 object-contain" />
+              <span className="text-[10px] font-bold" style={{ color: NEON }}>Demo</span>
+            </div>
+          )}
+          {fullLeft > 0 && (
+            <div className="flex items-center gap-1">
+              <img src="/icons/full-game-icon.png" alt="" className="w-4 h-4 object-contain" />
+              <span className="text-[10px] font-bold text-white/55">Full Game</span>
+            </div>
+          )}
+          {totalXP > 0 && (
+            <div className="flex items-center gap-1">
+              <Zap size={12} color={NEON} />
+              <span className="text-[10px] font-bold text-white/55">{totalXP.toLocaleString()} XP</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1">
+            <img src="/icons/token-icon.png" alt="" className="w-4 h-4 object-contain" />
+            <span className="text-[10px] font-bold text-white/40">GFT</span>
           </div>
-          <ArrowRight size={14} style={{ color: NEON }} />
         </div>
+
+        {/* Accept Mission CTA */}
+        <button
+          className="w-full py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all hover:brightness-110 hover:scale-[1.01] active:scale-[0.98]"
+          style={{ background: NEON, color: "#070b10" }}
+          onClick={e => { e.stopPropagation(); onClick(); }}
+        >
+          <ShieldCheck size={13} /> Accept Mission
+        </button>
       </div>
     </div>
   );
