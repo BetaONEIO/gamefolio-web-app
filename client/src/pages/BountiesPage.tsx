@@ -1524,12 +1524,13 @@ export default function BountiesPage() {
 
   return (
     <div className="min-h-screen" style={{ background: PAGE_BG }}>
-      <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
 
-        {/* ── Featured Slider (top 3 trending, auto-rotating) ── */}
-        {mainTab === "marketplace" && !isLoading && featuredSlides.length > 0 && (
-          <FeaturedSlider campaigns={featuredSlides} onSelect={openDetail} />
-        )}
+      {/* ── Featured Slider — full viewport width ── */}
+      {mainTab === "marketplace" && !isLoading && featuredSlides.length > 0 && (
+        <FeaturedSlider campaigns={featuredSlides} onSelect={openDetail} />
+      )}
+
+      <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
 
         {/* ── Community Stats strip ── */}
         {mainTab === "marketplace" && !isLoading && indieCampaigns.length > 0 && (
