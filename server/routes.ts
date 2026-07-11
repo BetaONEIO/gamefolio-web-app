@@ -10435,6 +10435,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/indie/itch/game/:gameId — fetch full details of one itch.io game using the
+  // stored API key. Returns a fields object in the same shape as steam/epic preview so
+  // the frontend can show the same field-picker UI before importing.
+  app.get("/api/indie/itch/game/:gameId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const gameId = req.params.gameId;
+    if (!gameId || isNaN(Number(gameId))) return res.status(400).json({ error: "valid gameId required" });
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const [profile] = await db.select({ itchApiKey: indieGameProfiles.itchApiKey })
+        .from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      if (!profile?.itchApiKey) return res.status(403).json({ error: "Connect your itch.io account first" });
+
+      const gameRes = await fetch(`https://api.itch.io/games/${gameId}`, {
+        headers: { Authorization: `Bearer ${profile.itchApiKey}` },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!gameRes.ok) {
+        if (gameRes.status === 404) return res.status(404).json({ error: "Game not found" });
+        return res.status(502).json({ error: "itch.io API unavailable" });
+      }
+      const json = await gameRes.json() as any;
+      const g = json.game || json;
+
+      // Map itch.io game fields → indie profile fields (matching the same schema as steam preview)
+      const fields: Record<string, any> = {};
+      if (g.title) fields.gameName = g.title;
+      if (g.short_text) fields.shortDescription = g.short_text;
+      if (g.description) fields.fullDescription = String(g.description).replace(/<[^>]*>/g, '').trim();
+      if (g.cover_url) { fields.headerImageUrl = g.cover_url; fields.capsuleImageUrl = g.cover_url; }
+      if (g.url) fields.itchUrl = g.url;
+      // Genre/classification → genres array
+      if (g.classification && g.classification !== 'game') fields.genres = [g.classification];
+      // Release state
+      if (g.published) fields.releaseStatus = 'released';
+      // Platforms from itch.io traits
+      const platforms: string[] = [];
+      if (g.p_windows) platforms.push('windows');
+      if (g.p_osx) platforms.push('mac');
+      if (g.p_linux) platforms.push('linux');
+      if (g.p_android) platforms.push('android');
+      if (platforms.length > 0) fields.platforms = platforms;
+      // Pricing
+      if (g.min_price !== undefined) {
+        if (g.min_price === 0) fields.isFree = true;
+        else fields.price = (g.min_price / 100).toFixed(2);
+      }
+
+      res.json({
+        source: "itch",
+        gameId: g.id,
+        name: g.title,
+        coverUrl: g.cover_url,
+        url: g.url,
+        fields,
+      });
+    } catch (err) {
+      console.error("GET /api/indie/itch/game/:gameId error:", err);
+      res.status(500).json({ error: "server_error" });
+    }
+  });
+
   // POST /api/indie/import — apply selected fields from a store preview into indie_game_profiles
   // Manual overrides (isManualOverride=true) are ALWAYS preserved — import cannot overwrite them.
   // The importedValue for each field is updated in the meta table regardless, so the user can

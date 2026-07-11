@@ -352,8 +352,8 @@ export default function IndieGameDashboard() {
     await saveSection(["itchUrl"]);
   };
 
-  const fetchSteamPreview = async () => {
-    const appId = steamPreviewAppId.trim().replace(/\D/g, "");
+  const fetchSteamPreview = async (overrideAppId?: string) => {
+    const appId = (overrideAppId ?? steamPreviewAppId).trim().replace(/\D/g, "");
     if (!appId) return;
     setSteamPreviewLoading(true);
     try {
@@ -382,6 +382,47 @@ export default function IndieGameDashboard() {
       qc.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       toast({ title: "Imported from Steam!", description: `${Object.keys(fields).length} fields updated.` });
       setSteamPreviewData(null);
+    } catch {
+      toast({ title: "Import failed", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // itch.io import state
+  const [itchPreviewData, setItchPreviewData] = useState<any>(null);
+  const [itchPreviewLoading, setItchPreviewLoading] = useState(false);
+  const [itchImportFields, setItchImportFields] = useState<Set<string>>(new Set());
+
+  const fetchItchGameDetails = async (gameId: number) => {
+    setItchPreviewLoading(true);
+    setItchPreviewData(null);
+    try {
+      const res = await fetch(`/api/indie/itch/game/${gameId}`, { credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) { toast({ title: data.error || "Failed to fetch game details", variant: "destructive" }); return; }
+      setItchPreviewData(data);
+      setItchImportFields(new Set(Object.keys(data.fields ?? {}).filter(k => data.fields[k] != null)));
+    } catch {
+      toast({ title: "Failed to load game details", variant: "destructive" });
+    } finally {
+      setItchPreviewLoading(false);
+    }
+  };
+
+  const importFromItch = async () => {
+    if (!itchPreviewData) return;
+    const fields: Record<string, any> = {};
+    for (const f of Array.from(itchImportFields)) {
+      if (itchPreviewData.fields[f] != null) fields[f] = itchPreviewData.fields[f];
+    }
+    setSaving(true);
+    try {
+      await apiRequest("PUT", "/api/indie/profile", fields);
+      setForm(f => ({ ...f, ...fields }));
+      qc.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+      toast({ title: "Imported from itch.io!", description: `${Object.keys(fields).length} fields updated.` });
+      setItchPreviewData(null);
     } catch {
       toast({ title: "Import failed", variant: "destructive" });
     } finally {
@@ -1161,77 +1202,250 @@ export default function IndieGameDashboard() {
         {/* ── IMPORT ── */}
         {activeTab === "import" && (
           <div className="space-y-4">
+
+            {/* ── Steam Import ── */}
             <SectionCard title="Import from Steam" icon={SiSteam as any}>
-              <p className="text-sm text-white/50 mb-4">
-                Enter your Steam App ID to preview and pull game data directly into your profile. You can pick which fields to import.
-              </p>
-              <div className="flex gap-2 mb-4">
-                <Input
-                  value={steamPreviewAppId}
-                  onChange={e => setSteamPreviewAppId(e.target.value)}
-                  placeholder="Steam App ID (e.g. 1234567)"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30 max-w-xs" />
-                <Button onClick={fetchSteamPreview} disabled={steamPreviewLoading || !steamPreviewAppId.trim()}
-                  className="bg-[#66c0f4] text-black font-bold hover:bg-[#66c0f4]/90">
-                  {steamPreviewLoading ? <Loader2 size={15} className="animate-spin mr-1" /> : <SiSteam size={15} className="mr-1" />}
-                  Preview
-                </Button>
-              </div>
-
-              {steamPreviewData && (
-                <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)", padding: "16px" }}>
-                  <div className="flex items-center gap-3 mb-4">
-                    {steamPreviewData.headerImageUrl && <img src={steamPreviewData.headerImageUrl} alt="" className="h-14 w-24 object-cover rounded-md" />}
-                    <div>
-                      <div className="font-bold text-white">{steamPreviewData.name}</div>
-                      <div className="text-xs text-white/40">App ID: {steamPreviewData.appId}</div>
+              <div className="space-y-4">
+                {/* Connected game — one-click import */}
+                {steamVerifStatus?.verified ? (
+                  <div className="rounded-lg p-4 space-y-3" style={{ background: "rgba(102,192,244,0.06)", border: "1px solid rgba(102,192,244,0.2)" }}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck size={14} className="text-[#66c0f4]" />
+                        <span className="text-xs font-bold text-[#66c0f4]">Connected Game · App {steamVerifStatus.steamVerifiedAppId}</span>
+                      </div>
+                      <Button size="sm" onClick={() => fetchSteamPreview(steamVerifStatus.steamVerifiedAppId)}
+                        disabled={steamPreviewLoading}
+                        className="h-8 text-xs font-bold" style={{ background: "#66c0f4", color: "#000" }}>
+                        {steamPreviewLoading ? <Loader2 size={13} className="animate-spin mr-1" /> : <SiSteam size={13} className="mr-1" />}
+                        Pull from Steam
+                      </Button>
                     </div>
+                    <p className="text-xs text-white/40">
+                      Pulls live data for your verified Steam game. Choose which fields to apply — existing manual edits are always preserved.
+                    </p>
                   </div>
+                ) : (
+                  <div className="rounded-lg px-4 py-3 flex items-center gap-3"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <ShieldAlert size={14} className="text-white/30 shrink-0" />
+                    <p className="text-xs text-white/40">
+                      No Steam game connected yet.{" "}
+                      <button onClick={() => setActiveTab("store")} className="underline" style={{ color: NEON }}>
+                        Go to Store Links → verify ownership
+                      </button>{" "}
+                      first, then come back to import.
+                    </p>
+                  </div>
+                )}
 
-                  <div className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">Select fields to import</div>
-                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                    {Object.entries(steamPreviewData.fields ?? {}).map(([key, val]: [string, any]) => {
-                      if (val == null) return null;
-                      const selected = steamSelectedFields.has(key);
-                      const display = Array.isArray(val) ? val.join(", ") : String(val).slice(0, 100);
-                      return (
-                        <label key={key}
-                          className="flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-colors"
-                          style={{ background: selected ? "rgba(183,255,24,0.05)" : "rgba(255,255,255,0.02)", border: `1px solid ${selected ? "rgba(183,255,24,0.2)" : "rgba(255,255,255,0.06)"}` }}>
-                          <input type="checkbox" checked={selected}
-                            onChange={e => {
-                              const s = new Set(steamSelectedFields);
-                              if (e.target.checked) s.add(key); else s.delete(key);
-                              setSteamSelectedFields(s);
-                            }}
-                            className="mt-0.5 accent-[#B7FF18]" />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs font-bold text-white/70">{key}</div>
-                            <div className="text-xs text-white/40 truncate">{display}</div>
-                          </div>
-                        </label>
-                      );
-                    })}
-                  </div>
-                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
-                    <span className="text-xs text-white/40">{steamSelectedFields.size} fields selected</span>
-                    <Button onClick={importFromSteam} disabled={saving || steamSelectedFields.size === 0}
-                      style={{ background: NEON, color: "#000" }} className="font-bold">
-                      {saving ? <Loader2 size={15} className="animate-spin mr-1" /> : <CheckCircle2 size={15} className="mr-1" />}
-                      Import Selected
+                {/* Manual App ID fallback */}
+                <details className="group">
+                  <summary className="text-xs text-white/30 hover:text-white/60 cursor-pointer select-none list-none flex items-center gap-1">
+                    <ChevronRight size={12} className="transition-transform group-open:rotate-90" />
+                    Or enter a different App ID manually
+                  </summary>
+                  <div className="flex gap-2 mt-2">
+                    <Input
+                      value={steamPreviewAppId}
+                      onChange={e => setSteamPreviewAppId(e.target.value)}
+                      placeholder="Steam App ID (e.g. 1234567)"
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/30 max-w-xs" />
+                    <Button onClick={() => fetchSteamPreview()} disabled={steamPreviewLoading || !steamPreviewAppId.trim()}
+                      className="bg-[#66c0f4] text-black font-bold hover:bg-[#66c0f4]/90">
+                      {steamPreviewLoading ? <Loader2 size={15} className="animate-spin mr-1" /> : <SiSteam size={15} className="mr-1" />}
+                      Preview
                     </Button>
                   </div>
-                </div>
-              )}
+                </details>
+
+                {/* Field picker */}
+                {steamPreviewData && (
+                  <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)", padding: "16px" }}>
+                    <div className="flex items-center gap-3 mb-4">
+                      {steamPreviewData.headerImageUrl && <img src={steamPreviewData.headerImageUrl} alt="" className="h-14 w-24 object-cover rounded-md" />}
+                      <div>
+                        <div className="font-bold text-white">{steamPreviewData.name}</div>
+                        <div className="text-xs text-white/40">App ID: {steamPreviewData.appId}</div>
+                      </div>
+                    </div>
+                    <div className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">Select fields to import</div>
+                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                      {Object.entries(steamPreviewData.fields ?? {}).map(([key, val]: [string, any]) => {
+                        if (val == null) return null;
+                        const selected = steamSelectedFields.has(key);
+                        const display = Array.isArray(val) ? val.join(", ") : String(val).slice(0, 100);
+                        return (
+                          <label key={key}
+                            className="flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-colors"
+                            style={{ background: selected ? "rgba(183,255,24,0.05)" : "rgba(255,255,255,0.02)", border: `1px solid ${selected ? "rgba(183,255,24,0.2)" : "rgba(255,255,255,0.06)"}` }}>
+                            <input type="checkbox" checked={selected}
+                              onChange={e => {
+                                const s = new Set(steamSelectedFields);
+                                if (e.target.checked) s.add(key); else s.delete(key);
+                                setSteamSelectedFields(s);
+                              }}
+                              className="mt-0.5 accent-[#B7FF18]" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-bold text-white/70">{key}</div>
+                              <div className="text-xs text-white/40 truncate">{display}</div>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
+                      <div className="flex gap-2 items-center">
+                        <span className="text-xs text-white/40">{steamSelectedFields.size} fields selected</span>
+                        <button className="text-[11px] text-white/30 hover:text-white/60 underline" onClick={() => setSteamPreviewData(null)}>Clear</button>
+                      </div>
+                      <Button onClick={importFromSteam} disabled={saving || steamSelectedFields.size === 0}
+                        style={{ background: NEON, color: "#000" }} className="font-bold">
+                        {saving ? <Loader2 size={15} className="animate-spin mr-1" /> : <CheckCircle2 size={15} className="mr-1" />}
+                        Import Selected
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </SectionCard>
 
-            <SectionCard title="Epic Games / itch.io" icon={Store}>
-              <p className="text-sm text-white/50">
-                Epic Games and itch.io imports are handled via the store links you set in the{" "}
-                <button onClick={() => setActiveTab("store")} className="underline" style={{ color: NEON }}>Store Links</button>{" "}
-                tab. Once you set your Epic slug or itch.io API key, live sync will be available here.
-              </p>
+            {/* ── itch.io Import ── */}
+            <SectionCard title="Import from itch.io" icon={SiItchdotio as any}>
+              <div className="space-y-4">
+                {itchStatus?.connected ? (
+                  <>
+                    {/* Connected banner */}
+                    <div className="flex items-center gap-2.5 rounded-lg px-4 py-2.5"
+                      style={{ background: "rgba(255,99,58,0.08)", border: "1px solid rgba(255,99,58,0.2)" }}>
+                      <SiItchdotio size={14} style={{ color: "#ff633a" }} />
+                      <span className="text-xs text-white/70">
+                        Importing as <span className="font-bold" style={{ color: "#ff633a" }}>@{itchStatus.itchUsername}</span> · {itchStatus.games?.length ?? 0} game{itchStatus.games?.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+
+                    {/* Game list */}
+                    {(itchStatus.games?.length ?? 0) === 0 ? (
+                      <p className="text-xs text-white/30 py-2">No games found on this account.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-white/40">Select a game to import</div>
+                        <div className="grid gap-2 max-h-56 overflow-y-auto pr-1">
+                          {itchStatus.games.map((g: any) => {
+                            const isActive = itchPreviewData?.gameId === g.id;
+                            return (
+                              <button key={g.id} onClick={() => fetchItchGameDetails(g.id)}
+                                disabled={itchPreviewLoading}
+                                className="flex items-center gap-3 w-full text-left rounded-lg px-3 py-2.5 transition-all"
+                                style={{
+                                  background: isActive ? "rgba(255,99,58,0.12)" : "rgba(255,255,255,0.04)",
+                                  border: `1px solid ${isActive ? "rgba(255,99,58,0.4)" : "rgba(255,255,255,0.08)"}`,
+                                }}>
+                                {g.coverUrl ? (
+                                  <img src={g.coverUrl} alt="" className="w-10 h-10 object-cover rounded shrink-0" />
+                                ) : (
+                                  <div className="w-10 h-10 rounded shrink-0 flex items-center justify-center"
+                                    style={{ background: "rgba(255,99,58,0.15)" }}>
+                                    <SiItchdotio size={16} style={{ color: "#ff633a" }} />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-semibold text-white truncate">{g.title}</div>
+                                  <div className="text-[11px] text-white/40 truncate">{g.url}</div>
+                                </div>
+                                {itchPreviewLoading && isActive
+                                  ? <Loader2 size={14} className="animate-spin text-white/40 shrink-0" />
+                                  : <ChevronRight size={14} className="text-white/20 shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Field picker after selecting a game */}
+                    {itchPreviewData && (
+                      <div style={{ background: "rgba(0,0,0,0.3)", borderRadius: "10px", border: "1px solid rgba(255,255,255,0.08)", padding: "16px" }}>
+                        <div className="flex items-center gap-3 mb-4">
+                          {itchPreviewData.coverUrl && <img src={itchPreviewData.coverUrl} alt="" className="h-14 w-14 object-cover rounded-md" />}
+                          <div>
+                            <div className="font-bold text-white">{itchPreviewData.name}</div>
+                            <a href={itchPreviewData.url} target="_blank" rel="noopener noreferrer"
+                              className="text-[11px] text-white/40 hover:text-white/70 underline flex items-center gap-1">
+                              {itchPreviewData.url} <ExternalLink size={10} />
+                            </a>
+                          </div>
+                        </div>
+                        <div className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3">Select fields to import</div>
+                        <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                          {Object.entries(itchPreviewData.fields ?? {}).map(([key, val]: [string, any]) => {
+                            if (val == null) return null;
+                            const selected = itchImportFields.has(key);
+                            const display = Array.isArray(val) ? val.join(", ") : String(val).slice(0, 100);
+                            return (
+                              <label key={key}
+                                className="flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-colors"
+                                style={{ background: selected ? "rgba(255,99,58,0.06)" : "rgba(255,255,255,0.02)", border: `1px solid ${selected ? "rgba(255,99,58,0.3)" : "rgba(255,255,255,0.06)"}` }}>
+                                <input type="checkbox" checked={selected}
+                                  onChange={e => {
+                                    const s = new Set(itchImportFields);
+                                    if (e.target.checked) s.add(key); else s.delete(key);
+                                    setItchImportFields(s);
+                                  }}
+                                  className="mt-0.5 accent-[#ff633a]" />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs font-bold text-white/70">{key}</div>
+                                  <div className="text-xs text-white/40 truncate">{display}</div>
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
+                          <div className="flex gap-2 items-center">
+                            <span className="text-xs text-white/40">{itchImportFields.size} fields selected</span>
+                            <button className="text-[11px] text-white/30 hover:text-white/60 underline" onClick={() => setItchPreviewData(null)}>Clear</button>
+                          </div>
+                          <Button onClick={importFromItch} disabled={saving || itchImportFields.size === 0}
+                            style={{ background: "#ff633a", color: "#fff" }} className="font-bold">
+                            {saving ? <Loader2 size={15} className="animate-spin mr-1" /> : <CheckCircle2 size={15} className="mr-1" />}
+                            Import Selected
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="rounded-lg px-4 py-3 flex items-center gap-3"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <SiItchdotio size={14} className="text-white/30 shrink-0" />
+                    <p className="text-xs text-white/40">
+                      No itch.io account connected.{" "}
+                      <button onClick={() => setActiveTab("store")} className="underline" style={{ color: NEON }}>
+                        Go to Store Links → Connect itch.io
+                      </button>{" "}
+                      to import your game data.
+                    </p>
+                  </div>
+                )}
+              </div>
             </SectionCard>
+
+            {/* ── Epic Games Import ── */}
+            <SectionCard title="Import from Epic Games" icon={SiEpicgames as any}>
+              <p className="text-xs text-white/50 mb-3">
+                Epic doesn't offer a developer OAuth — enter your game's Epic slug to pull public store data.
+              </p>
+              <div className="flex gap-2">
+                <Input value={form.epicSlug ?? ""} onChange={e => set("epicSlug", e.target.value)}
+                  placeholder="your-game-slug"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/30 max-w-xs" />
+                <Button disabled className="text-xs font-bold opacity-50">
+                  <SiEpicgames size={13} className="mr-1" /> Preview (soon)
+                </Button>
+              </div>
+            </SectionCard>
+
           </div>
         )}
 
