@@ -77,6 +77,7 @@ import adminNftSeedRouter from "./routes/admin-nft-seed";
 import adminWalletAuditRouter from "./routes/admin-wallet-audit";
 import { pushRouter, adminPushRouter } from "./routes/push";
 import gameBountiesRouter from "./routes/game-bounties";
+import campaignProgrammeRouter from "./routes/campaign-programme";
 import steamVerificationRouter from "./routes/steam-verification";
 import { twitchApi } from "./services/twitch-api";
 import { VideoProcessor } from "./video-processor";
@@ -12893,6 +12894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount Twitch games routes
   app.use('/api', twitchGamesRouter);
   app.use('/api/games', gameBountiesRouter);
+  app.use('/api/campaigns', campaignProgrammeRouter);
   app.use('/api/indie/steam', steamVerificationRouter);
 
   // Mount upload routes
