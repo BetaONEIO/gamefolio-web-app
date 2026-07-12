@@ -60,7 +60,7 @@ export async function ensureBountyMarketplaceTables() {
     await run(`ALTER TABLE campaign_participants ADD COLUMN IF NOT EXISTS deadline TIMESTAMP`);
     await run(`ALTER TABLE campaign_participants ADD COLUMN IF NOT EXISTS notes TEXT`);
     await run(`
-      CREATE TABLE IF NOT EXISTS bounty_submissions (
+      CREATE TABLE IF NOT EXISTS campaign_bounty_submissions (
         id SERIAL PRIMARY KEY,
         instance_id INTEGER NOT NULL REFERENCES campaign_instances(id) ON DELETE CASCADE,
         participant_id INTEGER NOT NULL,
@@ -74,9 +74,11 @@ export async function ensureBountyMarketplaceTables() {
         status TEXT DEFAULT 'pending',
         review_notes TEXT,
         submitted_at TIMESTAMP DEFAULT NOW(),
-        reviewed_at TIMESTAMP
+        reviewed_at TIMESTAMP,
+        xp_awarded INTEGER DEFAULT 0
       )
     `);
+    await run(`ALTER TABLE campaign_bounty_submissions ADD COLUMN IF NOT EXISTS xp_awarded INTEGER DEFAULT 0`);
 
     // Seed Gamefolio-managed campaigns if none exist
     const { rows: existing } = await pool.query(
@@ -520,8 +522,8 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
         t.completion_reward,
         t.completion_reward_description,
         (SELECT COUNT(*) FROM campaign_template_bounties WHERE template_id = t.id AND mandatory = true) AS mandatory_bounty_count,
-        (SELECT COUNT(*) FROM bounty_submissions bs WHERE bs.instance_id = ci.id AND bs.participant_id = ${userId} AND bs.status = 'approved') AS approved_bounties,
-        (SELECT COUNT(*) FROM bounty_submissions bs WHERE bs.instance_id = ci.id AND bs.participant_id = ${userId}) AS submitted_bounties,
+        (SELECT COUNT(*) FROM campaign_bounty_submissions bs WHERE bs.instance_id = ci.id AND bs.participant_id = ${userId} AND bs.status = 'approved') AS approved_bounties,
+        (SELECT COUNT(*) FROM campaign_bounty_submissions bs WHERE bs.instance_id = ci.id AND bs.participant_id = ${userId}) AS submitted_bounties,
         (SELECT key_value FROM game_keys gk WHERE gk.id = cp.demo_key_id) AS demo_key_value,
         (SELECT key_value FROM game_keys gk WHERE gk.id = cp.full_key_id) AS full_key_value
       FROM campaign_participants cp
@@ -610,11 +612,11 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         b.*,
         (
           SELECT json_agg(s ORDER BY s.submitted_at DESC)
-          FROM bounty_submissions s
+          FROM campaign_bounty_submissions s
           WHERE s.bounty_id = b.id AND s.instance_id = ${instanceId} AND s.participant_id = ${userId}
         ) AS submissions,
         (
-          SELECT COUNT(*) FROM bounty_submissions s
+          SELECT COUNT(*) FROM campaign_bounty_submissions s
           WHERE s.bounty_id = b.id AND s.instance_id = ${instanceId} AND s.participant_id = ${userId} AND s.status = 'approved'
         ) AS approved_count
       FROM campaign_template_bounties b
@@ -671,7 +673,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
     const ct = bounty.content_type as string;
     // Count prior submissions of same type for bonus calculation
     const [prior] = toRows(await db.execute(sql`
-      SELECT COUNT(*) AS qty FROM bounty_submissions
+      SELECT COUNT(*) AS qty FROM campaign_bounty_submissions
       WHERE participant_id = ${userId} AND instance_id = ${instanceId}
         AND bounty_id IN (SELECT id FROM campaign_template_bounties WHERE template_id = ${bounty.template_id} AND content_type = ${ct})
         AND status IN ('pending','under_review','approved')
@@ -681,7 +683,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
 
     // Insert submission
     const [submission] = toRows(await db.execute(sql`
-      INSERT INTO bounty_submissions
+      INSERT INTO campaign_bounty_submissions
         (instance_id, participant_id, bounty_id, content_type, clip_id, screenshot_id, reel_id, content_url, content_data, status, submitted_at, xp_awarded)
       VALUES
         (${instanceId}, ${userId}, ${bountyId}, ${contentType ?? bounty.content_type},
@@ -698,7 +700,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
         COUNT(DISTINCT bs.bounty_id) FILTER (WHERE b.mandatory = true AND bs.status IN ('pending', 'under_review', 'approved')) AS mandatory_submitted
       FROM campaign_template_bounties b
       JOIN campaign_instances ci ON ci.template_id = b.template_id
-      LEFT JOIN bounty_submissions bs ON bs.bounty_id = b.id AND bs.instance_id = ${instanceId} AND bs.participant_id = ${userId}
+      LEFT JOIN campaign_bounty_submissions bs ON bs.bounty_id = b.id AND bs.instance_id = ${instanceId} AND bs.participant_id = ${userId}
       WHERE ci.id = ${instanceId}
     `)) as any[];
 
@@ -744,7 +746,7 @@ router.post('/my/:instanceId/claim-full-key', requireAuth, async (req, res) => {
         COUNT(DISTINCT bs.bounty_id) FILTER (WHERE b.mandatory = true AND bs.status = 'approved') AS mandatory_approved
       FROM campaign_template_bounties b
       JOIN campaign_instances ci ON ci.template_id = b.template_id
-      LEFT JOIN bounty_submissions bs ON bs.bounty_id = b.id AND bs.instance_id = ${instanceId} AND bs.participant_id = ${userId}
+      LEFT JOIN campaign_bounty_submissions bs ON bs.bounty_id = b.id AND bs.instance_id = ${instanceId} AND bs.participant_id = ${userId}
       WHERE ci.id = ${instanceId}
     `)) as any[];
 
@@ -812,7 +814,7 @@ router.get('/admin/submissions', requireAdmin, async (req, res) => {
         ci.game_name,
         b.title AS bounty_title,
         b.content_type
-      FROM bounty_submissions bs
+      FROM campaign_bounty_submissions bs
       JOIN users u ON u.id = bs.participant_id
       JOIN campaign_instances ci ON ci.id = bs.instance_id
       JOIN campaign_template_bounties b ON b.id = bs.bounty_id
@@ -832,14 +834,14 @@ router.patch('/admin/submissions/:id/review', requireAdmin, async (req, res) => 
     const { verdict, notes } = req.body; // verdict: 'approved' | 'rejected' | 'changes_requested'
 
     await db.execute(sql`
-      UPDATE bounty_submissions
+      UPDATE campaign_bounty_submissions
       SET status = ${verdict}, review_notes = ${notes ?? null}, reviewed_at = NOW()
       WHERE id = ${submissionId}
     `);
 
     // If approved, check if campaign participant can claim full key
     if (verdict === 'approved') {
-      const [sub] = toRows(await db.execute(sql`SELECT instance_id, participant_id FROM bounty_submissions WHERE id = ${submissionId}`)) as any[];
+      const [sub] = toRows(await db.execute(sql`SELECT instance_id, participant_id FROM campaign_bounty_submissions WHERE id = ${submissionId}`)) as any[];
       if (sub) {
         const [check] = toRows(await db.execute(sql`
           SELECT
@@ -847,7 +849,7 @@ router.patch('/admin/submissions/:id/review', requireAdmin, async (req, res) => 
             COUNT(DISTINCT bs.bounty_id) FILTER (WHERE b.mandatory = true AND bs.status = 'approved') AS mandatory_approved
           FROM campaign_template_bounties b
           JOIN campaign_instances ci ON ci.template_id = b.template_id
-          LEFT JOIN bounty_submissions bs ON bs.bounty_id = b.id AND bs.instance_id = ${sub.instance_id} AND bs.participant_id = ${sub.participant_id}
+          LEFT JOIN campaign_bounty_submissions bs ON bs.bounty_id = b.id AND bs.instance_id = ${sub.instance_id} AND bs.participant_id = ${sub.participant_id}
           WHERE ci.id = ${sub.instance_id}
         `)) as any[];
 
@@ -874,13 +876,13 @@ router.patch('/admin/submissions/:id/review', requireAdmin, async (req, res) => 
         // Load bounty details to compute XP
         const [bountyInfo] = toRows(await db.execute(sql`
           SELECT b.content_type, b.quantity FROM campaign_template_bounties b
-          JOIN bounty_submissions bs ON bs.bounty_id = b.id
+          JOIN campaign_bounty_submissions bs ON bs.bounty_id = b.id
           WHERE bs.id = ${submissionId}
         `)) as any[];
         if (bountyInfo) {
           // Count prior approved submissions of same type for bonus
           const [priorApproved] = toRows(await db.execute(sql`
-            SELECT COUNT(*) AS qty FROM bounty_submissions
+            SELECT COUNT(*) AS qty FROM campaign_bounty_submissions
             WHERE participant_id = ${sub.participant_id} AND instance_id = ${sub.instance_id}
               AND bounty_id IN (SELECT id FROM campaign_template_bounties WHERE template_id = (SELECT template_id FROM campaign_instances WHERE id = ${sub.instance_id}) AND content_type = ${bountyInfo.content_type})
               AND status = 'approved' AND id != ${submissionId}
@@ -889,7 +891,7 @@ router.patch('/admin/submissions/:id/review', requireAdmin, async (req, res) => 
           const bountyXP = computeBountyXP(profile4, bountyInfo.content_type, isFirst2, bountyInfo.quantity ?? 1, Number(priorApproved?.qty ?? 0));
           const totalXP = Math.round(bountyXP * mult4);
           await awardCampaignXP(sub.participant_id, totalXP, 'bounty_approved', `Bounty approved in campaign #${sub.instance_id}`, sub.instance_id);
-          await db.execute(sql`UPDATE bounty_submissions SET xp_awarded = ${totalXP} WHERE id = ${submissionId}`);
+          await db.execute(sql`UPDATE campaign_bounty_submissions SET xp_awarded = ${totalXP} WHERE id = ${submissionId}`);
         }
       }
     }
