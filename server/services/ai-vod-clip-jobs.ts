@@ -1,9 +1,9 @@
 import path from 'path';
 import fs from 'fs/promises';
 import { nanoid } from 'nanoid';
-import { eq, and, asc, lt } from 'drizzle-orm';
+import { eq, and, asc, lt, sql } from 'drizzle-orm';
 import { db } from '../db';
-import { aiClipJobs, aiClipCandidates, insertClipSchema, type AiClipJob } from '@shared/schema';
+import { aiClipJobs, aiClipCandidates, aiClipDailyUsage, insertClipSchema, type AiClipJob, type User } from '@shared/schema';
 import { storage } from '../storage';
 import { supabaseStorage } from '../supabase-storage';
 import { VideoProcessor } from '../video-processor';
@@ -12,9 +12,57 @@ import { transcribeAudioFile } from './whisper-transcription';
 import { detectHighlights } from './ai-highlight-detector';
 import { LeaderboardService, POINT_VALUES } from '../leaderboard-service';
 
-const MAX_VOD_DURATION_SECONDS = parseInt(process.env.AI_VOD_MAX_VOD_DURATION_SECONDS || '2700', 10); // 45 min
+// This pipeline is genuinely expensive per job (multi-minute local Whisper
+// transcription + Claude calls), so limits are tiered free vs Pro rather
+// than a single flat cap — same shape as the upload-size/duration limits in
+// database-storage.ts#getUploadLimits.
+const PRO_MAX_VOD_DURATION_SECONDS = parseInt(process.env.AI_VOD_MAX_VOD_DURATION_SECONDS || '2700', 10); // 45 min
+const FREE_MAX_VOD_DURATION_SECONDS = parseInt(process.env.AI_VOD_FREE_MAX_VOD_DURATION_SECONDS || '1200', 10); // 20 min
+const PRO_DAILY_JOB_LIMIT = parseInt(process.env.AI_VOD_PRO_DAILY_JOBS || '3', 10);
+const FREE_DAILY_JOB_LIMIT = parseInt(process.env.AI_VOD_FREE_DAILY_JOBS || '1', 10);
 const CANDIDATE_TTL_DAYS = parseInt(process.env.AI_VOD_CANDIDATE_TTL_DAYS || '7', 10);
 const TEMP_DIR = path.join(process.cwd(), 'temp', 'ai-vod-clips');
+
+// Admins get Pro-tier limits too — same convention as getUploadLimits().
+function isProTier(user: Pick<User, 'isPro' | 'role'>): boolean {
+  return !!user.isPro || user.role === 'admin';
+}
+
+export function getVodClipLimits(user: Pick<User, 'isPro' | 'role'>) {
+  const isPro = isProTier(user);
+  return {
+    isPro,
+    maxVodDurationSeconds: isPro ? PRO_MAX_VOD_DURATION_SECONDS : FREE_MAX_VOD_DURATION_SECONDS,
+    dailyJobLimit: isPro ? PRO_DAILY_JOB_LIMIT : FREE_DAILY_JOB_LIMIT,
+  };
+}
+
+function todayUtc(): string {
+  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+export async function getAiClipDailyUsage(userId: number): Promise<number> {
+  const [row] = await db.select({ jobsCount: aiClipDailyUsage.jobsCount })
+    .from(aiClipDailyUsage)
+    .where(and(eq(aiClipDailyUsage.userId, userId), eq(aiClipDailyUsage.usageDate, todayUtc())));
+  return row?.jobsCount || 0;
+}
+
+// Atomically check-and-increment today's usage in one query — the WHERE
+// guard on the conflict update means a second concurrent request (e.g. a
+// double-click) can't both squeak through under the limit.
+async function incrementDailyUsage(userId: number, dailyLimit: number): Promise<boolean> {
+  const today = todayUtc();
+  const [row] = await db.insert(aiClipDailyUsage)
+    .values({ userId, usageDate: today, jobsCount: 1 })
+    .onConflictDoUpdate({
+      target: [aiClipDailyUsage.userId, aiClipDailyUsage.usageDate],
+      set: { jobsCount: sql`${aiClipDailyUsage.jobsCount} + 1`, updatedAt: new Date() },
+      where: lt(aiClipDailyUsage.jobsCount, dailyLimit),
+    })
+    .returning();
+  return !!row;
+}
 
 async function ensureTempDir(): Promise<void> {
   await fs.mkdir(TEMP_DIR, { recursive: true });
@@ -62,7 +110,8 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
 
 /**
  * Create a new job. Re-validates VOD duration against fresh Helix metadata
- * (not a client-supplied value) so the hard cap can't be bypassed.
+ * (not a client-supplied value) so the hard cap can't be bypassed, and
+ * enforces free-vs-Pro daily job + VOD duration limits.
  */
 export async function createJob(userId: number, twitchVodId: string): Promise<AiClipJob> {
   const user = await storage.getUser(userId);
@@ -70,12 +119,22 @@ export async function createJob(userId: number, twitchVodId: string): Promise<Ai
     throw new AiVodClipError(403, 'Twitch account not connected');
   }
 
+  const limits = getVodClipLimits(user);
+
   const vod = await twitchApi.getVodById(twitchVodId);
   if (!vod) {
     throw new AiVodClipError(404, 'VOD not found');
   }
-  if (vod.durationSeconds > MAX_VOD_DURATION_SECONDS) {
-    throw new AiVodClipError(422, `VOD is ${Math.round(vod.durationSeconds / 60)} min — the AI clip generator supports VODs up to ${Math.round(MAX_VOD_DURATION_SECONDS / 60)} min`);
+  if (vod.durationSeconds > limits.maxVodDurationSeconds) {
+    const capMin = Math.round(limits.maxVodDurationSeconds / 60);
+    const upgradeHint = limits.isPro ? '' : ' — upgrade to Pro for longer VODs';
+    throw new AiVodClipError(422, `VOD is ${Math.round(vod.durationSeconds / 60)} min — your plan supports VODs up to ${capMin} min${upgradeHint}`);
+  }
+
+  const allowed = await incrementDailyUsage(userId, limits.dailyJobLimit);
+  if (!allowed) {
+    const upgradeHint = limits.isPro ? '' : ' — upgrade to Pro for more';
+    throw new AiVodClipError(429, `Daily limit reached (${limits.dailyJobLimit}/day on your plan)${upgradeHint}. Resets at midnight UTC.`);
   }
 
   const [job] = await db.insert(aiClipJobs).values({

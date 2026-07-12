@@ -5,11 +5,9 @@ import { aiClipJobs, aiClipCandidates } from '@shared/schema';
 import { storage } from '../storage';
 import { hybridFullAccess } from '../middleware/hybrid-auth';
 import { twitchApi } from '../services/twitch-api';
-import { createJob, retryJob, publishCandidate, discardCandidate, AiVodClipError } from '../services/ai-vod-clip-jobs';
+import { createJob, retryJob, publishCandidate, discardCandidate, getVodClipLimits, getAiClipDailyUsage, AiVodClipError } from '../services/ai-vod-clip-jobs';
 
 const router = express.Router();
-
-const MAX_VOD_DURATION_SECONDS = parseInt(process.env.AI_VOD_MAX_VOD_DURATION_SECONDS || '2700', 10);
 
 function handleError(res: express.Response, error: unknown) {
   if (error instanceof AiVodClipError) {
@@ -42,10 +40,16 @@ router.get('/vods', hybridFullAccess, async (req, res) => {
       return res.status(403).json({ error: 'Twitch account not connected' });
     }
 
+    const limits = getVodClipLimits(user);
+    const dailyUsed = await getAiClipDailyUsage(req.user!.id);
+
     const vods = await twitchApi.getUserVods(user.twitchUserId, 20);
     res.json({
-      vods: vods.map((v) => ({ ...v, eligible: v.durationSeconds <= MAX_VOD_DURATION_SECONDS })),
-      maxDurationSeconds: MAX_VOD_DURATION_SECONDS,
+      vods: vods.map((v) => ({ ...v, eligible: v.durationSeconds <= limits.maxVodDurationSeconds })),
+      maxDurationSeconds: limits.maxVodDurationSeconds,
+      isPro: limits.isPro,
+      dailyJobLimit: limits.dailyJobLimit,
+      dailyJobsUsed: dailyUsed,
     });
   } catch (error) {
     handleError(res, error);

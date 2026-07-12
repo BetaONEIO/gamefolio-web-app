@@ -225,6 +225,21 @@ export const aiClipJobs = pgTable("ai_clip_jobs", {
   completedAt: timestamp("completed_at"),
 });
 
+// Per-user daily job count, so free vs Pro can be rate-limited differently
+// (this pipeline is compute-heavy — local Whisper + Claude — so unlimited
+// generation isn't viable). Mirrors the user_daily_imports convention used
+// elsewhere for Twitch clip-import limits. Reset is by UTC calendar day.
+export const aiClipDailyUsage = pgTable("ai_clip_daily_usage", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  usageDate: text("usage_date").notNull(), // YYYY-MM-DD, UTC
+  jobsCount: integer("jobs_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  userDateUnique: unique().on(table.userId, table.usageDate),
+}));
+
 // Candidate highlight clips produced by a job, staged for user review before
 // (optionally) being published into the real `clips` table.
 export const aiClipCandidates = pgTable("ai_clip_candidates", {
@@ -1500,6 +1515,7 @@ export type AiClipJob = typeof aiClipJobs.$inferSelect;
 export type InsertAiClipJob = z.infer<typeof insertAiClipJobSchema>;
 export type AiClipCandidate = typeof aiClipCandidates.$inferSelect;
 export type AiClipSettings = typeof aiClipSettings.$inferSelect;
+export type AiClipDailyUsage = typeof aiClipDailyUsage.$inferSelect;
 export type InsertAiClipSettings = z.infer<typeof insertAiClipSettingsSchema>;
 
 export type Like = typeof likes.$inferSelect;

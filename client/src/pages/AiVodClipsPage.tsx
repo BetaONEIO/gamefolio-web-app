@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import VodPickerList from "@/components/ai-vod/VodPickerList";
 import AiClipJobProgress from "@/components/ai-vod/AiClipJobProgress";
 import CandidateReviewCard from "@/components/ai-vod/CandidateReviewCard";
@@ -23,6 +24,7 @@ export default function AiVodClipsPage() {
   const [activeJobId, setActiveJobId] = useState<number | null>(null);
   const [publishingId, setPublishingId] = useState<number | null>(null);
   const [discardingId, setDiscardingId] = useState<number | null>(null);
+  const [showProUpgrade, setShowProUpgrade] = useState(false);
 
   const { data: statusData } = useAiClipsStatus();
   const { data: vodData, isLoading: vodsLoading, error: vodsError } = useTwitchVods();
@@ -37,7 +39,16 @@ export default function AiVodClipsPage() {
       const { job } = await createJob.mutateAsync(vod.id);
       setActiveJobId(job.id);
     } catch (error: any) {
-      toast({ title: "Couldn't start generation", description: error?.message, variant: "destructive" });
+      const message: string = error?.message || "";
+      if (message.startsWith("429:")) {
+        if (!vodData?.isPro) {
+          setShowProUpgrade(true);
+        } else {
+          toast({ title: "Daily limit reached", description: "Resets at midnight UTC.", variant: "destructive" });
+        }
+        return;
+      }
+      toast({ title: "Couldn't start generation", description: message, variant: "destructive" });
     }
   };
 
@@ -64,6 +75,32 @@ export default function AiVodClipsPage() {
     }
   };
 
+  const pendingCount = jobData?.candidates.filter((c) => c.status === "pending").length || 0;
+
+  // Generated drafts only become permanent when explicitly published — warn
+  // before an actual page close/refresh/navigation-away so an unpublished
+  // batch doesn't get lost without the user realizing nothing was saved.
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (pendingCount > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [pendingCount]);
+
+  const handlePickAnotherVod = () => {
+    if (pendingCount > 0) {
+      const confirmed = window.confirm(
+        `You have ${pendingCount} unpublished clip${pendingCount === 1 ? "" : "s"} from this VOD. They won't be saved unless you publish them first. Continue anyway?`
+      );
+      if (!confirmed) return;
+    }
+    setActiveJobId(null);
+  };
+
   if (vodsError) {
     return (
       <div className="max-w-2xl mx-auto p-6 text-center space-y-3">
@@ -76,14 +113,23 @@ export default function AiVodClipsPage() {
 
   const job = jobData?.job;
   const candidates = jobData?.candidates || [];
+  const limitReached = vodData ? vodData.dailyJobsUsed >= vodData.dailyJobLimit : false;
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">AI clips from your streams</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Pick a past broadcast and Claude will find the highlight-worthy moments and cut them into clips for you to review.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold">AI clips from your streams</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Pick a past broadcast and Claude will find the highlight-worthy moments and cut them into clips for you to review.
+          </p>
+        </div>
+        {vodData && (
+          <div className="text-right flex-shrink-0">
+            <p className="text-xs text-muted-foreground">{vodData.isPro ? "Pro" : "Free"} plan</p>
+            <p className="text-sm font-medium">{vodData.dailyJobsUsed}/{vodData.dailyJobLimit} today</p>
+          </div>
+        )}
       </div>
 
       {!activeJobId && statusData?.enabled === false && (
@@ -93,7 +139,19 @@ export default function AiVodClipsPage() {
         </div>
       )}
 
-      {!activeJobId && statusData?.enabled !== false && (
+      {!activeJobId && statusData?.enabled !== false && limitReached && (
+        <div className="text-center py-12 space-y-3">
+          <p className="font-medium">Daily limit reached</p>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            You've used {vodData!.dailyJobsUsed}/{vodData!.dailyJobLimit} AI clip generations today. Resets at midnight UTC.
+          </p>
+          {!vodData!.isPro && (
+            <Button onClick={() => setShowProUpgrade(true)}>Upgrade to Pro for more</Button>
+          )}
+        </div>
+      )}
+
+      {!activeJobId && statusData?.enabled !== false && !limitReached && (
         vodsLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="aspect-video rounded-lg" />)}
@@ -119,7 +177,7 @@ export default function AiVodClipsPage() {
           </div>
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">{candidates.length} candidate clips found</p>
-            <Button variant="ghost" size="sm" onClick={() => setActiveJobId(null)}>Pick another VOD</Button>
+            <Button variant="ghost" size="sm" onClick={handlePickAnotherVod}>Pick another VOD</Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {candidates.map((candidate) => (
@@ -139,6 +197,12 @@ export default function AiVodClipsPage() {
       {activeJobId && jobLoading && !job && (
         <div className="text-center py-12 text-muted-foreground">Loading job…</div>
       )}
+
+      <ProUpgradeDialog
+        open={showProUpgrade}
+        onOpenChange={setShowProUpgrade}
+        subtitle="Get more daily AI clip generations and longer VOD support with Pro."
+      />
     </div>
   );
 }

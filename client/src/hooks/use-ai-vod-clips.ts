@@ -21,8 +21,16 @@ export function useAiClipsStatus() {
   });
 }
 
+export interface TwitchVodsResponse {
+  vods: TwitchVodOption[];
+  maxDurationSeconds: number;
+  isPro: boolean;
+  dailyJobLimit: number;
+  dailyJobsUsed: number;
+}
+
 export function useTwitchVods() {
-  return useQuery<{ vods: TwitchVodOption[]; maxDurationSeconds: number }>({
+  return useQuery<TwitchVodsResponse>({
     queryKey: ["/api/ai-vod-clips/vods"],
   });
 }
