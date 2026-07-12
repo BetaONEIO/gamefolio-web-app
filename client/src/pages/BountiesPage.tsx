@@ -698,100 +698,132 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         <ChevronLeft size={16} /> Back to Bounty Hub
       </button>
 
-      {/* ── 1. HERO ── */}
-      <div className="relative overflow-hidden" style={{ height: 340 }}>
+      {/* ── CINEMATIC HERO ── */}
+      <div className="relative overflow-hidden" style={{ minHeight: 460 }}>
+        {/* Artwork */}
         {campaign.game_artwork_url ? (
-          <img src={campaign.game_artwork_url} alt={campaign.game_name} className="w-full h-full object-cover" style={{ opacity: 0.55 }} />
+          <img src={campaign.game_artwork_url} alt={campaign.game_name} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.65 }} />
         ) : (
-          <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(184,255,27,0.10) 0%, rgba(184,255,27,0.02) 100%)" }} />
+          <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, rgba(184,255,27,0.16) 0%, rgba(7,11,16,0.90) 100%)` }} />
         )}
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #070b10 0%, rgba(7,11,16,0.55) 55%, transparent 100%)" }} />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to right, #070b10 0%, transparent 65%)" }} />
-        <div className="absolute bottom-0 left-0 right-0 px-6 pb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-full" style={{ color: "#070b10", background: NEON }}>
-              <ShieldCheck size={9} /> GF Verified
-            </span>
-            {campaign.platform && (
-              <span className="text-[11px] font-bold text-white/40">{campaign.platform}</span>
-            )}
-          </div>
-          {campaign.game_name && (
-            <div className="text-sm font-bold text-white/50 mb-0.5">{campaign.game_name}</div>
-          )}
-          <div className="text-3xl font-black text-white leading-tight mb-3">{campaign.template_name}</div>
-          <div className="flex items-center gap-5 flex-wrap">
-            {timeLeft !== "Ended" && timeLeft !== "Ongoing" && (
-              <div className="flex items-center gap-1.5 text-xs text-white/55">
-                <Clock size={12} /><span>{timeLeft}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-1.5 text-xs text-white/55">
-              <Users size={12} /><span>{campaign.participant_count ?? 0} creators joined</span>
-            </div>
-            {!isGF && demoLeft > 0 && (
-              <div className="flex items-center gap-1.5 text-xs font-black" style={{ color: NEON }}>
-                <Key size={12} /><span>{demoLeft} demo keys left</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+        {/* Gradients */}
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(7,11,16,1) 0%, rgba(7,11,16,0.88) 35%, rgba(7,11,16,0.28) 68%, rgba(7,11,16,0.60) 100%)" }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,16,1) 0%, rgba(7,11,16,0.50) 42%, transparent 100%)" }} />
 
-      {/* ── COMPACT INFO STRIP ── */}
-      <div className="px-4 sm:px-6 lg:px-8" style={{ background: "rgba(255,255,255,0.025)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <div className="max-w-[1400px] mx-auto flex items-center gap-0 py-3 overflow-x-auto">
-          {[
-            campaign.platform && { icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" className="text-white/40"><path d="M2 6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/></svg>, label: campaign.platform },
-            timeLeft !== "Ended" && timeLeft !== "Ongoing" && { icon: <Clock size={12} className="text-white/40" />, label: timeLeft + " left" },
-            { icon: <Users size={12} className="text-white/40" />, label: `${campaign.participant_count ?? 0} creators` },
-            !isGF && demoLeft > 0 && { icon: <img src="/icons/demo-key-icon.png" alt="" className="w-3.5 h-3.5 object-contain" />, label: `${demoLeft} keys left`, neon: demoLeft <= 5 },
-            !isGF && fullLeft > 0 && { icon: <img src="/icons/full-game-icon.png" alt="" className="w-3.5 h-3.5 object-contain" />, label: `${fullLeft} full keys` },
-          ].filter(Boolean).map((item: any, i, arr) => (
-            <div key={i} className="flex items-center gap-0 flex-shrink-0">
-              <div className="flex items-center gap-1.5 px-4">
-                {item.icon}
-                <span className="text-xs font-bold whitespace-nowrap" style={{ color: item.neon ? NEON : "rgba(255,255,255,0.45)" }}>{item.label}</span>
-              </div>
-              {i < arr.length - 1 && <div className="w-px h-3.5" style={{ background: "rgba(255,255,255,0.12)" }} />}
-            </div>
-          ))}
-        </div>
-      </div>
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-end" style={{ minHeight: 460 }}>
+          <div className="px-6 pb-8 pt-24">
+            <div className="max-w-[1400px] mx-auto flex items-end justify-between gap-10">
 
-      {/* ── MISSION BRIEFING — 2 large cards ── */}
-      <div className="px-4 sm:px-6 lg:px-8 pt-7 pb-4 max-w-[1400px] mx-auto">
-
-        {campaign.description && (
-          <p className="text-sm text-white/50 leading-relaxed mb-7 max-w-2xl">{campaign.description}</p>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-10">
-
-          {/* ══ LEFT: Mission Workspace ══ */}
-          <div className="rounded-3xl flex flex-col" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-
-            {/* Card header */}
-            <div className="flex items-center justify-between px-7 pt-7 pb-5">
-              <div>
-                <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: NEON }}>Mission Workspace</div>
-                <div className="text-xl font-black text-white">Your Creator Dashboard</div>
-              </div>
-              <div className="flex items-center gap-2">
-                {completedMandatoryCount > 0 && (
-                  <div className="text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 transition-all duration-500" style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>
-                    <Check size={10} /> {completedMandatoryCount}/{mandatory.length}
-                  </div>
+              {/* LEFT: Game info */}
+              <div className="flex-1 max-w-2xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 rounded-full" style={{ color: "#070b10", background: NEON }}>
+                    <ShieldCheck size={10} /> GF Verified
+                  </span>
+                  {campaign.platform && (
+                    <span className="text-[11px] font-bold px-3 py-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.65)" }}>
+                      {campaign.platform}
+                    </span>
+                  )}
+                </div>
+                {campaign.game_name && (
+                  <div className="text-xs font-black uppercase tracking-[0.22em] mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{campaign.game_name}</div>
                 )}
-                <div className="text-xs font-bold px-3 py-1.5 rounded-full" style={{ background: "rgba(184,255,27,0.10)", color: NEON }}>
-                  {mandatory.length} Required
+                <div className="font-black text-white leading-none mb-5 uppercase" style={{ fontSize: "clamp(2.2rem,5vw,4rem)", letterSpacing: "-0.02em", textShadow: "0 4px 60px rgba(0,0,0,0.80)" }}>
+                  {campaign.template_name}
+                </div>
+                {campaign.description && (
+                  <p className="text-sm leading-relaxed mb-6 max-w-lg" style={{ color: "rgba(255,255,255,0.50)" }}>{campaign.description}</p>
+                )}
+                <div className="flex items-center gap-6 flex-wrap">
+                  {campaign.platform && (
+                    <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: "rgba(255,255,255,0.45)" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                      {campaign.platform}
+                    </div>
+                  )}
+                  {timeLeft !== "Ended" && timeLeft !== "Ongoing" && (
+                    <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: "rgba(255,255,255,0.45)" }}>
+                      <Clock size={13} /> Time Left: <span style={{ color: "rgba(255,255,255,0.78)" }}>{timeLeft}</span>
+                    </div>
+                  )}
+                  {!isGF && demoLeft > 0 && (
+                    <div className="flex items-center gap-1.5 text-xs font-black" style={{ color: NEON }}>
+                      <img src="/icons/demo-key-icon.png" alt="" className="w-3.5 h-3.5 object-contain" />
+                      Demo Keys: {demoLeft} Left
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: "rgba(255,255,255,0.45)" }}>
+                    <Users size={13} /> Creators Joined: <span style={{ color: "rgba(255,255,255,0.78)" }}>{campaign.participant_count ?? 0}</span>
+                  </div>
                 </div>
               </div>
+
+              {/* RIGHT: Circular campaign completion widget */}
+              <div className="flex-shrink-0 hidden md:flex flex-col items-center p-6 rounded-3xl" style={{ background: "rgba(7,11,16,0.85)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(20px)", minWidth: 210 }}>
+                <div className="text-[10px] font-black uppercase tracking-widest mb-5" style={{ color: "rgba(255,255,255,0.32)" }}>Campaign Completion</div>
+                <div className="relative" style={{ width: 128, height: 128 }}>
+                  <svg width="128" height="128" viewBox="0 0 128 128">
+                    <circle cx="64" cy="64" r="54" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="11" />
+                    <circle cx="64" cy="64" r="54" fill="none"
+                      stroke={overallPct === 100 ? "#22c55e" : NEON}
+                      strokeWidth="11"
+                      strokeLinecap="round"
+                      strokeDasharray={`${2 * Math.PI * 54}`}
+                      strokeDashoffset={`${2 * Math.PI * 54 * (1 - overallPct / 100)}`}
+                      transform="rotate(-90 64 64)"
+                      style={{ transition: "stroke-dashoffset 1.2s ease-out, stroke 0.5s", filter: `drop-shadow(0 0 10px ${overallPct === 100 ? "rgba(34,197,94,0.70)" : "rgba(184,255,27,0.65)"})` }}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-4xl font-black leading-none tabular-nums" style={{ color: overallPct === 100 ? "#22c55e" : NEON }}>{overallPct}%</div>
+                  </div>
+                </div>
+                <div className="mt-4 text-xs text-center leading-relaxed" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  {completedMandatoryCount} / {mandatory.length} Objectives Complete
+                </div>
+                {overallPct > 0 && overallPct < 100 && (
+                  <div className="mt-2 text-[10px] font-black px-3 py-1 rounded-full" style={{ background: "rgba(184,255,27,0.10)", color: NEON }}>In Progress</div>
+                )}
+                {overallPct === 100 && (
+                  <div className="mt-2 text-[10px] font-black px-3 py-1 rounded-full" style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>✓ Complete</div>
+                )}
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── MAIN CONTENT ── */}
+      <div className="px-4 sm:px-6 lg:px-8 pt-8 max-w-[1400px] mx-auto">
+
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_390px] gap-6 mb-8">
+
+          {/* ══ LEFT: Mission Workspace ══ */}
+          <div>
+            {/* Section header */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(184,255,27,0.12)", border: "1px solid rgba(184,255,27,0.22)" }}>
+                  <Target size={17} color={NEON} />
+                </div>
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: NEON }}>Mission Workspace</div>
+                  <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.30)" }}>{mandatory.length} required · {optional.length} bonus</div>
+                </div>
+              </div>
+              {completedMandatoryCount > 0 && (
+                <div className="flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-full" style={{ background: "rgba(34,197,94,0.10)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.22)" }}>
+                  <Check size={11} strokeWidth={3} /> {completedMandatoryCount}/{mandatory.length} done
+                </div>
+              )}
             </div>
 
-            {/* ── Interactive quest card grid ── */}
-            <div className="px-5 pb-5 flex-1">
-              <div className="grid grid-cols-2 gap-3">
+            {/* ── Objective cards ── */}
+            <div className="space-y-6">
+              <div className={`grid gap-4 ${mandatory.length <= 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"}`}>
                 {mandatory.map((b: any, idx: number) => {
                   const ct = b.content_type as string;
                   const qty = Number(b.quantity ?? 1);
@@ -888,7 +920,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                       style={{ background: done ? "rgba(34,197,94,0.05)" : "rgba(255,255,255,0.03)", border: done ? "1px solid rgba(34,197,94,0.28)" : "1px solid rgba(255,255,255,0.08)", boxShadow: done ? "0 0 20px rgba(34,197,94,0.08)" : "none" }}
                     >
                       {/* Artwork zone */}
-                      <div className="relative overflow-hidden flex-shrink-0" style={{ height: 96 }}>
+                      <div className="relative overflow-hidden flex-shrink-0" style={{ height: 160 }}>
                         {artwork}
                         {done && (
                           <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(34,197,94,0.22)" }}>
@@ -1029,115 +1061,158 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
           </div>
 
           {/* ══ RIGHT: Mission Rewards ══ */}
-          <div className="rounded-3xl flex flex-col" style={{ background: CARD_BG, border: "1px solid rgba(184,255,27,0.22)", boxShadow: "0 0 40px rgba(184,255,27,0.06), 0 0 0 1px rgba(184,255,27,0.05) inset" }}>
+          <div className="rounded-3xl flex flex-col" style={{ background: CARD_BG, border: "1px solid rgba(184,255,27,0.20)", boxShadow: "0 0 50px rgba(184,255,27,0.06)" }}>
 
             {/* Card header */}
-            <div className="px-7 pt-7 pb-5">
-              <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: NEON }}>Mission Rewards</div>
-              <div className="text-xl font-black text-white">What You'll Earn</div>
+            <div className="px-6 pt-6 pb-4 flex items-center gap-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,255,27,0.10)", border: "1px solid rgba(184,255,27,0.18)" }}>
+                <Gift size={15} color={NEON} />
+              </div>
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: NEON }}>Mission Rewards</div>
+                <div className="text-base font-black text-white">What You'll Earn</div>
+              </div>
             </div>
 
-            {/* Reward items */}
-            <div className="px-7 flex-1 space-y-1">
+            {/* Reward rows */}
+            <div className="flex-1 p-4 space-y-2.5">
+              {(() => {
+                const earnedXp = mandatory.reduce((sum: number, b: any) => isObjectiveDone(b) ? sum + (Number(b.xp_reward) || 0) : sum, 0);
+                const allComplete = completedMandatoryCount >= mandatory.length && mandatory.length > 0;
+                const demoStatus = hasJoined ? "claimed" : canAccept ? "available" : "locked";
 
-              {/* Demo Key — immediate, highlighted */}
-              {(demoLeft > 0 || isGF) && (
-                <div className="flex items-center gap-5 rounded-2xl px-5 py-4" style={{ background: "rgba(184,255,27,0.07)", border: "1px solid rgba(184,255,27,0.18)" }}>
-                  <img src="/icons/demo-key-icon.png" alt="Demo Key" className="w-14 h-14 object-contain flex-shrink-0 drop-shadow-lg" style={{ filter: "drop-shadow(0 0 8px rgba(184,255,27,0.40))" }} />
-                  <div className="flex-1">
-                    <div className="text-base font-black" style={{ color: NEON }}>Demo Key</div>
-                    <div className="text-xs text-white/50 mt-0.5">Received immediately on accepting</div>
+                return (<>
+                  {/* Demo Key */}
+                  {(demoLeft > 0 || isGF) && (
+                    <div className="flex items-center gap-3 rounded-2xl p-3.5 transition-all duration-500"
+                      style={{ background: demoStatus === "claimed" ? "rgba(34,197,94,0.07)" : "rgba(184,255,27,0.07)", border: demoStatus === "claimed" ? "1px solid rgba(34,197,94,0.25)" : "1px solid rgba(184,255,27,0.18)" }}>
+                      <img src="/icons/demo-key-icon.png" alt="Demo Key" className="w-11 h-11 object-contain flex-shrink-0" style={{ filter: demoStatus === "claimed" ? "drop-shadow(0 0 6px rgba(34,197,94,0.55))" : "drop-shadow(0 0 6px rgba(184,255,27,0.45))" }} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-black" style={{ color: demoStatus === "claimed" ? "#22c55e" : NEON }}>Demo Key</div>
+                        <div className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>Instant on joining</div>
+                      </div>
+                      <div className="text-[10px] font-black px-2.5 py-1 rounded-full flex-shrink-0 flex items-center gap-1"
+                        style={{ background: demoStatus === "claimed" ? "rgba(34,197,94,0.15)" : "rgba(184,255,27,0.15)", color: demoStatus === "claimed" ? "#22c55e" : NEON }}>
+                        {demoStatus === "claimed" ? <><Check size={9} strokeWidth={3} /> CLAIMED</> : <><Zap size={9} /> INSTANT</>}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Full Game */}
+                  <div className="flex items-center gap-3 rounded-2xl p-3.5 transition-all duration-500"
+                    style={{ background: allComplete ? "rgba(34,197,94,0.06)" : "rgba(255,255,255,0.03)", border: allComplete ? "1px solid rgba(34,197,94,0.22)" : "1px solid rgba(255,255,255,0.07)", opacity: allComplete ? 1 : 0.68 }}>
+                    <img src="/icons/full-game-icon.png" alt="Full Game" className="w-11 h-11 object-contain flex-shrink-0" style={{ filter: allComplete ? "drop-shadow(0 0 6px rgba(34,197,94,0.40))" : "grayscale(0.5)", opacity: allComplete ? 1 : 0.70 }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-black" style={{ color: allComplete ? "#22c55e" : "rgba(255,255,255,0.78)" }}>Full Game</div>
+                      <div className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.32)" }}>Unlocked after all objectives</div>
+                    </div>
+                    <div className="text-[10px] font-black px-2.5 py-1 rounded-full flex-shrink-0 flex items-center gap-1"
+                      style={{ background: allComplete ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.07)", color: allComplete ? "#22c55e" : "rgba(255,255,255,0.32)" }}>
+                      {allComplete ? <><Check size={9} strokeWidth={3} /> UNLOCKED</> : <><Lock size={9} /> LOCKED</>}
+                    </div>
                   </div>
-                  <div className="text-[10px] font-black px-2.5 py-1 rounded-full flex-shrink-0" style={{ background: NEON, color: "#070b10" }}>INSTANT</div>
-                </div>
-              )}
 
-              {/* Full Game */}
-              <div className="flex items-center gap-5 rounded-2xl px-5 py-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                <img src="/icons/full-game-icon.png" alt="Full Game" className="w-14 h-14 object-contain flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="text-base font-black text-white">Full Game</div>
-                  <div className="text-xs text-white/45 mt-0.5">Unlocked after completing the campaign</div>
-                </div>
-                <div className="text-[10px] font-black px-2.5 py-1 rounded-full flex-shrink-0" style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.45)" }}>ON COMPLETE</div>
-              </div>
+                  {/* XP with progress bar */}
+                  {totalXp > 0 && (
+                    <div className="rounded-2xl p-3.5 transition-all duration-500"
+                      style={{ background: earnedXp > 0 ? "rgba(184,255,27,0.05)" : "rgba(255,255,255,0.03)", border: earnedXp > 0 ? "1px solid rgba(184,255,27,0.15)" : "1px solid rgba(255,255,255,0.07)" }}>
+                      <div className="flex items-center gap-3 mb-2.5">
+                        <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,255,27,0.10)", border: "1px solid rgba(184,255,27,0.18)" }}>
+                          <Zap size={20} color={NEON} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-black text-white">XP Reward</div>
+                          <div className="text-[11px] font-black tabular-nums" style={{ color: NEON }}>
+                            {earnedXp.toLocaleString()} / {totalXp.toLocaleString()} XP
+                          </div>
+                        </div>
+                      </div>
+                      <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+                        <div className="h-full rounded-full transition-all duration-1000 ease-out"
+                          style={{ width: `${totalXp > 0 ? Math.round(earnedXp / totalXp * 100) : 0}%`, background: `linear-gradient(90deg,${NEON},rgba(184,255,27,0.65))`, boxShadow: earnedXp > 0 ? "0 0 8px rgba(184,255,27,0.40)" : "none" }} />
+                      </div>
+                      <div className="text-[10px] mt-1.5 text-right" style={{ color: "rgba(255,255,255,0.25)" }}>Across all objectives</div>
+                    </div>
+                  )}
 
-              {/* XP */}
-              {totalXp > 0 && (
-                <div className="flex items-center gap-5 rounded-2xl px-5 py-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,255,27,0.12)", border: "1px solid rgba(184,255,27,0.20)" }}>
-                    <Zap size={28} color={NEON} />
+                  {/* GFT Tokens */}
+                  <div className="flex items-center gap-3 rounded-2xl p-3.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", opacity: 0.62 }}>
+                    <img src="/icons/token-icon.png" alt="GFT" className="w-11 h-11 object-contain flex-shrink-0" style={{ filter: "grayscale(0.55)", opacity: 0.72 }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-black text-white/70">GFT Tokens</div>
+                      <div className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.30)" }}>On-chain · after verification</div>
+                    </div>
+                    <div className="text-[10px] font-black px-2.5 py-1 rounded-full flex-shrink-0 flex items-center gap-1" style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.30)" }}>
+                      <Lock size={9} /> LOCKED
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="text-base font-black text-white">{totalXp.toLocaleString()} XP</div>
-                    <div className="text-xs text-white/45 mt-0.5">Awarded across all objectives</div>
+
+                  {/* Exclusive Badge */}
+                  <div className="flex items-center gap-3 rounded-2xl p-3.5 transition-all duration-500"
+                    style={{ background: allComplete ? "rgba(139,92,246,0.07)" : "rgba(255,255,255,0.03)", border: allComplete ? "1px solid rgba(139,92,246,0.25)" : "1px solid rgba(255,255,255,0.07)", opacity: allComplete ? 1 : 0.62 }}>
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: allComplete ? "rgba(139,92,246,0.14)" : "rgba(255,255,255,0.05)", border: `1px solid ${allComplete ? "rgba(139,92,246,0.28)" : "rgba(255,255,255,0.07)"}` }}>
+                      <Trophy size={20} style={{ color: allComplete ? "#a78bfa" : "rgba(255,255,255,0.22)" }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-black" style={{ color: allComplete ? "#a78bfa" : "rgba(255,255,255,0.70)" }}>Exclusive Badge</div>
+                      <div className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.30)" }}>Show off your achievement</div>
+                    </div>
+                    <div className="text-[10px] font-black px-2.5 py-1 rounded-full flex-shrink-0 flex items-center gap-1"
+                      style={{ background: allComplete ? "rgba(139,92,246,0.15)" : "rgba(255,255,255,0.07)", color: allComplete ? "#a78bfa" : "rgba(255,255,255,0.30)" }}>
+                      {allComplete ? <><Check size={9} strokeWidth={3} /> UNLOCKED</> : <><Lock size={9} /> LOCKED</>}
+                    </div>
                   </div>
-                </div>
-              )}
-
-              {/* GFT Token */}
-              <div className="flex items-center gap-5 rounded-2xl px-5 py-4" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                <img src="/icons/token-icon.png" alt="GFT" className="w-14 h-14 object-contain flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="text-base font-black text-white">GFT Tokens</div>
-                  <div className="text-xs text-white/45 mt-0.5">On-chain reward, yours to keep</div>
-                </div>
-              </div>
-
+                </>);
+              })()}
             </div>
 
             {/* CTA */}
-            <div className="px-7 pb-7 pt-6">
+            <div className="px-5 pb-5 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
               {user ? (
                 <div className="space-y-3">
                   {completedMandatoryCount === mandatory.length && mandatory.length > 0 ? (
-                    /* All objectives complete — celebrate */
-                    <div className="rounded-2xl p-5 text-center space-y-2" style={{ background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.28)", boxShadow: "0 0 30px rgba(34,197,94,0.08)" }}>
+                    <div className="rounded-2xl p-4 text-center space-y-1.5" style={{ background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.25)", boxShadow: "0 0 24px rgba(34,197,94,0.07)" }}>
                       <div className="text-2xl">🎉</div>
-                      <div className="text-base font-black text-white">Mission Complete!</div>
-                      <div className="text-xs text-white/45">Your submissions are being reviewed by the developer. Rewards will be distributed once verified.</div>
-                      <div className="flex items-center justify-center gap-1.5 text-xs font-bold mt-1" style={{ color: "#22c55e" }}>
-                        <Check size={12} strokeWidth={3} /> All {mandatory.length} objectives submitted
+                      <div className="text-sm font-black text-white">Mission Complete!</div>
+                      <div className="text-[11px] leading-relaxed" style={{ color: "rgba(255,255,255,0.38)" }}>Awaiting developer verification. Rewards distributed once approved.</div>
+                      <div className="flex items-center justify-center gap-1.5 text-[11px] font-black" style={{ color: "#22c55e" }}>
+                        <Check size={11} strokeWidth={3} /> All {mandatory.length} objectives submitted
                       </div>
                     </div>
                   ) : hasJoined ? (
-                    /* Joined, in progress */
                     <button
-                      onClick={() => mandatory.find((b: any) => !isObjectiveDone(b)) && setActivePanel({ bounty: mandatory.find((b: any) => !isObjectiveDone(b)) })}
-                      className="w-full py-4 rounded-2xl text-base font-black flex items-center justify-center gap-2.5 transition-all hover:brightness-110 active:scale-[0.99]"
-                      style={{ background: NEON, color: "#070b10", boxShadow: `0 0 24px rgba(184,255,27,0.35)` }}
+                      onClick={() => { const next = mandatory.find((b: any) => !isObjectiveDone(b)); if (next) setActivePanel({ bounty: next }); }}
+                      className="w-full py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.99]"
+                      style={{ background: NEON, color: "#070b10", boxShadow: "0 0 22px rgba(184,255,27,0.32)" }}
                     >
-                      <Upload size={18} /> Keep Going! Submit Content
+                      <Upload size={16} /> Continue Mission
                     </button>
                   ) : (
-                    /* Not yet joined */
                     <button
                       disabled={!canAccept}
                       onClick={() => setShowModal(true)}
-                      className="w-full py-4 rounded-2xl text-base font-black flex items-center justify-center gap-2.5 transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
-                      style={{ background: NEON, color: "#070b10", boxShadow: `0 0 24px rgba(184,255,27,0.35)` }}
+                      className="w-full py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-40"
+                      style={{ background: NEON, color: "#070b10", boxShadow: "0 0 22px rgba(184,255,27,0.32)" }}
                     >
-                      {!canAccept
-                        ? <><Lock size={18} /> No Keys Available</>
-                        : <><ShieldCheck size={18} /> Accept Mission</>}
+                      {!canAccept ? <><Lock size={16} /> No Keys Available</> : <><ShieldCheck size={16} /> Accept Mission</>}
                     </button>
                   )}
                   {!hasJoined && canAccept && (
-                    <p className="text-[11px] text-white/25 text-center leading-relaxed">
+                    <p className="text-[10px] text-center leading-relaxed" style={{ color: "rgba(255,255,255,0.22)" }}>
                       Accept = use key yourself · genuine content · follow{" "}
-                      <span style={{ color: "rgba(184,255,27,0.6)" }}>Community Guidelines</span>
+                      <span style={{ color: "rgba(184,255,27,0.55)" }}>Community Guidelines</span>
                     </p>
                   )}
                   {hasJoined && completedMandatoryCount < mandatory.length && (
-                    <p className="text-[11px] text-center leading-relaxed" style={{ color: "rgba(184,255,27,0.55)" }}>
-                      {completedMandatoryCount}/{mandatory.length} objectives submitted · keep creating!
+                    <p className="text-[11px] text-center font-bold" style={{ color: "rgba(184,255,27,0.50)" }}>
+                      {completedMandatoryCount}/{mandatory.length} objectives · keep creating!
                     </p>
                   )}
                 </div>
               ) : (
-                <div className="rounded-2xl p-5 text-center" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <Lock size={22} className="mx-auto mb-2.5 text-white/25" />
-                  <div className="text-sm font-bold text-white/50 mb-2">Sign in to accept this mission</div>
+                <div className="rounded-2xl p-4 text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <Lock size={20} className="mx-auto mb-2 text-white/22" />
+                  <div className="text-sm font-bold mb-2" style={{ color: "rgba(255,255,255,0.40)" }}>Sign in to accept this mission</div>
                   <a href="/auth" className="text-sm font-black" style={{ color: NEON }}>Sign In →</a>
                 </div>
               )}
@@ -1202,31 +1277,56 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
           </div>
         </div>
 
-        {/* ── MISSION ROADMAP ── */}
-        <div className="mb-10">
-          <div className="text-[11px] font-black uppercase tracking-widest text-white/30 mb-4">How It Works</div>
-          <div className="flex items-center">
+        {/* ── HOW IT WORKS ── */}
+        <div className="mb-10 rounded-3xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+          <div className="px-6 sm:px-8 py-6 flex flex-col sm:flex-row items-center sm:items-stretch gap-0 sm:gap-0">
             {([
-              { icon: <ShieldCheck size={18} color={NEON} />, label: "Accept Mission", sub: "Get your demo key" },
-              { icon: <img src="/icons/demo-key-icon.png" alt="" className="w-5 h-5 object-contain" />, label: "Play the Game", sub: "Use your key" },
-              { icon: <Target size={18} color={NEON} />, label: "Complete Tasks", sub: "Upload content" },
-              { icon: <Trophy size={18} color={NEON} />, label: "Unlock Rewards", sub: "Full game + tokens" },
+              { icon: <ShieldCheck size={16} color={NEON} />, num: "1", label: "Accept Mission", sub: "Get your demo key" },
+              { icon: <img src="/icons/demo-key-icon.png" alt="" className="w-4 h-4 object-contain" />, num: "2", label: "Play the Game", sub: "Use your key & play" },
+              { icon: <Upload size={16} color={NEON} />, num: "3", label: "Upload Content", sub: "Clips, screenshots, reels" },
+              { icon: <Check size={16} strokeWidth={3} color={NEON} />, num: "4", label: "Verification", sub: "Dev reviews your content" },
+              { icon: <Trophy size={16} color={NEON} />, num: "5", label: "Unlock Rewards", sub: "Full game, XP, GFT" },
             ] as const).map((step, i, arr) => (
-              <div key={step.label} className="flex items-center flex-1">
-                <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "rgba(184,255,27,0.08)", border: "1px solid rgba(184,255,27,0.18)" }}>
-                    {step.icon}
-                  </div>
-                  <div className="text-center">
-                    <div className="text-[11px] font-black text-white/70">{step.label}</div>
-                    <div className="text-[10px] text-white/30 mt-0.5">{step.sub}</div>
+              <div key={step.label} className="flex sm:flex-col items-center flex-1 gap-3 sm:gap-0">
+                <div className="flex sm:flex-col items-center flex-1 sm:px-4 py-0 sm:py-2">
+                  <div className="flex sm:flex-col items-center sm:items-center gap-3 sm:gap-2 flex-shrink-0">
+                    <div className="relative w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,255,27,0.08)", border: "1px solid rgba(184,255,27,0.18)" }}>
+                      {step.icon}
+                      <div className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black" style={{ background: NEON, color: "#070b10" }}>{step.num}</div>
+                    </div>
+                    <div className="sm:text-center">
+                      <div className="text-xs font-black" style={{ color: "rgba(255,255,255,0.75)" }}>{step.label}</div>
+                      <div className="text-[10px] mt-0.5 hidden sm:block" style={{ color: "rgba(255,255,255,0.28)" }}>{step.sub}</div>
+                    </div>
                   </div>
                 </div>
                 {i < arr.length - 1 && (
-                  <div className="flex-1 h-px mx-3" style={{ background: "linear-gradient(90deg, rgba(184,255,27,0.25), rgba(184,255,27,0.08))" }} />
+                  <>
+                    <div className="hidden sm:block flex-shrink-0 self-center" style={{ width: 1, height: 32, background: "linear-gradient(180deg, rgba(184,255,27,0.22), rgba(184,255,27,0.06))" }} />
+                    <div className="sm:hidden w-px self-stretch" style={{ background: "linear-gradient(180deg, rgba(184,255,27,0.22), rgba(184,255,27,0.06))" }} />
+                  </>
                 )}
               </div>
             ))}
+            {/* CTA pill */}
+            {user && !hasJoined && canAccept && (
+              <div className="hidden sm:flex items-center pl-4 ml-2 flex-shrink-0" style={{ borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                <button onClick={() => setShowModal(true)}
+                  className="py-2.5 px-5 rounded-2xl text-xs font-black flex items-center gap-1.5 whitespace-nowrap transition-all hover:brightness-110"
+                  style={{ background: NEON, color: "#070b10", boxShadow: "0 0 18px rgba(184,255,27,0.28)" }}>
+                  <ShieldCheck size={13} /> Accept Mission
+                </button>
+              </div>
+            )}
+            {user && hasJoined && completedMandatoryCount < mandatory.length && (
+              <div className="hidden sm:flex items-center pl-4 ml-2 flex-shrink-0" style={{ borderLeft: "1px solid rgba(255,255,255,0.06)" }}>
+                <button onClick={() => { const next = mandatory.find((b: any) => !isObjectiveDone(b)); if (next) setActivePanel({ bounty: next }); }}
+                  className="py-2.5 px-5 rounded-2xl text-xs font-black flex items-center gap-1.5 whitespace-nowrap transition-all hover:brightness-110"
+                  style={{ background: NEON, color: "#070b10", boxShadow: "0 0 18px rgba(184,255,27,0.28)" }}>
+                  <Upload size={13} /> Continue Mission
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
