@@ -76,12 +76,19 @@ export async function signInWithGoogleNative(): Promise<NativeGoogleAuthResult> 
   if (!user || !user.email) {
     throw new Error('Google sign-in did not return an email address');
   }
+  // result.credential.idToken is the raw Google Sign-In token used to
+  // authenticate INTO Firebase (its audience is the Google OAuth client ID)
+  // — not the Firebase ID token minted for the now-signed-in native user
+  // (whose audience is the Firebase project ID, which is what the backend's
+  // Admin SDK verification expects). Fetch that one explicitly, or the
+  // server rejects every native sign-in with an "incorrect aud claim" error.
+  const { token: firebaseIdToken } = await FirebaseAuthentication.getIdToken();
   return {
     email: user.email,
     displayName: user.displayName || user.email.split('@')[0],
     photoURL: user.photoUrl ?? null,
     uid: user.uid,
-    idToken: result.credential?.idToken ?? null,
+    idToken: firebaseIdToken ?? null,
   };
 }
 
