@@ -9,7 +9,7 @@ import { User } from "@shared/schema";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { auth } from "@/lib/firebase";
+import { auth, getGoogleRedirectResult } from "@/lib/firebase";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { isNative } from "@/lib/platform";
@@ -200,6 +200,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       }
     };
+
+    // A page load returning from signInWithRedirect looks identical to a
+    // routine "Firebase restoring an existing session" load from
+    // onAuthStateChanged's point of view (first fire, user present) — the
+    // isInitialRestore skip below would otherwise silently eat a genuine
+    // sign-in. getRedirectResult() is the only API that can tell the two
+    // apart, so it's handled explicitly and independently here.
+    // handleFirebaseSignIn's own processedUid dedup makes it safe for this
+    // and the onAuthStateChanged fire below to both end up calling it for
+    // the same user — whichever runs first wins, the other is a no-op.
+    getGoogleRedirectResult().then((result) => {
+      if (result?.user && mounted) {
+        handleFirebaseSignIn(result.user);
+      }
+    }).catch((error) => {
+      if (!mounted) return;
+      console.error('Google redirect sign-in error:', error);
+      toast({
+        title: "Authentication failed",
+        description: "There was an error signing you in. Please try again.",
+        variant: "gamefolioError",
+      });
+    });
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       // Firebase always emits one onAuthStateChanged on init to report the

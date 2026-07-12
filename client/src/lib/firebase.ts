@@ -1,5 +1,5 @@
 import { initializeApp, getApps, FirebaseApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, Auth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, signOut, Auth } from "firebase/auth";
 import { isNative } from "./platform";
 
 const firebaseConfig = {
@@ -39,7 +39,6 @@ if (isFirebaseConfigValid) {
     googleProvider.addScope('profile');
     googleProvider.setCustomParameters({
       prompt: 'select_account',
-      display: 'popup'
     });
 
     console.log('Firebase initialized successfully');
@@ -87,10 +86,19 @@ export async function signInWithGoogleNative(): Promise<NativeGoogleAuthResult> 
 }
 
 /**
- * Web Google sign-in using a popup window.
- * The popup resolves without leaving the page. Firebase triggers
- * onAuthStateChanged in use-auth.tsx after the popup completes, which
- * calls /api/auth/google and sets the user session.
+ * Web Google sign-in via a full-page redirect (not a popup). Popup-based
+ * signInWithPopup was silently failing in production: Chrome's
+ * Cross-Origin-Opener-Policy handling breaks the popup-completion signal
+ * Firebase relies on (window.closed polling + the postMessage handshake
+ * with the google.com popup both stopped getting through), so
+ * onAuthStateChanged never fired and /api/auth/google was never called —
+ * no error, no toast, just a dead end back on the login page. Redirect
+ * sidesteps the popup/COOP interaction entirely.
+ *
+ * This navigates the browser away, so this function does not "return" in
+ * the normal sense. On the way back, use-auth.tsx calls
+ * getGoogleRedirectResult() (a thin wrapper over Firebase's
+ * getRedirectResult) to pick up the completed sign-in.
  */
 export const signInWithGoogle = async (): Promise<void> => {
   if (isNative) {
@@ -99,7 +107,17 @@ export const signInWithGoogle = async (): Promise<void> => {
   if (!auth || !googleProvider) {
     throw new Error('Firebase not properly configured');
   }
-  await signInWithPopup(auth, googleProvider);
+  await signInWithRedirect(auth, googleProvider);
+};
+
+/**
+ * Call once on app init to pick up a just-completed signInWithRedirect.
+ * Resolves to null on every normal page load that isn't returning from a
+ * redirect sign-in.
+ */
+export const getGoogleRedirectResult = async () => {
+  if (!auth) return null;
+  return getRedirectResult(auth);
 };
 
 export const signOutUser = async () => {
