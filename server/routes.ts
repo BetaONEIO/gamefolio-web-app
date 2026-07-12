@@ -80,6 +80,7 @@ import gameBountiesRouter from "./routes/game-bounties";
 import campaignProgrammeRouter from "./routes/campaign-programme";
 import bountyMarketplaceRouter, { ensureBountyMarketplaceTables } from "./routes/bounty-marketplace";
 import steamVerificationRouter from "./routes/steam-verification";
+import adminBountiesRouter from "./routes/admin-bounties";
 import { twitchApi } from "./services/twitch-api";
 import { VideoProcessor } from "./video-processor";
 import ffmpeg from "fluent-ffmpeg";
@@ -12882,6 +12883,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/admin', adminRouter);
   app.use('/api/admin/content-filter', adminContentFilterRouter);
   app.use('/api/admin/push', adminPushRouter);
+  app.use('/api/admin/bounties', adminBountiesRouter);
 
   // Push notifications (token register/unregister, self-test)
   app.use('/api/push', pushRouter);
