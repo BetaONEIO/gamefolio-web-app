@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Users, ListChecks, Clock } from "lucide-react";
 
 interface BountyOverview {
@@ -95,7 +96,7 @@ function StatTile({ icon: Icon, label, value }: { icon: typeof Trophy; label: st
   );
 }
 
-export function AdminBountiesPanel() {
+function LegacyBountiesSection() {
   const [selectedBountyId, setSelectedBountyId] = useState<number | null>(null);
 
   const overview = useQuery<{ overview: BountyOverview }>({
@@ -284,5 +285,233 @@ export function AdminBountiesPanel() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+interface CampaignOverview {
+  totalCampaigns: number;
+  activeCampaigns: number;
+  totalParticipants: number;
+  totalCompletions: number;
+}
+
+interface CampaignRow {
+  id: number;
+  status: string;
+  gamefolioManaged: boolean;
+  gameName: string | null;
+  gameArtworkUrl: string | null;
+  startType: string | null;
+  scheduledStart: string | null;
+  actualStart: string | null;
+  endDate: string | null;
+  createdAt: string;
+  templateId: number | null;
+  templateName: string | null;
+  participantCount: number;
+  completedCount: number;
+}
+
+interface CampaignBounty {
+  id: number;
+  title: string;
+  contentType: string;
+  mandatory: boolean;
+  quantity: number;
+  xpReward: number;
+}
+
+interface CampaignParticipant {
+  id: number;
+  status: string;
+  xpEarned: number;
+  joinedAt: string;
+  completedAt: string | null;
+  deadline: string | null;
+  userId: number;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+}
+
+interface CampaignDetail {
+  campaign: Record<string, any>;
+  bounties: CampaignBounty[];
+  participants: CampaignParticipant[];
+}
+
+function CampaignMarketplaceSection() {
+  const [selectedCampaignId, setSelectedCampaignId] = useState<number | null>(null);
+
+  const overview = useQuery<{ overview: CampaignOverview }>({
+    queryKey: ["/api/admin/bounties/campaigns/overview"],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+
+  const campaigns = useQuery<{ campaigns: CampaignRow[] }>({
+    queryKey: ["/api/admin/bounties/campaigns"],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+
+  const detail = useQuery<CampaignDetail>({
+    queryKey: [`/api/admin/bounties/campaigns/${selectedCampaignId}`],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: selectedCampaignId !== null,
+  });
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Campaign marketplace</CardTitle>
+          <CardDescription>Gamefolio-managed campaigns — participation and completion.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {overview.isLoading ? (
+            <div className="text-sm text-muted-foreground">Loading…</div>
+          ) : overview.data && (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StatTile icon={Trophy} label="Total campaigns" value={overview.data.overview.totalCampaigns} />
+              <StatTile icon={Trophy} label="Active" value={overview.data.overview.activeCampaigns} />
+              <StatTile icon={Users} label="Participants" value={overview.data.overview.totalParticipants} />
+              <StatTile icon={Users} label="Completions" value={overview.data.overview.totalCompletions} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>All campaigns</CardTitle>
+          <CardDescription>Click a row to see who's participating and their completion status.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {campaigns.isLoading ? (
+            <div className="text-sm text-muted-foreground">Loading…</div>
+          ) : !campaigns.data?.campaigns.length ? (
+            <div className="text-sm text-muted-foreground">No campaigns yet.</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Campaign</TableHead>
+                  <TableHead>Game</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Participants</TableHead>
+                  <TableHead className="text-right">Completed</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {campaigns.data.campaigns.map((c) => (
+                  <TableRow
+                    key={c.id}
+                    className="cursor-pointer"
+                    onClick={() => setSelectedCampaignId(c.id)}
+                    data-testid={`row-campaign-${c.id}`}
+                  >
+                    <TableCell className="font-medium">{c.templateName ?? `Campaign #${c.id}`}</TableCell>
+                    <TableCell className="text-muted-foreground">{c.gameName ?? "—"}</TableCell>
+                    <TableCell><Badge variant={statusVariant(c.status)}>{c.status}</Badge></TableCell>
+                    <TableCell className="text-right">{c.participantCount}</TableCell>
+                    <TableCell className="text-right">{c.completedCount}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={selectedCampaignId !== null} onOpenChange={(open) => !open && setSelectedCampaignId(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{detail.data?.campaign?.templateName ?? "Campaign detail"}</DialogTitle>
+            <DialogDescription>
+              {detail.data?.campaign?.gameName ? `Game: ${detail.data.campaign.gameName}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          {detail.isLoading ? (
+            <div className="text-sm text-muted-foreground">Loading…</div>
+          ) : detail.data && (
+            <div className="space-y-6">
+              <div>
+                <h4 className="mb-2 text-sm font-semibold">Bounties in this campaign ({detail.data.bounties.length})</h4>
+                {detail.data.bounties.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">No bounties defined.</div>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {detail.data.bounties.map((b) => (
+                      <Badge key={b.id} variant={b.mandatory ? "default" : "outline"}>
+                        {b.title} · {b.xpReward} XP
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <h4 className="mb-2 text-sm font-semibold">Participants ({detail.data.participants.length})</h4>
+                {detail.data.participants.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">No one has joined yet.</div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>User</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">XP earned</TableHead>
+                        <TableHead>Joined</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {detail.data.participants.map((p) => (
+                        <TableRow key={p.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={p.avatarUrl ?? undefined} />
+                                <AvatarFallback>{p.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+                              </Avatar>
+                              <span>@{p.username}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={p.completedAt ? "default" : "outline"}>
+                              {p.completedAt ? "completed" : p.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">{p.xpEarned}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {new Date(p.joinedAt).toLocaleDateString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+export function AdminBountiesPanel() {
+  return (
+    <Tabs defaultValue="legacy" className="space-y-4">
+      <TabsList>
+        <TabsTrigger value="legacy">Game bounties</TabsTrigger>
+        <TabsTrigger value="marketplace">Campaign marketplace</TabsTrigger>
+      </TabsList>
+      <TabsContent value="legacy">
+        <LegacyBountiesSection />
+      </TabsContent>
+      <TabsContent value="marketplace">
+        <CampaignMarketplaceSection />
+      </TabsContent>
+    </Tabs>
   );
 }
