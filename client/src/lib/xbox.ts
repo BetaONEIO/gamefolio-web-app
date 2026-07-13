@@ -104,8 +104,8 @@ export const signInWithXbox = async (): Promise<XboxNativeLoginResult | void> =>
   const state = generateOAuthState();
   storeOAuthState(state);
   localStorage.removeItem('xbox_oauth_mode');
-  // Same-tab redirect so localStorage state is readable in the callback tab.
-  // window.open/_blank partitions storage in Chrome 115+ with noopener.
+  // Same-tab redirect: window.open/_blank partitions storage in Chrome 115+
+  // with noopener, which broke the OAuth state cookie in the callback tab.
   window.location.href = buildXboxAuthUrl(state);
 };
 
@@ -125,8 +125,8 @@ export const connectXboxAccount = async (): Promise<XboxNativeConnectResult | vo
   const state = generateOAuthState();
   storeOAuthState(state);
   localStorage.setItem('xbox_oauth_mode', 'connect');
-  // Same-tab redirect so localStorage state is readable in the callback tab.
-  // window.open/_blank partitions storage in Chrome 115+ with noopener.
+  // Same-tab redirect: window.open/_blank partitions storage in Chrome 115+
+  // with noopener, which broke the OAuth state cookie in the callback tab.
   window.location.href = buildXboxAuthUrl(state);
 };
 
