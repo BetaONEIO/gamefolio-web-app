@@ -5,6 +5,7 @@ import {
   UseMutationResult,
   useQueryClient,
 } from "@tanstack/react-query";
+import * as Sentry from "@sentry/capacitor";
 import { User } from "@shared/schema";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -78,26 +79,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // session cookie, so after a successful session login we exchange the
   // session for a JWT pair and store it. The queryClient automatically
   // attaches it to subsequent requests and refreshes it on 401.
+  const attemptIssueNativeTokens = async (): Promise<"ok" | "unauthorized" | "failed"> => {
+    const res = await fetch("/api/auth/token/issue", {
+      method: "POST",
+      credentials: "include",
+    });
+    if (res.status === 401) return "unauthorized";
+    if (!res.ok) return "failed";
+    // Guard against SPA fallback returning index.html with status 200
+    // when the route is missing on a stale deploy.
+    if (!res.headers.get("content-type")?.includes("application/json")) return "failed";
+    const data = (await res.json()) as {
+      accessToken?: string;
+      refreshToken?: string;
+    };
+    if (!data.accessToken || !data.refreshToken) return "failed";
+    await setTokens(data.accessToken, data.refreshToken);
+    return "ok";
+  };
+
   const issueNativeTokens = async () => {
     if (!isNative) return;
     try {
-      const res = await fetch("/api/auth/token/issue", {
-        method: "POST",
-        credentials: "include",
+      let result = await attemptIssueNativeTokens();
+      // A 401 immediately after a successful login almost always means the
+      // session cookie this exchange depends on hasn't finished propagating
+      // through the native CapacitorCookies bridge yet, not a real auth
+      // failure. One short-delay retry clears that race.
+      if (result === "unauthorized") {
+        Sentry.addBreadcrumb({
+          category: "auth-token",
+          message: "issueNativeTokens: 401 on first attempt, retrying",
+          level: "warning",
+        });
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        result = await attemptIssueNativeTokens();
+      }
+      Sentry.addBreadcrumb({
+        category: "auth-token",
+        message: `issueNativeTokens: ${result}`,
+        level: result === "ok" ? "info" : "warning",
       });
-      if (!res.ok) return;
-      // Guard against SPA fallback returning index.html with status 200
-      // when the route is missing on a stale deploy.
-      if (!res.headers.get("content-type")?.includes("application/json")) return;
-      const data = (await res.json()) as {
-        accessToken?: string;
-        refreshToken?: string;
-      };
-      if (data.accessToken && data.refreshToken) {
-        await setTokens(data.accessToken, data.refreshToken);
+      if (result !== "ok") {
+        Sentry.captureException(new Error(`issueNativeTokens failed: ${result}`), {
+          tags: { module: "use-auth", op: "issueNativeTokens" },
+        });
       }
     } catch (e) {
       console.warn("issueNativeTokens failed", e);
+      Sentry.captureException(e, { tags: { module: "use-auth", op: "issueNativeTokens" } });
     }
   };
 
