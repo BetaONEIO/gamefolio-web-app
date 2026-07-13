@@ -5098,12 +5098,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // ── Build watermark filters ──────────────────────────────────────────
       const sgFont = path.join(process.cwd(), 'server', 'assets', 'fonts', 'SpaceGrotesk-Bold.ttf');
+      // Reels are portrait/vertical (TikTok-style) — use larger text so it reads on mobile
+      const wmFont1 = (clip as any).isReel ? 34 : 22;
+      const wmFont2 = (clip as any).isReel ? 24 : 16;
+      const wmY1    = (clip as any).isReel ? 'H-th-68' : 'H-th-44';
+      const wmY2    = (clip as any).isReel ? 'H-th-24' : 'H-th-16';
       const line1Filter =
-        `drawtext=text='${watermarkLine1}':fontfile='${sgFont}':fontsize=22:fontcolor=white@0.95:` +
-        `x=W-tw-20:y=H-th-44:shadowcolor=black@0.75:shadowx=2:shadowy=2`;
+        `drawtext=text='${watermarkLine1}':fontfile='${sgFont}':fontsize=${wmFont1}:fontcolor=white@0.95:` +
+        `x=W-tw-20:y=${wmY1}:shadowcolor=black@0.75:shadowx=2:shadowy=2`;
       const line2Filter =
-        `drawtext=text='${watermarkLine2}':fontfile='${sgFont}':fontsize=16:fontcolor=white@0.80:` +
-        `x=W-tw-20:y=H-th-16:shadowcolor=black@0.55:shadowx=1:shadowy=1`;
+        `drawtext=text='${watermarkLine2}':fontfile='${sgFont}':fontsize=${wmFont2}:fontcolor=white@0.80:` +
+        `x=W-tw-20:y=${wmY2}:shadowcolor=black@0.55:shadowx=1:shadowy=1`;
 
       const sharedOutputOptions = [
         '-c:v', 'libx264',
@@ -5220,11 +5225,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Fallback: text-only watermark (no logo, no outro)
         const drawtextFilter =
-          `drawtext=text='${watermarkLine1}':fontsize=22:fontcolor=white@0.92:` +
-          `x=w-tw-20:y=h-th-44:shadowcolor=black@0.75:shadowx=2:shadowy=2:` +
+          `drawtext=text='${watermarkLine1}':fontsize=${wmFont1}:fontcolor=white@0.92:` +
+          `x=w-tw-20:y=${wmY1}:shadowcolor=black@0.75:shadowx=2:shadowy=2:` +
           `box=1:boxcolor=black@0.38:boxborderw=8,` +
-          `drawtext=text='${watermarkLine2}':fontsize=16:fontcolor=white@0.80:` +
-          `x=w-tw-20:y=h-th-16:shadowcolor=black@0.55:shadowx=1:shadowy=1:` +
+          `drawtext=text='${watermarkLine2}':fontsize=${wmFont2}:fontcolor=white@0.80:` +
+          `x=w-tw-20:y=${wmY2}:shadowcolor=black@0.55:shadowx=1:shadowy=1:` +
           `box=1:boxcolor=black@0.38:boxborderw=6`;
 
         const command = (ffmpeg as any)(freshUrl)
