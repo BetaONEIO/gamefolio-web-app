@@ -854,11 +854,11 @@ router.get('/auth/mobile/xbox/init', (req: Request, res: Response) => {
   const state = generateSecureCode();
   oauthStateStore.set(state, { createdAt: Date.now(), platform: 'xbox', scheme, mode });
 
-  const authUrl = `https://login.live.com/oauth20_authorize.srf?` +
+  const authUrl = `https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize?` +
     `client_id=${microsoftClientId}&` +
     `redirect_uri=${encodeURIComponent(redirectUri)}&` +
     `response_type=code&` +
-    `scope=${encodeURIComponent('Xboxlive.signin Xboxlive.offline_access')}&` +
+    `scope=${encodeURIComponent('XboxLive.signin XboxLive.offline_access')}&` +
     `state=${state}`;
 
   res.json({ authUrl, redirectUri, state });
@@ -866,8 +866,9 @@ router.get('/auth/mobile/xbox/init', (req: Request, res: Response) => {
 
 /**
  * Xbox Live OAuth callback for mobile app (Rork)
- * Exchanges auth code via xbl.io, creates/finds user, redirects with a one-time auth code
- * Mobile app exchanges that code via POST /api/auth/mobile/exchange
+ * Exchanges auth code directly against Microsoft + Xbox Live (same chain the
+ * web flow at /api/auth/xbox/token uses), creates/finds user, redirects with
+ * a one-time auth code. Mobile app exchanges that code via POST /api/auth/mobile/exchange
  * GET /api/auth/mobile/xbox/callback
  */
 router.get('/auth/mobile/xbox/callback', async (req: Request, res: Response) => {
@@ -900,39 +901,97 @@ router.get('/auth/mobile/xbox/callback', async (req: Request, res: Response) => 
       return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Invalid authentication state')}`);
     }
 
-    const xblApiKey = process.env.XBL_API_KEY;
-    if (!xblApiKey) {
+    const microsoftClientId = process.env.VITE_MICROSOFT_CLIENT_ID;
+    const microsoftClientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+    if (!microsoftClientId || !microsoftClientSecret) {
       return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Xbox authentication not configured on server')}`);
     }
 
     const baseUrl = process.env.SITE_URL || `https://${process.env.REPLIT_DEV_DOMAIN}`;
     const redirectUri = `${baseUrl}/api/auth/mobile/xbox/callback`;
 
-    // Exchange the Microsoft auth code for Xbox Live profile via xbl.io
-    const xblResponse = await fetch('https://xbl.io/api/v2/auth/oauth', {
+    // Step 1: Exchange the Microsoft auth code for an access token using client secret
+    const tokenParams = new URLSearchParams({
+      client_id: microsoftClientId,
+      client_secret: microsoftClientSecret,
+      code: String(code),
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code',
+    });
+
+    const msTokenResponse = await fetch('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
       method: 'POST',
-      headers: {
-        'x-authorization': xblApiKey,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({ code: String(code), redirect_uri: redirectUri })
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: tokenParams.toString(),
+    });
+
+    if (!msTokenResponse.ok) {
+      const errorText = await msTokenResponse.text().catch(() => 'Unknown error');
+      console.error('Mobile Xbox Microsoft token exchange error:', msTokenResponse.status, errorText);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Failed to exchange authorization code with Microsoft')}`);
+    }
+
+    const msTokenData = await msTokenResponse.json();
+    const accessToken = msTokenData.access_token;
+
+    // Step 2: Exchange Microsoft access token for an Xbox Live (XBL) user token
+    const xblResponse = await fetch('https://user.auth.xboxlive.com/user/authenticate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        Properties: {
+          AuthMethod: 'RPS',
+          SiteName: 'user.auth.xboxlive.com',
+          RpsTicket: `d=${accessToken}`,
+        },
+        RelyingParty: 'http://auth.xboxlive.com',
+        TokenType: 'JWT',
+      }),
     });
 
     if (!xblResponse.ok) {
       const errorText = await xblResponse.text().catch(() => 'Unknown error');
-      console.error('xbl.io mobile token exchange error:', xblResponse.status, errorText);
-      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Failed to exchange authorization code with Xbox Live')}`);
+      console.error('Mobile Xbox XBL token error:', xblResponse.status, errorText);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Failed to authenticate with Xbox Live')}`);
     }
 
     const xblData = await xblResponse.json();
+    const xblToken = xblData.Token;
 
-    const xuid = xblData.xuid || xblData.data?.xuid;
-    const gamertag = xblData.gamertag || xblData.data?.gamertag || xblData.settings?.find((s: any) => s.id === 'Gamertag')?.value;
-    const gamerpic = xblData.displayPicRaw || xblData.data?.displayPicRaw || xblData.settings?.find((s: any) => s.id === 'GameDisplayPicRaw')?.value;
+    // Step 3: Exchange XBL token for an XSTS token (contains gamertag + XUID)
+    const xstsResponse = await fetch('https://xsts.auth.xboxlive.com/xsts/authorize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        Properties: {
+          SandboxId: 'RETAIL',
+          UserTokens: [xblToken],
+        },
+        RelyingParty: 'http://xboxlive.com',
+        TokenType: 'JWT',
+      }),
+    });
+
+    if (!xstsResponse.ok) {
+      const errorText = await xstsResponse.text().catch(() => 'Unknown error');
+      console.error('Mobile Xbox XSTS token error:', xstsResponse.status, errorText);
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Failed to get Xbox Secure Token')}`);
+    }
+
+    const xstsData = await xstsResponse.json();
+    const claims = xstsData.DisplayClaims?.xui?.[0];
+
+    if (!claims) {
+      console.error('Mobile Xbox XSTS response missing claims:', JSON.stringify(xstsData));
+      return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Could not retrieve Xbox profile information')}`);
+    }
+
+    const xuid = claims.xid;
+    const gamertag = claims.gtg;
+    const gamerpic = claims.gpd || undefined;
 
     if (!xuid || !gamertag) {
-      console.error('xbl.io mobile response missing required fields:', JSON.stringify(xblData));
+      console.error('Mobile Xbox XSTS response missing required fields:', JSON.stringify(xstsData));
       return res.redirect(`${appScheme}auth/error?message=${encodeURIComponent('Could not retrieve Xbox profile information')}`);
     }
 
