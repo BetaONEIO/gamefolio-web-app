@@ -5471,7 +5471,12 @@ export class DatabaseStorage implements IStorage {
   async getUploadLimits(userId: number): Promise<UploadLimits> {
     // Get user to check Pro status (admins are treated as Pro for upload caps).
     const user = await this.getUser(userId);
-    const isPro = user?.isPro || user?.role === 'admin' || false;
+    // Also honour users whose isPro flag was prematurely cleared (e.g. a
+    // past_due webhook race) but whose paid period has not yet expired.
+    const hasActivePaidPeriod = user?.proSubscriptionEndDate
+      ? new Date(user.proSubscriptionEndDate) > new Date()
+      : false;
+    const isPro = user?.isPro || hasActivePaidPeriod || user?.role === 'admin' || false;
 
     if (isPro) {
       return {
