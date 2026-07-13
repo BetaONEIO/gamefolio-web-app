@@ -5098,11 +5098,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // ── Build watermark filters ──────────────────────────────────────────
       const sgFont = path.join(process.cwd(), 'server', 'assets', 'fonts', 'SpaceGrotesk-Bold.ttf');
-      // Reels are portrait/vertical (TikTok-style) — use larger text so it reads on mobile
-      const wmFont1 = (clip as any).isReel ? 34 : 22;
-      const wmFont2 = (clip as any).isReel ? 24 : 16;
-      const wmY1    = (clip as any).isReel ? 'H-th-68' : 'H-th-44';
-      const wmY2    = (clip as any).isReel ? 'H-th-24' : 'H-th-16';
+      // Reels are portrait/vertical (1080×1920) — scale font relative to video height so text
+      // is readable regardless of resolution. Clips use fixed px (typically 720-1080p landscape).
+      const clipIsReel = clip.videoType === 'reel';
+      const wmFont1 = clipIsReel ? Math.round(clipH * 0.042) : 22;  // ~80px at 1920h
+      const wmFont2 = clipIsReel ? Math.round(clipH * 0.030) : 16;  // ~58px at 1920h
+      const wmY1    = clipIsReel ? 'H-th-110' : 'H-th-44';
+      const wmY2    = clipIsReel ? 'H-th-36'  : 'H-th-16';
       const line1Filter =
         `drawtext=text='${watermarkLine1}':fontfile='${sgFont}':fontsize=${wmFont1}:fontcolor=white@0.95:` +
         `x=W-tw-20:y=${wmY1}:shadowcolor=black@0.75:shadowx=2:shadowy=2`;
