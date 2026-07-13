@@ -5098,12 +5098,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // ── Build watermark filters ──────────────────────────────────────────
       const sgFont = path.join(process.cwd(), 'server', 'assets', 'fonts', 'SpaceGrotesk-Bold.ttf');
+      // Reels are portrait/vertical (1080×1920) — scale font relative to video height so text
+      // is readable regardless of resolution. Clips use fixed px (typically 720-1080p landscape).
+      const clipIsReel = clip.videoType === 'reel';
+      const wmFont1 = clipIsReel ? Math.round(clipH * 0.042) : 22;  // ~80px at 1920h
+      const wmFont2 = clipIsReel ? Math.round(clipH * 0.030) : 16;  // ~58px at 1920h
+      const wmY1    = clipIsReel ? 'H-th-110' : 'H-th-44';
+      const wmY2    = clipIsReel ? 'H-th-36'  : 'H-th-16';
       const line1Filter =
-        `drawtext=text='${watermarkLine1}':fontfile='${sgFont}':fontsize=38:fontcolor=white@0.95:` +
-        `x=W-tw-20:y=H-th-56:shadowcolor=black@0.75:shadowx=2:shadowy=2`;
+        `drawtext=text='${watermarkLine1}':fontfile='${sgFont}':fontsize=${wmFont1}:fontcolor=white@0.95:` +
+        `x=W-tw-20:y=${wmY1}:shadowcolor=black@0.75:shadowx=2:shadowy=2`;
       const line2Filter =
-        `drawtext=text='${watermarkLine2}':fontfile='${sgFont}':fontsize=26:fontcolor=white@0.80:` +
-        `x=W-tw-20:y=H-th-20:shadowcolor=black@0.55:shadowx=1:shadowy=1`;
+        `drawtext=text='${watermarkLine2}':fontfile='${sgFont}':fontsize=${wmFont2}:fontcolor=white@0.80:` +
+        `x=W-tw-20:y=${wmY2}:shadowcolor=black@0.55:shadowx=1:shadowy=1`;
 
       const sharedOutputOptions = [
         '-c:v', 'libx264',
@@ -5220,12 +5227,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Fallback: text-only watermark (no logo, no outro)
         const drawtextFilter =
-          `drawtext=text='${watermarkLine1}':fontsize=38:fontcolor=white@0.92:` +
-          `x=w-tw-20:y=h-th-56:shadowcolor=black@0.75:shadowx=2:shadowy=2:` +
-          `box=1:boxcolor=black@0.38:boxborderw=10,` +
-          `drawtext=text='${watermarkLine2}':fontsize=26:fontcolor=white@0.80:` +
-          `x=w-tw-20:y=h-th-20:shadowcolor=black@0.55:shadowx=1:shadowy=1:` +
-          `box=1:boxcolor=black@0.38:boxborderw=8`;
+          `drawtext=text='${watermarkLine1}':fontsize=${wmFont1}:fontcolor=white@0.92:` +
+          `x=w-tw-20:y=${wmY1}:shadowcolor=black@0.75:shadowx=2:shadowy=2:` +
+          `box=1:boxcolor=black@0.38:boxborderw=8,` +
+          `drawtext=text='${watermarkLine2}':fontsize=${wmFont2}:fontcolor=white@0.80:` +
+          `x=w-tw-20:y=${wmY2}:shadowcolor=black@0.55:shadowx=1:shadowy=1:` +
+          `box=1:boxcolor=black@0.38:boxborderw=6`;
 
         const command = (ffmpeg as any)(freshUrl)
           .videoFilters(drawtextFilter)
