@@ -1,4 +1,5 @@
 import { Preferences } from '@capacitor/preferences';
+import * as Sentry from '@sentry/capacitor';
 import { isNative } from './platform';
 
 const ACCESS_KEY = 'gf_access_token';
@@ -19,8 +20,15 @@ async function hydrate(): Promise<void> {
     ]);
     memoryAccess = a.value ?? null;
     memoryRefresh = r.value ?? null;
+    Sentry.addBreadcrumb({
+      category: 'auth-token',
+      message: 'hydrate',
+      level: 'info',
+      data: { hasAccess: !!memoryAccess, hasRefresh: !!memoryRefresh },
+    });
   } catch (e) {
     console.warn('auth-token: hydrate failed', e);
+    Sentry.captureException(e, { tags: { module: 'auth-token', op: 'hydrate' } });
   }
 }
 
@@ -48,8 +56,10 @@ export async function setTokens(access: string, refresh: string): Promise<void> 
       Preferences.set({ key: ACCESS_KEY, value: access }),
       Preferences.set({ key: REFRESH_KEY, value: refresh }),
     ]);
+    Sentry.addBreadcrumb({ category: 'auth-token', message: 'setTokens', level: 'info' });
   } catch (e) {
     console.warn('auth-token: setTokens failed', e);
+    Sentry.captureException(e, { tags: { module: 'auth-token', op: 'setTokens' } });
   }
 }
 
@@ -63,8 +73,10 @@ export async function clearTokens(): Promise<void> {
       Preferences.remove({ key: ACCESS_KEY }),
       Preferences.remove({ key: REFRESH_KEY }),
     ]);
+    Sentry.addBreadcrumb({ category: 'auth-token', message: 'clearTokens', level: 'info' });
   } catch (e) {
     console.warn('auth-token: clearTokens failed', e);
+    Sentry.captureException(e, { tags: { module: 'auth-token', op: 'clearTokens' } });
   }
 }
 
