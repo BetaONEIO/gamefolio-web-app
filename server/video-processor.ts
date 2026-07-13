@@ -602,11 +602,11 @@ export class VideoProcessor {
         '[0:v][glow_faded]overlay=(W-w)/2:(H-h)/2-90[bg_glow]',
         '[bg_glow][logo_faded]overlay=(W-w)/2:(H-h)/2-90[with_logo]',
         // Username text fades in 0.8 s AFTER logo starts (i.e. once logo is fully visible)
-        `[with_logo]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+120:alpha='if(lt(t\\,${userFadeStart})\\,0\\,if(lt(t\\,${userFadeStart + userFadeDur})\\,(t-${userFadeStart})/${userFadeDur}\\,1))'[out]`,
+        `[with_logo]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=40:fontcolor=white:x=(w-tw)/2:y=(h/2)+120:alpha='if(lt(t\\,${userFadeStart})\\,0\\,if(lt(t\\,${userFadeStart + userFadeDur})\\,(t-${userFadeStart})/${userFadeDur}\\,1))'[out]`,
         ...audioFilter,
       ] : [
         // Fallback: no logo — just text fading in at userFadeStart
-        `[0:v]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=66:fontcolor=white:x=(w-tw)/2:y=(h/2)+10:alpha='if(lt(t\\,${userFadeStart})\\,0\\,if(lt(t\\,${userFadeStart + userFadeDur})\\,(t-${userFadeStart})/${userFadeDur}\\,1))'[out]`,
+        `[0:v]drawtext=text='${safeUser}':fontfile='${fontPath}':fontsize=40:fontcolor=white:x=(w-tw)/2:y=(h/2)+10:alpha='if(lt(t\\,${userFadeStart})\\,0\\,if(lt(t\\,${userFadeStart + userFadeDur})\\,(t-${userFadeStart})/${userFadeDur}\\,1))'[out]`,
         ...audioFilter,
       ];
 
