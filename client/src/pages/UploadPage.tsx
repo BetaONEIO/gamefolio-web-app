@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import * as Sentry from "@sentry/capacitor";
 import { useLocation } from "wouter";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, authedFetch } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -509,10 +509,9 @@ const UploadPage = () => {
         formData.append("ageRestricted", screenshotAgeRestricted.toString());
         formData.append("screenshot", file);
         
-        const response = await fetch("/api/screenshots/upload", {
+        const response = await authedFetch("/api/screenshots/upload", {
           method: "POST",
           body: formData,
-          credentials: "include",
         });
         
         if (!response.ok) {
@@ -652,7 +651,7 @@ const UploadPage = () => {
           
           setUploadProgress(5);
           
-          const credsResponse = await fetch('/api/upload/supabase-creds', {
+          const credsResponse = await authedFetch('/api/upload/supabase-creds', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ filePath, contentType: file.type }),
@@ -738,7 +737,7 @@ const UploadPage = () => {
             fullProcessData: processData
           });
           
-          const processResponse = await fetch('/api/upload/process-video', {
+          const processResponse = await authedFetch('/api/upload/process-video', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(processData),
