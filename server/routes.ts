@@ -5106,7 +5106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const wmY1    = clipIsReel ? 'H-th-68'  : 'H-th-44';
       const wmY2    = clipIsReel ? 'H-th-24'  : 'H-th-16';
       const logoH   = 56;  // logo height in px
-      const logoY   = clipIsReel ? 'H-h-136' : 'H-h-102';
+      const logoY   = clipIsReel ? 'H-h-168' : 'H-h-102';
       const line1Filter =
         `drawtext=text='${watermarkLine1}':fontfile='${sgFont}':fontsize=${wmFont1}:fontcolor=white@0.95:` +
         `x=W-tw-20:y=${wmY1}:shadowcolor=black@0.75:shadowx=2:shadowy=2`;
