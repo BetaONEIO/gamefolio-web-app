@@ -315,7 +315,7 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
 });
 
 // Get Supabase upload credentials for direct client-side upload
-router.post('/upload/supabase-creds', fullAccessMiddleware, async (req, res) => {
+router.post('/upload/supabase-creds', hybridFullAccess, async (req, res) => {
   try {
     const { filePath, contentType } = req.body;
     
@@ -334,11 +334,11 @@ router.post('/upload/supabase-creds', fullAccessMiddleware, async (req, res) => 
 });
 
 // TUS endpoints (keep for future use)
-router.all('/tus/*', fullAccessMiddleware, (req, res) => {
+router.all('/tus/*', hybridFullAccess, (req, res) => {
   return tusServer.handle(req, res);
 });
 
-router.all('/tus', fullAccessMiddleware, (req, res) => {
+router.all('/tus', hybridFullAccess, (req, res) => {
   return tusServer.handle(req, res);
 });
 
