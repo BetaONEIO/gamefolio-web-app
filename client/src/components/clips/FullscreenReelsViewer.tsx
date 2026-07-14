@@ -451,36 +451,40 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             {!showComments && !isDesktop && (
               <div className="absolute bottom-0 left-0 right-0 z-[3] px-4 pb-8 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none">
                 <div className="pr-14">
-                  {/* User row */}
-                  <div className="flex items-center gap-2 mb-1.5">
+                  {/* User section — avatar above username */}
+                  <div className="mb-1.5">
+                    {/* Avatar */}
                     <Link
                       href={`/profile/${currentReel.user.username}`}
                       onClick={(e) => { e.stopPropagation(); onClose(); }}
-                      className="flex-shrink-0 pointer-events-auto"
+                      className="flex-shrink-0 pointer-events-auto inline-block mb-1"
                     >
                       <CustomAvatar user={currentReel.user as any} size="sm" showBorder={true} />
                     </Link>
-                    <ProfileHoverCard username={currentReel.user.username}>
-                      <Link
-                        href={`/profile/${currentReel.user.username}`}
-                        onClick={(e) => { e.stopPropagation(); onClose(); }}
-                        className="no-underline flex-shrink-0 pointer-events-auto"
-                      >
-                        <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
-                          @{currentReel.user.username}
-                        </span>
-                      </Link>
-                    </ProfileHoverCard>
-                    {user && user.id !== currentReel.user.id && !isFollowing && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleFollow(); }}
-                        disabled={followMutation.isPending}
-                        className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all pointer-events-auto"
-                        style={{ background: '#B7FF1A', color: '#000', border: '1px solid transparent' }}
-                      >
-                        {followMutation.isPending ? '…' : 'Follow'}
-                      </button>
-                    )}
+                    {/* Username + follow below avatar */}
+                    <div className="flex items-center gap-2">
+                      <ProfileHoverCard username={currentReel.user.username}>
+                        <Link
+                          href={`/profile/${currentReel.user.username}`}
+                          onClick={(e) => { e.stopPropagation(); onClose(); }}
+                          className="no-underline flex-shrink-0 pointer-events-auto"
+                        >
+                          <span className="text-white font-bold text-[11px] drop-shadow leading-tight">
+                            @{currentReel.user.username}
+                          </span>
+                        </Link>
+                      </ProfileHoverCard>
+                      {user && user.id !== currentReel.user.id && !isFollowing && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleFollow(); }}
+                          disabled={followMutation.isPending}
+                          className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all pointer-events-auto"
+                          style={{ background: '#B7FF1A', color: '#000', border: '1px solid transparent' }}
+                        >
+                          {followMutation.isPending ? '…' : 'Follow'}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Title */}
