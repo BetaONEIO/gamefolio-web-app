@@ -86,11 +86,6 @@ export function XboxCallback() {
             closeModal();
             setLocation("/onboarding");
           } else {
-            toast({
-              title: "Welcome back!",
-              description: `You're signed in as ${userData.xboxUsername || userData.displayName}.`,
-              variant: "gamefolioSuccess"
-            });
             closeModal();
             setLocation("/");
           }

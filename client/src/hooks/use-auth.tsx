@@ -213,11 +213,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           setLocation(pendingOAuthRedirect || "/onboarding");
         } else {
-          toast({
-            title: "Welcome back!",
-            description: `You're now signed in with Google.`,
-            variant: "gamefolioSuccess",
-          });
           setLocation(pendingOAuthRedirect || "/");
         }
       } catch (error) {
@@ -366,13 +361,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Use centralized refreshUser to ensure cache consistency
       await refreshUser();
-
-      // Show welcome back message
-      toast({
-        title: "Welcome back!",
-        description: `You are now logged in as ${user.displayName || user.username}`,
-        variant: "gamefolioSuccess",
-      });
 
       // Check if user needs onboarding
       const needsOnboarding = !user.userType;

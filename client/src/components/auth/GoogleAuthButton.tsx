@@ -49,11 +49,6 @@ export function GoogleAuthButton({ disabled = false }: GoogleAuthButtonProps) {
           });
           setLocation("/onboarding");
         } else {
-          toast({
-            title: "Welcome back!",
-            description: "You're now signed in with Google.",
-            variant: "gamefolioSuccess",
-          });
           setLocation("/");
         }
         setIsLoading(false);
