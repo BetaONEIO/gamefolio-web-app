@@ -459,7 +459,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                       onClick={(e) => { e.stopPropagation(); onClose(); }}
                       className="flex-shrink-0 pointer-events-auto inline-block mb-1"
                     >
-                      <CustomAvatar user={currentReel.user as any} size="sm" showBorder={true} />
+                      <CustomAvatar user={currentReel.user as any} size="md" showBorder={true} />
                     </Link>
                     {/* Username + follow below avatar */}
                     <div className="flex items-center gap-2">
