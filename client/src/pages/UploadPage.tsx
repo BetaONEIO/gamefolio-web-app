@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import * as Sentry from "@sentry/capacitor";
 import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -566,6 +567,13 @@ const UploadPage = () => {
     onError: (error: Error) => {
       const limits = error instanceof UploadLimitError ? error.limits : undefined;
       const showUpgradeCta = limits ? limits.isPro === false : false;
+      // Tier-limit rejections are expected, not bugs - only report genuine
+      // transport/server failures so Sentry stays a signal for real issues.
+      if (!(error instanceof UploadLimitError)) {
+        Sentry.captureException(error, {
+          tags: { module: "upload-page", op: "screenshot-upload" },
+        });
+      }
       toast({
         title: "Upload failed",
         description: error.message,
@@ -812,6 +820,13 @@ const UploadPage = () => {
       console.error('Upload mutation error:', error);
       const limits = error instanceof UploadLimitError ? error.limits : undefined;
       const showUpgradeCta = limits ? limits.isPro === false : false;
+      // Tier-limit rejections are expected, not bugs - only report genuine
+      // transport/server failures so Sentry stays a signal for real issues.
+      if (!(error instanceof UploadLimitError)) {
+        Sentry.captureException(error, {
+          tags: { module: "upload-page", op: "video-upload", videoType: contentType === 'reels' ? 'reel' : 'clip' },
+        });
+      }
       toast({
         title: "Upload failed",
         description: error.message,
