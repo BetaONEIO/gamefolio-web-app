@@ -5099,10 +5099,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Reels are portrait/vertical (1080×1920) — scale font relative to video height so text
       // is readable regardless of resolution. Clips use fixed px (typically 720-1080p landscape).
       const clipIsReel = clip.videoType === 'reel';
-      const wmFont1 = clipIsReel ? Math.round(clipH * 0.042) : 22;  // ~80px at 1920h
-      const wmFont2 = clipIsReel ? Math.round(clipH * 0.030) : 16;  // ~58px at 1920h
-      const wmY1    = clipIsReel ? 'H-th-110' : 'H-th-44';
-      const wmY2    = clipIsReel ? 'H-th-36'  : 'H-th-16';
+      const wmFont1 = clipIsReel ? Math.round(clipH * 0.026) : 22;  // ~50px at 1920h (reduced from 0.042)
+      const wmFont2 = clipIsReel ? Math.round(clipH * 0.019) : 16;  // ~36px at 1920h (reduced from 0.030)
+      // Logo sits ABOVE username, username ABOVE game/site line.
+      // Reel layout from bottom: game(24px) → username(68px) → logo(136px)
+      const wmY1    = clipIsReel ? 'H-th-68'  : 'H-th-44';
+      const wmY2    = clipIsReel ? 'H-th-24'  : 'H-th-16';
+      const logoH   = 56;  // logo height in px
+      const logoY   = clipIsReel ? 'H-h-136' : 'H-h-102';
       const line1Filter =
         `drawtext=text='${watermarkLine1}':fontfile='${sgFont}':fontsize=${wmFont1}:fontcolor=white@0.95:` +
         `x=W-tw-20:y=${wmY1}:shadowcolor=black@0.75:shadowx=2:shadowy=2`;
@@ -5153,8 +5157,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .input(logoPath)
           .input(outroSignedUrl)
           .complexFilter([
-            '[1:v]scale=-1:72[logo]',
-            '[0:v][logo]overlay=x=W-w-20:y=H-h-102[wl]',
+            `[1:v]scale=-1:${logoH}[logo]`,
+            `[0:v][logo]overlay=x=W-w-20:y=${logoY}[wl]`,
             `[wl]${line1Filter}[wl2]`,
             `[wl2]${line2Filter}[clip_wm]`,
             ...audioFilters,
@@ -5174,8 +5178,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .input(freshUrl)
           .input(logoPath)
           .complexFilter([
-            '[1:v]scale=-1:72[logo]',
-            '[0:v][logo]overlay=x=W-w-20:y=H-h-102[wl]',
+            `[1:v]scale=-1:${logoH}[logo]`,
+            `[0:v][logo]overlay=x=W-w-20:y=${logoY}[wl]`,
             `[wl]${line1Filter}[wl2]`,
             `[wl2]${line2Filter}[out]`,
           ])
