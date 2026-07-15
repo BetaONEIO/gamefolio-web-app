@@ -105,6 +105,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ isPro: proStatus }),
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/upload/limits"] });
     } catch (error) {
       console.error("Failed to sync Pro status:", error);
     }
@@ -123,6 +124,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ appUserId, platform }),
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/upload/limits"] });
     } catch (error) {
       console.error("Failed to activate Pro on backend:", error);
     }

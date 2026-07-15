@@ -391,6 +391,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       // The webhook backstop will still provision Pro server-side.
     }
     await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    await queryClient.invalidateQueries({ queryKey: ["/api/upload/limits"] });
     setProLootboxReward(lootboxReward);
     setStep("success");
   }, [checkoutSessionId, billingPeriod]);
