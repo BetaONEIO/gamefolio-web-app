@@ -10873,6 +10873,194 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Legacy redirect: old endpoint now returns 410 Gone
   app.get("/api/indie/game-profile", (_req, res) => res.status(410).json({ error: "Use /api/indie/profile" }));
 
+  // ─── Indie Game Management: Creator Content ───────────────────────────────
+  app.get("/api/indie/creator-content", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    const { type = "all", sort = "newest" } = req.query as any;
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      // Find the indie profile to get the game name
+      const profileRows = await db.execute(sql`
+        SELECT game_name FROM indie_game_profiles WHERE user_id = ${req.user.id} LIMIT 1
+      `);
+      const gameName = (profileRows.rows?.[0] as any)?.game_name;
+      if (!gameName) return res.json({ items: [] });
+
+      const orderBy = sort === "most_viewed" ? "c.views DESC" : sort === "most_liked" ? "c.likes DESC" : "c.created_at DESC";
+      let items: any[] = [];
+
+      if (type === "all" || type === "clips") {
+        const rows = await db.execute(sql`
+          SELECT c.id, 'clip' AS type, c.title, c.thumbnail_url AS "thumbnailUrl", c.views, c.likes, u.username, c.created_at AS "createdAt"
+          FROM clips c
+          JOIN users u ON u.id = c.user_id
+          JOIN games g ON g.id = c.game_id
+          WHERE g.name ILIKE ${'%' + gameName + '%'} AND c.user_id != ${req.user.id}
+          ORDER BY c.created_at DESC LIMIT 20
+        `);
+        items = [...items, ...(rows.rows ?? [])];
+      }
+      if (type === "all" || type === "screenshots") {
+        const rows = await db.execute(sql`
+          SELECT s.id, 'screenshot' AS type, s.title, s.file_url AS "thumbnailUrl", 0 AS views, 0 AS likes, u.username, s.created_at AS "createdAt"
+          FROM screenshots s
+          JOIN users u ON u.id = s.user_id
+          JOIN games g ON g.id = s.game_id
+          WHERE g.name ILIKE ${'%' + gameName + '%'} AND s.user_id != ${req.user.id}
+          ORDER BY s.created_at DESC LIMIT 20
+        `);
+        items = [...items, ...(rows.rows ?? [])];
+      }
+      res.json({ items: items.slice(0, 30) });
+    } catch (err) {
+      console.error("GET /api/indie/creator-content error:", err);
+      res.json({ items: [] });
+    }
+  });
+
+  // ─── Indie Game Management: Game Updates ──────────────────────────────────
+  // Ensure table exists
+  (async () => {
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS indie_game_updates (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          title TEXT NOT NULL,
+          type TEXT NOT NULL DEFAULT 'Announcement',
+          summary TEXT,
+          content TEXT,
+          publish_date TEXT,
+          status TEXT NOT NULL DEFAULT 'draft',
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+      `);
+    } catch (e) { /* table may already exist */ }
+  })();
+
+  app.get("/api/indie/updates", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      const rows = await db.execute(sql`
+        SELECT id, title, type, summary, content, publish_date AS "publishDate", status, created_at AS "createdAt"
+        FROM indie_game_updates WHERE user_id = ${req.user.id} ORDER BY created_at DESC LIMIT 50
+      `);
+      res.json({ updates: rows.rows ?? [] });
+    } catch (err) {
+      console.error("GET /api/indie/updates error:", err);
+      res.json({ updates: [] });
+    }
+  });
+
+  app.post("/api/indie/updates", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    const { title, type = "Announcement", summary = "", content = "", publishDate = "", status = "draft" } = req.body;
+    if (!title?.trim()) return res.status(400).json({ error: "title required" });
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      const rows = await db.execute(sql`
+        INSERT INTO indie_game_updates (user_id, title, type, summary, content, publish_date, status)
+        VALUES (${req.user.id}, ${title.trim()}, ${type}, ${summary}, ${content}, ${publishDate || null}, ${status})
+        RETURNING id, title, type, summary, publish_date AS "publishDate", status, created_at AS "createdAt"
+      `);
+      res.status(201).json({ update: rows.rows?.[0] });
+    } catch (err) {
+      console.error("POST /api/indie/updates error:", err);
+      res.status(500).json({ error: "Failed to create update" });
+    }
+  });
+
+  app.delete("/api/indie/updates/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    const id = parseInt(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid id" });
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      await db.execute(sql`DELETE FROM indie_game_updates WHERE id = ${id} AND user_id = ${req.user.id}`);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("DELETE /api/indie/updates error:", err);
+      res.status(500).json({ error: "Failed to delete update" });
+    }
+  });
+
+  // ─── Indie Game Management: Analytics ─────────────────────────────────────
+  app.get("/api/indie/analytics", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      const profileRows = await db.execute(sql`SELECT game_name FROM indie_game_profiles WHERE user_id = ${req.user.id} LIMIT 1`);
+      const gameName = (profileRows.rows?.[0] as any)?.game_name;
+
+      let clipsGenerated = 0, screenshotsGenerated = 0;
+      if (gameName) {
+        const clipCount = await db.execute(sql`
+          SELECT COUNT(*)::int AS cnt FROM clips c JOIN games g ON g.id = c.game_id
+          WHERE g.name ILIKE ${'%' + gameName + '%'} AND c.user_id != ${req.user.id}
+        `);
+        clipsGenerated = (clipCount.rows?.[0] as any)?.cnt ?? 0;
+        const ssCount = await db.execute(sql`
+          SELECT COUNT(*)::int AS cnt FROM screenshots s JOIN games g ON g.id = s.game_id
+          WHERE g.name ILIKE ${'%' + gameName + '%'} AND s.user_id != ${req.user.id}
+        `);
+        screenshotsGenerated = (ssCount.rows?.[0] as any)?.cnt ?? 0;
+      }
+
+      const updateCount = await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM indie_game_updates WHERE user_id = ${req.user.id}`);
+      res.json({ clipsGenerated, screenshotsGenerated, reelsGenerated: 0, publishedUpdates: (updateCount.rows?.[0] as any)?.cnt ?? 0 });
+    } catch (err) {
+      console.error("GET /api/indie/analytics error:", err);
+      res.json({});
+    }
+  });
+
+  // ─── Indie Game Management: Bounty Status ─────────────────────────────────
+  app.get("/api/indie/bounty-status", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    try {
+      res.json({ status: "not_enrolled", demoKeys: { uploaded: 0, valid: 0, available: 0, claimed: 0 }, fullGameKeys: { uploaded: 0, valid: 0, available: 0, awarded: 0 } });
+    } catch (err) {
+      res.json({ status: "not_enrolled" });
+    }
+  });
+
+  // ─── Indie Game Management: Verification ──────────────────────────────────
+  app.get("/api/indie/verification", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      const profileRows = await db.execute(sql`SELECT steam_app_id, itch_url FROM indie_game_profiles WHERE user_id = ${req.user.id} LIMIT 1`);
+      const p = profileRows.rows?.[0] as any;
+      res.json({
+        developerIdentity: req.user.emailVerified ? "pending" : "not_started",
+        gameOwnership: "not_started",
+        steamOwnership: p?.steam_app_id ? "pending" : "not_started",
+        epicOwnership: "not_started",
+        itchOwnership: p?.itch_url ? "pending" : "not_started",
+        websiteDomain: "not_started",
+      });
+    } catch (err) {
+      res.json({});
+    }
+  });
+
   // Legacy stubs — return 410 Gone
   app.post("/api/indie/store-import/preview", (_req, res) => res.status(410).json({ error: "Use /api/indie/steam/preview, /api/indie/epic/preview, or /api/indie/itch/preview" }));
 
