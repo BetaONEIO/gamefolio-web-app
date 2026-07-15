@@ -590,6 +590,21 @@ export const steamVerificationCodes = pgTable("steam_verification_codes", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// One-time codes for proving ownership of an Epic Games Store page — same
+// mechanic as steamVerificationCodes: dev pastes the code into their store
+// page description, we check it via Epic's public catalog page. Permanent
+// record lives on indieGameProfiles.epicVerifiedSlug/epicVerifiedAt.
+export const epicVerificationCodes = pgTable("epic_verification_codes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .references(() => users.id)
+    .notNull(),
+  epicSlug: text("epic_slug").notNull(),
+  code: text("code").notNull(), // 6-digit, same generator as email verification
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Password reset tokens table
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: serial("id").primaryKey(),
@@ -683,6 +698,21 @@ export const screenshotReports = pgTable("screenshot_reports", {
   reporterId: integer("reporter_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   screenshotId: integer("screenshot_id").notNull().references(() => screenshots.id, { onDelete: "cascade" }),
   reason: text("reason").notNull(),
+  additionalMessage: text("additional_message"),
+  status: text("status").default("pending").notNull(), // "pending", "reviewed", "dismissed", "action_taken"
+  reviewedBy: integer("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Reports that a user's declared game ownership (Steam/Epic/Itch verified badge
+// or claimed indie game profile) is false — feeds an admin moderation queue,
+// same shape as clip/screenshot/comment reports.
+export const gameOwnershipReports = pgTable("game_ownership_reports", {
+  id: serial("id").primaryKey(),
+  reporterId: integer("reporter_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  reportedUserId: integer("reported_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  reason: text("reason").notNull(), // "not_their_game" | "impersonation" | "stolen_assets" | "other"
   additionalMessage: text("additional_message"),
   status: text("status").default("pending").notNull(), // "pending", "reviewed", "dismissed", "action_taken"
   reviewedBy: integer("reviewed_by").references(() => users.id),
@@ -838,6 +868,8 @@ export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect
 export type InsertEmailVerificationToken = typeof emailVerificationTokens.$inferInsert;
 export type SteamVerificationCode = typeof steamVerificationCodes.$inferSelect;
 export type InsertSteamVerificationCode = typeof steamVerificationCodes.$inferInsert;
+export type EpicVerificationCode = typeof epicVerificationCodes.$inferSelect;
+export type InsertEpicVerificationCode = typeof epicVerificationCodes.$inferInsert;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 export type PasswordResetRequest = z.infer<typeof passwordResetRequestSchema>;
@@ -1173,6 +1205,15 @@ export const insertScreenshotReportSchema = createInsertSchema(screenshotReports
   createdAt: true,
 });
 
+// Schema for inserting game ownership reports
+export const insertGameOwnershipReportSchema = createInsertSchema(gameOwnershipReports).omit({
+  id: true,
+  status: true,
+  reviewedBy: true,
+  reviewedAt: true,
+  createdAt: true,
+});
+
 // Badges definition table - stores custom badge types
 export const badges = pgTable("badges", {
   id: serial("id").primaryKey(),
@@ -1405,6 +1446,9 @@ export type InsertClipReport = z.infer<typeof insertClipReportSchema>;
 
 export type ScreenshotReport = typeof screenshotReports.$inferSelect;
 export type InsertScreenshotReport = z.infer<typeof insertScreenshotReportSchema>;
+
+export type GameOwnershipReport = typeof gameOwnershipReports.$inferSelect;
+export type InsertGameOwnershipReport = z.infer<typeof insertGameOwnershipReportSchema>;
 
 export type Game = typeof games.$inferSelect;
 export type InsertGame = z.infer<typeof insertGameSchema>;
@@ -2022,9 +2066,12 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
   steamAppId: text("steam_app_id"),
   epicUrl: text("epic_url"),
   epicSlug: text("epic_slug"),
+  epicVerifiedSlug: text("epic_verified_slug"), // set once the dev proves ownership via epicVerificationCodes
+  epicVerifiedAt: timestamp("epic_verified_at"),
   itchUrl: text("itch_url"),
   itchApiKey: text("itch_api_key"),       // encrypted at rest; validated via itch.io API
   itchUsername: text("itch_username"),    // populated when API key is first connected
+  itchVerifiedAt: timestamp("itch_verified_at"), // set once itchApiKey is confirmed against /my-games
 
   // Section 8: Social & Contact
   websiteUrl: text("website_url"),

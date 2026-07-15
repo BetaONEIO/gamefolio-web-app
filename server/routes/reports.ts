@@ -1,9 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth';
+import { adminMiddleware } from '../middleware/admin';
 import { storage } from '../storage';
 import { EmailService } from '../email-service';
 import { nanoid } from 'nanoid';
+import { db } from '../db';
+import { gameOwnershipReports } from '@shared/schema';
+import { eq, desc } from 'drizzle-orm';
 
 const router = Router();
 
@@ -205,6 +209,93 @@ router.post('/comments/:id/report', requireAuth, async (req: Request, res: Respo
       });
     }
     console.error('Error in comment report route:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Validation schema for reporting a false game-ownership claim
+const ownershipReportSchema = z.object({
+  reason: z.enum(['not_their_game', 'impersonation', 'stolen_assets', 'other']),
+  additionalMessage: z.string().max(500).optional(),
+});
+
+// Report a user's declared game ownership (verified badge / claimed indie profile)
+router.post('/users/:username/report-ownership', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const reportedUser = await storage.getUserByUsername(req.params.username);
+    if (!reportedUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const reporterId = req.user!.id;
+    if (reportedUser.id === reporterId) {
+      return res.status(400).json({ error: 'Cannot report your own profile' });
+    }
+
+    const { reason, additionalMessage } = ownershipReportSchema.parse(req.body);
+
+    const [report] = await db.insert(gameOwnershipReports).values({
+      reporterId,
+      reportedUserId: reportedUser.id,
+      reason,
+      additionalMessage,
+    }).returning();
+
+    res.json({ success: true, message: 'Report submitted successfully', reportId: report.id });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid request data', details: error.errors });
+    }
+    console.error('Error in ownership report route:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin: list ownership reports, optionally filtered by status
+router.get('/admin/ownership-reports', adminMiddleware, async (req: Request, res: Response) => {
+  try {
+    const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+    const query = db.select().from(gameOwnershipReports);
+    const reports = status
+      ? await query.where(eq(gameOwnershipReports.status, status)).orderBy(desc(gameOwnershipReports.createdAt))
+      : await query.orderBy(desc(gameOwnershipReports.createdAt));
+
+    res.json(reports);
+  } catch (error) {
+    console.error('Error listing ownership reports:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Admin: resolve an ownership report
+const resolveOwnershipReportSchema = z.object({
+  status: z.enum(['reviewed', 'dismissed', 'action_taken']),
+});
+
+router.patch('/admin/ownership-reports/:id', adminMiddleware, async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid report ID' });
+    }
+
+    const { status } = resolveOwnershipReportSchema.parse(req.body);
+
+    const [updated] = await db.update(gameOwnershipReports)
+      .set({ status, reviewedBy: req.user!.id, reviewedAt: new Date() })
+      .where(eq(gameOwnershipReports.id, id))
+      .returning();
+
+    if (!updated) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+
+    res.json(updated);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid request data', details: error.errors });
+    }
+    console.error('Error resolving ownership report:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

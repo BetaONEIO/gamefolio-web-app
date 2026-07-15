@@ -80,6 +80,8 @@ import gameBountiesRouter from "./routes/game-bounties";
 import campaignProgrammeRouter from "./routes/campaign-programme";
 import bountyMarketplaceRouter, { ensureBountyMarketplaceTables } from "./routes/bounty-marketplace";
 import steamVerificationRouter from "./routes/steam-verification";
+import epicVerificationRouter from "./routes/epic-verification";
+import itchVerificationRouter from "./routes/itch-verification";
 import adminBountiesRouter from "./routes/admin-bounties";
 import { twitchApi } from "./services/twitch-api";
 import { VideoProcessor } from "./video-processor";
@@ -12901,6 +12903,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/bounties', bountyMarketplaceRouter);
   ensureBountyMarketplaceTables();
   app.use('/api/indie/steam', steamVerificationRouter);
+  app.use('/api/indie/epic', epicVerificationRouter);
+  app.use('/api/indie/itch', itchVerificationRouter);
 
   // Mount upload routes
   app.use('/api/upload', uploadRouter);
