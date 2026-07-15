@@ -2071,15 +2071,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         referringUser = { id: foundReferrer.id };
       }
 
-      // Hash password
-      const hashedPassword = await hashPassword(userData.password);
-
       // Create user — referralCode is always server-generated; referredBy records which code was used at signup
+      // storage.createUser() hashes the password itself (like every other
+      // caller here - OAuth/admin paths), so pass it through in plain text.
       const user = await storage.createUser({
         ...userData,
         username: userData.username.toLowerCase(),
         email: userData.email.toLowerCase(),
-        password: hashedPassword,
         emailVerified: false,
         ...(usedReferralCode && { referredBy: usedReferralCode }),
       });
