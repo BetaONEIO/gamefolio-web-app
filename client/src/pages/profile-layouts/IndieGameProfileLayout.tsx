@@ -6,6 +6,7 @@ import { queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import PlatformConnections from '@/components/profile/PlatformConnections';
+import { ReportOwnershipButton } from '@/components/reporting/ReportOwnershipButton';
 import { SiSteam, SiEpicgames, SiItchdotio } from 'react-icons/si';
 import {
   Users,
@@ -282,6 +283,13 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
                 <MessageCircle size={18} />
                 Message
               </button>
+              <ReportOwnershipButton
+                username={profile.username}
+                displayName={profile.displayName}
+                variant="minimal"
+                size="sm"
+                className="px-2"
+              />
             </div>
           )}
 
@@ -520,7 +528,14 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
                     className="w-full flex items-center gap-3 p-3 rounded-md bg-[#121212] hover:bg-[#2a2a2a] transition-colors border border-white/5">
                     <SiEpicgames size={24} className="text-white" />
                     <span className="font-semibold text-white">Epic Games</span>
-                    <ExternalLink size={12} className="ml-auto opacity-40" />
+                    {ig?.epicVerifiedAt ? (
+                      <span className="ml-auto flex items-center gap-1 text-xs font-semibold text-[#a855f7]">
+                        <CheckCircle2 size={14} />
+                        Verified
+                      </span>
+                    ) : (
+                      <ExternalLink size={12} className="ml-auto opacity-40" />
+                    )}
                   </a>
                 )}
                 {igItchUrl && (
@@ -529,7 +544,14 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
                     style={{ background: 'rgba(250,92,92,0.08)' }}>
                     <SiItchdotio size={24} className="text-[#fa5c5c]" />
                     <span className="font-semibold text-white">itch.io</span>
-                    <ExternalLink size={12} className="ml-auto opacity-40" />
+                    {ig?.itchVerifiedAt ? (
+                      <span className="ml-auto flex items-center gap-1 text-xs font-semibold text-[#fa5c5c]">
+                        <CheckCircle2 size={14} />
+                        Verified
+                      </span>
+                    ) : (
+                      <ExternalLink size={12} className="ml-auto opacity-40" />
+                    )}
                   </a>
                 )}
               </div>

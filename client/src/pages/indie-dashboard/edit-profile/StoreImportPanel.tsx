@@ -71,6 +71,47 @@ export function StoreImportPanel({ profile, fieldMeta, onImported }: StoreImport
     setCopiedCode(true); setTimeout(() => setCopiedCode(false), 2000);
   };
 
+  // ── Epic verification state ──
+  const { data: epicStatus, refetch: refetchEpicStatus } = useQuery<any>({
+    queryKey: ["/api/indie/epic/status"],
+  });
+  const [epicVerifLoading, setEpicVerifLoading] = useState(false);
+  const [epicVerifStep, setEpicVerifStep] = useState<"idle" | "code" | "checking">("idle");
+  const [epicVerifCode, setEpicVerifCode] = useState<{ code: string; epicSlug: string; expiresAt: string } | null>(null);
+  const [copiedEpicCode, setCopiedEpicCode] = useState(false);
+
+  const startEpicVerif = async () => {
+    setEpicVerifLoading(true);
+    try {
+      const res = await fetch("/api/indie/epic/start-verification", { method: "POST", credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) { toast({ description: data.message || "Could not start verification", variant: "gamefolioError" }); return; }
+      setEpicVerifCode(data);
+      setEpicVerifStep("code");
+    } catch { toast({ description: "Verification start failed", variant: "gamefolioError" }); }
+    finally { setEpicVerifLoading(false); }
+  };
+
+  const checkEpicVerif = async () => {
+    setEpicVerifStep("checking");
+    try {
+      const res = await fetch("/api/indie/epic/verify", { method: "POST", credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ description: data.message || "Code not found yet — save on Epic first", variant: "gamefolioError" });
+        setEpicVerifStep("code"); return;
+      }
+      toast({ description: `Epic ownership verified! ${data.epicVerifiedSlug}` });
+      setEpicVerifStep("idle"); setEpicVerifCode(null);
+      refetchEpicStatus();
+    } catch { toast({ description: "Verification check failed", variant: "gamefolioError" }); setEpicVerifStep("code"); }
+  };
+
+  const copyEpicCode = async (code: string) => {
+    await navigator.clipboard.writeText(code);
+    setCopiedEpicCode(true); setTimeout(() => setCopiedEpicCode(false), 2000);
+  };
+
   // ── itch.io connection state ──
   const { data: itchStatus, refetch: refetchItchStatus } = useQuery<any>({
     queryKey: ["/api/indie/itch/status"],
@@ -176,6 +217,7 @@ export function StoreImportPanel({ profile, fieldMeta, onImported }: StoreImport
   const previewFields = previewData?.fields ?? {};
   const previewEntries = Object.entries(previewFields).filter(([, v]) => v !== null && v !== undefined);
   const steamVerified = steamStatus?.verified;
+  const epicVerified = epicStatus?.verified;
   const itchConnected = itchStatus?.connected;
 
   return (
@@ -191,6 +233,7 @@ export function StoreImportPanel({ profile, fieldMeta, onImported }: StoreImport
             {t === "itch" && <SiItchdotio size={13} className="text-[#fa5c5c]" />}
             {t === "steam" ? "Steam" : t === "epic" ? "Epic Games" : "itch.io"}
             {t === "steam" && steamVerified && <span className="w-1.5 h-1.5 rounded-full bg-green-400 ml-0.5" />}
+            {t === "epic" && epicVerified && <span className="w-1.5 h-1.5 rounded-full bg-green-400 ml-0.5" />}
             {t === "itch" && itchConnected && <span className="w-1.5 h-1.5 rounded-full bg-[#fa5c5c] ml-0.5" />}
           </button>
         ))}
@@ -304,20 +347,98 @@ export function StoreImportPanel({ profile, fieldMeta, onImported }: StoreImport
 
       {/* ── EPIC TAB ── */}
       {!previewData && tab === "epic" && (
-        <div className="space-y-2">
-          <label className="text-xs text-white/50">
-            Epic Games slug <span className="opacity-50">(from store URL: .../p/your-game-slug)</span>
-          </label>
-          <div className="flex gap-2">
-            <input value={epicInput} onChange={e => setEpicInput(e.target.value)} onKeyDown={e => e.key === "Enter" && fetchEpic()}
-              placeholder="e.g. fortnite" className="flex-1 bg-transparent border rounded px-3 py-2 text-sm text-white outline-none"
-              style={{ borderColor: "rgba(255,255,255,0.2)" }} />
-            <button onClick={fetchEpic} disabled={isPreviewing}
-              className="px-4 py-2 rounded text-xs font-bold flex items-center gap-1.5"
-              style={{ background: NEON, color: "#070b10" }}>
-              {isPreviewing ? <Loader2 size={13} className="animate-spin" /> : "Preview"}
-            </button>
-          </div>
+        <div className="space-y-3">
+          {epicVerified ? (
+            <div className="rounded-lg p-3.5 space-y-1" style={{ background: "rgba(168,85,247,0.07)", border: "1px solid rgba(168,85,247,0.25)" }}>
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={13} className="text-[#a855f7]" />
+                <span className="text-xs font-bold text-[#a855f7]">
+                  Ownership verified · {epicStatus.epicVerifiedSlug}
+                </span>
+              </div>
+              <p className="text-[11px] text-white/40">This badge lets other users trust your claimed game.</p>
+            </div>
+          ) : (
+            <div className="rounded-lg p-3.5 space-y-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)" }}>
+              <div className="flex items-center gap-2">
+                <ShieldAlert size={13} className="text-white/30" />
+                <span className="text-xs font-bold text-white/50">Epic ownership not verified</span>
+              </div>
+
+              {epicVerifStep === "idle" && (
+                <div className="space-y-2">
+                  <p className="text-[11px] text-white/40">
+                    Prove ownership by adding a short code to your Epic store page description. Set your Epic slug in Store Links first, then click Verify.
+                  </p>
+                  <button onClick={startEpicVerif} disabled={epicVerifLoading || !profile?.epicSlug}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold"
+                    style={{ background: "#a855f7", color: "#fff", opacity: !profile?.epicSlug ? 0.4 : 1 }}>
+                    {epicVerifLoading ? <Loader2 size={12} className="animate-spin" /> : <SiEpicgames size={12} />}
+                    Verify Epic Ownership
+                  </button>
+                  {!profile?.epicSlug && (
+                    <p className="text-[10px] text-yellow-500/70">Add your Epic slug in Store Links section first.</p>
+                  )}
+                </div>
+              )}
+
+              {(epicVerifStep === "code" || epicVerifStep === "checking") && epicVerifCode && (
+                <div className="space-y-2.5">
+                  <p className="text-[11px] text-white/50">
+                    <strong className="text-white">Step 1:</strong> Copy this code, paste it into your Epic store page description, then save.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 font-mono text-sm font-bold px-3 py-2 rounded select-all"
+                      style={{ background: "rgba(183,255,24,0.08)", color: NEON, border: "1px solid rgba(183,255,24,0.2)", letterSpacing: "0.1em" }}>
+                      {epicVerifCode.code}
+                    </div>
+                    <button onClick={() => copyEpicCode(epicVerifCode.code)}
+                      className="p-2 rounded border border-white/10 hover:border-white/30 transition-colors">
+                      {copiedEpicCode ? <Check size={13} style={{ color: NEON }} /> : <Copy size={13} className="text-white/40" />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-white/50">
+                    <strong className="text-white">Step 2:</strong> After saving on Epic, click below to confirm the code is live.
+                  </p>
+                  <div className="flex gap-2">
+                    <button onClick={checkEpicVerif} disabled={epicVerifStep === "checking"}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-bold"
+                      style={{ background: NEON, color: "#070b10" }}>
+                      {epicVerifStep === "checking" ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                      Check Verification
+                    </button>
+                    <button onClick={() => { setEpicVerifStep("idle"); setEpicVerifCode(null); }}
+                      className="px-3 py-1.5 rounded text-xs font-bold text-white/40 border border-white/10 hover:text-white/70">
+                      Cancel
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-white/20">Code expires {new Date(epicVerifCode.expiresAt).toLocaleTimeString()}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <details className="group">
+            <summary className="text-[11px] text-white/30 hover:text-white/60 cursor-pointer list-none flex items-center gap-1 select-none">
+              <ChevronRight size={11} className="transition-transform group-open:rotate-90" />
+              Pull a different Epic slug manually
+            </summary>
+            <div className="space-y-2 mt-2">
+              <label className="text-xs text-white/50">
+                Epic Games slug <span className="opacity-50">(from store URL: .../p/your-game-slug)</span>
+              </label>
+              <div className="flex gap-2">
+                <input value={epicInput} onChange={e => setEpicInput(e.target.value)} onKeyDown={e => e.key === "Enter" && fetchEpic()}
+                  placeholder="e.g. fortnite" className="flex-1 bg-transparent border rounded px-3 py-2 text-sm text-white outline-none"
+                  style={{ borderColor: "rgba(255,255,255,0.2)" }} />
+                <button onClick={fetchEpic} disabled={isPreviewing}
+                  className="px-4 py-2 rounded text-xs font-bold flex items-center gap-1.5"
+                  style={{ background: NEON, color: "#070b10" }}>
+                  {isPreviewing ? <Loader2 size={13} className="animate-spin" /> : "Preview"}
+                </button>
+              </div>
+            </div>
+          </details>
         </div>
       )}
 

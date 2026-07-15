@@ -81,7 +81,6 @@ import campaignProgrammeRouter from "./routes/campaign-programme";
 import bountyMarketplaceRouter, { ensureBountyMarketplaceTables } from "./routes/bounty-marketplace";
 import steamVerificationRouter from "./routes/steam-verification";
 import epicVerificationRouter from "./routes/epic-verification";
-import itchVerificationRouter from "./routes/itch-verification";
 import adminBountiesRouter from "./routes/admin-bounties";
 import { twitchApi } from "./services/twitch-api";
 import { VideoProcessor } from "./video-processor";
@@ -10373,7 +10372,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { eq } = await import("drizzle-orm");
       const existing = await db.select({ id: indieGameProfiles.id })
         .from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
-      const patch = { itchApiKey: apiKey, itchUsername, updatedAt: new Date() };
+      const patch = { itchApiKey: apiKey, itchUsername, itchVerifiedAt: new Date(), updatedAt: new Date() };
       if (existing.length > 0) {
         await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.userId, req.user.id));
       } else {
@@ -10431,7 +10430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
       await db.update(indieGameProfiles)
-        .set({ itchApiKey: null, itchUsername: null, updatedAt: new Date() })
+        .set({ itchApiKey: null, itchUsername: null, itchVerifiedAt: null, updatedAt: new Date() })
         .where(eq(indieGameProfiles.userId, req.user.id));
       res.json({ connected: false });
     } catch (err) {
@@ -10819,9 +10818,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await storage.getIndieGameProfileByUsername(req.params.username);
       if (!result) return res.status(404).json({ error: "Indie game profile not found" });
       const { user, profile } = result;
+      // itchApiKey is a live credential — never expose it on this public, unauthenticated endpoint.
+      const { itchApiKey, ...publicProfile } = profile as any;
       res.json({
         user: { id: user.id, username: user.username, displayName: user.displayName, avatarUrl: user.avatarUrl, bio: user.bio, level: user.level, totalXP: user.totalXP, currentStreak: user.currentStreak },
-        profile,
+        profile: publicProfile,
       });
     } catch (err) {
       console.error("GET /api/games/indie/:username error:", err);
@@ -12904,7 +12905,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   ensureBountyMarketplaceTables();
   app.use('/api/indie/steam', steamVerificationRouter);
   app.use('/api/indie/epic', epicVerificationRouter);
-  app.use('/api/indie/itch', itchVerificationRouter);
 
   // Mount upload routes
   app.use('/api/upload', uploadRouter);
