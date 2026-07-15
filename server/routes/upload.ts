@@ -684,7 +684,7 @@ router.post('/fix-durations', fullAccessMiddleware, async (req, res) => {
 });
 
 // Get upload limits and configuration
-router.get('/config', fullAccessMiddleware, (req, res) => {
+router.get('/config', hybridFullAccess, (req, res) => {
   res.json({
     limits: {
       video: {
@@ -709,7 +709,7 @@ router.get('/config', fullAccessMiddleware, (req, res) => {
 });
 
 // Get user-specific upload limits and remaining quota
-router.get('/limits', fullAccessMiddleware, async (req, res) => {
+router.get('/limits', hybridFullAccess, async (req, res) => {
   try {
     const userId = req.user!.id;
     const limits = await storage.getUploadLimits(userId);
