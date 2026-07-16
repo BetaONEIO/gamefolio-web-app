@@ -163,11 +163,34 @@ export const getQueryFn: <T>(options: {
     const res = await authedFetch(url, { method: "GET" });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      if (isNative && url === "/api/user") {
+        Sentry.captureMessage("getQueryFn: /api/user returned 401, returning null", {
+          level: "warning",
+          tags: { module: "queryClient", op: "getQueryFn" },
+        });
+      }
       return null;
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    const data = await res.json();
+    if (isNative && url === "/api/user") {
+      // Diagnostic for the "logged out after force-quit" investigation: the
+      // request can return 200 while the app still renders as logged out, so
+      // capture what the parsed body actually looks like, not just the status.
+      Sentry.captureMessage("getQueryFn: /api/user parsed body", {
+        level: "info",
+        tags: {
+          module: "queryClient",
+          op: "getQueryFn",
+          isNullish: String(data == null),
+          isEmptyObject: String(!!data && typeof data === "object" && Object.keys(data).length === 0),
+          hasId: String(!!data?.id),
+          bodyPreview: JSON.stringify(data).slice(0, 300),
+        },
+      });
+    }
+    return data;
   };
 
 export const queryClient = new QueryClient({
