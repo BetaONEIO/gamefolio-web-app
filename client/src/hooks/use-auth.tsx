@@ -249,6 +249,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     });
 
+    // Diagnosed via Sentry: on native, the app's own /api/user check (which
+    // works fine off a valid stored token, independent of Firebase) only
+    // ever runs when firebaseAuthChecked flips true - and Firebase's own
+    // onAuthStateChanged callback can apparently hang indefinitely on some
+    // cold boots, permanently blocking that check and leaving a user with a
+    // perfectly valid token stuck on the login screen. Firebase is only used
+    // for Google sign-in here, not for native-token auth, so don't let it
+    // gate the whole app's auth resolution forever.
+    const firebaseCheckTimeout = setTimeout(() => {
+      if (!mounted) return;
+      Sentry.captureMessage("use-auth: Firebase auth check timed out, proceeding anyway", {
+        level: "warning",
+        tags: { module: "use-auth", op: "firebase-timeout" },
+      });
+      setFirebaseAuthChecked(true);
+    }, 5000);
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       // Firebase always emits one onAuthStateChanged on init to report the
       // restored session state. Consume the flag on that very first fire
@@ -261,12 +278,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (mounted) {
+        clearTimeout(firebaseCheckTimeout);
         setFirebaseAuthChecked(true);
       }
     });
 
     return () => {
       mounted = false;
+      clearTimeout(firebaseCheckTimeout);
       unsubscribe();
     };
   }, [queryClient, toast, setLocation]);
