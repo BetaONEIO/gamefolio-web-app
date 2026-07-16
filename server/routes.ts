@@ -2888,6 +2888,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   })();
 
+  // Run migration to ensure indie_game_profiles has all required columns
+  (async () => {
+    try {
+      await db.execute(sql`
+        ALTER TABLE indie_game_profiles
+          ADD COLUMN IF NOT EXISTS age_rating TEXT,
+          ADD COLUMN IF NOT EXISTS supported_languages TEXT[],
+          ADD COLUMN IF NOT EXISTS content_descriptors TEXT[]
+      `);
+    } catch (err) {
+      // Columns already exist or other harmless error
+    }
+  })();
+
   // Public endpoint — look up a user by referral code for the invite landing page
   app.get("/api/invite/:code", async (req, res) => {
     try {
