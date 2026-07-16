@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import * as Sentry from "@sentry/capacitor";
 import {
   clearTokens,
   getAccessToken,
@@ -6,6 +7,13 @@ import {
   getRefreshToken,
   setTokens,
 } from "./auth-token";
+import { isNative } from "./platform";
+
+// Diagnostic for the "logged out after force-quit" investigation: report the
+// very first authedFetch call of this app session in detail (token attached,
+// initial status, refresh attempted/outcome, final status), so we can see
+// exactly which step produces the 401 instead of just the end result.
+let firstAuthedFetchReported = false;
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -61,16 +69,26 @@ export async function authedFetch(
   url: string,
   init: RequestInit,
 ): Promise<Response> {
+  const shouldReport = isNative && !firstAuthedFetchReported;
+  if (shouldReport) firstAuthedFetchReported = true;
+
   const headers = new Headers(init.headers ?? {});
   const token = (await getAccessToken()) ?? getAccessTokenSync();
-  if (token && !headers.has("Authorization")) {
+  const tokenAttached = !!token && !headers.has("Authorization");
+  if (tokenAttached) {
     headers.set("Authorization", `Bearer ${token}`);
   }
   let res = await fetch(url, { ...init, headers, credentials: "include" });
+  const initialStatus = res.status;
+  const initialUrl = res.url;
 
+  let refreshAttempted = false;
+  let refreshSucceeded = false;
   if (res.status === 401 && (await getRefreshToken())) {
+    refreshAttempted = true;
     const newToken = await refreshAccessToken();
     if (newToken) {
+      refreshSucceeded = true;
       const retryHeaders = new Headers(init.headers ?? {});
       retryHeaders.set("Authorization", `Bearer ${newToken}`);
       res = await fetch(url, {
@@ -79,6 +97,23 @@ export async function authedFetch(
         credentials: "include",
       });
     }
+  }
+
+  if (shouldReport) {
+    Sentry.captureMessage("authedFetch: first call of session", {
+      level: "info",
+      tags: {
+        module: "queryClient",
+        op: "authedFetch",
+        url,
+        tokenAttached: String(tokenAttached),
+        initialStatus: String(initialStatus),
+        initialUrl,
+        refreshAttempted: String(refreshAttempted),
+        refreshSucceeded: String(refreshSucceeded),
+        finalStatus: String(res.status),
+      },
+    });
   }
 
   return res;
