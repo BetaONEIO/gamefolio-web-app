@@ -10,10 +10,12 @@ import {
 import { isNative } from "./platform";
 
 // Diagnostic for the "logged out after force-quit" investigation: report the
-// very first authedFetch call of this app session in detail (token attached,
-// initial status, refresh attempted/outcome, final status), so we can see
-// exactly which step produces the 401 instead of just the end result.
-let firstAuthedFetchReported = false;
+// first /api/user call of this app session in detail (token attached, initial
+// status, refresh attempted/outcome, final status) - this is the specific
+// request that decides whether the UI shows logged in or logged out, and it
+// doesn't always win the race to be the literal first authedFetch call, so
+// target it by URL rather than "whichever fires first".
+let userCheckReported = false;
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -69,8 +71,8 @@ export async function authedFetch(
   url: string,
   init: RequestInit,
 ): Promise<Response> {
-  const shouldReport = isNative && !firstAuthedFetchReported;
-  if (shouldReport) firstAuthedFetchReported = true;
+  const shouldReport = isNative && url === "/api/user" && !userCheckReported;
+  if (shouldReport) userCheckReported = true;
 
   const headers = new Headers(init.headers ?? {});
   const token = (await getAccessToken()) ?? getAccessTokenSync();
@@ -100,7 +102,7 @@ export async function authedFetch(
   }
 
   if (shouldReport) {
-    Sentry.captureMessage("authedFetch: first call of session", {
+    Sentry.captureMessage("authedFetch: /api/user call", {
       level: "info",
       tags: {
         module: "queryClient",
