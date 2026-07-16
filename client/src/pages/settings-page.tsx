@@ -1994,32 +1994,36 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 gap-1">
+          <TabsList className={`grid w-full gap-1 ${user.isPartner ? "grid-cols-2" : "grid-cols-3 sm:grid-cols-5"}`}>
             <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Profile</span>
-              <span className="sm:hidden">Profile</span>
+              <span>Profile</span>
             </TabsTrigger>
-            <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Appearance</span>
-              <span className="sm:hidden">Look</span>
-            </TabsTrigger>
-            <TabsTrigger value="banners" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Banner Images</span>
-              <span className="sm:hidden">Banner</span>
-            </TabsTrigger>
+            {!user.isPartner && (
+              <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Appearance</span>
+                <span className="sm:hidden">Look</span>
+              </TabsTrigger>
+            )}
+            {!user.isPartner && (
+              <TabsTrigger value="banners" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Banner Images</span>
+                <span className="sm:hidden">Banner</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="platforms" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Gamepad2 className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Platforms</span>
-              <span className="sm:hidden">Platforms</span>
+              <span>Platforms</span>
             </TabsTrigger>
-            <TabsTrigger value="streamer" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Video className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Streamer</span>
-              <span className="sm:hidden">Stream</span>
-            </TabsTrigger>
+            {!user.isPartner && (
+              <TabsTrigger value="streamer" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Video className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Streamer</span>
+                <span className="sm:hidden">Stream</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Profile Tab */}
