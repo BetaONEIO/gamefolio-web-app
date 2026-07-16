@@ -14,7 +14,7 @@ import { auth, getGoogleRedirectResult } from "@/lib/firebase";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { isNative } from "@/lib/platform";
-import { clearTokens, setTokens } from "@/lib/auth-token";
+import { clearTokens, getAccessTokenSync, setTokens } from "@/lib/auth-token";
 import { initPushNotifications, unregisterCurrentPushToken } from "@/lib/push-notifications";
 
 type AuthContextType = {
@@ -291,6 +291,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     retry: 1,
     retryDelay: 500,
   });
+
+  // Diagnostic for the "logged out after force-quit" investigation: report
+  // the outcome of the very first /api/user resolution on this app launch,
+  // together with whether a token was in memory at that moment. This is the
+  // one thing hydrate()'s own logging can't show - whether the token that was
+  // found actually resulted in a recognized session.
+  const initialAuthCheckReported = useRef(false);
+  useEffect(() => {
+    if (!isNative || isLoading || initialAuthCheckReported.current) return;
+    initialAuthCheckReported.current = true;
+    Sentry.captureMessage("use-auth: initial /api/user resolution", {
+      level: "info",
+      tags: {
+        module: "use-auth",
+        op: "initial-user-check",
+        hadTokenAtCheckTime: String(!!getAccessTokenSync()),
+        userResolved: String(!!user),
+        hadError: String(!!error),
+      },
+    });
+  }, [isLoading, user, error]);
 
   // Once the user is authenticated, fire off the push-notification handshake
   // (request OS permission, fetch FCM token, POST to /api/push/register). Safe
