@@ -494,6 +494,7 @@ function Router() {
           <ProtectedRoute path="/upload" component={UploadPage} />
           <ProtectedRoute path="/scheduled-posts" component={ScheduledPostsPage} />
           <PartnerProtectedRoute path="/indie/dashboard" partnerType="indie" component={IndieDashboardPage} />
+          <PartnerProtectedRoute path="/settings/game" partnerType="indie" component={SettingsPage} />
           <Route path="/bounties" component={BountiesPage} />
           <Route path="/streamer/dashboard" component={StreamerDashboardPage} />
           <ProtectedRoute path="/upload/bulk" component={BulkUploadPage} />

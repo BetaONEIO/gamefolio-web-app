@@ -20,7 +20,7 @@ import {
   Plus, Trash2, Eye, EyeOff, RefreshCw, Loader2, Star,
   Video, Camera, Film, Package, Key, Lock, TrendingUp, ChevronDown,
   Calendar, Pencil, Check, X, Link2, Globe, MessageSquare, Zap, Info,
-  BookOpen, Clapperboard, Radio, Monitor, Smartphone
+  BookOpen, Clapperboard, Radio, Monitor, Smartphone, Clock
 } from "lucide-react";
 import { FaSteam, FaDiscord, FaTwitter, FaYoutube, FaGlobe } from "react-icons/fa";
 import { SiEpicgames, SiItchdotio, SiGogdotcom } from "react-icons/si";
@@ -334,8 +334,8 @@ export default function ManageGameSettings() {
             <ArrowLeft className="h-4 w-4" />
             Back to Game Profile
           </Button>
-          <h1 className="text-2xl sm:text-3xl font-black text-white">Manage Game</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage your public game profile, media, store information and Bounty Programme.</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-white">Manage Game Profile</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage your game information, artwork, media, store links and public Gamefolio page.</p>
         </div>
 
         <ProfileCompleteness profile={profile} user={user} />
@@ -385,7 +385,7 @@ function GameProfileTab({ profile, fieldMeta, saveMut }: {
   saveMut: any;
 }) {
   const [form, setForm] = useState<IndieProfile>({});
-  useEffect(() => { setForm(profile); }, [profile.gameName]);
+  useEffect(() => { setForm(profile); }, [profile]);
 
   const set = (k: keyof IndieProfile, v: any) => setForm((f) => ({ ...f, [k]: v }));
   const src = (k: string) => fieldMeta[k]?.importSource ?? (fieldMeta[k]?.isManualOverride ? "manual" : undefined);
@@ -524,7 +524,7 @@ function GameProfileTab({ profile, fieldMeta, saveMut }: {
 function MediaTab({ profile, saveMut }: { profile: IndieProfile; saveMut: any }) {
   const [form, setForm] = useState<IndieProfile>({});
   const [newScreenshot, setNewScreenshot] = useState("");
-  useEffect(() => { setForm(profile); }, [profile.gameName]);
+  useEffect(() => { setForm(profile); }, [profile]);
 
   const set = (k: keyof IndieProfile, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -628,7 +628,7 @@ function StoreTab({ profile, fieldMeta, saveMut }: {
   saveMut: any;
 }) {
   const [form, setForm] = useState<IndieProfile>({});
-  useEffect(() => { setForm(profile); }, [profile.gameName]);
+  useEffect(() => { setForm(profile); }, [profile]);
 
   const set = (k: keyof IndieProfile, v: any) => setForm((f) => ({ ...f, [k]: v }));
 
