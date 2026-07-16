@@ -130,7 +130,18 @@ export default function GameProfileTab() {
       {importOpen && (
         <div className="rounded-xl p-5" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
           <h3 className="text-sm font-bold text-white mb-4">Import from Store</h3>
-          <StoreImportPanel profile={profile} fieldMeta={fieldMeta} onImported={() => setImportOpen(false)} />
+          <StoreImportPanel
+            profile={profile}
+            fieldMeta={fieldMeta}
+            onImported={() => setImportOpen(false)}
+            onGoToStoreLinks={() => {
+              setOpenSections(prev => { const n = new Set(prev); n.add("stores"); return n; });
+              setImportOpen(false);
+              setTimeout(() => {
+                document.getElementById("store-links-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 80);
+            }}
+          />
         </div>
       )}
 
@@ -148,7 +159,9 @@ export default function GameProfileTab() {
       <FeaturesSection {...sharedProps} open={openSections.has("features")} onToggle={() => toggleSection("features")} filledCount={sectionFilled("features")} totalCount={sectionTotal("features")} />
       <MediaSection {...sharedProps} open={openSections.has("media")} onToggle={() => toggleSection("media")} filledCount={sectionFilled("media")} totalCount={sectionTotal("media")} />
       <PlatformsSection {...sharedProps} open={openSections.has("platforms")} onToggle={() => toggleSection("platforms")} filledCount={sectionFilled("platforms")} totalCount={sectionTotal("platforms")} />
-      <StoreLinksSection {...sharedProps} open={openSections.has("stores")} onToggle={() => toggleSection("stores")} filledCount={sectionFilled("stores")} totalCount={sectionTotal("stores")} />
+      <div id="store-links-section">
+        <StoreLinksSection {...sharedProps} open={openSections.has("stores")} onToggle={() => toggleSection("stores")} filledCount={sectionFilled("stores")} totalCount={sectionTotal("stores")} />
+      </div>
       <SocialSection {...sharedProps} open={openSections.has("social")} onToggle={() => toggleSection("social")} filledCount={sectionFilled("social")} totalCount={sectionTotal("social")} />
       <StoreSpecificSection {...sharedProps} open={openSections.has("store-specific")} onToggle={() => toggleSection("store-specific")} filledCount={sectionFilled("store-specific")} totalCount={sectionTotal("store-specific")} />
       <SyncSettingsSection {...sharedProps} open={openSections.has("sync-settings")} onToggle={() => toggleSection("sync-settings")} filledCount={sectionFilled("sync-settings")} totalCount={sectionTotal("sync-settings")} />

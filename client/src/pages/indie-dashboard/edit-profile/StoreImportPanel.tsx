@@ -14,9 +14,10 @@ interface StoreImportPanelProps {
   profile: Profile | null;
   fieldMeta: FieldMeta;
   onImported: () => void;
+  onGoToStoreLinks?: () => void;
 }
 
-export function StoreImportPanel({ profile, fieldMeta, onImported }: StoreImportPanelProps) {
+export function StoreImportPanel({ profile, fieldMeta, onImported, onGoToStoreLinks }: StoreImportPanelProps) {
   const { toast } = useToast();
   const [tab, setTab] = useState<"steam" | "epic" | "itch">("steam");
   const [epicInput, setEpicInput] = useState(profile?.epicSlug ?? "");
@@ -240,7 +241,12 @@ export function StoreImportPanel({ profile, fieldMeta, onImported }: StoreImport
                     Verify Steam Ownership
                   </button>
                   {!profile?.steamAppId && (
-                    <p className="text-[10px] text-yellow-500/70">Add your Steam App ID in Store Links section first.</p>
+                    <button
+                      onClick={onGoToStoreLinks}
+                      className="text-[10px] text-yellow-500/70 underline underline-offset-2 hover:text-yellow-400 transition-colors text-left"
+                    >
+                      Add your Steam App ID in Store Links section first →
+                    </button>
                   )}
                 </div>
               )}
