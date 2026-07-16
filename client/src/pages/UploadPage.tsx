@@ -401,16 +401,22 @@ const UploadPage = () => {
       return;
     }
 
-    // Validate file size against the user's tier limit (clip vs reel).
-    const isReelUpload = contentType === 'reels';
-    const maxSizeMB = uploadLimits
-      ? (isReelUpload ? uploadLimits.maxReelSizeMB : uploadLimits.maxClipSizeMB)
-      : (isReelUpload ? 50 : 100);
-    const maxSize = maxSizeMB * 1024 * 1024;
-    if (selectedFile.size > maxSize) {
-      console.log('File too large:', selectedFile.size, 'bytes');
-      setFileError(`File size must be less than ${maxSizeMB}MB${uploadLimits && !uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
-      return;
+    // Validate file size against the user's tier limit (clip vs reel). Skip
+    // this fast-fail check entirely while limits are still loading rather
+    // than guessing a free-tier default - the server re-validates the real
+    // size against the correct tier before processing regardless, so there's
+    // no enforcement gap, only a UX one (a Pro user could otherwise get a
+    // false "file too large" rejection during the brief loading window,
+    // e.g. right after a fresh login when the limits query hasn't resolved).
+    if (uploadLimits) {
+      const isReelUpload = contentType === 'reels';
+      const maxSizeMB = isReelUpload ? uploadLimits.maxReelSizeMB : uploadLimits.maxClipSizeMB;
+      const maxSize = maxSizeMB * 1024 * 1024;
+      if (selectedFile.size > maxSize) {
+        console.log('File too large:', selectedFile.size, 'bytes');
+        setFileError(`File size must be less than ${maxSizeMB}MB${!uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
+        return;
+      }
     }
     
     console.log('File validation passed, setting file state');
@@ -460,12 +466,16 @@ const UploadPage = () => {
         return;
       }
       
-      // Validate file size against the user's tier screenshot cap.
-      const maxImageMB = uploadLimits?.maxScreenshotSizeMB ?? 10;
-      const maxSize = maxImageMB * 1024 * 1024;
-      if (file.size > maxSize) {
-        setScreenshotError(`Each image must be less than ${maxImageMB}MB${uploadLimits && !uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
-        return;
+      // Validate file size against the user's tier screenshot cap. Skip while
+      // limits are still loading rather than guessing a free-tier default -
+      // see the matching comment on the video-size check above.
+      if (uploadLimits) {
+        const maxImageMB = uploadLimits.maxScreenshotSizeMB;
+        const maxSize = maxImageMB * 1024 * 1024;
+        if (file.size > maxSize) {
+          setScreenshotError(`Each image must be less than ${maxImageMB}MB${!uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
+          return;
+        }
       }
     }
     
@@ -870,21 +880,23 @@ const UploadPage = () => {
     
     console.log('Content type for validation:', contentType);
     
-    // Validate video duration against the user's tier limit.
-    const isReelSubmit = contentType === 'reels';
-    const maxDurationSec = uploadLimits
-      ? (isReelSubmit ? uploadLimits.maxReelDurationSeconds : uploadLimits.maxClipDurationSeconds)
-      : (isReelSubmit ? 60 : 180);
-    if (videoDuration > maxDurationSec) {
-      const limitLabel = maxDurationSec >= 60
-        ? `${Math.round(maxDurationSec / 60 * 10) / 10} minutes`
-        : `${maxDurationSec} seconds`;
-      toast({
-        title: "Video too long",
-        description: `Your video is ${Math.round(videoDuration / 60 * 10) / 10} minutes long. ${isReelSubmit ? 'Reels' : 'Clips'} must be ${limitLabel} or less${uploadLimits && !uploadLimits.isPro ? ' — upgrade to Pro for longer videos.' : '.'}`,
-        variant: "gamefolioError",
-      });
-      return;
+    // Validate video duration against the user's tier limit. Skip while
+    // limits are still loading rather than guessing a free-tier default -
+    // see the matching comment on the video-size check above.
+    if (uploadLimits) {
+      const isReelSubmit = contentType === 'reels';
+      const maxDurationSec = isReelSubmit ? uploadLimits.maxReelDurationSeconds : uploadLimits.maxClipDurationSeconds;
+      if (videoDuration > maxDurationSec) {
+        const limitLabel = maxDurationSec >= 60
+          ? `${Math.round(maxDurationSec / 60 * 10) / 10} minutes`
+          : `${maxDurationSec} seconds`;
+        toast({
+          title: "Video too long",
+          description: `Your video is ${Math.round(videoDuration / 60 * 10) / 10} minutes long. ${isReelSubmit ? 'Reels' : 'Clips'} must be ${limitLabel} or less${!uploadLimits.isPro ? ' — upgrade to Pro for longer videos.' : '.'}`,
+          variant: "gamefolioError",
+        });
+        return;
+      }
     }
     
     // For reel uploads, backend will automatically crop to 9:16 format
@@ -1146,18 +1158,20 @@ const UploadPage = () => {
                                   const duration = videoRef.current.duration;
                                   console.log('Setting video duration:', duration, 'seconds');
                                   
-                                  // Validate duration against the user's tier limit.
-                                  const isReelLoad = contentType === 'reels';
-                                  const maxDurLoad = uploadLimits
-                                    ? (isReelLoad ? uploadLimits.maxReelDurationSeconds : uploadLimits.maxClipDurationSeconds)
-                                    : (isReelLoad ? 60 : 180);
-                                  if (duration > maxDurLoad) {
-                                    const label = maxDurLoad >= 60
-                                      ? `${Math.round(maxDurLoad / 60 * 10) / 10} minutes`
-                                      : `${maxDurLoad} seconds`;
-                                    setFileError(`Video duration is ${Math.round(duration / 60 * 10) / 10} minutes. ${isReelLoad ? 'Reels' : 'Clips'} must be ${label} or less${uploadLimits && !uploadLimits.isPro ? ' — upgrade to Pro for longer videos.' : '.'}`);
-                                    setFile(null);
-                                    return;
+                                  // Validate duration against the user's tier limit. Skip
+                                  // while limits are still loading rather than guessing a
+                                  // free-tier default - see the comment on the size check above.
+                                  if (uploadLimits) {
+                                    const isReelLoad = contentType === 'reels';
+                                    const maxDurLoad = isReelLoad ? uploadLimits.maxReelDurationSeconds : uploadLimits.maxClipDurationSeconds;
+                                    if (duration > maxDurLoad) {
+                                      const label = maxDurLoad >= 60
+                                        ? `${Math.round(maxDurLoad / 60 * 10) / 10} minutes`
+                                        : `${maxDurLoad} seconds`;
+                                      setFileError(`Video duration is ${Math.round(duration / 60 * 10) / 10} minutes. ${isReelLoad ? 'Reels' : 'Clips'} must be ${label} or less${!uploadLimits.isPro ? ' — upgrade to Pro for longer videos.' : '.'}`);
+                                      setFile(null);
+                                      return;
+                                    }
                                   }
                                   
                                   setVideoDuration(duration);
