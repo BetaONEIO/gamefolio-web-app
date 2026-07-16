@@ -73,6 +73,11 @@ export async function authedFetch(
 ): Promise<Response> {
   const shouldReport = isNative && url === "/api/user" && !userCheckReported;
   if (shouldReport) userCheckReported = true;
+  // Diagnostic: capture the actual call stack so we can see which caller
+  // this specific /api/user request came from - getQueryFn's own diagnostic
+  // never fires despite this one showing a real completed fetch, so the
+  // call must be coming from somewhere other than the main useQuery.
+  const callerStack = shouldReport ? new Error().stack ?? "" : "";
 
   const headers = new Headers(init.headers ?? {});
   const token = (await getAccessToken()) ?? getAccessTokenSync();
@@ -115,6 +120,7 @@ export async function authedFetch(
         refreshSucceeded: String(refreshSucceeded),
         finalStatus: String(res.status),
       },
+      extra: { callerStack },
     });
   }
 
