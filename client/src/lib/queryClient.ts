@@ -172,25 +172,44 @@ export const getQueryFn: <T>(options: {
       return null;
     }
 
-    await throwIfResNotOk(res);
-    const data = await res.json();
     if (isNative && url === "/api/user") {
       // Diagnostic for the "logged out after force-quit" investigation: the
       // request can return 200 while the app still renders as logged out, so
-      // capture what the parsed body actually looks like, not just the status.
-      Sentry.captureMessage("getQueryFn: /api/user parsed body", {
-        level: "info",
-        tags: {
-          module: "queryClient",
-          op: "getQueryFn",
-          isNullish: String(data == null),
-          isEmptyObject: String(!!data && typeof data === "object" && Object.keys(data).length === 0),
-          hasId: String(!!data?.id),
-          bodyPreview: JSON.stringify(data).slice(0, 300),
-        },
-      });
+      // capture what actually happens turning that response into data -
+      // wrapped in its own try/catch since a throw here (e.g. bad JSON) would
+      // otherwise propagate silently past this point with no record of why.
+      try {
+        await throwIfResNotOk(res);
+        const bodyText = await res.text();
+        let data: any = undefined;
+        let parseError: string | null = null;
+        try {
+          data = bodyText ? JSON.parse(bodyText) : undefined;
+        } catch (e) {
+          parseError = e instanceof Error ? e.message : String(e);
+        }
+        Sentry.captureMessage("getQueryFn: /api/user parsed body", {
+          level: "info",
+          tags: {
+            module: "queryClient",
+            op: "getQueryFn",
+            parseError: parseError ?? "",
+            isNullish: String(data == null),
+            isEmptyObject: String(!!data && typeof data === "object" && Object.keys(data).length === 0),
+            hasId: String(!!data?.id),
+            bodyPreview: bodyText.slice(0, 300),
+          },
+        });
+        if (parseError) throw new Error(`Failed to parse /api/user response: ${parseError}`);
+        return data;
+      } catch (e) {
+        Sentry.captureException(e, { tags: { module: "queryClient", op: "getQueryFn", url } });
+        throw e;
+      }
     }
-    return data;
+
+    await throwIfResNotOk(res);
+    return await res.json();
   };
 
 export const queryClient = new QueryClient({

@@ -277,6 +277,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
+    isFetching,
   } = useQuery<User | undefined, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -297,9 +298,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // together with whether a token was in memory at that moment. This is the
   // one thing hydrate()'s own logging can't show - whether the token that was
   // found actually resulted in a recognized session.
+  //
+  // Must gate on firebaseAuthChecked + !isFetching, not just !isLoading: a
+  // disabled query (enabled: false, before firebaseAuthChecked flips true)
+  // also reports isLoading: false with no fetch ever having run, so an
+  // earlier version of this effect fired on that very first disabled render
+  // and locked itself out before the real fetch ever completed - every
+  // "userResolved: false" it ever reported was meaningless.
   const initialAuthCheckReported = useRef(false);
   useEffect(() => {
-    if (!isNative || isLoading || initialAuthCheckReported.current) return;
+    if (!isNative || !firebaseAuthChecked || isFetching || initialAuthCheckReported.current) return;
     initialAuthCheckReported.current = true;
     Sentry.captureMessage("use-auth: initial /api/user resolution", {
       level: "info",
@@ -309,9 +317,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hadTokenAtCheckTime: String(!!getAccessTokenSync()),
         userResolved: String(!!user),
         hadError: String(!!error),
+        errorMessage: error?.message ?? "",
       },
     });
-  }, [isLoading, user, error]);
+  }, [firebaseAuthChecked, isFetching, user, error]);
 
   // Once the user is authenticated, fire off the push-notification handshake
   // (request OS permission, fetch FCM token, POST to /api/push/register). Safe
