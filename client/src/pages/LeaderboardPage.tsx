@@ -1328,7 +1328,10 @@ export default function LeaderboardPage() {
   const playerCount = alltimeData?.length ?? weeklyData?.length ?? 0;
 
   return (
-    <div className="min-h-screen bg-[#0B1218] overflow-y-auto">
+    <div
+      className="min-h-screen bg-[#0B1218] overflow-y-auto"
+      style={{ overscrollBehaviorX: "none" }}
+    >
       <style>{RS_STYLES}{CREATOR_CARD_STYLES}</style>
 
       {/* Banner — electrical bg + creator cards carousel */}
