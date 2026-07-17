@@ -6901,7 +6901,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! ${clipUrl}`
         )}`,
         snapchat: clipUrl,
-        threads: clipUrl,
+        threads: `https://www.threads.net/intent/post?text=${encodeURIComponent(
+          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! ${clipUrl}`
+        )}`,
         pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(clipUrl)}&description=${encodeURIComponent(
           `🎮 Epic gaming clip from ${displayName}'s Gamefolio!`
         )}`,
@@ -7925,7 +7927,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! ${screenshotUrl}`
         )}`,
         snapchat: screenshotUrl,
-        threads: screenshotUrl,
+        threads: `https://www.threads.net/intent/post?text=${encodeURIComponent(
+          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! ${screenshotUrl}`
+        )}`,
         pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(screenshotUrl)}&description=${encodeURIComponent(
           `📸 Epic gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,

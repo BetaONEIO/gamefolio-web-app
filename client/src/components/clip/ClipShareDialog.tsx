@@ -13,8 +13,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
-import { FaFacebook, FaReddit, FaWhatsapp, FaTelegram, FaEnvelope } from "react-icons/fa";
-import { FaXTwitter, FaBluesky, FaTiktok, FaSnapchat } from "react-icons/fa6";
+import { FaFacebook, FaReddit, FaWhatsapp, FaTelegram, FaEnvelope, FaLinkedin, FaDiscord, FaYoutube } from "react-icons/fa";
+import { FaXTwitter, FaBluesky, FaTiktok, FaSnapchat, FaInstagram, FaThreads } from "react-icons/fa6";
 
 interface ClipShareDialogProps {
   clipId: number;
@@ -54,8 +54,13 @@ const SOCIAL_PLATFORMS = [
   { name: "Telegram", icon: FaTelegram, key: "telegram", copyOnly: false },
   { name: "Reddit", icon: FaReddit, key: "reddit", copyOnly: false },
   { name: "Bluesky", icon: FaBluesky, key: "bluesky", copyOnly: false },
+  { name: "Discord", icon: FaDiscord, key: "discord", copyOnly: true },
   { name: "TikTok", icon: FaTiktok, key: "tiktok", copyOnly: true },
+  { name: "Instagram", icon: FaInstagram, key: "instagram", copyOnly: true },
   { name: "Snapchat", icon: FaSnapchat, key: "snapchat", copyOnly: true },
+  { name: "Threads", icon: FaThreads, key: "threads", copyOnly: false },
+  { name: "YouTube", icon: FaYoutube, key: "youtube", copyOnly: true },
+  { name: "LinkedIn", icon: FaLinkedin, key: "linkedin", copyOnly: false },
   { name: "Email", icon: FaEnvelope, key: "email", copyOnly: false },
 ];
 
@@ -347,7 +352,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
               {/* Social platforms */}
               <div className="flex flex-col gap-2">
                 <span className="text-[#64748b] text-xs font-medium uppercase tracking-wide">Share to</span>
-                <div className="grid grid-cols-9 gap-1">
+                <div className="grid grid-cols-7 gap-1">
                   {SOCIAL_PLATFORMS.map((platform) => {
                     const Icon = platform.icon;
                     const shareUrl = shareData.socialMediaLinks?.[platform.key];
