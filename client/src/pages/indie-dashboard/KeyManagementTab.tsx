@@ -6,10 +6,10 @@ import {
   KeyRound, Plus, Upload, X, AlertTriangle, CheckCircle2,
   ChevronDown, ChevronRight, Download, Shield, Lock,
   Loader2, FileText, ClipboardList, Pencil, Info,
-  AlertCircle,
+  AlertCircle, Gamepad2,
 } from "lucide-react";
 import {
-  SiSteam, SiEpicgames, SiItchdotio, SiXbox,
+  SiSteam, SiEpicgames, SiItchdotio,
   SiPlaystation, SiNintendo,
 } from "react-icons/si";
 import { NEON, CARD_BG, CARD_BORDER } from "./constants";
@@ -65,7 +65,7 @@ const PLATFORMS: { id: Platform; label: string; icon: any }[] = [
   { id: "steam",       label: "Steam",           icon: SiSteam },
   { id: "epic",        label: "Epic Games",       icon: SiEpicgames },
   { id: "itch",        label: "itch.io",          icon: SiItchdotio },
-  { id: "xbox",        label: "Xbox",             icon: SiXbox },
+  { id: "xbox",        label: "Xbox",             icon: Gamepad2 },
   { id: "playstation", label: "PlayStation",      icon: SiPlaystation },
   { id: "switch",      label: "Nintendo Switch",  icon: SiNintendo },
   { id: "other",       label: "Other",            icon: KeyRound },
