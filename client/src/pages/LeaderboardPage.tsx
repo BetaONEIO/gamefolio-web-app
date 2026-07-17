@@ -1237,14 +1237,52 @@ function SeasonCategories() {
       <div className="flex items-center gap-2 mb-2">
         <Star className="w-5 h-5 text-[#B7FF1A]" />
         <h2 className="text-xl font-black text-white">Season Awards</h2>
+        <span className="text-[10px] font-bold text-[#B7FF1A] bg-[#B7FF1A]/10 border border-[#B7FF1A]/20 px-2 py-0.5 rounded-full ml-1">
+          SEASON 01
+        </span>
       </div>
-      <p className="text-slate-500 text-xs mb-4 ml-7">Special recognition beyond the overall leaderboard.</p>
+      <p className="text-slate-500 text-xs mb-4 ml-7">
+        Special recognition beyond the overall leaderboard.
+        <span className="text-[#B7FF1A]/70 ml-1">Winners revealed at season close.</span>
+      </p>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {CATEGORIES.map(c => (
-          <div key={c.title} className="rounded-xl border border-white/8 bg-white/3 px-4 py-4">
-            <span className="text-2xl block mb-2">{c.icon}</span>
-            <div className="font-bold text-white text-xs mb-1">{c.title}</div>
-            <div className="text-[10px] text-slate-500 leading-snug">{c.desc}</div>
+        {CATEGORIES.map((c, i) => (
+          <div
+            key={c.title}
+            className="relative rounded-xl border border-white/5 bg-gradient-to-b from-white/[0.04] to-white/[0.01] px-4 py-5 overflow-hidden group"
+          >
+            {/* Subtle animated shimmer on hover */}
+            <div className="absolute inset-0 bg-[#B7FF1A]/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+            {/* Mystery card state */}
+            <div className="flex flex-col items-center text-center relative z-10">
+              {/* Rotating category icon with blur effect (teaser) */}
+              <div className="relative w-11 h-11 mb-3 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-lg bg-[#B7FF1A]/5 border border-[#B7FF1A]/10 group-hover:border-[#B7FF1A]/30 transition-colors" />
+                <span className="text-xl block blur-[1.5px] group-hover:blur-[1px] transition-all duration-300">{c.icon}</span>
+              </div>
+
+              {/* Title: blurred/teaser style */}
+              <div className="font-bold text-[11px] text-white/60 blur-[0.5px] group-hover:blur-0 group-hover:text-white/80 transition-all duration-300 mb-1">
+                {c.title}
+              </div>
+
+              {/* "Revealing Soon" pill replaces description */}
+              <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#B7FF1A]/70 bg-[#B7FF1A]/[0.06] border border-[#B7FF1A]/10 px-2.5 py-1 rounded-full">
+                <Sparkles className="w-3 h-3" />
+                Revealing Soon
+              </div>
+
+              {/* Lock icon overlay on mobile to reinforce mystery */}
+              <div className="absolute -top-1 -right-1 opacity-40 group-hover:opacity-70 transition-opacity">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 2a2.5 2.5 0 00-2.5 2.5V5h5v-.5A2.5 2.5 0 008 2z" fill="#64748b"/>
+                  <rect x="2" y="5" width="12" height="9" rx="1.5" fill="#64748b"/>
+                  <circle cx="8" cy="9.5" r="1" fill="#0B1218"/>
+                  <path d="M8 10.5v2" stroke="#0B1218" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
           </div>
         ))}
       </div>
