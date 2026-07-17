@@ -413,7 +413,7 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
                 className={`flex flex-col items-center flex-shrink-0 ${isCenter ? "" : "mt-14"} lb-card-${rank}`}
               >
                 <div
-                  className={`${isCenter ? "w-[215px]" : "w-[185px]"}`}
+                  className="w-[200px]"
                   style={{ filter: PODIUM_GLOW[rank] }}
                 >
                   <CreatorCard entry={entry} period="week" />
