@@ -248,6 +248,17 @@ const UploadPage = () => {
   const uploadSizeTipStorageKey = "gamefolio_upload_size_tip_dismissed";
 
   // Fetch upload limits (size + duration only — no count caps)
+  //
+  // Overrides the app-wide defaults (staleTime: Infinity, retry: false) that
+  // otherwise strand this query at `undefined` forever after a single
+  // transient failure - e.g. one fetch racing ahead of session/cookie setup
+  // right after login. A stranded `undefined` here doesn't block uploads
+  // (the size check below is gated on `if (uploadLimits)`, and the server
+  // re-validates independently), but it does show the wrong tier limits and
+  // hides the Pro badge/upgrade messaging indefinitely for otherwise-correct
+  // Pro accounts. Confirmed live for three separate Pro users all seeing the
+  // free-tier 50MB reel cap in this UI despite the server returning the
+  // correct 250MB for their account.
   const { data: uploadLimits, isLoading: limitsLoading } = useQuery<{
     isPro: boolean;
     maxClipSizeMB: number;
@@ -258,6 +269,8 @@ const UploadPage = () => {
   }>({
     queryKey: ['/api/upload/limits'],
     enabled: !!userId,
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
   });
 
   useEffect(() => {
