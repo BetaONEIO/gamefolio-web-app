@@ -89,6 +89,10 @@ export const users = pgTable("users", {
   showLiveOverlay: boolean("show_live_overlay").default(false), // Show LIVE badge on avatar
   twitchShowOnProfile: boolean("twitch_show_on_profile").default(true), // Embed Twitch stream on profile
   kickShowOnProfile: boolean("kick_show_on_profile").default(true),     // Embed Kick stream on profile
+  vpzoneChannelName: text("vpzone_channel_name"), // VPZone channel slug, verified via OAuth
+  vpzoneId: text("vpzone_id"),                    // VPZone user ID (set when OAuth-connected)
+  vpzoneVerified: boolean("vpzone_verified").default(false), // Connected via OAuth
+  vpzoneShowOnProfile: boolean("vpzone_show_on_profile").default(true), // Embed VPZone stream on profile
   ageRange: text("age_range"), // Age range: 13-17, 18-24, 25-34, 35-44, 45-54, 55+
   // Authentication provider fields
   authProvider: text("auth_provider").default("local"), // "local", "google", "discord", "steam", "apple"

@@ -570,6 +570,8 @@ export default function SettingsPage() {
   const [disconnectingYouTube, setDisconnectingYouTube] = useState(false);
   const [connectingRumble, setConnectingRumble] = useState(false);
   const [disconnectingRumble, setDisconnectingRumble] = useState(false);
+  const [connectingVpzone, setConnectingVpzone] = useState(false);
+  const [disconnectingVpzone, setDisconnectingVpzone] = useState(false);
 
   // When the in-app browser closes (user dismissed without finishing OAuth),
   // clear the per-platform "Connecting…" spinners so the buttons aren't stuck
@@ -579,6 +581,7 @@ export default function SettingsPage() {
       setConnectingTwitch(false);
       setConnectingKick(false);
       setConnectingRumble(false);
+      setConnectingVpzone(false);
     });
   }, []);
   const [syncingAchievements, setSyncingAchievements] = useState(false);
@@ -815,6 +818,19 @@ export default function SettingsPage() {
     }
   };
 
+  const handleVpzoneDisconnect = async () => {
+    setDisconnectingVpzone(true);
+    try {
+      await apiRequest("POST", "/api/auth/vpzone/disconnect");
+      await refreshUser();
+      toast({ title: "VPZone disconnected", description: "Your VPZone channel has been unlinked.", duration: 3000 });
+    } catch {
+      toast({ title: "Failed to disconnect", variant: "destructive" });
+    } finally {
+      setDisconnectingVpzone(false);
+    }
+  };
+
   const handleYouTubeDisconnect = async () => {
     setDisconnectingYouTube(true);
     try {
@@ -828,7 +844,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleStreamerSettingsSave = async (patch: { isStreamer?: boolean; streamPlatform?: string; liveEnabled?: boolean; twitchShowOnProfile?: boolean; kickShowOnProfile?: boolean; youtubeShowOnProfile?: boolean }) => {
+  const handleStreamerSettingsSave = async (patch: { isStreamer?: boolean; streamPlatform?: string; liveEnabled?: boolean; twitchShowOnProfile?: boolean; kickShowOnProfile?: boolean; youtubeShowOnProfile?: boolean; vpzoneShowOnProfile?: boolean }) => {
     setSavingStreamerSettings(true);
     try {
       await apiRequest("PATCH", "/api/user/streamer-settings", patch);
@@ -1376,7 +1392,7 @@ export default function SettingsPage() {
     enabled: !!user,
   });
 
-  const { data: oauthConfig } = useQuery<{ kick: boolean; twitch: boolean; rumble: boolean }>({
+  const { data: oauthConfig } = useQuery<{ kick: boolean; twitch: boolean; rumble: boolean; vpzone: boolean }>({
     queryKey: ['/api/auth/social-oauth/config'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     staleTime: 60000,
@@ -1459,6 +1475,22 @@ export default function SettingsPage() {
       };
       toast({ title: "YouTube connection failed", description: errMap[params.get('youtube_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
       window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('vpzone_connected') === 'true') {
+      refreshUser();
+      toast({ title: "VPZone connected!", description: "Your VPZone channel has been verified and linked." + (isOAuthPopup ? ' This tab will close shortly.' : ''), duration: 4000 });
+      window.history.replaceState({}, '', window.location.pathname);
+      notifyAndClose('vpzone_connected');
+    } else if (params.get('vpzone_error')) {
+      const errMap: Record<string, string> = {
+        access_denied: 'You cancelled the VPZone authorisation.',
+        redirect_uri_mismatch: 'Redirect URI mismatch — the callback URL is not registered in your VPZone app. Check the VPZone developer dashboard.',
+        invalid_state: 'Invalid OAuth state. Please try again.',
+        not_configured: 'VPZone OAuth is not configured on this server.',
+        auth_failed: 'VPZone authentication failed. Please try again.',
+        no_channel: 'No VPZone channel found on your account.',
+      };
+      toast({ title: "VPZone connection failed", description: errMap[params.get('vpzone_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+      window.history.replaceState({}, '', window.location.pathname);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1473,6 +1505,9 @@ export default function SettingsPage() {
       } else if (event.data?.type === 'kick_connected') {
         refreshUser();
         toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
+      } else if (event.data?.type === 'vpzone_connected') {
+        refreshUser();
+        toast({ title: "VPZone connected!", description: "Your VPZone channel has been verified and linked.", duration: 4000 });
       }
     };
     window.addEventListener('message', handler);
@@ -4405,12 +4440,14 @@ export default function SettingsPage() {
                   <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
                     {(user as any)?.streamPlatform === "kick"
                       ? <SiKick className="w-5 h-5 text-[#53FC18]" />
+                      : (user as any)?.streamPlatform === "vpzone"
+                      ? <Video className="w-5 h-5 text-[#f9376b]" />
                       : <SiTwitch className="w-5 h-5 text-[#9146FF]" />}
                   </div>
                   <div className="flex-1">
                     <CardTitle className="text-base">Streamer Settings</CardTitle>
                     <CardDescription className="mt-0.5 text-xs">
-                      Verify your Twitch or Kick channel via OAuth to show a Streamer badge on your profile.
+                      Verify your Twitch, Kick, YouTube, Rumble, or VPZone channel via OAuth to show a Streamer badge on your profile.
                     </CardDescription>
                   </div>
                 </div>
@@ -4670,11 +4707,11 @@ export default function SettingsPage() {
                   </div>
                   <Switch
                     checked={!!(user as any)?.liveEnabled}
-                    disabled={savingStreamerSettings || (!(user as any)?.twitchVerified && !(user as any)?.kickVerified && !(user as any)?.youtubeVerified)}
+                    disabled={savingStreamerSettings || (!(user as any)?.twitchVerified && !(user as any)?.kickVerified && !(user as any)?.youtubeVerified && !(user as any)?.vpzoneVerified)}
                     onCheckedChange={(val) => handleStreamerSettingsSave({ liveEnabled: val })}
                   />
                 </div>
-                {!(user as any)?.twitchVerified && !(user as any)?.kickVerified && !(user as any)?.youtubeVerified && (
+                {!(user as any)?.twitchVerified && !(user as any)?.kickVerified && !(user as any)?.youtubeVerified && !(user as any)?.vpzoneVerified && (
                   <p className="text-xs text-slate-500 px-1">Connect a streaming platform first to enable the LIVE badge.</p>
                 )}
 
@@ -4783,6 +4820,20 @@ export default function SettingsPage() {
                       }`}
                     >
                       YouTube
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!isStreamingEnabled}
+                      onClick={() => setStreamPlatform('vpzone')}
+                      className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        !isStreamingEnabled
+                          ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
+                          : streamPlatform === 'vpzone'
+                          ? 'border-[#f9376b] bg-[#f9376b]/20 text-[#f9376b]'
+                          : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
+                      }`}
+                    >
+                      VPZone
                     </button>
                   </div>
                 </div>
@@ -5028,6 +5079,68 @@ export default function SettingsPage() {
                     </div>
                   )}
 
+                  {/* VPZone OAuth connect option */}
+                  {isStreamingEnabled && oauthConfig?.vpzone && (
+                    <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.vpzoneVerified ? 'border-[#f9376b]/30 bg-[#f9376b]/5' : 'border-slate-700 bg-slate-800/30'}`}>
+                      {(user as any)?.vpzoneVerified ? (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded bg-[#f9376b]/20 flex items-center justify-center">
+                              <Check className="w-3.5 h-3.5 text-[#f9376b]" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-[#f9376b]">VPZone OAuth Verified</p>
+                              <p className="text-[11px] text-slate-400">@{(user as any)?.vpzoneChannelName}</p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={disconnectingVpzone}
+                            className="h-7 px-2 text-xs text-slate-400 hover:text-red-400"
+                            onClick={handleVpzoneDisconnect}
+                          >
+                            {disconnectingVpzone ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Unlink className="w-3 h-3 mr-1" />}
+                            Disconnect
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-slate-400">Verify your VPZone channel via OAuth for a secure connection.</p>
+                          <Button
+                            size="sm"
+                            disabled={connectingVpzone}
+                            className="bg-[#f9376b] hover:bg-[#e0245e] text-white font-semibold border-0 h-8 px-3 text-xs"
+                            onClick={() => {
+                              setConnectingVpzone(true);
+                              const url = '/api/auth/vpzone/connect';
+                              if (isNative) void openExternal(`${API_BASE}${url}`);
+                              else window.location.href = url;
+                            }}
+                          >
+                            {connectingVpzone ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+                            Connect with VPZone
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* VPZone "show on profile" toggle - only relevant once connected */}
+                  {(user as any)?.vpzoneVerified && (
+                    <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/30 p-3">
+                      <div>
+                        <p className="text-xs font-medium text-slate-200">Show VPZone on profile</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Embed your VPZone stream on your profile</p>
+                      </div>
+                      <Switch
+                        checked={(user as any)?.vpzoneShowOnProfile ?? true}
+                        disabled={savingStreamerSettings}
+                        onCheckedChange={(val) => handleStreamerSettingsSave({ vpzoneShowOnProfile: val })}
+                      />
+                    </div>
+                  )}
+
                   {/* Show a message when OAuth isn't configured for the selected platform */}
                   {isStreamingEnabled && streamPlatform === 'twitch' && !oauthConfig?.twitch && (
                     <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-slate-700 p-3">
@@ -5042,6 +5155,11 @@ export default function SettingsPage() {
                   {isStreamingEnabled && !oauthConfig?.rumble && (
                     <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-slate-700 p-3">
                       Rumble connection is not configured for this app. Contact the administrator to enable it.
+                    </p>
+                  )}
+                  {isStreamingEnabled && !oauthConfig?.vpzone && (
+                    <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-slate-700 p-3">
+                      VPZone connection is not configured for this app. Contact the administrator to enable it.
                     </p>
                   )}
                 </div>
