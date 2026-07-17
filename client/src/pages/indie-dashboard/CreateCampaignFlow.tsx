@@ -151,11 +151,17 @@ function StepPickTemplate({
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-4 mb-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5">
+                      <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                         <span className="text-[9px] font-black px-1.5 py-0.5 rounded flex items-center gap-1"
                           style={{ background: "rgba(183,255,24,0.1)", color: NEON }}>
                           <ShieldCheck className="w-2.5 h-2.5" /> GAMEFOLIO VERIFIED
                         </span>
+                        {t.difficulty && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                            style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.45)" }}>
+                            {t.difficulty}
+                          </span>
+                        )}
                       </div>
                       <h3 className="text-base font-black text-white leading-tight">{t.name}</h3>
                       <p className="text-[12px] text-white/40 mt-1 line-clamp-2">{t.description}</p>
@@ -171,7 +177,7 @@ function StepPickTemplate({
                       { icon: Clock,    label: "Duration",   value: `${t.duration}d` },
                       { icon: Users,    label: "Creators",   value: t.participant_capacity },
                       { icon: KeyRound, label: "Demo Keys",  value: t.demo_keys_required > 0 ? t.demo_keys_required : "None" },
-                      { icon: KeyRound, label: "Full Keys",  value: t.full_keys_required > 0 ? t.full_keys_required : "None" },
+                      { icon: Star,     label: "Max XP",     value: t.max_xp > 0 ? `${(t.max_xp / 1000).toFixed(0)}k` : "—" },
                     ].map(({ icon: Icon, label, value }) => (
                       <div key={label} className="rounded-xl p-2.5 text-center"
                         style={{ background: "rgba(255,255,255,0.04)" }}>
@@ -224,7 +230,26 @@ interface CustomSettings {
   gameName: string;
   gameId: number | null;
   gameImageUrl: string | null;
+  regions: string;
+  platforms: string[];
 }
+
+const REGION_OPTIONS = [
+  { id: "worldwide",        label: "Worldwide" },
+  { id: "north_america",    label: "North America" },
+  { id: "europe",           label: "Europe" },
+  { id: "asia_pacific",     label: "Asia Pacific" },
+  { id: "latin_america",    label: "Latin America" },
+  { id: "middle_east",      label: "Middle East & Africa" },
+];
+
+const PLATFORM_OPTIONS = [
+  { id: "pc",      label: "PC (Windows / Mac / Linux)" },
+  { id: "ps",      label: "PlayStation" },
+  { id: "xbox",    label: "Xbox" },
+  { id: "switch",  label: "Nintendo Switch" },
+  { id: "mobile",  label: "Mobile (iOS / Android)" },
+];
 
 function StepCustomise({ template, settings, onChange }: {
   template: any;
@@ -403,6 +428,50 @@ function StepCustomise({ template, settings, onChange }: {
             ))}
           </div>
         </div>
+
+        {/* Eligible Regions */}
+        <div>
+          <label className={labelStyle}>Eligible Regions</label>
+          <select
+            style={{ ...fieldStyle, paddingRight: "32px" } as any}
+            value={settings.regions}
+            onChange={e => onChange({ regions: e.target.value })}>
+            {REGION_OPTIONS.map(r => (
+              <option key={r.id} value={r.id}>{r.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Supported Platforms */}
+        <div className="sm:col-span-2">
+          <label className={labelStyle}>Supported Platforms <span className="text-white/20 normal-case font-normal">(select all that apply)</span></label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {PLATFORM_OPTIONS.map(p => {
+              const on = settings.platforms.includes(p.id);
+              return (
+                <button key={p.id}
+                  onClick={() => onChange({
+                    platforms: on
+                      ? settings.platforms.filter(x => x !== p.id)
+                      : [...settings.platforms, p.id],
+                  })}
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-left transition-all"
+                  style={{
+                    background: on ? "rgba(183,255,24,0.07)" : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${on ? "rgba(183,255,24,0.25)" : "rgba(255,255,255,0.07)"}`,
+                  }}>
+                  <div className="w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center"
+                    style={{ borderColor: on ? NEON : "rgba(255,255,255,0.2)", background: on ? NEON : "transparent" }}>
+                    {on && <Check className="w-2.5 h-2.5" style={{ color: "#070b10" }} />}
+                  </div>
+                  <span className="text-[11px] font-semibold" style={{ color: on ? NEON : "rgba(255,255,255,0.55)" }}>
+                    {p.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -553,21 +622,33 @@ function StepReviewLaunch({
 }) {
   const bounties: any[] = template.bounties ?? [];
 
+  const regionLabel = REGION_OPTIONS.find(r => r.id === settings.regions)?.label ?? "Worldwide";
+  const platformsLabel = settings.platforms.length === 0
+    ? "All platforms"
+    : settings.platforms.map(p => PLATFORM_OPTIONS.find(o => o.id === p)?.label ?? p).join(", ");
+
+  const contentParts: string[] = [];
+  if (template.estimated_clips > 0) contentParts.push(`${template.estimated_clips} clips`);
+  if (template.estimated_screenshots > 0) contentParts.push(`${template.estimated_screenshots} screenshots`);
+  if (template.estimated_feedback > 0) contentParts.push(`${template.estimated_feedback} reviews`);
+
   const rows: { label: string; value: React.ReactNode }[] = [
-    { label: "Campaign Name",     value: settings.campaignName || template.name },
-    { label: "Objective",         value: goal.label },
-    { label: "Template",          value: <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3" style={{ color: NEON }} />{template.name}</span> },
-    { label: "Game",              value: settings.gameName || "—" },
-    { label: "Duration",          value: `${template.duration} days` },
-    { label: "Creator Capacity",  value: template.participant_capacity },
-    { label: "Start",             value: settings.startType === "asap" ? "After Gamefolio review" : settings.scheduledDate || "—" },
-    { label: "Key Release",       value: settings.keyReleaseMode === "auto" ? "Automatic" : "Approval Required" },
-    { label: "Demo Keys Required", value: template.demo_keys_required > 0 ? template.demo_keys_required : "None" },
-    { label: "Full Keys Required", value: template.full_keys_required > 0 ? template.full_keys_required : "None" },
-    { label: "Bounties Included",  value: bounties.length },
-    { label: "Est. Clips",        value: template.estimated_clips > 0 ? `Up to ${template.estimated_clips}` : "—" },
-    { label: "Est. Screenshots",  value: template.estimated_screenshots > 0 ? `Up to ${template.estimated_screenshots}` : "—" },
-    { label: "Review Deadline",   value: `${template.duration} days after launch` },
+    { label: "Campaign Name",          value: settings.campaignName || template.name },
+    { label: "Objective",              value: goal.label },
+    { label: "Template",               value: <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3" style={{ color: NEON }} />{template.name}</span> },
+    { label: "Game",                   value: settings.gameName || "—" },
+    { label: "Duration",               value: `${template.duration} days` },
+    { label: "Creator Capacity",       value: template.participant_capacity },
+    { label: "Start",                  value: settings.startType === "asap" ? "After Gamefolio review" : settings.scheduledDate || "—" },
+    { label: "Key Release",            value: settings.keyReleaseMode === "auto" ? "Automatic" : "Approval Required" },
+    { label: "Demo Keys Required",     value: template.demo_keys_required > 0 ? template.demo_keys_required : "None" },
+    { label: "Full Keys Required",     value: template.full_keys_required > 0 ? template.full_keys_required : "None" },
+    { label: "Bounties Included",      value: bounties.length },
+    { label: "Total XP Available",     value: template.max_xp > 0 ? `${template.max_xp.toLocaleString()} XP` : "—" },
+    { label: "Estimated Content",      value: contentParts.length > 0 ? contentParts.join(" · ") : "—" },
+    { label: "Creator Eligibility",    value: regionLabel },
+    { label: "Supported Platforms",    value: platformsLabel },
+    { label: "Review Deadline",        value: `${template.duration} days after launch` },
   ];
 
   return (
@@ -667,6 +748,8 @@ export default function CreateCampaignFlow({
     gameName: "",
     gameId: null,
     gameImageUrl: null,
+    regions: "worldwide",
+    platforms: [],
   });
 
   const { data: bountyStatus } = useQuery<any>({
@@ -703,6 +786,8 @@ export default function CreateCampaignFlow({
         customName: settings.campaignName || undefined,
         description: settings.description || undefined,
         keyReleaseMode: settings.keyReleaseMode,
+        regions: settings.regions,
+        platforms: settings.platforms.length > 0 ? settings.platforms : undefined,
       });
       const instData = await inst.json();
       if (!inst.ok) throw new Error(instData.message || "Failed to create campaign");
