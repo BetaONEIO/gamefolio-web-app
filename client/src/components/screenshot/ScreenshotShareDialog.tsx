@@ -10,8 +10,8 @@ import {
 } from '@/components/ui/dialog';
 import { Copy, X, RefreshCw, AlertCircle } from 'lucide-react';
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
-import { FaFacebook, FaReddit, FaWhatsapp, FaTelegram, FaEnvelope } from 'react-icons/fa';
-import { FaXTwitter, FaBluesky } from 'react-icons/fa6';
+import { FaFacebook, FaReddit, FaWhatsapp, FaTelegram, FaEnvelope, FaLinkedin, FaDiscord, FaYoutube } from 'react-icons/fa';
+import { FaXTwitter, FaBluesky, FaTiktok, FaSnapchat, FaInstagram, FaThreads } from 'react-icons/fa6';
 import { useToast } from '@/hooks/use-toast';
 import { openShareWindow, nativeShare, isNative } from '@/lib/platform';
 
@@ -43,13 +43,20 @@ interface ScreenshotShareDialogProps {
 }
 
 const SOCIAL_PLATFORMS = [
-  { name: "X", icon: FaXTwitter, key: "twitter" },
-  { name: "Facebook", icon: FaFacebook, key: "facebook" },
-  { name: "WhatsApp", icon: FaWhatsapp, key: "whatsapp" },
-  { name: "Telegram", icon: FaTelegram, key: "telegram" },
-  { name: "Reddit", icon: FaReddit, key: "reddit" },
-  { name: "Bluesky", icon: FaBluesky, key: "bluesky" },
-  { name: "Email", icon: FaEnvelope, key: "email" },
+  { name: "X", icon: FaXTwitter, key: "twitter", copyOnly: false },
+  { name: "Facebook", icon: FaFacebook, key: "facebook", copyOnly: false },
+  { name: "WhatsApp", icon: FaWhatsapp, key: "whatsapp", copyOnly: false },
+  { name: "Telegram", icon: FaTelegram, key: "telegram", copyOnly: false },
+  { name: "Reddit", icon: FaReddit, key: "reddit", copyOnly: false },
+  { name: "Bluesky", icon: FaBluesky, key: "bluesky", copyOnly: false },
+  { name: "Discord", icon: FaDiscord, key: "discord", copyOnly: true },
+  { name: "TikTok", icon: FaTiktok, key: "tiktok", copyOnly: true },
+  { name: "Instagram", icon: FaInstagram, key: "instagram", copyOnly: true },
+  { name: "Snapchat", icon: FaSnapchat, key: "snapchat", copyOnly: true },
+  { name: "Threads", icon: FaThreads, key: "threads", copyOnly: false },
+  { name: "YouTube", icon: FaYoutube, key: "youtube", copyOnly: true },
+  { name: "LinkedIn", icon: FaLinkedin, key: "linkedin", copyOnly: false },
+  { name: "Email", icon: FaEnvelope, key: "email", copyOnly: false },
 ];
 
 export function ScreenshotShareDialog({ 
@@ -109,6 +116,29 @@ export function ScreenshotShareDialog({
           console.error('Native share failed:', error);
         }
       }
+    }
+  };
+
+  const handleCopyOnlyShare = async (platform: string) => {
+    if (!shareData?.screenshotUrl) return;
+    if (isNative) {
+      const handled = await nativeShare({
+        title: shareData.title || 'Gamefolio screenshot',
+        url: shareData.screenshotUrl,
+        dialogTitle: `Share to ${platform}`,
+      });
+      if (handled) { trackShare(); return; }
+    }
+    try {
+      await navigator.clipboard.writeText(shareData.screenshotUrl);
+      trackShare();
+      toast({
+        title: `Link copied for ${platform}!`,
+        description: `Paste it into ${platform} to share your screenshot.`,
+        duration: 3000,
+      });
+    } catch {
+      toast({ title: "Copy Failed", description: "Unable to copy link to clipboard.", variant: "destructive" });
     }
   };
 
@@ -244,17 +274,20 @@ export function ScreenshotShareDialog({
                   {SOCIAL_PLATFORMS.map((platform) => {
                     const Icon = platform.icon;
                     const shareUrl = shareData.socialMediaLinks?.[platform.key];
+                    const handleClick = platform.copyOnly
+                      ? () => handleCopyOnlyShare(platform.name)
+                      : () => shareUrl && handleSocialShare(platform.name, shareUrl, platform.key);
                     return (
                       <button
                         key={platform.key}
-                        onClick={() => shareUrl && handleSocialShare(platform.name, shareUrl, platform.key)}
-                        disabled={!shareUrl}
+                        onClick={handleClick}
+                        disabled={!platform.copyOnly && !shareUrl}
                         className="flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                        title={platform.name}
+                        title={platform.copyOnly ? `${platform.name} (copies link)` : platform.name}
                         aria-label={`Share on ${platform.name}`}
                       >
-                        <div className="w-9 h-9 rounded-full border border-[#B7FF1A]/30 bg-[#1B2A33] flex items-center justify-center">
-                          <Icon className="w-4 h-4 text-[#F5F7F2]" />
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#B7FF1A]/30 bg-[#1B2A33] flex items-center justify-center hover:border-[#B7FF1A] hover:bg-[#B7FF1A]/10 transition-colors">
+                          <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#F5F7F2]" />
                         </div>
                       </button>
                     );

@@ -5106,7 +5106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Reel layout from bottom: game(24px) → username(68px) → logo(136px)
       const wmY1    = clipIsReel ? 'H-th-68'  : 'H-th-44';
       const wmY2    = clipIsReel ? 'H-th-24'  : 'H-th-16';
-      const logoH   = 56;  // logo height in px
+      const logoH   = clipIsReel ? Math.round(clipH * 0.065) : 56;  // ~125px at 1920h for reels, 56px for clips
       const logoY   = clipIsReel ? 'H-h-168' : 'H-h-102';
       const line1Filter =
         `drawtext=text='${watermarkLine1}':fontfile='${sgFont}':fontsize=${wmFont1}:fontcolor=white@0.95:` +
@@ -6501,7 +6501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 6;
       const currentUserId = (req.user as any)?.id;
       const reels = await storage.getLatestReels(limit, currentUserId);
-      res.json(reels);
+      res.json(await signClipUrls(reels));
     } catch (err) {
       console.error("Error fetching latest reels:", err);
       res.status(500).json({ message: "Internal server error" });
@@ -6902,7 +6902,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! ${clipUrl}`
         )}`,
         snapchat: clipUrl,
-        threads: clipUrl,
+        threads: `https://www.threads.net/intent/post?text=${encodeURIComponent(
+          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! ${clipUrl}`
+        )}`,
         pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(clipUrl)}&description=${encodeURIComponent(
           `🎮 Epic gaming clip from ${displayName}'s Gamefolio!`
         )}`,
@@ -7926,7 +7928,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! ${screenshotUrl}`
         )}`,
         snapchat: screenshotUrl,
-        threads: screenshotUrl,
+        threads: `https://www.threads.net/intent/post?text=${encodeURIComponent(
+          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! ${screenshotUrl}`
+        )}`,
         pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(screenshotUrl)}&description=${encodeURIComponent(
           `📸 Epic gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
