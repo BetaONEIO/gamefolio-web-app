@@ -1476,10 +1476,12 @@ export default function SettingsPage() {
       toast({ title: "YouTube connection failed", description: errMap[params.get('youtube_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
       window.history.replaceState({}, '', window.location.pathname);
     } else if (params.get('vpzone_connected') === 'true') {
-      refreshUser();
-      toast({ title: "VPZone connected!", description: "Your VPZone channel has been verified and linked." + (isOAuthPopup ? ' This tab will close shortly.' : ''), duration: 4000 });
       window.history.replaceState({}, '', window.location.pathname);
       notifyAndClose('vpzone_connected');
+      (async () => {
+        await refreshUser();
+        toast({ title: "VPZone connected!", description: "Your VPZone channel has been verified and linked." + (isOAuthPopup ? ' This tab will close shortly.' : ''), duration: 4000 });
+      })();
     } else if (params.get('vpzone_error')) {
       const errMap: Record<string, string> = {
         access_denied: 'You cancelled the VPZone authorisation.',
@@ -5115,7 +5117,7 @@ export default function SettingsPage() {
                               setConnectingVpzone(true);
                               const url = '/api/auth/vpzone/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.location.href = url;
+                              else { window.open(url, '_blank', 'noopener'); setConnectingVpzone(false); }
                             }}
                           >
                             {connectingVpzone ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
