@@ -5105,7 +5105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Reel layout from bottom: game(24px) → username(68px) → logo(136px)
       const wmY1    = clipIsReel ? 'H-th-68'  : 'H-th-44';
       const wmY2    = clipIsReel ? 'H-th-24'  : 'H-th-16';
-      const logoH   = 56;  // logo height in px
+      const logoH   = clipIsReel ? Math.round(clipH * 0.065) : 56;  // ~125px at 1920h for reels, 56px for clips
       const logoY   = clipIsReel ? 'H-h-168' : 'H-h-102';
       const line1Filter =
         `drawtext=text='${watermarkLine1}':fontfile='${sgFont}':fontsize=${wmFont1}:fontcolor=white@0.95:` +
