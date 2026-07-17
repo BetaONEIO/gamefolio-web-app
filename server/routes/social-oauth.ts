@@ -240,7 +240,7 @@ router.get('/auth/vpzone/connect', (req: Request, res: Response) => {
       response_type: 'code',
       client_id: clientId,
       redirect_uri: callbackUrl,
-      scope: 'channel:read',
+      scope: 'profile:read channel:read',
       state,
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
