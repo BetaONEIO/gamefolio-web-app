@@ -187,9 +187,9 @@ function DashboardTab({
   }
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-8">
 
-      {/* 1. HERO */}
+      {/* HERO — full width */}
       <div className="rounded-2xl p-6 sm:p-8 relative overflow-hidden"
         style={{
           background: "linear-gradient(135deg, rgba(183,255,24,0.055) 0%, rgba(255,255,255,0.018) 100%)",
@@ -288,400 +288,407 @@ function DashboardTab({
         </div>
       </div>
 
-      {/* 2. KEY METRICS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          {
-            icon: Users, label: "Active Creators",
-            value: String(d.totalParticipants),
-            desc: "Across all campaigns",
-            color: d.totalParticipants > 0 ? NEON : "#334155",
-            onClick: () => onGoTo("campaigns", "my"),
-          },
-          {
-            icon: TrendingUp, label: "Exposure",
-            value: exposureEst,
-            desc: "Estimated this week",
-            color: contentTotal > 0 ? NEON : "#334155",
-            onClick: () => onGoTo("analytics"),
-          },
-          {
-            icon: Film, label: "Community Content",
-            value: String(contentTotal),
-            desc: `${clipsTotal} clips · ${reelsTotal} reels · ${screenshotsTotal} ss`,
-            color: contentTotal > 0 ? "#a78bfa" : "#334155",
-            onClick: () => onGoTo("community", "content"),
-          },
-          {
-            icon: KeyRound, label: "Keys Remaining",
-            value: String(demoKeys.available + fullKeys.available),
-            desc: `${demoKeys.available} demo · ${fullKeys.available} full`,
-            color: (demoKeys.available + fullKeys.available) < 5 ? "#f87171" : NEON,
-            onClick: () => onGoTo("keys"),
-          },
-        ].map(({ icon: Icon, label, value, desc, color, onClick }) => (
-          <button key={label} onClick={onClick}
-            className="rounded-2xl p-5 text-left group transition-all hover:scale-[1.01] active:scale-[0.99]"
-            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                style={{ background: `${color}12` }}>
-                <Icon className="w-4 h-4" style={{ color }} />
-              </div>
-              <ChevronRight className="w-3.5 h-3.5 text-white/15 group-hover:text-white/40 transition-colors" />
-            </div>
-            <div className="text-2xl font-black text-white mb-0.5">{value}</div>
-            <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">{label}</div>
-            <div className="text-[11px] text-white/20 leading-snug">{desc}</div>
-          </button>
-        ))}
-      </div>
+      {/* TWO-COLUMN BODY */}
+      <div className="flex flex-col lg:flex-row gap-8 items-start">
 
-      {/* 3. WHAT NEEDS YOUR ATTENTION */}
-      {attentionItems.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2.5 mb-4">
-            <h3 className="text-base font-black text-white">What Needs Your Attention</h3>
-            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black"
-              style={{ background: "rgba(248,113,113,0.14)", color: "#f87171" }}>
-              {attentionItems.length}
-            </span>
+        {/* ── LEFT COLUMN (70%) — primary content ── */}
+        <div className="flex-1 min-w-0 space-y-10">
+
+          {/* Metric cards */}
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              {
+                icon: Users, label: "Active Creators",
+                value: String(d.totalParticipants),
+                desc: "Across all campaigns",
+                color: d.totalParticipants > 0 ? NEON : "#334155",
+                onClick: () => onGoTo("campaigns", "my"),
+              },
+              {
+                icon: TrendingUp, label: "Exposure",
+                value: exposureEst,
+                desc: "Estimated this week",
+                color: contentTotal > 0 ? NEON : "#334155",
+                onClick: () => onGoTo("analytics"),
+              },
+              {
+                icon: Film, label: "Community Content",
+                value: String(contentTotal),
+                desc: `${clipsTotal} clips · ${reelsTotal} reels · ${screenshotsTotal} ss`,
+                color: contentTotal > 0 ? "#a78bfa" : "#334155",
+                onClick: () => onGoTo("community", "content"),
+              },
+              {
+                icon: KeyRound, label: "Keys Remaining",
+                value: String(demoKeys.available + fullKeys.available),
+                desc: `${demoKeys.available} demo · ${fullKeys.available} full`,
+                color: (demoKeys.available + fullKeys.available) < 5 ? "#f87171" : NEON,
+                onClick: () => onGoTo("keys"),
+              },
+            ].map(({ icon: Icon, label, value, desc, color, onClick }) => (
+              <button key={label} onClick={onClick}
+                className="rounded-2xl p-5 text-left group transition-all hover:scale-[1.01] active:scale-[0.99]"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                    style={{ background: `${color}12` }}>
+                    <Icon className="w-4 h-4" style={{ color }} />
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-white/15 group-hover:text-white/40 transition-colors" />
+                </div>
+                <div className="text-2xl font-black text-white mb-0.5">{value}</div>
+                <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">{label}</div>
+                <div className="text-[11px] text-white/20 leading-snug">{desc}</div>
+              </button>
+            ))}
           </div>
-          <div className="space-y-2">
-            {attentionItems.map(({ icon: Icon, color, title, desc, cta, action }, i) => (
-              <div key={i}
-                className="flex items-center gap-4 rounded-xl px-5 py-4"
-                style={{ background: "rgba(255,255,255,0.022)", border: "1px solid rgba(255,255,255,0.055)" }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: `${color}10` }}>
-                  <Icon className="w-4 h-4" style={{ color }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-white/90">{title}</div>
-                  <div className="text-[11px] text-white/30 mt-0.5">{desc}</div>
-                </div>
-                <button onClick={action}
-                  className="shrink-0 text-[11px] font-bold px-3.5 py-1.5 rounded-lg transition-all hover:brightness-110"
-                  style={{ background: `${color}13`, color }}>
-                  {cta}
+
+          {/* Active Campaigns */}
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-black text-white">Active Campaigns</h3>
+              <button onClick={() => onGoTo("campaigns", "my")}
+                className="text-xs font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
+                View all <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {activeCampaigns.length === 0 ? (
+              <div className="rounded-2xl px-8 py-12 text-center"
+                style={{ background: "rgba(255,255,255,0.018)", border: "1px dashed rgba(255,255,255,0.07)" }}>
+                <Crosshair className="w-9 h-9 mx-auto mb-3 text-white/10" />
+                <p className="text-sm font-semibold text-white/35 mb-1">No active campaigns</p>
+                <p className="text-xs text-white/20 mb-6 max-w-xs mx-auto">
+                  Create your first campaign to start recruiting creators and build community buzz.
+                </p>
+                <button onClick={() => onGoTo("campaigns", "library")}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110"
+                  style={{ background: NEON, color: "#070b10" }}>
+                  <BookOpen className="w-4 h-4" /> Browse Campaign Library
                 </button>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 4. ACTIVE CAMPAIGNS */}
-      <div>
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-base font-black text-white">Active Campaigns</h3>
-          <button onClick={() => onGoTo("campaigns", "my")}
-            className="text-xs font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
-            View all <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {activeCampaigns.length === 0 ? (
-          <div className="rounded-2xl px-8 py-14 text-center"
-            style={{ background: "rgba(255,255,255,0.018)", border: "1px dashed rgba(255,255,255,0.07)" }}>
-            <Crosshair className="w-9 h-9 mx-auto mb-3 text-white/10" />
-            <p className="text-sm font-semibold text-white/35 mb-1">No active campaigns</p>
-            <p className="text-xs text-white/20 mb-6 max-w-xs mx-auto">
-              Create your first campaign to start recruiting creators and build community buzz.
-            </p>
-            <button onClick={() => onGoTo("campaigns", "library")}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110"
-              style={{ background: NEON, color: "#070b10" }}>
-              <BookOpen className="w-4 h-4" /> Browse Campaign Library
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {activeCampaigns.slice(0, 3).map((c: any) => {
-              const statusColor = STATUS_COLORS[c.status] ?? "#94a3b8";
-              const daysLeft = c.ends_at
-                ? Math.max(0, Math.ceil((new Date(c.ends_at).getTime() - Date.now()) / 86400000))
-                : null;
-              const completionPct = c.participant_count && c.participant_capacity
-                ? Math.round((c.participant_count / c.participant_capacity) * 100) : null;
-              return (
-                <div key={c.id} className="rounded-2xl p-5 flex flex-col gap-4"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-bold text-white truncate">
-                        {c.template_name ?? c.name ?? "Campaign"}
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {activeCampaigns.slice(0, 4).map((c: any) => {
+                  const statusColor = STATUS_COLORS[c.status] ?? "#94a3b8";
+                  const daysLeft = c.ends_at
+                    ? Math.max(0, Math.ceil((new Date(c.ends_at).getTime() - Date.now()) / 86400000))
+                    : null;
+                  const completionPct = c.participant_count && c.participant_capacity
+                    ? Math.round((c.participant_count / c.participant_capacity) * 100) : null;
+                  return (
+                    <div key={c.id} className="rounded-2xl p-5 flex flex-col gap-4"
+                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-white truncate">
+                            {c.template_name ?? c.name ?? "Campaign"}
+                          </div>
+                          <div className="text-[10px] text-white/25 mt-0.5">{c.game_name ?? "Your game"}</div>
+                        </div>
+                        <span className="text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wide shrink-0"
+                          style={{ color: statusColor, background: `${statusColor}16` }}>
+                          {(c.status ?? "").replace(/_/g, " ")}
+                        </span>
                       </div>
-                      <div className="text-[10px] text-white/25 mt-0.5">{c.game_name ?? "Your game"}</div>
-                    </div>
-                    <span className="text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wide shrink-0"
-                      style={{ color: statusColor, background: `${statusColor}16` }}>
-                      {(c.status ?? "").replace(/_/g, " ")}
-                    </span>
-                  </div>
 
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    {[
-                      { val: c.participant_count ?? 0, lbl: "Creators" },
-                      completionPct !== null ? { val: `${completionPct}%`, lbl: "Filled" } : null,
-                      daysLeft !== null ? { val: `${daysLeft}d`, lbl: "Left" } : null,
-                    ].filter(Boolean).map(({ val, lbl }: any) => (
-                      <div key={lbl}>
-                        <div className="text-sm font-black text-white">{val}</div>
-                        <div className="text-[9px] text-white/25 uppercase tracking-wider mt-0.5">{lbl}</div>
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        {[
+                          { val: c.participant_count ?? 0, lbl: "Creators" },
+                          completionPct !== null ? { val: `${completionPct}%`, lbl: "Filled" } : null,
+                          daysLeft !== null ? { val: `${daysLeft}d`, lbl: "Left" } : null,
+                        ].filter(Boolean).map(({ val, lbl }: any) => (
+                          <div key={lbl}>
+                            <div className="text-sm font-black text-white">{val}</div>
+                            <div className="text-[9px] text-white/25 uppercase tracking-wider mt-0.5">{lbl}</div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
 
-                  {completionPct !== null && (
-                    <div className="h-1 rounded-full overflow-hidden"
-                      style={{ background: "rgba(255,255,255,0.06)" }}>
-                      <div className="h-full rounded-full"
-                        style={{ width: `${completionPct}%`, background: NEON }} />
+                      {completionPct !== null && (
+                        <div className="h-1 rounded-full overflow-hidden"
+                          style={{ background: "rgba(255,255,255,0.06)" }}>
+                          <div className="h-full rounded-full"
+                            style={{ width: `${completionPct}%`, background: NEON }} />
+                        </div>
+                      )}
+
+                      <button onClick={() => onGoTo("campaigns", "my")}
+                        className="w-full text-xs font-bold py-2 rounded-xl transition-all hover:brightness-110"
+                        style={{ background: "rgba(183,255,24,0.09)", color: NEON, border: "1px solid rgba(183,255,24,0.18)" }}>
+                        View Campaign
+                      </button>
                     </div>
-                  )}
-
-                  <button onClick={() => onGoTo("campaigns", "my")}
-                    className="w-full text-xs font-bold py-2 rounded-xl transition-all hover:brightness-110"
-                    style={{ background: "rgba(183,255,24,0.09)", color: NEON, border: "1px solid rgba(183,255,24,0.18)" }}>
-                    View Campaign
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* 5. LATEST CREATOR CONTENT */}
-      <div>
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-base font-black text-white">Latest Creator Content</h3>
-          <button onClick={() => onGoTo("community", "content")}
-            className="text-xs font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
-            View all <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {content.length === 0 ? (
-          <div className="rounded-2xl px-8 py-12 text-center"
-            style={{ background: "rgba(255,255,255,0.018)", border: "1px dashed rgba(255,255,255,0.07)" }}>
-            <Film className="w-9 h-9 mx-auto mb-3 text-white/10" />
-            <p className="text-sm font-semibold text-white/35 mb-1">No creator content yet</p>
-            <p className="text-xs text-white/20">
-              Once creators participate in your campaigns, their clips and screenshots will appear here.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            {content.slice(0, 6).map((item: any, i: number) => (
-              <div key={item.id ?? i}
-                className="rounded-xl overflow-hidden group"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <div className="aspect-video relative overflow-hidden">
-                  {item.thumbnail_url ? (
-                    <img src={item.thumbnail_url} alt=""
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center"
-                      style={{ background: "rgba(255,255,255,0.035)" }}>
-                      {item.type === "screenshot" ? <Camera className="w-5 h-5 text-white/15" />
-                        : item.type === "reel" ? <Video className="w-5 h-5 text-white/15" />
-                        : <Film className="w-5 h-5 text-white/15" />}
-                    </div>
-                  )}
-                  <div className="absolute top-1.5 left-1.5">
-                    <span className="text-[8px] font-bold px-1.5 py-0.5 rounded uppercase"
-                      style={{ background: "rgba(0,0,0,0.6)", color: "rgba(255,255,255,0.65)" }}>
-                      {item.type ?? "clip"}
-                    </span>
-                  </div>
-                </div>
-                <div className="p-2.5">
-                  <div className="text-[10px] font-semibold text-white/60 truncate">
-                    @{item.creator_username ?? "creator"}
-                  </div>
-                  <div className="flex items-center justify-between mt-0.5">
-                    <span className="text-[9px] text-white/25">{(item.views ?? 0).toLocaleString()} views</span>
-                    {item.fires > 0 && (
-                      <span className="text-[9px] text-orange-400">⚡{item.fires}</span>
-                    )}
-                  </div>
-                  <div className="flex gap-1 mt-2">
-                    <button className="flex-1 text-[9px] font-bold py-1 rounded transition-all hover:brightness-110"
-                      style={{ background: "rgba(183,255,24,0.09)", color: NEON }}>
-                      Feature
-                    </button>
-                    <button className="text-[9px] font-bold px-2 py-1 rounded"
-                      style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.3)" }}>
-                      Hide
-                    </button>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
-            ))}
+            )}
           </div>
-        )}
-      </div>
 
-      {/* 6 + 7. KEY INVENTORY & ANALYTICS SNAPSHOT */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-
-        <div>
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-base font-black text-white">Key Inventory</h3>
-            <button onClick={() => onGoTo("keys")}
-              className="text-xs font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
-              Manage <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="space-y-6">
-            {[
-              { label: "Demo Keys", avail: demoKeys.available, used: demoKeys.claimed ?? 0, usedLabel: "claimed" },
-              { label: "Full Game Keys", avail: fullKeys.available, used: fullKeys.awarded ?? 0, usedLabel: "awarded" },
-            ].map(({ label, avail, used, usedLabel }) => {
-              const total = avail + used;
-              const pct = total > 0 ? Math.round((avail / total) * 100) : 0;
-              const isLow = avail <= 3;
-              const isWarn = !isLow && avail <= 10;
-              const barColor = isLow ? "#f87171" : isWarn ? "#f59e0b" : NEON;
-              return (
-                <div key={label}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-semibold text-white/75">{label}</span>
-                    <div className="flex items-center gap-1.5">
-                      {isLow && <AlertTriangle className="w-3.5 h-3.5 text-red-400" />}
-                      <span className="text-sm font-black" style={{ color: barColor }}>{avail} remaining</span>
-                    </div>
-                  </div>
-                  <div className="h-2 rounded-full overflow-hidden mb-1.5"
-                    style={{ background: "rgba(255,255,255,0.06)" }}>
-                    <div className="h-full rounded-full transition-all duration-700"
-                      style={{ width: `${pct}%`, background: barColor }} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.22)" }}>
-                      {used} {usedLabel} · {total} total
-                    </span>
-                    <button onClick={() => onGoTo("keys")}
-                      className="text-[10px] font-bold flex items-center gap-1 hover:opacity-70 transition-opacity"
-                      style={{ color: NEON }}>
-                      <Upload className="w-3 h-3" /> Upload More
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div>
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-base font-black text-white">This Week</h3>
-            <button onClick={() => onGoTo("analytics")}
-              className="text-xs font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
-              Full analytics <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="space-y-3">
-            {[
-              { label: "Community Clips",   value: clipsTotal,             icon: Film,   color: "#818cf8" },
-              { label: "Community Reels",   value: reelsTotal,             icon: Video,  color: "#f472b6" },
-              { label: "Screenshots",       value: screenshotsTotal,       icon: Camera, color: "#34d399" },
-              { label: "Active Creators",   value: d.totalParticipants,    icon: Users,  color: NEON },
-              { label: "Campaigns Running", value: d.activeCampaigns ?? 0, icon: Target, color: "#60a5fa" },
-            ].map(({ label, value, icon: Icon, color }) => (
-              <div key={label} className="flex items-center gap-3">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: `${color}12` }}>
-                  <Icon className="w-3.5 h-3.5" style={{ color }} />
-                </div>
-                <span className="flex-1 text-sm text-white/50">{label}</span>
-                <span className="text-sm font-black text-white">{Number(value).toLocaleString()}</span>
-              </div>
-            ))}
-            <button onClick={() => onGoTo("analytics")}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold mt-1 transition-all hover:brightness-110"
-              style={{
-                background: "rgba(255,255,255,0.035)",
-                color: "rgba(255,255,255,0.45)",
-                border: "1px solid rgba(255,255,255,0.07)",
-              }}>
-              View Full Analytics <ArrowUpRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-      </div>
-
-      {/* 8. PROFILE COMPLETION */}
-      <div>
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-base font-black text-white">Profile Completion</h3>
-          <button onClick={() => onGoTo("settings", "profile")}
-            className="text-xs font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
-            Edit Profile <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="rounded-2xl p-6"
-          style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-          <div className="flex items-center gap-6 mb-6">
-            <div className="relative w-16 h-16 shrink-0">
-              <svg className="w-16 h-16 -rotate-90" viewBox="0 0 56 56">
-                <circle cx="28" cy="28" r="22" fill="none" strokeWidth="4"
-                  stroke="rgba(255,255,255,0.06)" />
-                <circle cx="28" cy="28" r="22" fill="none" strokeWidth="4"
-                  stroke={profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171"}
-                  strokeDasharray={`${2 * Math.PI * 22 * profilePct / 100} ${2 * Math.PI * 22}`}
-                  strokeLinecap="round" />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-sm font-black text-white">{profilePct}%</span>
-              </div>
+          {/* Latest Creator Content */}
+          <div>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-black text-white">Latest Creator Content</h3>
+              <button onClick={() => onGoTo("community", "content")}
+                className="text-xs font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
+                View all <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <div>
-              <div className="text-lg font-black text-white mb-0.5">
-                {profilePct === 100 ? "Profile Complete!" : `${100 - profilePct}% left to go`}
-              </div>
-              <div className="text-xs text-white/30">
-                {profilePct === 100
-                  ? "Your game profile is fully set up."
-                  : "A complete profile attracts significantly more creators."}
-              </div>
-            </div>
-          </div>
 
-          {profilePct < 100 && nextSteps.length > 0 && (
-            <>
-              <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">
-                Recommended Next Steps
+            {content.length === 0 ? (
+              <div className="rounded-2xl px-8 py-12 text-center"
+                style={{ background: "rgba(255,255,255,0.018)", border: "1px dashed rgba(255,255,255,0.07)" }}>
+                <Film className="w-9 h-9 mx-auto mb-3 text-white/10" />
+                <p className="text-sm font-semibold text-white/35 mb-1">No creator content yet</p>
+                <p className="text-xs text-white/20">
+                  Once creators participate in your campaigns, their clips and screenshots will appear here.
+                </p>
               </div>
-              <div className="space-y-2.5">
-                {nextSteps.map(({ field, label, pct }) => (
-                  <button key={field} onClick={() => onGoTo("settings", "profile")}
-                    className="w-full flex items-center gap-3 text-left group">
-                    <div className="w-5 h-5 rounded-full border shrink-0 flex items-center justify-center"
-                      style={{ borderColor: "rgba(255,255,255,0.1)" }}>
-                      <Circle className="w-2 h-2 text-white/15" />
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {content.slice(0, 6).map((item: any, i: number) => (
+                  <div key={item.id ?? i}
+                    className="rounded-xl overflow-hidden group"
+                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                    <div className="aspect-video relative overflow-hidden">
+                      {item.thumbnail_url ? (
+                        <img src={item.thumbnail_url} alt=""
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center"
+                          style={{ background: "rgba(255,255,255,0.035)" }}>
+                          {item.type === "screenshot" ? <Camera className="w-5 h-5 text-white/15" />
+                            : item.type === "reel" ? <Video className="w-5 h-5 text-white/15" />
+                            : <Film className="w-5 h-5 text-white/15" />}
+                        </div>
+                      )}
+                      <div className="absolute top-1.5 left-1.5">
+                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded uppercase"
+                          style={{ background: "rgba(0,0,0,0.6)", color: "rgba(255,255,255,0.65)" }}>
+                          {item.type ?? "clip"}
+                        </span>
+                      </div>
                     </div>
-                    <span className="flex-1 text-sm text-white/45 group-hover:text-white/70 transition-colors">
-                      {label}
-                    </span>
-                    <span className="text-[10px] font-bold shrink-0" style={{ color: NEON }}>+{pct}%</span>
-                  </button>
+                    <div className="p-2.5">
+                      <div className="text-[10px] font-semibold text-white/60 truncate">
+                        @{item.creator_username ?? "creator"}
+                      </div>
+                      <div className="flex items-center justify-between mt-0.5">
+                        <span className="text-[9px] text-white/25">{(item.views ?? 0).toLocaleString()} views</span>
+                        {item.fires > 0 && (
+                          <span className="text-[9px] text-orange-400">⚡{item.fires}</span>
+                        )}
+                      </div>
+                      <div className="flex gap-1 mt-2">
+                        <button className="flex-1 text-[9px] font-bold py-1 rounded transition-all hover:brightness-110"
+                          style={{ background: "rgba(183,255,24,0.09)", color: NEON }}>
+                          Feature
+                        </button>
+                        <button className="text-[9px] font-bold px-2 py-1 rounded"
+                          style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.3)" }}>
+                          Hide
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
-            </>
-          )}
+            )}
+          </div>
 
-          {profilePct === 100 && (
-            <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: NEON }}>
-              <CheckCircle2 className="w-4 h-4" /> Your game profile is fully complete!
+        </div>{/* end left column */}
+
+        {/* ── RIGHT COLUMN (30%) — action rail ── */}
+        <div className="w-full lg:w-[300px] xl:w-[320px] shrink-0 space-y-8">
+
+          {/* What Needs Your Attention */}
+          {attentionItems.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <h3 className="text-sm font-black text-white">Needs Attention</h3>
+                <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black"
+                  style={{ background: "rgba(248,113,113,0.14)", color: "#f87171" }}>
+                  {attentionItems.length}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {attentionItems.map(({ icon: Icon, color, title, desc, cta, action }, i) => (
+                  <div key={i}
+                    className="rounded-xl p-3.5"
+                    style={{ background: "rgba(255,255,255,0.022)", border: "1px solid rgba(255,255,255,0.055)" }}>
+                    <div className="flex items-start gap-3 mb-2.5">
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                        style={{ background: `${color}10` }}>
+                        <Icon className="w-3.5 h-3.5" style={{ color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-white/85 leading-snug">{title}</div>
+                        <div className="text-[10px] text-white/30 mt-0.5">{desc}</div>
+                      </div>
+                    </div>
+                    <button onClick={action}
+                      className="w-full text-[10px] font-bold py-1.5 rounded-lg transition-all hover:brightness-110"
+                      style={{ background: `${color}13`, color }}>
+                      {cta}
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-        </div>
-      </div>
+
+          {/* Key Inventory */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-black text-white">Key Inventory</h3>
+              <button onClick={() => onGoTo("keys")}
+                className="text-[10px] font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
+                Manage <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+            <div className="space-y-5">
+              {[
+                { label: "Demo Keys", avail: demoKeys.available, used: demoKeys.claimed ?? 0, usedLabel: "claimed" },
+                { label: "Full Game Keys", avail: fullKeys.available, used: fullKeys.awarded ?? 0, usedLabel: "awarded" },
+              ].map(({ label, avail, used, usedLabel }) => {
+                const total = avail + used;
+                const pct = total > 0 ? Math.round((avail / total) * 100) : 0;
+                const isLow = avail <= 3;
+                const isWarn = !isLow && avail <= 10;
+                const barColor = isLow ? "#f87171" : isWarn ? "#f59e0b" : NEON;
+                return (
+                  <div key={label}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-semibold text-white/70">{label}</span>
+                      <div className="flex items-center gap-1">
+                        {isLow && <AlertTriangle className="w-3 h-3 text-red-400" />}
+                        <span className="text-xs font-black" style={{ color: barColor }}>{avail}</span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden mb-1"
+                      style={{ background: "rgba(255,255,255,0.06)" }}>
+                      <div className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${pct}%`, background: barColor }} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.2)" }}>
+                        {used} {usedLabel} · {total} total
+                      </span>
+                      <button onClick={() => onGoTo("keys")}
+                        className="text-[9px] font-bold flex items-center gap-0.5 hover:opacity-70 transition-opacity"
+                        style={{ color: NEON }}>
+                        <Upload className="w-2.5 h-2.5" /> Upload
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Profile Completion */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-black text-white">Profile Completion</h3>
+              <button onClick={() => onGoTo("settings", "profile")}
+                className="text-[10px] font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
+                Edit <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+
+            <div className="rounded-2xl p-4"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="relative w-12 h-12 shrink-0">
+                  <svg className="w-12 h-12 -rotate-90" viewBox="0 0 44 44">
+                    <circle cx="22" cy="22" r="17" fill="none" strokeWidth="3.5"
+                      stroke="rgba(255,255,255,0.06)" />
+                    <circle cx="22" cy="22" r="17" fill="none" strokeWidth="3.5"
+                      stroke={profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171"}
+                      strokeDasharray={`${2 * Math.PI * 17 * profilePct / 100} ${2 * Math.PI * 17}`}
+                      strokeLinecap="round" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-[11px] font-black text-white">{profilePct}%</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm font-black text-white">
+                    {profilePct === 100 ? "Complete!" : `${100 - profilePct}% left`}
+                  </div>
+                  <div className="text-[10px] text-white/30 mt-0.5">
+                    {profilePct === 100 ? "Fully set up" : "Attract more creators"}
+                  </div>
+                </div>
+              </div>
+
+              {profilePct < 100 && nextSteps.length > 0 && (
+                <div className="space-y-2">
+                  {nextSteps.map(({ field, label, pct }) => (
+                    <button key={field} onClick={() => onGoTo("settings", "profile")}
+                      className="w-full flex items-center gap-2.5 text-left group">
+                      <div className="w-4 h-4 rounded-full border shrink-0 flex items-center justify-center"
+                        style={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                        <Circle className="w-1.5 h-1.5 text-white/15" />
+                      </div>
+                      <span className="flex-1 text-xs text-white/40 group-hover:text-white/65 transition-colors truncate">
+                        {label}
+                      </span>
+                      <span className="text-[9px] font-bold shrink-0" style={{ color: NEON }}>+{pct}%</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {profilePct === 100 && (
+                <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: NEON }}>
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Profile complete!
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Weekly Analytics */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-black text-white">This Week</h3>
+              <button onClick={() => onGoTo("analytics")}
+                className="text-[10px] font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
+                Full report <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+            <div className="space-y-2.5">
+              {[
+                { label: "Community Clips",   value: clipsTotal,             icon: Film,   color: "#818cf8" },
+                { label: "Community Reels",   value: reelsTotal,             icon: Video,  color: "#f472b6" },
+                { label: "Screenshots",       value: screenshotsTotal,       icon: Camera, color: "#34d399" },
+                { label: "Active Creators",   value: d.totalParticipants,    icon: Users,  color: NEON },
+                { label: "Campaigns Running", value: d.activeCampaigns ?? 0, icon: Target, color: "#60a5fa" },
+              ].map(({ label, value, icon: Icon, color }) => (
+                <div key={label} className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+                    style={{ background: `${color}12` }}>
+                    <Icon className="w-3 h-3" style={{ color }} />
+                  </div>
+                  <span className="flex-1 text-xs text-white/45">{label}</span>
+                  <span className="text-xs font-black text-white">{Number(value).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => onGoTo("analytics")}
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold mt-4 transition-all hover:brightness-110"
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                color: "rgba(255,255,255,0.4)",
+                border: "1px solid rgba(255,255,255,0.07)",
+              }}>
+              View Full Analytics <ArrowUpRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+        </div>{/* end right column */}
+
+      </div>{/* end two-column */}
 
     </div>
   );
