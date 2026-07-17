@@ -1383,15 +1383,17 @@ export default function LeaderboardPage() {
       {/* Remaining narrow sections */}
       <div className="max-w-3xl mx-auto pb-20">
         <div className="rs-section-divider" />
+      </div>
 
-        {/* Season Rewards */}
+      {/* Season Rewards — full width */}
+      <div className="w-full">
         <SeasonRewards />
-        <div className="rs-section-divider" />
+      </div>
 
-        {/* Season Categories */}
+      {/* Season Categories (Awards) — full width */}
+      <div className="w-full pb-20">
+        <div className="rs-section-divider" />
         <SeasonCategories />
-        <div className="rs-section-divider" />
-
       </div>
     </div>
   );
