@@ -308,19 +308,16 @@ router.get('/auth/vpzone/callback', async (req: Request, res: Response) => {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
-    const raw = profileRes.data?.data ?? profileRes.data;
-    const vpzoneUser = Array.isArray(raw) ? raw[0] : raw;
-
-    console.log('VPZone profile raw response:', JSON.stringify(profileRes.data, null, 2));
+    // VPZone /me response: { data: { auth_source, scopes, profile: { id, username, display_name, ... } } }
+    const meta = profileRes.data?.data ?? profileRes.data;
+    const vpzoneUser = meta?.profile ?? meta;
 
     if (!vpzoneUser) {
       return res.redirect('/settings/profile?tab=streamer&vpzone_error=no_channel');
     }
 
-    console.log('VPZone user object keys:', Object.keys(vpzoneUser));
-
-    const vpzoneId = String(vpzoneUser.sub ?? vpzoneUser.id ?? vpzoneUser.user_id ?? '');
-    const channelName = vpzoneUser.preferred_username ?? vpzoneUser.username ?? vpzoneUser.slug ?? vpzoneUser.name ?? vpzoneUser.display_name ?? vpzoneUser.channel_name ?? '';
+    const vpzoneId = String(vpzoneUser.id ?? '');
+    const channelName = vpzoneUser.username ?? vpzoneUser.display_name ?? '';
 
     if (!channelName) {
       return res.redirect('/settings/profile?tab=streamer&vpzone_error=no_channel');
