@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getQueryFn, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { ReportButton } from "@/components/reporting/ReportButton";
@@ -33,6 +34,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   const avatarUrl = screenshot?.user?.avatarUrl;
   const { signedUrl: avatarSignedUrl } = useSignedUrl(avatarUrl);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const [isMobile, setIsMobile] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -186,6 +188,9 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/users/${username}/follow-status`] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update follow status", variant: "destructive" });
     },
   });
 
