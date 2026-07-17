@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { FaFacebook, FaReddit, FaWhatsapp, FaTelegram, FaEnvelope } from "react-icons/fa";
-import { FaXTwitter, FaBluesky } from "react-icons/fa6";
+import { FaXTwitter, FaBluesky, FaTiktok, FaSnapchat } from "react-icons/fa6";
 
 interface ClipShareDialogProps {
   clipId: number;
@@ -48,13 +48,15 @@ interface ShareData {
 }
 
 const SOCIAL_PLATFORMS = [
-  { name: "X", icon: FaXTwitter, key: "twitter" },
-  { name: "Facebook", icon: FaFacebook, key: "facebook" },
-  { name: "WhatsApp", icon: FaWhatsapp, key: "whatsapp" },
-  { name: "Telegram", icon: FaTelegram, key: "telegram" },
-  { name: "Reddit", icon: FaReddit, key: "reddit" },
-  { name: "Bluesky", icon: FaBluesky, key: "bluesky" },
-  { name: "Email", icon: FaEnvelope, key: "email" },
+  { name: "X", icon: FaXTwitter, key: "twitter", copyOnly: false },
+  { name: "Facebook", icon: FaFacebook, key: "facebook", copyOnly: false },
+  { name: "WhatsApp", icon: FaWhatsapp, key: "whatsapp", copyOnly: false },
+  { name: "Telegram", icon: FaTelegram, key: "telegram", copyOnly: false },
+  { name: "Reddit", icon: FaReddit, key: "reddit", copyOnly: false },
+  { name: "Bluesky", icon: FaBluesky, key: "bluesky", copyOnly: false },
+  { name: "TikTok", icon: FaTiktok, key: "tiktok", copyOnly: true },
+  { name: "Snapchat", icon: FaSnapchat, key: "snapchat", copyOnly: true },
+  { name: "Email", icon: FaEnvelope, key: "email", copyOnly: false },
 ];
 
 function ClipThumbnail({ thumbnailUrl, videoUrl, imageUrl }: { thumbnailUrl?: string | null; videoUrl?: string | null; imageUrl?: string | null }) {
@@ -181,6 +183,29 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
           console.error('Native share failed:', error);
         }
       }
+    }
+  };
+
+  const handleCopyOnlyShare = async (platform: string) => {
+    if (!shareData?.clipUrl) return;
+    if (isNative) {
+      const handled = await nativeShare({
+        title: shareData.title || `Gamefolio ${label}`,
+        url: shareData.clipUrl,
+        dialogTitle: `Share to ${platform}`,
+      });
+      if (handled) { trackShare(); return; }
+    }
+    try {
+      await navigator.clipboard.writeText(shareData.clipUrl);
+      trackShare();
+      toast({
+        title: `Link copied for ${platform}!`,
+        description: `Paste it into ${platform} to share your ${label}.`,
+        duration: 3000,
+      });
+    } catch {
+      toast({ title: "Copy Failed", description: "Unable to copy link to clipboard.", variant: "destructive" });
     }
   };
 
@@ -322,26 +347,29 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
               {/* Social platforms */}
               <div className="flex flex-col gap-2">
                 <span className="text-[#64748b] text-xs font-medium uppercase tracking-wide">Share to</span>
-                <div className="grid grid-cols-7 gap-1">
+                <div className="grid grid-cols-9 gap-1">
                   {SOCIAL_PLATFORMS.map((platform) => {
                     const Icon = platform.icon;
                     const shareUrl = shareData.socialMediaLinks?.[platform.key];
                     const isSelected = selectedPlatform === platform.key;
+                    const handleClick = platform.copyOnly
+                      ? () => handleCopyOnlyShare(platform.name)
+                      : () => shareUrl && handleSocialShare(platform.name, shareUrl, platform.key);
                     return (
                       <button
                         key={platform.key}
-                        onClick={() => shareUrl && handleSocialShare(platform.name, shareUrl, platform.key)}
-                        disabled={!shareUrl}
+                        onClick={handleClick}
+                        disabled={!platform.copyOnly && !shareUrl}
                         className="flex flex-col items-center gap-1 py-2 rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                        title={platform.name}
+                        title={platform.copyOnly ? `${platform.name} (copies link)` : platform.name}
                         aria-label={`Share on ${platform.name}`}
                       >
-                        <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full border flex items-center justify-center transition-colors ${
+                        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border flex items-center justify-center transition-colors ${
                           isSelected
                             ? 'border-[#B7FF1A] bg-[#B7FF1A]/20'
                             : 'border-[#B7FF1A]/30 bg-[#1B2A33] hover:border-[#B7FF1A] hover:bg-[#B7FF1A]/10'
                         }`}>
-                          <Icon className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${isSelected ? 'text-[#B7FF1A]' : 'text-[#F5F7F2] hover:text-[#B7FF1A]'}`} />
+                          <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors ${isSelected ? 'text-[#B7FF1A]' : 'text-[#F5F7F2] hover:text-[#B7FF1A]'}`} />
                         </div>
                       </button>
                     );
