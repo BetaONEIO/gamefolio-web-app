@@ -6500,7 +6500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 6;
       const currentUserId = (req.user as any)?.id;
       const reels = await storage.getLatestReels(limit, currentUserId);
-      res.json(reels);
+      res.json(await signClipUrls(reels));
     } catch (err) {
       console.error("Error fetching latest reels:", err);
       res.status(500).json({ message: "Internal server error" });
