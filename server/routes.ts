@@ -1875,8 +1875,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/user/streamer-settings", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const { isStreamer, streamPlatform, liveEnabled, twitchShowOnProfile, kickShowOnProfile, youtubeShowOnProfile } = req.body;
-      const ALLOWED_PLATFORMS = ["twitch", "kick", "youtube"];
+      const { isStreamer, streamPlatform, liveEnabled, twitchShowOnProfile, kickShowOnProfile, youtubeShowOnProfile, vpzoneShowOnProfile } = req.body;
+      const ALLOWED_PLATFORMS = ["twitch", "kick", "youtube", "vpzone"];
       if (streamPlatform !== undefined && !ALLOWED_PLATFORMS.includes(streamPlatform)) {
         return res.status(400).json({ message: "Invalid streamPlatform value" });
       }
@@ -1887,6 +1887,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (twitchShowOnProfile !== undefined) update.twitchShowOnProfile = Boolean(twitchShowOnProfile);
       if (kickShowOnProfile !== undefined) update.kickShowOnProfile = Boolean(kickShowOnProfile);
       if (youtubeShowOnProfile !== undefined) update.youtubeShowOnProfile = Boolean(youtubeShowOnProfile);
+      if (vpzoneShowOnProfile !== undefined) update.vpzoneShowOnProfile = Boolean(vpzoneShowOnProfile);
       const updated = await storage.updateUser((req.user as any).id, update);
       res.json(updated);
     } catch (err) {

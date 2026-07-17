@@ -455,7 +455,7 @@ const ProfilePage = () => {
   });
 
   const isStreamer = !!(profile?.userType?.split(',').map(t => t.trim()).includes('streamer'));
-  const hasStreamSetup = !!(isStreamer && (profile?.twitchVerified || profile?.kickVerified || (profile as any)?.youtubeVerified));
+  const hasStreamSetup = !!(isStreamer && (profile?.twitchVerified || profile?.kickVerified || (profile as any)?.youtubeVerified || (profile as any)?.vpzoneVerified));
   const { data: profileLiveStatus } = useQuery<{
     isLive: boolean;
     twitchLive: boolean;
@@ -485,6 +485,9 @@ const ProfilePage = () => {
     if ((profile as any).twitchShowOnProfile !== false && profile.twitchVerified && profileLiveStatus.twitchLive) initial['twitch'] = true;
     if ((profile as any).kickShowOnProfile !== false && profile.kickVerified && profileLiveStatus.kickLive) initial['kick'] = true;
     if ((profile as any).youtubeShowOnProfile !== false && (profile as any).youtubeVerified && profileLiveStatus.youtubeLive) initial['youtube'] = true;
+    // VPZone has no server-pollable live-status API (only a client-side SDK
+    // event), so it can't participate in this live-status auto-expand - it
+    // always starts collapsed and the user expands it manually.
     if (Object.keys(initial).length > 0) {
       setExpandedStreams(prev => ({ ...prev, ...initial }));
     }
@@ -3111,7 +3114,7 @@ const ProfilePage = () => {
                   size="mobile-profile"
                   borderIntensity="strong"
                   showAvatarBorderOverlay={true}
-                  showLiveOverlay={!!(isStreamer && (profile?.twitchVerified || profile?.kickVerified))}
+                  showLiveOverlay={!!(isStreamer && (profile?.twitchVerified || profile?.kickVerified || (profile as any)?.vpzoneVerified))}
                   isLive={profileLiveStatus?.isLive ?? false}
                   themeColor={avatarThemeColor}
                   className="h-full w-full"
@@ -3669,7 +3672,7 @@ const ProfilePage = () => {
                   size="profile"
                   borderIntensity="strong"
                   showAvatarBorderOverlay={true}
-                  showLiveOverlay={!!(isStreamer && (profile?.twitchVerified || profile?.kickVerified))}
+                  showLiveOverlay={!!(isStreamer && (profile?.twitchVerified || profile?.kickVerified || (profile as any)?.vpzoneVerified))}
                   isLive={profileLiveStatus?.isLive ?? false}
                   themeColor={avatarThemeColor}
                 />
@@ -4189,8 +4192,9 @@ const ProfilePage = () => {
             || (profile as any)?.youtubeChannelId || null;
           const youtubeChannelName = profileLiveStatus?.youtubeChannelName
             || (profile as any)?.youtubeChannelName || null;
+          const vpzoneChannel = (profile as any)?.vpzoneChannelName || null;
 
-          type StreamPlatform = { platform: 'twitch' | 'kick' | 'youtube'; channel: string; displayName?: string; isLive: boolean };
+          type StreamPlatform = { platform: 'twitch' | 'kick' | 'youtube' | 'vpzone'; channel: string; displayName?: string; isLive: boolean };
           const platforms: StreamPlatform[] = [];
           if (((profile as any)?.twitchShowOnProfile ?? true) && twitchChannel) {
             platforms.push({ platform: 'twitch', channel: twitchChannel, isLive: !!(profileLiveStatus?.twitchLive) });
@@ -4201,14 +4205,19 @@ const ProfilePage = () => {
           if (((profile as any)?.youtubeShowOnProfile ?? true) && youtubeChannelId) {
             platforms.push({ platform: 'youtube', channel: youtubeChannelId, displayName: youtubeChannelName || youtubeChannelId, isLive: !!(profileLiveStatus?.youtubeLive) });
           }
+          if (((profile as any)?.vpzoneShowOnProfile ?? true) && vpzoneChannel) {
+            // No server-side live-status API for VPZone - isLive always false here.
+            platforms.push({ platform: 'vpzone', channel: vpzoneChannel, isLive: false });
+          }
           if (platforms.length === 0) return null;
 
-          const platformColor = (p: string) => p === 'kick' ? '#53FC18' : p === 'youtube' ? '#FF0000' : '#9146FF';
+          const platformColor = (p: string) => p === 'kick' ? '#53FC18' : p === 'youtube' ? '#FF0000' : p === 'vpzone' ? '#f9376b' : '#9146FF';
           const platformTextColor = (p: string) => p === 'kick' ? '#000000' : '#ffffff';
-          const platformLabel = (p: string) => p === 'kick' ? 'Kick' : p === 'youtube' ? 'YouTube' : 'Twitch';
+          const platformLabel = (p: string) => p === 'kick' ? 'Kick' : p === 'youtube' ? 'YouTube' : p === 'vpzone' ? 'VPZone' : 'Twitch';
           const PlatformIcon = ({ platform, className }: { platform: string; className?: string }) => {
             if (platform === 'kick') return <SiKick className={className} />;
             if (platform === 'youtube') return <SiYoutube className={className} />;
+            if (platform === 'vpzone') return <Video className={className} />;
             return <SiTwitch className={className} />;
           };
 
@@ -4250,17 +4259,22 @@ const ProfilePage = () => {
                   {platforms.filter(p => !!expandedStreams[p.platform]).map(({ platform, channel, displayName, isLive }) => {
                     const isYouTube = platform === 'youtube';
                     const isKick = platform === 'kick';
+                    const isVpzone = platform === 'vpzone';
                     const playerSrc = isYouTube
                       ? `https://www.youtube.com/embed/live_stream?channel=${channel}&autoplay=${isLive ? '1' : '0'}&mute=1`
                       : isKick
                         ? `https://player.kick.com/${channel}?autoplay=${isLive ? 'true' : 'false'}&muted=true`
-                        : `https://player.twitch.tv/?channel=${channel}&parent=${hostname}&autoplay=${isLive ? 'true' : 'false'}&muted=true`;
+                        : isVpzone
+                          ? `https://vpzone.tv/embed/video/${channel}?autoplay=0&muted=1`
+                          : `https://player.twitch.tv/?channel=${channel}&parent=${hostname}&autoplay=${isLive ? 'true' : 'false'}&muted=true`;
                     const color = platformColor(platform);
                     const headerBg = isYouTube
                       ? 'linear-gradient(90deg, #1a0000, #2a0000)'
                       : isKick
                         ? 'linear-gradient(90deg, #1a3a1a, #0f2a0f)'
-                        : 'linear-gradient(90deg, #1f1035, #0f0a1e)';
+                        : isVpzone
+                          ? 'linear-gradient(90deg, #2a0f1a, #1a0a12)'
+                          : 'linear-gradient(90deg, #1f1035, #0f0a1e)';
 
                     return (
                       <div key={platform} className="rounded-xl overflow-hidden border border-border bg-black shadow-lg">
@@ -4290,7 +4304,7 @@ const ProfilePage = () => {
                             src={playerSrc}
                             className="absolute inset-0 w-full h-full"
                             allowFullScreen
-                            allow="autoplay; fullscreen"
+                            allow="autoplay; fullscreen; picture-in-picture"
                             title={`${channel}'s stream`}
                             {...{ scrolling: 'yes' } as any}
                           />

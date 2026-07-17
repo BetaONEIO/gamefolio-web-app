@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useAuthModal } from "@/hooks/use-auth-modal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/content/ReportDialog";
 import { LazyImage } from "@/components/ui/lazy-image";
@@ -179,6 +180,7 @@ export function MobileTrendingViewer({ content: rawContent, initialIndex = 0, on
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { openModal } = useAuthModal();
+  const { toast } = useToast();
 
   // Declare currentItem here so it's available to hooks below
   const currentItem = content[currentIndex];
@@ -216,7 +218,9 @@ export function MobileTrendingViewer({ content: rawContent, initialIndex = 0, on
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/users/follow-status', currentAuthorUsername] });
     },
-    onError: () => {},
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update follow status", variant: "destructive" });
+    },
   });
 
   const handleFollowPress = (e: React.MouseEvent) => {

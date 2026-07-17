@@ -119,6 +119,9 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
       setLocalFollowing(true);
       queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/follow-status`] });
     },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update follow status", variant: "destructive" });
+    },
   });
 
   const caption = [clip.title, clip.description].filter(Boolean).join(' — ');

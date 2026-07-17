@@ -312,6 +312,9 @@ export const ScreenshotFeedCard: React.FC<{
       setLocalFollowing(true);
       queryClient.invalidateQueries({ queryKey: [`/api/users/${screenshot.user.username}/follow-status`] });
     },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update follow status", variant: "destructive" });
+    },
   });
 
   return (

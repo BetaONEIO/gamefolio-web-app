@@ -190,6 +190,171 @@ router.post('/auth/kick/disconnect', async (req: Request, res: Response) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// VPZONE  OAuth 2.0
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Required env vars:
+//   VPZONE_CLIENT_ID      – from vpzone.tv/developers
+//   VPZONE_CLIENT_SECRET  – from vpzone.tv/developers
+//
+// Redirect URI to register in your VPZONE app:
+//   https://<your-domain>/api/auth/vpzone/callback
+//
+// Confirmed against the real vpzone.tv/developers/oauth page + live probing
+// of the authorize endpoint with our actual registered client_id:
+//   - authorize: GET https://vpzone.tv/oauth/authorize (OAuth 2.1 + PKCE, required)
+//   - token:     POST https://vpzone.tv/api/oauth/token
+//   - all other calls: Authorization: Bearer vpz_at_... against /api/v1/*
+//   - scopes are resource:action pairs registered per-app in the dashboard
+//     (e.g. channel:read, channel:write, chat:read...), NOT OIDC scopes -
+//     "channel:read" confirmed to pass the authorize step's scope check.
+//
+// STILL UNVERIFIED: the exact /api/v1/* path for "get my own channel" (used
+// below as /api/v1/me) and its response field names - the docs page only
+// shows the generic /api/v1/* pattern, not a full endpoint reference. Check
+// server logs on the first real connect attempt and correct the path/field
+// mapping below if it 404s or the parsed channel name comes back empty.
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get('/auth/vpzone/connect', (req: Request, res: Response) => {
+  if (!(req.user as any)?.id) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+
+  const clientId = process.env.VPZONE_CLIENT_ID;
+  if (!clientId) {
+    return res.status(503).json({ message: 'VPZone OAuth is not configured.' });
+  }
+
+  const codeVerifier = generateCodeVerifier();
+  const codeChallenge = generateCodeChallenge(codeVerifier);
+  const state = crypto.randomBytes(16).toString('hex');
+
+  (req.session as any).vpzoneOAuthState = state;
+  (req.session as any).vpzoneOAuthVerifier = codeVerifier;
+  (req.session as any).vpzoneOAuthUserId = (req.user as any).id;
+
+  req.session.save(() => {
+    const callbackUrl = `${getBaseUrl(req)}/api/auth/vpzone/callback`;
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: clientId,
+      redirect_uri: callbackUrl,
+      scope: 'channel:read',
+      state,
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
+    });
+
+    res.redirect(`https://vpzone.tv/oauth/authorize?${params.toString()}`);
+  });
+});
+
+router.get('/auth/vpzone/callback', async (req: Request, res: Response) => {
+  const { code, state, error } = req.query;
+
+  const storedState = (req.session as any).vpzoneOAuthState;
+  const codeVerifier = (req.session as any).vpzoneOAuthVerifier;
+  const userId = (req.session as any).vpzoneOAuthUserId;
+
+  delete (req.session as any).vpzoneOAuthState;
+  delete (req.session as any).vpzoneOAuthVerifier;
+  delete (req.session as any).vpzoneOAuthUserId;
+
+  if (error) {
+    const errorStr = String(error).toLowerCase();
+    if (errorStr.includes('redirect') || errorStr.includes('redirect_uri')) {
+      return res.redirect('/settings/profile?tab=streamer&vpzone_error=redirect_uri_mismatch');
+    }
+    return res.redirect('/settings/profile?tab=streamer&vpzone_error=access_denied');
+  }
+
+  if (!code || !state || state !== storedState || !userId) {
+    return res.redirect('/settings/profile?tab=streamer&vpzone_error=invalid_state');
+  }
+
+  const clientId = process.env.VPZONE_CLIENT_ID;
+  const clientSecret = process.env.VPZONE_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    return res.redirect('/settings/profile?tab=streamer&vpzone_error=not_configured');
+  }
+
+  // ── Step 1: Exchange code for token ────────────────────────────────────────
+  let accessToken: string;
+  try {
+    const callbackUrl = `${getBaseUrl(req)}/api/auth/vpzone/callback`;
+    const tokenRes = await axios.post(
+      'https://vpzone.tv/api/oauth/token',
+      new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: callbackUrl,
+        code: code as string,
+        code_verifier: codeVerifier,
+      }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+    accessToken = tokenRes.data.access_token;
+  } catch (err: any) {
+    console.error('VPZone token exchange error:', err?.response?.status, err?.response?.data);
+    return res.redirect('/settings/profile?tab=streamer&vpzone_error=auth_failed');
+  }
+
+  // ── Step 2: Fetch user profile ──────────────────────────────────────────────
+  try {
+    const profileRes = await axios.get('https://vpzone.tv/api/v1/me', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    const raw = profileRes.data?.data ?? profileRes.data;
+    const vpzoneUser = Array.isArray(raw) ? raw[0] : raw;
+
+    if (!vpzoneUser) {
+      return res.redirect('/settings/profile?tab=streamer&vpzone_error=no_channel');
+    }
+
+    const vpzoneId = String(vpzoneUser.sub ?? vpzoneUser.id ?? vpzoneUser.user_id ?? '');
+    const channelName = vpzoneUser.preferred_username ?? vpzoneUser.username ?? vpzoneUser.slug ?? vpzoneUser.name ?? '';
+
+    if (!channelName) {
+      return res.redirect('/settings/profile?tab=streamer&vpzone_error=no_channel');
+    }
+
+    await db.update(users).set({
+      vpzoneChannelName: channelName,
+      vpzoneId,
+      vpzoneVerified: true,
+      vpzoneShowOnProfile: true,
+    }).where(eq(users.id, userId));
+
+    return res.redirect('/settings/profile?tab=streamer&vpzone_connected=true');
+  } catch (err: any) {
+    console.error('VPZone profile fetch error:', err?.response?.status, err?.response?.data);
+    return res.redirect('/settings/profile?tab=streamer&vpzone_error=auth_failed');
+  }
+});
+
+router.post('/auth/vpzone/disconnect', async (req: Request, res: Response) => {
+  if (!(req.user as any)?.id) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+  try {
+    await db.update(users).set({
+      vpzoneChannelName: null,
+      vpzoneId: null,
+      vpzoneVerified: false,
+    }).where(eq(users.id, (req.user as any).id));
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('VPZone disconnect error:', err);
+    res.status(500).json({ message: 'Failed to disconnect VPZone' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Twitch  OAuth 2.0  (Authorization Code flow)
 // ─────────────────────────────────────────────────────────────────────────────
 //
@@ -601,6 +766,7 @@ router.get('/auth/social-oauth/config', (_req: Request, res: Response) => {
     twitch: !!process.env.TWITCH_CLIENT_ID,
     rumble: !!process.env.RUMBLE_CLIENT_ID,
     youtube: !!process.env.GOOGLE_CLIENT_ID,
+    vpzone: !!process.env.VPZONE_CLIENT_ID,
   });
 });
 
