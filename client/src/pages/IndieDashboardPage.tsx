@@ -12,7 +12,7 @@ import {
   Crosshair, Settings, LayoutDashboard,
   AlertCircle, Star, Circle,
 } from "lucide-react";
-import CampaignLibraryTab from "./indie-dashboard/CampaignLibraryTab";
+import CreateCampaignFlow from "./indie-dashboard/CreateCampaignFlow";
 import MyCampaignsTab from "./indie-dashboard/MyCampaignsTab";
 import SubmissionReviewTab from "./indie-dashboard/SubmissionReviewTab";
 import KeyManagementTab from "./indie-dashboard/KeyManagementTab";
@@ -24,7 +24,7 @@ export { NEON, CARD_BG, CARD_BORDER, PAGE_BG } from "./indie-dashboard/constants
 import { NEON, PAGE_BG } from "./indie-dashboard/constants";
 
 type TopTabId = "overview" | "campaigns" | "community" | "keys" | "analytics" | "settings";
-type CampaignSubTab = "library" | "my";
+type CampaignSubTab = "create" | "my";
 type CommunitySubTab = "content" | "submissions";
 type SettingsSubTab = "profile" | "store";
 
@@ -720,7 +720,7 @@ export default function IndieDashboardPage() {
 
   const openRunWizard = (template?: any) => {
     if (template) setRunWizardTemplate(template);
-    else goTo("campaigns", "library");
+    else goTo("campaigns", "create");
   };
 
   return (
@@ -776,17 +776,20 @@ export default function IndieDashboardPage() {
           <>
             <SubNav
               items={[
-                { id: "my",      label: "My Campaigns" },
-                { id: "library", label: "Campaign Library" },
+                { id: "my",     label: "My Campaigns" },
+                { id: "create", label: "Create Campaign" },
               ]}
               active={campaignSub}
               onChange={v => setCampaignSub(v as CampaignSubTab)}
             />
             {campaignSub === "my" && (
-              <MyCampaignsTab onBrowseLibrary={() => setCampaignSub("library")} />
+              <MyCampaignsTab onCreateCampaign={() => setCampaignSub("create")} />
             )}
-            {campaignSub === "library" && (
-              <CampaignLibraryTab onRunCampaign={t => setRunWizardTemplate(t)} />
+            {campaignSub === "create" && (
+              <CreateCampaignFlow
+                onComplete={() => goTo("campaigns", "my")}
+                onGoToKeys={() => setTab("keys")}
+              />
             )}
           </>
         )}

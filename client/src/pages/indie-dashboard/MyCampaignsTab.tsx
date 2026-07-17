@@ -156,7 +156,7 @@ function CampaignCard({ campaign, onViewDetails }: { campaign: any; onViewDetail
   );
 }
 
-export default function MyCampaignsTab({ onBrowseLibrary }: { onBrowseLibrary: () => void }) {
+export default function MyCampaignsTab({ onCreateCampaign }: { onCreateCampaign: () => void }) {
   const { data: campaigns = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/campaigns/instances"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -178,12 +178,12 @@ export default function MyCampaignsTab({ onBrowseLibrary }: { onBrowseLibrary: (
         </div>
         <div>
           <div className="text-base font-black text-white mb-1">No campaigns yet</div>
-          <div className="text-sm text-white/40">Browse the Campaign Library and run your first Gamefolio Verified Campaign.</div>
+          <div className="text-sm text-white/40">Choose what you want to achieve and Gamefolio will automatically create the right creator bounties for your game.</div>
         </div>
-        <button onClick={onBrowseLibrary}
+        <button onClick={onCreateCampaign}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black"
           style={{ background: NEON, color: "#070b10" }}>
-          Browse Campaign Library
+          Create Your First Campaign
         </button>
       </div>
     );
