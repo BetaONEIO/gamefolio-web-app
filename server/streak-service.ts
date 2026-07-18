@@ -42,28 +42,19 @@ export function getNextMilestone(currentStreak: number): { day: number; bonus: n
 
 export { STREAK_MILESTONES };
 
+// A claim is too soon if less than this many hours have passed since the
+// last one — guards the reward regardless of which calendar day either
+// timestamp falls on in any particular timezone. Kept comfortably under 24h
+// so a user who logs in at a slightly earlier or later time each day isn't
+// penalized, while still blocking a same-day repeat claim.
+const MIN_HOURS_BETWEEN_CLAIMS = 20;
+// A claim beyond this many hours since the last one breaks the streak
+// instead of continuing it, giving a grace window past exactly 24h.
+const MAX_HOURS_FOR_STREAK_CONTINUATION = 48;
+
 export class StreakService {
-  private static getCalendarDate(date: Date): Date {
-    const normalized = new Date(date);
-    normalized.setHours(0, 0, 0, 0);
-    return normalized;
-  }
-
-  private static areConsecutiveDays(date1: Date, date2: Date): boolean {
-    const cal1 = this.getCalendarDate(date1);
-    const cal2 = this.getCalendarDate(date2);
-    const oneDay = 24 * 60 * 60 * 1000;
-    const diffMs = cal2.getTime() - cal1.getTime();
-    const diffDays = Math.round(diffMs / oneDay);
-    return diffDays === 1;
-  }
-
-  private static isSameDay(date1: Date, date2: Date): boolean {
-    return (
-      date1.getFullYear() === date2.getFullYear() &&
-      date1.getMonth() === date2.getMonth() &&
-      date1.getDate() === date2.getDate()
-    );
+  private static hoursBetween(earlier: Date, later: Date): number {
+    return (later.getTime() - earlier.getTime()) / (60 * 60 * 1000);
   }
 
   static async updateLoginStreak(userId: number): Promise<{
@@ -95,31 +86,35 @@ export class StreakService {
       if (isFirstLogin) {
         currentStreak = 1;
         message = `Welcome! Your login streak has started!`;
-      } else if (this.isSameDay(lastStreakUpdate, now)) {
-        return {
-          currentStreak,
-          bonusAwarded: 0,
-          dailyXP: 0,
-          isNewMilestone: false,
-          message: "Already logged in today",
-          isFirstLogin: false,
-        };
-      } else if (this.areConsecutiveDays(lastStreakUpdate, now)) {
-        currentStreak++;
-        dailyXP = DAILY_LOGIN_XP;
-
-        const milestoneBonus = getMilestoneBonus(currentStreak);
-        if (milestoneBonus > 0) {
-          bonusAwarded = milestoneBonus;
-          isNewMilestone = true;
-          message = `🎉 ${currentStreak} day streak milestone! +${DAILY_LOGIN_XP} daily XP + ${bonusAwarded} bonus XP!`;
-        } else {
-          message = `${currentStreak} day streak! +${DAILY_LOGIN_XP} XP. Keep going!`;
-        }
       } else {
-        currentStreak = 1;
-        dailyXP = DAILY_LOGIN_XP;
-        message = `Streak reset! Starting fresh at day 1. +${DAILY_LOGIN_XP} XP`;
+        const hoursSinceLastClaim = this.hoursBetween(lastStreakUpdate, now);
+
+        if (hoursSinceLastClaim < MIN_HOURS_BETWEEN_CLAIMS) {
+          return {
+            currentStreak,
+            bonusAwarded: 0,
+            dailyXP: 0,
+            isNewMilestone: false,
+            message: "Already logged in today",
+            isFirstLogin: false,
+          };
+        } else if (hoursSinceLastClaim <= MAX_HOURS_FOR_STREAK_CONTINUATION) {
+          currentStreak++;
+          dailyXP = DAILY_LOGIN_XP;
+
+          const milestoneBonus = getMilestoneBonus(currentStreak);
+          if (milestoneBonus > 0) {
+            bonusAwarded = milestoneBonus;
+            isNewMilestone = true;
+            message = `🎉 ${currentStreak} day streak milestone! +${DAILY_LOGIN_XP} daily XP + ${bonusAwarded} bonus XP!`;
+          } else {
+            message = `${currentStreak} day streak! +${DAILY_LOGIN_XP} XP. Keep going!`;
+          }
+        } else {
+          currentStreak = 1;
+          dailyXP = DAILY_LOGIN_XP;
+          message = `Streak reset! Starting fresh at day 1. +${DAILY_LOGIN_XP} XP`;
+        }
       }
 
       await LeaderboardService.awardPoints(
