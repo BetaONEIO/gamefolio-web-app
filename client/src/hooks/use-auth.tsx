@@ -16,6 +16,7 @@ import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { isNative } from "@/lib/platform";
 import { clearTokens, getAccessTokenSync, setTokens } from "@/lib/auth-token";
 import { initPushNotifications, unregisterCurrentPushToken } from "@/lib/push-notifications";
+import { setSentryUser } from "@/lib/sentry";
 
 type AuthContextType = {
   user: User | null;
@@ -340,6 +341,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
   }, [firebaseAuthChecked, isFetching, user, error]);
+
+  // Tag Sentry events with the resolved user so crashes/errors are
+  // attributable to a username, not just an anonymous device UUID.
+  useEffect(() => {
+    setSentryUser(user ? { id: String(user.id), username: user.username } : null);
+  }, [user]);
 
   // Once the user is authenticated, fire off the push-notification handshake
   // (request OS permission, fetch FCM token, POST to /api/push/register). Safe
