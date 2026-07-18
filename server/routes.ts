@@ -7750,7 +7750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Like a clip comment
-  app.post("/api/comments/:id/like", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/comments/:id/like", hybridEmailVerification, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -7772,7 +7772,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unlike a clip comment
-  app.delete("/api/comments/:id/like", emailVerificationMiddleware, async (req, res) => {
+  app.delete("/api/comments/:id/like", hybridEmailVerification, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -7804,7 +7804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Like a screenshot comment
-  app.post("/api/screenshot-comments/:id/like", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/screenshot-comments/:id/like", hybridEmailVerification, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -7826,7 +7826,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unlike a screenshot comment
-  app.delete("/api/screenshot-comments/:id/like", emailVerificationMiddleware, async (req, res) => {
+  app.delete("/api/screenshot-comments/:id/like", hybridEmailVerification, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -8013,7 +8013,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check if user has liked a screenshot
-  app.get("/api/screenshots/:id/likes/status", emailVerificationMiddleware, async (req, res) => {
+  app.get("/api/screenshots/:id/likes/status", hybridEmailVerification, async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
       if (isNaN(screenshotId)) {
@@ -12044,7 +12044,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add comment to a screenshot
-  app.post("/api/screenshots/:id/comments", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/screenshots/:id/comments", hybridEmailVerification, async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
 
@@ -12135,7 +12135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Like/unlike screenshot
-  app.post("/api/screenshots/:id/likes", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/screenshots/:id/likes", hybridEmailVerification, async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -12191,7 +12191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unlike screenshot (DELETE endpoint for backward compatibility)
-  app.delete("/api/screenshots/:id/likes", emailVerificationMiddleware, async (req, res) => {
+  app.delete("/api/screenshots/:id/likes", hybridEmailVerification, async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
       if (isNaN(screenshotId)) {
@@ -12247,7 +12247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add reaction to screenshot (fire reactions are permanent, limited daily, worth 5 points)
-  app.post("/api/screenshots/:id/reactions", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/screenshots/:id/reactions", hybridEmailVerification, async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
       const userId = req.user!.id;
