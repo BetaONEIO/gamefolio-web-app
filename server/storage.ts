@@ -133,6 +133,7 @@ export interface IStorage {
   incrementClipViews(id: number): Promise<void>;
   incrementScreenshotViews(id: number): Promise<void>;
   getClipsByUserId(userId: number): Promise<ClipWithUser[]>;
+  getClipsByUserIdPaginated(userId: number, opts: { limit: number; offset: number }): Promise<{ clips: ClipWithUser[]; total: number }>;
   getClipsByGameId(gameId: number, limit?: number): Promise<ClipWithUser[]>;
   getClipsWithDuration(duration: number): Promise<Clip[]>;
   getFeedClips(period?: string, limit?: number): Promise<ClipWithUser[]>;
