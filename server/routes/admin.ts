@@ -270,7 +270,8 @@ adminRouter.patch("/users/:id/streak", async (req: Request, res: Response) => {
         userId,
         currentStreak: parseInt(currentStreak),
         longestStreak: parseInt(longestStreak),
-        lastStreakUpdate: existingLastUpdate
+        lastStreakUpdate: existingLastUpdate,
+        expectedPreviousLastStreakUpdate: user.lastStreakUpdate ?? null
       });
     } else {
       // Fallback if updateUserStreak is not available

@@ -80,7 +80,10 @@ export interface IStorage {
   deleteUser(id: number): Promise<boolean>;
   getUserWithStats(id: number): Promise<UserWithStats | null>;
   getFeaturedUsers(limit?: number): Promise<User[]>;
-  updateUserStreak?(data: {userId: number, currentStreak: number, longestStreak: number, lastStreakUpdate: Date}): Promise<void>;
+  // Returns false if `expectedPreviousLastStreakUpdate` no longer matches the
+  // stored value (a concurrent request already claimed this update), so the
+  // caller can skip re-awarding points/notifications instead of racing.
+  updateUserStreak?(data: {userId: number, currentStreak: number, longestStreak: number, lastStreakUpdate: Date, expectedPreviousLastStreakUpdate: Date | null}): Promise<boolean>;
 
   // Admin operations
   getAllUsers(limit?: number, offset?: number, search?: string): Promise<UserWithBadges[]>;

@@ -116,7 +116,7 @@ import {
   pushBroadcasts
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, notInArray, isNotNull, getTableColumns } from "drizzle-orm";
+import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, notInArray, isNotNull, isNull, getTableColumns } from "drizzle-orm";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { IStorage } from "./storage";
@@ -350,9 +350,17 @@ export class DatabaseStorage implements IStorage {
     currentStreak: number;
     longestStreak: number;
     lastStreakUpdate: Date;
-  }): Promise<void> {
+    expectedPreviousLastStreakUpdate: Date | null;
+  }): Promise<boolean> {
     try {
-      await db
+      // Conditioned on the value we last read so two concurrent logins can't
+      // both pass the eligibility check and both award the reward — whichever
+      // commits first wins the row, the other gets 0 rows back and backs off.
+      const guard = data.expectedPreviousLastStreakUpdate
+        ? eq(users.lastStreakUpdate, data.expectedPreviousLastStreakUpdate)
+        : isNull(users.lastStreakUpdate);
+
+      const updated = await db
         .update(users)
         .set({
           currentStreak: data.currentStreak,
@@ -360,8 +368,15 @@ export class DatabaseStorage implements IStorage {
           lastStreakUpdate: data.lastStreakUpdate,
           updatedAt: new Date()
         })
-        .where(eq(users.id, data.userId));
+        .where(and(eq(users.id, data.userId), guard))
+        .returning({ id: users.id });
+
+      if (updated.length === 0) {
+        console.log(`⚠️  Streak update for user ${data.userId} lost a race — already claimed concurrently`);
+        return false;
+      }
       console.log(`✅ Updated streak for user ${data.userId}: ${data.currentStreak} days`);
+      return true;
     } catch (error) {
       console.error("Error updating user streak:", error);
       throw error;
