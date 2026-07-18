@@ -50,15 +50,32 @@ router.get('/me', requireOAuthScope('profile:read'), oauthRateLimiter, async (re
   }
 });
 
+const CLIPS_DEFAULT_PAGE_SIZE = 20;
+const CLIPS_MAX_PAGE_SIZE = 50;
+
 /**
  * GET /api/public/v1/clips — clips:read
  * Only the authorizing user's own clips — public catalog browsing doesn't need OAuth.
+ * Paginated (limit/pageSize + page) — an unpaginated fetch of a prolific
+ * streamer's full clip history is what was timing out integrations out at 20s.
  */
 router.get('/clips', requireOAuthScope('clips:read'), oauthRateLimiter, async (req: Request, res: Response) => {
   try {
-    const clips = await storage.getClipsByUserId(req.oauthContext!.userId);
+    const rawLimit = Number(req.query.limit ?? req.query.pageSize);
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0
+      ? Math.min(Math.floor(rawLimit), CLIPS_MAX_PAGE_SIZE)
+      : CLIPS_DEFAULT_PAGE_SIZE;
+
+    const rawPage = Number(req.query.page);
+    const page = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
+    const offset = (page - 1) * limit;
+
+    const { clips, total } = await storage.getClipsByUserIdPaginated(req.oauthContext!.userId, { limit, offset });
     const signedClips = await Promise.all(clips.map(signClipMediaUrls));
-    return res.json({ clips: signedClips });
+    return res.json({
+      clips: signedClips,
+      pagination: { page, pageSize: limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    });
   } catch (error) {
     console.error('[Public API v1] GET /clips error:', error);
     return res.status(500).json({ error: 'server_error' });
