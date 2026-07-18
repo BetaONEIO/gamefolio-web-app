@@ -117,6 +117,32 @@ export class StreakService {
         }
       }
 
+      if (currentStreak > longestStreak) {
+        longestStreak = currentStreak;
+      }
+
+      // Claim this update atomically before awarding anything — if a
+      // concurrent login (e.g. two auth providers firing at once) already
+      // claimed it first, back off instead of double-awarding.
+      const claimed = await storage.updateUserStreak?.({
+        userId,
+        currentStreak,
+        longestStreak,
+        lastStreakUpdate: now,
+        expectedPreviousLastStreakUpdate: lastStreakUpdate ?? null,
+      });
+
+      if (claimed === false) {
+        return {
+          currentStreak: user.currentStreak || 0,
+          bonusAwarded: 0,
+          dailyXP: 0,
+          isNewMilestone: false,
+          message: "Already logged in today",
+          isFirstLogin: false,
+        };
+      }
+
       await LeaderboardService.awardPoints(
         userId,
         'daily_login',
@@ -159,17 +185,6 @@ export class StreakService {
           console.error("Error creating streak notification:", notifError);
         }
       }
-
-      if (currentStreak > longestStreak) {
-        longestStreak = currentStreak;
-      }
-
-      await storage.updateUserStreak?.({
-        userId,
-        currentStreak,
-        longestStreak,
-        lastStreakUpdate: now
-      });
 
       return {
         currentStreak,
