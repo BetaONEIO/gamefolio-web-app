@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import { eq } from 'drizzle-orm';
+import { initServerSentry } from './sentry';
+import * as Sentry from '@sentry/node';
 import { db } from './db';
 import { users } from '../shared/schema';
 import { scrypt, randomBytes } from 'crypto';
@@ -105,6 +107,8 @@ import { dirname } from 'path';
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+initServerSentry();
 
 const app = express();
 
@@ -379,6 +383,7 @@ app.use((req, res, next) => {
       const message = err.message || "Internal Server Error";
 
       console.error("Server error:", err);
+      Sentry.captureException(err);
       res.status(status).json({ message });
     });
 

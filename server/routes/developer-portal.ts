@@ -6,6 +6,7 @@ import { hybridAuth } from '../middleware/hybrid-auth';
 import { createRateLimiter } from '../middleware/rate-limit';
 import { generateOpaqueToken, hashClientSecret, revokeAllTokensForClient } from '../services/oauth-service';
 import { z } from 'zod';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 
@@ -71,6 +72,7 @@ router.post('/apps', hybridAuth, createAppRateLimiter, async (req: Request, res:
       clientSecret: rawSecret, // returned once — never retrievable again
     });
   } catch (error) {
+    captureRouteError(error);
     console.error('[Developer Portal] create app error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -82,6 +84,7 @@ router.get('/apps', hybridAuth, async (req: Request, res: Response) => {
     const apps = await db.select().from(oauthClients).where(eq(oauthClients.ownerUserId, ownerUserId));
     return res.json(apps.map(toPublicClient));
   } catch (error) {
+    captureRouteError(error);
     console.error('[Developer Portal] list apps error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -95,6 +98,7 @@ router.get('/apps/:id', hybridAuth, async (req: Request, res: Response) => {
     if (!client) return res.status(404).json({ error: 'not_found' });
     return res.json(toPublicClient(client));
   } catch (error) {
+    captureRouteError(error);
     console.error('[Developer Portal] get app error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -129,6 +133,7 @@ router.patch('/apps/:id', hybridAuth, async (req: Request, res: Response) => {
 
     return res.json(toPublicClient(updated));
   } catch (error) {
+    captureRouteError(error);
     console.error('[Developer Portal] update app error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -152,6 +157,7 @@ router.post('/apps/:id/regenerate-secret', hybridAuth, async (req: Request, res:
 
     return res.json({ clientSecret: rawSecret });
   } catch (error) {
+    captureRouteError(error);
     console.error('[Developer Portal] regenerate secret error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -175,6 +181,7 @@ router.patch('/apps/:id/deactivate', hybridAuth, async (req: Request, res: Respo
 
     return res.json(toPublicClient(updated));
   } catch (error) {
+    captureRouteError(error);
     console.error('[Developer Portal] deactivate app error:', error);
     return res.status(500).json({ error: 'server_error' });
   }

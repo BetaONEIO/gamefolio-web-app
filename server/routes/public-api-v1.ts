@@ -7,6 +7,7 @@ import { requireOAuthScope } from '../middleware/oauth-auth';
 import { oauthRateLimiter } from '../oauth-rate-limiter';
 import { upload } from './upload';
 import { processAndCreateClip, ClipProcessingError } from '../services/clip-processing';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 
@@ -45,6 +46,7 @@ router.get('/me', requireOAuthScope('profile:read'), oauthRateLimiter, async (re
       bio: user.bio,
     });
   } catch (error) {
+    captureRouteError(error);
     console.error('[Public API v1] GET /me error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -77,6 +79,7 @@ router.get('/clips', requireOAuthScope('clips:read'), oauthRateLimiter, async (r
       pagination: { page, pageSize: limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
     });
   } catch (error) {
+    captureRouteError(error);
     console.error('[Public API v1] GET /clips error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -90,6 +93,7 @@ router.get('/clips/:id', requireOAuthScope('clips:read'), oauthRateLimiter, asyn
     }
     return res.json({ clip: await signClipMediaUrls(clip) });
   } catch (error) {
+    captureRouteError(error);
     console.error('[Public API v1] GET /clips/:id error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -180,6 +184,7 @@ router.post('/clips', requireOAuthScope('clips:write'), oauthRateLimiter, upload
       clip: await signClipMediaUrls(responseData.clip),
     });
   } catch (error) {
+    captureRouteError(error);
     if (req.file?.path) fs.unlink(req.file.path, () => {});
     if (error instanceof ClipProcessingError) {
       return res.status(error.status).json(error.body);

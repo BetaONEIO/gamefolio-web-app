@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { contentFilterService } from '../services/content-filter';
 import { insertBannedWordSchema, insertContentFilterSettingsSchema } from '@shared/schema';
 import { z } from 'zod';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.get('/banned-words', requireAdmin, async (req, res) => {
     const bannedWords = await contentFilterService.getAllBannedWords();
     res.json(bannedWords);
   } catch (error) {
+    captureRouteError(error);
     console.error('Error fetching banned words:', error);
     res.status(500).json({ error: 'Failed to fetch banned words' });
   }
@@ -42,6 +44,7 @@ router.post('/banned-words', requireAdmin, async (req, res) => {
     
     res.status(201).json(bannedWord);
   } catch (error) {
+    captureRouteError(error);
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Invalid input', details: error.errors });
     }
@@ -62,6 +65,7 @@ router.delete('/banned-words/:word', requireAdmin, async (req, res) => {
       res.status(404).json({ error: 'Banned word not found' });
     }
   } catch (error) {
+    captureRouteError(error);
     console.error('Error removing banned word:', error);
     res.status(500).json({ error: 'Failed to remove banned word' });
   }
@@ -79,6 +83,7 @@ router.patch('/banned-words/:word/deactivate', requireAdmin, async (req, res) =>
       res.status(404).json({ error: 'Banned word not found' });
     }
   } catch (error) {
+    captureRouteError(error);
     console.error('Error deactivating banned word:', error);
     res.status(500).json({ error: 'Failed to deactivate banned word' });
   }
@@ -96,6 +101,7 @@ router.patch('/banned-words/:word/reactivate', requireAdmin, async (req, res) =>
       res.status(404).json({ error: 'Banned word not found' });
     }
   } catch (error) {
+    captureRouteError(error);
     console.error('Error reactivating banned word:', error);
     res.status(500).json({ error: 'Failed to reactivate banned word' });
   }
@@ -110,6 +116,7 @@ router.get('/filter-settings', requireAdmin, async (req, res) => {
     );
     res.json(settings);
   } catch (error) {
+    captureRouteError(error);
     console.error('Error fetching filter settings:', error);
     res.status(500).json({ error: 'Failed to fetch filter settings' });
   }
@@ -140,6 +147,7 @@ router.patch('/filter-settings/:fieldName', requireAdmin, async (req, res) => {
       res.status(404).json({ error: 'Filter settings not found' });
     }
   } catch (error) {
+    captureRouteError(error);
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Invalid input', details: error.errors });
     }
@@ -169,6 +177,7 @@ router.post('/filter-settings', requireAdmin, async (req, res) => {
     
     res.status(201).json(created);
   } catch (error) {
+    captureRouteError(error);
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Invalid input', details: error.errors });
     }
@@ -190,6 +199,7 @@ router.post('/test-filter', requireAdmin, async (req, res) => {
     const result = await contentFilterService.validateContent(content, fieldName);
     res.json(result);
   } catch (error) {
+    captureRouteError(error);
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Invalid input', details: error.errors });
     }
@@ -218,6 +228,7 @@ router.get('/statistics', requireAdmin, async (req, res) => {
     
     res.json(stats);
   } catch (error) {
+    captureRouteError(error);
     console.error('Error fetching content filter statistics:', error);
     res.status(500).json({ error: 'Failed to fetch statistics' });
   }
@@ -242,6 +253,7 @@ router.post('/validate', requireAdmin, async (req, res) => {
       originalContent: content
     });
   } catch (error) {
+    captureRouteError(error);
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Invalid input', details: error.errors });
     }

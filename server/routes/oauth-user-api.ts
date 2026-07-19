@@ -4,6 +4,7 @@ import { oauthClients, oauthAccessTokens, oauthRefreshTokens } from '@shared/sch
 import { eq, and, isNull, inArray } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
 import { isValidUuid } from '../services/oauth-service';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 
@@ -30,6 +31,7 @@ router.get('/client-info', async (req: Request, res: Response) => {
       logoUrl: client.logoUrl,
     });
   } catch (error) {
+    captureRouteError(error);
     console.error('[OAuth] client-info error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -80,6 +82,7 @@ router.get('/my-authorizations', hybridAuth, async (req: Request, res: Response)
 
     return res.json({ authorizations });
   } catch (error) {
+    captureRouteError(error);
     console.error('[OAuth] my-authorizations error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -102,6 +105,7 @@ router.delete('/my-authorizations/:clientId', hybridAuth, async (req: Request, r
 
     return res.json({ success: true });
   } catch (error) {
+    captureRouteError(error);
     console.error('[OAuth] revoke my-authorization error:', error);
     return res.status(500).json({ error: 'server_error' });
   }

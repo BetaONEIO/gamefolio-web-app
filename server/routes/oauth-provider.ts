@@ -14,6 +14,7 @@ import {
   revokeAllTokensForClient,
   isValidUuid,
 } from '../services/oauth-service';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 
@@ -142,6 +143,7 @@ router.post('/oauth/authorize/decision', authorizeRateLimiter, hybridAuth, async
     const redirectUrl = `${redirectUri}?code=${encodeURIComponent(rawCode)}&state=${encodeURIComponent(stateParam)}`;
     return res.json({ redirectUrl });
   } catch (error) {
+    captureRouteError(error);
     console.error('[OAuth] authorize/decision error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -278,6 +280,7 @@ router.post('/oauth/token', tokenRateLimiter, async (req: Request, res: Response
 
     return res.status(400).json({ error: 'unsupported_grant_type' });
   } catch (error) {
+    captureRouteError(error);
     console.error('[OAuth] token error:', error);
     return res.status(500).json({ error: 'server_error' });
   }

@@ -4,6 +4,7 @@ import { oauthClients, oauthAccessTokens, users } from '@shared/schema';
 import { eq, and, isNull, gt, sql } from 'drizzle-orm';
 import { adminMiddleware } from '../middleware/admin';
 import { revokeAllTokensForClient } from '../services/oauth-service';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 router.use(adminMiddleware);
@@ -56,6 +57,7 @@ router.get('/clients', async (req: Request, res: Response) => {
 
     return res.json({ clients: result });
   } catch (error) {
+    captureRouteError(error);
     console.error('[Admin OAuth] list clients error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -105,6 +107,7 @@ router.get('/clients/:id', async (req: Request, res: Response) => {
 
     return res.json({ client, authorizedUsers: activeTokens });
   } catch (error) {
+    captureRouteError(error);
     console.error('[Admin OAuth] get client detail error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -130,6 +133,7 @@ router.patch('/clients/:id/deactivate', async (req: Request, res: Response) => {
 
     return res.json({ success: true });
   } catch (error) {
+    captureRouteError(error);
     console.error('[Admin OAuth] deactivate client error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -150,6 +154,7 @@ router.patch('/clients/:id/reactivate', async (req: Request, res: Response) => {
 
     return res.json({ success: true });
   } catch (error) {
+    captureRouteError(error);
     console.error('[Admin OAuth] reactivate client error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -167,6 +172,7 @@ router.post('/clients/:id/revoke-all', async (req: Request, res: Response) => {
     await revokeAllTokensForClient(id);
     return res.json({ success: true });
   } catch (error) {
+    captureRouteError(error);
     console.error('[Admin OAuth] revoke-all error:', error);
     return res.status(500).json({ error: 'server_error' });
   }

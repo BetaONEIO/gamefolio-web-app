@@ -17,6 +17,7 @@ import { LeaderboardService, POINT_VALUES } from '../leaderboard-service';
 import { BonusEventsService } from '../bonus-events-service';
 import { CreatorMilestoneService } from '../creator-milestone-service';
 import { processAndCreateClip, ClipProcessingError } from '../services/clip-processing';
+import { captureRouteError } from "../sentry";
 
 const router = express.Router();
 
@@ -299,6 +300,7 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('❌ Direct video upload error:', error);
 
     // Clean up temp file on error
@@ -328,6 +330,7 @@ router.post('/upload/supabase-creds', hybridFullAccess, async (req, res) => {
     
     res.json({ uploadUrl, publicUrl });
   } catch (error) {
+    captureRouteError(error);
     console.error('Error generating Supabase upload credentials:', error);
     res.status(500).json({ error: 'Failed to generate upload credentials' });
   }
@@ -576,6 +579,7 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
     res.json(responseData);
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Screenshot upload error:', error);
 
     // Clean up temp file on error
@@ -606,6 +610,7 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
     console.log(`🎯 XP Debug - Response data: xpGained=${responseData.xpGained}, userXP=${responseData.userXP}, userLevel=${responseData.userLevel}`);
     res.json(responseData);
   } catch (error) {
+    captureRouteError(error);
     if (error instanceof ClipProcessingError) {
       return res.status(error.status).json(error.body);
     }
@@ -676,6 +681,7 @@ router.post('/fix-durations', fullAccessMiddleware, async (req, res) => {
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Duration fix error:', error);
     res.status(500).json({ 
       error: error instanceof Error ? error.message : 'Duration fix failed' 
@@ -715,6 +721,7 @@ router.get('/limits', hybridFullAccess, async (req, res) => {
     const limits = await storage.getUploadLimits(userId);
     res.json(limits);
   } catch (error) {
+    captureRouteError(error);
     console.error('Error fetching upload limits:', error);
     res.status(500).json({ error: 'Failed to fetch upload limits' });
   }
@@ -786,6 +793,7 @@ router.post('/avatar', fullAccessMiddleware, avatarUpload.single('avatar'), asyn
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Avatar upload error:', error);
 
     // Clean up temp file on error

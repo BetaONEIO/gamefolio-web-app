@@ -7,6 +7,7 @@ import { getUncachableStripeClient, getStripePublishableKey } from '../stripeCli
 import { hybridAuth } from '../middleware/hybrid-auth';
 import { getTreasuryBalance, getTreasuryAddress, transferGfTokens } from '../gf-token-service';
 import { detectLocalCurrency, getGbpRates } from '../services/currency-service';
+import { captureRouteError } from "../sentry";
 
 const SKALE_NEBULA_TESTNET_CHAIN_ID = 1187947933;
 
@@ -124,6 +125,7 @@ router.post('/api/gf/checkout', hybridAuth, async (req: Request, res: Response) 
       checkoutUrl: session.url,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('GF Checkout error:', error);
     return res.status(500).json({ 
       error: 'Failed to create checkout session',
@@ -153,6 +155,7 @@ router.get('/api/me/wallet', hybridAuth, async (req: Request, res: Response) => 
       chainId: user.walletAddress ? SKALE_NEBULA_TESTNET_CHAIN_ID : null,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Get wallet error:', error);
     return res.status(500).json({ error: 'Failed to get wallet info' });
   }
@@ -180,6 +183,7 @@ router.get('/api/gf/orders', hybridAuth, async (req: Request, res: Response) => 
 
     return res.json(orders);
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Get orders error:', error);
     return res.status(500).json({ error: 'Failed to get orders' });
   }
@@ -211,6 +215,7 @@ router.get('/api/gf/orders/:id', hybridAuth, async (req: Request, res: Response)
 
     return res.json(order);
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Get order error:', error);
     return res.status(500).json({ error: 'Failed to get order' });
   }
@@ -221,6 +226,7 @@ router.get('/api/stripe/config', async (_req: Request, res: Response) => {
     const publishableKey = await getStripePublishableKey();
     return res.json({ publishableKey });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Failed to get Stripe config:', error);
     return res.status(500).json({ error: 'Failed to load payment configuration' });
   }
@@ -288,6 +294,7 @@ router.post('/api/gf/create-payment-intent', hybridAuth, async (req: Request, re
       orderId: order.id,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Create PaymentIntent error:', error);
     return res.status(500).json({ 
       error: 'Failed to create payment',
@@ -365,6 +372,7 @@ router.post('/api/gf/recover-orders', hybridAuth, async (req: Request, res: Resp
 
     return res.json({ recovered, totalCredited, message: `Recovered ${recovered} orders, credited ${totalCredited} GFT` });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Recover orders error:', error);
     return res.status(500).json({ error: 'Failed to recover orders' });
   }
@@ -449,6 +457,7 @@ router.post('/api/gf/confirm-payment', hybridAuth, async (req: Request, res: Res
       txHash,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Confirm payment error:', error);
     return res.status(500).json({ error: 'Failed to confirm payment', message: error.message });
   }
@@ -499,6 +508,7 @@ router.get('/api/wallet/activity', hybridAuth, async (req: Request, res: Respons
 
     return res.json({ activities });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Wallet activity error:', error);
     return res.status(500).json({ error: 'Failed to fetch activity' });
   }
@@ -569,6 +579,7 @@ router.get('/api/token/on-chain-balance', hybridAuth, async (req: Request, res: 
       explorerUrl: `${explorerBaseUrl}/address/${user.walletAddress}`,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Explorer balance error, falling back to RPC:', error.message);
 
     try {
@@ -605,6 +616,7 @@ router.get('/api/token/on-chain-balance', hybridAuth, async (req: Request, res: 
         explorerUrl: `https://base.explorer.mainnet.skalenodes.com/address/${user.walletAddress}`,
       });
     } catch (fallbackError: any) {
+      captureRouteError(fallbackError);
       console.error('RPC fallback also failed:', fallbackError.message);
       return res.status(500).json({ error: 'Failed to fetch on-chain balance' });
     }
@@ -621,6 +633,7 @@ router.get('/api/treasury/info', hybridAuth, async (req: Request, res: Response)
       balance: treasuryBalance,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Treasury info error:', error);
     return res.status(500).json({ error: 'Failed to fetch treasury info' });
   }

@@ -2,6 +2,7 @@ import express from 'express';
 import { storage } from '../storage';
 import { twitchApi } from '../services/twitch-api';
 import { InsertGame } from '@shared/schema';
+import { captureRouteError } from "../sentry";
 
 const router = express.Router();
 
@@ -12,6 +13,7 @@ router.get('/twitch/streams/top', async (req: express.Request, res: express.Resp
     const streams = await twitchApi.getTopStreams(limit);
     res.json(streams);
   } catch (error) {
+    captureRouteError(error);
     console.error('Error fetching top streams from Twitch:', error);
     if (error instanceof Error && error.message.includes('credentials not configured')) {
       res.status(503).json({
@@ -32,6 +34,7 @@ router.get('/twitch/games/top', async (req: express.Request, res: express.Respon
 
     res.json(games);
   } catch (error) {
+    captureRouteError(error);
     console.error('Error fetching top games from Twitch:', error);
 
     // Return a user-friendly error with fallback suggestion
@@ -58,6 +61,7 @@ router.get('/twitch/games/search', async (req: express.Request, res: express.Res
     const games = await twitchApi.searchGames(query);
     res.json(games);
   } catch (error) {
+    captureRouteError(error);
     console.error('Error searching games on Twitch:', error);
 
     // Return a user-friendly error with fallback suggestion
@@ -84,6 +88,7 @@ router.get('/twitch/games/:id', async (req: express.Request, res: express.Respon
 
     res.json(game);
   } catch (error) {
+    captureRouteError(error);
     console.error('Error fetching game from Twitch:', error);
 
     // Return a user-friendly error with fallback suggestion
@@ -129,6 +134,7 @@ router.post('/twitch/games/add', async (req: express.Request, res: express.Respo
     const createdGame = await storage.createGame(newGame);
     res.status(201).json(createdGame);
   } catch (error) {
+    captureRouteError(error);
     console.error('Error adding Twitch game to database:', error);
 
     // Return a user-friendly error with fallback suggestion
@@ -169,6 +175,7 @@ router.post('/games/custom', async (req: express.Request, res: express.Response)
     const createdGame = await storage.createGame(newGame);
     res.status(201).json(createdGame);
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Error creating custom game:', error);
     if (error.code === '23505') {
       const existingGame = await storage.getGameByName(req.body.name?.trim());
@@ -326,6 +333,7 @@ router.get('/games/slug/:slug', async (req: express.Request, res: express.Respon
 
     res.json(game);
   } catch (error) {
+    captureRouteError(error);
     console.error('Error fetching game by slug:', error);
     res.status(500).json({ message: 'Failed to fetch game by slug' });
   }
