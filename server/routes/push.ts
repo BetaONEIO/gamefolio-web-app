@@ -16,6 +16,7 @@ import {
   sendPushToUsers,
   sendPushToUser,
 } from "../push-service";
+import { captureRouteError } from "../sentry";
 
 const pushRouter = Router();
 
@@ -56,6 +57,7 @@ pushRouter.post("/register", async (req: Request, res: Response) => {
     console.log(`[push] token registered OK — userId=${userId} platform=${parsed.data.platform}`);
     return res.json({ ok: true, pushEnabled: isPushEnabled() });
   } catch (err) {
+    captureRouteError(err);
     console.error("[push] register failed:", err);
     return res.status(500).json({ message: "Failed to register push token" });
   }
@@ -76,6 +78,7 @@ pushRouter.post("/unregister", async (req: Request, res: Response) => {
     await storage.deletePushToken(parsed.data.token);
     return res.json({ ok: true });
   } catch (err) {
+    captureRouteError(err);
     console.error("[push] unregister failed:", err);
     return res.status(500).json({ message: "Failed to unregister push token" });
   }
@@ -168,6 +171,7 @@ adminPushRouter.post("/broadcast", async (req: Request, res: Response) => {
   try {
     result = await dispatch(audience, { title, body, actionUrl: actionUrl ?? null });
   } catch (err) {
+    captureRouteError(err);
     console.error("[push] broadcast failed:", err);
     return res.status(500).json({ message: "Broadcast failed", error: (err as Error).message });
   }

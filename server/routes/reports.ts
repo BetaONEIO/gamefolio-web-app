@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth';
 import { storage } from '../storage';
 import { EmailService } from '../email-service';
 import { nanoid } from 'nanoid';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 
@@ -136,6 +137,7 @@ async function processContentReport(
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error(`Error processing ${contentType} report:`, error);
     res.status(500).json({ 
       error: `Failed to submit ${contentType} report` 
@@ -154,6 +156,7 @@ router.post('/clips/:id/report', requireAuth, async (req: Request, res: Response
     const reportData = reportSchema.parse(req.body);
     await processContentReport('clip', clipId, reportData, req.user!.id, res);
   } catch (error) {
+    captureRouteError(error);
     if (error instanceof z.ZodError) {
       return res.status(400).json({ 
         error: 'Invalid request data', 
@@ -176,6 +179,7 @@ router.post('/screenshots/:id/report', requireAuth, async (req: Request, res: Re
     const reportData = reportSchema.parse(req.body);
     await processContentReport('screenshot', screenshotId, reportData, req.user!.id, res);
   } catch (error) {
+    captureRouteError(error);
     if (error instanceof z.ZodError) {
       return res.status(400).json({ 
         error: 'Invalid request data', 
@@ -198,6 +202,7 @@ router.post('/comments/:id/report', requireAuth, async (req: Request, res: Respo
     const reportData = reportSchema.parse(req.body);
     await processContentReport('comment', commentId, reportData, req.user!.id, res);
   } catch (error) {
+    captureRouteError(error);
     if (error instanceof z.ZodError) {
       return res.status(400).json({ 
         error: 'Invalid request data', 

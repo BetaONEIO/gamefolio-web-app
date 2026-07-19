@@ -1,4 +1,5 @@
 import { Express } from "express";
+import { captureRouteError } from "./sentry";
 
 // Quick fix for blocked users route
 export function addBlockedUsersRoute(app: Express, authMiddleware: any) {
@@ -98,11 +99,13 @@ export function addBlockedUsersRoute(app: Express, authMiddleware: any) {
           console.log(`✅ OVERRIDE: Transformed blocked users for user ${userId}:`, transformedUsers);
           return res.json(transformedUsers);
         } catch (dbError: any) {
+          captureRouteError(dbError);
           console.error(`❌ Error fetching from database for user ${userId}:`, dbError);
           return res.status(500).json({ message: "Error fetching blocked users", error: dbError?.message || "Unknown error" });
         }
       }
     } catch (err) {
+      captureRouteError(err);
       console.error("💥 Error in blocked users route override:", err);
       return res.status(500).json({ message: "Error fetching blocked users" });
     }
@@ -142,6 +145,7 @@ export function addBlockedUsersRoute(app: Express, authMiddleware: any) {
         }
       });
     } catch (err: any) {
+      captureRouteError(err);
       console.error("💥 Error in unblock user route:", err);
       res.status(500).json({ message: "Error unblocking user", error: err?.message || "Unknown error" });
     }

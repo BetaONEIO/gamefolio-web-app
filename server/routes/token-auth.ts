@@ -9,6 +9,7 @@ import { verifyAppleIdentityToken } from '../services/apple-auth';
 import { isDeveloperSubdomainRequest } from '../middleware/subdomain-check';
 import { scrypt, timingSafeEqual, randomBytes } from 'crypto';
 import { promisify } from 'util';
+import { captureRouteError } from "../sentry";
 
 const scryptAsync = promisify(scrypt);
 const router = Router();
@@ -191,6 +192,7 @@ router.post('/auth/token/login', async (req: Request, res: Response) => {
 
     return res.json(response);
   } catch (error) {
+    captureRouteError(error);
     console.error('Token login error:', error);
     return res.status(500).json({ message: 'Login failed' });
   }
@@ -247,6 +249,7 @@ router.post('/auth/token/refresh', async (req: Request, res: Response) => {
       user: userWithoutPassword,
     });
   } catch (error) {
+    captureRouteError(error);
     console.error('Token refresh error:', error);
     if (error instanceof Error) {
       if (error.message.includes('expired')) {
@@ -438,6 +441,7 @@ router.post('/auth/mobile/google', async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
+    captureRouteError(error);
     console.error('Mobile Google auth error:', error);
     return res.status(500).json({ success: false, message: 'Google authentication failed' });
   }
@@ -617,6 +621,7 @@ router.post('/auth/mobile/apple', async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
+    captureRouteError(error);
     console.error('Mobile Apple auth error:', error);
     return res.status(500).json({
       success: false,
@@ -1135,6 +1140,7 @@ router.post('/auth/mobile/exchange', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Mobile auth code exchange error:', error);
     return res.status(500).json({
       success: false,
@@ -1196,6 +1202,7 @@ router.post('/auth/mobile/xbox/connect', hybridAuth, async (req: Request, res: R
       user: updated,
     });
   } catch (error) {
+    captureRouteError(error);
     console.error('Mobile Xbox connect error:', error);
     return res.status(500).json({ success: false, message: 'Failed to link Xbox account' });
   }

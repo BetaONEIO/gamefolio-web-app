@@ -4,6 +4,7 @@ import { users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 import axios from 'axios';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 
@@ -184,6 +185,7 @@ router.post('/auth/kick/disconnect', async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (err) {
+    captureRouteError(err);
     console.error('Kick disconnect error:', err);
     res.status(500).json({ message: 'Failed to disconnect Kick' });
   }
@@ -350,6 +352,7 @@ router.post('/auth/vpzone/disconnect', async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (err) {
+    captureRouteError(err);
     console.error('VPZone disconnect error:', err);
     res.status(500).json({ message: 'Failed to disconnect VPZone' });
   }
@@ -486,6 +489,7 @@ router.post('/auth/twitch-stream/disconnect', async (req: Request, res: Response
 
     res.json({ success: true });
   } catch (err) {
+    captureRouteError(err);
     console.error('Twitch disconnect error:', err);
     res.status(500).json({ message: 'Failed to disconnect Twitch' });
   }
@@ -620,6 +624,7 @@ router.post('/auth/rumble/disconnect', async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (err) {
+    captureRouteError(err);
     console.error('Rumble disconnect error:', err);
     res.status(500).json({ message: 'Failed to disconnect Rumble' });
   }
@@ -752,6 +757,7 @@ router.post('/auth/youtube/disconnect', async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (err) {
+    captureRouteError(err);
     console.error('YouTube disconnect error:', err);
     res.status(500).json({ message: 'Failed to disconnect YouTube' });
   }

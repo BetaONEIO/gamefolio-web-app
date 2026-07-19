@@ -6,6 +6,7 @@ import { hybridAuth } from '../middleware/hybrid-auth';
 import { EmailService } from '../email-service';
 import { storage } from '../storage';
 import { notifyProPurchase } from '../telegram-notify';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 
@@ -138,6 +139,7 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
 
     return res.json({ success: true, isPro: true, plan, endDate, lootboxReward });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('[RevenueCat] activate error:', error);
     return res.status(500).json({ error: 'Failed to activate Pro', message: error.message });
   }

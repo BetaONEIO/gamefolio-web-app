@@ -1,6 +1,7 @@
 
 import express from 'express';
 import { runMigration } from '../migrate-to-supabase';
+import { captureRouteError } from "../sentry";
 
 const router = express.Router();
 
@@ -28,6 +29,7 @@ router.post('/migrate-to-supabase', requireAdmin, async (req, res) => {
     });
     
   } catch (error) {
+    captureRouteError(error);
     console.error('❌ Migration failed:', error);
     res.status(500).json({
       error: 'Migration failed',
@@ -79,6 +81,7 @@ router.get('/migration-status', requireAdmin, async (req, res) => {
     });
     
   } catch (error) {
+    captureRouteError(error);
     console.error('Error checking migration status:', error);
     res.status(500).json({
       error: 'Failed to check migration status'
