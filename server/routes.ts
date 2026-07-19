@@ -2592,6 +2592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           emailVerified: u.emailVerified || false,
           profilePictureUrl: u.profilePictureUrl,
           bio: u.bio,
+          clanTag: u.clanTag || null,
           bannerUrl: u.bannerUrl,
           displayName: u.displayName,
           backgroundColor: u.backgroundColor,
@@ -5413,9 +5414,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      if (typeof req.body.clanTag === "string") {
+        const trimmed = req.body.clanTag.trim();
+        if (trimmed === "") {
+          req.body.clanTag = null; // Empty input clears the tag
+        } else if (!/^[A-Z0-9]{1,4}$/i.test(trimmed)) {
+          validationErrors.push("Clan Tag: must be 1-4 letters/numbers only");
+        } else {
+          req.body.clanTag = trimmed.toUpperCase();
+        }
+      }
+
       if (validationErrors.length > 0) {
         return res.status(400).json({
-          message: "Profile contains inappropriate content",
+          message: "Profile update failed",
           errors: validationErrors
         });
       }
@@ -5424,7 +5436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sensitive/system fields (gfTokenBalance, isPro, level, totalXP, etc.)
       // are managed by dedicated server-side routes only.
       const ALLOWED_PROFILE_FIELDS = new Set([
-        "username", "displayName", "bio", "userType", "location", "website",
+        "username", "displayName", "bio", "clanTag", "userType", "location", "website",
         "dateOfBirth", "avatarUrl", "bannerUrl", "activeProfilePicType",
         "avatarBorderColor", "primaryColor", "secondaryColor", "accentColor",
         "backgroundColor", "cardColor", "layoutStyle", "showUserType",

@@ -3273,7 +3273,7 @@ const ProfilePage = () => {
           {/* Username and Display Name - Left aligned on Mobile */}
           <div className="flex flex-col items-start gap-0.5 mb-2 mt-8 pl-4">
             <div className="flex items-center gap-2">
-              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: isMacTheme ? 'none' : profileTextShadow, color: isWatermelonTheme ? '#ffffff' : isMacTheme ? '#1a1a1a' : isLightBackground ? accentColor : profileFontColor, fontSize: `${1.25 * profileFontScale}rem`, lineHeight: `${1.75 * profileFontScale}rem` }}>{profile.displayName}</h1>
+              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: isMacTheme ? 'none' : profileTextShadow, color: isWatermelonTheme ? '#ffffff' : isMacTheme ? '#1a1a1a' : isLightBackground ? accentColor : profileFontColor, fontSize: `${1.25 * profileFontScale}rem`, lineHeight: `${1.75 * profileFontScale}rem` }}>{profile.clanTag ? `[${profile.clanTag}] ` : ''}{profile.displayName}</h1>
               <VerificationBadge
                 isVerified={!!verificationBadgeData?.verificationBadge}
                 badgeImageUrl={verificationBadgeData?.verificationBadge?.imageUrl}
@@ -3692,7 +3692,7 @@ const ProfilePage = () => {
 
             {/* Display Name and Badges */}
             <div className="flex items-center gap-2 flex-nowrap mt-8">
-              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: isMacTheme ? 'none' : profileTextShadow, color: isWatermelonTheme ? '#ffffff' : isMacTheme ? '#1a1a1a' : isLightBackground ? accentColor : profileFontColor, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.displayName}</h1>
+              <h1 className={`font-bold ${profileFontAnimClass}`} style={{ fontFamily: profileFontFamily, textShadow: isMacTheme ? 'none' : profileTextShadow, color: isWatermelonTheme ? '#ffffff' : isMacTheme ? '#1a1a1a' : isLightBackground ? accentColor : profileFontColor, fontSize: `${1.5 * profileFontScale}rem`, lineHeight: `${2 * profileFontScale}rem` }}>{profile.clanTag ? `[${profile.clanTag}] ` : ''}{profile.displayName}</h1>
               <span className="flex-shrink-0 inline-flex">
                 <VerificationBadge
                   isVerified={!!verificationBadgeData?.verificationBadge}

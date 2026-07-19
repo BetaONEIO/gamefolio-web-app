@@ -11,6 +11,7 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").default(false),
   displayName: text("display_name").notNull(),
   bio: text("bio"),
+  clanTag: text("clan_tag"), // Up to 4 chars, A-Z0-9, shown as [TAG] before the display name (COD-style)
   avatarUrl: text("avatar_url"),
   bannerUrl: text("banner_url").default("/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg"),
   // Customization options
