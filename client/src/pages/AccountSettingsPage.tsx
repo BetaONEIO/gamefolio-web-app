@@ -832,7 +832,7 @@ const AccountSettingsPage: React.FC = () => {
       <h1 className="text-3xl font-bold mb-8">Account Settings</h1>
       
       <Tabs defaultValue={initialTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-8">
+        <TabsList className="grid w-full grid-cols-5 mb-8">
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="2fa">
             <KeyRound className="h-4 w-4 mr-2" />
@@ -845,6 +845,10 @@ const AccountSettingsPage: React.FC = () => {
           <TabsTrigger value="referral">
             <Gift className="h-4 w-4 mr-2" />
             Referral
+          </TabsTrigger>
+          <TabsTrigger value="developer">
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Developer
           </TabsTrigger>
         </TabsList>
 
@@ -1413,6 +1417,26 @@ const AccountSettingsPage: React.FC = () => {
         {/* Referral Program */}
         <TabsContent value="referral">
           <ReferralSection />
+        </TabsContent>
+
+        {/* Developer Platform */}
+        <TabsContent value="developer">
+          <Card>
+            <CardHeader>
+              <CardTitle>Developer Platform</CardTitle>
+              <CardDescription>
+                Manage apps you've connected, or register your own to build on the Gamefolio API.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col sm:flex-row gap-3">
+              <Button variant="outline" onClick={() => setLocation('/settings/connected-apps')}>
+                Connected Apps
+              </Button>
+              <Button variant="outline" onClick={() => setLocation('/developer')}>
+                Developer Portal
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

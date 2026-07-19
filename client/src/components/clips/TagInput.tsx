@@ -2,6 +2,7 @@ import { useState, KeyboardEvent, useRef, useEffect } from "react";
 import { X, Hash } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface TagInputProps {
   tags: string[];
@@ -25,7 +26,7 @@ const TagInput = ({
   const { data: frequentTags = [] } = useQuery<string[]>({
     queryKey: ["/api/user/top-tags"],
     queryFn: async () => {
-      const res = await fetch("/api/user/top-tags", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/user/top-tags");
       if (!res.ok) return [];
       return res.json();
     },

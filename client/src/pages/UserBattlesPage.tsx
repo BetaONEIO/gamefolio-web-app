@@ -73,10 +73,6 @@ export default function UserBattlesPage() {
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
       localStorage.setItem(SESSION_KEY, "authenticated");
       setIsAuthenticated(true);
-      toast({
-        title: "Login successful",
-        description: "Welcome to the Battle Arena!",
-      });
     } else {
       setLoginError("Invalid credentials");
     }

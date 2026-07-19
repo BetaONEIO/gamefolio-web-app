@@ -149,7 +149,6 @@ export function JoinGamefolioDialog({
       { username: loginData.usernameOrEmail, password: loginData.password },
       {
         onSuccess: () => {
-          toast({ title: 'Welcome back!', description: "You've been logged in successfully.", variant: 'gamefolioSuccess' });
           triggerClose();
           onAuthSuccess?.();
         },

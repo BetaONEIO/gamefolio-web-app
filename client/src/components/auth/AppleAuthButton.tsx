@@ -37,11 +37,6 @@ export function AppleAuthButton({ disabled = false }: AppleAuthButtonProps) {
         });
         setLocation("/onboarding");
       } else {
-        toast({
-          title: "Welcome back!",
-          description: "You're now signed in with Apple.",
-          variant: "gamefolioSuccess",
-        });
         setLocation("/");
       }
     } catch (error: any) {

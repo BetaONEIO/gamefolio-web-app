@@ -6,6 +6,7 @@ import { hybridAuth } from '../middleware/hybrid-auth';
 import { EmailService } from '../email-service';
 import { storage } from '../storage';
 import { notifyProPurchase } from '../telegram-notify';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 
@@ -138,6 +139,7 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
 
     return res.json({ success: true, isPro: true, plan, endDate, lootboxReward });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('[RevenueCat] activate error:', error);
     return res.status(500).json({ error: 'Failed to activate Pro', message: error.message });
   }
@@ -159,8 +161,9 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Missing event payload' });
     }
 
-    const { type, app_user_id, expiration_at_ms, product_id } = event;
-    console.log(`[RevenueCat Webhook] Received event type: ${type}, app_user_id: ${app_user_id}`);
+    const { type, app_user_id, expiration_at_ms, product_id, environment } = event;
+    const isSandbox = environment === 'SANDBOX';
+    console.log(`[RevenueCat Webhook] Received event type: ${type}, app_user_id: ${app_user_id}, environment: ${environment}`);
 
     if (!app_user_id) {
       return res.status(200).json({ received: true });
@@ -220,7 +223,9 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
           ).catch(err => console.error('[RevenueCat Webhook] Failed to send Pro welcome email:', err));
         }
 
-        notifyProPurchase(user, { kind: 'new', plan, source: 'RevenueCat' });
+        if (!isSandbox) {
+          notifyProPurchase(user, { kind: 'new', plan, source: 'RevenueCat' });
+        }
       }
 
       if (type === 'RENEWAL') {
@@ -230,10 +235,12 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
           console.error('[RevenueCat Webhook] Failed to grant renewal pro lootbox:', err);
         }
 
-        notifyProPurchase(user, { kind: 'renewal', plan, source: 'RevenueCat' });
+        if (!isSandbox) {
+          notifyProPurchase(user, { kind: 'renewal', plan, source: 'RevenueCat' });
+        }
       }
 
-      console.log(`[RevenueCat Webhook] User ${user.id} Pro activated/renewed (type: ${type}, plan: ${plan}, until: ${endDate})`);
+      console.log(`[RevenueCat Webhook] User ${user.id} Pro activated/renewed (type: ${type}, plan: ${plan}, until: ${endDate}, sandbox: ${isSandbox})`);
     } else if (deactivatingEvents.includes(type)) {
       await db.update(users).set({
         isPro: false,

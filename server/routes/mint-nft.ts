@@ -17,6 +17,7 @@ import { writeContractWithPoW, writeContractWithPoWFromRawKey, publicClient } fr
 import { isWalletLinkedToUser } from './linked-wallets';
 import { adminMiddleware } from '../middleware/admin';
 import { sendAdminAlert } from '../admin-alert-service';
+import { captureRouteError } from "../sentry";
 
 (async () => {
   try {
@@ -222,6 +223,7 @@ router.get('/api/mint/wallet-status', async (req: Request, res: Response) => {
       walletAddress: user.walletAddress,
     });
   } catch (error: any) {
+    captureRouteError(error);
     return res.status(500).json({ error: error.message || 'Failed to check wallet status' });
   }
 });
@@ -248,6 +250,7 @@ router.post('/api/mint/approve', async (req: Request, res: Response) => {
 
     return res.json({ success: true, message: 'No approval needed — minting uses treasury wallet directly.' });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Server-side approve error:', error);
     return res.status(500).json({ error: error.message || 'Approval failed' });
   }
@@ -432,6 +435,7 @@ router.post('/api/mint/mint', async (req: Request, res: Response) => {
 
     return res.json({ success: true, txHash: hash, tokenIds });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Server-side mint error:', error);
     return res.status(500).json({ error: error.message || 'Mint failed' });
   }
@@ -447,6 +451,7 @@ router.get('/api/mint/treasury-address', async (_req: Request, res: Response) =>
     const address = privateKeyToAccount(formatted).address;
     return res.json({ treasuryAddress: address });
   } catch (e: any) {
+    captureRouteError(e);
     return res.status(500).json({ error: e?.message || 'Failed to derive treasury address' });
   }
 });
@@ -537,6 +542,7 @@ router.post('/api/mint/external-finalize', async (req: Request, res: Response) =
       `);
       claimed = true;
     } catch (insertErr: any) {
+      captureRouteError(insertErr);
       // Unique violation -> txHash already claimed. Return prior terminal state.
       const priorRes: any = await db.execute(sql`
         SELECT user_id, status, mint_tx_hash, token_ids, error
@@ -673,6 +679,7 @@ router.post('/api/mint/external-finalize', async (req: Request, res: Response) =
 
     return res.json({ success: true, txHash: hash, tokenIds });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('External-finalize mint error:', error);
     return res.status(500).json({ error: error.message || 'External finalize failed' });
   }
@@ -977,6 +984,7 @@ router.get('/api/mint/my-payments', async (req: Request, res: Response) => {
 
     return res.json({ payments, dismissedCount });
   } catch (err: any) {
+    captureRouteError(err);
     console.error('my-payments list error:', err);
     return res.status(500).json({ error: err?.message || 'Failed to list mint payments' });
   }
@@ -1012,6 +1020,7 @@ router.post('/api/mint/my-payments/:id/dismiss', async (req: Request, res: Respo
     }
     return res.json({ success: true });
   } catch (err: any) {
+    captureRouteError(err);
     console.error('dismiss payment error:', err);
     return res.status(500).json({ error: err?.message || 'Failed to dismiss payment' });
   }
@@ -1040,6 +1049,7 @@ router.post('/api/mint/my-payments/:id/restore', async (req: Request, res: Respo
     `);
     return res.json({ success: true });
   } catch (err: any) {
+    captureRouteError(err);
     console.error('restore payment error:', err);
     return res.status(500).json({ error: err?.message || 'Failed to restore payment' });
   }
@@ -1063,6 +1073,7 @@ router.get('/api/admin/mint/stuck-payments', adminMiddleware, async (_req: Reque
       payments: rows,
     });
   } catch (err: any) {
+    captureRouteError(err);
     console.error('stuck-payments list error:', err);
     return res.status(500).json({ error: err?.message || 'Failed to list stuck payments' });
   }
@@ -1074,6 +1085,7 @@ router.post('/api/admin/mint/reconcile', adminMiddleware, async (_req: Request, 
     const result = await reconcileStuckMintPayments();
     return res.json({ success: true, result });
   } catch (err: any) {
+    captureRouteError(err);
     console.error('manual reconcile error:', err);
     return res.status(500).json({ error: err?.message || 'Reconciliation failed' });
   }
@@ -1126,6 +1138,7 @@ router.post('/api/mint/regenerate-wallet', async (req: Request, res: Response) =
       previousWalletAddress: result.oldWalletAddress,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Wallet regeneration error:', error);
     return res.status(500).json({ error: error.message || 'Wallet regeneration failed' });
   }
@@ -1180,6 +1193,7 @@ router.get('/api/nft/image/:cid/*', async (req: Request, res: Response) => {
     }
     return res.status(502).json({ error: 'Failed to fetch image from IPFS' });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('IPFS image proxy error:', error);
     return res.status(500).json({ error: 'Image proxy error' });
   }
@@ -1239,6 +1253,7 @@ router.get('/api/nft/thumb/:cid/*', async (req: Request, res: Response) => {
     }
     return res.status(502).json({ error: 'Failed to fetch image from IPFS' });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('IPFS thumbnail proxy error:', error);
     return res.status(500).json({ error: 'Thumbnail proxy error' });
   }
@@ -1494,6 +1509,7 @@ router.get('/api/nft/metadata/:tokenId', async (req: Request, res: Response) => 
       attributes: cached.attributes,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('NFT metadata fetch error:', error);
     return res.status(500).json({ error: error.message || 'Failed to fetch metadata' });
   }
@@ -1516,6 +1532,7 @@ router.post('/api/admin/nft/cache/flush', adminMiddleware, async (req: Request, 
     console.log(`[NFT Cache] Admin flushed entire metadata cache (${result.cleared} entr${result.cleared === 1 ? 'y' : 'ies'})`);
     return res.json({ success: true, cleared: result.cleared });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('[NFT Cache] Flush error:', error);
     return res.status(500).json({ error: error.message || 'Failed to flush cache' });
   }
@@ -1544,6 +1561,7 @@ router.post('/api/nft/metadata/batch', async (req: Request, res: Response) => {
 
     return res.json({ nfts });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Batch metadata fetch error:', error);
     return res.status(500).json({ error: error.message || 'Failed to fetch metadata' });
   }
@@ -1630,6 +1648,7 @@ router.get('/api/nfts/owned', async (req: Request, res: Response) => {
 
     return res.json({ nfts, count: ownedTokenIds.length });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Owned NFTs fetch error:', error);
     return res.status(500).json({ error: error.message || 'Failed to fetch owned NFTs' });
   }
@@ -1695,6 +1714,7 @@ router.get('/api/nfts/user/:userId', async (req: Request, res: Response) => {
 
     return res.json({ nfts, count: ownedTokenIds.length });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('User NFTs fetch error:', error);
     return res.status(500).json({ error: error.message || 'Failed to fetch user NFTs' });
   }
@@ -1790,6 +1810,7 @@ router.post('/api/admin/nfts/backfill', async (req: Request, res: Response) => {
 
     return res.json({ success: true, totalBackfilled });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Backfill error:', error);
     return res.status(500).json({ error: error.message || 'Backfill failed' });
   }
@@ -1836,6 +1857,7 @@ router.post('/api/nft/set-profile-picture', async (req: Request, res: Response) 
 
     return res.json({ success: true, tokenId, imageUrl });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Set NFT profile picture error:', error);
     return res.status(500).json({ error: error.message || 'Failed to set NFT profile picture' });
   }
@@ -1874,6 +1896,7 @@ router.get('/api/nft/profile-picture/:userId', async (req: Request, res: Respons
       metadata,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Get NFT profile picture error:', error);
     return res.status(500).json({ error: error.message || 'Failed to get NFT profile picture' });
   }

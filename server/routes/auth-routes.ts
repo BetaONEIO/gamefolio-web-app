@@ -15,6 +15,7 @@ import {
 } from '../services/token-service';
 import { EmailService } from '../services/email-service'; // Assuming EmailService is set up for Brevo
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../services/jwt-service';
+import { captureRouteError } from "../sentry";
 
 // Scrypt promisification for password hashing
 const scryptAsync = promisify(scrypt);
@@ -74,6 +75,7 @@ router.post('/auth/token/login', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Token login error:', error);
     return res.status(500).json({ message: 'Authentication failed' });
   }
@@ -160,6 +162,7 @@ router.post('/auth/request-verification', async (req: Request, res: Response) =>
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Error requesting email verification:', error);
     return res.status(500).json({ message: 'Failed to send verification email' });
   }
@@ -344,6 +347,7 @@ router.post('/auth/verify-email', async (req: Request, res: Response) => {
     return res.status(200).json({ message: 'Email verified successfully' });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Error verifying email:', error);
     return res.status(500).json({ message: 'Failed to verify email' });
   }
@@ -396,6 +400,7 @@ router.post('/auth/forgot-password', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('❌ Error requesting password reset:', error);
     return res.status(500).json({ message: 'Failed to send password reset code' });
   }
@@ -425,6 +430,7 @@ router.post('/auth/verify-reset-code', async (req: Request, res: Response) => {
     return res.status(200).json({ message: 'Code verified successfully', verified: true });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Error verifying reset code:', error);
     return res.status(500).json({ message: 'Failed to verify code' });
   }
@@ -465,6 +471,7 @@ router.post('/auth/reset-password', async (req: Request, res: Response) => {
     return res.status(200).json({ message: 'Password reset successfully' });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Error resetting password:', error);
     return res.status(500).json({ message: 'Failed to reset password' });
   }
@@ -519,6 +526,7 @@ router.get('/auth/debug-tokens/:email', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Debug tokens error:', error);
     return res.status(500).json({ error: error.message });
   }
@@ -600,6 +608,7 @@ router.post('/auth/verify-code', async (req: Request, res: Response) => {
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Code verification error:', error);
     return res.status(500).json({ message: 'Failed to verify code' });
   }
@@ -673,6 +682,7 @@ router.post('/auth/resend-verification', async (req: Request, res: Response) => 
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Error resending verification code:', error);
     return res.status(500).json({ message: 'Failed to send verification code' });
   }

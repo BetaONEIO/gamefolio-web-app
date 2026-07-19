@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import * as Sentry from "@sentry/capacitor";
 import { useLocation } from "wouter";
 import { ScheduleControl, type ScheduleLimits } from "@/components/upload/ScheduleControl";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, authedFetch } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { MentionInput } from "@/components/ui/mention-input";
@@ -393,6 +393,17 @@ const UploadPage = () => {
   };
 
   // Fetch upload limits (size + duration only — no count caps)
+  //
+  // Overrides the app-wide defaults (staleTime: Infinity, retry: false) that
+  // otherwise strand this query at `undefined` forever after a single
+  // transient failure - e.g. one fetch racing ahead of session/cookie setup
+  // right after login. A stranded `undefined` here doesn't block uploads
+  // (the size check below is gated on `if (uploadLimits)`, and the server
+  // re-validates independently), but it does show the wrong tier limits and
+  // hides the Pro badge/upgrade messaging indefinitely for otherwise-correct
+  // Pro accounts. Confirmed live for three separate Pro users all seeing the
+  // free-tier 50MB reel cap in this UI despite the server returning the
+  // correct 250MB for their account.
   const { data: uploadLimits, isLoading: limitsLoading } = useQuery<{
     isPro: boolean;
     maxClipSizeMB: number;
@@ -403,6 +414,8 @@ const UploadPage = () => {
   }>({
     queryKey: ['/api/upload/limits'],
     enabled: !!userId,
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
   });
 
   // Scheduling quota (unlimited for Pro/Partner, capped pending count for Free).
@@ -590,16 +603,22 @@ const UploadPage = () => {
       return;
     }
 
-    // Validate file size against the user's tier limit (clip vs reel).
-    const isReelUpload = contentType === 'reels';
-    const maxSizeMB = uploadLimits
-      ? (isReelUpload ? uploadLimits.maxReelSizeMB : uploadLimits.maxClipSizeMB)
-      : (isReelUpload ? 50 : 100);
-    const maxSize = maxSizeMB * 1024 * 1024;
-    if (selectedFile.size > maxSize) {
-      console.log('File too large:', selectedFile.size, 'bytes');
-      setFileError(`File size must be less than ${maxSizeMB}MB${uploadLimits && !uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
-      return;
+    // Validate file size against the user's tier limit (clip vs reel). Skip
+    // this fast-fail check entirely while limits are still loading rather
+    // than guessing a free-tier default - the server re-validates the real
+    // size against the correct tier before processing regardless, so there's
+    // no enforcement gap, only a UX one (a Pro user could otherwise get a
+    // false "file too large" rejection during the brief loading window,
+    // e.g. right after a fresh login when the limits query hasn't resolved).
+    if (uploadLimits) {
+      const isReelUpload = contentType === 'reels';
+      const maxSizeMB = isReelUpload ? uploadLimits.maxReelSizeMB : uploadLimits.maxClipSizeMB;
+      const maxSize = maxSizeMB * 1024 * 1024;
+      if (selectedFile.size > maxSize) {
+        console.log('File too large:', selectedFile.size, 'bytes');
+        setFileError(`File size must be less than ${maxSizeMB}MB${!uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
+        return;
+      }
     }
     
     console.log('File validation passed, setting file state');
@@ -651,12 +670,16 @@ const UploadPage = () => {
         return;
       }
       
-      // Validate file size against the user's tier screenshot cap.
-      const maxImageMB = uploadLimits?.maxScreenshotSizeMB ?? 10;
-      const maxSize = maxImageMB * 1024 * 1024;
-      if (file.size > maxSize) {
-        setScreenshotError(`Each image must be less than ${maxImageMB}MB${uploadLimits && !uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
-        return;
+      // Validate file size against the user's tier screenshot cap. Skip while
+      // limits are still loading rather than guessing a free-tier default -
+      // see the matching comment on the video-size check above.
+      if (uploadLimits) {
+        const maxImageMB = uploadLimits.maxScreenshotSizeMB;
+        const maxSize = maxImageMB * 1024 * 1024;
+        if (file.size > maxSize) {
+          setScreenshotError(`Each image must be less than ${maxImageMB}MB${!uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
+          return;
+        }
       }
     }
     
@@ -702,10 +725,9 @@ const UploadPage = () => {
         if (scheduledIso) formData.append("scheduledAt", scheduledIso);
         formData.append("screenshot", file);
         
-        const response = await fetch("/api/screenshots/upload", {
+        const response = await authedFetch("/api/screenshots/upload", {
           method: "POST",
           body: formData,
-          credentials: "include",
         });
         
         if (!response.ok) {
@@ -774,6 +796,13 @@ const UploadPage = () => {
     onError: (error: Error) => {
       const limits = error instanceof UploadLimitError ? error.limits : undefined;
       const showUpgradeCta = limits ? limits.isPro === false : false;
+      // Tier-limit rejections are expected, not bugs - only report genuine
+      // transport/server failures so Sentry stays a signal for real issues.
+      if (!(error instanceof UploadLimitError)) {
+        Sentry.captureException(error, {
+          tags: { module: "upload-page", op: "screenshot-upload" },
+        });
+      }
       toast({
         title: "Upload failed",
         description: error.message,
@@ -852,7 +881,7 @@ const UploadPage = () => {
           
           setUploadProgress(5);
           
-          const credsResponse = await fetch('/api/upload/supabase-creds', {
+          const credsResponse = await authedFetch('/api/upload/supabase-creds', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ filePath, contentType: file.type }),
@@ -942,7 +971,7 @@ const UploadPage = () => {
             fullProcessData: processData
           });
           
-          const processResponse = await fetch('/api/upload/process-video', {
+          const processResponse = await authedFetch('/api/upload/process-video', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(processData),
@@ -1043,6 +1072,13 @@ const UploadPage = () => {
       console.error('Upload mutation error:', error);
       const limits = error instanceof UploadLimitError ? error.limits : undefined;
       const showUpgradeCta = limits ? limits.isPro === false : false;
+      // Tier-limit rejections are expected, not bugs - only report genuine
+      // transport/server failures so Sentry stays a signal for real issues.
+      if (!(error instanceof UploadLimitError)) {
+        Sentry.captureException(error, {
+          tags: { module: "upload-page", op: "video-upload", videoType: contentType === 'reels' ? 'reel' : 'clip' },
+        });
+      }
       toast({
         title: "Upload failed",
         description: error.message,
@@ -1087,21 +1123,23 @@ const UploadPage = () => {
     
     console.log('Content type for validation:', contentType);
     
-    // Validate video duration against the user's tier limit.
-    const isReelSubmit = contentType === 'reels';
-    const maxDurationSec = uploadLimits
-      ? (isReelSubmit ? uploadLimits.maxReelDurationSeconds : uploadLimits.maxClipDurationSeconds)
-      : (isReelSubmit ? 60 : 180);
-    if (videoDuration > maxDurationSec) {
-      const limitLabel = maxDurationSec >= 60
-        ? `${Math.round(maxDurationSec / 60 * 10) / 10} minutes`
-        : `${maxDurationSec} seconds`;
-      toast({
-        title: "Video too long",
-        description: `Your video is ${Math.round(videoDuration / 60 * 10) / 10} minutes long. ${isReelSubmit ? 'Reels' : 'Clips'} must be ${limitLabel} or less${uploadLimits && !uploadLimits.isPro ? ' — upgrade to Pro for longer videos.' : '.'}`,
-        variant: "gamefolioError",
-      });
-      return;
+    // Validate video duration against the user's tier limit. Skip while
+    // limits are still loading rather than guessing a free-tier default -
+    // see the matching comment on the video-size check above.
+    if (uploadLimits) {
+      const isReelSubmit = contentType === 'reels';
+      const maxDurationSec = isReelSubmit ? uploadLimits.maxReelDurationSeconds : uploadLimits.maxClipDurationSeconds;
+      if (videoDuration > maxDurationSec) {
+        const limitLabel = maxDurationSec >= 60
+          ? `${Math.round(maxDurationSec / 60 * 10) / 10} minutes`
+          : `${maxDurationSec} seconds`;
+        toast({
+          title: "Video too long",
+          description: `Your video is ${Math.round(videoDuration / 60 * 10) / 10} minutes long. ${isReelSubmit ? 'Reels' : 'Clips'} must be ${limitLabel} or less${!uploadLimits.isPro ? ' — upgrade to Pro for longer videos.' : '.'}`,
+          variant: "gamefolioError",
+        });
+        return;
+      }
     }
     
     // For reel uploads, backend will automatically crop to 9:16 format
@@ -1194,8 +1232,6 @@ const UploadPage = () => {
         <h1 className="text-2xl font-bold">Upload Content</h1>
       </div>
       
-      <EmailVerificationBanner />
-
       {/* Upload Limits Display — unlimited uploads, capped by file size & duration */}
       {!limitsLoading && uploadLimits && !uploadLimits.isPro && showUploadSizeTip && (
         <Alert className="mb-4 relative pr-10">
@@ -1217,7 +1253,14 @@ const UploadPage = () => {
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               Upload as many as you like.
-              <a href="/pro" className="text-primary ml-1 underline">Upgrade to Pro</a> for larger files and longer videos.
+              <button
+                type="button"
+                onClick={() => setShowProUpgrade(true)}
+                className="text-primary ml-1 underline"
+              >
+                Upgrade to Pro
+              </button>{" "}
+              for larger files and longer videos.
             </p>
           </AlertDescription>
         </Alert>
@@ -1385,18 +1428,20 @@ const UploadPage = () => {
                                   const duration = videoRef.current.duration;
                                   console.log('Setting video duration:', duration, 'seconds');
                                   
-                                  // Validate duration against the user's tier limit.
-                                  const isReelLoad = contentType === 'reels';
-                                  const maxDurLoad = uploadLimits
-                                    ? (isReelLoad ? uploadLimits.maxReelDurationSeconds : uploadLimits.maxClipDurationSeconds)
-                                    : (isReelLoad ? 60 : 180);
-                                  if (duration > maxDurLoad) {
-                                    const label = maxDurLoad >= 60
-                                      ? `${Math.round(maxDurLoad / 60 * 10) / 10} minutes`
-                                      : `${maxDurLoad} seconds`;
-                                    setFileError(`Video duration is ${Math.round(duration / 60 * 10) / 10} minutes. ${isReelLoad ? 'Reels' : 'Clips'} must be ${label} or less${uploadLimits && !uploadLimits.isPro ? ' — upgrade to Pro for longer videos.' : '.'}`);
-                                    setFile(null);
-                                    return;
+                                  // Validate duration against the user's tier limit. Skip
+                                  // while limits are still loading rather than guessing a
+                                  // free-tier default - see the comment on the size check above.
+                                  if (uploadLimits) {
+                                    const isReelLoad = contentType === 'reels';
+                                    const maxDurLoad = isReelLoad ? uploadLimits.maxReelDurationSeconds : uploadLimits.maxClipDurationSeconds;
+                                    if (duration > maxDurLoad) {
+                                      const label = maxDurLoad >= 60
+                                        ? `${Math.round(maxDurLoad / 60 * 10) / 10} minutes`
+                                        : `${maxDurLoad} seconds`;
+                                      setFileError(`Video duration is ${Math.round(duration / 60 * 10) / 10} minutes. ${isReelLoad ? 'Reels' : 'Clips'} must be ${label} or less${!uploadLimits.isPro ? ' — upgrade to Pro for longer videos.' : '.'}`);
+                                      setFile(null);
+                                      return;
+                                    }
                                   }
                                   
                                   setVideoDuration(duration);

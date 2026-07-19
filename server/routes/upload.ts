@@ -6,7 +6,7 @@ import fs from 'fs';
 import { supabaseTusStore } from '../tus-storage';
 import { supabaseStorage } from '../supabase-storage';
 import { storage } from '../storage';
-import { insertClipSchema, insertScreenshotSchema, type UploadLimits } from '@shared/schema';
+import { insertScreenshotSchema, type UploadLimits } from '@shared/schema';
 import { VideoProcessor } from '../video-processor';
 import sharp from 'sharp';
 import { nanoid } from 'nanoid';
@@ -16,6 +16,7 @@ import { hybridFullAccess } from '../middleware/hybrid-auth';
 import { LeaderboardService, POINT_VALUES } from '../leaderboard-service';
 import { BonusEventsService } from '../bonus-events-service';
 import { CreatorMilestoneService } from '../creator-milestone-service';
+import { captureRouteError } from "../sentry";
 
 const router = express.Router();
 
@@ -37,7 +38,9 @@ const videoStorage = multer.diskStorage({
   }
 });
 
-const upload = multer({
+// Exported so server/routes/public-api-v1.ts (OAuth "post a clip" endpoint) can
+// reuse the exact same multer config instead of a second, divergent copy.
+export const upload = multer({
   storage: videoStorage,
   limits: {
     fileSize: 500 * 1024 * 1024, // 500MB max for videos
@@ -316,6 +319,7 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('❌ Direct video upload error:', error);
 
     // Clean up temp file on error
@@ -332,7 +336,7 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
 });
 
 // Get Supabase upload credentials for direct client-side upload
-router.post('/upload/supabase-creds', fullAccessMiddleware, async (req, res) => {
+router.post('/upload/supabase-creds', hybridFullAccess, async (req, res) => {
   try {
     const { filePath, contentType } = req.body;
     
@@ -345,17 +349,18 @@ router.post('/upload/supabase-creds', fullAccessMiddleware, async (req, res) => 
     
     res.json({ uploadUrl, publicUrl });
   } catch (error) {
+    captureRouteError(error);
     console.error('Error generating Supabase upload credentials:', error);
     res.status(500).json({ error: 'Failed to generate upload credentials' });
   }
 });
 
 // TUS endpoints (keep for future use)
-router.all('/tus/*', fullAccessMiddleware, (req, res) => {
+router.all('/tus/*', hybridFullAccess, (req, res) => {
   return tusServer.handle(req, res);
 });
 
-router.all('/tus', fullAccessMiddleware, (req, res) => {
+router.all('/tus', hybridFullAccess, (req, res) => {
   return tusServer.handle(req, res);
 });
 
@@ -631,6 +636,7 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
     res.json(responseData);
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Screenshot upload error:', error);
 
     // Clean up temp file on error
@@ -648,6 +654,14 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 
 // Video/Reel processing endpoint (called after TUS upload completes)
 router.post('/process-video', hybridFullAccess, async (req, res) => {
+  const { ageRestricted } = req.body;
+  console.log('🔞 Age Restriction Backend Debug:', {
+    ageRestricted,
+    ageRestrictedType: typeof ageRestricted,
+    rawBody: req.body,
+    evaluation: ageRestricted === true || ageRestricted === 'true'
+  });
+
   try {
     const { uploadResult, title, description, gameId, tags, videoType = 'clip', ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd, scheduledAt: rawScheduledAt, source } = req.body;
 
@@ -1144,13 +1158,12 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
     };
     
     console.log(`🎯 XP Debug - Response data: xpGained=${responseData.xpGained}, userXP=${responseData.userXP}, userLevel=${responseData.userLevel}`);
-    
     res.json(responseData);
-
   } catch (error) {
+    captureRouteError(error);
     console.error('Video processing error:', error);
-    res.status(500).json({ 
-      error: error instanceof Error ? error.message : 'Video processing failed' 
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Video processing failed'
     });
   }
 });
@@ -1215,6 +1228,7 @@ router.post('/fix-durations', fullAccessMiddleware, async (req, res) => {
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Duration fix error:', error);
     res.status(500).json({ 
       error: error instanceof Error ? error.message : 'Duration fix failed' 
@@ -1223,7 +1237,7 @@ router.post('/fix-durations', fullAccessMiddleware, async (req, res) => {
 });
 
 // Get upload limits and configuration
-router.get('/config', fullAccessMiddleware, (req, res) => {
+router.get('/config', hybridFullAccess, (req, res) => {
   res.json({
     limits: {
       video: {
@@ -1248,12 +1262,13 @@ router.get('/config', fullAccessMiddleware, (req, res) => {
 });
 
 // Get user-specific upload limits and remaining quota
-router.get('/limits', fullAccessMiddleware, async (req, res) => {
+router.get('/limits', hybridFullAccess, async (req, res) => {
   try {
     const userId = req.user!.id;
     const limits = await storage.getUploadLimits(userId);
     res.json(limits);
   } catch (error) {
+    captureRouteError(error);
     console.error('Error fetching upload limits:', error);
     res.status(500).json({ error: 'Failed to fetch upload limits' });
   }
@@ -1325,6 +1340,7 @@ router.post('/avatar', fullAccessMiddleware, avatarUpload.single('avatar'), asyn
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Avatar upload error:', error);
 
     // Clean up temp file on error

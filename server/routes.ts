@@ -18,7 +18,7 @@ import { CreatorMilestoneService } from "./creator-milestone-service";
 import { BonusEventsService } from "./bonus-events-service";
 import { XPService } from "./xp-service";
 import { createInsertSchema } from "drizzle-zod";
-import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema } from "@shared/schema";
+import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema, insertBookmarkSchema } from "@shared/schema";
 import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { nanoid } from "nanoid";
@@ -26,6 +26,7 @@ import jwt from "jsonwebtoken";
 import { eq, sql, desc, inArray, and } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
+import { captureRouteError } from "./sentry";
 import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes } from "@shared/schema";
 
 // Helper function to generate unique share code
@@ -94,6 +95,7 @@ import { initializeRealtimeNotificationService } from './realtime-notification-s
 import { adminMiddleware } from "./middleware/admin";
 import { optionalHybridAuth } from "./middleware/optional-hybrid-auth";
 import { hybridAuth, hybridEmailVerification } from "./middleware/hybrid-auth";
+import { isDeveloperSubdomainRequest } from "./middleware/subdomain-check";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
 import { contentFilterService } from "./services/content-filter";
@@ -575,6 +577,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.json(safe);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching blocked users:", err);
       return res.status(500).json({ message: "Error fetching blocked users" });
     }
@@ -601,6 +604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       return res.json({ message: "User unblocked successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error unblocking user:", err);
       return res.status(500).json({ message: "Error unblocking user" });
     }
@@ -658,6 +662,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error blocking user:", err);
       return res.status(500).json({ message: "Error blocking user" });
     }
@@ -891,6 +896,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isValid = await comparePasswords(password, user.password);
       return res.json({ verified: isValid });
     } catch (error: any) {
+      captureRouteError(error);
       console.error("Password verification error:", error);
       return res.status(500).json({ verified: false, message: "Failed to verify password" });
     }
@@ -931,6 +937,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(200).json({ available: true, message: "Username is available" });
     } catch (error) {
+      captureRouteError(error);
       console.error("Username check error:", error);
       res.status(500).json({ message: "Failed to check username availability" });
     }
@@ -964,6 +971,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let user = await storage.getUserByEmail?.(email);
 
       if (!user) {
+        // Block new registrations on developer.gamefolio.com
+        if (isDeveloperSubdomainRequest(req)) {
+          return res.status(403).json({
+            message: 'New registrations are not available on the developer portal. Please create an account on app.gamefolio.com first, then sign in here.',
+            code: 'DEV_PORTAL_NO_REGISTRATION',
+          });
+        }
         // Validate display name for inappropriate content before creating user
         const fallbackDisplayName = displayName || email.split('@')[0];
         const displayNameValidation = await contentFilterService.validateDisplayName(fallbackDisplayName);
@@ -1254,6 +1268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(200).json(userData);
 
     } catch (error) {
+      captureRouteError(error);
       console.error("Discord token exchange error:", error);
       res.status(500).json({ message: "Failed to authenticate with Discord" });
     }
@@ -1272,6 +1287,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let user = await storage.getUserByEmail?.(email);
 
       if (!user) {
+        // Block new registrations on developer.gamefolio.com
+        if (isDeveloperSubdomainRequest(req)) {
+          return res.status(403).json({
+            message: 'New registrations are not available on the developer portal. Please create an account on app.gamefolio.com first, then sign in here.',
+            code: 'DEV_PORTAL_NO_REGISTRATION',
+          });
+        }
         // Validate display name for inappropriate content before creating user
         const displayName = `${username}#${discriminator}`;
         const displayNameValidation = await contentFilterService.validateDisplayName(displayName);
@@ -1534,6 +1556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json({ xuid, gamertag, gamerpic });
 
     } catch (error) {
+      captureRouteError(error);
       console.error("Xbox token exchange error:", error);
       res.status(500).json({ message: "Failed to authenticate with Xbox" });
     }
@@ -1552,6 +1575,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let user = await storage.getUserByExternalId?.(xuid, "xbox");
 
       if (!user) {
+        // Block new registrations on developer.gamefolio.com
+        if (isDeveloperSubdomainRequest(req)) {
+          return res.status(403).json({
+            message: 'New registrations are not available on the developer portal. Please create an account on app.gamefolio.com first, then sign in here.',
+            code: 'DEV_PORTAL_NO_REGISTRATION',
+          });
+        }
         // New user — create account from their Xbox profile
         const timestamp = Date.now().toString().slice(-6);
         const tempUsername = `temp_xbox_${xuid.substring(0, 8)}_${timestamp}`;
@@ -1693,6 +1723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(200).json({ success: true, xboxUsername: gamertag, xboxXuid: xuid });
     } catch (error) {
+      captureRouteError(error);
       console.error("Xbox connect error:", error);
       res.status(500).json({ message: "Failed to link Xbox account" });
     }
@@ -1712,6 +1743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.status(200).json({ success: true });
     } catch (error) {
+      captureRouteError(error);
       console.error("Xbox disconnect error:", error);
       res.status(500).json({ message: "Failed to disconnect Xbox account" });
     }
@@ -1818,6 +1850,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json({ success: true });
     } catch (err) {
+      captureRouteError(err);
       console.error("Twitch disconnect error:", err);
       res.status(500).json({ message: "Failed to disconnect Twitch" });
     }
@@ -1990,6 +2023,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json({ success: true });
     } catch (err) {
+      captureRouteError(err);
       console.error("Kick disconnect error:", err);
       res.status(500).json({ message: "Failed to disconnect Kick" });
     }
@@ -2007,8 +2041,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/user/streamer-settings", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
     try {
-      const { isStreamer, streamPlatform, liveEnabled, twitchShowOnProfile, kickShowOnProfile, youtubeShowOnProfile } = req.body;
-      const ALLOWED_PLATFORMS = ["twitch", "kick", "youtube"];
+      const { isStreamer, streamPlatform, liveEnabled, twitchShowOnProfile, kickShowOnProfile, youtubeShowOnProfile, vpzoneShowOnProfile } = req.body;
+      const ALLOWED_PLATFORMS = ["twitch", "kick", "youtube", "vpzone"];
       if (streamPlatform !== undefined && !ALLOWED_PLATFORMS.includes(streamPlatform)) {
         return res.status(400).json({ message: "Invalid streamPlatform value" });
       }
@@ -2019,9 +2053,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (twitchShowOnProfile !== undefined) update.twitchShowOnProfile = Boolean(twitchShowOnProfile);
       if (kickShowOnProfile !== undefined) update.kickShowOnProfile = Boolean(kickShowOnProfile);
       if (youtubeShowOnProfile !== undefined) update.youtubeShowOnProfile = Boolean(youtubeShowOnProfile);
+      if (vpzoneShowOnProfile !== undefined) update.vpzoneShowOnProfile = Boolean(vpzoneShowOnProfile);
       const updated = await storage.updateUser((req.user as any).id, update);
       res.json(updated);
     } catch (err) {
+      captureRouteError(err);
       console.error("Streamer settings error:", err);
       res.status(500).json({ message: "Failed to save streamer settings" });
     }
@@ -2043,6 +2079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalAchievements: result.totalAchievements,
       });
     } catch (error) {
+      captureRouteError(error);
       if (error instanceof PlatformSyncError) {
         return res.status(error.httpStatus).json({ message: error.message });
       }
@@ -2062,6 +2099,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updated = await storage.updateUser(user.id, { showXboxAchievements: !!show });
       res.json({ showXboxAchievements: updated?.showXboxAchievements });
     } catch (error) {
+      captureRouteError(error);
       console.error("Xbox achievements toggle error:", error);
       res.status(500).json({ message: "Failed to update achievement display setting" });
     }
@@ -2085,6 +2123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         syncedAt: new Date().toISOString(),
       });
     } catch (error: any) {
+      captureRouteError(error);
       if (error instanceof PlatformSyncError) {
         return res.status(error.httpStatus).json({ message: error.message });
       }
@@ -2104,6 +2143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updated = await storage.updateUser(user.id, { showPsnTrophies: !!show });
       res.json({ showPsnTrophies: updated?.showPsnTrophies });
     } catch (error) {
+      captureRouteError(error);
       console.error("PSN trophies toggle error:", error);
       res.status(500).json({ message: "Failed to update trophy display setting" });
     }
@@ -2112,6 +2152,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register route
   app.post("/api/register", async (req, res) => {
     try {
+      // Block new registrations on developer.gamefolio.com
+      if (isDeveloperSubdomainRequest(req)) {
+        return res.status(403).json({
+          message: 'New registrations are not available on the developer portal. Please create an account on app.gamefolio.com first, then sign in here.',
+          code: 'DEV_PORTAL_NO_REGISTRATION',
+        });
+      }
       // Extract the referral code the new user typed at signup — separate from their own future referral code
       const usedReferralCode: string | undefined = typeof req.body.referralCode === 'string' && req.body.referralCode.trim()
         ? req.body.referralCode.trim().toUpperCase()
@@ -2196,15 +2243,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         referringUser = { id: foundReferrer.id };
       }
 
-      // Hash password
-      const hashedPassword = await hashPassword(userData.password);
-
       // Create user — referralCode is always server-generated; referredBy records which code was used at signup
+      // storage.createUser() hashes the password itself (like every other
+      // caller here - OAuth/admin paths), so pass it through in plain text.
       const user = await storage.createUser({
         ...userData,
         username: userData.username.toLowerCase(),
         email: userData.email.toLowerCase(),
-        password: hashedPassword,
         emailVerified: false,
         ...(usedReferralCode && { referredBy: usedReferralCode }),
       });
@@ -2440,6 +2485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         enabled: fullUser.twoFactorEnabled || false
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error checking 2FA status:", error);
       return res.status(500).json({ message: "Failed to check 2FA status" });
     }
@@ -2473,6 +2519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         keyUri
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error setting up 2FA:", error);
       return res.status(500).json({ message: "Failed to setup 2FA" });
     }
@@ -2517,6 +2564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         enabled: true
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error enabling 2FA:", error);
       return res.status(500).json({ message: "Failed to enable 2FA" });
     }
@@ -2566,6 +2614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         enabled: false
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error disabling 2FA:", error);
       return res.status(500).json({ message: "Failed to disable 2FA" });
     }
@@ -2634,6 +2683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(response);
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error verifying 2FA:", error);
       return res.status(500).json({ message: "Failed to verify 2FA code" });
     }
@@ -2915,6 +2965,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         referralCode: user.referralCode,
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching invite:", error);
       return res.status(500).json({ message: "Failed to fetch invite" });
     }
@@ -2933,6 +2984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         referralLink: stats.referralCode ? `${appUrl}/invite/${stats.referralCode}` : null,
       });
     } catch (error) {
+      captureRouteError(error);
       console.error('Error fetching referral stats:', error);
       return res.status(500).json({ message: 'Failed to fetch referral stats' });
     }
@@ -2979,6 +3031,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.json({ message: result.message });
     } catch (error) {
+      captureRouteError(error);
       console.error('Error customizing referral code:', error);
       return res.status(500).json({ message: 'Failed to customize referral code' });
     }
@@ -3016,6 +3069,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.json({ message: 'Referral code applied! You both earned XP.' });
     } catch (error) {
+      captureRouteError(error);
       console.error('Error applying referral code:', error);
       return res.status(500).json({ message: 'Failed to apply referral code' });
     }
@@ -3064,6 +3118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`✅ Password changed successfully for user ${user.id} (${user.username})`);
       res.json({ message: "Password changed successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error changing password:", err);
       res.status(500).json({ message: "Failed to change password" });
     }
@@ -3115,6 +3170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
     } catch (err) {
+      captureRouteError(err);
       console.error("Error initiating account deletion:", err);
       res.status(500).json({ error: "INTERNAL_ERROR" });
     }
@@ -3176,6 +3232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
     } catch (err) {
+      captureRouteError(err);
       console.error("Error confirming account deletion:", err);
       res.status(500).json({ error: "DELETE_FAILED" });
     }
@@ -3208,6 +3265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(filteredUsers);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error searching users:", error);
       return res.status(500).json({ message: "Error searching users" });
     }
@@ -3361,6 +3419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(publicUsers);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error getting featured users:", err);
       res.status(500).json({ message: "Error getting featured users" });
     }
@@ -3392,6 +3451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(publicUsers);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error getting random users:", err);
       res.status(500).json({ message: "Error getting random users" });
     }
@@ -3422,6 +3482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(bannerSettings);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching banner settings:", err);
       res.status(500).json({ message: "Error fetching banner settings" });
     }
@@ -3476,6 +3537,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(slidesWithSignedUrls);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching hero slides:", err);
       res.status(500).json({ message: "Error fetching hero slides" });
     }
@@ -3488,6 +3550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [config] = await db.select().from(heroTextSettings).where(eq(heroTextSettings.textType, "slide_config"));
       res.json({ intervalSeconds: config ? parseInt(config.title) || 15 : 15 });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching hero slide settings:", err);
       res.status(500).json({ message: "Error fetching settings" });
     }
@@ -3643,6 +3706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         discover,
       });
     } catch (err: any) {
+      captureRouteError(err);
       console.error("Error fetching hero carousel:", err?.message || err, err?.stack || "");
       res.status(500).json({ message: "Error fetching hero carousel data", error: err?.message || String(err) });
     }
@@ -3796,6 +3860,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching all-time leaderboard:", error);
       res.status(500).json({ message: "Error fetching all-time leaderboard data" });
     }
@@ -3811,6 +3876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching current month leaderboard:", error);
       res.status(500).json({ message: "Error fetching current month leaderboard" });
     }
@@ -3822,6 +3888,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const leaderboardData = await LeaderboardService.getPreviousMonthLeaderboard(limit);
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching previous month leaderboard:", error);
       res.status(500).json({ message: "Error fetching previous month leaderboard" });
     }
@@ -3837,6 +3904,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching current week leaderboard:", error);
       res.status(500).json({ message: "Error fetching current week leaderboard" });
     }
@@ -3848,6 +3916,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const leaderboardData = await LeaderboardService.getPreviousWeekLeaderboard(limit);
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching previous week leaderboard:", error);
       res.status(500).json({ message: "Error fetching previous week leaderboard" });
     }
@@ -3976,6 +4045,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(enriched);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching trending gamefolios:", error);
       res.status(500).json({ message: "Error fetching trending gamefolios" });
     }
@@ -3991,6 +4061,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stats = await LeaderboardService.getUserCurrentMonthStats(userId);
       res.json(stats);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching user monthly stats:", error);
       res.status(500).json({ message: "Error fetching user monthly stats" });
     }
@@ -4005,6 +4076,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stats = await LeaderboardService.getUserCurrentWeekStats(userId);
       res.json(stats);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching user weekly stats:", error);
       res.status(500).json({ message: "Error fetching user weekly stats" });
     }
@@ -4021,6 +4093,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const topContributors = await LeaderboardService.getTopContributors(periodType, limit);
       res.json(await signLeaderboardAvatars(topContributors));
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching top contributors:", error);
       res.status(500).json({ message: "Error fetching top contributors" });
     }
@@ -4042,6 +4115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const topContributors = await LeaderboardService.getTopContributorsByPeriod(periodType, period, year);
       res.json(await signLeaderboardAvatars(topContributors));
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching top contributors by period:", error);
       res.status(500).json({ message: "Error fetching top contributors by period" });
     }
@@ -4125,6 +4199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const leaderboard = await storage.getXPLeaderboard(limit);
       res.json(leaderboard);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching points leaderboard:", error);
       res.status(500).json({ message: "Error fetching points leaderboard" });
     }
@@ -4140,6 +4215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(userId);
       res.json({ totalXP: user?.totalXP || 0 });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching user points:", error);
       res.status(500).json({ message: "Error fetching user points" });
     }
@@ -4156,6 +4232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pointsHistory = await storage.getUserPointsHistory(userId, limit);
       res.json(pointsHistory);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching user points history:", error);
       res.status(500).json({ message: "Error fetching user points history" });
     }
@@ -4182,6 +4259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...progress
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching user level progress:", error);
       res.status(500).json({ message: "Error fetching user level progress" });
     }
@@ -4207,6 +4285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const xpHistory = await storage.getUserXPHistory(userId, limit);
       res.json(xpHistory);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching user XP history:", error);
       res.status(500).json({ message: "Error fetching user XP history" });
     }
@@ -4277,6 +4356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isWeekend,
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching daily activity:", error);
       res.status(500).json({ message: "Error fetching daily activity" });
     }
@@ -4627,6 +4707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       res.send(csv);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error exporting content:", err);
       res.status(500).json({ message: "Failed to export content" });
     }
@@ -4646,6 +4727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await BonusEventsService.awardFeaturedClipBonus(clip.userId, clipId);
       res.json({ message: `Clip #${clipId} featured! Owner awarded +500 XP.` });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error featuring clip:", error);
       res.status(500).json({ message: "Error featuring clip" });
     }
@@ -4679,6 +4761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalUsers: allUsers.length
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error recalculating levels:", error);
       res.status(500).json({ message: "Error recalculating levels" });
     }
@@ -4734,6 +4817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalWinners: allMonthlyWinners.length
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error awarding monthly badges:", error);
       res.status(500).json({ message: "Error awarding monthly badges" });
     }
@@ -4757,6 +4841,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(pointsHistory);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching user points history:", error);
       res.status(500).json({ message: "Error fetching user points history" });
     }
@@ -4826,6 +4911,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reason
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error adjusting user points:", error);
       res.status(500).json({ message: "Error adjusting user points" });
     }
@@ -4858,6 +4944,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching points system:", error);
       res.status(500).json({ message: "Error fetching points system" });
     }
@@ -4921,6 +5008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalPointsAwarded
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error recalculating upload points:", error);
       res.status(500).json({ message: "Error recalculating upload points" });
     }
@@ -4948,6 +5036,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `Successfully cleared historic migration points and rebuilt leaderboards`
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error clearing historic points:", error);
       res.status(500).json({ message: "Error clearing historic points" });
     }
@@ -4991,6 +5080,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         usersUpdated
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error recalculating points and levels:", error);
       res.status(500).json({ message: "Error recalculating points and levels" });
     }
@@ -5075,6 +5165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // while keeping the profile stats/display fields the page needs.
       res.json(stripUserSecrets(userWithStats));
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching user:", err);
       return res.status(500).json({ message: "Error fetching user" });
     }
@@ -5223,7 +5314,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'gamer': 'Gamer', 
         'professional_gamer': 'Pro Gamer',
         'content_creator': 'Creator',
-        'indie_developer': 'Indie Dev',
         'viewer': 'Viewer',
         'filthy_casual': 'Casual',
         'doom_scroller': 'Doom Scroller'
@@ -5393,6 +5483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.send(finalImage);
       
     } catch (error) {
+      captureRouteError(error);
       console.error('Error generating social preview image:', error);
       res.status(500).json({ error: 'Failed to generate preview image' });
     }
@@ -5464,6 +5555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
     } catch (error) {
+      captureRouteError(error);
       console.error('Error generating OG thumbnail with play button:', error);
       res.status(500).json({ error: 'Failed to generate thumbnail' });
     }
@@ -5510,6 +5602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const nodeStream = Readable.fromWeb(videoResponse.body as any);
       nodeStream.pipe(res);
     } catch (error) {
+      captureRouteError(error);
       console.error('OG video proxy error:', error);
       if (!res.headersSent) res.status(500).json({ error: 'Failed to proxy video' });
     }
@@ -5568,6 +5661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.setHeader('Access-Control-Allow-Origin', '*');
       return res.send(buffer);
     } catch (error) {
+      captureRouteError(error);
       console.error('Error serving OG screenshot image:', error);
       res.status(500).json({ error: 'Failed to serve screenshot image' });
     }
@@ -5594,6 +5688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ url: freshUrl, filename: `${safeTitle}_gamefolio.mp4` });
     } catch (error) {
+      captureRouteError(error);
       console.error('Download URL error:', error);
       res.status(500).json({ error: 'Failed to get download URL' });
     }
@@ -5756,12 +5851,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // ── Build watermark filters ──────────────────────────────────────────
       const sgFont = path.join(process.cwd(), 'server', 'assets', 'fonts', 'SpaceGrotesk-Bold.ttf');
+      // Reels are portrait/vertical (1080×1920) — scale font relative to video height so text
+      // is readable regardless of resolution. Clips use fixed px (typically 720-1080p landscape).
+      const clipIsReel = clip.videoType === 'reel';
+      const wmFont1 = clipIsReel ? Math.round(clipH * 0.026) : 22;  // ~50px at 1920h (reduced from 0.042)
+      const wmFont2 = clipIsReel ? Math.round(clipH * 0.019) : 16;  // ~36px at 1920h (reduced from 0.030)
+      // Logo sits ABOVE username, username ABOVE game/site line.
+      // Reel layout from bottom: game(24px) → username(68px) → logo(136px)
+      const wmY1    = clipIsReel ? 'H-th-68'  : 'H-th-44';
+      const wmY2    = clipIsReel ? 'H-th-24'  : 'H-th-16';
+      const logoH   = clipIsReel ? Math.round(clipH * 0.065) : 56;  // ~125px at 1920h for reels, 56px for clips
+      const logoY   = clipIsReel ? 'H-h-168' : 'H-h-102';
       const line1Filter =
-        `drawtext=text='${watermarkLine1}':fontfile='${sgFont}':fontsize=38:fontcolor=white@0.95:` +
-        `x=W-tw-20:y=H-th-56:shadowcolor=black@0.75:shadowx=2:shadowy=2`;
+        `drawtext=text='${watermarkLine1}':fontfile='${sgFont}':fontsize=${wmFont1}:fontcolor=white@0.95:` +
+        `x=W-tw-20:y=${wmY1}:shadowcolor=black@0.75:shadowx=2:shadowy=2`;
       const line2Filter =
-        `drawtext=text='${watermarkLine2}':fontfile='${sgFont}':fontsize=26:fontcolor=white@0.80:` +
-        `x=W-tw-20:y=H-th-20:shadowcolor=black@0.55:shadowx=1:shadowy=1`;
+        `drawtext=text='${watermarkLine2}':fontfile='${sgFont}':fontsize=${wmFont2}:fontcolor=white@0.80:` +
+        `x=W-tw-20:y=${wmY2}:shadowcolor=black@0.55:shadowx=1:shadowy=1`;
 
       const sharedOutputOptions = [
         '-c:v', 'libx264',
@@ -5817,8 +5923,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .input(logoPath)
           .input(outroLocalPath)
           .complexFilter([
-            '[1:v]scale=-1:72[logo]',
-            '[0:v][logo]overlay=x=W-w-20:y=H-h-102[wl]',
+            `[1:v]scale=-1:${logoH}[logo]`,
+            `[0:v][logo]overlay=x=W-w-20:y=${logoY}[wl]`,
             `[wl]${line1Filter}[wl2]`,
             `[wl2]${line2Filter}[clip_wm]`,
             ...audioFilters,
@@ -5838,8 +5944,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .input(freshUrl)
           .input(logoPath)
           .complexFilter([
-            '[1:v]scale=-1:72[logo]',
-            '[0:v][logo]overlay=x=W-w-20:y=H-h-102[wl]',
+            `[1:v]scale=-1:${logoH}[logo]`,
+            `[0:v][logo]overlay=x=W-w-20:y=${logoY}[wl]`,
             `[wl]${line1Filter}[wl2]`,
             `[wl2]${line2Filter}[out]`,
           ])
@@ -5897,12 +6003,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         // Fallback: text-only watermark (no logo, no outro)
         const drawtextFilter =
-          `drawtext=text='${watermarkLine1}':fontsize=38:fontcolor=white@0.92:` +
-          `x=w-tw-20:y=h-th-56:shadowcolor=black@0.75:shadowx=2:shadowy=2:` +
-          `box=1:boxcolor=black@0.38:boxborderw=10,` +
-          `drawtext=text='${watermarkLine2}':fontsize=26:fontcolor=white@0.80:` +
-          `x=w-tw-20:y=h-th-20:shadowcolor=black@0.55:shadowx=1:shadowy=1:` +
-          `box=1:boxcolor=black@0.38:boxborderw=8`;
+          `drawtext=text='${watermarkLine1}':fontsize=${wmFont1}:fontcolor=white@0.92:` +
+          `x=w-tw-20:y=${wmY1}:shadowcolor=black@0.75:shadowx=2:shadowy=2:` +
+          `box=1:boxcolor=black@0.38:boxborderw=8,` +
+          `drawtext=text='${watermarkLine2}':fontsize=${wmFont2}:fontcolor=white@0.80:` +
+          `x=w-tw-20:y=${wmY2}:shadowcolor=black@0.55:shadowx=1:shadowy=1:` +
+          `box=1:boxcolor=black@0.38:boxborderw=6`;
 
         const command = (ffmpeg as any)(freshUrl)
           .videoFilters(drawtextFilter)
@@ -5924,6 +6030,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         command.pipe(res, { end: true });
       }
     } catch (error) {
+      captureRouteError(error);
       console.error('Download clip error:', error);
       if (!res.headersSent) res.status(500).json({ error: 'Failed to download clip' });
     }
@@ -5943,6 +6050,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const signedUrl = await supabaseStorage.getSignedUrl(user.outroVideoPath, 60 * 60 * 2);
       res.json({ url: signedUrl });
     } catch (err) {
+      captureRouteError(err);
       console.error('GET outro error:', err);
       res.status(500).json({ error: 'Failed to get outro' });
     }
@@ -5971,6 +6079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`✅ Outro generated and stored for user ${userId}`);
       res.json({ url: signedUrl });
     } catch (err) {
+      captureRouteError(err);
       console.error('POST outro error:', err);
       res.status(500).json({ error: 'Failed to generate outro' });
     }
@@ -6217,6 +6326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Avatar uploaded successfully"
       });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error uploading avatar:", err);
       return res.status(500).json({ message: "Error uploading avatar" });
     }
@@ -6242,6 +6352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(200).json({ available: true, message: "Username is available" });
       }
     } catch (error) {
+      captureRouteError(error);
       console.error("Error checking username availability:", error);
       return res.status(500).json({ available: false, message: "Error checking username availability" });
     }
@@ -6288,6 +6399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { password, ...userWithoutPassword } = updatedUser;
       res.json(userWithoutPassword);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error uploading profile image:", err);
       return res.status(500).json({ message: "Error uploading profile image" });
     }
@@ -6331,6 +6443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(clips);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching user clips:", err);
       return res.status(500).json({ message: "Error fetching user clips" });
     }
@@ -6386,6 +6499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(games);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching games:", err);
       return res.status(500).json({ message: "Error fetching games" });
     }
@@ -6402,6 +6516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(allGames);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching admin games:", err);
       res.status(500).json({ message: "Error fetching games" });
     }
@@ -6426,6 +6541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.status(201).json(game);
     } catch (err: any) {
+      captureRouteError(err);
       console.error("Error creating admin game:", err);
       if (err.code === '23505') {
         return res.status(409).json({ message: "A game with this name already exists" });
@@ -6452,6 +6568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!game) return res.status(404).json({ message: "Game not found" });
       res.json(game);
     } catch (err: any) {
+      captureRouteError(err);
       console.error("Error updating admin game:", err);
       if (err.code === '23505') {
         return res.status(409).json({ message: "A game with this name already exists" });
@@ -6470,6 +6587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!deleted) return res.status(404).json({ message: "Game not found" });
       res.json({ message: "Game deleted successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error deleting admin game:", err);
       res.status(500).json({ message: "Error deleting game" });
     }
@@ -6481,6 +6599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pendingGames = await storage.getPendingGames();
       res.json(pendingGames);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching pending games:", err);
       res.status(500).json({ message: "Error fetching pending games" });
     }
@@ -6496,6 +6615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!game) return res.status(404).json({ message: "Game not found" });
       res.json(game);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error approving game:", err);
       res.status(500).json({ message: "Error approving game" });
     }
@@ -6511,6 +6631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!rejected) return res.status(404).json({ message: "Game not found" });
       res.json({ message: "Game rejected — content remains hidden. Use delete to fully remove the game." });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error rejecting game:", err);
       res.status(500).json({ message: "Error rejecting game" });
     }
@@ -6557,6 +6678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.status(404).json({ message: "Game not found" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error getting/creating game:", err);
       return res.status(500).json({ message: "Error getting game" });
     }
@@ -6569,6 +6691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const games = await storage.getTrendingGames(limit);
       res.json(games);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching trending games:", err);
       return res.status(500).json({ message: "Error fetching trending games" });
     }
@@ -6587,6 +6710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(game);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching game:", err);
       return res.status(500).json({ message: "Error fetching game" });
     }
@@ -6601,6 +6725,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const screenshotsResult = await storage.getLatestScreenshots(limit, gameId);
       res.json(screenshotsResult);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching latest screenshots:", err);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -6628,6 +6753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(screenshot);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching screenshot:", err);
       return res.status(500).json({ message: "Error fetching screenshot" });
     }
@@ -6746,6 +6872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.send(watermarked);
     } catch (err: any) {
+      captureRouteError(err);
       console.error("Screenshot watermark download error:", err);
       res.status(500).json({ error: "Failed to generate watermarked screenshot" });
     }
@@ -6774,6 +6901,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(screenshot);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching screenshot by shareCode:", err);
       return res.status(500).json({ message: "Error fetching screenshot" });
     }
@@ -6839,6 +6967,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(clips);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching game clips:", err);
       return res.status(500).json({ message: "Error fetching game clips" });
     }
@@ -6873,6 +7002,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const games = await storage.searchGames(req.params.query);
       res.json(games);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error searching games:", err);
       return res.status(500).json({ message: "Error searching games" });
     }
@@ -6907,6 +7037,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const signed = await signClipUrls(latestClips);
       res.json(signed);
     } catch (err) {
+      captureRouteError(err);
       console.error('Error fetching latest clips:', err);
       res.status(500).json({ message: 'Internal server error' });
     }
@@ -6976,6 +7107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(items.slice(0, 24));
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching recent uploads:", err);
       return res.status(500).json({ message: "Error fetching recent uploads" });
     }
@@ -7097,6 +7229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(activities);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching activity feed:", err);
       return res.status(500).json({ message: "Error fetching activity feed" });
     }
@@ -7118,6 +7251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clips = await storage.getAllClips(limit, offset, currentUserId);
       res.json(await signClipUrls(clips));
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching clips:", err);
       return res.status(500).json({ message: "Error fetching clips" });
     }
@@ -7130,6 +7264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clips = await storage.getClipsByHashtag(hashtag);
       res.json(await signClipUrls(clips));
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching clips by hashtag:", err);
       return res.status(500).json({ message: "Error fetching clips by hashtag" });
     }
@@ -7144,6 +7279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clips = await storage.getFeedClips(period, limit);
       res.json(await signClipUrls(clips));
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching clips feed:", err);
       return res.status(500).json({ message: "Error fetching clips feed" });
     }
@@ -7172,6 +7308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(signed);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching trending clips:", err);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -7194,6 +7331,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(reels);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching trending reels:", err);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -7205,8 +7343,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 6;
       const currentUserId = (req.user as any)?.id;
       const reels = await storage.getLatestReels(limit, currentUserId);
-      res.json(reels);
+      res.json(await signClipUrls(reels));
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching latest reels:", err);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -7241,6 +7380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       res.json(result);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching trending reels:", err);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -7259,6 +7399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       res.json(clips);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching trending clips by likes:", err);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -7275,6 +7416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       res.json(clips);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching trending clips by comments:", err);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -7291,6 +7433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       res.json(reels);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching trending reels by likes:", err);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -7307,6 +7450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       res.json(reels);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching trending reels by comments:", err);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -7323,6 +7467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       res.json(screenshots);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching trending screenshots:", err);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -7336,6 +7481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const screenshots = await storage.getLatestScreenshots(limit, gameId);
       res.json(screenshots);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching latest screenshots:", err);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -7352,6 +7498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       res.json(screenshots);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching screenshots:", err);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -7363,6 +7510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const categories = await storage.getGameCategories();
       res.json(categories);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching game categories:", err);
       res.status(500).json({ message: "Error fetching game" });
     }
@@ -7374,6 +7522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clips = await storage.searchClips(req.params.query);
       res.json(clips);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error searching clips:", err);
       return res.status(500).json({ message: "Error searching clips" });
     }
@@ -7399,6 +7548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔍 Clip user data:`, clip.user ? `User ID: ${clip.user.id}, Username: ${clip.user.username}` : 'No user data');
       res.json(clip);
     } catch (error) {
+      captureRouteError(error);
       console.error(`❌ Clips API: Error getting clip ${id}:`, error);
       res.status(500).json({ error: "Failed to get clip" });
     }
@@ -7433,6 +7583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`✅ Reels API: Found reel by shareCode ${shareCode}: "${fullClip.title}"`);
       res.json(fullClip);
     } catch (err) {
+      captureRouteError(err);
       console.error(`❌ Reels API: Error getting reel by shareCode ${req.params.shareCode}:`, err);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -7466,6 +7617,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`✅ Reels API: Found reel ${reelId}: "${reel.title}"`);
       res.json(reel);
     } catch (err) {
+      captureRouteError(err);
       console.error(`❌ Reels API: Error getting reel ${req.params.id}:`, err);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -7484,6 +7636,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(recommendedClips);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching recommended clips:", err);
       return res.status(500).json({ message: "Error fetching recommended clips" });
     }
@@ -7512,6 +7665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`✅ Clips API: Found clip by shareCode ${shareCode}: "${fullClip.title}"`);
       res.json(fullClip);
     } catch (err) {
+      captureRouteError(err);
       console.error(`❌ Clips API: Error getting clip by shareCode ${req.params.shareCode}:`, err);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -7606,7 +7760,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! ${clipUrl}`
         )}`,
         snapchat: clipUrl,
-        threads: clipUrl,
+        threads: `https://www.threads.net/intent/post?text=${encodeURIComponent(
+          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! ${clipUrl}`
+        )}`,
         pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(clipUrl)}&description=${encodeURIComponent(
           `🎮 Epic gaming clip from ${displayName}'s Gamefolio!`
         )}`,
@@ -7635,6 +7791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         videoType: clip.videoType || 'clip'
       });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error generating share data:", err);
       return res.status(500).json({ message: "Error generating share data" });
     }
@@ -7683,6 +7840,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ awarded: !sharedToday });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error tracking clip share:", err);
       res.status(500).json({ message: "Error tracking share" });
     }
@@ -7729,6 +7887,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ awarded: !sharedToday });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error tracking screenshot share:", err);
       res.status(500).json({ message: "Error tracking share" });
     }
@@ -8201,6 +8360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(200).json({ message: "Clip deleted successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error deleting clip:", err);
       return res.status(500).json({ message: "Error deleting clip" });
     }
@@ -8231,6 +8391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedClip);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error pinning clip:", err);
       return res.status(500).json({ message: "Error pinning clip" });
     }
@@ -8257,6 +8418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.status(404).json({ message: "Thumbnail not available" });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error getting clip thumbnail:", error);
       return res.status(500).json({ message: "Internal server error" });
     }
@@ -8288,6 +8450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedClip);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error updating clip thumbnail:", error);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -8325,6 +8488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ thumbnailUrl, clip: updatedClip });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error uploading custom thumbnail:", error);
       res.status(500).json({ message: "Internal server error" });
     }
@@ -8345,6 +8509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const comments = await storage.getCommentsByClipId(clipId);
       res.json(comments);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching clip comments:", error);
       res.status(500).json({ error: "Failed to fetch comments" });
     }
@@ -8446,13 +8611,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       invalidateTrendingByRoute('clips');
       res.status(200).json({ message: "Comment deleted successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error deleting comment:", err);
       return res.status(500).json({ message: "Error deleting comment" });
     }
   });
 
   // Like a clip comment
-  app.post("/api/comments/:id/like", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/comments/:id/like", hybridEmailVerification, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -8468,13 +8634,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(200).json({ liked: true, likeCount });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error liking comment:", err);
       return res.status(500).json({ message: "Error liking comment" });
     }
   });
 
   // Unlike a clip comment
-  app.delete("/api/comments/:id/like", emailVerificationMiddleware, async (req, res) => {
+  app.delete("/api/comments/:id/like", hybridEmailVerification, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -8484,6 +8651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(200).json({ liked: false, likeCount });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error unliking comment:", err);
       return res.status(500).json({ message: "Error unliking comment" });
     }
@@ -8500,13 +8668,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(200).json({ hasLiked, likeCount });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error getting comment like status:", err);
       return res.status(500).json({ message: "Error getting comment like status" });
     }
   });
 
   // Like a screenshot comment
-  app.post("/api/screenshot-comments/:id/like", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/screenshot-comments/:id/like", hybridEmailVerification, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -8522,13 +8691,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(200).json({ liked: true, likeCount });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error liking screenshot comment:", err);
       return res.status(500).json({ message: "Error liking screenshot comment" });
     }
   });
 
   // Unlike a screenshot comment
-  app.delete("/api/screenshot-comments/:id/like", emailVerificationMiddleware, async (req, res) => {
+  app.delete("/api/screenshot-comments/:id/like", hybridEmailVerification, async (req, res) => {
     try {
       const commentId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -8538,6 +8708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(200).json({ liked: false, likeCount });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error unliking screenshot comment:", err);
       return res.status(500).json({ message: "Error unliking screenshot comment" });
     }
@@ -8554,6 +8725,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(200).json({ hasLiked, likeCount });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error getting screenshot comment like status:", err);
       return res.status(500).json({ message: "Error getting screenshot comment like status" });
     }
@@ -8630,7 +8802,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! ${screenshotUrl}`
         )}`,
         snapchat: screenshotUrl,
-        threads: screenshotUrl,
+        threads: `https://www.threads.net/intent/post?text=${encodeURIComponent(
+          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! ${screenshotUrl}`
+        )}`,
         pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(screenshotUrl)}&description=${encodeURIComponent(
           `📸 Epic gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
@@ -8656,6 +8830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: screenshot.description || ""
       });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error generating screenshot sharing data:", err);
       return res.status(500).json({ message: "Error generating sharing data" });
     }
@@ -8675,6 +8850,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const likes = await storage.getLikesByClipId(clipId);
       res.json(likes);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching likes:", err);
       return res.status(500).json({ message: "Error fetching likes" });
     }
@@ -8692,6 +8868,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasLiked = await storage.hasUserLikedClip(userId, clipId);
       res.json({ hasLiked });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error checking like status:", error);
       res.status(500).json({ error: "Failed to check like status" });
     }
@@ -8707,13 +8884,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingReaction = await storage.getUserClipReaction(userId, clipId, '🔥');
       res.json({ hasFired: !!existingReaction });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error checking clip fire status:", error);
       res.status(500).json({ error: "Failed to check fire status" });
     }
   });
 
   // Check if user has liked a screenshot
-  app.get("/api/screenshots/:id/likes/status", emailVerificationMiddleware, async (req, res) => {
+  app.get("/api/screenshots/:id/likes/status", hybridEmailVerification, async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
       if (isNaN(screenshotId)) {
@@ -8724,6 +8902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasLiked = await storage.hasUserLikedScreenshot(userId, screenshotId);
       res.json({ hasLiked });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error checking screenshot like status:", error);
       res.status(500).json({ error: "Failed to check like status" });
     }
@@ -8779,6 +8958,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       })();
     } catch (error) {
+      captureRouteError(error);
       console.error("Error toggling clip like:", error);
       res.status(500).json({ error: "Failed to toggle like" });
     }
@@ -8808,6 +8988,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(200).json({ message: "Clip unliked successfully", liked: false });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error unliking clip:", error);
       res.status(500).json({ error: "Failed to unlike clip" });
     }
@@ -8827,6 +9008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const reactions = await storage.getClipReactions(clipId);
       res.json(reactions);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching clip reactions:", err);
       return res.status(500).json({ message: "Error fetching clip reactions" });
     }
@@ -9020,6 +9202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })();
       }
     } catch (error) {
+      captureRouteError(error);
       console.error('Error incrementing clip views:', error);
       res.status(500).json({
         error: error instanceof Error ? error.message : 'Failed to increment views'
@@ -9066,6 +9249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })();
       }
     } catch (error) {
+      captureRouteError(error);
       console.error('Error incrementing screenshot views:', error);
       res.status(500).json({
         error: error instanceof Error ? error.message : 'Failed to increment views'
@@ -9102,6 +9286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(200).json({ message: "Reaction deleted successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error deleting reaction:", err);
       return res.status(500).json({ message: "Error deleting reaction" });
     }
@@ -9155,6 +9340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reportId: report.id
       });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error creating clip report:", err);
       return res.status(500).json({ message: "Error submitting report" });
     }
@@ -9204,6 +9390,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reportId: report.id
       });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error creating screenshot report:", err);
       return res.status(500).json({ message: "Error submitting report" });
     }
@@ -9225,6 +9412,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const games = await storage.getUserGameFavorites(userId);
       res.json(games);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching favorite games:", err);
       return res.status(500).json({ message: "Error fetching favorite games" });
     }
@@ -9263,6 +9451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const games = await storage.getUserGameFavorites(user.id);
       res.json(games);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching favorite games:", err);
       return res.status(500).json({ message: "Error fetching favorite games" });
     }
@@ -9341,6 +9530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(200).json({ message: "Game removed from favorites" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error removing game from favorites:", err);
       return res.status(500).json({ message: "Error removing game from favorites" });
     }
@@ -9362,6 +9552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const followers = await storage.getFollowersByUserId(userId);
       res.json(followers.map(stripUserSecrets));
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching followers:", err);
       return res.status(500).json({ message: "Error fetching followers" });
     }
@@ -9379,6 +9570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const following = await storage.getFollowingByUserId(userId);
       res.json(following.map(stripUserSecrets));
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching following:", err);
       return res.status(500).json({ message: "Error fetching following" });
     }
@@ -9398,6 +9590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isFollowing = await storage.isFollowing(followerId, followingId);
       res.json({ isFollowing });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error checking follow status:", err);
       return res.status(500).json({ message: "Error checking follow status" });
     }
@@ -9434,6 +9627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ following: isFollowing, requested: hasRequest });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error checking follow status:", err);
       return res.status(500).json({ message: "Error checking follow status" });
     }
@@ -9490,6 +9684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       NotificationService.createFollowNotification(followingId, followerId).catch(() => {});
       LeaderboardService.awardCustomPoints(followingId, 'follow_received', 50, 'Received a new follower').catch(() => {});
     } catch (err) {
+      captureRouteError(err);
       console.error("Error following user:", err);
       return res.status(500).json({ message: "Error following user" });
     }
@@ -9530,6 +9725,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: "User was not being followed" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error unfollowing user:", err);
       return res.status(500).json({ message: "Error unfollowing user" });
     }
@@ -9570,6 +9766,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.createFollow(followData);
       res.status(201).json({ message: "User followed successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error following user:", err);
       
       // Handle specific database errors
@@ -9624,6 +9821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(200).json({ message: "User unfollowed successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error unfollowing user:", err);
       return res.status(500).json({ message: "Error unfollowing user" });
     }
@@ -9640,6 +9838,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const followRequests = await storage.getPendingFollowRequests(userId);
       res.json(followRequests);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching follow requests:", err);
       return res.status(500).json({ message: "Error fetching follow requests" });
     }
@@ -9675,6 +9874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: "Follow request approved successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error approving follow request:", err);
       return res.status(500).json({ message: "Error approving follow request" });
     }
@@ -9707,6 +9907,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: "Follow request rejected successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error rejecting follow request:", err);
       return res.status(500).json({ message: "Error rejecting follow request" });
     }
@@ -9751,6 +9952,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: "Follow request approved successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error approving follow request via notification:", err);
       return res.status(500).json({ message: "Error approving follow request" });
     }
@@ -9792,6 +9994,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: "Follow request rejected successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error rejecting follow request via notification:", err);
       return res.status(500).json({ message: "Error rejecting follow request" });
     }
@@ -9813,6 +10016,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clips = await storage.searchClips(query);
       res.json(clips);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error searching clips:", err);
       return res.status(500).json({ message: "Error searching clips" });
     }
@@ -9828,6 +10032,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const users = await storage.searchUsers(query);
       res.json(users.map(stripUserSecrets));
     } catch (err) {
+      captureRouteError(err);
       console.error("Error searching users:", err);
       return res.status(500).json({ message: "Error searching users" });
     }
@@ -9843,6 +10048,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const games = await storage.searchGames(query);
       res.json(games);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error searching games:", err);
       return res.status(500).json({ message: "Error searching games" });
     }
@@ -9858,6 +10064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const reels = await storage.searchReels(query);
       res.json(reels);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error searching reels:", err);
       return res.status(500).json({ message: "Error searching reels" });
     }
@@ -9873,6 +10080,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const screenshots = await storage.searchScreenshots(query);
       res.json(screenshots);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error searching screenshots:", err);
       return res.status(500).json({ message: "Error searching screenshots" });
     }
@@ -9886,6 +10094,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const users = await storage.searchUsers(req.params.query);
       res.json(users.map(stripUserSecrets));
     } catch (err) {
+      captureRouteError(err);
       console.error("Error searching users:", err);
       return res.status(500).json({ message: "Error searching users" });
     }
@@ -9901,6 +10110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const banners = await storage.getAllProfileBanners();
       res.json(banners);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching profile banners:", err);
       return res.status(500).json({ message: "Error fetching profile banners" });
     }
@@ -9917,6 +10127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const banners = await storage.getUserUnlockedBanners(userId);
       res.json(banners);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching unlocked banners:", err);
       return res.status(500).json({ message: "Error fetching unlocked banners" });
     }
@@ -9935,6 +10146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.unlockBannerForUser(userId, bannerId);
       res.json({ success: true, message: "Banner unlocked" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error unlocking banner:", err);
       return res.status(500).json({ message: "Error unlocking banner" });
     }
@@ -9946,6 +10158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const banners = await storage.getProfileBannersByCategory(req.params.category);
       res.json(banners);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching profile banners by category:", err);
       return res.status(500).json({ message: "Error fetching profile banners by category" });
     }
@@ -9958,6 +10171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const banners = await storage.getAllProfileBanners();
       res.json(banners);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching banner images:", err);
       return res.status(500).json({ message: "Error fetching banner images" });
     }
@@ -10064,6 +10278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         positioning: { positionX, positionY, scale }
       });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error uploading banner:", err);
       return res.status(500).json({ message: "Error uploading banner" });
     }
@@ -10102,6 +10317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try { await fsPromises.unlink(req.file.path); } catch {}
       res.json({ url: imageUrl, message: "Background image uploaded successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error uploading profile background image:", err);
       return res.status(500).json({ message: "Error uploading background image" });
     }
@@ -11095,6 +11311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const banners = await storage.getUserUploadedBanners(req.user.id);
       res.json(banners);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching uploaded banners:", err);
       return res.status(500).json({ message: "Error fetching uploaded banners" });
     }
@@ -11116,6 +11333,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: "Banner activated successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error activating banner:", err);
       return res.status(500).json({ message: "Error activating banner" });
     }
@@ -11137,6 +11355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: "Banner deleted successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error deleting banner:", err);
       return res.status(500).json({ message: "Error deleting banner" });
     }
@@ -11164,6 +11383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const unlockedBorders = await storage.getUserUnlockedAvatarBorders(req.user.id);
       res.json(unlockedBorders);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching unlocked avatar borders:", err);
       return res.status(500).json({ message: "Error fetching unlocked avatar borders" });
     }
@@ -11205,6 +11425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUserAvatarBorder(req.user.id, avatarBorderId);
       res.json({ message: "Avatar border updated successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error updating avatar border:", err);
       return res.status(500).json({ message: "Error updating avatar border" });
     }
@@ -11232,6 +11453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const avatarBorder = await storage.getAssetReward(user.selectedAvatarBorderId);
       res.json({ avatarBorder });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching user avatar border:", err);
       return res.status(500).json({ message: "Error fetching user avatar border" });
     }
@@ -11324,6 +11546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         youtubeChannelName: youtubeChannelName || null,
       });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error checking live status:", err);
       return res.status(500).json({ message: "Error checking live status" });
     }
@@ -11348,6 +11571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json({ success: true });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error saving previous avatar:", err);
       res.status(500).json({ message: "Failed to save previous avatar" });
     }
@@ -11363,6 +11587,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(20);
       res.json({ avatars });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching previous avatars:", err);
       res.status(500).json({ message: "Failed to fetch previous avatars" });
     }
@@ -11376,6 +11601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(sql`${previousAvatars.id} = ${avatarId} AND ${previousAvatars.userId} = ${req.user!.id}`);
       res.json({ success: true });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error deleting previous avatar:", err);
       res.status(500).json({ message: "Failed to delete previous avatar" });
     }
@@ -11391,6 +11617,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tags = await storage.getAllNameTags();
       res.json(tags);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching name tags:", err);
       return res.status(500).json({ message: "Error fetching name tags" });
     }
@@ -11414,6 +11641,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(mergedTags);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching unlocked name tags:", err);
       return res.status(500).json({ message: "Error fetching unlocked name tags" });
     }
@@ -11446,6 +11674,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUserNameTag(req.user.id, nameTagId);
       res.json({ message: "Name tag updated successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error updating name tag:", err);
       return res.status(500).json({ message: "Error updating name tag" });
     }
@@ -11473,6 +11702,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const nameTag = await storage.getNameTag(user.selectedNameTagId);
       res.json({ nameTag });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching user name tag:", err);
       return res.status(500).json({ message: "Error fetching user name tag" });
     }
@@ -11524,6 +11754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(tagsWithSignedUrls.map(tag => ({ ...tag, owned: false, originalPrice: tag.gfCost, proDiscount: false })));
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching store name tags:", err);
       return res.status(500).json({ message: "Error fetching store name tags" });
     }
@@ -11555,6 +11786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.json({ nameTagId, gfCost, treasuryAddress, discountApplied: user.isPro, originalPrice: baseCost });
     } catch (err) {
+      captureRouteError(err);
       console.error("Name tag purchase intent error:", err);
       return res.status(500).json({ error: "Failed to create purchase intent" });
     }
@@ -11624,6 +11856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         txHash,
       });
     } catch (err) {
+      captureRouteError(err);
       console.error("Verify name tag purchase error:", err);
       return res.status(500).json({ error: "Failed to verify purchase" });
     }
@@ -11684,6 +11917,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ synced, total: files.length, message: `Synced ${synced} name tags from bucket` });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error syncing name tags from bucket:", err);
       return res.status(500).json({ message: "Error syncing name tags from bucket" });
     }
@@ -11735,6 +11969,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(bordersWithSignedUrls.map(border => ({ ...border, owned: false, isPro: false })));
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching store borders:", err);
       return res.status(500).json({ message: "Error fetching store borders" });
     }
@@ -11766,6 +12001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const treasuryAddress = getNftTreasuryAddress();
       return res.json({ borderId, gfCost, treasuryAddress });
     } catch (err) {
+      captureRouteError(err);
       console.error("Border purchase intent error:", err);
       return res.status(500).json({ error: "Failed to create purchase intent" });
     }
@@ -11834,6 +12070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         txHash,
       });
     } catch (err) {
+      captureRouteError(err);
       console.error("Verify border purchase error:", err);
       return res.status(500).json({ error: "Failed to verify purchase" });
     }
@@ -11902,6 +12139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ synced, total: files.length, message: `Synced ${synced} borders from bucket` });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error syncing borders from bucket:", err);
       return res.status(500).json({ message: "Error syncing borders from bucket" });
     }
@@ -11961,6 +12199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(badgesWithSignedUrls);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching unlocked verification badges:", err);
       return res.status(500).json({ message: "Error fetching unlocked verification badges" });
     }
@@ -12002,6 +12241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUserVerificationBadge(req.user.id, badgeId);
       res.json({ message: "Verification badge updated successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error updating verification badge:", err);
       return res.status(500).json({ message: "Error updating verification badge" });
     }
@@ -12041,6 +12281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json({ verificationBadge: badge });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching user verification badge:", err);
       return res.status(500).json({ message: "Error fetching user verification badge" });
     }
@@ -12080,6 +12321,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(badgesWithSignedUrls.map(badge => ({ ...badge, owned: false })));
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching store verification badges:", err);
       return res.status(500).json({ message: "Error fetching store verification badges" });
     }
@@ -12147,6 +12389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ synced, total: files.length, message: `Synced ${synced} verification badges from bucket` });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error syncing verification badges from bucket:", err);
       return res.status(500).json({ message: "Error syncing verification badges from bucket" });
     }
@@ -12230,6 +12473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(items);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching admin store items:", err);
       return res.status(500).json({ message: "Error fetching admin store items" });
     }
@@ -12264,6 +12508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.status(400).json({ message: "Invalid item type" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error updating store item:", err);
       return res.status(500).json({ message: "Error updating store item" });
     }
@@ -12499,6 +12744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
     } catch (err) {
+      captureRouteError(err);
       console.error("Error uploading screenshot:", err);
       return res.status(500).json({ message: "Error uploading screenshot" });
     }
@@ -12541,6 +12787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(screenshots);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching user screenshots:", err);
       return res.status(500).json({ message: "Error fetching screenshots" });
     }
@@ -12553,6 +12800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { hasClips, hasScreenshots } = await storage.hasContentByUserId(userId);
       res.json({ hasContent: hasClips || hasScreenshots });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error checking user content:", err);
       return res.status(500).json({ message: "Error checking user content" });
     }
@@ -12571,6 +12819,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(heroText);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching hero text settings:", err);
       return res.status(500).json({ message: "Error fetching hero text settings" });
     }
@@ -12602,6 +12851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedSettings);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error updating hero text settings:", err);
       return res.status(500).json({ message: "Error updating hero text settings" });
     }
@@ -12615,6 +12865,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const screenshots = await storage.getScreenshotsByGameId(gameId, limit);
       res.json(screenshots);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching game screenshots:", err);
       return res.status(500).json({ message: "Error fetching screenshots" });
     }
@@ -12645,6 +12896,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedScreenshot);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error pinning screenshot:", err);
       return res.status(500).json({ message: "Error pinning screenshot" });
     }
@@ -12719,6 +12971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`✅ Screenshot ${screenshotId} deleted successfully`);
       res.status(200).json({ message: "Screenshot deleted successfully" });
     } catch (err) {
+      captureRouteError(err);
       console.error("❌ Error deleting screenshot:", err);
       console.error("Error stack:", err instanceof Error ? err.stack : "No stack trace");
       return res.status(500).json({ 
@@ -12767,6 +13020,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         source: "rawg"
       });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error searching RAWG API:", err);
       return res.status(500).json({ message: "Error searching games" });
     }
@@ -12787,6 +13041,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const conversations = await storage.getConversations(req.user.id);
       res.json(conversations);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching conversations:", err);
       res.status(500).json({ message: "Error fetching conversations" });
     }
@@ -12846,6 +13101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(messagesWithUsers);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching messages:", err);
       res.status(500).json({ message: "Error fetching messages" });
     }
@@ -12923,6 +13179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(404).json({ message: "Message not found or you don't have permission to delete it" });
       }
     } catch (err) {
+      captureRouteError(err);
       console.error("Error deleting message:", err);
       res.status(500).json({ message: "Error deleting message" });
     }
@@ -12952,6 +13209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(500).json({ message: "Failed to delete conversation history" });
       }
     } catch (err) {
+      captureRouteError(err);
       console.error("Error deleting conversation history:", err);
       res.status(500).json({ message: "Error deleting conversation history" });
     }
@@ -13047,6 +13305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(404).json({ message: "User not found - FIXED VERSION" });
       }
     } catch (err) {
+      captureRouteError(err);
       console.error("Error updating messaging preferences:", err);
       res.status(500).json({ message: "Error updating messaging preferences" });
     }
@@ -13075,6 +13334,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(404).json({ message: "User not found" });
       }
     } catch (error) {
+      captureRouteError(error);
       console.error('Error updating privacy preferences:', error);
       res.status(500).json({ message: "Error updating privacy preferences" });
     }
@@ -13407,6 +13667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
     } catch (error) {
+      captureRouteError(error);
       console.error('❌ Desktop video upload error:', error);
 
       if (req.file?.path) {
@@ -13452,6 +13713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         database: "connected"
       });
     } catch (error) {
+      captureRouteError(error);
       // Log the detail server-side; return only a generic status to the
       // client so internal error messages aren't disclosed publicly.
       console.error("Health check failed:", error);
@@ -13491,6 +13753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const games = await storage.getUserGameFavorites(userId);
       res.json(games);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching user game favorites:", err);
       return res.status(500).json({ message: "Error fetching favorite games" });
     }
@@ -13524,6 +13787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json((rows.rows as any[]).map((r) => r.tag));
     } catch (err) {
       console.error("Error fetching user top tags:", err);
+      captureRouteError(err, { route: "/api/user/top-tags" });
       res.status(500).json({ message: "Error fetching top tags" });
     }
   });
@@ -13555,6 +13819,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(rows.rows);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching user top games:", err);
       res.status(500).json({ message: "Error fetching top games" });
     }
@@ -13613,6 +13878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(uniqueClips);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching recommendations:", err);
       return res.status(500).json({ message: "Error fetching recommendations" });
     }
@@ -13625,10 +13891,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's notifications
   app.get("/api/notifications", authMiddleware, async (req, res) => {
     try {
-      const userId = req.user?.id ?? 0;
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const userId = req.user.id;
       const notifications = await storage.getNotificationsByUserId(userId);
       res.json(notifications);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching notifications:", err);
       return res.status(500).json({ message: "Error fetching notifications" });
     }
@@ -13637,10 +13907,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get unread notifications count
   app.get("/api/notifications/unread-count", authMiddleware, async (req, res) => {
     try {
-      const userId = req.user?.id ?? 0;
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const userId = req.user.id;
       const count = await storage.getUnreadNotificationsCount(userId);
       res.json(count);
     } catch (err) {
+      captureRouteError(err);
       console.error("Error fetching unread notifications count:", err);
       return res.status(500).json({ message: "Error fetching unread notifications count" });
     }
@@ -13649,7 +13923,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mark all notifications as read (must come before :id route)
   app.post("/api/notifications/mark-all-read", authMiddleware, async (req, res) => {
     try {
-      const userId = req.user?.id ?? 0;
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const userId = req.user.id;
       const success = await storage.markAllNotificationsAsRead(userId);
 
       if (!success) {
@@ -13658,6 +13935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: "All notifications marked as read" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error marking all notifications as read:", err);
       return res.status(500).json({ message: "Error marking all notifications as read" });
     }
@@ -13666,7 +13944,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mark notification as read
   app.post("/api/notifications/:id/mark-read", authMiddleware, async (req, res) => {
     try {
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
       const notificationId = parseInt(req.params.id);
+      const userId = req.user.id;
+
+      // Verify the notification belongs to the requesting user before mutating it.
+      const notifications = await storage.getNotificationsByUserId(userId);
+      const notification = notifications.find(n => n.id === notificationId);
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found or does not belong to user" });
+      }
+
       const success = await storage.markNotificationAsRead(notificationId);
 
       if (!success) {
@@ -13675,6 +13965,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: "Notification marked as read" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error marking notification as read:", err);
       return res.status(500).json({ message: "Error marking notification as read" });
     }
@@ -13683,7 +13974,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete all notifications for the authenticated user (must come before :id route)
   app.delete("/api/notifications/delete-all", authMiddleware, async (req, res) => {
     try {
-      const userId = req.user?.id ?? 0;
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const userId = req.user.id;
 
       const success = await storage.deleteAllNotifications(userId);
 
@@ -13693,6 +13987,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: "All notifications deleted" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error deleting all notifications:", err);
       return res.status(500).json({ message: "Error deleting all notifications" });
     }
@@ -13701,8 +13996,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete notification
   app.delete("/api/notifications/:id", authMiddleware, async (req, res) => {
     try {
+      if (!req.user?.id) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
       const notificationId = parseInt(req.params.id);
-      const userId = req.user?.id ?? 0;
+      const userId = req.user.id;
 
       // First check if the notification belongs to the user
       const notifications = await storage.getNotificationsByUserId(userId);
@@ -13720,6 +14018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: "Notification deleted" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error deleting notification:", err);
       return res.status(500).json({ message: "Error deleting notification" });
     }
@@ -13734,13 +14033,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const comments = await storage.getScreenshotComments(screenshotId);
       res.json(comments);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching screenshot comments:", error);
       res.status(500).json({ error: "Failed to fetch comments" });
     }
   });
 
   // Add comment to a screenshot
-  app.post("/api/screenshots/:id/comments", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/screenshots/:id/comments", hybridEmailVerification, async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
 
@@ -13813,6 +14113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: "Comment deleted" });
     } catch (err) {
+      captureRouteError(err);
       console.error("Error deleting screenshot comment:", err);
       return res.status(500).json({ message: "Error deleting comment" });
     }
@@ -13825,13 +14126,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const likes = await storage.getScreenshotLikes(screenshotId);
       res.json(likes);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching screenshot likes:", error);
       res.status(500).json({ error: "Failed to fetch likes" });
     }
   });
 
   // Like/unlike screenshot
-  app.post("/api/screenshots/:id/likes", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/screenshots/:id/likes", hybridEmailVerification, async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -13881,13 +14183,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })();
       }
     } catch (error) {
+      captureRouteError(error);
       console.error("Error toggling screenshot like:", error);
       res.status(500).json({ error: "Failed to toggle like" });
     }
   });
 
   // Unlike screenshot (DELETE endpoint for backward compatibility)
-  app.delete("/api/screenshots/:id/likes", emailVerificationMiddleware, async (req, res) => {
+  app.delete("/api/screenshots/:id/likes", hybridEmailVerification, async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
       if (isNaN(screenshotId)) {
@@ -13910,6 +14213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(200).json({ message: "Screenshot unliked successfully", liked: false });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error unliking screenshot:", error);
       res.status(500).json({ error: "Failed to unlike screenshot" });
     }
@@ -13922,6 +14226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const reactions = await storage.getScreenshotReactions(screenshotId);
       res.json(reactions);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching screenshot reactions:", error);
       res.status(500).json({ error: "Failed to fetch reactions" });
     }
@@ -13937,13 +14242,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingReaction = await storage.getUserScreenshotReaction(userId, screenshotId, '🔥');
       res.json({ hasFired: !!existingReaction });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error checking screenshot fire status:", error);
       res.status(500).json({ error: "Failed to check fire status" });
     }
   });
 
   // Add reaction to screenshot (fire reactions are permanent, limited daily, worth 5 points)
-  app.post("/api/screenshots/:id/reactions", emailVerificationMiddleware, async (req, res) => {
+  app.post("/api/screenshots/:id/reactions", hybridEmailVerification, async (req, res) => {
     try {
       const screenshotId = parseInt(req.params.id);
       const userId = req.user!.id;
@@ -14135,6 +14441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const reports = await storage.getCommentReports(status as string);
       res.json(reports);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching comment reports:", error);
       res.status(500).json({ error: "Failed to fetch comment reports" });
     }
@@ -14158,6 +14465,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ message: "Report status updated successfully" });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error updating comment report status:", error);
       res.status(500).json({ error: "Failed to update report status" });
     }
@@ -14173,6 +14481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const opens = await storage.getAllLootboxOpens();
       res.json(opens);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching lootbox opens:", error);
       res.status(500).json({ error: "Failed to fetch lootbox opens" });
     }
@@ -14195,6 +14504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(404).json({ message: "User lootbox record not found" });
       }
     } catch (error) {
+      captureRouteError(error);
       console.error("Error resetting user lootbox:", error);
       res.status(500).json({ error: "Failed to reset user lootbox" });
     }
@@ -14296,6 +14606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(uploadedContent);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching upload success data:", error);
       res.status(500).json({ message: "Failed to fetch upload data" });
     }
@@ -14388,6 +14699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gftRewardSent: gftReward?.success || false,
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error creating wallet:", error);
       res.status(500).json({ error: "Failed to create wallet" });
     }
@@ -14438,6 +14750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         previousWalletAddress: result.oldWalletAddress,
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error updating wallet address:", error);
       res.status(500).json({ error: "Failed to update wallet address" });
     }
@@ -14459,6 +14772,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: user.walletCreatedAt,
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching wallet info:", error);
       res.status(500).json({ error: "Failed to fetch wallet info" });
     }
@@ -14474,6 +14788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tokenInfo = await getTokenInfo();
       res.json(tokenInfo);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching token info:", error);
       res.status(500).json({ error: "Failed to fetch token information" });
     }
@@ -14500,6 +14815,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         contractAddress: "0x9c4aC24c7bb36AA3772ccd5aCBCB48a20a1704B7",
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching token balance:", error);
       res.status(500).json({ error: "Failed to fetch token balance" });
     }
@@ -14540,6 +14856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const available = NFT_CATALOG.filter(nft => !purchasedIds.has(nft.id));
       res.json(available);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching store catalog:", error);
       res.status(500).json({ error: "Failed to fetch store catalog" });
     }
@@ -14576,6 +14893,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const treasuryAddress = getNftTreasuryAddress();
       return res.json({ gfCost: nft.price, treasuryAddress });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error creating NFT purchase intent:", error);
       res.status(500).json({ error: "Failed to create purchase intent" });
     }
@@ -14649,6 +14967,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[NFT Purchase] User ${userId} purchased NFT #${nftId} for ${nft.price} GFT (tx: ${txHash})`);
       res.json({ success: true, message: "NFT purchased successfully", nftId, nftName: nft.name, pricePaid: nft.price });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error verifying NFT purchase:", error);
       res.status(500).json({ error: "Failed to verify purchase" });
     }
@@ -14740,6 +15059,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[NFT Server Purchase] User ${userId} purchased NFT #${nftId} for ${nft.price} GFT (tx: ${txHash})`);
       return res.json({ success: true, txHash, nftId, nftName: nft.name, pricePaid: nft.price });
     } catch (error: any) {
+      captureRouteError(error);
       console.error("[NFT Server Purchase] Error:", error);
       return res.status(500).json({ error: error.message || "Failed to process purchase" });
     }
@@ -14757,6 +15077,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const watchlistItem = await storage.addToNftWatchlist(validatedData);
       res.json(watchlistItem);
     } catch (error: any) {
+      captureRouteError(error);
       // Handle duplicate entry error
       if (error.code === '23505') {
         return res.status(400).json({ message: "NFT already in watchlist" });
@@ -14779,6 +15100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.removeFromNftWatchlist(userId, nftId);
       res.json({ success: true });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error removing from NFT watchlist:", error);
       res.status(500).json({ error: "Failed to remove NFT from watchlist" });
     }
@@ -14791,6 +15113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const watchlist = await storage.getNftWatchlist(userId);
       res.json(watchlist);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error fetching NFT watchlist:", error);
       res.status(500).json({ error: "Failed to fetch watchlist" });
     }
@@ -14809,8 +15132,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isWatched = await storage.isNftInWatchlist(userId, nftId);
       res.json({ isWatched });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error checking NFT watchlist status:", error);
       res.status(500).json({ error: "Failed to check watchlist status" });
+    }
+  });
+
+  // Get the current user's bookmarks, with the underlying content joined in.
+  // Reels are just clips, so contentType "clip" covers both regular clips and reels.
+  app.get("/api/bookmarks", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const bookmarkRows = await storage.getBookmarks(userId);
+
+      const clipIds = bookmarkRows.filter(b => b.contentType === 'clip').map(b => b.contentId);
+      const screenshotIds = bookmarkRows.filter(b => b.contentType === 'screenshot').map(b => b.contentId);
+      const gameIds = bookmarkRows.filter(b => b.contentType === 'game').map(b => b.contentId);
+
+      const [clipResults, screenshotResults, gameResults] = await Promise.all([
+        Promise.all(clipIds.map(id => storage.getClipById(id).catch(() => null))),
+        Promise.all(screenshotIds.map(id => storage.getScreenshotWithUser(id).catch(() => null))),
+        Promise.all(gameIds.map(id => storage.getGame(id).catch(() => null))),
+      ]);
+
+      const clipMap = new Map(clipResults.filter(Boolean).map((c: any) => [c.id, c]));
+      const screenshotMap = new Map(screenshotResults.filter(Boolean).map((s: any) => [s.id, s]));
+      const gameMap = new Map(gameResults.filter(Boolean).map((g: any) => [g.id, g]));
+
+      const items = bookmarkRows
+        .map(bookmark => {
+          const content = bookmark.contentType === 'clip'
+            ? clipMap.get(bookmark.contentId)
+            : bookmark.contentType === 'screenshot'
+            ? screenshotMap.get(bookmark.contentId)
+            : gameMap.get(bookmark.contentId);
+          if (!content) return null;
+          return {
+            id: bookmark.id,
+            contentType: bookmark.contentType,
+            contentId: bookmark.contentId,
+            createdAt: bookmark.createdAt,
+            content,
+          };
+        })
+        .filter(Boolean);
+
+      res.json(items);
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error fetching bookmarks:", error);
+      res.status(500).json({ error: "Failed to fetch bookmarks" });
+    }
+  });
+
+  // Add a bookmark
+  app.post("/api/bookmarks", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const validatedData = insertBookmarkSchema.parse({
+        ...req.body,
+        userId,
+      });
+
+      if (!['clip', 'screenshot', 'game'].includes(validatedData.contentType)) {
+        return res.status(400).json({ message: "Invalid content type" });
+      }
+
+      const bookmark = await storage.addBookmark(validatedData);
+      res.json(bookmark);
+    } catch (error: any) {
+      captureRouteError(error);
+      if (error.code === '23505') {
+        return res.status(400).json({ message: "Already bookmarked" });
+      }
+      console.error("Error adding bookmark:", error);
+      res.status(500).json({ error: "Failed to add bookmark" });
+    }
+  });
+
+  // Remove a bookmark
+  app.delete("/api/bookmarks/:contentType/:contentId", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { contentType } = req.params;
+      const contentId = parseInt(req.params.contentId);
+
+      if (isNaN(contentId) || !['clip', 'screenshot', 'game'].includes(contentType)) {
+        return res.status(400).json({ message: "Invalid bookmark identifier" });
+      }
+
+      await storage.removeBookmark(userId, contentType, contentId);
+      res.json({ success: true });
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error removing bookmark:", error);
+      res.status(500).json({ error: "Failed to remove bookmark" });
+    }
+  });
+
+  // Check if a piece of content is bookmarked by the current user
+  app.get("/api/bookmarks/check/:contentType/:contentId", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const { contentType } = req.params;
+      const contentId = parseInt(req.params.contentId);
+
+      if (isNaN(contentId) || !['clip', 'screenshot', 'game'].includes(contentType)) {
+        return res.status(400).json({ message: "Invalid bookmark identifier" });
+      }
+
+      const isBookmarked = await storage.isBookmarked(userId, contentType, contentId);
+      res.json({ isBookmarked });
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error checking bookmark status:", error);
+      res.status(500).json({ error: "Failed to check bookmark status" });
     }
   });
 
@@ -14923,6 +15359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         priceUSD,
       });
     } catch (error) {
+      captureRouteError(error);
       console.error('Error creating Crossmint order:', error);
       res.status(500).json({ error: 'Failed to create order' });
     }
@@ -15020,6 +15457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orderId
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error completing order:", error);
       res.status(500).json({ error: "Failed to complete order" });
     }
@@ -15068,6 +15506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
     } catch (error) {
+      captureRouteError(error);
       console.error('Error testing Crossmint connection:', error);
       res.status(500).json({ 
         success: false, 
@@ -15086,6 +15525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const status = await storage.getDailyLootboxStatus(userId);
       res.json(status);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error getting lootbox status:", error);
       res.status(500).json({ message: "Failed to get lootbox status" });
     }
@@ -15137,6 +15577,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error opening lootbox:", error);
       res.status(500).json({ message: "Failed to open lootbox" });
     }
@@ -15149,6 +15590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rewards = await storage.getUserClaimedRewards(userId);
       res.json(rewards);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error getting user rewards:", error);
       res.status(500).json({ message: "Failed to get rewards" });
     }
@@ -15161,6 +15603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const collectionData = await storage.getUserCollectionData(userId);
       res.json(collectionData);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error getting collection data:", error);
       res.status(500).json({ message: "Failed to get collection data" });
     }
@@ -15172,6 +15615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rewards = await storage.getActiveRewardsForLootbox();
       res.json(rewards);
     } catch (error) {
+      captureRouteError(error);
       console.error("Error getting available rewards:", error);
       res.status(500).json({ message: "Failed to get available rewards" });
     }
@@ -15184,6 +15628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.resetUserLootbox(userId);
       res.json({ success: true, message: "Lootbox reset successfully" });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error resetting lootbox:", error);
       res.status(500).json({ message: "Failed to reset lootbox" });
     }
@@ -15211,6 +15656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         canClaim: !user.welcomePackClaimed
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error getting welcome pack status:", error);
       res.status(500).json({ message: "Failed to get welcome pack status" });
     }
@@ -15343,6 +15789,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Welcome pack claimed successfully!"
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error claiming welcome pack:", error);
       res.status(500).json({ message: "Failed to claim welcome pack" });
     }
@@ -15378,6 +15825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.json({ granted: true, xp: MAC_BONUS_XP });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error granting Mac bonus:", error);
       return res.status(500).json({ message: "Failed to grant Mac bonus" });
     }
@@ -15463,6 +15911,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ success: true, isPro, lootboxReward });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error syncing subscription:", error);
       res.status(500).json({ message: "Failed to sync subscription status" });
     }
@@ -15496,6 +15945,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
     } catch (error) {
+      captureRouteError(error);
       console.error("Error claiming monthly lootbox:", error);
       res.status(500).json({ message: "Failed to claim monthly lootbox" });
     }
@@ -15577,6 +16027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subscriptionAmount,
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error getting subscription status:", error);
       res.status(500).json({ message: "Failed to get subscription status" });
     }
@@ -15771,6 +16222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endDate: endDate.toISOString(),
       });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error cancelling subscription:", error);
       res.status(500).json({ message: "Failed to cancel subscription" });
     }
@@ -15802,6 +16254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ signedUrl });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error generating signed URL:", error);
       res.status(500).json({ error: "Failed to generate signed URL" });
     }
@@ -15854,6 +16307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({ signedUrls: results });
     } catch (error) {
+      captureRouteError(error);
       console.error("Error generating signed URLs:", error);
       res.status(500).json({ error: "Failed to generate signed URLs" });
     }

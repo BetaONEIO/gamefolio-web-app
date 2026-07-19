@@ -46,6 +46,7 @@ const cachedPriceIds: { monthly: string | null; yearly: string | null } = {
 // All failures fall back silently to the raw GBP price.
 // ---------------------------------------------------------------------------
 import { getGbpRates, detectLocalCurrency } from '../services/currency-service';
+import { captureRouteError } from "../sentry";
 
 async function getOrCreatePriceId(
   stripe: any,
@@ -283,6 +284,7 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
       sessionId: session.id,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Create pro subscription error:', error);
     return res.status(500).json({
       error: 'Failed to create pro subscription',
@@ -342,6 +344,7 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
 
     return res.json({ success: true, isPro: true, subscriptionId, lootboxReward });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Confirm pro subscription error:', error);
     return res.status(500).json({
       error: 'Failed to confirm pro subscription',
@@ -430,6 +433,7 @@ router.post('/api/pro/gift-checkout', hybridAuth, async (req: Request, res: Resp
 
     return res.json({ url: session.url });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Gift pro checkout error:', error);
     return res.status(500).json({ error: 'Failed to create gift checkout', message: error.message });
   }

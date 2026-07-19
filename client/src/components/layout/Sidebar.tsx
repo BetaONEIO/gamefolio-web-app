@@ -12,6 +12,7 @@ import {
   Rocket,
   Radio,
   Target,
+  Bookmark,
 } from "lucide-react";
 import { isPartnerType } from "@shared/partner-access";
 import { GamefolioStoreIcon } from "@/components/icons/GamefolioStoreIcon";
@@ -328,6 +329,12 @@ const Sidebar = () => {
                       <Link href={item.href} onClick={() => { closeClipDialog(); setMyGamefolioExpanded(false); }}>
                         <div className="flex items-center px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors cursor-pointer">
                           View Profile
+                        </div>
+                      </Link>
+                      <Link href="/bookmarks" onClick={() => { closeClipDialog(); setMyGamefolioExpanded(false); }}>
+                        <div className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors cursor-pointer">
+                          <Bookmark className="h-3.5 w-3.5 shrink-0" />
+                          Bookmarks
                         </div>
                       </Link>
                       <button

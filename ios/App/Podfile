@@ -28,6 +28,13 @@ end
 target 'App' do
   capacitor_pods
   # Add your Pods here
+  # CapacitorFirebaseAuthentication defaults to its "Lite" subspec, which
+  # excludes the GoogleSignIn SDK and compiles FirebaseAuthentication's
+  # Google sign-in code paths out entirely (#if RGCFA_INCLUDE_GOOGLE), making
+  # signInWithGoogle() a silent no-op that never resolves or rejects. The
+  # capacitor_pods block above is regenerated verbatim by every `cap sync`,
+  # so this override must stay here, outside that block, to survive syncs.
+  pod 'CapacitorFirebaseAuthentication/Google', :path => '../../node_modules/@capacitor-firebase/authentication'
 end
 
 post_install do |installer|

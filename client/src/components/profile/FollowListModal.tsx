@@ -135,6 +135,9 @@ function FollowUserRow({ user, onClose }: { user: FollowUser; onClose: () => voi
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user.username}/follow-status`] });
     },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update follow status", variant: "destructive" });
+    },
   });
 
   return (

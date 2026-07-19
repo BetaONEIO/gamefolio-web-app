@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { MediaBucketMigration } from '../migrations/media-bucket-migration';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 
@@ -45,6 +46,7 @@ router.post('/migrate-media-storage', async (req, res) => {
       });
     }
   } catch (error) {
+    captureRouteError(error);
     console.error('Migration failed:', error);
     res.status(500).json({
       success: false,
@@ -81,6 +83,7 @@ router.post('/migrate-media-storage/dry-run', async (req, res) => {
       }
     });
   } catch (error) {
+    captureRouteError(error);
     console.error('Dry run failed:', error);
     res.status(500).json({
       success: false,
@@ -103,6 +106,7 @@ router.get('/validate-migration', async (req, res) => {
       message: validation.valid ? 'Migration is valid' : 'Migration has issues'
     });
   } catch (error) {
+    captureRouteError(error);
     console.error('Validation failed:', error);
     res.status(500).json({
       success: false,

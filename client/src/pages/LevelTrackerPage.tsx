@@ -183,9 +183,16 @@ function CountdownClock() {
   useEffect(() => {
     const update = () => {
       const now = new Date();
-      const midnight = new Date(now);
-      midnight.setHours(24, 0, 0, 0);
-      const diff = midnight.getTime() - now.getTime();
+      // Daily activity resets on the server's calendar day (UTC — see
+      // isSameDay in the /daily-activity route), not the browser's local
+      // midnight, so the countdown has to target UTC midnight to be accurate.
+      const utcMidnight = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() + 1,
+        0, 0, 0, 0,
+      ));
+      const diff = utcMidnight.getTime() - now.getTime();
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);

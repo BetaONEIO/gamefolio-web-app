@@ -5,16 +5,18 @@ import {
   UseMutationResult,
   useQueryClient,
 } from "@tanstack/react-query";
+import * as Sentry from "@sentry/capacitor";
 import { User } from "@shared/schema";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { auth } from "@/lib/firebase";
+import { auth, getGoogleRedirectResult } from "@/lib/firebase";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { isNative } from "@/lib/platform";
-import { clearTokens, setTokens } from "@/lib/auth-token";
+import { clearTokens, getAccessTokenSync, setTokens } from "@/lib/auth-token";
 import { initPushNotifications, unregisterCurrentPushToken } from "@/lib/push-notifications";
+import { setSentryUser } from "@/lib/sentry";
 
 type AuthContextType = {
   user: User | null;
@@ -40,6 +42,20 @@ type RegisterData = {
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
+// Set by OAuthAuthorizePage before bouncing an unauthenticated user to /auth, so
+// they land back on the consent screen (with its original query params) instead
+// of the default home/onboarding destination once they log in.
+const PENDING_OAUTH_REDIRECT_KEY = 'oauth_pending_redirect';
+function consumePendingOAuthRedirect(): string | null {
+  try {
+    const pending = sessionStorage.getItem(PENDING_OAUTH_REDIRECT_KEY);
+    if (pending) sessionStorage.removeItem(PENDING_OAUTH_REDIRECT_KEY);
+    return pending;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -64,26 +80,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // session cookie, so after a successful session login we exchange the
   // session for a JWT pair and store it. The queryClient automatically
   // attaches it to subsequent requests and refreshes it on 401.
+  const attemptIssueNativeTokens = async (): Promise<"ok" | "unauthorized" | "failed"> => {
+    const res = await fetch("/api/auth/token/issue", {
+      method: "POST",
+      credentials: "include",
+    });
+    if (res.status === 401) return "unauthorized";
+    if (!res.ok) return "failed";
+    // Guard against SPA fallback returning index.html with status 200
+    // when the route is missing on a stale deploy.
+    if (!res.headers.get("content-type")?.includes("application/json")) return "failed";
+    const data = (await res.json()) as {
+      accessToken?: string;
+      refreshToken?: string;
+    };
+    if (!data.accessToken || !data.refreshToken) return "failed";
+    await setTokens(data.accessToken, data.refreshToken);
+    return "ok";
+  };
+
   const issueNativeTokens = async () => {
     if (!isNative) return;
     try {
-      const res = await fetch("/api/auth/token/issue", {
-        method: "POST",
-        credentials: "include",
+      let result = await attemptIssueNativeTokens();
+      // A 401 immediately after a successful login almost always means the
+      // session cookie this exchange depends on hasn't finished propagating
+      // through the native CapacitorCookies bridge yet, not a real auth
+      // failure. One short-delay retry clears that race.
+      if (result === "unauthorized") {
+        Sentry.addBreadcrumb({
+          category: "auth-token",
+          message: "issueNativeTokens: 401 on first attempt, retrying",
+          level: "warning",
+        });
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        result = await attemptIssueNativeTokens();
+      }
+      Sentry.addBreadcrumb({
+        category: "auth-token",
+        message: `issueNativeTokens: ${result}`,
+        level: result === "ok" ? "info" : "warning",
       });
-      if (!res.ok) return;
-      // Guard against SPA fallback returning index.html with status 200
-      // when the route is missing on a stale deploy.
-      if (!res.headers.get("content-type")?.includes("application/json")) return;
-      const data = (await res.json()) as {
-        accessToken?: string;
-        refreshToken?: string;
-      };
-      if (data.accessToken && data.refreshToken) {
-        await setTokens(data.accessToken, data.refreshToken);
+      if (result !== "ok") {
+        Sentry.captureException(new Error(`issueNativeTokens failed: ${result}`), {
+          tags: { module: "use-auth", op: "issueNativeTokens" },
+        });
       }
     } catch (e) {
       console.warn("issueNativeTokens failed", e);
+      Sentry.captureException(e, { tags: { module: "use-auth", op: "issueNativeTokens" } });
     }
   };
 
@@ -124,6 +169,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (!mounted) return;
 
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: 'Google authentication failed' }));
+          if (errorData.code === 'DEV_PORTAL_NO_REGISTRATION') {
+            toast({
+              title: "Registration not available",
+              description: "New registrations are not available on the developer portal. Please create an account on app.gamefolio.com first.",
+              variant: "gamefolioError",
+            });
+            return;
+          }
+          throw new Error(errorData.message || `Server error: ${response.status}`);
+        }
+
         const userData = await response.json();
 
         if (!mounted) return;
@@ -137,6 +195,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           dailyRewardShownRef.current = true;
         }
         queryClient.setQueryData(["/api/user"], userData);
+
+        const pendingOAuthRedirect = consumePendingOAuthRedirect();
 
         if (userData.needsOnboarding) {
           if (userData.isNewGoogleUser) {
@@ -152,14 +212,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               variant: "gamefolioSuccess",
             });
           }
-          setLocation("/onboarding");
+          setLocation(pendingOAuthRedirect || "/onboarding");
         } else {
-          toast({
-            title: "Welcome back!",
-            description: `You're now signed in with Google.`,
-            variant: "gamefolioSuccess",
-          });
-          setLocation("/");
+          setLocation(pendingOAuthRedirect || "/");
         }
       } catch (error) {
         if (!mounted) return;
@@ -171,6 +226,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       }
     };
+
+    // A page load returning from signInWithRedirect looks identical to a
+    // routine "Firebase restoring an existing session" load from
+    // onAuthStateChanged's point of view (first fire, user present) — the
+    // isInitialRestore skip below would otherwise silently eat a genuine
+    // sign-in. getRedirectResult() is the only API that can tell the two
+    // apart, so it's handled explicitly and independently here.
+    // handleFirebaseSignIn's own processedUid dedup makes it safe for this
+    // and the onAuthStateChanged fire below to both end up calling it for
+    // the same user — whichever runs first wins, the other is a no-op.
+    getGoogleRedirectResult().then((result) => {
+      if (result?.user && mounted) {
+        handleFirebaseSignIn(result.user);
+      }
+    }).catch((error) => {
+      if (!mounted) return;
+      console.error('Google redirect sign-in error:', error);
+      toast({
+        title: "Authentication failed",
+        description: "There was an error signing you in. Please try again.",
+        variant: "gamefolioError",
+      });
+    });
+
+    // Diagnosed via Sentry: on native, the app's own /api/user check (which
+    // works fine off a valid stored token, independent of Firebase) only
+    // ever runs when firebaseAuthChecked flips true - and Firebase's own
+    // onAuthStateChanged callback can apparently hang indefinitely on some
+    // cold boots, permanently blocking that check and leaving a user with a
+    // perfectly valid token stuck on the login screen. Firebase is only used
+    // for Google sign-in here, not for native-token auth, so don't let it
+    // gate the whole app's auth resolution forever.
+    const firebaseCheckTimeout = setTimeout(() => {
+      if (!mounted) return;
+      Sentry.captureMessage("use-auth: Firebase auth check timed out, proceeding anyway", {
+        level: "warning",
+        tags: { module: "use-auth", op: "firebase-timeout" },
+      });
+      setFirebaseAuthChecked(true);
+    }, 5000);
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       // Firebase always emits one onAuthStateChanged on init to report the
@@ -184,12 +279,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (mounted) {
+        clearTimeout(firebaseCheckTimeout);
         setFirebaseAuthChecked(true);
       }
     });
 
     return () => {
       mounted = false;
+      clearTimeout(firebaseCheckTimeout);
       unsubscribe();
     };
   }, [queryClient, toast, setLocation]);
@@ -200,6 +297,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
+    isFetching,
   } = useQuery<User | undefined, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -214,6 +312,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     retry: 1,
     retryDelay: 500,
   });
+
+  // Diagnostic for the "logged out after force-quit" investigation: report
+  // the outcome of the very first /api/user resolution on this app launch,
+  // together with whether a token was in memory at that moment. This is the
+  // one thing hydrate()'s own logging can't show - whether the token that was
+  // found actually resulted in a recognized session.
+  //
+  // Must gate on firebaseAuthChecked + !isFetching, not just !isLoading: a
+  // disabled query (enabled: false, before firebaseAuthChecked flips true)
+  // also reports isLoading: false with no fetch ever having run, so an
+  // earlier version of this effect fired on that very first disabled render
+  // and locked itself out before the real fetch ever completed - every
+  // "userResolved: false" it ever reported was meaningless.
+  const initialAuthCheckReported = useRef(false);
+  useEffect(() => {
+    if (!isNative || !firebaseAuthChecked || isFetching || initialAuthCheckReported.current) return;
+    initialAuthCheckReported.current = true;
+    Sentry.captureMessage("use-auth: initial /api/user resolution", {
+      level: "info",
+      tags: {
+        module: "use-auth",
+        op: "initial-user-check",
+        hadTokenAtCheckTime: String(!!getAccessTokenSync()),
+        userResolved: String(!!user),
+        hadError: String(!!error),
+        errorMessage: error?.message ?? "",
+      },
+    });
+  }, [firebaseAuthChecked, isFetching, user, error]);
+
+  // Tag Sentry events with the resolved user so crashes/errors are
+  // attributable to a username, not just an anonymous device UUID.
+  useEffect(() => {
+    setSentryUser(user ? { id: String(user.id), username: user.username } : null);
+  }, [user]);
 
   // Once the user is authenticated, fire off the push-notification handshake
   // (request OS permission, fetch FCM token, POST to /api/push/register). Safe
@@ -285,24 +418,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Use centralized refreshUser to ensure cache consistency
       await refreshUser();
 
-      // Show welcome back message
-      toast({
-        title: "Welcome back!",
-        description: `You are now logged in as ${user.displayName || user.username}`,
-        variant: "gamefolioSuccess",
-      });
-
       // Check if user needs onboarding
       const needsOnboarding = !user.userType;
+      const pendingOAuthRedirect = consumePendingOAuthRedirect();
       if (needsOnboarding) {
         toast({
           title: "Complete your profile",
           description: "Finish setting up your gaming profile to continue.",
           variant: "gamefolioSuccess",
         });
-        setLocation("/onboarding");
+        setLocation(pendingOAuthRedirect || "/onboarding");
       } else {
-        setLocation("/");
+        setLocation(pendingOAuthRedirect || "/");
       }
     },
     // Error handling now done in the forms for contextual display
@@ -337,7 +464,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "gamefolioSuccess",
       });
 
-      // Redirect based on email verification status
+      // Redirect based on email verification status. A pending OAuth consent
+      // bounce-back is deliberately not restored here — a brand-new
+      // registration still needs to clear email verification/onboarding first.
       if (user.emailVerified) {
         // User is already verified (e.g., OAuth users), go directly to onboarding
         setLocation("/onboarding");

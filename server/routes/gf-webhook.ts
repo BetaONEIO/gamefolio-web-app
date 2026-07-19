@@ -304,7 +304,12 @@ router.post('/api/stripe/webhook',
     if (event.type === 'customer.subscription.updated') {
       const subscription = event.data.object as Stripe.Subscription;
       const subscriptionId = subscription.id;
-      const nonActiveStatuses = ['canceled', 'incomplete', 'incomplete_expired', 'past_due', 'unpaid'];
+      // `past_due` is intentionally excluded: Stripe retries payment for several
+      // days before truly ending a subscription, so the user still has a valid
+      // paid period and must not lose Pro access during that retry window.
+      // `incomplete` is also excluded because it only applies to brand-new
+      // subscriptions that are mid-checkout and have not yet been provisioned.
+      const nonActiveStatuses = ['canceled', 'incomplete_expired', 'unpaid'];
 
       if (nonActiveStatuses.includes(subscription.status)) {
         try {

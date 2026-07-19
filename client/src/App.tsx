@@ -26,6 +26,7 @@ import { ProtectedRoute } from "@/components/auth/protected-route";
 import { PartnerProtectedRoute } from "@/components/auth/partner-protected-route";
 import { AdminProtectedRoute } from "@/components/auth/admin-protected-route";
 import { OnboardingGuard } from "@/components/auth/onboarding-guard";
+import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { PageTransition } from "@/components/ui/page-transition";
 import { BannerSettings } from "@shared/schema";
 import { WebPlatformRedirect } from "@/components/WebPlatformRedirect";
@@ -140,6 +141,12 @@ const ViewContentPage = lazyWithRecovery(() => import("./pages/ViewContentPage")
 const PostUploadSuccessPage = lazyWithRecovery(() => import("./pages/PostUploadSuccessPage"));
 const VerifyEmailPage = lazyWithRecovery(() => import("./pages/verify-email"));
 const VerifyCodePage = lazyWithRecovery(() => import("./pages/verify-code-page"));
+const OAuthAuthorizePage = lazyWithRecovery(() => import("./pages/OAuthAuthorizePage"));
+const DeveloperHomePage = lazyWithRecovery(() => import("./pages/developer/DeveloperHomePage"));
+const MyAppsPage = lazyWithRecovery(() => import("./pages/developer/MyAppsPage"));
+const CreateAppPage = lazyWithRecovery(() => import("./pages/developer/CreateAppPage"));
+const AppDetailPage = lazyWithRecovery(() => import("./pages/developer/AppDetailPage"));
+const ConnectedAppsPage = lazyWithRecovery(() => import("./pages/ConnectedAppsPage"));
 const TermsPage = lazyWithRecovery(() => import("./pages/terms-page"));
 const PrivacyPage = lazyWithRecovery(() => import("./pages/privacy-page"));
 const ContactPage = lazyWithRecovery(() => import("./pages/contact-page"));
@@ -153,6 +160,7 @@ const WatchlistPage = lazyWithRecovery(() => import("./pages/WatchlistPage"));
 const UserBattlesPage = lazyWithRecovery(() => import("./pages/UserBattlesPage"));
 const LevelTrackerPage = lazyWithRecovery(() => import("./pages/LevelTrackerPage"));
 const CollectionPage = lazyWithRecovery(() => import("./pages/CollectionPage"));
+const BookmarksPage = lazyWithRecovery(() => import("./pages/BookmarksPage"));
 const DebugWalletPage = lazyWithRecovery(() => import("./pages/DebugWalletPage"));
 const TwoFactorVerifyPage = lazyWithRecovery(() => import("./pages/TwoFactorVerifyPage"));
 const MintNFTPage = lazyWithRecovery(() => import("./pages/MintNFTPage"));
@@ -360,10 +368,17 @@ function MainLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // developer.gamefolio.com is a dedicated developer-portal site — it keeps
+  // the Header (branding + login) and AuthModal so auth still works, but
+  // drops the consumer app's Sidebar/MobileNav/MobileMenu and promotional
+  // banners, none of which make sense outside the main app.
+  const isDeveloperSubdomain = window.location.hostname === 'developer.gamefolio.com';
+
   // Don't render layout for onboarding, verification, password reset, embed pages, and public view pages
   const isAuthOrOnboarding = location.startsWith("/onboarding") ||
                            location.startsWith("/verify-email") ||
                            location.startsWith("/verify-code") ||
+                           location.startsWith("/oauth/consent") ||
                            location.startsWith("/embed/") ||
                            location.startsWith("/leaderboard/embed") ||
                            location.startsWith("/view/") ||
@@ -378,11 +393,18 @@ function MainLayout({ children }: { children: React.ReactNode }) {
     <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
       <Header />
 
+      {/* Email Verification Banner - shown app-wide until the user verifies */}
+      {!isDeveloperSubdomain && user && !user.emailVerified && (
+        <div className={`px-4 mt-2 relative z-20 ${!isMobile ? 'ml-64' : ''}`}>
+          <EmailVerificationBanner />
+        </div>
+      )}
+
       {/* Activity Scroll Banner - Only show on home page */}
-      {location === "/" && <ActivityScrollBanner />}
+      {!isDeveloperSubdomain && location === "/" && <ActivityScrollBanner />}
 
       {/* Dynamic Banner */}
-      {!isLoadingBanner && bannerSettings && bannerSettings.isEnabled && !isBannerDismissed && (
+      {!isDeveloperSubdomain && !isLoadingBanner && bannerSettings && bannerSettings.isEnabled && !isBannerDismissed && (
         <Alert className={`mx-4 mt-2 border-primary/30 bg-primary/10 backdrop-blur-sm relative z-20 ${!isMobile ? 'ml-64' : ''}`}>
           {bannerSettings.showIcon && <AlertTriangle className="h-4 w-4 text-primary" />}
           <AlertDescription className="text-foreground flex items-center justify-between">
@@ -418,14 +440,14 @@ function MainLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Mobile Menu Overlay */}
-      <MobileMenu />
+      {!isDeveloperSubdomain && <MobileMenu />}
 
       <div className="flex flex-1 min-h-0 relative z-10">
-        {!isMobile && <Sidebar />}
+        {!isDeveloperSubdomain && !isMobile && <Sidebar />}
 
         <main
           ref={mainScrollRef}
-          className={`flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide bg-background ${!isMobile ? 'ml-64' : ''}`}
+          className={`flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide bg-background ${!isDeveloperSubdomain && !isMobile ? 'ml-64' : ''}`}
           style={{
             ...(isMobile && keyboardHeight > 0 ? { paddingBottom: `${keyboardHeight}px` } : {}),
             overflowAnchor: 'none',
@@ -442,7 +464,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {isMobile && <MobileNav />}
+      {!isDeveloperSubdomain && isMobile && <MobileNav />}
       
       {/* Auth Modal */}
       <AuthModal 
@@ -455,6 +477,21 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 }
 
 
+// developer.gamefolio.com is meant to be a dedicated developer-portal site
+// (sign up, register an app, use the OAuth API) rather than the consumer home
+// feed — render the developer portal directly at its root path rather than
+// navigating to /developer, so the URL bar doesn't show the redundant-looking
+// "developer.gamefolio.com/developer". Every other route (login,
+// /oauth/authorize, /api/public/v1/*, etc.) behaves identically regardless of
+// hostname, since Express/wouter don't otherwise branch on it.
+const DEVELOPER_SUBDOMAIN_HOSTNAME = 'developer.gamefolio.com';
+
+function RootRoute() {
+  const isDeveloperSubdomain = window.location.hostname === DEVELOPER_SUBDOMAIN_HOSTNAME;
+  if (isDeveloperSubdomain) return <DeveloperHomePage />;
+  return <HomePage />;
+}
+
 function Router() {
   return (
     <PageTransition>
@@ -462,7 +499,7 @@ function Router() {
         <Suspense fallback={<RouteLoader />}>
           <Switch>
           {/* Public routes accessible to guests */}
-          <Route path="/" component={HomePage} />
+          <Route path="/" component={RootRoute} />
           <Route path="/dashboard" component={DashboardPage} />
           <Route path="/trending" component={TrendingPage} />
           <Route path="/clip/:id" component={ClipRedirectPage} />
@@ -525,6 +562,12 @@ function Router() {
           <Route path="/onboarding" component={OnboardingPage} />
           <Route path="/verify-email" component={VerifyEmailPage} />
           <Route path="/verify-code" component={VerifyCodePage} />
+          <Route path="/oauth/consent" component={OAuthAuthorizePage} />
+          <Route path="/developer" component={DeveloperHomePage} />
+          <ProtectedRoute path="/developer/apps/new" component={CreateAppPage} />
+          <ProtectedRoute path="/developer/apps/:id" component={AppDetailPage} />
+          <ProtectedRoute path="/developer/apps" component={MyAppsPage} />
+          <Route path="/settings/connected-apps" component={ConnectedAppsPage} />
           <Route path="/2fa-verify" component={TwoFactorVerifyPage} />
           <Route path="/terms" component={TermsPage} />
           <Route path="/privacy" component={PrivacyPage} />
@@ -578,6 +621,7 @@ function Router() {
               sourced and uses no wallet provider at render time. Transaction
               actions (Quick Sell) are disabled on native — see MintedNftDetailScreen. */}
           <ProtectedRoute path="/collection" component={CollectionPage} />
+          <ProtectedRoute path="/bookmarks" component={BookmarksPage} />
           <Route path="/leaderboard/embed" component={LeaderboardEmbedPage} />
           <Route path="/debug/wallet" component={WALLET_UI_ENABLED ? DebugWalletPage : () => (
             <WebPlatformRedirect title="Wallet" />
