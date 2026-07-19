@@ -26,6 +26,7 @@ import jwt from "jsonwebtoken";
 import { eq, sql, desc, inArray, and } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
+import { captureRouteError } from "./sentry";
 import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory } from "@shared/schema";
 
 // Helper function to generate unique share code
@@ -11801,6 +11802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json((rows.rows as any[]).map((r) => r.tag));
     } catch (err) {
       console.error("Error fetching user top tags:", err);
+      captureRouteError(err, { route: "/api/user/top-tags" });
       res.status(500).json({ message: "Error fetching top tags" });
     }
   });
