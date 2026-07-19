@@ -187,7 +187,7 @@ function GamefolioActivityPanel() {
   const { data: rows = [], isLoading } = useQuery<GamefolioActivityRow[]>({
     queryKey: ["/api/store/gamefolio-activity"],
     queryFn: async () => {
-      const res = await fetch("/api/store/gamefolio-activity", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/store/gamefolio-activity");
       if (!res.ok) throw new Error("Failed to load activity");
       return res.json();
     },

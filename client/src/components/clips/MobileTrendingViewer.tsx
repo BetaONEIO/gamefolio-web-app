@@ -15,6 +15,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useAuthModal } from "@/hooks/use-auth-modal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/content/ReportDialog";
 import { LazyImage } from "@/components/ui/lazy-image";
@@ -179,6 +180,7 @@ export function MobileTrendingViewer({ content: rawContent, initialIndex = 0, on
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { openModal } = useAuthModal();
+  const { toast } = useToast();
 
   // Declare currentItem here so it's available to hooks below
   const currentItem = content[currentIndex];
@@ -216,7 +218,9 @@ export function MobileTrendingViewer({ content: rawContent, initialIndex = 0, on
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/users/follow-status', currentAuthorUsername] });
     },
-    onError: () => {},
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update follow status", variant: "destructive" });
+    },
   });
 
   const handleFollowPress = (e: React.MouseEvent) => {
@@ -401,39 +405,43 @@ export function MobileTrendingViewer({ content: rawContent, initialIndex = 0, on
                 onClick={e => e.stopPropagation()}
               >
                 <div className="pr-14" style={{ pointerEvents: 'auto' }}>
-                  <div className="flex items-center gap-2 mb-1.5">
+                  <div className="mb-1.5">
+                    {/* Avatar — sits above the username row */}
                     <Link
                       href={`/profile/${item.user.username}`}
-                      className="flex-shrink-0 no-underline"
+                      className="flex-shrink-0 no-underline inline-block mb-1"
                       data-testid={`link-user-${item.user.username}`}
                     >
-                      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid #B7FF1A' }}>
+                      <div className="w-12 h-12 rounded-full overflow-hidden" style={{ border: '2px solid #B7FF1A' }}>
                         <AuthorAvatar
                           avatarUrl={item.user.avatarUrl}
                           displayName={item.user.displayName}
                         />
                       </div>
                     </Link>
-                    <ProfileHoverCard username={item.user.username}>
-                      <Link
-                        href={`/profile/${item.user.username}`}
-                        className="no-underline flex-shrink-0"
-                      >
-                        <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
-                          @{item.user.username}
-                        </span>
-                      </Link>
-                    </ProfileHoverCard>
-                    {!isSelf && !isFollowing && (
-                      <button
-                        onClick={handleFollowPress}
-                        disabled={followMutation.isPending}
-                        className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all"
-                        style={{ background: '#B7FF1A', color: '#000', border: '1px solid transparent' }}
-                      >
-                        {followMutation.isPending ? '…' : 'Follow'}
-                      </button>
-                    )}
+                    {/* Username + follow — below avatar */}
+                    <div className="flex items-center gap-2">
+                      <ProfileHoverCard username={item.user.username}>
+                        <Link
+                          href={`/profile/${item.user.username}`}
+                          className="no-underline flex-shrink-0"
+                        >
+                          <span className="text-white font-bold text-[11px] drop-shadow leading-tight">
+                            @{item.user.username}
+                          </span>
+                        </Link>
+                      </ProfileHoverCard>
+                      {!isSelf && !isFollowing && (
+                        <button
+                          onClick={handleFollowPress}
+                          disabled={followMutation.isPending}
+                          className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all"
+                          style={{ background: '#B7FF1A', color: '#000', border: '1px solid transparent' }}
+                        >
+                          {followMutation.isPending ? '…' : 'Follow'}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <p className="text-white font-bold text-[13px] drop-shadow mb-0.5 leading-snug">

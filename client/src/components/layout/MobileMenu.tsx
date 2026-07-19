@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { X, Plus, Gift, Users } from "lucide-react";
+import { X, Plus, Gift, Users, Bookmark, ChevronDown } from "lucide-react";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
@@ -126,6 +126,7 @@ const MobileMenu = () => {
   }, [close]);
 
   const [showGiftProDialog, setShowGiftProDialog] = useState(false);
+  const [myGamefolioExpanded, setMyGamefolioExpanded] = useState(false);
 
   const { data: ownProfileData } = useQuery({
     queryKey: [`/api/users/${user?.username}`],
@@ -288,12 +289,12 @@ const MobileMenu = () => {
                 </Link>
               </li>
               <li>
-                <Link 
+                <Link
                   href="/trending"
                   onClick={handleClose}
                   className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                 >
-                  <ZapIconSvg className="mr-3 h-5 w-5" active={true} />
+                  <ZapIconSvg className="mr-3 h-5 w-5 text-primary" active={false} />
                   <span className="font-medium">Trending</span>
                 </Link>
               </li>
@@ -357,14 +358,49 @@ const MobileMenu = () => {
               )}
               {user && (
                 <li>
-                  <Link 
-                    href={`/profile/${user.username}`}
-                    onClick={handleClose}
-                    className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
+                  <div
+                    className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left cursor-pointer"
+                    onClick={() => setMyGamefolioExpanded((prev) => !prev)}
                   >
                     <GamefolioIcon glow={location === `/${user?.username}` || location === `/@${user?.username}`} className="mr-3 h-5 w-5 scale-[1.8] flex-shrink-0" />
-                    <span className="font-medium">My Gamefolio</span>
-                  </Link>
+                    <span className="font-medium flex-1">My Gamefolio</span>
+                    <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", myGamefolioExpanded ? "rotate-180" : "")} />
+                  </div>
+                  {myGamefolioExpanded && (
+                    <div className="ml-3 mt-0.5 space-y-0.5 pl-5 border-l border-border">
+                      <Link
+                        href={`/profile/${user.username}`}
+                        onClick={handleClose}
+                        className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors no-underline"
+                      >
+                        View Profile
+                      </Link>
+                      <Link
+                        href="/bookmarks"
+                        onClick={handleClose}
+                        className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors no-underline"
+                      >
+                        <Bookmark className="h-3.5 w-3.5 shrink-0" />
+                        Bookmarks
+                      </Link>
+                      <button
+                        onClick={() => { setLocation(`/profile/${user.username}/followers`); handleClose(); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors"
+                      >
+                        <Users className="h-3.5 w-3.5 shrink-0" />
+                        <span className="font-semibold">{followerCount.toLocaleString()}</span>
+                        <span>Followers</span>
+                      </button>
+                      <button
+                        onClick={() => { setLocation(`/profile/${user.username}/followers?tab=following`); handleClose(); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors"
+                      >
+                        <Users className="h-3.5 w-3.5 shrink-0" />
+                        <span className="font-semibold">{followingCount.toLocaleString()}</span>
+                        <span>Following</span>
+                      </button>
+                    </div>
+                  )}
                 </li>
               )}
             </ul>

@@ -59,16 +59,17 @@ export const users = pgTable("users", {
   facebookUsername: text("facebook_username"), // Facebook
   rumbleUsername: text("rumble_username"),    // Rumble
   // Streamer settings (OAuth-verified Twitch/Kick connections).
-  // streamPlatform / twitch+kick ChannelName / twitch+kick Verified are defined
-  // in the "Streamer settings" block below (from main) — removed here to drop
-  // the duplicate object keys the merge created. Only the OAuth token/id columns
-  // unique to clip-import remain in this block. (twitchChannelId/kickChannelId
-  // overlap conceptually with main's twitchUserId/kickId — left for a later
-  // schema reconciliation.)
+  // twitchChannelId/kickChannelId overlap conceptually with main's
+  // twitchUserId/kickId (below) — left for a later schema reconciliation.
   isStreamer: boolean("is_streamer").default(false),
+  streamPlatform: text("stream_platform"), // "twitch" or "kick"
+  twitchChannelName: text("twitch_channel_name"), // Verified via OAuth
   twitchChannelId: text("twitch_channel_id"),     // Twitch user ID from OAuth
+  twitchVerified: boolean("twitch_verified").default(false),
   twitchAccessToken: text("twitch_access_token"), // OAuth access token (server-only)
+  kickChannelName: text("kick_channel_name"),     // Verified via OAuth
   kickChannelId: text("kick_channel_id"),         // Kick user/channel ID from OAuth
+  kickVerified: boolean("kick_verified").default(false),
   kickAccessToken: text("kick_access_token"),     // OAuth access token (server-only)
   liveEnabled: boolean("live_enabled").default(false), // Show LIVE badge on profile
   // Onboarding data for analytics and personalization
@@ -90,6 +91,10 @@ export const users = pgTable("users", {
   showLiveOverlay: boolean("show_live_overlay").default(false), // Show LIVE badge on avatar
   twitchShowOnProfile: boolean("twitch_show_on_profile").default(true), // Embed Twitch stream on profile
   kickShowOnProfile: boolean("kick_show_on_profile").default(true),     // Embed Kick stream on profile
+  vpzoneChannelName: text("vpzone_channel_name"), // VPZone channel slug, verified via OAuth
+  vpzoneId: text("vpzone_id"),                    // VPZone user ID (set when OAuth-connected)
+  vpzoneVerified: boolean("vpzone_verified").default(false), // Connected via OAuth
+  vpzoneShowOnProfile: boolean("vpzone_show_on_profile").default(true), // Embed VPZone stream on profile
   ageRange: text("age_range"), // Age range: 13-17, 18-24, 25-34, 35-44, 45-54, 55+
   // Authentication provider fields
   authProvider: text("auth_provider").default("local"), // "local", "google", "discord", "steam", "apple"
@@ -601,6 +606,85 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// OAuth2 provider — lets external developers register apps and get tokens to
+// read/write a consenting user's data ("Login with Gamefolio").
+export const VALID_OAUTH_SCOPES = [
+  'profile:read', 'profile:write',
+  'clips:read', 'clips:write',
+  'screenshots:read', 'screenshots:write',
+  'games:read',
+] as const;
+export type OAuthScope = typeof VALID_OAUTH_SCOPES[number];
+
+export const oauthClients = pgTable("oauth_clients", {
+  id: serial("id").primaryKey(),
+  clientId: uuid("client_id").defaultRandom().notNull().unique(),
+  clientSecretHash: text("client_secret_hash").notNull(), // scrypt hash.salt, same format as users.password
+  name: text("name").notNull(),
+  description: text("description"),
+  logoUrl: text("logo_url"),
+  ownerUserId: integer("owner_user_id").notNull().references(() => users.id),
+  redirectUris: text("redirect_uris").array().notNull(), // exact-match allow-list
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  ownerIdx: index("oauth_clients_owner_idx").on(table.ownerUserId),
+}));
+
+export const insertOauthClientSchema = createInsertSchema(oauthClients)
+  .omit({ id: true, clientId: true, clientSecretHash: true, ownerUserId: true, isActive: true, createdAt: true, updatedAt: true })
+  .extend({
+    name: z.string().min(1).max(100),
+    redirectUris: z.array(z.string().url()).min(1),
+  });
+
+// Short-lived authorization codes (Authorization Code grant, step 1). PKCE required.
+export const oauthAuthorizationCodes = pgTable("oauth_authorization_codes", {
+  id: serial("id").primaryKey(),
+  codeHash: text("code_hash").notNull().unique(),
+  clientId: integer("client_id").notNull().references(() => oauthClients.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  redirectUri: text("redirect_uri").notNull(), // must match what was sent to /oauth/token
+  scope: text("scope").notNull(), // space-separated OAuthScope values
+  codeChallenge: text("code_challenge").notNull(),
+  codeChallengeMethod: text("code_challenge_method").notNull(), // "S256"
+  expiresAt: timestamp("expires_at").notNull(), // now + 60s
+  usedAt: timestamp("used_at"), // replay detection: redeeming twice revokes descendant tokens
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Access tokens — opaque, hashed at rest (not JWTs) for O(1) revocation.
+export const oauthAccessTokens = pgTable("oauth_access_tokens", {
+  id: serial("id").primaryKey(),
+  tokenHash: text("token_hash").notNull().unique(),
+  clientId: integer("client_id").notNull().references(() => oauthClients.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  scope: text("scope").notNull(),
+  expiresAt: timestamp("expires_at").notNull(), // now + 1h
+  revokedAt: timestamp("revoked_at"),
+  lastUsedAt: timestamp("last_used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userClientIdx: index("oauth_access_tokens_user_client_idx").on(table.userId, table.clientId),
+}));
+
+// Refresh tokens — separate table so rotation doesn't touch access-token rows.
+export const oauthRefreshTokens = pgTable("oauth_refresh_tokens", {
+  id: serial("id").primaryKey(),
+  tokenHash: text("token_hash").notNull().unique(),
+  accessTokenId: integer("access_token_id").notNull().references(() => oauthAccessTokens.id, { onDelete: "cascade" }),
+  clientId: integer("client_id").notNull().references(() => oauthClients.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  scope: text("scope").notNull(),
+  expiresAt: timestamp("expires_at").notNull(), // now + 30d
+  revokedAt: timestamp("revoked_at"),
+  rotatedToId: integer("rotated_to_id"), // self-ref audit trail for rotation chains
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  userClientIdx: index("oauth_refresh_tokens_user_client_idx").on(table.userId, table.clientId),
+}));
+
 // Emoji reactions table
 export const clipReactions = pgTable("clip_reactions", {
   id: serial("id").primaryKey(),
@@ -702,6 +786,18 @@ export const nftWatchlist = pgTable("nft_watchlist", {
 }, (table) => ({
   // Prevent duplicate watchlist entries for the same user and NFT
   uniqueWatchlist: unique().on(table.userId, table.nftId),
+}));
+
+// Bookmarks table - for users to save clips, screenshots, and games (reels are clips)
+export const bookmarks = pgTable("bookmarks", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  contentType: text("content_type").notNull(), // "clip", "screenshot", or "game"
+  contentId: integer("content_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  // Prevent duplicate bookmarks for the same user and content
+  uniqueBookmark: unique().on(table.userId, table.contentType, table.contentId),
 }));
 
 // Content filter settings and custom banned words table
@@ -843,6 +939,12 @@ export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 export type PasswordResetRequest = z.infer<typeof passwordResetRequestSchema>;
 export type PasswordResetConfirm = z.infer<typeof passwordResetConfirmSchema>;
 export type EmailVerification = z.infer<typeof emailVerificationSchema>;
+
+export type OauthClient = typeof oauthClients.$inferSelect;
+export type InsertOauthClient = z.infer<typeof insertOauthClientSchema>;
+export type OauthAuthorizationCode = typeof oauthAuthorizationCodes.$inferSelect;
+export type OauthAccessToken = typeof oauthAccessTokens.$inferSelect;
+export type OauthRefreshToken = typeof oauthRefreshTokens.$inferSelect;
 
 // Schema for inserting a game
 export const insertGameSchema = createInsertSchema(games).omit({
@@ -1527,6 +1629,16 @@ export const insertNftWatchlistSchema = createInsertSchema(nftWatchlist).omit({
 // Types for NFT watchlist
 export type NftWatchlist = typeof nftWatchlist.$inferSelect;
 export type InsertNftWatchlist = z.infer<typeof insertNftWatchlistSchema>;
+
+// Schema for inserting bookmarks
+export const insertBookmarkSchema = createInsertSchema(bookmarks).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for bookmarks
+export type Bookmark = typeof bookmarks.$inferSelect;
+export type InsertBookmark = z.infer<typeof insertBookmarkSchema>;
 
 // Extended types with relational data
 export type ClipWithUser = Clip & {

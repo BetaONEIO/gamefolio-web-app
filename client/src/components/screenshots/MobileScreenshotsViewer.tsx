@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -14,12 +15,14 @@ import CommentSection from "@/components/clips/CommentSection";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { PartnerBadge } from "@/components/ui/partner-badge";
+import { ProBadge } from "@/components/ui/pro-badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  ArrowLeft, BadgeCheck, Bookmark, BarChart2, MessageCircle,
+  ArrowLeft, BarChart2, MessageCircle,
   Gamepad2, ChevronDown, ImageOff, Maximize2, X, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useSignedUrl } from "@/hooks/use-signed-url";
+import { BookmarkButton } from "@/components/engagement/BookmarkButton";
 
 interface ScreenshotWithUser {
   id: number;
@@ -37,6 +40,7 @@ interface ScreenshotWithUser {
     avatarUrl?: string;
     isPro?: boolean;
     isPartner?: boolean;
+    selectedVerificationBadgeId?: number | null;
   };
   game?: { id: number; name: string };
   _count?: { likes?: number; reactions?: number; comments?: number };
@@ -247,7 +251,6 @@ export const ScreenshotFeedCard: React.FC<{
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
   const [localFollowing, setLocalFollowing] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const [sheetMounted, setSheetMounted] = useState(false);
@@ -309,6 +312,9 @@ export const ScreenshotFeedCard: React.FC<{
       setLocalFollowing(true);
       queryClient.invalidateQueries({ queryKey: [`/api/users/${screenshot.user.username}/follow-status`] });
     },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update follow status", variant: "destructive" });
+    },
   });
 
   return (
@@ -350,7 +356,7 @@ export const ScreenshotFeedCard: React.FC<{
                     {screenshot.user.displayName || screenshot.user.username}
                   </span>
                 </Link>
-                {isPro && <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#B7FF1A' }} />}
+                <ProBadge selectedVerificationBadgeId={screenshot.user.selectedVerificationBadgeId} size="sm" />
                 <PartnerBadge isPartner={(screenshot.user as any).isPartner} size="sm" />
               </div>
               <Link href={`/profile/${screenshot.user.username}`} className="no-underline">
@@ -460,13 +466,11 @@ export const ScreenshotFeedCard: React.FC<{
             <span className="text-[13px]">{fmt(views)}</span>
           </button>
 
-          <button
-            onClick={() => setBookmarked(v => !v)}
-            className="flex items-center justify-center flex-1 transition-colors"
-            style={{ color: bookmarked ? '#B7FF1A' : '#7E887A' }}
-          >
-            <Bookmark className={`h-[18px] w-[18px] ${bookmarked ? 'fill-current' : ''}`} />
-          </button>
+          <BookmarkButton
+            contentId={screenshot.id}
+            contentType="screenshot"
+            className="flex-1"
+          />
 
           <button
             onClick={(e) => { e.stopPropagation(); setShareOpen(true); }}
@@ -571,7 +575,7 @@ export const MobileScreenshotsViewer: React.FC<{
     }
   }, [startId, screenshots]);
 
-  return (
+  return createPortal(
     <>
       <div className="fixed inset-0 z-[9999]" style={{ background: '#081017' }}>
         {/* Back button — floats over the feed, no layout height consumed */}
@@ -581,7 +585,7 @@ export const MobileScreenshotsViewer: React.FC<{
         >
           <button
             onClick={onBack}
-            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors pointer-events-auto"
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors pointer-events-auto bg-black/40 backdrop-blur-sm hover:bg-black/60"
             style={{ color: '#F5F7F2' }}
             aria-label="Back"
           >
@@ -643,6 +647,7 @@ export const MobileScreenshotsViewer: React.FC<{
           onClose={() => setFullscreenIndex(null)}
         />
       )}
-    </>
+    </>,
+    document.body
   );
 };

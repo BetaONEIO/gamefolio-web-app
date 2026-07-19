@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import { eq } from 'drizzle-orm';
+import { initServerSentry } from './sentry';
+import * as Sentry from '@sentry/node';
 import { db } from './db';
 import { users } from '../shared/schema';
 import { scrypt, randomBytes } from 'crypto';
@@ -89,6 +91,11 @@ import { requestContextMiddleware } from './request-context';
 import storeRoutes from './routes/store';
 import gamefolioPurchaseRoutes from './routes/gamefolio-purchases';
 import revenuecatRoutes from './routes/revenuecat';
+import oauthProviderRoutes from './routes/oauth-provider';
+import developerPortalRoutes from './routes/developer-portal';
+import publicApiV1Routes from './routes/public-api-v1';
+import oauthUserApiRoutes from './routes/oauth-user-api';
+import adminOAuthRoutes from './routes/admin-oauth';
 import { createOGMetaMiddleware } from './og-meta';
 import { storage } from './storage';
 import { LeaderboardService, loadXpSettingsFromDB } from './leaderboard-service';
@@ -100,6 +107,8 @@ import { dirname } from 'path';
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+initServerSentry();
 
 const app = express();
 
@@ -264,6 +273,11 @@ app.use((req, res, next) => {
     app.use(storeRoutes);
     app.use(gamefolioPurchaseRoutes);
     app.use(revenuecatRoutes);
+    app.use(oauthProviderRoutes); // /oauth/authorize, /oauth/token, /oauth/revoke — unprefixed, standard OAuth issuer paths
+    app.use('/api/developer', developerPortalRoutes);
+    app.use('/api/public/v1', publicApiV1Routes);
+    app.use('/api/oauth', oauthUserApiRoutes);
+    app.use('/api/admin/oauth', adminOAuthRoutes);
 
     // Social media preview route - must be before Vite middleware
     app.get('/profile/:username', async (req, res, next) => {
@@ -308,7 +322,7 @@ app.use((req, res, next) => {
         const userTypesArr = (profile.userType || '').split(',').map((t: string) => t.trim()).filter(Boolean);
         const typeLabels: Record<string, string> = {
           streamer: 'Streamer', gamer: 'Gamer', professional_gamer: 'Pro Gamer',
-          content_creator: 'Creator', indie_developer: 'Indie Dev', viewer: 'Viewer',
+          content_creator: 'Creator', viewer: 'Viewer',
           filthy_casual: 'Casual', doom_scroller: 'Doom Scroller'
         };
         const typePart = userTypesArr.map((t: string) => typeLabels[t] || t).slice(0, 2).join(' · ');
@@ -381,6 +395,7 @@ app.use((req, res, next) => {
       const message = err.message || "Internal Server Error";
 
       console.error("Server error:", err);
+      Sentry.captureException(err);
       res.status(status).json({ message });
     });
 

@@ -5,11 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { useMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ClipWithUser, Game, GameBounty } from "@shared/schema";
+import { Upload, ArrowLeft, Play, TrendingUp, Camera, Users, Clock, Calendar, CalendarDays, X, Mail } from "lucide-react";
+import { BookmarkButton } from "@/components/engagement/BookmarkButton";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
@@ -382,13 +385,24 @@ const GamePage = () => {
     enabled: !!game?.id,
   });
 
+  // "Ever" (all-time) is meant to show the full history for the game, not just
+  // the top-20-by-engagement — since most clips/reels/screenshots tend to have
+  // similar (often zero) engagement, the engagement-desc ordering ties back to
+  // most-recent-first, making "Ever" look identical to "Most Recent" when it's
+  // capped at the same small limit. Request a much larger page for "ever".
+  const trendingLimit = timePeriod === 'ever' ? '500' : '20';
+
   const { data: trendingClips, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
     queryKey: ["/api/clips/trending", timePeriod, game?.id],
     queryFn: async () => {
-      const p = new URLSearchParams({ period: timePeriod, limit: "20", gameId: game?.id?.toString() || "" });
-      const r = await fetch(`/api/clips/trending?${p}`);
-      if (!r.ok) throw new Error("Failed");
-      return r.json();
+      const params = new URLSearchParams({
+        period: timePeriod,
+        limit: trendingLimit,
+        gameId: game?.id?.toString() || '',
+      });
+      const response = await fetch(`/api/clips/trending?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch trending clips');
+      return response.json();
     },
     enabled: activeTab === "clips" && !!game?.id,
   });
@@ -396,10 +410,14 @@ const GamePage = () => {
   const { data: trendingReels, isLoading: isLoadingReels } = useQuery<ClipWithUser[]>({
     queryKey: ["/api/reels/trending", timePeriod, game?.id],
     queryFn: async () => {
-      const p = new URLSearchParams({ period: timePeriod, limit: "20", gameId: game?.id?.toString() || "" });
-      const r = await fetch(`/api/reels/trending?${p}`);
-      if (!r.ok) throw new Error("Failed");
-      return r.json();
+      const params = new URLSearchParams({
+        period: timePeriod,
+        limit: trendingLimit,
+        gameId: game?.id?.toString() || '',
+      });
+      const response = await fetch(`/api/reels/trending?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch trending reels');
+      return response.json();
     },
     enabled: activeTab === "reels" && !!game?.id,
   });
@@ -407,10 +425,14 @@ const GamePage = () => {
   const { data: screenshots, isLoading: isLoadingScreenshots } = useQuery<any[]>({
     queryKey: ["/api/games", game?.id, "screenshots", timePeriod],
     queryFn: async () => {
-      const p = new URLSearchParams({ period: timePeriod, limit: "20", gameId: game?.id?.toString() || "" });
-      const r = await fetch(`/api/screenshots?${p}`);
-      if (!r.ok) throw new Error("Failed");
-      return r.json();
+      const params = new URLSearchParams({
+        period: timePeriod,
+        limit: trendingLimit,
+        gameId: game?.id?.toString() || '',
+      });
+      const response = await fetch(`/api/screenshots?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch screenshots');
+      return response.json();
     },
     enabled: false,
   });
@@ -555,6 +577,12 @@ const GamePage = () => {
           <button onClick={() => navigate("/explore")} className="flex items-center gap-1 text-sm text-gray-400 hover:text-white mb-4 transition-colors">
             <ArrowLeft className="w-4 h-4" />Back to Explore
           </button>
+          <BookmarkButton
+            contentId={game.id}
+            contentType="game"
+            size={isMobile ? 20 : 24}
+            className="absolute top-4 right-4 sm:right-6"
+          />
 
           <div className="flex items-start gap-4 sm:gap-5 mb-5">
             {/* Square rounded game image */}

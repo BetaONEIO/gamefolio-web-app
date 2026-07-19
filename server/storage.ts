@@ -1,7 +1,7 @@
 import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
   monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, userXPHistory, notifications, userBadges, contentFilterSettings, bannedWords,
-  heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist, assetRewards, assetRewardClaims,
+  heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist, bookmarks, assetRewards, assetRewardClaims,
   proLootboxGrants, nameTags, userUnlockedNameTags, userDailyFires, profileBorders, userUnlockedBorders, verificationBadges, userUnlockedVerificationBadges, xpSettings,
   type User, type InsertUser,
   type Game, type InsertGame,
@@ -29,6 +29,7 @@ import {
   type CommentMention, type InsertCommentMention,
   type ScreenshotCommentMention, type InsertScreenshotCommentMention,
   type NftWatchlist, type InsertNftWatchlist,
+  type Bookmark, type InsertBookmark,
   type AssetReward, type InsertAssetReward,
   type AssetRewardClaim, type InsertAssetRewardClaim,
   type AssetRewardWithClaims,
@@ -84,7 +85,10 @@ export interface IStorage {
   deleteUser(id: number): Promise<boolean>;
   getUserWithStats(id: number): Promise<UserWithStats | null>;
   getFeaturedUsers(limit?: number): Promise<User[]>;
-  updateUserStreak?(data: {userId: number, currentStreak: number, longestStreak: number, lastStreakUpdate: Date}): Promise<void>;
+  // Returns false if `expectedPreviousLastStreakUpdate` no longer matches the
+  // stored value (a concurrent request already claimed this update), so the
+  // caller can skip re-awarding points/notifications instead of racing.
+  updateUserStreak?(data: {userId: number, currentStreak: number, longestStreak: number, lastStreakUpdate: Date, expectedPreviousLastStreakUpdate: Date | null}): Promise<boolean>;
 
   // Admin operations
   getAllUsers(limit?: number, offset?: number, search?: string): Promise<UserWithBadges[]>;
@@ -137,6 +141,7 @@ export interface IStorage {
   incrementClipViews(id: number): Promise<void>;
   incrementScreenshotViews(id: number): Promise<void>;
   getClipsByUserId(userId: number): Promise<ClipWithUser[]>;
+  getClipsByUserIdPaginated(userId: number, opts: { limit: number; offset: number }): Promise<{ clips: ClipWithUser[]; total: number }>;
   getClipsByGameId(gameId: number, limit?: number): Promise<ClipWithUser[]>;
   getClipsWithDuration(duration: number): Promise<Clip[]>;
   getFeedClips(period?: string, limit?: number): Promise<ClipWithUser[]>;
@@ -403,6 +408,12 @@ export interface IStorage {
   removeFromNftWatchlist(userId: number, nftId: number): Promise<boolean>;
   getNftWatchlist(userId: number): Promise<NftWatchlist[]>;
   isNftInWatchlist(userId: number, nftId: number): Promise<boolean>;
+
+  // Bookmark operations
+  addBookmark(bookmarkData: InsertBookmark): Promise<Bookmark>;
+  removeBookmark(userId: number, contentType: string, contentId: number): Promise<boolean>;
+  getBookmarks(userId: number): Promise<Bookmark[]>;
+  isBookmarked(userId: number, contentType: string, contentId: number): Promise<boolean>;
 
   // Leaderboard operations
   getEngagementLeaderboard(limit?: number): Promise<Array<{

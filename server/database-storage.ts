@@ -34,6 +34,7 @@ import {
   CommentMention, InsertCommentMention,
   ScreenshotCommentMention, InsertScreenshotCommentMention,
   NftWatchlist, InsertNftWatchlist,
+  Bookmark, InsertBookmark,
   AssetReward, InsertAssetReward,
   AssetRewardClaim, InsertAssetRewardClaim,
   AssetRewardWithClaims,
@@ -90,6 +91,7 @@ import {
   uploadedBanners,
   clipMentions,
   nftWatchlist,
+  bookmarks,
   commentMentions,
   nameTags,
   userUnlockedNameTags,
@@ -121,7 +123,7 @@ import {
   indieGameFieldOverrides, IndieGameFieldOverride
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, like, ilike, asc, or, lt, lte, gt, sql, arrayContains, ne, inArray, notInArray, isNotNull, getTableColumns } from "drizzle-orm";
+import { eq, and, desc, like, ilike, asc, or, lt, lte, gt, sql, arrayContains, ne, inArray, notInArray, isNotNull, isNull, getTableColumns } from "drizzle-orm";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { IStorage } from "./storage";
@@ -354,9 +356,17 @@ export class DatabaseStorage implements IStorage {
     currentStreak: number;
     longestStreak: number;
     lastStreakUpdate: Date;
-  }): Promise<void> {
+    expectedPreviousLastStreakUpdate: Date | null;
+  }): Promise<boolean> {
     try {
-      await db
+      // Conditioned on the value we last read so two concurrent logins can't
+      // both pass the eligibility check and both award the reward — whichever
+      // commits first wins the row, the other gets 0 rows back and backs off.
+      const guard = data.expectedPreviousLastStreakUpdate
+        ? eq(users.lastStreakUpdate, data.expectedPreviousLastStreakUpdate)
+        : isNull(users.lastStreakUpdate);
+
+      const updated = await db
         .update(users)
         .set({
           currentStreak: data.currentStreak,
@@ -364,8 +374,15 @@ export class DatabaseStorage implements IStorage {
           lastStreakUpdate: data.lastStreakUpdate,
           updatedAt: new Date()
         })
-        .where(eq(users.id, data.userId));
+        .where(and(eq(users.id, data.userId), guard))
+        .returning({ id: users.id });
+
+      if (updated.length === 0) {
+        console.log(`⚠️  Streak update for user ${data.userId} lost a race — already claimed concurrently`);
+        return false;
+      }
       console.log(`✅ Updated streak for user ${data.userId}: ${data.currentStreak} days`);
+      return true;
     } catch (error) {
       console.error("Error updating user streak:", error);
       throw error;
@@ -850,6 +867,92 @@ export class DatabaseStorage implements IStorage {
     }
 
     return clipsWithDetails;
+  }
+
+  /**
+   * Paginated, batch-queried variant of getClipsByUserId. That method does
+   * 1 + 4*N sequential round-trips (a per-clip join + 3 separate COUNT
+   * queries via getClipWithUser) which is fine for a handful of clips but
+   * took 138s against a real 192-clip account — the cause of the
+   * /api/public/v1/clips timeout for prolific streamers. This does a fixed
+   * number of queries per page regardless of clip count: 1 total-count + 1
+   * page join query + 3 grouped aggregate queries.
+   */
+  async getClipsByUserIdPaginated(
+    userId: number,
+    opts: { limit: number; offset: number }
+  ): Promise<{ clips: ClipWithUser[]; total: number }> {
+    const { limit, offset } = opts;
+
+    const [{ count: totalCount }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(clips)
+      .where(eq(clips.userId, userId));
+    const total = Number(totalCount) || 0;
+
+    if (total === 0) return { clips: [], total: 0 };
+
+    const rows = await db
+      .select({
+        ...getTableColumns(clips),
+        user: {
+          id: users.id,
+          username: users.username,
+          displayName: users.displayName,
+          avatarUrl: users.avatarUrl,
+          emailVerified: users.emailVerified,
+          nftProfileTokenId: users.nftProfileTokenId,
+          nftProfileImageUrl: users.nftProfileImageUrl,
+        },
+        game: {
+          id: games.id,
+          name: games.name,
+          imageUrl: games.imageUrl,
+          twitchId: games.twitchId,
+          isApproved: games.isApproved,
+          createdAt: games.createdAt,
+        },
+      })
+      .from(clips)
+      .leftJoin(users, eq(clips.userId, users.id))
+      .leftJoin(games, eq(clips.gameId, games.id))
+      .where(eq(clips.userId, userId))
+      .orderBy(desc(clips.createdAt), desc(clips.id))
+      .limit(limit)
+      .offset(offset);
+
+    if (rows.length === 0) return { clips: [], total };
+
+    const clipIds = rows.map((r) => r.id);
+
+    const [likesRows, commentsRows, reactionsRows] = await Promise.all([
+      db.select({ clipId: likes.clipId, count: sql<number>`count(*)` })
+        .from(likes).where(inArray(likes.clipId, clipIds)).groupBy(likes.clipId),
+      db.select({ clipId: comments.clipId, count: sql<number>`count(*)` })
+        .from(comments).where(inArray(comments.clipId, clipIds)).groupBy(comments.clipId),
+      db.select({ clipId: clipReactions.clipId, count: sql<number>`count(*)` })
+        .from(clipReactions).where(inArray(clipReactions.clipId, clipIds)).groupBy(clipReactions.clipId),
+    ]);
+
+    const likesMap = new Map(likesRows.map((r) => [r.clipId, Number(r.count)]));
+    const commentsMap = new Map(commentsRows.map((r) => [r.clipId, Number(r.count)]));
+    const reactionsMap = new Map(reactionsRows.map((r) => [r.clipId, Number(r.count)]));
+
+    const clipsWithDetails: ClipWithUser[] = rows.map((row) => {
+      const { user, game, ...clipData } = row;
+      return {
+        ...clipData,
+        user: user?.id ? { ...user } : null,
+        game: game?.id ? { ...game } : null,
+        _count: {
+          likes: likesMap.get(row.id) || 0,
+          comments: commentsMap.get(row.id) || 0,
+          reactions: reactionsMap.get(row.id) || 0,
+        },
+      } as ClipWithUser;
+    });
+
+    return { clips: clipsWithDetails, total };
   }
 
   async getClipByShareCode(shareCode: string): Promise<Clip | null> {
@@ -4240,6 +4343,48 @@ export class DatabaseStorage implements IStorage {
     return !!result;
   }
 
+  // Bookmark operations
+  async addBookmark(bookmarkData: InsertBookmark): Promise<Bookmark> {
+    const [result] = await db
+      .insert(bookmarks)
+      .values(bookmarkData)
+      .returning();
+    return result;
+  }
+
+  async removeBookmark(userId: number, contentType: string, contentId: number): Promise<boolean> {
+    await db
+      .delete(bookmarks)
+      .where(and(
+        eq(bookmarks.userId, userId),
+        eq(bookmarks.contentType, contentType),
+        eq(bookmarks.contentId, contentId)
+      ));
+    return true;
+  }
+
+  async getBookmarks(userId: number): Promise<Bookmark[]> {
+    const results = await db
+      .select()
+      .from(bookmarks)
+      .where(eq(bookmarks.userId, userId))
+      .orderBy(desc(bookmarks.createdAt));
+    return results;
+  }
+
+  async isBookmarked(userId: number, contentType: string, contentId: number): Promise<boolean> {
+    const [result] = await db
+      .select()
+      .from(bookmarks)
+      .where(and(
+        eq(bookmarks.userId, userId),
+        eq(bookmarks.contentType, contentType),
+        eq(bookmarks.contentId, contentId)
+      ))
+      .limit(1);
+    return !!result;
+  }
+
   // Recommendation operations
   async getRecommendedClips(userId: number, limit: number = 8): Promise<ClipWithUser[]> {
     try {
@@ -5461,7 +5606,12 @@ export class DatabaseStorage implements IStorage {
   async getUploadLimits(userId: number): Promise<UploadLimits> {
     // Get user to check Pro status (admins are treated as Pro for upload caps).
     const user = await this.getUser(userId);
-    const isPro = user?.isPro || user?.role === 'admin' || false;
+    // Also honour users whose isPro flag was prematurely cleared (e.g. a
+    // past_due webhook race) but whose paid period has not yet expired.
+    const hasActivePaidPeriod = user?.proSubscriptionEndDate
+      ? new Date(user.proSubscriptionEndDate) > new Date()
+      : false;
+    const isPro = user?.isPro || hasActivePaidPeriod || user?.role === 'admin' || false;
     // The higher bulk-upload batch cap is granted to Pro, Partner and admin
     // users. Partners aren't flagged isPro, so they're checked explicitly here.
     const maxBulkUploads = (isPro || user?.isPartner)

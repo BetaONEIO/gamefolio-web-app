@@ -103,19 +103,26 @@ export function NotificationBell() {
   });
 
   // Fetch notifications
-  const { data: notifications = [] } = useQuery<NotificationWithUser[]>({
+  const { data: notificationsData } = useQuery<NotificationWithUser[] | null>({
     queryKey: ['/api/notifications'],
     queryFn: getQueryFn({ on401: "returnNull" }),
     staleTime: 0,
   });
+  // `data` can be explicitly `null` (returned by getQueryFn on a 401), which a
+  // destructure default (`= []`) does NOT catch — only `undefined` triggers it.
+  // Without this guard, a transient 401 would set `notifications` to `null`
+  // and every `.length`/`.slice()` call below would throw, breaking the whole
+  // dropdown (including the Clear All button) until the page was reloaded.
+  const notifications = notificationsData ?? [];
 
   // Fetch unread count
-  const { data: unreadCount = 0 } = useQuery<number>({
+  const { data: unreadCountData } = useQuery<number | null>({
     queryKey: ['/api/notifications/unread-count'],
     queryFn: getQueryFn({ on401: "returnNull" }),
     staleTime: 0,
     refetchInterval: 30000,
   });
+  const unreadCount = unreadCountData ?? 0;
 
   // Trigger green popup animation when new notifications arrive
   useEffect(() => {
@@ -256,10 +263,16 @@ export function NotificationBell() {
       markAsReadMutation.mutate(notification.id);
     }
     setIsOpen(false);
-    
-    // Navigate to action URL if provided using client-side routing
+
     if (notification.actionUrl) {
-      setLocation(notification.actionUrl);
+      // developer.gamefolio.com only hosts the developer portal — send the
+      // user to the main app for a notification's actual destination instead
+      // of client-side routing them to a nonexistent page on this subdomain.
+      if (window.location.hostname === 'developer.gamefolio.com') {
+        window.location.href = `https://app.gamefolio.com${notification.actionUrl}`;
+      } else {
+        setLocation(notification.actionUrl);
+      }
     }
   };
 

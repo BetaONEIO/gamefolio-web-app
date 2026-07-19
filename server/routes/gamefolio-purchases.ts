@@ -9,6 +9,7 @@ import { writeContractWithPoW, writeContractWithPoWFromRawKey, publicClient } fr
 import { transferGfTokens } from '../gf-token-service';
 import { getTokenBalance } from '../blockchain';
 import { privateKeyToAccount } from 'viem/accounts';
+import { captureRouteError } from "../sentry";
 
 const GF_DECIMALS = 18;
 const PLATFORM_FEE_PERCENT = 5;
@@ -229,6 +230,7 @@ async function processServerPurchase(req: Request, res: Response, type: Purchase
   try {
     return await processServerPurchaseInner(req, res, type);
   } catch (err: any) {
+    captureRouteError(err);
     console.error(`[gamefolio-purchases] Unhandled error in ${type} flow:`, err);
     if (!res.headersSent) {
       return res.status(500).json({ error: err?.message || 'Unexpected purchase error' });
@@ -425,6 +427,7 @@ async function processServerPurchaseInner(req: Request, res: Response, type: Pur
 
     return res.json({ success: true, txHash, message: finalize.message, purchaseId: pending.id });
   } catch (err: any) {
+    captureRouteError(err);
     console.error(`[gamefolio-purchases] ${type} purchase error:`, err);
     // If the tx hash was never set, the GFT never moved — just mark failed.
     // For marketplace_nft, also restore the listing we pre-claimed so the
@@ -462,6 +465,7 @@ router.get('/api/store/gamefolio-activity', async (req: Request, res: Response) 
       .limit(20);
     return res.json(rows);
   } catch (err: any) {
+    captureRouteError(err);
     console.error('[gamefolio-purchases] activity error:', err);
     return res.status(500).json({ error: 'Failed to fetch activity' });
   }

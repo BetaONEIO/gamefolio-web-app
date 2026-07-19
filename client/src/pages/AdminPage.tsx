@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { AlertSettings } from "@/components/admin/AlertSettings";
 import { PushBroadcastPanel } from "@/components/admin/PushBroadcastPanel";
@@ -893,6 +893,250 @@ function ProSubscribersManagement() {
   );
 }
 
+// OAuth Developer Platform Management Component
+interface AdminOAuthClient {
+  id: number;
+  clientId: string;
+  name: string;
+  description: string | null;
+  logoUrl: string | null;
+  isActive: boolean;
+  createdAt: string;
+  ownerUserId: number;
+  ownerUsername: string | null;
+  activeTokenCount: number;
+  activeUserCount: number;
+  lastUsedAt: string | null;
+}
+
+interface AdminOAuthAuthorizedUser {
+  userId: number;
+  username: string | null;
+  scope: string;
+  lastUsedAt: string | null;
+  createdAt: string;
+}
+
+function OAuthAppUsersDialog({ clientId, clientName, onClose }: { clientId: number; clientName: string; onClose: () => void }) {
+  const { data, isLoading } = useQuery<{ authorizedUsers: AdminOAuthAuthorizedUser[] }>({
+    queryKey: [`/api/admin/oauth/clients/${clientId}`],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+
+  const authorizedUsers = data?.authorizedUsers || [];
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Authorized users — {clientName}</DialogTitle>
+        </DialogHeader>
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+          </div>
+        ) : authorizedUsers.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">No users currently have an active token for this app.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Scope</TableHead>
+                  <TableHead>Last used</TableHead>
+                  <TableHead>Authorized</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {authorizedUsers.map((u) => (
+                  <TableRow key={u.userId}>
+                    <TableCell>{u.username || `User #${u.userId}`}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{u.scope}</TableCell>
+                    <TableCell>{u.lastUsedAt ? new Date(u.lastUsedAt).toLocaleString() : 'Never'}</TableCell>
+                    <TableCell>{new Date(u.createdAt).toLocaleDateString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function OAuthAppsManagement() {
+  const { toast } = useToast();
+  const [usersDialogClient, setUsersDialogClient] = useState<{ id: number; name: string } | null>(null);
+  const { data, isLoading, refetch } = useQuery<{ clients: AdminOAuthClient[] }>({
+    queryKey: ['/api/admin/oauth/clients'],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+
+  const deactivateMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('PATCH', `/api/admin/oauth/clients/${id}/deactivate`);
+      return res.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({ title: 'App deactivated', description: 'All active tokens for this app were revoked.', variant: 'gamefolioSuccess' });
+    },
+    onError: (error: Error) => toast({ title: 'Failed to deactivate', description: error.message, variant: 'gamefolioError' }),
+  });
+
+  const reactivateMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('PATCH', `/api/admin/oauth/clients/${id}/reactivate`);
+      return res.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({ title: 'App reactivated', variant: 'gamefolioSuccess' });
+    },
+    onError: (error: Error) => toast({ title: 'Failed to reactivate', description: error.message, variant: 'gamefolioError' }),
+  });
+
+  const revokeAllMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('POST', `/api/admin/oauth/clients/${id}/revoke-all`);
+      return res.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({ title: 'All sessions revoked', variant: 'gamefolioSuccess' });
+    },
+    onError: (error: Error) => toast({ title: 'Failed to revoke sessions', description: error.message, variant: 'gamefolioError' }),
+  });
+
+  const clients = data?.clients || [];
+  const totalActiveUsers = clients.reduce((sum, c) => sum + c.activeUserCount, 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-4 pb-3 px-4">
+            <p className="text-xs text-muted-foreground">Registered apps</p>
+            <p className="text-2xl font-bold mt-1">{clients.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3 px-4">
+            <p className="text-xs text-muted-foreground">Active apps</p>
+            <p className="text-2xl font-bold mt-1">{clients.filter(c => c.isActive).length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3 px-4">
+            <p className="text-xs text-muted-foreground">Total connected users</p>
+            <p className="text-2xl font-bold mt-1">{totalActiveUsers}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Registered OAuth Apps</CardTitle>
+          <CardDescription>Every app registered on the developer platform, across all developers.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-2">
+              {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+            </div>
+          ) : clients.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">No apps registered yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>App</TableHead>
+                    <TableHead>Owner</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Active users</TableHead>
+                    <TableHead>Last used</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {clients.map((client) => (
+                    <TableRow key={client.id}>
+                      <TableCell>
+                        <div className="font-medium">{client.name}</div>
+                        {client.description && <div className="text-xs text-muted-foreground">{client.description}</div>}
+                      </TableCell>
+                      <TableCell>{client.ownerUsername || `User #${client.ownerUserId}`}</TableCell>
+                      <TableCell>
+                        <Badge className={client.isActive ? 'bg-primary text-white' : 'bg-red-600 text-white'}>
+                          {client.isActive ? 'Active' : 'Deactivated'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{client.activeUserCount} ({client.activeTokenCount} tokens)</TableCell>
+                      <TableCell>{client.lastUsedAt ? new Date(client.lastUsedAt).toLocaleString() : 'Never'}</TableCell>
+                      <TableCell>{new Date(client.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={client.activeUserCount === 0}
+                            onClick={() => setUsersDialogClient({ id: client.id, name: client.name })}
+                          >
+                            View users
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={revokeAllMutation.isPending}
+                            onClick={() => revokeAllMutation.mutate(client.id)}
+                          >
+                            Revoke sessions
+                          </Button>
+                          {client.isActive ? (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={deactivateMutation.isPending}
+                              onClick={() => deactivateMutation.mutate(client.id)}
+                            >
+                              Deactivate
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={reactivateMutation.isPending}
+                              onClick={() => reactivateMutation.mutate(client.id)}
+                            >
+                              Reactivate
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {usersDialogClient && (
+        <OAuthAppUsersDialog
+          clientId={usersDialogClient.id}
+          clientName={usersDialogClient.name}
+          onClose={() => setUsersDialogClient(null)}
+        />
+      )}
+    </div>
+  );
+}
+
 // Lootbox Management Component
 interface LootboxOpen {
   id: number;
@@ -1113,6 +1357,7 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -1191,7 +1436,7 @@ const PendingGamesSection = () => {
   const { data: pendingGames = [], isLoading, refetch } = useQuery<PendingGame[]>({
     queryKey: ["/api/admin/games/pending"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/games/pending", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/admin/games/pending");
       if (!res.ok) throw new Error("Failed to fetch pending games");
       return res.json();
     },
@@ -2991,6 +3236,7 @@ const AdminPage = () => {
           <TabsTrigger value="alerts" className="text-xs px-3 py-1.5">Alerts</TabsTrigger>
           <TabsTrigger value="push" className="text-xs px-3 py-1.5">Push</TabsTrigger>
           <TabsTrigger value="bounties" className="text-xs px-3 py-1.5">Bounties</TabsTrigger>
+          <TabsTrigger value="oauth-apps" className="text-xs px-3 py-1.5">Developer</TabsTrigger>
         </TabsList>
 
         <TabsContent value="alerts" className="space-y-4">
@@ -6349,6 +6595,10 @@ const AdminPage = () => {
         {/* Pro Subscribers Tab */}
         <TabsContent value="pro-subscribers" className="space-y-4">
           <ProSubscribersManagement />
+        </TabsContent>
+
+        <TabsContent value="oauth-apps" className="space-y-4">
+          <OAuthAppsManagement />
         </TabsContent>
 
         {/* Settings Tab */}

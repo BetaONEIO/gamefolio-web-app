@@ -9,7 +9,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { ChevronRight, Video, Plus, ChevronLeft } from "lucide-react";
 import { useLocation, Link } from "wouter";
-import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { LatestReelsCarousel } from "@/components/clips/LatestReelsCarousel";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
@@ -509,12 +508,6 @@ const HomePage = () => {
 
   return (
     <div className="pb-16 md:pb-8 hide-scrollbar">
-      {/* Email Verification Banner - Only for authenticated users */}
-      {user && (
-        <div className="mx-2 sm:mx-4 md:mx-6 mb-0">
-          <EmailVerificationBanner />
-        </div>
-      )}
       
       {/* Hero Banner Carousel */}
       <section className="mb-0 -mx-0">
