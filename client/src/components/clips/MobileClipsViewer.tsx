@@ -17,6 +17,7 @@ import CommentSection from "@/components/clips/CommentSection";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { PartnerBadge } from "@/components/ui/partner-badge";
+import { AmbassadorBadge } from "@/components/ui/ambassador-badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowLeft, BadgeCheck, BarChart2, MessageCircle, Gamepad2, Play, ChevronDown } from "lucide-react";
 import { useBlockedUsers } from "@/hooks/use-blocked-users";
@@ -176,6 +177,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
               </Link>
               {isPro && <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#B7FF1A' }} />}
               <PartnerBadge isPartner={(clip.user as any).isPartner} size="sm" />
+              <AmbassadorBadge isAmbassador={(clip.user as any).isAmbassador} size="sm" />
             </div>
             <Link href={`/profile/${clip.user.username}`} className="no-underline">
               <span className="text-[13px] block leading-tight mt-0.5" style={{ color: '#7E887A' }}>

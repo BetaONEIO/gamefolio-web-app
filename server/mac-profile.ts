@@ -55,6 +55,7 @@ export const getMacUserWithStats = (): UserWithStats => {
     status: "active",
     isPro: true,
     isPartner: false,
+    isAmbassador: false,
     level: 99,
     totalXP: 999999,
     lastLoginAt: null,

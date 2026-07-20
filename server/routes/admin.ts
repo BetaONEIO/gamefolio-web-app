@@ -538,6 +538,42 @@ adminRouter.post("/users/:id/remove-partner", async (req: Request, res: Response
   }
 });
 
+// POST /api/admin/users/:id/make-ambassador - Grant ambassador status to user
+adminRouter.post("/users/:id/make-ambassador", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const user = await storage.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await storage.updateUser(userId, { isAmbassador: true });
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Error granting ambassador status:", err);
+    res.status(500).json({ message: "Error granting ambassador status" });
+  }
+});
+
+// POST /api/admin/users/:id/remove-ambassador - Remove ambassador status from user
+adminRouter.post("/users/:id/remove-ambassador", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const user = await storage.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await storage.updateUser(userId, { isAmbassador: false });
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Error removing ambassador status:", err);
+    res.status(500).json({ message: "Error removing ambassador status" });
+  }
+});
+
 // POST /api/admin/users/:id/reset-password - Reset user password
 adminRouter.post("/users/:id/reset-password", async (req: Request, res: Response) => {
   try {

@@ -1391,6 +1391,7 @@ import {
   UserMinus,
   Award,
   Star,
+  Medal,
   Crown,
   Shield,
   Plus,
@@ -2685,6 +2686,26 @@ const AdminPage = () => {
     }
   };
 
+  const handleMakeAmbassador = async (userId: number) => {
+    try {
+      await apiRequest("POST", `/api/admin/users/${userId}/make-ambassador`);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"], exact: false });
+      toast({ title: "Ambassador status granted", description: "The user is now a Gamefolio Ambassador." });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to grant ambassador status.", variant: "gamefolioError" });
+    }
+  };
+
+  const handleRemoveAmbassador = async (userId: number) => {
+    try {
+      await apiRequest("POST", `/api/admin/users/${userId}/remove-ambassador`);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"], exact: false });
+      toast({ title: "Ambassador status removed", description: "Ambassador badge removed from user." });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to remove ambassador status.", variant: "gamefolioError" });
+    }
+  };
+
   const handleMakeAdmin = async (userId: number) => {
     try {
       await apiRequest("POST", `/api/admin/users/${userId}/make-admin`);
@@ -3695,6 +3716,28 @@ const AdminPage = () => {
                                   className="text-muted-foreground hover:text-yellow-500"
                                 >
                                   <Star className="h-4 w-4" />
+                                </Button>
+                              )}
+
+                              {(user as any).isAmbassador ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoveAmbassador(user.id)}
+                                  title="Remove Ambassador"
+                                  style={{ color: '#38BDF8' }}
+                                >
+                                  <Medal className="h-4 w-4 fill-current" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleMakeAmbassador(user.id)}
+                                  title="Make Ambassador"
+                                  className="text-muted-foreground hover:text-sky-500"
+                                >
+                                  <Medal className="h-4 w-4" />
                                 </Button>
                               )}
                               

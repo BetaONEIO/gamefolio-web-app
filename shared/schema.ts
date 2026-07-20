@@ -124,6 +124,7 @@ export const users = pgTable("users", {
   // Gamefolio Pro subscription
   isPro: boolean("is_pro").default(false).notNull(), // Gamefolio Pro subscriber status
   isPartner: boolean("is_partner").default(false).notNull(), // Official Gamefolio Partner
+  isAmbassador: boolean("is_ambassador").default(false).notNull(), // Official Gamefolio Ambassador
   hideFromLeaderboard: boolean("hide_from_leaderboard").default(false).notNull(), // Admin-controlled leaderboard exclusion
   proSubscriptionType: text("pro_subscription_type"), // "yearly", "monthly", etc.
   proSubscriptionStartDate: timestamp("pro_subscription_start_date"), // When subscription started

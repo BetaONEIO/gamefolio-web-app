@@ -29,6 +29,7 @@ async function ensureBabyTomlinsonAccount() {
       status: 'active',
       isPro: false,
       isPartner: false,
+      isAmbassador: false,
       level: 1,
       totalXP: 0,
       messagingEnabled: true,
