@@ -91,16 +91,12 @@ function PlaceIcon({ place }: { place: 1 | 2 | 3 }) {
   return (
     <span
       className="relative flex-shrink-0"
-      style={{ width: 28, height: 28, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+      style={{ width: 35, height: 35, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
     >
-      <span
-        className="place-glow"
-        style={{ position: "absolute", inset: -2, borderRadius: "50%", zIndex: 0, "--glow-color": glowColor } as React.CSSProperties}
-      />
       <img
         src={icon}
         alt={`${place}${place === 1 ? "st" : place === 2 ? "nd" : "rd"}`}
-        style={{ position: "relative", zIndex: 1, width: 28, height: 28, objectFit: "contain", display: "block", filter: `drop-shadow(0 0 4px rgba(${glowColor},0.8))` }}
+        style={{ position: "relative", zIndex: 1, width: 35, height: 35, objectFit: "contain", display: "block", filter: `drop-shadow(0 0 4px rgba(${glowColor},0.8))` }}
       />
     </span>
   );
