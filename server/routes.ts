@@ -4030,7 +4030,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             rank: index + 1,  // Always use position in results array, not stale stored rank
             uploadsCount: entry.uploadsCount,
             totalPoints: entry.totalPoints,
-            user: userData,
+            user: { id: entry.userId, ...userData },
             clipsCount: clipsMap[entry.userId] || 0,
             reelsCount: reelsMap[entry.userId] || 0,
             screenshotsCount: ssMap[entry.userId] || 0,
@@ -4079,45 +4079,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       captureRouteError(error);
       console.error("Error fetching user weekly stats:", error);
       res.status(500).json({ message: "Error fetching user weekly stats" });
-    }
-  });
-
-  // Top contributors routes
-  app.get("/api/leaderboard/top-contributors/:periodType", async (req, res) => {
-    try {
-      const periodType = req.params.periodType as 'weekly' | 'monthly';
-      if (!['weekly', 'monthly'].includes(periodType)) {
-        return res.status(400).json({ message: "Period type must be 'weekly' or 'monthly'" });
-      }
-      const limit = parseInt(req.query.limit as string) || 10;
-      const topContributors = await LeaderboardService.getTopContributors(periodType, limit);
-      res.json(await signLeaderboardAvatars(topContributors));
-    } catch (error) {
-      captureRouteError(error);
-      console.error("Error fetching top contributors:", error);
-      res.status(500).json({ message: "Error fetching top contributors" });
-    }
-  });
-
-  app.get("/api/leaderboard/top-contributors/:periodType/:period/:year", async (req, res) => {
-    try {
-      const periodType = req.params.periodType as 'weekly' | 'monthly';
-      const period = req.params.period;
-      const year = parseInt(req.params.year);
-      
-      if (!['weekly', 'monthly'].includes(periodType)) {
-        return res.status(400).json({ message: "Period type must be 'weekly' or 'monthly'" });
-      }
-      if (isNaN(year)) {
-        return res.status(400).json({ message: "Invalid year" });
-      }
-      
-      const topContributors = await LeaderboardService.getTopContributorsByPeriod(periodType, period, year);
-      res.json(await signLeaderboardAvatars(topContributors));
-    } catch (error) {
-      captureRouteError(error);
-      console.error("Error fetching top contributors by period:", error);
-      res.status(500).json({ message: "Error fetching top contributors by period" });
     }
   });
 
@@ -4188,6 +4149,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching season history:", error);
       res.status(500).json({ message: "Error fetching season history" });
+    }
+  });
+
+  // Top contributors routes
+  app.get("/api/leaderboard/top-contributors/:periodType", async (req, res) => {
+    try {
+      const periodType = req.params.periodType as 'weekly' | 'monthly';
+      if (!['weekly', 'monthly'].includes(periodType)) {
+        return res.status(400).json({ message: "Period type must be 'weekly' or 'monthly'" });
+      }
+      const limit = parseInt(req.query.limit as string) || 10;
+      const topContributors = await LeaderboardService.getTopContributors(periodType, limit);
+      res.json(await signLeaderboardAvatars(topContributors));
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error fetching top contributors:", error);
+      res.status(500).json({ message: "Error fetching top contributors" });
+    }
+  });
+
+  app.get("/api/leaderboard/top-contributors/:periodType/:period/:year", async (req, res) => {
+    try {
+      const periodType = req.params.periodType as 'weekly' | 'monthly';
+      const period = req.params.period;
+      const year = parseInt(req.params.year);
+      
+      if (!['weekly', 'monthly'].includes(periodType)) {
+        return res.status(400).json({ message: "Period type must be 'weekly' or 'monthly'" });
+      }
+      if (isNaN(year)) {
+        return res.status(400).json({ message: "Invalid year" });
+      }
+      
+      const topContributors = await LeaderboardService.getTopContributorsByPeriod(periodType, period, year);
+      res.json(await signLeaderboardAvatars(topContributors));
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error fetching top contributors by period:", error);
+      res.status(500).json({ message: "Error fetching top contributors by period" });
     }
   });
 

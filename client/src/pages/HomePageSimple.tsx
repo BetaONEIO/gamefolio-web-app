@@ -27,6 +27,7 @@ import { CREATOR_CARD_STYLES, TrendingEntry } from "@/components/home/creator-ca
 
 import { Trophy } from "lucide-react";
 import LatestContentSlider from "@/components/home/LatestContentSlider";
+import TrendingHeroSlide from "@/components/home/TrendingSlider";
 
 interface DbHeroSlide {
   id: number;
@@ -81,7 +82,7 @@ interface FeaturedGamefolioData {
   topGame: { id: number; name: string; imageUrl: string | null; uploadCount: number } | null;
 }
 
-type AnySlide = DbHeroSlide | { type: 'leaderboard'; id: 'leaderboard' } | { type: 'latestContent'; id: 'latestContent' };
+type AnySlide = DbHeroSlide | { type: 'leaderboard'; id: 'leaderboard' } | { type: 'latestContent'; id: 'latestContent' } | { type: 'trending'; id: 'trending' };
 
 interface LeaderboardWinner {
   userId: number;
@@ -438,7 +439,8 @@ const HomePage = () => {
       : [];
     const leaderboardSlide: AnySlide = { type: 'leaderboard', id: 'leaderboard' };
     const latestContentSlide: AnySlide = { type: 'latestContent', id: 'latestContent' };
-    return [latestContentSlide, ...base, leaderboardSlide];
+    const trendingSlide: AnySlide = { type: 'trending', id: 'trending' };
+    return [latestContentSlide, trendingSlide, ...base, leaderboardSlide];
   }, [dbHeroSlides]);
 
   const prevSlide = useCallback(() => {
@@ -518,6 +520,7 @@ const HomePage = () => {
                 {activeSlides.map((slide, idx) => {
                   const isLeaderboardSlide = 'type' in slide && slide.type === 'leaderboard';
                   const isLatestContentSlide = 'type' in slide && slide.type === 'latestContent';
+                  const isTrendingSlide = 'type' in slide && slide.type === 'trending';
 
                   return (
                   <div
@@ -740,6 +743,11 @@ const HomePage = () => {
                         <div className="flex-1 min-h-0 overflow-hidden px-2 sm:px-8 py-3 sm:py-4">
                           <LatestContentSlider />
                         </div>
+                      </div>
+                    ) : isTrendingSlide ? (
+                      /* ── Trending clips/reels slide ── */
+                      <div className="absolute inset-0 overflow-hidden bg-black">
+                        <TrendingHeroSlide />
                       </div>
                     ) : (
                       /* ── Regular image slide ── */
