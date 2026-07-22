@@ -196,7 +196,7 @@ router.post('/api/stripe/webhook',
             : session.customer?.id;
 
           if (userId && subscriptionId && customerId) {
-            await provisionProSubscription({ userId, plan, customerId, subscriptionId });
+            await provisionProSubscription({ userId, plan, customerId, subscriptionId, ambassadorCode: session.metadata?.ambassadorCode });
             console.log(`[GF Webhook] Provisioned Pro for user ${userId} via checkout.session.completed`);
           } else {
             console.warn('[GF Webhook] pro_subscription session missing user/subscription/customer ids');
