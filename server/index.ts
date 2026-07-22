@@ -90,6 +90,7 @@ import { requestContextMiddleware } from './request-context';
 import storeRoutes from './routes/store';
 import gamefolioPurchaseRoutes from './routes/gamefolio-purchases';
 import revenuecatRoutes from './routes/revenuecat';
+import { ambassadorRouter } from './routes/ambassador';
 import oauthProviderRoutes from './routes/oauth-provider';
 import developerPortalRoutes from './routes/developer-portal';
 import publicApiV1Routes from './routes/public-api-v1';
@@ -258,6 +259,7 @@ app.use((req, res, next) => {
     app.use(storeRoutes);
     app.use(gamefolioPurchaseRoutes);
     app.use(revenuecatRoutes);
+    app.use(ambassadorRouter);
     app.use(oauthProviderRoutes); // /oauth/authorize, /oauth/token, /oauth/revoke — unprefixed, standard OAuth issuer paths
     app.use('/api/developer', developerPortalRoutes);
     app.use('/api/public/v1', publicApiV1Routes);

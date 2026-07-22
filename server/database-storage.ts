@@ -113,7 +113,8 @@ import {
   PushToken, InsertPushToken,
   PushBroadcast, PushAudience,
   pushTokens,
-  pushBroadcasts
+  pushBroadcasts,
+  ambassadorConversions
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, gt, sql, arrayContains, ne, inArray, notInArray, isNotNull, isNull, getTableColumns } from "drizzle-orm";
@@ -272,6 +273,71 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
 
     return { success: true, message: 'Referral code updated successfully.' };
+  }
+
+  async recordAmbassadorConversion(referredUserId: number, referralCodeUsed: string, subscriptionType: string | null, source: string): Promise<void> {
+    const ambassador = await this.getUserByReferralCode(referralCodeUsed);
+    if (!ambassador || !ambassador.isAmbassador || ambassador.id === referredUserId) return;
+
+    await db.insert(ambassadorConversions).values({
+      ambassadorUserId: ambassador.id,
+      referredUserId,
+      referralCode: referralCodeUsed,
+      subscriptionType,
+      source,
+    }).onConflictDoNothing({ target: ambassadorConversions.referredUserId });
+  }
+
+  async getAmbassadorDashboardStats(ambassadorUserId: number): Promise<{
+    referralCode: string | null;
+    totalConversions: number;
+    conversions: Array<{ userId: number; username: string; displayName: string | null; avatarUrl: string | null; subscriptionType: string | null; convertedAt: Date }>;
+  }> {
+    const stats = await this.getReferralStats(ambassadorUserId);
+    const conversions = await this.getAmbassadorConversionsForAdmin(ambassadorUserId);
+
+    return {
+      referralCode: stats.referralCode,
+      totalConversions: conversions.length,
+      conversions,
+    };
+  }
+
+  async getAllAmbassadorsWithStats(): Promise<Array<{ id: number; username: string; displayName: string | null; avatarUrl: string | null; referralCode: string | null; totalConversions: number }>> {
+    const ambassadors = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        displayName: users.displayName,
+        avatarUrl: users.avatarUrl,
+        referralCode: users.referralCode,
+        totalConversions: sql<number>`COUNT(${ambassadorConversions.id})`,
+      })
+      .from(users)
+      .leftJoin(ambassadorConversions, eq(ambassadorConversions.ambassadorUserId, users.id))
+      .where(eq(users.isAmbassador, true))
+      .groupBy(users.id)
+      .orderBy(desc(sql`COUNT(${ambassadorConversions.id})`));
+
+    return ambassadors.map(a => ({ ...a, totalConversions: Number(a.totalConversions) }));
+  }
+
+  async getAmbassadorConversionsForAdmin(ambassadorUserId: number): Promise<Array<{ userId: number; username: string; displayName: string | null; avatarUrl: string | null; subscriptionType: string | null; convertedAt: Date }>> {
+    const rows = await db
+      .select({
+        userId: users.id,
+        username: users.username,
+        displayName: users.displayName,
+        avatarUrl: users.avatarUrl,
+        subscriptionType: ambassadorConversions.subscriptionType,
+        convertedAt: ambassadorConversions.createdAt,
+      })
+      .from(ambassadorConversions)
+      .innerJoin(users, eq(users.id, ambassadorConversions.referredUserId))
+      .where(eq(ambassadorConversions.ambassadorUserId, ambassadorUserId))
+      .orderBy(desc(ambassadorConversions.createdAt));
+
+    return rows;
   }
 
   async createUser(userData: InsertUser): Promise<User> {

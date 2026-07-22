@@ -153,6 +153,10 @@ export async function provisionProSubscription(opts: {
     if (updatedUser) {
       notifyProPurchase(updatedUser, { kind: 'new', plan, source: 'Stripe' });
     }
+    if (updatedUser?.referredBy) {
+      storage.recordAmbassadorConversion(userId, updatedUser.referredBy, plan, 'stripe')
+        .catch(err => console.error('Failed to record ambassador conversion:', err));
+    }
   }
 
   let lootboxReward: { reward: any; isDuplicate: boolean } | null = null;

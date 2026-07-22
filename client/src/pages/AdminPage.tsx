@@ -3,6 +3,7 @@ import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { AlertSettings } from "@/components/admin/AlertSettings";
 import { PushBroadcastPanel } from "@/components/admin/PushBroadcastPanel";
+import { AmbassadorManagementPanel } from "@/components/admin/AmbassadorManagementPanel";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
@@ -3251,6 +3252,7 @@ const AdminPage = () => {
           <TabsTrigger value="store-management" className="text-xs px-3 py-1.5">Store</TabsTrigger>
           <TabsTrigger value="assets" className="text-xs px-3 py-1.5">Assets</TabsTrigger>
           <TabsTrigger value="pro-subscribers" className="text-xs px-3 py-1.5">Pro</TabsTrigger>
+          <TabsTrigger value="ambassadors" className="text-xs px-3 py-1.5">Ambassadors</TabsTrigger>
           <TabsTrigger value="settings" className="text-xs px-3 py-1.5">Settings</TabsTrigger>
           <TabsTrigger value="games" className="text-xs px-3 py-1.5">Games</TabsTrigger>
           <TabsTrigger value="alerts" className="text-xs px-3 py-1.5">Alerts</TabsTrigger>
@@ -3265,6 +3267,10 @@ const AdminPage = () => {
 
         <TabsContent value="push" className="space-y-4">
           <PushBroadcastPanel />
+        </TabsContent>
+
+        <TabsContent value="ambassadors" className="space-y-4">
+          <AmbassadorManagementPanel />
         </TabsContent>
 
         {/* Dashboard Tab */}

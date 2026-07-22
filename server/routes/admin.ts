@@ -574,6 +574,29 @@ adminRouter.post("/users/:id/remove-ambassador", async (req: Request, res: Respo
   }
 });
 
+// GET /api/admin/ambassadors - List all ambassadors with their conversion counts
+adminRouter.get("/ambassadors", async (req: Request, res: Response) => {
+  try {
+    const ambassadors = await storage.getAllAmbassadorsWithStats();
+    res.json(ambassadors);
+  } catch (err) {
+    console.error("Error fetching ambassadors:", err);
+    res.status(500).json({ message: "Error fetching ambassadors" });
+  }
+});
+
+// GET /api/admin/ambassadors/:id/conversions - List one ambassador's conversions
+adminRouter.get("/ambassadors/:id/conversions", async (req: Request, res: Response) => {
+  try {
+    const ambassadorId = parseInt(req.params.id);
+    const conversions = await storage.getAmbassadorConversionsForAdmin(ambassadorId);
+    res.json(conversions);
+  } catch (err) {
+    console.error("Error fetching ambassador conversions:", err);
+    res.status(500).json({ message: "Error fetching ambassador conversions" });
+  }
+});
+
 // POST /api/admin/users/:id/reset-password - Reset user password
 adminRouter.post("/users/:id/reset-password", async (req: Request, res: Response) => {
   try {

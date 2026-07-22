@@ -74,6 +74,16 @@ export interface IStorage {
   getUserByReferralCode(referralCode: string): Promise<User | null>;
   getReferralStats(userId: number): Promise<{ referralCount: number; totalXpEarned: number; referralCode: string | null; referralCodeCustomized: boolean }>;
   customizeReferralCode(userId: number, newCode: string): Promise<{ success: boolean; message: string }>;
+  // Records a Pro purchase against the ambassador whose referral code was used
+  // (no-op if the code's owner isn't an ambassador). Idempotent per referred user.
+  recordAmbassadorConversion(referredUserId: number, referralCodeUsed: string, subscriptionType: string | null, source: string): Promise<void>;
+  getAmbassadorDashboardStats(ambassadorUserId: number): Promise<{
+    referralCode: string | null;
+    totalConversions: number;
+    conversions: Array<{ userId: number; username: string; displayName: string | null; avatarUrl: string | null; subscriptionType: string | null; convertedAt: Date }>;
+  }>;
+  getAllAmbassadorsWithStats(): Promise<Array<{ id: number; username: string; displayName: string | null; avatarUrl: string | null; referralCode: string | null; totalConversions: number }>>;
+  getAmbassadorConversionsForAdmin(ambassadorUserId: number): Promise<Array<{ userId: number; username: string; displayName: string | null; avatarUrl: string | null; subscriptionType: string | null; convertedAt: Date }>>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | null>;
   updateUserType(id: number, userType: string): Promise<User | null>;
