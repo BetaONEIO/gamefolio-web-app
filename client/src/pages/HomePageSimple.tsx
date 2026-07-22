@@ -398,17 +398,17 @@ const HomePage = () => {
   });
 
   const { data: weeklyTop10 } = useQuery<LeaderboardWinner[]>({
-    queryKey: ["/api/trending-gamefolios", "week", 10],
+    queryKey: ["/api/leaderboard/current-season/top"],
     queryFn: async () => {
-      const r = await fetch("/api/trending-gamefolios?period=week&limit=10");
+      const r = await fetch("/api/leaderboard/current-season/top?limit=10");
       if (!r.ok) throw new Error("Failed to fetch");
       const data = await r.json();
       // Don't accept empty arrays — retry on next render instead of caching blank state
       if (!Array.isArray(data) || data.length === 0) throw new Error("No leaderboard data yet");
       return data;
     },
-    staleTime: 5 * 60_000,       // treat data as fresh for 5 minutes
-    gcTime: 30 * 60_000,         // keep in cache 30 minutes across navigations
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
     retry: 3,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10_000),
   });
@@ -543,7 +543,7 @@ const HomePage = () => {
                           <div className="flex-shrink-0 pt-2 pb-1 sm:pt-4 sm:pb-2 px-3 sm:px-4 flex items-center justify-between">
                             <h2 className="text-lg sm:text-2xl font-bold">Leaderboard</h2>
                             <div className="flex items-center gap-1.5 sm:gap-3">
-                              <span className="text-[9px] sm:text-[10px] text-white/40">⏱ <span className="hidden sm:inline">Resets in: </span><span className="font-bold text-white/70">{resetCountdown.days}d {resetCountdown.hours}h</span></span>
+                              <span className="text-[9px] sm:text-[10px] text-white/40">🏆 <span className="hidden sm:inline">Season: </span><span className="font-bold text-white/70">Summer Showdown</span></span>
                               <button
                                 onClick={() => setLocation('/leaderboard')}
                                 className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-black px-2 sm:px-3 py-1 rounded-lg transition-all hover:opacity-90 active:scale-95"
@@ -597,7 +597,7 @@ const HomePage = () => {
                                                 style={{ background:'rgba(11,19,25,0.95)' }}>
                                                 <div className="text-4xl">{medal}</div>
                                                 <div className="text-white/30 text-xs font-bold">Could be you!</div>
-                                                <div className="text-white/20 text-[10px] text-center px-4">Upload clips this week to compete</div>
+                                                <div className="text-white/20 text-[10px] text-center px-4">Earn points this season to compete</div>
                                               </div>
                                             </div>
                                           </div>
@@ -662,7 +662,7 @@ const HomePage = () => {
                           {/* ── RIGHT: Top 10 list ── */}
                           <div className="flex-1 flex flex-col py-4 px-4 sm:px-5 overflow-hidden rounded-xl mx-2 my-2" style={{ background:'rgb(11,19,25)', border:'1px solid rgba(183,255,26,0.10)' }}>
                             <div className="text-[9px] font-black uppercase tracking-[0.2em] mb-3" style={{ color:'#B7FF18' }}>
-                              Top 10 This Week
+                              Top 10 This Season
                             </div>
                             <div className="flex flex-col gap-0 overflow-y-auto flex-1">
                               {(weeklyTop10 && weeklyTop10.length > 0 ? weeklyTop10 : Array.from({length:10}).map((_,i) => null)).map((winner, idx) => {
