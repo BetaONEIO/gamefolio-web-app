@@ -7,6 +7,7 @@ const streakIcon = "/attached_assets/upload_streak.png";
 const firstPlaceIcon = "/attached_assets/1st-icon_1784739835624.png";
 const secondPlaceIcon = "/attached_assets/Silver-2nd_1784739835625.png";
 const thirdPlaceIcon = "/attached_assets/bronze-3rd_1784739835625.png";
+const otherRankIcon = "/attached_assets/Green-bars_1784740690797.png";
 
 type EventKind = "xp" | "streak" | "trending" | "levelup";
 
@@ -85,7 +86,7 @@ function StreakIcon() {
   );
 }
 
-function PlaceIcon({ place }: { place: 1 | 2 | 3 }) {
+function PlaceIcon({ place }: { place: 1 | 2 | 3 | 4 }) {
   const icon = place === 1 ? firstPlaceIcon : place === 2 ? secondPlaceIcon : thirdPlaceIcon;
   const glowColor = place === 1 ? "255,215,0" : place === 2 ? "192,192,192" : "205,127,50";
   return (
@@ -102,11 +103,27 @@ function PlaceIcon({ place }: { place: 1 | 2 | 3 }) {
   );
 }
 
-function getPlaceFromText(text: string): 1 | 2 | 3 {
+function getPlaceFromText(text: string): 1 | 2 | 3 | 4 {
   if (text.includes("#1") || text.includes("1st") || text.includes("first")) return 1;
   if (text.includes("#2") || text.includes("2nd") || text.includes("second")) return 2;
   if (text.includes("#3") || text.includes("3rd") || text.includes("third")) return 3;
-  return 1; // default to 1st if not specified
+  if (text.includes("#4") || text.includes("4th") || text.includes("fourth")) return 4;
+  return 1;
+}
+
+function OtherRankIcon() {
+  return (
+    <span
+      className="relative flex-shrink-0"
+      style={{ width: 35, height: 35, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+    >
+      <img
+        src={otherRankIcon}
+        alt="Rank"
+        style={{ position: "relative", zIndex: 1, width: 35, height: 35, objectFit: "contain", display: "block", filter: "drop-shadow(0 0 4px rgba(183,255,24,0.6))" }}
+      />
+    </span>
+  );
 }
 
 const seedRailItems: RailItem[] = SEED_ITEMS.map(u => ({ ...u, uid: u.id, status: 'visible' as ItemStatus }));
@@ -234,7 +251,10 @@ export function EcosystemActivityRail() {
                 ) : item.kind === "streak" ? (
                   <StreakIcon />
                 ) : item.kind === "levelup" ? (
-                  <PlaceIcon place={getPlaceFromText(item.text)} />
+                  (() => {
+                    const place = getPlaceFromText(item.text);
+                    return place >= 4 ? <OtherRankIcon /> : <PlaceIcon place={place} />;
+                  })()
                 ) : (
                   <span className="text-sm leading-none select-none">
                     {KIND_EMOJI[item.kind]}
