@@ -107,7 +107,10 @@ function getPlaceFromText(text: string): 1 | 2 | 3 | 4 {
   if (text.includes("#1") || text.includes("1st") || text.includes("first")) return 1;
   if (text.includes("#2") || text.includes("2nd") || text.includes("second")) return 2;
   if (text.includes("#3") || text.includes("3rd") || text.includes("third")) return 3;
-  if (text.includes("#4") || text.includes("4th") || text.includes("fourth")) return 4;
+  // Any rank #4 or higher -> use the "other" icon
+  const match = text.match(/#(\d+)/);
+  if (match && parseInt(match[1], 10) >= 4) return 4;
+  if (text.includes("4th") || text.includes("fourth")) return 4;
   return 1;
 }
 
