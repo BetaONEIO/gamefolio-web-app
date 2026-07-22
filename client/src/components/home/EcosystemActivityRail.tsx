@@ -4,9 +4,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 const xpIcon = "/attached_assets/XP-text_1779960376768.png";
 const streakIcon = "/attached_assets/upload_streak.png";
-const firstPlaceIcon = "/podium-1st.webp";
-const secondPlaceIcon = "/podium-2nd.webp";
-const thirdPlaceIcon = "/podium-3rd.webp";
+const firstPlaceIcon = "/attached_assets/1st-icon_1784739835624.png";
+const secondPlaceIcon = "/attached_assets/Silver-2nd_1784739835625.png";
+const thirdPlaceIcon = "/attached_assets/bronze-3rd_1784739835625.png";
 
 type EventKind = "xp" | "streak" | "trending" | "levelup";
 
