@@ -7332,7 +7332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pts = Math.round(Number(row.total_points)).toLocaleString();
         activities.push({
           id: `trending-${row.user_id}`,
-          kind: rank <= 3 ? 'levelup' : 'trending',
+          kind: 'levelup',
           username: row.username,
           text: `${name} is #${rank} this month · ${pts} XP`,
         });
