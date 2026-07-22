@@ -47,7 +47,7 @@ function XPIcon() {
   return (
     <span
       className="relative flex-shrink-0"
-      style={{ width: 16, height: 16, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+      style={{ width: 28, height: 28, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
     >
       <span
         className="xp-glow-ring"
@@ -55,12 +55,12 @@ function XPIcon() {
       />
       <span
         className="xp-pulse-bg"
-        style={{ position: "absolute", width: 8, height: 8, borderRadius: "50%", background: "rgba(183,255,24,0.08)", zIndex: 1 }}
+        style={{ position: "absolute", width: 14, height: 14, borderRadius: "50%", background: "rgba(183,255,24,0.08)", zIndex: 1 }}
       />
       <img
         src={xpIcon}
         alt="XP"
-        style={{ position: "relative", zIndex: 2, width: 14, height: 14, objectFit: "contain", display: "block", filter: "drop-shadow(0 0 2px rgba(183,255,24,0.7))" }}
+        style={{ position: "relative", zIndex: 2, width: 26, height: 26, objectFit: "contain", display: "block", filter: "drop-shadow(0 0 3px rgba(183,255,24,0.7))" }}
       />
     </span>
   );
@@ -70,7 +70,7 @@ function StreakIcon() {
   return (
     <span
       className="relative flex-shrink-0"
-      style={{ width: 16, height: 16, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+      style={{ width: 28, height: 28, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
     >
       <span
         className="streak-flare"
@@ -79,7 +79,7 @@ function StreakIcon() {
       <img
         src={streakIcon}
         alt="Streak"
-        style={{ position: "relative", zIndex: 1, width: 16, height: 16, objectFit: "contain", display: "block", filter: "drop-shadow(0 0 3px rgba(255,120,0,0.8))" }}
+        style={{ position: "relative", zIndex: 1, width: 28, height: 28, objectFit: "contain", display: "block", filter: "drop-shadow(0 0 4px rgba(255,120,0,0.8))" }}
       />
     </span>
   );
@@ -91,7 +91,7 @@ function PlaceIcon({ place }: { place: 1 | 2 | 3 }) {
   return (
     <span
       className="relative flex-shrink-0"
-      style={{ width: 16, height: 16, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+      style={{ width: 28, height: 28, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
     >
       <span
         className="place-glow"
@@ -100,7 +100,7 @@ function PlaceIcon({ place }: { place: 1 | 2 | 3 }) {
       <img
         src={icon}
         alt={`${place}${place === 1 ? "st" : place === 2 ? "nd" : "rd"}`}
-        style={{ position: "relative", zIndex: 1, width: 16, height: 16, objectFit: "contain", display: "block", filter: `drop-shadow(0 0 3px rgba(${glowColor},0.8))` }}
+        style={{ position: "relative", zIndex: 1, width: 28, height: 28, objectFit: "contain", display: "block", filter: `drop-shadow(0 0 4px rgba(${glowColor},0.8))` }}
       />
     </span>
   );
