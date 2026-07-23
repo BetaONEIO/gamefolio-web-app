@@ -332,6 +332,7 @@ function toPublicUser(user: any): Record<string, unknown> {
     isPrivate: user.isPrivate,
     isPro: user.isPro,
     isPartner: user.isPartner,
+    isAmbassador: user.isAmbassador,
     isStreamer: user.isStreamer,
     role: user.role,
     status: user.status,
@@ -2609,6 +2610,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           level: u.level || 1,
           totalXP: u.totalXP || 0,
           isPro: u.isPro || false,
+          isAmbassador: u.isAmbassador || false,
           walletAddress: u.walletAddress || null,
           walletChain: u.walletChain || null,
           gfTokenBalance: u.gfTokenBalance || 0,
@@ -2711,6 +2713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       level: u.level || 1,
       totalXP: u.totalXP || 0,
       isPro: u.isPro || false,
+      isAmbassador: u.isAmbassador || false,
       walletAddress: u.walletAddress || null,
       walletChain: u.walletChain || null,
       gfTokenBalance: u.gfTokenBalance || 0,
@@ -2768,6 +2771,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   (async () => {
     try {
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_partner BOOLEAN NOT NULL DEFAULT false`);
+    } catch (err) {
+      // Column already exists or other harmless error
+    }
+  })();
+
+  // Run migration to ensure the is_ambassador column exists
+  (async () => {
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_ambassador BOOLEAN NOT NULL DEFAULT false`);
     } catch (err) {
       // Column already exists or other harmless error
     }

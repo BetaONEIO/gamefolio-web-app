@@ -6,6 +6,7 @@ import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera, Clock, X 
 import {
   LevelTrackerIcon,
   ReferFriendIcon,
+  AmbassadorIcon,
   GoProIcon,
   ManageProIcon,
   AccountSettingsIcon,
@@ -625,7 +626,18 @@ const Header = () => {
                       <ReferFriendIcon className="mr-2 h-4 w-4" />
                       <span>Refer a Friend</span>
                     </DropdownMenuItem>
-                    
+
+                    {user?.isAmbassador && (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/ambassador-dashboard")}
+                        data-testid="button-ambassador-dashboard"
+                      >
+                        <AmbassadorIcon className="mr-2 h-4 w-4" />
+                        <span>Ambassador Dashboard</span>
+                      </DropdownMenuItem>
+                    )}
+
                     {!(isPro || user?.isPro || (user?.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date())) && (
                       <DropdownMenuItem
                         className="cursor-pointer text-white"

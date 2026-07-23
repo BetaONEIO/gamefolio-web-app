@@ -162,6 +162,25 @@ interface LootboxReward {
   isDuplicate: boolean;
 }
 
+// apiRequest throws Error(`${status}: ${bodyText}`) on non-2xx responses —
+// pull the JSON message back out so the UI shows the server's real reason
+// instead of a raw "400: {\"error\":\"...\"}" string.
+function parseApiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) {
+    const jsonStart = error.message.indexOf('{');
+    if (jsonStart !== -1) {
+      try {
+        const parsed = JSON.parse(error.message.slice(jsonStart));
+        if (parsed?.error) return parsed.error;
+        if (parsed?.message) return parsed.message;
+      } catch {
+        // fall through
+      }
+    }
+  }
+  return fallback;
+}
+
 export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthRequired }: ProUpgradeDialogProps) {
   const { isInitialized, isLoading, isPro, getCurrentOffering, purchasePackage } = useRevenueCat();
   const { user } = useAuth();
@@ -176,6 +195,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [webPricing, setWebPricing] = useState<WebPricing | null>(null);
+  const [showCodeInput, setShowCodeInput] = useState(false);
+  const [ambassadorCode, setAmbassadorCode] = useState("");
   const scrollContainerRef = useCallback((node: HTMLDivElement | null) => {
     if (node) {
       node.scrollTop = 0;
@@ -361,13 +382,14 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       await loadStripeInstance();
       const res = await apiRequest("POST", "/api/stripe/create-pro-subscription", {
         plan: billingPeriod,
+        ambassadorCode: ambassadorCode.trim() || undefined,
       });
       const data = await res.json();
       setCheckoutClientSecret(data.clientSecret);
       setCheckoutSessionId(data.sessionId);
       setStep("checkout");
     } catch (err: any) {
-      setCheckoutError(err?.message || "Failed to start checkout");
+      setCheckoutError(parseApiErrorMessage(err, "Failed to start checkout"));
     } finally {
       setCheckoutLoading(false);
     }
@@ -549,6 +571,38 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     );
   };
 
+  // Ambassador referral discount — web/Stripe checkout only, validated
+  // server-side against the ambassador's referral code at checkout time.
+  const ambassadorCodeSection = () => (
+    <div className="text-left">
+      {!showCodeInput ? (
+        <button
+          type="button"
+          onClick={() => setShowCodeInput(true)}
+          className="text-[#B8C0AE] text-[11px] underline hover:text-white"
+        >
+          Have an ambassador code?
+        </button>
+      ) : (
+        <div className="flex flex-col gap-1">
+          <label className="text-[#B8C0AE] text-[10px] font-bold uppercase tracking-[1px]">
+            Ambassador code
+          </label>
+          <input
+            type="text"
+            value={ambassadorCode}
+            onChange={(e) => setAmbassadorCode(e.target.value)}
+            placeholder="e.g. TOWER"
+            className="w-full bg-[#0B1218] border border-[#1B2A33] rounded-lg px-3 py-2 text-white text-sm placeholder:text-[#475569] focus:outline-none focus:border-[#B7FF1A]"
+          />
+          <p className="text-[#B8C0AE] text-[10px]">
+            10% off your first payment.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
   const leftPanel = (
     <div className="relative w-full h-full min-h-0">
       <div className="absolute inset-0">
@@ -634,6 +688,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         </div>
 
         {planSelector()}
+
+        {!isNative && ambassadorCodeSection()}
 
         <button
           onClick={handleJoinPro}
@@ -800,6 +856,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
                   {planSelector(true)}
 
+                  {!isNative && ambassadorCodeSection()}
+
                   <button
                     onClick={handleJoinPro}
                     disabled={buttonDisabled}
@@ -818,6 +876,10 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                       </>
                     )}
                   </button>
+
+                  {checkoutError && (
+                    <p className="text-red-400 text-xs text-center mt-2">{checkoutError}</p>
+                  )}
 
                   <span className="text-[#B8C0AE] text-[11px] text-center block mt-2">
                     Cancel anytime.{" "}
