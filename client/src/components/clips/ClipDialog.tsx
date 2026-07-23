@@ -58,6 +58,7 @@ import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 import { AgeRestrictionDialog } from "@/components/content/AgeRestrictionDialog";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
+import { AmbassadorBadge } from "@/components/ui/ambassador-badge";
 import { VideoAdPlayer } from "@/components/ads/VideoAdPlayer";
 import { useClipAdDecision } from "@/hooks/use-ad-manager";
 import {
@@ -1215,6 +1216,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                               @{clip.user.username}
                               <ModeratorBadge isModerator={((clip.user as any).role === "moderator" || (clip.user as any).role === "admin") && !(clip.user as any).selectedVerificationBadgeId} size="sm" />
                               <ProBadge selectedVerificationBadgeId={(clip.user as any).selectedVerificationBadgeId} size="sm" />
+                              <AmbassadorBadge isAmbassador={(clip.user as any).isAmbassador} size="sm" />
                             </div>
                           </Link>
                         ) : (
