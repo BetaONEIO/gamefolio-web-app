@@ -120,7 +120,8 @@ import {
   pushTokens,
   pushBroadcasts,
   indieGameProfiles, IndieGameProfile, InsertIndieGameProfile,
-  indieGameFieldOverrides, IndieGameFieldOverride
+  indieGameFieldOverrides, IndieGameFieldOverride,
+  ambassadorConversions
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, like, ilike, asc, or, lt, lte, gt, sql, arrayContains, ne, inArray, notInArray, isNotNull, isNull, getTableColumns } from "drizzle-orm";
@@ -155,6 +156,12 @@ async function comparePasswords(password: string, hashedPassword: string | null 
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
   return timingSafeEqual(Buffer.from(hash, 'hex'), buf);
 }
+
+// Shared rolling-window duration for once-per-day rewards (lootbox, fire
+// reactions). Deliberately a fixed elapsed-time lockout rather than a
+// calendar-day boundary, since a fixed UTC/local midnight reset lets users
+// outside that timezone claim again a few hours later the same real day.
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
@@ -278,6 +285,71 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
 
     return { success: true, message: 'Referral code updated successfully.' };
+  }
+
+  async recordAmbassadorConversion(referredUserId: number, referralCodeUsed: string, subscriptionType: string | null, source: string): Promise<void> {
+    const ambassador = await this.getUserByReferralCode(referralCodeUsed);
+    if (!ambassador || !ambassador.isAmbassador || ambassador.id === referredUserId) return;
+
+    await db.insert(ambassadorConversions).values({
+      ambassadorUserId: ambassador.id,
+      referredUserId,
+      referralCode: referralCodeUsed,
+      subscriptionType,
+      source,
+    }).onConflictDoNothing({ target: ambassadorConversions.referredUserId });
+  }
+
+  async getAmbassadorDashboardStats(ambassadorUserId: number): Promise<{
+    referralCode: string | null;
+    totalConversions: number;
+    conversions: Array<{ userId: number; username: string; displayName: string | null; avatarUrl: string | null; subscriptionType: string | null; convertedAt: Date }>;
+  }> {
+    const stats = await this.getReferralStats(ambassadorUserId);
+    const conversions = await this.getAmbassadorConversionsForAdmin(ambassadorUserId);
+
+    return {
+      referralCode: stats.referralCode,
+      totalConversions: conversions.length,
+      conversions,
+    };
+  }
+
+  async getAllAmbassadorsWithStats(): Promise<Array<{ id: number; username: string; displayName: string | null; avatarUrl: string | null; referralCode: string | null; totalConversions: number }>> {
+    const ambassadors = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        displayName: users.displayName,
+        avatarUrl: users.avatarUrl,
+        referralCode: users.referralCode,
+        totalConversions: sql<number>`COUNT(${ambassadorConversions.id})`,
+      })
+      .from(users)
+      .leftJoin(ambassadorConversions, eq(ambassadorConversions.ambassadorUserId, users.id))
+      .where(eq(users.isAmbassador, true))
+      .groupBy(users.id)
+      .orderBy(desc(sql`COUNT(${ambassadorConversions.id})`));
+
+    return ambassadors.map(a => ({ ...a, totalConversions: Number(a.totalConversions) }));
+  }
+
+  async getAmbassadorConversionsForAdmin(ambassadorUserId: number): Promise<Array<{ userId: number; username: string; displayName: string | null; avatarUrl: string | null; subscriptionType: string | null; convertedAt: Date }>> {
+    const rows = await db
+      .select({
+        userId: users.id,
+        username: users.username,
+        displayName: users.displayName,
+        avatarUrl: users.avatarUrl,
+        subscriptionType: ambassadorConversions.subscriptionType,
+        convertedAt: ambassadorConversions.createdAt,
+      })
+      .from(ambassadorConversions)
+      .innerJoin(users, eq(users.id, ambassadorConversions.referredUserId))
+      .where(eq(ambassadorConversions.ambassadorUserId, ambassadorUserId))
+      .orderBy(desc(ambassadorConversions.createdAt));
+
+    return rows;
   }
 
   async createUser(userData: InsertUser): Promise<User> {
@@ -5177,24 +5249,17 @@ export class DatabaseStorage implements IStorage {
 
     const now = new Date();
     const lastOpened = new Date(record.lastOpenedAt);
-    
-    // Reset at midnight UTC
-    const todayMidnight = new Date(now);
-    todayMidnight.setUTCHours(0, 0, 0, 0);
-    
-    const lastOpenedDate = new Date(lastOpened);
-    lastOpenedDate.setUTCHours(0, 0, 0, 0);
-    
-    const canOpen = lastOpenedDate < todayMidnight;
-    
-    // Calculate next open time (next midnight UTC)
-    const nextOpenAt = new Date(todayMidnight);
-    nextOpenAt.setUTCDate(nextOpenAt.getUTCDate() + 1);
 
-    return { 
-      canOpen, 
-      lastOpenedAt: record.lastOpenedAt, 
-      nextOpenAt: canOpen ? null : nextOpenAt 
+    // Rolling 24h lockout from the last open, not a calendar-day boundary —
+    // a fixed UTC/local midnight reset lets non-UK users reopen a few hours
+    // later the same real day once the boundary rolls over underneath them.
+    const nextOpenAt = new Date(lastOpened.getTime() + TWENTY_FOUR_HOURS_MS);
+    const canOpen = now >= nextOpenAt;
+
+    return {
+      canOpen,
+      lastOpenedAt: record.lastOpenedAt,
+      nextOpenAt: canOpen ? null : nextOpenAt
     };
   }
 
@@ -6141,43 +6206,48 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId));
   }
 
-  // Daily fire limit operations
-  async getUserDailyFires(userId: number, date: string): Promise<UserDailyFires | null> {
+  // Daily fire limit operations — a rolling 24h window from when the
+  // current window started (`createdAt` on the most recent row), not a
+  // calendar-date key. Same rationale as getDailyLootboxStatus above: a
+  // fixed UTC calendar-date reset let users outside that timezone use their
+  // fire allowance twice in one real day. `fireDate` is kept only as a
+  // human-readable record of when each window started.
+  async getUserDailyFires(userId: number): Promise<UserDailyFires | null> {
     const [record] = await db
       .select()
       .from(userDailyFires)
-      .where(
-        and(
-          eq(userDailyFires.userId, userId),
-          eq(userDailyFires.fireDate, date)
-        )
-      );
+      .where(eq(userDailyFires.userId, userId))
+      .orderBy(desc(userDailyFires.createdAt))
+      .limit(1);
     return record || null;
   }
 
+  private isFireWindowActive(record: UserDailyFires, now: Date): boolean {
+    return now.getTime() - new Date(record.createdAt).getTime() < TWENTY_FOUR_HOURS_MS;
+  }
+
   async incrementDailyFireCount(userId: number): Promise<UserDailyFires> {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-    
-    const existing = await this.getUserDailyFires(userId, today);
-    
-    if (existing) {
-      // Update existing record
+    const now = new Date();
+    const existing = await this.getUserDailyFires(userId);
+
+    if (existing && this.isFireWindowActive(existing, now)) {
+      // Still within the current 24h window — increment in place.
       const [updated] = await db
         .update(userDailyFires)
-        .set({ 
+        .set({
           firesCount: existing.firesCount + 1,
-          updatedAt: new Date()
+          updatedAt: now
         })
         .where(eq(userDailyFires.id, existing.id))
         .returning();
       return updated;
     } else {
-      // Create new record for today
+      // No window yet, or the previous one has fully elapsed — start a new one.
       const [created] = await db
         .insert(userDailyFires)
         .values({
           userId,
-          fireDate: today,
+          fireDate: now.toISOString().split('T')[0],
           firesCount: 1
         })
         .returning();
@@ -6188,14 +6258,14 @@ export class DatabaseStorage implements IStorage {
   async getFireLimits(userId: number): Promise<FireLimits> {
     const user = await this.getUser(userId);
     const isPro = user?.isPro ?? false;
-    
+
     // Pro users get 3 fires per day, regular users get 1
     const maxFiresPerDay = isPro ? 3 : 1;
-    
-    const today = new Date().toISOString().split('T')[0];
-    const dailyFires = await this.getUserDailyFires(userId, today);
-    const firesUsedToday = dailyFires?.firesCount ?? 0;
-    
+
+    const now = new Date();
+    const existing = await this.getUserDailyFires(userId);
+    const firesUsedToday = existing && this.isFireWindowActive(existing, now) ? existing.firesCount : 0;
+
     return {
       isPro,
       maxFiresPerDay,

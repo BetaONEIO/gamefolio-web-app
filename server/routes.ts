@@ -339,6 +339,7 @@ function toPublicUser(user: any): Record<string, unknown> {
     isPro: user.isPro,
     isPartner: user.isPartner,
     partnerType: user.partnerType,
+    isAmbassador: user.isAmbassador,
     isStreamer: user.isStreamer,
     role: user.role,
     status: user.status,
@@ -2763,6 +2764,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           level: u.level || 1,
           totalXP: u.totalXP || 0,
           isPro: u.isPro || false,
+          isAmbassador: u.isAmbassador || false,
           walletAddress: u.walletAddress || null,
           walletChain: u.walletChain || null,
           gfTokenBalance: u.gfTokenBalance || 0,
@@ -2867,6 +2869,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       level: u.level || 1,
       totalXP: u.totalXP || 0,
       isPro: u.isPro || false,
+      isAmbassador: u.isAmbassador || false,
       walletAddress: u.walletAddress || null,
       walletChain: u.walletChain || null,
       gfTokenBalance: u.gfTokenBalance || 0,
@@ -2924,6 +2927,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   (async () => {
     try {
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_partner BOOLEAN NOT NULL DEFAULT false`);
+    } catch (err) {
+      // Column already exists or other harmless error
+    }
+  })();
+
+  // Run migration to ensure the is_ambassador column exists
+  (async () => {
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_ambassador BOOLEAN NOT NULL DEFAULT false`);
     } catch (err) {
       // Column already exists or other harmless error
     }
@@ -9073,8 +9085,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!fireLimits.canFire) {
           return res.status(400).json({ 
             message: fireLimits.isPro 
-              ? "You've used all 3 zaps for today. Come back tomorrow!" 
-              : "You've used your daily zap. Pro users can zap 3 times a day!",
+              ? "You've used all 3 zaps. Come back in 24 hours!" 
+              : "You've used your zap. Come back in 24 hours! Pro users get 3 zaps a day.",
             firesRemaining: 0,
             maxFires: fireLimits.maxFiresPerDay
           });
@@ -14294,8 +14306,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!fireLimits.canFire) {
             return res.status(400).json({ 
               message: fireLimits.isPro 
-                ? "You've used all 3 zaps for today. Come back tomorrow!" 
-                : "You've used your daily zap. Pro users can zap 3 times a day!",
+                ? "You've used all 3 zaps. Come back in 24 hours!" 
+                : "You've used your zap. Come back in 24 hours! Pro users get 3 zaps a day.",
               firesRemaining: 0,
               maxFires: fireLimits.maxFiresPerDay
             });
@@ -14802,9 +14814,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const aggregated = await getAggregatedGfBalance(userId);
 
       if (aggregated.perWallet.length === 0) {
-        return res.status(404).json({
-          message: "No wallet found",
+        return res.json({
           balance: "0",
+          walletAddress: null,
+          wallets: [],
         });
       }
 

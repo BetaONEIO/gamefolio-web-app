@@ -84,6 +84,7 @@ import { FireButton } from "@/components/engagement/FireButton";
 import { ModeratorIcon } from "@/components/ui/moderator-icon";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { PartnerBadge } from "@/components/ui/partner-badge";
+import { AmbassadorBadge } from "@/components/ui/ambassador-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { ReportButton } from "@/components/reporting/ReportButton";
@@ -3291,6 +3292,7 @@ const ProfilePage = () => {
                 size="lg" 
               />
               <PartnerBadge isPartner={(profile as any).isPartner} size="lg" />
+              <AmbassadorBadge isAmbassador={(profile as any).isAmbassador} size="lg" />
             </div>
             <span className="text-sm font-normal" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.6)' }}>@{profile.username}</span>
             {/* User type badges on their own line */}

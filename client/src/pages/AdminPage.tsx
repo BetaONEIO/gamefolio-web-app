@@ -4,6 +4,7 @@ import { getQueryFn } from "@/lib/queryClient";
 import { AlertSettings } from "@/components/admin/AlertSettings";
 import { PushBroadcastPanel } from "@/components/admin/PushBroadcastPanel";
 import { AdminBountiesPanel } from "@/components/admin/AdminBountiesPanel";
+import { AmbassadorManagementPanel } from "@/components/admin/AmbassadorManagementPanel";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
@@ -1392,6 +1393,7 @@ import {
   UserMinus,
   Award,
   Star,
+  Medal,
   Crown,
   Shield,
   Plus,
@@ -2686,6 +2688,26 @@ const AdminPage = () => {
     }
   };
 
+  const handleMakeAmbassador = async (userId: number) => {
+    try {
+      await apiRequest("POST", `/api/admin/users/${userId}/make-ambassador`);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"], exact: false });
+      toast({ title: "Ambassador status granted", description: "The user is now a Gamefolio Ambassador." });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to grant ambassador status.", variant: "gamefolioError" });
+    }
+  };
+
+  const handleRemoveAmbassador = async (userId: number) => {
+    try {
+      await apiRequest("POST", `/api/admin/users/${userId}/remove-ambassador`);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"], exact: false });
+      toast({ title: "Ambassador status removed", description: "Ambassador badge removed from user." });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to remove ambassador status.", variant: "gamefolioError" });
+    }
+  };
+
   const handleMakeAdmin = async (userId: number) => {
     try {
       await apiRequest("POST", `/api/admin/users/${userId}/make-admin`);
@@ -3231,6 +3253,7 @@ const AdminPage = () => {
           <TabsTrigger value="store-management" className="text-xs px-3 py-1.5">Store</TabsTrigger>
           <TabsTrigger value="assets" className="text-xs px-3 py-1.5">Assets</TabsTrigger>
           <TabsTrigger value="pro-subscribers" className="text-xs px-3 py-1.5">Pro</TabsTrigger>
+          <TabsTrigger value="ambassadors" className="text-xs px-3 py-1.5">Ambassadors</TabsTrigger>
           <TabsTrigger value="settings" className="text-xs px-3 py-1.5">Settings</TabsTrigger>
           <TabsTrigger value="games" className="text-xs px-3 py-1.5">Games</TabsTrigger>
           <TabsTrigger value="alerts" className="text-xs px-3 py-1.5">Alerts</TabsTrigger>
@@ -3250,6 +3273,10 @@ const AdminPage = () => {
 
         <TabsContent value="bounties" className="space-y-4">
           <AdminBountiesPanel />
+        </TabsContent>
+
+        <TabsContent value="ambassadors" className="space-y-4">
+          <AmbassadorManagementPanel />
         </TabsContent>
 
         {/* Dashboard Tab */}
@@ -3701,6 +3728,28 @@ const AdminPage = () => {
                                   className="text-muted-foreground hover:text-yellow-500"
                                 >
                                   <Star className="h-4 w-4" />
+                                </Button>
+                              )}
+
+                              {(user as any).isAmbassador ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoveAmbassador(user.id)}
+                                  title="Remove Ambassador"
+                                  style={{ color: '#38BDF8' }}
+                                >
+                                  <Medal className="h-4 w-4 fill-current" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleMakeAmbassador(user.id)}
+                                  title="Make Ambassador"
+                                  className="text-muted-foreground hover:text-sky-500"
+                                >
+                                  <Medal className="h-4 w-4" />
                                 </Button>
                               )}
                               
