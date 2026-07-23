@@ -230,6 +230,33 @@ router.post('/:gameId/bounties', async (req, res) => {
 
     const totalXp = (xpJoin || 500) + (demoKeys.length * (xpPerClip || 1000)) + (fullKeys.length * (xpPerReel || 2500)) + ((xpPerScreenshot || 200) * (requiredScreenshots || 0)) + (xpViewMilestone || 2500) + (xpCompletionBonus || 5000);
 
+    // Active-bounty concurrency cap: free accounts get 1 active bounty at a
+    // time, paid Indie Developer subscribers get up to 5. Drafts don't count.
+    const willBeActive = status !== 'draft';
+    if (willBeActive) {
+      const subResult = await db.execute(sql`
+        SELECT is_indie_dev_subscriber AS "isIndieDevSubscriber" FROM users WHERE id = ${userId}
+      `);
+      const subRows = (subResult as any).rows ?? subResult;
+      const isIndieDevSubscriber = !!subRows?.[0]?.isIndieDevSubscriber;
+      const limit = isIndieDevSubscriber ? 5 : 1;
+
+      const activeCountResult = await db.execute(sql`
+        SELECT COUNT(*)::int AS count FROM game_bounties
+        WHERE created_by_user_id = ${userId} AND status = 'active'
+      `);
+      const countRows = (activeCountResult as any).rows ?? activeCountResult;
+      const activeCount = countRows?.[0]?.count ?? 0;
+
+      if (activeCount >= limit) {
+        return res.status(403).json({
+          message: isIndieDevSubscriber
+            ? `You've reached your active bounty limit (${limit}).`
+            : `Free accounts can run 1 active bounty at a time. Upgrade to Indie Developer to run up to 5.`,
+        });
+      }
+    }
+
     const result = await db.execute(sql`
       INSERT INTO game_bounties
         (game_id, created_by_user_id, title, campaign_title, description,

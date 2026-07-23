@@ -19,6 +19,7 @@ import KeyManagementTab from "./indie-dashboard/KeyManagementTab";
 import AnalyticsTab from "./indie-dashboard/AnalyticsTab";
 import GameProfileTab from "./indie-dashboard/GameProfileTab";
 import RunCampaignWizard from "./indie-dashboard/RunCampaignWizard";
+import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
 
 export { NEON, CARD_BG, CARD_BORDER, PAGE_BG } from "./indie-dashboard/constants";
 import { NEON, PAGE_BG } from "./indie-dashboard/constants";
@@ -26,7 +27,7 @@ import { NEON, PAGE_BG } from "./indie-dashboard/constants";
 type TopTabId = "overview" | "campaigns" | "community" | "keys" | "analytics" | "settings";
 type CampaignSubTab = "create" | "my";
 type CommunitySubTab = "content" | "submissions";
-type SettingsSubTab = "profile" | "store";
+type SettingsSubTab = "profile" | "store" | "subscription";
 
 const ESSENTIAL_FIELDS = ["gameName", "shortDescription", "headerImageUrl", "steamUrl", "epicUrl", "itchUrl"];
 const ALL_PROFILE_FIELDS = [
@@ -86,6 +87,45 @@ function SubNav({ items, active, onChange }: {
   );
 }
 
+function IndieDevSubscriptionTab() {
+  const { user } = useAuth();
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const isSubscriber = !!user?.isIndieDevSubscriber;
+
+  return (
+    <div className="max-w-xl">
+      <div className="rounded-2xl p-6"
+        style={{
+          background: "linear-gradient(135deg, rgba(183,255,24,0.055) 0%, rgba(255,255,255,0.018) 100%)",
+          border: "1px solid rgba(183,255,24,0.13)",
+        }}>
+        <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: NEON }}>
+          Indie Developer Subscription
+        </p>
+        <h3 className="text-xl font-black text-white mb-3">
+          {isSubscriber ? "You're subscribed" : "Run more bounties at once"}
+        </h3>
+        <p className="text-sm text-white/50 mb-2">
+          Active bounty limit: <span className="font-bold text-white">{isSubscriber ? 5 : 1}</span>
+        </p>
+        <p className="text-sm text-white/50 mb-5">
+          {isSubscriber
+            ? `Billed ${user?.indieDevSubscriptionType === "yearly" ? "yearly (£49.99/yr)" : "monthly (£4.99/mo)"}.`
+            : "Upgrade to run up to 5 active bounties at once, plus get featured on gamefolio.com/games and included in Gamefolio's social promotion."}
+        </p>
+        {!isSubscriber && (
+          <button onClick={() => setShowUpgrade(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110"
+            style={{ background: NEON, color: "#070b10" }}>
+            Upgrade to Indie Developer <ArrowUpRight className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+      <IndieDevUpgradeDialog open={showUpgrade} onOpenChange={setShowUpgrade} />
+    </div>
+  );
+}
+
 function DashboardTab({
   onGoTo,
   onRunCampaign,
@@ -93,6 +133,8 @@ function DashboardTab({
   onGoTo: (tab: TopTabId, sub?: string) => void;
   onRunCampaign: () => void;
 }) {
+  const { user } = useAuth();
+  const [showIndieDevUpgrade, setShowIndieDevUpgrade] = useState(false);
   const { data: overview, isLoading } = useQuery<any>({
     queryKey: ["/api/campaigns/overview"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -175,6 +217,15 @@ function DashboardTab({
       desc: "Recruit creators to build buzz for your game",
       cta: "Browse Templates",
       action: () => onGoTo("campaigns", "library"),
+    });
+  }
+  if (!user?.isIndieDevSubscriber) {
+    attentionItems.push({
+      icon: Rocket, color: NEON,
+      title: "Free accounts can run 1 active bounty at a time",
+      desc: "Upgrade to Indie Developer to run up to 5 at once, plus promotion perks",
+      cta: "Upgrade",
+      action: () => setShowIndieDevUpgrade(true),
     });
   }
 
@@ -690,6 +741,7 @@ function DashboardTab({
 
       </div>{/* end two-column */}
 
+      <IndieDevUpgradeDialog open={showIndieDevUpgrade} onOpenChange={setShowIndieDevUpgrade} />
     </div>
   );
 }
@@ -821,8 +873,9 @@ export default function IndieDashboardPage() {
           <>
             <SubNav
               items={[
-                { id: "profile", label: "Game Profile" },
-                { id: "store",   label: "Store & Media" },
+                { id: "profile",      label: "Game Profile" },
+                { id: "store",        label: "Store & Media" },
+                { id: "subscription", label: "Subscription" },
               ]}
               active={settingsSub}
               onChange={v => setSettingsSub(v as SettingsSubTab)}
@@ -834,6 +887,7 @@ export default function IndieDashboardPage() {
                 <p className="text-sm">Store &amp; Media settings — use Game Profile for now</p>
               </div>
             )}
+            {settingsSub === "subscription" && <IndieDevSubscriptionTab />}
           </>
         )}
 

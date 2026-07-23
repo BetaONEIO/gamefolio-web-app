@@ -31,15 +31,20 @@ type RevenueCatContextType = {
   isInitialized: boolean;
   isLoading: boolean;
   isPro: boolean;
+  isIndieDevSubscriber: boolean;
   customerInfo: RcCustomerInfo | null;
   refreshCustomerInfo: () => Promise<void>;
   purchasePackage: (pkg: RcPackage) => Promise<boolean>;
   getCurrentOffering: () => RcPackage[] | null;
+  getIndieDevOffering: () => RcPackage[] | null;
+  purchaseIndieDevPackage: (pkg: RcPackage) => Promise<boolean>;
 };
 
 const RevenueCatContext = createContext<RevenueCatContextType | null>(null);
 
 const PRO_ENTITLEMENT_ID = "pro";
+const INDIE_DEV_ENTITLEMENT_ID = "indie_dev";
+const INDIE_DEV_OFFERING_ID = "Gamefolio Indie Developer";
 
 function pickKey(v: unknown): string | null {
   return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
@@ -91,13 +96,21 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const webInstanceRef = useRef<ReturnType<typeof WebPurchases.getSharedInstance> | null>(null);
   const nativeConfiguredRef = useRef(false);
+  // Raw offerings object (native or web), kept around so a NAMED offering
+  // (Indie Developer) can be looked up without a second network round-trip —
+  // the initial fetch already retrieves every offering, we just only mapped
+  // `current` (Pro) into `packages` below.
+  const offeringsRef = useRef<any>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [customerInfo, setCustomerInfo] = useState<RcCustomerInfo | null>(null);
   const [hasProEntitlement, setHasProEntitlement] = useState(false);
+  const [hasIndieDevEntitlement, setHasIndieDevEntitlement] = useState(false);
   const [packages, setPackages] = useState<RcPackage[] | null>(null);
+  const [indieDevPackages, setIndieDevPackages] = useState<RcPackage[] | null>(null);
 
   const isPro = hasProEntitlement || user?.isPro === true;
+  const isIndieDevSubscriber = hasIndieDevEntitlement || user?.isIndieDevSubscriber === true;
 
   const syncProStatusWithBackend = useCallback(async (proStatus: boolean) => {
     try {
@@ -133,6 +146,22 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Same server-verified activation as Pro, but for the Indie Developer
+  // entitlement — see /api/indie-dev/activate in server/routes/revenuecat.ts.
+  const activateIndieDevOnBackend = useCallback(async (appUserId: string) => {
+    try {
+      await fetch("/api/indie-dev/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ appUserId, platform }),
+      });
+      await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    } catch (error) {
+      console.error("Failed to activate Indie Developer subscription on backend:", error);
+    }
+  }, []);
+
   useEffect(() => {
     if (!user?.id) {
       webInstanceRef.current = null;
@@ -140,7 +169,10 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       setIsInitialized(false);
       setCustomerInfo(null);
       setHasProEntitlement(false);
+      setHasIndieDevEntitlement(false);
       setPackages(null);
+      setIndieDevPackages(null);
+      offeringsRef.current = null;
       return;
     }
 
@@ -154,12 +186,22 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     const appUserId = `gamefolio_${user.id}`;
 
-    const finish = (info: RcCustomerInfo, pkgs: RcPackage[] | null) => {
+    const finish = (
+      info: RcCustomerInfo,
+      pkgs: RcPackage[] | null,
+      rawOfferings: any,
+      normalize: (pkg: any) => RcPackage,
+    ) => {
       if (cancelled) return;
       setCustomerInfo(info);
       const pro = info.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined;
+      const indieDev = info.entitlements?.active?.[INDIE_DEV_ENTITLEMENT_ID] !== undefined;
       setHasProEntitlement(pro);
+      setHasIndieDevEntitlement(indieDev);
       setPackages(pkgs);
+      offeringsRef.current = rawOfferings;
+      const indieDevOffering = rawOfferings?.all?.[INDIE_DEV_OFFERING_ID];
+      setIndieDevPackages(indieDevOffering ? indieDevOffering.availablePackages.map(normalize) : null);
       setIsInitialized(true);
       if (pro && !user.isPro) void syncProStatusWithBackend(true);
     };
@@ -176,7 +218,12 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
         Purchases.getOfferings(),
       ]);
       const current = offerings.current;
-      finish(info as unknown as RcCustomerInfo, current ? current.availablePackages.map(normalizeNative) : null);
+      finish(
+        info as unknown as RcCustomerInfo,
+        current ? current.availablePackages.map(normalizeNative) : null,
+        offerings,
+        normalizeNative as (pkg: any) => RcPackage,
+      );
     };
 
     // Web: RevenueCat Web Billing SDK. NB the paywall itself purchases via
@@ -188,7 +235,12 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       webInstanceRef.current = instance;
       const [info, offers] = await Promise.all([instance.getCustomerInfo(), instance.getOfferings()]);
       const current = offers.current;
-      finish(info as unknown as RcCustomerInfo, current ? current.availablePackages.map(normalizeWeb) : null);
+      finish(
+        info as unknown as RcCustomerInfo,
+        current ? current.availablePackages.map(normalizeWeb) : null,
+        offers,
+        normalizeWeb as (pkg: any) => RcPackage,
+      );
     };
 
     (isNative ? initNative() : initWeb()).catch((error) => {
@@ -217,7 +269,9 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       }
       setCustomerInfo(info);
       const pro = info.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined;
+      const indieDev = info.entitlements?.active?.[INDIE_DEV_ENTITLEMENT_ID] !== undefined;
       setHasProEntitlement(pro);
+      setHasIndieDevEntitlement(indieDev);
       if (pro !== (user?.isPro === true)) await syncProStatusWithBackend(pro);
     } catch (error) {
       console.error("Failed to refresh customer info:", error);
@@ -291,7 +345,74 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.id, user?.email, toast, syncProStatusWithBackend, activateProOnBackend]);
 
+  // Same purchase flow as purchasePackage, but for the Indie Developer
+  // offering/entitlement — kept separate rather than parameterizing
+  // purchasePackage, since the two tiers have different backend activation
+  // endpoints and success copy.
+  const purchaseIndieDevPackage = useCallback(async (pkg: RcPackage): Promise<boolean> => {
+    const notReady = () =>
+      toast({
+        title: "Not ready",
+        description: "Please wait while we set up the payment system.",
+        variant: "destructive",
+      });
+
+    setIsLoading(true);
+    try {
+      let info: RcCustomerInfo;
+      if (isNative) {
+        if (!nativeConfiguredRef.current || !pkg._native) {
+          notReady();
+          return false;
+        }
+        const { Purchases } = await import("@revenuecat/purchases-capacitor");
+        const result = await Purchases.purchasePackage({ aPackage: pkg._native });
+        info = result.customerInfo as unknown as RcCustomerInfo;
+      } else {
+        const instance = webInstanceRef.current;
+        if (!instance || !pkg._web) {
+          notReady();
+          return false;
+        }
+        const result = await instance.purchase({ rcPackage: pkg._web, customerEmail: user?.email || undefined });
+        info = result.customerInfo as unknown as RcCustomerInfo;
+      }
+
+      setCustomerInfo(info);
+      const indieDev = info.entitlements?.active?.[INDIE_DEV_ENTITLEMENT_ID] !== undefined;
+      if (indieDev) {
+        setHasIndieDevEntitlement(true);
+        if (isNative && user?.id) {
+          await activateIndieDevOnBackend(`gamefolio_${user.id}`);
+        } else {
+          await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+        }
+        toast({
+          title: "Welcome to Indie Developer!",
+          description: "You can now run up to 5 active bounties at once.",
+          variant: "gamefolioSuccess",
+        });
+        return true;
+      }
+      return false;
+    } catch (error: any) {
+      if (error?.userCancelled || error?.errorCode === "UserCancelledError" || /cancel/i.test(error?.message || "")) {
+        return false;
+      }
+      console.error("Indie Developer purchase failed:", error);
+      toast({
+        title: "Purchase failed",
+        description: error?.message || "There was an error processing your purchase. Please try again.",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user?.id, user?.email, toast, activateIndieDevOnBackend]);
+
   const getCurrentOffering = useCallback((): RcPackage[] | null => packages, [packages]);
+  const getIndieDevOffering = useCallback((): RcPackage[] | null => indieDevPackages, [indieDevPackages]);
 
   return (
     <RevenueCatContext.Provider
@@ -299,10 +420,13 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
         isInitialized,
         isLoading,
         isPro,
+        isIndieDevSubscriber,
         customerInfo,
         refreshCustomerInfo,
         purchasePackage,
         getCurrentOffering,
+        getIndieDevOffering,
+        purchaseIndieDevPackage,
       }}
     >
       {children}

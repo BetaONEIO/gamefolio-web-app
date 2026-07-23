@@ -2822,6 +2822,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           canSellNfts: u.canSellNfts || false,
           isPartner: u.isPartner || false,
           partnerType: u.partnerType || null,
+          isIndieDevSubscriber: u.isIndieDevSubscriber || false,
+          indieDevSubscriptionType: u.indieDevSubscriptionType || null,
           isStreamer: u.isStreamer || false,
           streamPlatform: u.streamPlatform || null,
           streamChannelName: u.streamChannelName || null,

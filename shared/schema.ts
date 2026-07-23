@@ -138,6 +138,13 @@ export const users = pgTable("users", {
   stripeCustomerId: text("stripe_customer_id"), // Stripe customer ID for recurring billing
   stripeSubscriptionId: text("stripe_subscription_id"), // Stripe subscription ID for managing recurring payments
   revenuecatUserId: text("revenuecat_user_id"), // RevenueCat app user ID for mobile subscription verification
+  // Gamefolio Indie Developer subscription — a separate paid tier from Pro/Partner.
+  // Raises the active-bounty concurrency cap (free: 1, subscriber: 5).
+  isIndieDevSubscriber: boolean("is_indie_dev_subscriber").default(false).notNull(),
+  indieDevSubscriptionType: text("indie_dev_subscription_type"), // "monthly" | "yearly"
+  indieDevSubscriptionStartDate: timestamp("indie_dev_subscription_start_date"),
+  indieDevSubscriptionEndDate: timestamp("indie_dev_subscription_end_date"),
+  indieDevStripeSubscriptionId: text("indie_dev_stripe_subscription_id"), // separate from stripeSubscriptionId — a user can hold Pro + Indie Dev at once
   // Selected Avatar Border (from lootbox rewards)
   selectedAvatarBorderId: integer("selected_avatar_border_id"), // References asset_rewards table
   // Selected Name Tag
