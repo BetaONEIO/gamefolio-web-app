@@ -85,6 +85,7 @@ import uploadRoutes from './routes/upload';
 import twitchGamesRoutes from './routes/twitch-games';
 import gfCheckoutRoutes from './routes/gf-checkout';
 import proSubscriptionRoutes from './routes/pro-subscription';
+import indieDevSubscriptionRoutes from './routes/indie-dev-subscription';
 import gfWebhookRoutes from './routes/gf-webhook';
 import gfStakingRoutes from './routes/gf-staking';
 import { blockCryptoOnNative } from './middleware/block-crypto-on-native';
@@ -271,6 +272,7 @@ app.use((req, res, next) => {
     app.use('/api/twitch', twitchGamesRoutes);
     app.use(gfCheckoutRoutes);
     app.use(proSubscriptionRoutes);
+    app.use(indieDevSubscriptionRoutes);
     app.use(gfStakingRoutes);
     app.use(storeRoutes);
     app.use(gamefolioPurchaseRoutes);

@@ -8,6 +8,7 @@ import { transferGfTokens } from '../gf-token-service';
 import { EmailService } from '../email-service';
 import { notifyProPurchase } from '../telegram-notify';
 import { provisionProSubscription, grantGiftPro } from './pro-subscription';
+import { provisionIndieDevSubscription } from './indie-dev-subscription';
 import Stripe from 'stripe';
 
 const router = Router();
@@ -203,6 +204,31 @@ router.post('/api/stripe/webhook',
           }
         } catch (error) {
           console.error('[GF Webhook] Error provisioning Pro subscription:', error);
+        }
+      }
+
+      // Indie Developer subscription checkout — backstop for the client-side
+      // confirm call. Idempotent: safe even if the client already provisioned
+      // this session.
+      if (session.metadata?.type === 'indie_dev_subscription' && session.metadata?.userId) {
+        try {
+          const userId = parseInt(session.metadata.userId, 10);
+          const plan: 'monthly' | 'yearly' = session.metadata.plan === 'yearly' ? 'yearly' : 'monthly';
+          const subscriptionId = typeof session.subscription === 'string'
+            ? session.subscription
+            : session.subscription?.id;
+          const customerId = typeof session.customer === 'string'
+            ? session.customer
+            : session.customer?.id;
+
+          if (userId && subscriptionId && customerId) {
+            await provisionIndieDevSubscription({ userId, plan, customerId, subscriptionId });
+            console.log(`[GF Webhook] Provisioned Indie Developer subscription for user ${userId} via checkout.session.completed`);
+          } else {
+            console.warn('[GF Webhook] indie_dev_subscription session missing user/subscription/customer ids');
+          }
+        } catch (error) {
+          console.error('[GF Webhook] Error provisioning Indie Developer subscription:', error);
         }
       }
     }
