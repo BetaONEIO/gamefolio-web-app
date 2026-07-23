@@ -41,6 +41,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { LootboxDialog, LootboxTrigger } from "@/components/lootbox/LootboxDialog";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
+import { AmbassadorBadge } from "@/components/ui/ambassador-badge";
 import { LevelTrackerModal } from "@/components/level/LevelTrackerModal";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useLevelTracker } from "@/hooks/use-level-tracker";
@@ -469,6 +470,7 @@ const Header = () => {
                               size="sm" 
                             />
                             <ProBadge selectedVerificationBadgeId={searchUser.selectedVerificationBadgeId} size="sm" />
+                            <AmbassadorBadge isAmbassador={(searchUser as any).isAmbassador} size="sm" />
                           </div>
                           <div className="text-sm text-muted-foreground">@{searchUser.username}</div>
                         </div>
@@ -994,6 +996,7 @@ const Header = () => {
                                   size="sm" 
                                 />
                                 <ProBadge selectedVerificationBadgeId={searchUser.selectedVerificationBadgeId} size="sm" />
+                                <AmbassadorBadge isAmbassador={(searchUser as any).isAmbassador} size="sm" />
                               </div>
                               <div className="text-sm text-muted-foreground">@{searchUser.username}</div>
                             </div>

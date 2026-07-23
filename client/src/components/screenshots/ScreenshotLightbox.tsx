@@ -15,6 +15,7 @@ import { formatDistance } from "date-fns";
 import { Link } from "wouter";
 import { Eye, Clock, MessageSquare, User as UserIcon, UserPlus, UserCheck, ChevronLeft, ChevronRight, X, Maximize2, Minimize2, ArrowLeft } from "lucide-react";
 import { ProBadge } from "@/components/ui/pro-badge";
+import { AmbassadorBadge } from "@/components/ui/ambassador-badge";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import type { Game, Screenshot } from "@shared/schema";
 
@@ -431,6 +432,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                   </span>
                 </Link>
                 <ProBadge selectedVerificationBadgeId={(screenshot.user as any)?.selectedVerificationBadgeId} size="sm" />
+                <AmbassadorBadge isAmbassador={(screenshot.user as any)?.isAmbassador} size="sm" />
               </div>
               {currentUserId && screenshotUser?.id && currentUserId !== screenshotUser.id && (
                 <Button
@@ -606,6 +608,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                     </div>
                   </Link>
                   <ProBadge selectedVerificationBadgeId={(screenshot.user as any)?.selectedVerificationBadgeId} size="sm" />
+                  <AmbassadorBadge isAmbassador={(screenshot.user as any)?.isAmbassador} size="sm" />
                 </div>
                 {currentUserId && screenshotUser?.id && currentUserId !== screenshotUser.id && (
                   <Button
