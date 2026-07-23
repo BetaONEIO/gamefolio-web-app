@@ -20,7 +20,7 @@ export function AmbassadorBadge({ isAmbassador, size = "md" }: AmbassadorBadgePr
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className="inline-flex items-center ml-1 shrink-0" style={{ lineHeight: 0 }}>
+          <span className="inline-flex items-center shrink-0" style={{ lineHeight: 0 }}>
             <img
               src={ambassadorBadgeIcon}
               alt="Gamefolio Ambassador"
