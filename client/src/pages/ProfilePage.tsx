@@ -3709,6 +3709,8 @@ const ProfilePage = () => {
                   size="xl" 
                 />
               </span>
+              <PartnerBadge isPartner={(profile as any).isPartner} size="xl" />
+              <AmbassadorBadge isAmbassador={(profile as any).isAmbassador} size="xl" />
               {profile.userType && profile.showUserType !== false && (() => {
                 const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
                 return userTypes.map((type, index) => {
