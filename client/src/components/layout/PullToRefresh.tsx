@@ -10,9 +10,10 @@ interface PullToRefreshProps {
   containerRef: RefObject<HTMLElement>;
   onRefresh: () => Promise<void> | void;
   children: React.ReactNode;
+  enabled?: boolean;
 }
 
-export function PullToRefresh({ containerRef, onRefresh, children }: PullToRefreshProps) {
+export function PullToRefresh({ containerRef, onRefresh, children, enabled = true }: PullToRefreshProps) {
   const isMobile = useMobile();
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -25,7 +26,7 @@ export function PullToRefresh({ containerRef, onRefresh, children }: PullToRefre
   stateRef.current.isRefreshing = isRefreshing;
 
   useEffect(() => {
-    if (!isMobile) return;
+    if (!isMobile || !enabled) return;
     const container = containerRef.current;
     if (!container) return;
 
@@ -78,9 +79,9 @@ export function PullToRefresh({ containerRef, onRefresh, children }: PullToRefre
       container.removeEventListener("touchend", handleTouchEnd);
       container.removeEventListener("touchcancel", handleTouchEnd);
     };
-  }, [isMobile, containerRef, onRefresh]);
+  }, [isMobile, enabled, containerRef, onRefresh]);
 
-  if (!isMobile) return <>{children}</>;
+  if (!isMobile || !enabled) return <>{children}</>;
 
   const visible = pullDistance > 0 || isRefreshing;
   const opacity = Math.min(pullDistance / TRIGGER_DISTANCE, 1);

@@ -447,6 +447,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
           <PullToRefresh
             containerRef={mainScrollRef}
             onRefresh={() => queryClient.invalidateQueries()}
+            enabled={!location.startsWith("/messages")}
           >
             <div className="px-0 py-0">
               {children}

@@ -399,7 +399,7 @@ export function MobileTrendingViewer({ content: rawContent, initialIndex = 0, on
                 className="absolute left-0 right-0 z-10 px-4 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent"
                 style={{
                   bottom: '0',
-                  paddingBottom: '20px',
+                  paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
                   pointerEvents: 'none',
                 }}
                 onClick={e => e.stopPropagation()}
