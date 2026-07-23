@@ -124,6 +124,7 @@ export const users = pgTable("users", {
   // Gamefolio Pro subscription
   isPro: boolean("is_pro").default(false).notNull(), // Gamefolio Pro subscriber status
   isPartner: boolean("is_partner").default(false).notNull(), // Official Gamefolio Partner
+  isAmbassador: boolean("is_ambassador").default(false).notNull(), // Official Gamefolio Ambassador
   hideFromLeaderboard: boolean("hide_from_leaderboard").default(false).notNull(), // Admin-controlled leaderboard exclusion
   proSubscriptionType: text("pro_subscription_type"), // "yearly", "monthly", etc.
   proSubscriptionStartDate: timestamp("pro_subscription_start_date"), // When subscription started
@@ -1745,6 +1746,23 @@ export const gamefolioPurchases = pgTable("gamefolio_purchases", {
 }));
 
 export type GamefolioPurchase = typeof gamefolioPurchases.$inferSelect;
+
+// Records a Pro purchase attributed to an ambassador's referral code.
+// referredUserId is unique so a user is only ever attributed once (their
+// first Pro purchase) — renewals never insert a second row.
+export const ambassadorConversions = pgTable("ambassador_conversions", {
+  id: serial("id").primaryKey(),
+  ambassadorUserId: integer("ambassador_user_id").references(() => users.id).notNull(),
+  referredUserId: integer("referred_user_id").references(() => users.id).notNull().unique(),
+  referralCode: text("referral_code").notNull(),
+  subscriptionType: text("subscription_type"), // "monthly" | "yearly"
+  source: text("source").notNull(), // "stripe" | "revenuecat"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  ambassadorIdx: index("ambassador_conversions_ambassador_idx").on(table.ambassadorUserId),
+}));
+
+export type AmbassadorConversion = typeof ambassadorConversions.$inferSelect;
 
 export const heroSlides = pgTable("hero_slides", {
   id: serial("id").primaryKey(),

@@ -133,6 +133,11 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
           plan
         ).catch(err => console.error('[RevenueCat] Failed to send Pro welcome email:', err));
       }
+
+      if (user.referredBy) {
+        storage.recordAmbassadorConversion(userId, user.referredBy, plan, 'revenuecat')
+          .catch(err => console.error('[RevenueCat] Failed to record ambassador conversion:', err));
+      }
     }
 
     console.log(`[RevenueCat] User ${userId} activated Pro via RevenueCat (appUserId: ${appUserId}, plan: ${plan})`);
