@@ -8343,8 +8343,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!fireLimits.canFire) {
           return res.status(400).json({ 
             message: fireLimits.isPro 
-              ? "You've used all 3 zaps for today. Come back tomorrow!" 
-              : "You've used your daily zap. Pro users can zap 3 times a day!",
+              ? "You've used all 3 zaps. Come back in 24 hours!" 
+              : "You've used your zap. Come back in 24 hours! Pro users get 3 zaps a day.",
             firesRemaining: 0,
             maxFires: fireLimits.maxFiresPerDay
           });
@@ -12541,8 +12541,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!fireLimits.canFire) {
             return res.status(400).json({ 
               message: fireLimits.isPro 
-                ? "You've used all 3 zaps for today. Come back tomorrow!" 
-                : "You've used your daily zap. Pro users can zap 3 times a day!",
+                ? "You've used all 3 zaps. Come back in 24 hours!" 
+                : "You've used your zap. Come back in 24 hours! Pro users get 3 zaps a day.",
               firesRemaining: 0,
               maxFires: fireLimits.maxFiresPerDay
             });
