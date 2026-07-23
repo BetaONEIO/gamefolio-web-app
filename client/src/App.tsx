@@ -25,6 +25,7 @@ import DailyStreakOverlay from "@/components/gamification/DailyStreak";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { PartnerProtectedRoute } from "@/components/auth/partner-protected-route";
 import { AdminProtectedRoute } from "@/components/auth/admin-protected-route";
+import { AmbassadorProtectedRoute } from "@/components/auth/ambassador-protected-route";
 import { OnboardingGuard } from "@/components/auth/onboarding-guard";
 import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { PageTransition } from "@/components/ui/page-transition";
@@ -135,6 +136,7 @@ const NotificationsPage = lazyWithRecovery(() => import("./pages/NotificationsPa
 const FollowersPage = lazyWithRecovery(() => import("./pages/FollowersPage"));
 const NotFound = lazyWithRecovery(() => import("@/pages/not-found"));
 const AdminPage = lazyWithRecovery(() => import("./pages/AdminPage"));
+const AmbassadorDashboardPage = lazyWithRecovery(() => import("./pages/AmbassadorDashboardPage"));
 const AdminContentFilter = lazyWithRecovery(() => import("./pages/AdminContentFilter"));
 const ContentFilterTest = lazyWithRecovery(() => import("./pages/ContentFilterTest"));
 const ViewContentPage = lazyWithRecovery(() => import("./pages/ViewContentPage"));
@@ -456,6 +458,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
           <PullToRefresh
             containerRef={mainScrollRef}
             onRefresh={() => queryClient.invalidateQueries()}
+            enabled={!location.startsWith("/messages")}
           >
             <div className="px-0 py-0">
               {children}
@@ -551,6 +554,7 @@ function Router() {
           <Route path="/latest-content" component={LatestContentPage} />
           <Route path="/latest-screenshots" component={LatestScreenshotsPage} />
 
+          <AmbassadorProtectedRoute path="/ambassador-dashboard" component={AmbassadorDashboardPage} />
           <AdminProtectedRoute path="/admin" component={AdminPage} />
           <AdminProtectedRoute path="/admin/content-filter" component={AdminContentFilter} />
           <ProtectedRoute path="/test/content-filter" component={ContentFilterTest} />
