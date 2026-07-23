@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { formatDistanceToNow } from "date-fns";
 import { VerificationGuard } from "@/components/auth/verification-guard";
+import { GifPicker } from "@/components/messages/GifPicker";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 
 const SignedAvatar: React.FC<{ url: string | null | undefined; fallback: string; className?: string }> = ({ url, fallback, className }) => {
@@ -221,6 +222,38 @@ const MessagesPage: React.FC = () => {
       toast({
         title: "Error",
         description: error.message || "Failed to send message",
+        variant: "gamefolioError",
+      });
+    },
+  });
+
+  // Send GIF mutation
+  const sendGifMutation = useMutation({
+    mutationFn: async ({ attachmentUrl, receiverId }: { attachmentUrl: string; receiverId: number }) => {
+      const isBlocked = blockedUsers.some(
+        (blockedUser: any) => blockedUser.id === receiverId || blockedUser.userId === receiverId
+      );
+
+      if (isBlocked) {
+        throw new Error("Cannot send message to blocked user");
+      }
+
+      await apiRequest("POST", "/api/messages", { content: "", receiverId, attachmentUrl, attachmentType: "gif" });
+    },
+    onSuccess: () => {
+      if (selectedConversation) {
+        queryClient.invalidateQueries({
+          queryKey: ["/api/messages", selectedConversation]
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["/api/messages/conversations"]
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send GIF",
         variant: "gamefolioError",
       });
     },
@@ -1118,13 +1151,23 @@ const MessagesPage: React.FC = () => {
 
                       <div className={`max-w-xs lg:max-w-md`}>
                         <div
-                          className={`rounded-lg px-4 py-2 relative group ${
+                          className={`rounded-lg relative group ${
                             isMine
                               ? "bg-primary text-primary-foreground shadow-md"
                               : "bg-muted"
-                          }`}
+                          } ${message.attachmentUrl && !message.content ? "p-1" : "px-4 py-2"}`}
                         >
-                          <p className="text-sm">{message.content}</p>
+                          {message.attachmentUrl && (
+                            <img
+                              src={message.attachmentUrl}
+                              alt="GIF"
+                              loading="lazy"
+                              className="rounded-md max-w-[240px] max-h-[240px] object-contain block"
+                            />
+                          )}
+                          {message.content && (
+                            <p className={`text-sm ${message.attachmentUrl ? "mt-2 px-3 pb-1" : ""}`}>{message.content}</p>
+                          )}
                           {message.senderId === user.id && (
                             <div className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <AlertDialog>
@@ -1222,6 +1265,14 @@ const MessagesPage: React.FC = () => {
                           className="flex-1 h-11 text-[16px] bg-muted/50 border-border/60 rounded-full px-4"
                           disabled={sendMessageMutation.isPending}
                           autoComplete="off"
+                        />
+                        <GifPicker
+                          disabled={sendGifMutation.isPending}
+                          onSelectGif={(url) => {
+                            if (selectedConversation) {
+                              sendGifMutation.mutate({ attachmentUrl: url, receiverId: selectedConversation });
+                            }
+                          }}
                         />
                         <Button
                           type="submit"

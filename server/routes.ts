@@ -11366,26 +11366,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Send a message
   app.post("/api/messages", hybridEmailVerification, async (req, res) => {
     try {
-      // Validate content for profanity and inappropriate language
-      const contentValidation = await contentFilterService.validateContent(req.body.content, 'message');
-
-      if (!contentValidation.isValid) {
-        return res.status(400).json({
-          message: "Message contains inappropriate content",
-          errors: contentValidation.errors
-        });
+      // GIF attachments come from our own GIPHY proxy picker only — validate
+      // the URL's origin so the messages API can't be used to smuggle
+      // arbitrary external image URLs in via attachmentUrl.
+      const rawAttachmentUrl = typeof req.body.attachmentUrl === 'string' ? req.body.attachmentUrl : undefined;
+      let attachmentUrl: string | undefined;
+      if (rawAttachmentUrl) {
+        try {
+          const hostname = new URL(rawAttachmentUrl).hostname;
+          if (!hostname.endsWith('giphy.com')) {
+            return res.status(400).json({ message: "Invalid attachment URL" });
+          }
+          attachmentUrl = rawAttachmentUrl;
+        } catch {
+          return res.status(400).json({ message: "Invalid attachment URL" });
+        }
       }
+      const attachmentType = attachmentUrl ? 'gif' : undefined;
 
-      // Use cleaned content if automatic cleaning was applied
       let content = req.body.content;
-      if (contentValidation.filteredContent) {
-        content = contentValidation.filteredContent;
+      const hasCaption = typeof content === 'string' && content.trim().length > 0;
+
+      // Only run text moderation when there's actually a caption to check —
+      // a caption-less GIF message has no text content to validate.
+      if (hasCaption || !attachmentUrl) {
+        const contentValidation = await contentFilterService.validateContent(content, 'message');
+
+        if (!contentValidation.isValid) {
+          return res.status(400).json({
+            message: "Message contains inappropriate content",
+            errors: contentValidation.errors
+          });
+        }
+
+        // Use cleaned content if automatic cleaning was applied
+        if (contentValidation.filteredContent) {
+          content = contentValidation.filteredContent;
+        }
+      } else {
+        content = '';
       }
 
       const messageData = insertMessageSchema.parse({
         senderId: req.user.id,
         receiverId: req.body.receiverId,
         content,
+        attachmentUrl,
+        attachmentType,
       });
 
       // Check if sender has messaging enabled
@@ -11411,7 +11438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await NotificationService.createMessageNotification(
         messageData.senderId,
         messageData.receiverId,
-        messageData.content
+        messageData.content || (messageData.attachmentUrl ? "Sent a GIF" : messageData.content)
       );
 
       res.status(201).json(message);

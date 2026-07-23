@@ -296,6 +296,8 @@ export const messages = pgTable("messages", {
   senderId: integer("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   receiverId: integer("receiver_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   content: text("content").notNull(),
+  attachmentUrl: text("attachment_url"), // Tenor CDN URL for GIF messages
+  attachmentType: text("attachment_type"), // "gif" (only value for now)
   isRead: boolean("is_read").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
