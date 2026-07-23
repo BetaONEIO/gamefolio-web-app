@@ -529,7 +529,7 @@ export interface IStorage {
   updateUserVerificationBadge(userId: number, badgeId: number | null): Promise<void>;
 
   // Daily fire limit operations (1/day for regular users, 3/day for Pro users)
-  getUserDailyFires(userId: number, date: string): Promise<UserDailyFires | null>;
+  getUserDailyFires(userId: number): Promise<UserDailyFires | null>;
   incrementDailyFireCount(userId: number): Promise<UserDailyFires>;
   getFireLimits(userId: number): Promise<FireLimits>;
 
