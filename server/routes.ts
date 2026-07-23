@@ -13034,9 +13034,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const aggregated = await getAggregatedGfBalance(userId);
 
       if (aggregated.perWallet.length === 0) {
-        return res.status(404).json({
-          message: "No wallet found",
+        return res.json({
           balance: "0",
+          walletAddress: null,
+          wallets: [],
         });
       }
 
