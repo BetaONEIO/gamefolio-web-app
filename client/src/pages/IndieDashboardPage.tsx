@@ -27,7 +27,8 @@ import { NEON, PAGE_BG } from "./indie-dashboard/constants";
 type TopTabId = "overview" | "campaigns" | "community" | "keys" | "analytics" | "settings";
 type CampaignSubTab = "create" | "my";
 type CommunitySubTab = "content" | "submissions";
-type SettingsSubTab = "profile" | "store" | "subscription";
+type SettingsSubTab = "profile" | "store" | "subscription" | "auto";
+import AutoCampaignSettingsTab from "./indie-dashboard/AutoCampaignSettingsTab";
 
 const ESSENTIAL_FIELDS = ["gameName", "shortDescription", "headerImageUrl", "steamUrl", "epicUrl", "itchUrl"];
 const ALL_PROFILE_FIELDS = [
@@ -992,7 +993,6 @@ export default function IndieDashboardPage() {
             {campaignSub === "create" && (
               <CreateCampaignFlow
                 onComplete={() => goTo("campaigns", "my")}
-                onGoToKeys={() => setTab("keys")}
               />
             )}
           </>
@@ -1026,6 +1026,7 @@ export default function IndieDashboardPage() {
             <SubNav
               items={[
                 { id: "profile",      label: "Game Profile" },
+                { id: "auto",         label: "Auto Campaigns" },
                 { id: "store",        label: "Store & Media" },
                 { id: "subscription", label: "Subscription" },
               ]}
@@ -1033,6 +1034,7 @@ export default function IndieDashboardPage() {
               onChange={v => setSettingsSub(v as SettingsSubTab)}
             />
             {settingsSub === "profile" && <GameProfileTab />}
+            {settingsSub === "auto" && <AutoCampaignSettingsTab />}
             {settingsSub === "store" && (
               <div className="text-center py-24" style={{ color: "rgba(255,255,255,0.2)" }}>
                 <Settings className="w-10 h-10 mx-auto mb-3 opacity-20" />

@@ -27,6 +27,7 @@ async function ensureCampaignTables() {
         completion_reward_description TEXT,
         campaign_price INTEGER DEFAULT 0,
         estimated_clips INTEGER DEFAULT 0,
+        estimated_reels INTEGER DEFAULT 0,
         estimated_screenshots INTEGER DEFAULT 0,
         estimated_feedback INTEGER DEFAULT 0,
         estimated_views_min INTEGER DEFAULT 0,
@@ -68,6 +69,8 @@ async function ensureCampaignTables() {
         scheduled_start TIMESTAMP,
         actual_start TIMESTAMP,
         end_date TIMESTAMP,
+        auto_campaign BOOLEAN DEFAULT false,
+        auto_campaign_settings JSONB,
         status TEXT DEFAULT 'draft',
         admin_notes TEXT,
         rejection_reason TEXT,
@@ -93,8 +96,9 @@ async function ensureCampaignTables() {
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS game_keys (
         id SERIAL PRIMARY KEY,
-        batch_id INTEGER NOT NULL REFERENCES game_key_batches(id) ON DELETE CASCADE,
-        instance_id INTEGER NOT NULL REFERENCES campaign_instances(id) ON DELETE CASCADE,
+        batch_id INTEGER REFERENCES game_key_batches(id) ON DELETE CASCADE,
+        instance_id INTEGER REFERENCES campaign_instances(id) ON DELETE SET NULL,
+        developer_user_id INTEGER,
         key_type TEXT NOT NULL,
         key_value TEXT NOT NULL,
         status TEXT DEFAULT 'available',
@@ -103,6 +107,20 @@ async function ensureCampaignTables() {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
+    // Migration: make game_keys columns nullable for pool support
+    await db.execute(sql`
+      ALTER TABLE game_keys ALTER COLUMN instance_id DROP NOT NULL
+    `).catch(() => {});
+    await db.execute(sql`
+      ALTER TABLE game_keys ADD COLUMN IF NOT EXISTS developer_user_id INTEGER
+    `).catch(() => {});
+    await db.execute(sql`
+      ALTER TABLE game_key_batches ALTER COLUMN instance_id DROP NOT NULL
+    `).catch(() => {});
+    await db.execute(sql`
+      ALTER TABLE game_key_batches ADD COLUMN IF NOT EXISTS developer_user_id INTEGER
+    `).catch(() => {});
+
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS campaign_participants (
         id SERIAL PRIMARY KEY,
@@ -117,6 +135,60 @@ async function ensureCampaignTables() {
       )
     `);
 
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS auto_campaign_settings (
+        id SERIAL PRIMARY KEY,
+        developer_user_id INTEGER NOT NULL UNIQUE,
+        enabled BOOLEAN DEFAULT false,
+        allowed_templates JSONB DEFAULT '[]',
+        frequency TEXT DEFAULT 'weekly',
+        max_creators_per_campaign INTEGER DEFAULT 20,
+        min_key_reserve INTEGER DEFAULT 10,
+        key_pool_size INTEGER DEFAULT 50,
+        game_name TEXT,
+        game_artwork_url TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Migration: add updated_at to campaign_templates if missing (seed updates need it)
+    await db.execute(sql`
+      ALTER TABLE campaign_templates ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()
+    `).catch(() => {});
+
+    // Migration: recreate auto_campaign_settings with correct column types (safe because data is minimal)
+    await db.execute(sql`
+      DROP TABLE IF EXISTS auto_campaign_settings
+    `).catch(() => {});
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS auto_campaign_settings (
+        id SERIAL PRIMARY KEY,
+        developer_user_id INTEGER NOT NULL UNIQUE,
+        enabled BOOLEAN DEFAULT false,
+        allowed_templates JSONB DEFAULT '[]',
+        frequency TEXT DEFAULT 'weekly',
+        max_creators_per_campaign INTEGER DEFAULT 20,
+        min_key_reserve INTEGER DEFAULT 10,
+        key_pool_size INTEGER DEFAULT 50,
+        game_name TEXT,
+        game_artwork_url TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Migration: add new columns if they don't exist
+    await db.execute(sql`
+      ALTER TABLE campaign_templates ADD COLUMN IF NOT EXISTS estimated_reels INTEGER DEFAULT 0
+    `);
+    await db.execute(sql`
+      ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS auto_campaign BOOLEAN DEFAULT false
+    `);
+    await db.execute(sql`
+      ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS auto_campaign_settings JSONB
+    `);
+
     await seedCampaignTemplates();
   } catch (err) {
     console.error('Failed to create campaign tables:', err);
@@ -127,228 +199,129 @@ async function ensureCampaignTables() {
 // SEED TEMPLATES
 // ─────────────────────────────────────────────
 
+// ─────────────────────────────────────────────
+// NEW SIMPLIFIED CAMPAIGN TEMPLATES (4 types)
+// Every campaign requires BOTH demo keys AND full game keys.
+// Bounties are auto-generated; developers never see them.
+// ─────────────────────────────────────────────
+
 const TEMPLATES = [
   {
-    name: "Demo Discovery",
-    slug: "demo-discovery",
-    category: "demo_promotion",
-    description: "Promote a playable demo and generate early gameplay content from engaged players.",
-    bestUseCase: "New demos and upcoming releases",
-    duration: 7,
-    participantCapacity: 30,
-    demoKeysRequired: 30,
-    fullKeysRequired: 30,
+    name: "Quick Creator Campaign",
+    slug: "quick-creator",
+    category: "quick_creator",
+    description: "Fast exposure with quick creator participation and first impressions.",
+    bestUseCase: "Getting your first creators playing and talking about your game.",
+    duration: 5,
+    participantCapacity: 20,
+    demoKeysRequired: 20,
+    fullKeysRequired: 20,
     completionReward: "full_game_key",
-    completionRewardDescription: "One full-game key after all mandatory bounties are verified",
-    estimatedClips: 90,
-    estimatedScreenshots: 90,
-    estimatedFeedback: 30,
-    estimatedViewsMin: 5000,
-    estimatedViewsMax: 25000,
-    status: "available",
-    featured: true,
-    recommended: true,
-    displayOrder: 1,
-    bounties: [
-      { title: "Play the Demo", description: "Download and play the game demo", mandatory: true, quantity: 1, order: 1, xp: 500, validation: "session_tracking", contentType: "session" },
-      { title: "Upload 3 Clips", description: "Upload 3 gameplay clips from the demo tagged with the game", mandatory: true, quantity: 3, order: 2, xp: 3000, validation: "manual_review", contentType: "clip" },
-      { title: "Upload 3 Screenshots", description: "Upload 3 screenshots from the demo", mandatory: true, quantity: 3, order: 3, xp: 600, validation: "manual_review", contentType: "screenshot" },
-      { title: "Submit First Impressions", description: "Submit your first impressions via the structured feedback form", mandatory: true, quantity: 1, order: 4, xp: 1000, validation: "form_submission", contentType: "feedback" },
-    ],
-  },
-  {
-    name: "Quick Clip Boost",
-    slug: "quick-clip-boost",
-    category: "content_generation",
-    description: "Generate short-form gameplay clips and reels quickly with a focused content campaign.",
-    bestUseCase: "Generating short-form gameplay content quickly",
-    duration: 7,
-    participantCapacity: 25,
-    demoKeysRequired: 25,
-    fullKeysRequired: 10,
-    completionReward: "full_game_key",
-    completionRewardDescription: "Full-game key on verified completion",
-    estimatedClips: 75,
-    estimatedScreenshots: 0,
-    estimatedFeedback: 0,
+    completionRewardDescription: "Full game key awarded after verified completion",
+    estimatedClips: 40,
+    estimatedReels: 10,
+    estimatedScreenshots: 40,
+    estimatedFeedback: 20,
     estimatedViewsMin: 3000,
     estimatedViewsMax: 15000,
     status: "available",
     featured: false,
     recommended: false,
-    displayOrder: 2,
+    displayOrder: 1,
     bounties: [
-      { title: "Upload 3 Gameplay Clips", description: "Upload 3 gameplay clips tagged with the game", mandatory: true, quantity: 3, order: 1, xp: 3000, validation: "manual_review", contentType: "clip" },
-      { title: "Upload 1 Reel", description: "Create and upload 1 gameplay reel", mandatory: true, quantity: 1, order: 2, xp: 2500, validation: "manual_review", contentType: "reel" },
-      { title: "Tag the Game Correctly", description: "All content must be tagged with the correct game", mandatory: true, quantity: 1, order: 3, xp: 200, validation: "auto_tag_check", contentType: "tag" },
+      { title: "Play the Game", description: "Download and play the game", mandatory: true, quantity: 1, order: 1, xp: 500, validation: "session_tracking", contentType: "session" },
+      { title: "Upload 2 Gameplay Clips", description: "Upload 2 gameplay clips tagged with the game", mandatory: true, quantity: 2, order: 2, xp: 2000, validation: "manual_review", contentType: "clip" },
+      { title: "Upload 2 Screenshots", description: "Upload 2 screenshots from the game", mandatory: true, quantity: 2, order: 3, xp: 400, validation: "manual_review", contentType: "screenshot" },
+      { title: "Submit Feedback", description: "Submit your first impressions via the feedback form", mandatory: true, quantity: 1, order: 4, xp: 1000, validation: "form_submission", contentType: "feedback" },
     ],
   },
   {
-    name: "Launch Week",
-    slug: "launch-week",
-    category: "game_launch",
-    description: "A 14-day multi-format launch campaign generating clips, reels, screenshots and first impressions at scale.",
-    bestUseCase: "New game launches",
-    duration: 14,
-    participantCapacity: 50,
-    demoKeysRequired: 0,
-    fullKeysRequired: 50,
+    name: "Content Boost Campaign",
+    slug: "content-boost",
+    category: "content_boost",
+    description: "Generate lots of promotional content across multiple formats.",
+    bestUseCase: "Building a library of clips, reels and screenshots for marketing.",
+    duration: 10,
+    participantCapacity: 35,
+    demoKeysRequired: 35,
+    fullKeysRequired: 35,
     completionReward: "full_game_key",
-    completionRewardDescription: "Full-game key included in campaign",
-    estimatedClips: 250,
-    estimatedScreenshots: 250,
-    estimatedFeedback: 50,
-    estimatedViewsMin: 15000,
-    estimatedViewsMax: 75000,
+    completionRewardDescription: "Full game key awarded after verified completion",
+    estimatedClips: 70,
+    estimatedReels: 35,
+    estimatedScreenshots: 105,
+    estimatedFeedback: 35,
+    estimatedViewsMin: 10000,
+    estimatedViewsMax: 50000,
     status: "available",
-    featured: true,
+    featured: false,
+    recommended: true,
+    displayOrder: 2,
+    bounties: [
+      { title: "Play the Game", description: "Download and play the game", mandatory: true, quantity: 1, order: 1, xp: 500, validation: "session_tracking", contentType: "session" },
+      { title: "Upload 2 Gameplay Clips", description: "Upload 2 gameplay clips tagged with the game", mandatory: true, quantity: 2, order: 2, xp: 2000, validation: "manual_review", contentType: "clip" },
+      { title: "Upload 1 Reel", description: "Create and upload 1 gameplay reel", mandatory: true, quantity: 1, order: 3, xp: 2500, validation: "manual_review", contentType: "reel" },
+      { title: "Upload 3 Screenshots", description: "Upload 3 screenshots from the game", mandatory: true, quantity: 3, order: 4, xp: 600, validation: "manual_review", contentType: "screenshot" },
+      { title: "Submit Feedback", description: "Submit your impressions via the feedback form", mandatory: true, quantity: 1, order: 5, xp: 1000, validation: "form_submission", contentType: "feedback" },
+    ],
+  },
+  {
+    name: "Creator Showcase Campaign",
+    slug: "creator-showcase",
+    category: "creator_showcase",
+    description: "Deep creator engagement with premium content including streams and reviews.",
+    bestUseCase: "Maximum exposure and high-quality creator content.",
+    duration: 21,
+    participantCapacity: 25,
+    demoKeysRequired: 25,
+    fullKeysRequired: 25,
+    completionReward: "full_game_key",
+    completionRewardDescription: "Full game key awarded after verified completion",
+    estimatedClips: 50,
+    estimatedReels: 25,
+    estimatedScreenshots: 75,
+    estimatedFeedback: 25,
+    estimatedViewsMin: 15000,
+    estimatedViewsMax: 80000,
+    status: "available",
+    featured: false,
     recommended: false,
     displayOrder: 3,
     bounties: [
-      { title: "Upload 5 Clips", description: "Upload 5 gameplay clips from the game", mandatory: true, quantity: 5, order: 1, xp: 5000, validation: "manual_review", contentType: "clip" },
-      { title: "Upload 3 Reels", description: "Create and upload 3 gameplay reels", mandatory: true, quantity: 3, order: 2, xp: 7500, validation: "manual_review", contentType: "reel" },
-      { title: "Upload 5 Screenshots", description: "Upload 5 screenshots from the game", mandatory: true, quantity: 5, order: 3, xp: 1000, validation: "manual_review", contentType: "screenshot" },
-      { title: "Submit First Impressions", description: "Submit structured first impressions feedback", mandatory: true, quantity: 1, order: 4, xp: 1000, validation: "form_submission", contentType: "feedback" },
-      { title: "Reach 100 Views", description: "Accumulate 100 genuine views across your submitted content", mandatory: true, quantity: 100, order: 5, xp: 2500, validation: "view_count", contentType: "views" },
+      { title: "Play the Game", description: "Download and play the game", mandatory: true, quantity: 1, order: 1, xp: 500, validation: "session_tracking", contentType: "session" },
+      { title: "Upload 2 Gameplay Clips", description: "Upload 2 gameplay clips tagged with the game", mandatory: true, quantity: 2, order: 2, xp: 2000, validation: "manual_review", contentType: "clip" },
+      { title: "Upload 1 Reel", description: "Create and upload 1 gameplay reel", mandatory: true, quantity: 1, order: 3, xp: 2500, validation: "manual_review", contentType: "reel" },
+      { title: "Upload 3 Screenshots", description: "Upload 3 screenshots from the game", mandatory: true, quantity: 3, order: 4, xp: 600, validation: "manual_review", contentType: "screenshot" },
+      { title: "Stream the Game", description: "Stream the game live for at least 1 hour", mandatory: true, quantity: 1, order: 5, xp: 3000, validation: "stream_duration", contentType: "stream" },
+      { title: "Submit Review", description: "Submit a written or video review", mandatory: true, quantity: 1, order: 6, xp: 1500, validation: "form_submission", contentType: "feedback" },
     ],
   },
   {
-    name: "Streamer Discovery",
-    slug: "streamer-discovery",
-    category: "streaming",
-    description: "Find dedicated streamers, generate live coverage, and build an ongoing streamer community around your game.",
-    bestUseCase: "Finding streamers and generating live exposure",
+    name: "Custom Campaign",
+    slug: "custom-campaign",
+    category: "custom",
+    description: "For experienced developers who want full control over campaign settings.",
+    bestUseCase: "Custom duration, capacity and targeting for specific needs.",
     duration: 14,
     participantCapacity: 20,
-    demoKeysRequired: 0,
+    demoKeysRequired: 20,
     fullKeysRequired: 20,
-    completionReward: "xp_bonus",
-    completionRewardDescription: "XP bonus and streamer badge on verified completion",
+    completionReward: "full_game_key",
+    completionRewardDescription: "Full game key awarded after verified completion",
     estimatedClips: 40,
-    estimatedScreenshots: 0,
+    estimatedReels: 20,
+    estimatedScreenshots: 60,
     estimatedFeedback: 20,
-    estimatedViewsMin: 10000,
-    estimatedViewsMax: 100000,
+    estimatedViewsMin: 5000,
+    estimatedViewsMax: 30000,
     status: "available",
     featured: false,
     recommended: false,
     displayOrder: 4,
     bounties: [
-      { title: "Stream for 2 Hours", description: "Stream the game live for a minimum of 2 continuous hours", mandatory: true, quantity: 1, order: 1, xp: 5000, validation: "stream_duration", contentType: "stream" },
-      { title: "Upload 2 Stream Highlights", description: "Upload 2 clip highlights from your stream", mandatory: true, quantity: 2, order: 2, xp: 2000, validation: "manual_review", contentType: "clip" },
-      { title: "Upload 1 Reel", description: "Create and upload 1 reel from your stream", mandatory: true, quantity: 1, order: 3, xp: 2500, validation: "manual_review", contentType: "reel" },
-      { title: "Submit Stream Analytics", description: "Submit your stream analytics via the structured form", mandatory: true, quantity: 1, order: 4, xp: 1000, validation: "form_submission", contentType: "analytics" },
-    ],
-  },
-  {
-    name: "Screenshot Showcase",
-    slug: "screenshot-showcase",
-    category: "screenshots",
-    description: "Generate a curated collection of high-quality screenshots to showcase your game's visual strengths.",
-    bestUseCase: "Visually strong games needing a screenshot library",
-    duration: 7,
-    participantCapacity: 30,
-    demoKeysRequired: 0,
-    fullKeysRequired: 30,
-    completionReward: "xp_bonus",
-    completionRewardDescription: "XP bonus on verified completion",
-    estimatedClips: 0,
-    estimatedScreenshots: 150,
-    estimatedFeedback: 0,
-    estimatedViewsMin: 2000,
-    estimatedViewsMax: 10000,
-    status: "available",
-    featured: false,
-    recommended: false,
-    displayOrder: 5,
-    bounties: [
-      { title: "Upload 5 Screenshots", description: "Upload 5 high-quality screenshots showcasing the game", mandatory: true, quantity: 5, order: 1, xp: 1000, validation: "manual_review", contentType: "screenshot" },
-      { title: "Submit a Featured Screenshot", description: "Select and submit your best single screenshot for potential featuring", mandatory: true, quantity: 1, order: 2, xp: 500, validation: "manual_review", contentType: "screenshot" },
-      { title: "Tag Game and Visual Category", description: "Correctly tag all screenshots with the game and appropriate visual category", mandatory: true, quantity: 1, order: 3, xp: 200, validation: "auto_tag_check", contentType: "tag" },
-    ],
-  },
-  {
-    name: "First Impressions",
-    slug: "first-impressions",
-    category: "reviews_feedback",
-    description: "Collect structured early feedback from first-time players alongside light content generation.",
-    bestUseCase: "Early feedback and structured content generation for demos",
-    duration: 7,
-    participantCapacity: 30,
-    demoKeysRequired: 30,
-    fullKeysRequired: 30,
-    completionReward: "full_game_key",
-    completionRewardDescription: "Full-game key after all bounties verified",
-    estimatedClips: 30,
-    estimatedScreenshots: 0,
-    estimatedFeedback: 30,
-    estimatedViewsMin: 2000,
-    estimatedViewsMax: 8000,
-    status: "available",
-    featured: false,
-    recommended: true,
-    displayOrder: 6,
-    bounties: [
-      { title: "Play the Demo", description: "Download and play the game demo", mandatory: true, quantity: 1, order: 1, xp: 500, validation: "session_tracking", contentType: "session" },
-      { title: "Upload 1 Clip", description: "Upload 1 gameplay clip from the demo", mandatory: true, quantity: 1, order: 2, xp: 1000, validation: "manual_review", contentType: "clip" },
-      { title: "Complete Structured Feedback", description: "Fill in the full structured feedback form", mandatory: true, quantity: 1, order: 3, xp: 1500, validation: "form_submission", contentType: "feedback" },
-      { title: "Submit First Impressions", description: "Write and submit your first impressions review", mandatory: true, quantity: 1, order: 4, xp: 1000, validation: "form_submission", contentType: "feedback" },
-    ],
-  },
-  {
-    name: "Bug Hunter",
-    slug: "bug-hunter",
-    category: "bug_testing",
-    description: "Deploy community testers to find and document bugs in demos, betas or early-access builds.",
-    bestUseCase: "Testing demos, betas and early-access builds",
-    duration: 14,
-    participantCapacity: 30,
-    demoKeysRequired: 30,
-    fullKeysRequired: 0,
-    completionReward: "xp_bonus",
-    completionRewardDescription: "Significant XP bonus for verified bug reports",
-    estimatedClips: 30,
-    estimatedScreenshots: 30,
-    estimatedFeedback: 30,
-    estimatedViewsMin: 0,
-    estimatedViewsMax: 0,
-    status: "available",
-    featured: false,
-    recommended: false,
-    displayOrder: 7,
-    bounties: [
-      { title: "Play Minimum Session", description: "Play the game for a minimum required session time", mandatory: true, quantity: 1, order: 1, xp: 500, validation: "session_tracking", contentType: "session" },
-      { title: "Submit Reproducible Bug Report", description: "Submit at least one detailed, reproducible bug report", mandatory: true, quantity: 1, order: 2, xp: 2000, validation: "form_submission", contentType: "feedback" },
-      { title: "Upload Supporting Media", description: "Upload a screenshot or clip that demonstrates the reported bug", mandatory: true, quantity: 1, order: 3, xp: 500, validation: "manual_review", contentType: "clip" },
-      { title: "Complete Severity Fields", description: "Fill in all severity and device fields on your bug report", mandatory: true, quantity: 1, order: 4, xp: 300, validation: "form_submission", contentType: "feedback" },
-    ],
-  },
-  {
-    name: "Update Spotlight",
-    slug: "update-spotlight",
-    category: "updates_dlc",
-    description: "Generate fresh content and player impressions around a major update, DLC or seasonal release.",
-    bestUseCase: "Major updates, DLC and seasonal releases",
-    duration: 14,
-    participantCapacity: 40,
-    demoKeysRequired: 0,
-    fullKeysRequired: 0,
-    completionReward: "xp_bonus",
-    completionRewardDescription: "XP bonus for verified update content",
-    estimatedClips: 120,
-    estimatedScreenshots: 120,
-    estimatedFeedback: 40,
-    estimatedViewsMin: 8000,
-    estimatedViewsMax: 40000,
-    status: "available",
-    featured: false,
-    recommended: false,
-    displayOrder: 8,
-    bounties: [
-      { title: "Play the Latest Update", description: "Play the game featuring the new update content", mandatory: true, quantity: 1, order: 1, xp: 500, validation: "session_tracking", contentType: "session" },
-      { title: "Upload 3 Clips (New Content)", description: "Upload 3 clips featuring the new update content", mandatory: true, quantity: 3, order: 2, xp: 3000, validation: "manual_review", contentType: "clip" },
-      { title: "Upload 3 Screenshots", description: "Upload 3 screenshots of new update content", mandatory: true, quantity: 3, order: 3, xp: 600, validation: "manual_review", contentType: "screenshot" },
-      { title: "Submit Update Impressions", description: "Submit your impressions of the update via the feedback form", mandatory: true, quantity: 1, order: 4, xp: 1000, validation: "form_submission", contentType: "feedback" },
+      { title: "Play the Game", description: "Download and play the game", mandatory: true, quantity: 1, order: 1, xp: 500, validation: "session_tracking", contentType: "session" },
+      { title: "Upload Content", description: "Upload creator content tagged with the game", mandatory: true, quantity: 3, order: 2, xp: 2500, validation: "manual_review", contentType: "clip" },
+      { title: "Submit Feedback", description: "Submit your impressions via the feedback form", mandatory: true, quantity: 1, order: 3, xp: 1000, validation: "form_submission", contentType: "feedback" },
     ],
   },
 ];
@@ -364,31 +337,58 @@ function toRows(result: any): any[] {
 
 async function seedCampaignTemplates() {
   try {
-    const existing = await db.execute(sql`SELECT COUNT(*) as count FROM campaign_templates`);
-    const existingRows = toRows(existing);
-    const count = Number((existingRows[0] as any)?.count ?? 0);
-    if (count > 0) return; // already seeded
-
     for (const t of TEMPLATES) {
-      const insertedRows = toRows(await db.execute(sql`
-        INSERT INTO campaign_templates
-          (name, slug, category, description, best_use_case, duration, participant_capacity,
-           demo_keys_required, full_keys_required, completion_reward, completion_reward_description,
-           estimated_clips, estimated_screenshots, estimated_feedback,
-           estimated_views_min, estimated_views_max,
-           status, featured, recommended, display_order)
-        VALUES
-          (${t.name}, ${t.slug}, ${t.category}, ${t.description}, ${t.bestUseCase},
-           ${t.duration}, ${t.participantCapacity}, ${t.demoKeysRequired}, ${t.fullKeysRequired},
-           ${t.completionReward}, ${t.completionRewardDescription},
-           ${t.estimatedClips}, ${t.estimatedScreenshots}, ${t.estimatedFeedback},
-           ${t.estimatedViewsMin}, ${t.estimatedViewsMax},
-           ${t.status}, ${t.featured}, ${t.recommended}, ${t.displayOrder})
-        RETURNING id
-      `));
-      const inserted = insertedRows[0] as any;
+      const existing = toRows(await db.execute(sql`SELECT id FROM campaign_templates WHERE slug = ${t.slug}`));
+      let templateId: number;
 
-      const templateId = inserted.id;
+      if (existing.length > 0) {
+        templateId = (existing[0] as any).id;
+        await db.execute(sql`
+          UPDATE campaign_templates SET
+            name = ${t.name},
+            category = ${t.category},
+            description = ${t.description},
+            best_use_case = ${t.bestUseCase},
+            duration = ${t.duration},
+            participant_capacity = ${t.participantCapacity},
+            demo_keys_required = ${t.demoKeysRequired},
+            full_keys_required = ${t.fullKeysRequired},
+            completion_reward = ${t.completionReward},
+            completion_reward_description = ${t.completionRewardDescription},
+            estimated_clips = ${t.estimatedClips},
+            estimated_reels = ${t.estimatedReels ?? 0},
+            estimated_screenshots = ${t.estimatedScreenshots},
+            estimated_feedback = ${t.estimatedFeedback},
+            estimated_views_min = ${t.estimatedViewsMin},
+            estimated_views_max = ${t.estimatedViewsMax},
+            status = ${t.status},
+            featured = ${t.featured},
+            recommended = ${t.recommended},
+            display_order = ${t.displayOrder},
+            updated_at = NOW()
+          WHERE id = ${templateId}
+        `);
+        await db.execute(sql`DELETE FROM campaign_template_bounties WHERE template_id = ${templateId}`);
+      } else {
+        const insertedRows = toRows(await db.execute(sql`
+          INSERT INTO campaign_templates
+            (name, slug, category, description, best_use_case, duration, participant_capacity,
+             demo_keys_required, full_keys_required, completion_reward, completion_reward_description,
+             estimated_clips, estimated_reels, estimated_screenshots, estimated_feedback,
+             estimated_views_min, estimated_views_max,
+             status, featured, recommended, display_order)
+          VALUES
+            (${t.name}, ${t.slug}, ${t.category}, ${t.description}, ${t.bestUseCase},
+             ${t.duration}, ${t.participantCapacity}, ${t.demoKeysRequired}, ${t.fullKeysRequired},
+             ${t.completionReward}, ${t.completionRewardDescription},
+             ${t.estimatedClips}, ${t.estimatedReels ?? 0}, ${t.estimatedScreenshots}, ${t.estimatedFeedback},
+             ${t.estimatedViewsMin}, ${t.estimatedViewsMax},
+             ${t.status}, ${t.featured}, ${t.recommended}, ${t.displayOrder})
+          RETURNING id
+        `));
+        templateId = (insertedRows[0] as any).id;
+      }
+
       for (const b of t.bounties) {
         await db.execute(sql`
           INSERT INTO campaign_template_bounties
@@ -399,7 +399,7 @@ async function seedCampaignTemplates() {
         `);
       }
     }
-    console.log('✅ Campaign templates seeded');
+    console.log('✅ Campaign templates seeded/updated');
   } catch (err) {
     console.error('Failed to seed campaign templates:', err);
   }
@@ -427,6 +427,173 @@ function requireAdmin(req: any, res: any, next: any) {
   if (!req.user.isAdmin) return res.status(403).json({ error: 'Admin access required' });
   next();
 }
+
+// ─────────────────────────────────────────────
+// AUTO CAMPAIGN SCHEDULER
+// ─────────────────────────────────────────────
+
+/**
+ * Run auto-campaign check for a single developer.
+ * Creates a new auto-campaign if all safety checks pass.
+ */
+async function runAutoCampaignCheck(developerUserId: number): Promise<{ created: boolean; message: string; campaignId?: number }> {
+  // 1. Load auto-campaign settings
+  const settingsRows = toRows(await db.execute(sql`
+    SELECT * FROM auto_campaign_settings WHERE developer_user_id = ${developerUserId}
+  `)) as any[];
+
+  if (settingsRows.length === 0 || !settingsRows[0].enabled) {
+    return { created: false, message: 'Auto campaigns not enabled' };
+  }
+
+  const settings = settingsRows[0];
+  const allowedTemplates = settings.allowed_templates ? (Array.isArray(settings.allowed_templates) ? settings.allowed_templates : JSON.parse(settings.allowed_templates)) : [];
+  const maxCreators = settings.max_creators_per_campaign ?? 20;
+  const minKeyReserve = settings.min_key_reserve ?? 10;
+  const gameName = settings.game_name;
+  const gameArtworkUrl = settings.game_artwork_url;
+
+  if (allowedTemplates.length === 0) {
+    return { created: false, message: 'No campaign templates selected for auto campaigns' };
+  }
+
+  // 2. Count active auto-campaigns (running or approved/scheduled)
+  const activeRows = toRows(await db.execute(sql`
+    SELECT COUNT(*) AS count FROM campaign_instances
+    WHERE developer_user_id = ${developerUserId}
+      AND auto_campaign = true
+      AND status IN ('live', 'approved', 'scheduled', 'draft', 'awaiting_review')
+  `)) as any[];
+  const activeAutoCampaigns = Number(activeRows[0].count ?? 0);
+
+  if (activeAutoCampaigns >= 3) {
+    return { created: false, message: 'Maximum simultaneous auto-campaigns (3) already running' };
+  }
+
+  // 3. Count pool keys (unassigned to any instance)
+  const demoPoolRows = toRows(await db.execute(sql`
+    SELECT COUNT(*) AS count FROM game_keys
+    WHERE developer_user_id = ${developerUserId}
+      AND instance_id IS NULL
+      AND key_type = 'demo'
+      AND status = 'available'
+  `)) as any[];
+  const fullPoolRows = toRows(await db.execute(sql`
+    SELECT COUNT(*) AS count FROM game_keys
+    WHERE developer_user_id = ${developerUserId}
+      AND instance_id IS NULL
+      AND key_type = 'full'
+      AND status = 'available'
+  `)) as any[];
+  const demoPool = Number(demoPoolRows[0].count ?? 0);
+  const fullPool = Number(fullPoolRows[0].count ?? 0);
+
+  // 4. Pick a template (random from allowed list)
+  const tmplIds = allowedTemplates as number[];
+  const randomTemplateId = tmplIds[Math.floor(Math.random() * tmplIds.length)];
+
+  const [tmpl] = toRows(await db.execute(sql`
+    SELECT id, name, duration, participant_capacity,
+           demo_keys_required, full_keys_required, estimated_clips, estimated_screenshots
+    FROM campaign_templates WHERE id = ${randomTemplateId}
+  `)) as any[];
+
+  if (!tmpl) {
+    return { created: false, message: 'Selected template not found' };
+  }
+
+  const needDemo = Number(tmpl.demo_keys_required ?? tmpl.participant_capacity ?? 20);
+  const needFull = Number(tmpl.full_keys_required ?? tmpl.participant_capacity ?? 20);
+  const creators = Math.min(maxCreators, Number(tmpl.participant_capacity ?? 20));
+
+  // 5. Safety: must have enough keys (required + reserve)
+  if (demoPool < needDemo + minKeyReserve) {
+    return { created: false, message: `Not enough demo keys in pool (${demoPool} available, ${needDemo + minKeyReserve} needed)` };
+  }
+  if (fullPool < needFull + minKeyReserve) {
+    return { created: false, message: `Not enough full keys in pool (${fullPool} available, ${needFull + minKeyReserve} needed)` };
+  }
+
+  // 6. Create campaign instance
+  const [instance] = toRows(await db.execute(sql`
+    INSERT INTO campaign_instances
+      (template_id, developer_user_id, game_name, game_artwork_url,
+       status, auto_campaign, start_type, artwork_url, participant_capacity)
+    VALUES
+      (${randomTemplateId}, ${developerUserId}, ${gameName ?? null}, ${gameArtworkUrl ?? null},
+       'approved', true, 'asap', ${gameArtworkUrl ?? null}, ${creators})
+    RETURNING *
+  `) as any[]);
+
+  const instanceId = instance.id;
+
+  // 7. Assign keys from pool to the new instance
+  // Demo keys
+  const demoKeysToAssign = toRows(await db.execute(sql`
+    SELECT id FROM game_keys
+    WHERE developer_user_id = ${developerUserId}
+      AND instance_id IS NULL
+      AND key_type = 'demo'
+      AND status = 'available'
+    ORDER BY created_at ASC
+    LIMIT ${needDemo}
+  `));
+  for (const k of demoKeysToAssign) {
+    await db.execute(sql`
+      UPDATE game_keys SET instance_id = ${instanceId} WHERE id = ${(k as any).id}
+    `);
+  }
+
+  // Full keys
+  const fullKeysToAssign = toRows(await db.execute(sql`
+    SELECT id FROM game_keys
+    WHERE developer_user_id = ${developerUserId}
+      AND instance_id IS NULL
+      AND key_type = 'full'
+      AND status = 'available'
+    ORDER BY created_at ASC
+    LIMIT ${needFull}
+  `));
+  for (const k of fullKeysToAssign) {
+    await db.execute(sql`
+      UPDATE game_keys SET instance_id = ${instanceId} WHERE id = ${(k as any).id}
+    `);
+  }
+
+  return {
+    created: true,
+    message: `Auto-campaign "${tmpl.name}" created with ${creators} creators`,
+    campaignId: instanceId,
+  };
+}
+
+// Global scheduler interval (runs every 30 minutes)
+let autoCampaignInterval: ReturnType<typeof setInterval> | null = null;
+
+function startAutoCampaignScheduler() {
+  if (autoCampaignInterval) return;
+  autoCampaignInterval = setInterval(async () => {
+    try {
+      // Find all developers with auto campaigns enabled
+      const devRows = toRows(await db.execute(sql`
+        SELECT developer_user_id FROM auto_campaign_settings WHERE enabled = true
+      `)) as any[];
+      for (const row of devRows) {
+        try {
+          await runAutoCampaignCheck(row.developer_user_id);
+        } catch (innerErr) {
+          console.error(`Auto-campaign check failed for dev ${row.developer_user_id}:`, innerErr);
+        }
+      }
+    } catch (err) {
+      console.error('Auto-campaign scheduler tick failed:', err);
+    }
+  }, 30 * 60 * 1000); // 30 minutes
+  console.log('✅ Auto-campaign scheduler started (30min interval)');
+}
+
+// Start scheduler after a brief delay (let DB init finish)
+setTimeout(startAutoCampaignScheduler, 5000);
 
 // ─────────────────────────────────────────────
 // ROUTES: CAMPAIGN TEMPLATES
@@ -634,7 +801,12 @@ router.post('/instances/:id/keys', requirePartner, async (req, res) => {
     if (instance.developer_user_id !== userId) return res.status(403).json({ error: 'Forbidden' });
 
     // De-dupe and validate
-    const cleaned = [...new Set(keys.map((k: string) => k.trim()).filter((k: string) => k.length > 0))];
+    const trimmed = keys.map((k: string) => k.trim()).filter((k: string) => k.length > 0);
+    const cleaned: string[] = [];
+    const seen = new Set<string>();
+    for (const k of trimmed) {
+      if (!seen.has(k)) { seen.add(k); cleaned.push(k); }
+    }
     const total = keys.length;
     const duplicates = total - cleaned.length;
 
@@ -774,6 +946,117 @@ router.patch('/admin/templates/:id', requireAdmin, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update template' });
+  }
+});
+
+// ─────────────────────────────────────────────
+// AUTO CAMPAIGN SETTINGS (Indie Pro feature)
+// ─────────────────────────────────────────────
+
+// GET /api/campaigns/auto/settings — get current auto-campaign config
+router.get('/auto/settings', requirePartner, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const rows = toRows(await db.execute(sql`
+      SELECT * FROM auto_campaign_settings WHERE developer_user_id = ${userId}
+    `)) as any[];
+    if (rows.length === 0) {
+      return res.json({ enabled: false, settings: null });
+    }
+    const row = rows[0];
+    const allowedTemplates = row.allowed_templates ? (Array.isArray(row.allowed_templates) ? row.allowed_templates : JSON.parse(row.allowed_templates)) : [];
+    res.json({
+      enabled: row.enabled ?? false,
+      settings: {
+        allowedTemplates,
+        frequency: row.frequency ?? 'weekly',
+        maxCreatorsPerCampaign: row.max_creators_per_campaign ?? 20,
+        minKeyReserve: row.min_key_reserve ?? 10,
+        keyPoolSize: row.key_pool_size ?? 50,
+        gameName: row.game_name ?? '',
+        gameArtworkUrl: row.game_artwork_url ?? '',
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load auto-campaign settings' });
+  }
+});
+
+// POST /api/campaigns/auto/settings — save auto-campaign config
+router.post('/auto/settings', requirePartner, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const {
+      enabled, allowedTemplates, frequency, maxCreatorsPerCampaign,
+      minKeyReserve, keyPoolSize, gameName, gameArtworkUrl,
+    } = req.body;
+
+    // Upsert into auto_campaign_settings
+    const existing = toRows(await db.execute(sql`
+      SELECT id FROM auto_campaign_settings WHERE developer_user_id = ${userId}
+    `));
+
+    const templatesJson = JSON.stringify(allowedTemplates ?? []);
+    if (existing.length > 0) {
+      await db.execute(sql`
+        UPDATE auto_campaign_settings SET
+          enabled = ${enabled ?? false},
+          allowed_templates = ${templatesJson}::jsonb,
+          frequency = ${frequency ?? 'weekly'},
+          max_creators_per_campaign = ${maxCreatorsPerCampaign ?? 20},
+          min_key_reserve = ${minKeyReserve ?? 10},
+          key_pool_size = ${keyPoolSize ?? 50},
+          game_name = ${gameName ?? null},
+          game_artwork_url = ${gameArtworkUrl ?? null},
+          updated_at = NOW()
+        WHERE developer_user_id = ${userId}
+      `);
+    } else {
+      await db.execute(sql`
+        INSERT INTO auto_campaign_settings
+          (developer_user_id, enabled, allowed_templates, frequency,
+           max_creators_per_campaign, min_key_reserve, key_pool_size,
+           game_name, game_artwork_url)
+        VALUES
+          (${userId}, ${enabled ?? false}, ${templatesJson}::jsonb, ${frequency ?? 'weekly'},
+           ${maxCreatorsPerCampaign ?? 20}, ${minKeyReserve ?? 10}, ${keyPoolSize ?? 50},
+           ${gameName ?? null}, ${gameArtworkUrl ?? null})
+      `);
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('POST /api/campaigns/auto/settings error:', err);
+    res.status(500).json({ error: 'Failed to save auto-campaign settings' });
+  }
+});
+
+// GET /api/campaigns/auto/queue — auto-campaign history
+router.get('/auto/queue', requirePartner, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const rows = toRows(await db.execute(sql`
+      SELECT ci.id, ci.game_name, ci.game_artwork_url, ci.created_at, ci.status,
+        t.name AS template_name, t.duration
+      FROM campaign_instances ci
+      JOIN campaign_templates t ON t.id = ci.template_id
+      WHERE ci.developer_user_id = ${userId} AND ci.auto_campaign = true
+      ORDER BY ci.created_at DESC
+    `));
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load auto-campaign queue' });
+  }
+});
+
+// POST /api/campaigns/auto/trigger — manually trigger auto-campaign check (dev/admin)
+router.post('/auto/trigger', requirePartner, async (req, res) => {
+  try {
+    const result = await runAutoCampaignCheck(req.user!.id);
+    res.json(result);
+  } catch (err: any) {
+    console.error('Auto-campaign trigger error:', err);
+    res.status(500).json({ error: err.message || 'Auto-campaign check failed' });
   }
 });
 

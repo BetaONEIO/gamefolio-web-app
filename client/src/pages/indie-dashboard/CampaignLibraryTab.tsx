@@ -10,15 +10,10 @@ import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 
 const CATEGORY_LABELS: Record<string, string> = {
   all: "All Campaigns",
-  demo_promotion: "Demo Promotion",
-  game_launch: "Game Launch",
-  content_generation: "Content Generation",
-  streaming: "Streaming",
-  screenshots: "Screenshots",
-  reviews_feedback: "Reviews & Feedback",
-  community_growth: "Community Growth",
-  updates_dlc: "Updates & DLC",
-  bug_testing: "Bug Testing",
+  quick_creator: "Quick Creator",
+  content_boost: "Content Boost",
+  creator_showcase: "Creator Showcase",
+  custom: "Custom",
 };
 
 const CATEGORY_FILTERS = Object.entries(CATEGORY_LABELS);
@@ -192,7 +187,7 @@ function CampaignCard({ template, onDetails, onRun }: { template: any; onDetails
     <div className="rounded-2xl overflow-hidden flex flex-col transition-all hover:-translate-y-0.5 hover:shadow-xl"
       style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
       {/* Card header band */}
-      <div className="h-1.5 w-full" style={{ background: badge.recommended ? NEON : badge.color, opacity: 0.7 }} />
+      <div className="h-1.5 w-full" style={{ background: template.recommended ? NEON : badge.color, opacity: 0.7 }} />
 
       <div className="p-5 flex-1 flex flex-col gap-4">
         {/* Title row */}

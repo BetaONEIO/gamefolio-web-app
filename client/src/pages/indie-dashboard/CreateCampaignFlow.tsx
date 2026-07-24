@@ -1,43 +1,126 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Rocket, Gamepad2, Star, TrendingUp, Users, Film, MessageSquare,
-  Zap, Bug, ChevronRight, ChevronLeft, Check, ShieldCheck, Clock,
-  KeyRound, Lock, AlertTriangle, Loader2, X, Target, Calendar,
-  Radio, BarChart3, Globe, CheckCircle2, Search,
+  Rocket, Clock, Users, KeyRound, Lock, AlertTriangle, Loader2,
+  ChevronRight, ChevronLeft, Check, ShieldCheck, Calendar,
+  CheckCircle2, Search, Sparkles, Cog, Zap,
 } from "lucide-react";
-import { NEON, CARD_BG, CARD_BORDER } from "./constants";
+import { NEON } from "./constants";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// STEP 1: Pick Campaign Type — 4 simplified options
+// ─────────────────────────────────────────────
 
-interface Goal {
-  id: string;
-  label: string;
-  desc: string;
+interface CampaignType {
+  slug: string;
+  name: string;
+  tagline: string;
+  description: string;
+  duration: number;
+  capacity: number;
+  demoKeys: number;
+  fullKeys: number;
+  recommended?: boolean;
+  custom?: boolean;
   icon: any;
-  category: string;
+  estimated: {
+    clips: number; reels: number; screenshots: number; feedback: number;
+    viewsMin: number; viewsMax: number;
+  };
 }
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
-
-const GOALS: Goal[] = [
-  { id: "demo",        label: "Promote a Playable Demo",       desc: "Get creators playing and covering your demo before launch.",              icon: Gamepad2,      category: "demo_promotion" },
-  { id: "launch",      label: "Launch a New Game",             desc: "Build momentum for your game's release with a creator campaign.",          icon: Rocket,        category: "game_launch" },
-  { id: "early_access",label: "Promote Early Access",          desc: "Recruit creators to cover your early access title.",                       icon: Star,          category: "game_launch" },
-  { id: "update",      label: "Promote a Major Update",        desc: "Drive attention to a major new version or seasonal content.",              icon: TrendingUp,    category: "updates_dlc" },
-  { id: "dlc",         label: "Promote DLC",                   desc: "Get creators covering your new downloadable content.",                     icon: Zap,           category: "updates_dlc" },
-  { id: "content",     label: "Generate Creator Content",      desc: "Build a library of clips, reels and screenshots of your game.",            icon: Film,          category: "content_generation" },
-  { id: "community",   label: "Grow Community Awareness",      desc: "Expand your game's community across social platforms.",                    icon: Users,         category: "community_growth" },
-  { id: "streaming",   label: "Recruit Streamers",             desc: "Find streamers willing to go live with your game.",                        icon: Radio,         category: "streaming" },
-  { id: "reviews",     label: "Collect Reviews and Feedback",  desc: "Get honest written and video reviews from real players.",                  icon: MessageSquare, category: "reviews_feedback" },
-  { id: "bugs",        label: "Test Bugs and Gameplay",        desc: "Use creators to stress-test your game and surface issues.",                icon: Bug,           category: "bug_testing" },
+const CAMPAIGN_TYPES: CampaignType[] = [
+  {
+    slug: "quick-creator",
+    name: "Quick Creator Campaign",
+    tagline: "Get your first creators playing fast",
+    description: "5-day sprint to get creators engaged with quick clips and first impressions. Great for new launches or building momentum.",
+    duration: 5,
+    capacity: 20,
+    demoKeys: 20,
+    fullKeys: 20,
+    icon: Zap,
+    estimated: { clips: 40, reels: 10, screenshots: 40, feedback: 20, viewsMin: 3000, viewsMax: 15000 },
+  },
+  {
+    slug: "content-boost",
+    name: "Content Boost Campaign",
+    tagline: "Build a content library",
+    description: "10-day multi-format campaign to generate clips, reels and screenshots. Best for marketing assets and discovery.",
+    duration: 10,
+    capacity: 35,
+    demoKeys: 35,
+    fullKeys: 35,
+    recommended: true,
+    icon: Sparkles,
+    estimated: { clips: 70, reels: 35, screenshots: 105, feedback: 35, viewsMin: 10000, viewsMax: 50000 },
+  },
+  {
+    slug: "creator-showcase",
+    name: "Creator Showcase Campaign",
+    tagline: "Maximum exposure with premium content",
+    description: "21-day deep engagement with streams, reviews and clips. The premium option for serious developer marketing.",
+    duration: 21,
+    capacity: 25,
+    demoKeys: 25,
+    fullKeys: 25,
+    icon: Rocket,
+    estimated: { clips: 50, reels: 25, screenshots: 75, feedback: 25, viewsMin: 15000, viewsMax: 80000 },
+  },
+  {
+    slug: "custom-campaign",
+    name: "Custom Campaign",
+    tagline: "Full control for experienced developers",
+    description: "Set your own duration, capacity, regions and platforms. For developers who know exactly what they need.",
+    duration: 14,
+    capacity: 20,
+    demoKeys: 20,
+    fullKeys: 20,
+    custom: true,
+    icon: Cog,
+    estimated: { clips: 40, reels: 20, screenshots: 60, feedback: 20, viewsMin: 5000, viewsMax: 30000 },
+  },
 ];
 
-const STEP_LABELS = ["Choose Goal", "Pick Template", "Customise", "Commit Keys", "Review & Launch"];
+const STEP_LABELS = ["Pick Type", "Customise", "Review", "Launch"];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+interface CampaignSettings {
+  campaignName: string;
+  description: string;
+  gameName: string;
+  gameId: number | null;
+  gameImageUrl: string | null;
+  startType: "asap" | "scheduled";
+  scheduledDate: string;
+  regions: string;
+  platforms: string[];
+  // custom overrides
+  customDuration?: number;
+  customCapacity?: number;
+}
+
+const REGION_OPTIONS = [
+  { id: "worldwide",        label: "Worldwide" },
+  { id: "north_america",    label: "North America" },
+  { id: "europe",           label: "Europe" },
+  { id: "asia_pacific",     label: "Asia Pacific" },
+  { id: "latin_america",    label: "Latin America" },
+  { id: "middle_east",      label: "Middle East & Africa" },
+];
+
+const PLATFORM_OPTIONS = [
+  { id: "pc",      label: "PC (Windows / Mac / Linux)" },
+  { id: "ps",      label: "PlayStation" },
+  { id: "xbox",    label: "Xbox" },
+  { id: "switch",  label: "Nintendo Switch" },
+  { id: "mobile",  label: "Mobile (iOS / Android)" },
+];
+
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
 
 function StepHeader({ step, total, label }: { step: number; total: number; label: string }) {
   return (
@@ -60,201 +143,107 @@ function StepHeader({ step, total, label }: { step: number; total: number; label
   );
 }
 
-// ─── Step 1: Choose Goal ──────────────────────────────────────────────────────
-
-function StepChooseGoal({ selected, onSelect }: { selected: Goal | null; onSelect: (g: Goal) => void }) {
+function TypeCard({ type, selected, onSelect }: { type: CampaignType; selected: boolean; onSelect: () => void }) {
+  const Icon = type.icon;
+  const est = type.estimated;
   return (
-    <div>
-      <p className="text-sm text-white/45 mb-7 max-w-xl">
-        Tell Gamefolio what you want to achieve. We'll automatically create the right creator bounties for your game.
-      </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {GOALS.map(goal => {
-          const active = selected?.id === goal.id;
-          return (
-            <button key={goal.id} onClick={() => onSelect(goal)}
-              className="flex items-start gap-4 p-4 rounded-2xl text-left transition-all group"
-              style={{
-                background: active ? "rgba(183,255,24,0.07)" : "rgba(255,255,255,0.025)",
-                border: `1px solid ${active ? "rgba(183,255,24,0.35)" : "rgba(255,255,255,0.07)"}`,
-              }}>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
-                style={{ background: active ? "rgba(183,255,24,0.15)" : "rgba(255,255,255,0.06)" }}>
-                <goal.icon className="w-4 h-4" style={{ color: active ? NEON : "rgba(255,255,255,0.4)" }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-bold mb-0.5" style={{ color: active ? NEON : "rgba(255,255,255,0.85)" }}>
-                  {goal.label}
-                </div>
-                <div className="text-[11px] leading-snug" style={{ color: "rgba(255,255,255,0.35)" }}>
-                  {goal.desc}
-                </div>
-              </div>
-              {active && <Check className="w-4 h-4 shrink-0 mt-1" style={{ color: NEON }} />}
-            </button>
-          );
-        })}
+    <button onClick={onSelect}
+      className="w-full text-left rounded-2xl transition-all p-5"
+      style={{
+        background: selected ? "rgba(183,255,24,0.055)" : "rgba(255,255,255,0.025)",
+        border: `1px solid ${selected ? "rgba(183,255,24,0.3)" : "rgba(255,255,255,0.07)"}`,
+      }}>
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+            <span className="text-[9px] font-black px-1.5 py-0.5 rounded flex items-center gap-1"
+              style={{ background: "rgba(183,255,24,0.1)", color: NEON }}>
+              <ShieldCheck className="w-2.5 h-2.5" /> GAMEFOLIO VERIFIED
+            </span>
+            {type.recommended && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                style={{ background: "rgba(251,146,60,0.1)", color: "#fb923c" }}>
+                Recommended
+              </span>
+            )}
+            {type.custom && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
+                style={{ background: "rgba(96,165,250,0.1)", color: "#60a5fa" }}>
+                Advanced
+              </span>
+            )}
+          </div>
+          <h3 className="text-base font-black text-white leading-tight">{type.name}</h3>
+          <p className="text-xs font-semibold mt-0.5" style={{ color: selected ? NEON : "rgba(255,255,255,0.45)" }}>
+            {type.tagline}
+          </p>
+          <p className="text-[12px] text-white/40 mt-1.5 line-clamp-2">{type.description}</p>
+        </div>
+        <div className="w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center mt-1"
+          style={{ borderColor: selected ? NEON : "rgba(255,255,255,0.2)", background: selected ? NEON : "transparent" }}>
+          {selected && <Check className="w-3.5 h-3.5" style={{ color: "#070b10" }} />}
+        </div>
       </div>
-    </div>
+
+      <div className="grid grid-cols-4 gap-2 mb-4">
+        {[
+          { icon: Clock,    label: "Duration",   value: `${type.duration}d` },
+          { icon: Users,    label: "Creators",   value: type.capacity },
+          { icon: KeyRound, label: "Demo Keys",  value: type.demoKeys },
+          { icon: KeyRound, label: "Full Keys",  value: type.fullKeys },
+        ].map(({ icon: Icon, label, value }) => (
+          <div key={label} className="rounded-xl p-2.5 text-center"
+            style={{ background: "rgba(255,255,255,0.04)" }}>
+            <Icon className="w-3 h-3 mx-auto mb-1 text-white/25" />
+            <div className="text-sm font-black text-white">{value}</div>
+            <div className="text-[9px] text-white/30 uppercase tracking-wide">{label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="text-[10px] text-white/25">
+        Est. output: {est.clips} clips · {est.reels} reels · {est.screenshots} screenshots · {est.feedback} reviews
+        <span className="text-white/15"> · {est.viewsMin.toLocaleString()}–{est.viewsMax.toLocaleString()} views</span>
+      </div>
+    </button>
   );
 }
 
-// ─── Step 2: Pick Template ────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// Step 1: Pick Campaign Type
+// ─────────────────────────────────────────────
 
-function StepPickTemplate({
-  goal, selected, onSelect,
-}: { goal: Goal; selected: any; onSelect: (t: any) => void }) {
-  const { data: allTemplates = [], isLoading } = useQuery<any[]>({
-    queryKey: ["/api/campaigns/templates"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-  });
-
-  const templates = allTemplates.filter(t =>
-    t.category === goal.category || t.status === "available"
-  );
-
-  if (isLoading) return (
-    <div className="flex justify-center py-20">
-      <Loader2 className="w-6 h-6 animate-spin" style={{ color: NEON }} />
-    </div>
-  );
-
+function StepPickType({ selected, onSelect }: { selected: CampaignType | null; onSelect: (t: CampaignType) => void }) {
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-2">
-        <goal.icon className="w-4 h-4" style={{ color: NEON }} />
-        <p className="text-sm font-bold" style={{ color: NEON }}>{goal.label}</p>
-      </div>
-      <p className="text-sm text-white/40 mb-7">
-        Choose a Gamefolio-verified campaign template. Each template includes pre-built bounties and proven reward structures.
+    <div className="space-y-5">
+      <p className="text-sm text-white/40">
+        Choose the campaign type that matches your goals. Every campaign gives creators a <strong className="text-white/60">demo key on join</strong> and a <strong className="text-white/60">full game key on completion</strong>.
       </p>
 
-      {templates.length === 0 ? (
-        <div className="text-center py-16 rounded-2xl"
-          style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.07)" }}>
-          <Target className="w-8 h-8 mx-auto mb-3 text-white/15" />
-          <p className="text-sm text-white/35 mb-1">No templates yet for this goal</p>
-          <p className="text-xs text-white/20">Check back soon — Gamefolio is building more verified campaign templates.</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {templates.map((t: any) => {
-            const active = selected?.id === t.id;
-            const bounties: any[] = t.bounties ?? [];
-            return (
-              <button key={t.id} onClick={() => onSelect(t)}
-                className="w-full text-left rounded-2xl transition-all"
-                style={{
-                  background: active ? "rgba(183,255,24,0.055)" : "rgba(255,255,255,0.025)",
-                  border: `1px solid ${active ? "rgba(183,255,24,0.3)" : "rgba(255,255,255,0.07)"}`,
-                }}>
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded flex items-center gap-1"
-                          style={{ background: "rgba(183,255,24,0.1)", color: NEON }}>
-                          <ShieldCheck className="w-2.5 h-2.5" /> GAMEFOLIO VERIFIED
-                        </span>
-                        {t.difficulty && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
-                            style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.45)" }}>
-                            {t.difficulty}
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="text-base font-black text-white leading-tight">{t.name}</h3>
-                      <p className="text-[12px] text-white/40 mt-1 line-clamp-2">{t.description}</p>
-                    </div>
-                    <div className="w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center mt-1"
-                      style={{ borderColor: active ? NEON : "rgba(255,255,255,0.2)", background: active ? NEON : "transparent" }}>
-                      {active && <Check className="w-3.5 h-3.5" style={{ color: "#070b10" }} />}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-2 mb-4">
-                    {[
-                      { icon: Clock,    label: "Duration",   value: `${t.duration}d` },
-                      { icon: Users,    label: "Creators",   value: t.participant_capacity },
-                      { icon: KeyRound, label: "Demo Keys",  value: t.demo_keys_required > 0 ? t.demo_keys_required : "None" },
-                      { icon: Star,     label: "Max XP",     value: t.max_xp > 0 ? `${(t.max_xp / 1000).toFixed(0)}k` : "—" },
-                    ].map(({ icon: Icon, label, value }) => (
-                      <div key={label} className="rounded-xl p-2.5 text-center"
-                        style={{ background: "rgba(255,255,255,0.04)" }}>
-                        <Icon className="w-3 h-3 mx-auto mb-1 text-white/25" />
-                        <div className="text-sm font-black text-white">{value}</div>
-                        <div className="text-[9px] text-white/30 uppercase tracking-wide">{label}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex flex-wrap gap-1.5">
-                    {bounties.slice(0, 4).map((b: any, i: number) => (
-                      <span key={i} className="text-[10px] px-2 py-1 rounded-full text-white/45"
-                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                        {b.title}
-                      </span>
-                    ))}
-                    {bounties.length > 4 && (
-                      <span className="text-[10px] px-2 py-1 rounded-full text-white/25">
-                        +{bounties.length - 4} more bounties
-                      </span>
-                    )}
-                  </div>
-
-                  {(t.estimated_clips > 0 || t.estimated_screenshots > 0) && (
-                    <div className="mt-3 text-[10px] text-white/25">
-                      Estimated output:{t.estimated_clips > 0 ? ` ${t.estimated_clips} clips` : ""}
-                      {t.estimated_screenshots > 0 ? ` · ${t.estimated_screenshots} screenshots` : ""}
-                      {t.estimated_feedback > 0 ? ` · ${t.estimated_feedback} reviews` : ""}
-                    </div>
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {CAMPAIGN_TYPES.map(t => (
+        <TypeCard key={t.slug} type={t} selected={selected?.slug === t.slug} onSelect={() => onSelect(t)} />
+      ))}
     </div>
   );
 }
 
-// ─── Step 3: Customise ────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// Step 2: Customise (skip for non-custom)
+// ─────────────────────────────────────────────
 
-interface CustomSettings {
-  campaignName: string;
-  description: string;
-  startType: "asap" | "scheduled";
-  scheduledDate: string;
-  keyReleaseMode: "auto" | "approval";
-  gameName: string;
-  gameId: number | null;
-  gameImageUrl: string | null;
-  regions: string;
-  platforms: string[];
-}
+const fieldStyle = {
+  background: "rgba(255,255,255,0.05)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  color: "#fff",
+  borderRadius: "12px",
+  padding: "10px 14px",
+  outline: "none",
+  width: "100%",
+  fontSize: "13px",
+};
 
-const REGION_OPTIONS = [
-  { id: "worldwide",        label: "Worldwide" },
-  { id: "north_america",    label: "North America" },
-  { id: "europe",           label: "Europe" },
-  { id: "asia_pacific",     label: "Asia Pacific" },
-  { id: "latin_america",    label: "Latin America" },
-  { id: "middle_east",      label: "Middle East & Africa" },
-];
-
-const PLATFORM_OPTIONS = [
-  { id: "pc",      label: "PC (Windows / Mac / Linux)" },
-  { id: "ps",      label: "PlayStation" },
-  { id: "xbox",    label: "Xbox" },
-  { id: "switch",  label: "Nintendo Switch" },
-  { id: "mobile",  label: "Mobile (iOS / Android)" },
-];
-
-function StepCustomise({ template, settings, onChange }: {
-  template: any;
-  settings: CustomSettings;
-  onChange: (s: Partial<CustomSettings>) => void;
+function StepCustomise({ type, settings, onChange }: {
+  type: CampaignType; settings: CampaignSettings; onChange: (s: Partial<CampaignSettings>) => void;
 }) {
   const [gameQuery, setGameQuery] = useState("");
   const { data: indieProfile } = useQuery<any>({
@@ -273,18 +262,6 @@ function StepCustomise({ template, settings, onChange }: {
 
   const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = tomorrow.toISOString().split("T")[0];
-
-  const fieldStyle = {
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    color: "#fff",
-    borderRadius: "12px",
-    padding: "10px 14px",
-    outline: "none",
-    width: "100%",
-    fontSize: "13px",
-  };
-
   const labelStyle = "text-[10px] font-bold text-white/30 uppercase tracking-wider block mb-1.5";
 
   return (
@@ -293,14 +270,14 @@ function StepCustomise({ template, settings, onChange }: {
         Personalise your campaign. The bounty requirements, XP rewards and creator protections are managed by Gamefolio and cannot be changed.
       </p>
 
-      {/* Fixed notice */}
+      {/* Gamefolio-managed notice */}
       <div className="flex items-start gap-3 rounded-xl p-4"
         style={{ background: "rgba(251,146,60,0.06)", border: "1px solid rgba(251,146,60,0.15)" }}>
         <Lock className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
         <div>
           <p className="text-xs font-bold text-orange-300 mb-0.5">Gamefolio-managed settings</p>
           <p className="text-[11px] text-orange-300/60">
-            Duration ({template.duration} days) · {template.participant_capacity} creator capacity · {template.demo_keys_required} demo keys required · {template.full_keys_required} full game keys required · Bounty requirements · XP values · Moderation rules
+            Duration ({type.duration} days) · {type.capacity} creator capacity · {type.demoKeys} demo keys · {type.fullKeys} full game keys · Bounty requirements · XP values · Moderation rules
           </p>
         </div>
       </div>
@@ -311,7 +288,7 @@ function StepCustomise({ template, settings, onChange }: {
           <label className={labelStyle}>Campaign Name</label>
           <input style={fieldStyle} value={settings.campaignName}
             onChange={e => onChange({ campaignName: e.target.value })}
-            placeholder={`${template.name} — My Game`} />
+            placeholder={`${type.name} — My Game`} />
         </div>
 
         {/* Game */}
@@ -402,33 +379,6 @@ function StepCustomise({ template, settings, onChange }: {
           </div>
         </div>
 
-        {/* Key release */}
-        <div>
-          <label className={labelStyle}>Demo Key Release</label>
-          <div className="space-y-2">
-            {([
-              { id: "auto",     label: "Automatic",        desc: "Released when creator joins" },
-              { id: "approval", label: "Approval Required", desc: "You approve each creator first" },
-            ] as const).map(({ id, label, desc }) => (
-              <button key={id} onClick={() => onChange({ keyReleaseMode: id })}
-                className="w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all"
-                style={{
-                  background: settings.keyReleaseMode === id ? "rgba(183,255,24,0.07)" : "rgba(255,255,255,0.03)",
-                  border: `1px solid ${settings.keyReleaseMode === id ? "rgba(183,255,24,0.25)" : "rgba(255,255,255,0.07)"}`,
-                }}>
-                <div className="w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center"
-                  style={{ borderColor: settings.keyReleaseMode === id ? NEON : "rgba(255,255,255,0.2)", background: settings.keyReleaseMode === id ? NEON : "transparent" }}>
-                  {settings.keyReleaseMode === id && <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#070b10" }} />}
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-white">{label}</div>
-                  <div className="text-[10px] text-white/30 mt-0.5">{desc}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Eligible Regions */}
         <div>
           <label className={labelStyle}>Eligible Regions</label>
@@ -472,14 +422,37 @@ function StepCustomise({ template, settings, onChange }: {
             })}
           </div>
         </div>
+
+        {/* Custom overrides (only for custom type) */}
+        {type.custom && (
+          <>
+            <div>
+              <label className={labelStyle}>Custom Duration (days)</label>
+              <input type="number" min={3} max={60} style={fieldStyle}
+                value={settings.customDuration ?? type.duration}
+                onChange={e => onChange({ customDuration: Math.max(3, Math.min(60, Number(e.target.value))) })} />
+            </div>
+            <div>
+              <label className={labelStyle}>Custom Creator Capacity</label>
+              <input type="number" min={5} max={100} style={fieldStyle}
+                value={settings.customCapacity ?? type.capacity}
+                onChange={e => onChange({ customCapacity: Math.max(5, Math.min(100, Number(e.target.value))) })} />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-// ─── Step 4: Commit Keys ──────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// Step 3: Review
+// ─────────────────────────────────────────────
 
-function StepCommitKeys({ template, onGoToKeys }: { template: any; onGoToKeys: () => void }) {
+function StepReview({ type, settings, keysOk, onConfirm, confirmed }: {
+  type: CampaignType; settings: CampaignSettings; keysOk: boolean;
+  onConfirm: (v: boolean) => void; confirmed: boolean;
+}) {
   const { data: bountyStatus } = useQuery<any>({
     queryKey: ["/api/indie/bounty-status"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -487,174 +460,33 @@ function StepCommitKeys({ template, onGoToKeys }: { template: any; onGoToKeys: (
 
   const demoAvail = bountyStatus?.demoKeys?.available ?? 0;
   const fullAvail = bountyStatus?.fullGameKeys?.available ?? 0;
-  const demoRequired = template.demo_keys_required ?? 0;
-  const fullRequired = template.full_keys_required ?? 0;
-
-  const demoOk = demoRequired === 0 || demoAvail >= demoRequired;
-  const fullOk = fullRequired === 0 || fullAvail >= fullRequired;
-  const allOk = demoOk && fullOk;
-
-  return (
-    <div className="space-y-6">
-      <p className="text-sm text-white/40">
-        Before launching, the required keys must be secured in the Gamefolio Key Vault. Keys are locked as escrow once the campaign begins.
-      </p>
-
-      {/* Key requirements */}
-      <div className="space-y-3">
-        {demoRequired > 0 && (
-          <div className="rounded-2xl p-5"
-            style={{
-              background: demoOk ? "rgba(183,255,24,0.04)" : "rgba(248,113,113,0.05)",
-              border: `1px solid ${demoOk ? "rgba(183,255,24,0.2)" : "rgba(248,113,113,0.25)"}`,
-            }}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2.5">
-                <KeyRound className="w-4 h-4" style={{ color: demoOk ? NEON : "#f87171" }} />
-                <span className="text-sm font-bold text-white">Demo Keys</span>
-              </div>
-              {demoOk
-                ? <span className="text-xs font-bold flex items-center gap-1" style={{ color: NEON }}><CheckCircle2 className="w-3.5 h-3.5" /> Sufficient</span>
-                : <span className="text-xs font-bold flex items-center gap-1 text-red-400"><AlertTriangle className="w-3.5 h-3.5" /> Insufficient</span>}
-            </div>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)" }}>
-                <div className="text-lg font-black" style={{ color: NEON }}>{demoRequired}</div>
-                <div className="text-[9px] text-white/30 uppercase tracking-wide mt-0.5">Required</div>
-              </div>
-              <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)" }}>
-                <div className="text-lg font-black text-white">{demoAvail}</div>
-                <div className="text-[9px] text-white/30 uppercase tracking-wide mt-0.5">In Vault</div>
-              </div>
-              <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)" }}>
-                <div className="text-lg font-black" style={{ color: demoOk ? NEON : "#f87171" }}>{Math.max(0, demoRequired - demoAvail)}</div>
-                <div className="text-[9px] text-white/30 uppercase tracking-wide mt-0.5">Still Needed</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {fullRequired > 0 && (
-          <div className="rounded-2xl p-5"
-            style={{
-              background: fullOk ? "rgba(96,165,250,0.04)" : "rgba(248,113,113,0.05)",
-              border: `1px solid ${fullOk ? "rgba(96,165,250,0.2)" : "rgba(248,113,113,0.25)"}`,
-            }}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2.5">
-                <KeyRound className="w-4 h-4" style={{ color: fullOk ? "#60a5fa" : "#f87171" }} />
-                <span className="text-sm font-bold text-white">Full Game Keys</span>
-              </div>
-              {fullOk
-                ? <span className="text-xs font-bold flex items-center gap-1" style={{ color: "#60a5fa" }}><CheckCircle2 className="w-3.5 h-3.5" /> Sufficient</span>
-                : <span className="text-xs font-bold flex items-center gap-1 text-red-400"><AlertTriangle className="w-3.5 h-3.5" /> Insufficient</span>}
-            </div>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)" }}>
-                <div className="text-lg font-black" style={{ color: "#60a5fa" }}>{fullRequired}</div>
-                <div className="text-[9px] text-white/30 uppercase tracking-wide mt-0.5">Required</div>
-              </div>
-              <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)" }}>
-                <div className="text-lg font-black text-white">{fullAvail}</div>
-                <div className="text-[9px] text-white/30 uppercase tracking-wide mt-0.5">In Vault</div>
-              </div>
-              <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.04)" }}>
-                <div className="text-lg font-black" style={{ color: fullOk ? "#60a5fa" : "#f87171" }}>{Math.max(0, fullRequired - fullAvail)}</div>
-                <div className="text-[9px] text-white/30 uppercase tracking-wide mt-0.5">Still Needed</div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {demoRequired === 0 && fullRequired === 0 && (
-          <div className="rounded-2xl p-5 text-center"
-            style={{ background: "rgba(183,255,24,0.04)", border: "1px solid rgba(183,255,24,0.15)" }}>
-            <CheckCircle2 className="w-7 h-7 mx-auto mb-2" style={{ color: NEON }} />
-            <p className="text-sm font-bold text-white">No keys required for this campaign</p>
-            <p className="text-xs text-white/30 mt-0.5">You can launch without uploading keys.</p>
-          </div>
-        )}
-      </div>
-
-      {!allOk && (
-        <div className="space-y-3">
-          <div className="flex items-start gap-3 rounded-xl p-4"
-            style={{ background: "rgba(248,113,113,0.06)", border: "1px solid rgba(248,113,113,0.18)" }}>
-            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-xs font-bold text-red-300">More keys needed</p>
-              <p className="text-[11px] text-red-300/60 mt-0.5">
-                Upload the required keys to your Key Vault before you can launch. This ensures creators are guaranteed their rewards.
-              </p>
-            </div>
-          </div>
-          <button onClick={onGoToKeys}
-            className="w-full py-2.5 rounded-xl text-sm font-bold transition-all hover:brightness-110"
-            style={{ background: "rgba(248,113,113,0.12)", color: "#fca5a5", border: "1px solid rgba(248,113,113,0.2)" }}>
-            Go to Keys &amp; Rewards to Upload Keys
-          </button>
-        </div>
-      )}
-
-      {allOk && (
-        <div className="flex items-start gap-3 rounded-xl p-4"
-          style={{ background: "rgba(183,255,24,0.05)", border: "1px solid rgba(183,255,24,0.15)" }}>
-          <Lock className="w-4 h-4 shrink-0 mt-0.5" style={{ color: NEON }} />
-          <p className="text-[11px] leading-relaxed" style={{ color: "rgba(183,255,24,0.7)" }}>
-            Once the campaign begins, committed keys will be locked in the Gamefolio Key Vault. They cannot be withdrawn while creators are participating, completing tasks, or awaiting review.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Step 5: Review & Launch ──────────────────────────────────────────────────
-
-function StepReviewLaunch({
-  goal, template, settings, confirmed, onConfirm,
-}: {
-  goal: Goal;
-  template: any;
-  settings: CustomSettings;
-  confirmed: boolean;
-  onConfirm: (v: boolean) => void;
-}) {
-  const bounties: any[] = template.bounties ?? [];
+  const duration = type.custom && settings.customDuration ? settings.customDuration : type.duration;
+  const capacity = type.custom && settings.customCapacity ? settings.customCapacity : type.capacity;
 
   const regionLabel = REGION_OPTIONS.find(r => r.id === settings.regions)?.label ?? "Worldwide";
   const platformsLabel = settings.platforms.length === 0
     ? "All platforms"
     : settings.platforms.map(p => PLATFORM_OPTIONS.find(o => o.id === p)?.label ?? p).join(", ");
 
-  const contentParts: string[] = [];
-  if (template.estimated_clips > 0) contentParts.push(`${template.estimated_clips} clips`);
-  if (template.estimated_screenshots > 0) contentParts.push(`${template.estimated_screenshots} screenshots`);
-  if (template.estimated_feedback > 0) contentParts.push(`${template.estimated_feedback} reviews`);
-
-  const rows: { label: string; value: React.ReactNode }[] = [
-    { label: "Campaign Name",          value: settings.campaignName || template.name },
-    { label: "Objective",              value: goal.label },
-    { label: "Template",               value: <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3" style={{ color: NEON }} />{template.name}</span> },
-    { label: "Game",                   value: settings.gameName || "—" },
-    { label: "Duration",               value: `${template.duration} days` },
-    { label: "Creator Capacity",       value: template.participant_capacity },
-    { label: "Start",                  value: settings.startType === "asap" ? "After Gamefolio review" : settings.scheduledDate || "—" },
-    { label: "Key Release",            value: settings.keyReleaseMode === "auto" ? "Automatic" : "Approval Required" },
-    { label: "Demo Keys Required",     value: template.demo_keys_required > 0 ? template.demo_keys_required : "None" },
-    { label: "Full Keys Required",     value: template.full_keys_required > 0 ? template.full_keys_required : "None" },
-    { label: "Bounties Included",      value: bounties.length },
-    { label: "Total XP Available",     value: template.max_xp > 0 ? `${template.max_xp.toLocaleString()} XP` : "—" },
-    { label: "Estimated Content",      value: contentParts.length > 0 ? contentParts.join(" · ") : "—" },
-    { label: "Creator Eligibility",    value: regionLabel },
-    { label: "Supported Platforms",    value: platformsLabel },
-    { label: "Review Deadline",        value: `${template.duration} days after launch` },
+  const rows = [
+    { label: "Campaign Name",  value: settings.campaignName || type.name },
+    { label: "Campaign Type",  value: type.name },
+    { label: "Game",          value: settings.gameName || "—" },
+    { label: "Duration",      value: `${duration} days` },
+    { label: "Creator Capacity", value: capacity },
+    { label: "Start",         value: settings.startType === "asap" ? "After Gamefolio review" : settings.scheduledDate || "—" },
+    { label: "Demo Keys Needed", value: type.demoKeys },
+    { label: "Full Keys Needed", value: type.fullKeys },
+    { label: "Demo Keys in Vault", value: `${demoAvail} available` },
+    { label: "Full Keys in Vault", value: `${fullAvail} available` },
+    { label: "Creator Eligibility", value: regionLabel },
+    { label: "Supported Platforms", value: platformsLabel },
   ];
 
   return (
     <div className="space-y-6">
       <p className="text-sm text-white/40">
-        Review everything before launching. Once creators join, reward commitments are locked.
+        Review your campaign before launching. Keys will be committed to the Campaign Key Vault.
       </p>
 
       {/* Summary table */}
@@ -673,23 +505,21 @@ function StepReviewLaunch({
         ))}
       </div>
 
-      {/* Bounty list */}
-      <div>
-        <div className="text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">
-          Included Bounties (auto-generated, fixed)
-        </div>
-        <div className="space-y-2">
-          {bounties.map((b: any, i: number) => (
-            <div key={i} className="flex items-center gap-3 rounded-xl px-4 py-3"
-              style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <div className="w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-[10px] font-black"
-                style={{ background: "rgba(183,255,24,0.12)", color: NEON }}>{i + 1}</div>
-              <span className="flex-1 text-sm font-semibold text-white/80">{b.title}</span>
-              <span className="text-[11px] font-bold shrink-0" style={{ color: NEON }}>+{(b.xp_reward ?? 0).toLocaleString()} XP</span>
+      {/* Key status */}
+      {!keysOk && (
+        <div className="rounded-2xl p-5"
+          style={{ background: "rgba(248,113,113,0.05)", border: "1px solid rgba(248,113,113,0.2)" }}>
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-red-300">More keys needed</p>
+              <p className="text-xs text-red-300/60 mt-1">
+                Upload the required keys to your Key Vault before launching. Every campaign needs both demo keys (for creators to join) and full game keys (for completion rewards).
+              </p>
             </div>
-          ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Escrow warning */}
       <div className="rounded-2xl p-5"
@@ -699,7 +529,7 @@ function StepReviewLaunch({
           <div>
             <p className="text-sm font-bold text-orange-300 mb-2">Campaign Key Vault — Escrow Protection</p>
             <p className="text-xs text-orange-300/70 leading-relaxed">
-              Once this campaign begins, committed keys and rewards will be locked in the Gamefolio Key Vault for participating creators. They <strong className="text-orange-300">cannot be withdrawn</strong> after creators begin completing campaign bounties.
+              Once this campaign begins, committed keys will be locked in the Gamefolio Key Vault. They <strong className="text-orange-300">cannot be withdrawn</strong> after creators begin participating.
             </p>
           </div>
         </div>
@@ -717,34 +547,32 @@ function StepReviewLaunch({
           {confirmed && <Check className="w-3 h-3" style={{ color: "#070b10" }} />}
         </div>
         <span className="text-sm text-white/70 leading-snug">
-          I understand that the campaign rewards will be committed to the Campaign Key Vault and cannot be withdrawn after creators join and complete bounties.
+          I understand that the campaign rewards will be committed to the Campaign Key Vault and cannot be withdrawn after creators join and complete the campaign.
         </span>
       </button>
     </div>
   );
 }
 
-// ─── Main Flow ────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// Main Flow
+// ─────────────────────────────────────────────
 
 export default function CreateCampaignFlow({
   onComplete,
-  onGoToKeys,
 }: {
   onComplete: () => void;
-  onGoToKeys: () => void;
 }) {
   const { toast } = useToast();
   const [step, setStep] = useState(1);
-  const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [selectedType, setSelectedType] = useState<CampaignType | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [settings, setSettings] = useState<CustomSettings>({
+  const [settings, setSettings] = useState<CampaignSettings>({
     campaignName: "",
     description: "",
     startType: "asap",
     scheduledDate: "",
-    keyReleaseMode: "auto",
     gameName: "",
     gameId: null,
     gameImageUrl: null,
@@ -757,26 +585,43 @@ export default function CreateCampaignFlow({
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
-  const keysOk = !selectedTemplate || (
-    (selectedTemplate.demo_keys_required === 0 || (bountyStatus?.demoKeys?.available ?? 0) >= selectedTemplate.demo_keys_required) &&
-    (selectedTemplate.full_keys_required === 0 || (bountyStatus?.fullGameKeys?.available ?? 0) >= selectedTemplate.full_keys_required)
+  const { data: templates = [] } = useQuery<any[]>({
+    queryKey: ["/api/campaigns/templates"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+  });
+
+  const keysOk = !!selectedType && (
+    (bountyStatus?.demoKeys?.available ?? 0) >= selectedType.demoKeys &&
+    (bountyStatus?.fullGameKeys?.available ?? 0) >= selectedType.fullKeys
   );
 
+  // Map campaign type slug to actual template ID
+  const getTemplateId = (): number | null => {
+    if (!selectedType) return null;
+    const tmpl = templates.find((t: any) => t.slug === selectedType.slug);
+    return tmpl?.id ?? null;
+  };
+
+  // Effective step count: skip customise if not custom
+  const hasCustomStep = selectedType?.custom ?? false;
+  const totalSteps = hasCustomStep ? 4 : 3;
+  const effectiveStep = hasCustomStep ? step : (step >= 2 ? step + 1 : step);
+  const stepLabel = step <= totalSteps ? STEP_LABELS[effectiveStep - 1] : "Launch";
+
   const canAdvance = (): boolean => {
-    if (step === 1) return !!selectedGoal;
-    if (step === 2) return !!selectedTemplate;
-    if (step === 3) return settings.gameName.trim().length > 0;
-    if (step === 4) return keysOk;
-    if (step === 5) return confirmed;
+    if (step === 1) return !!selectedType;
+    if (step === 2) return hasCustomStep ? settings.gameName.trim().length > 0 : true;
+    if (step === 3) return keysOk && confirmed;
     return false;
   };
 
   const handleSubmit = async () => {
-    if (!selectedTemplate) return;
+    const templateId = getTemplateId();
+    if (!templateId || !selectedType) return;
     setSubmitting(true);
     try {
       const inst = await apiRequest("POST", "/api/campaigns/instances", {
-        templateId: selectedTemplate.id,
+        templateId,
         gameName: settings.gameName,
         gameId: settings.gameId,
         gameArtworkUrl: settings.gameImageUrl,
@@ -785,7 +630,6 @@ export default function CreateCampaignFlow({
         artworkUrl: settings.gameImageUrl || null,
         customName: settings.campaignName || undefined,
         description: settings.description || undefined,
-        keyReleaseMode: settings.keyReleaseMode,
         regions: settings.regions,
         platforms: settings.platforms.length > 0 ? settings.platforms : undefined,
       });
@@ -807,22 +651,19 @@ export default function CreateCampaignFlow({
     }
   };
 
-  const updateSettings = (partial: Partial<CustomSettings>) => setSettings(s => ({ ...s, ...partial }));
-
-  const stepLabels = STEP_LABELS;
-  const totalSteps = stepLabels.length;
+  const updateSettings = (partial: Partial<CampaignSettings>) => setSettings(s => ({ ...s, ...partial }));
 
   return (
     <div className="max-w-2xl">
-      <StepHeader step={step} total={totalSteps} label={stepLabels[step - 1]} />
+      <StepHeader step={effectiveStep} total={4} label={stepLabel} />
 
       <div className="min-h-[400px]">
-        {step === 1 && <StepChooseGoal selected={selectedGoal} onSelect={g => { setSelectedGoal(g); setSelectedTemplate(null); }} />}
-        {step === 2 && selectedGoal && <StepPickTemplate goal={selectedGoal} selected={selectedTemplate} onSelect={setSelectedTemplate} />}
-        {step === 3 && selectedTemplate && <StepCustomise template={selectedTemplate} settings={settings} onChange={updateSettings} />}
-        {step === 4 && selectedTemplate && <StepCommitKeys template={selectedTemplate} onGoToKeys={onGoToKeys} />}
-        {step === 5 && selectedGoal && selectedTemplate && (
-          <StepReviewLaunch goal={selectedGoal} template={selectedTemplate} settings={settings} confirmed={confirmed} onConfirm={setConfirmed} />
+        {step === 1 && <StepPickType selected={selectedType} onSelect={t => { setSelectedType(t); setConfirmed(false); }} />}
+        {step === 2 && hasCustomStep && selectedType && (
+          <StepCustomise type={selectedType} settings={settings} onChange={updateSettings} />
+        )}
+        {((step === 2 && !hasCustomStep) || (step === 3 && hasCustomStep) || (step === totalSteps && selectedType)) && selectedType && (
+          <StepReview type={selectedType} settings={settings} keysOk={keysOk} confirmed={confirmed} onConfirm={setConfirmed} />
         )}
       </div>
 
