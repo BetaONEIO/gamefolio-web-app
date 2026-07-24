@@ -611,6 +611,14 @@ function TypeCard({
 // Thin pricing card (used inside carousel)
 // ─────────────────────────────────────────────
 
+// per-type picsum seeds that give dark cinematic photos
+const CARD_IMG_SEED: Record<string, string> = {
+  "quick-creator":    "1067",  // dark forest / moody
+  "content-boost":    "0376",  // colourful abstract light
+  "creator-showcase": "0180",  // neon city night
+  "custom-campaign":  "0842",  // dark architecture
+};
+
 function ThinTypeCard({
   type, isCenter, onClick,
 }: {
@@ -618,7 +626,7 @@ function ThinTypeCard({
 }) {
   const accent = TYPE_ACCENT[type.slug] ?? NEON;
   const rgb    = ACCENT_RGB[accent] ?? "183,255,27";
-  const Icon   = type.icon;
+  const seed   = CARD_IMG_SEED[type.slug] ?? "1000";
 
   return (
     <div
@@ -627,55 +635,49 @@ function ThinTypeCard({
       style={{
         flex: isCenter ? "1.08" : "1",
         borderRadius: "18px",
-        background: isCenter
-          ? `linear-gradient(180deg, rgba(${rgb},0.13) 0%, ${CARD_BG} 42%)`
-          : "rgba(255,255,255,0.03)",
+        background: CARD_BG,
         border: `1.5px solid ${isCenter ? `rgba(${rgb},0.30)` : "rgba(255,255,255,0.07)"}`,
         boxShadow: isCenter
           ? `0 28px 64px 0 rgba(${rgb},0.18), 0 0 0 1px rgba(${rgb},0.06)`
           : "none",
         transform: isCenter ? "translateY(-14px) scale(1.03)" : "scale(0.97)",
         opacity: isCenter ? 1 : 0.55,
-        filter: isCenter ? "none" : "saturate(0.5) brightness(0.85)",
+        filter: isCenter ? "none" : "saturate(0.4) brightness(0.75)",
         transition: "all 0.35s cubic-bezier(0.22,1,0.36,1)",
         padding: "0 0 20px 0",
         zIndex: isCenter ? 2 : 1,
       }}>
 
-      {/* Decorative corner triangle (top-right, like reference) */}
-      <div className="absolute top-0 right-0 overflow-hidden" style={{ width: "36px", height: "36px" }}>
-        <div style={{
-          position: "absolute", top: 0, right: 0,
-          borderStyle: "solid", borderWidth: "0 36px 36px 0",
-          borderColor: `transparent rgba(${rgb},${isCenter ? 0.45 : 0.20}) transparent transparent`,
+      {/* ── Full-width gaming image header ── */}
+      <div className="relative w-full overflow-hidden shrink-0" style={{ height: "120px", borderRadius: "18px 18px 0 0" }}>
+        <img
+          src={`https://picsum.photos/seed/${seed}/400/240`}
+          alt=""
+          draggable={false}
+          className="w-full h-full object-cover"
+          style={{ display: "block" }}
+        />
+        {/* dark base overlay so text is always readable */}
+        <div className="absolute inset-0" style={{ background: "rgba(7,11,16,0.45)" }} />
+        {/* accent colour tint from the bottom */}
+        <div className="absolute inset-0" style={{
+          background: `linear-gradient(to top, rgba(${rgb},0.28) 0%, transparent 60%)`,
         }} />
-      </div>
-
-      {/* Best-for label top-left */}
-      <div className="px-4 pt-4 mb-3">
-        {type.recommended && (
-          <div className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mb-1.5"
-            style={{ background: "rgba(251,146,60,0.18)", color: "#fb923c" }}>
-            ★ Best
-          </div>
-        )}
-        <h3 className="text-[14px] font-black leading-tight" style={{ color: isCenter ? "#fff" : "rgba(255,255,255,0.65)" }}>
-          {type.shortName}
-        </h3>
-      </div>
-
-      {/* Large circle with icon (like the price badge in reference) */}
-      <div className="mx-auto mb-4 flex flex-col items-center justify-center rounded-full"
-        style={{
-          width: "84px", height: "84px",
-          background: `radial-gradient(circle, rgba(${rgb},0.22) 0%, rgba(${rgb},0.08) 100%)`,
-          border: `2px solid rgba(${rgb},${isCenter ? 0.40 : 0.20})`,
-          boxShadow: isCenter ? `0 0 32px 0 rgba(${rgb},0.25)` : "none",
-        }}>
-        <Icon size={36} style={{ color: accent, filter: isCenter ? `drop-shadow(0 0 14px ${accent}90)` : "none" }} />
-        <span className="text-[9px] font-bold mt-0.5" style={{ color: `rgba(${rgb},0.7)` }}>
-          {type.duration}d
-        </span>
+        {/* title + badge sit over the image */}
+        <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
+          {type.recommended && (
+            <div className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mb-1.5"
+              style={{ background: "rgba(251,146,60,0.22)", color: "#fb923c", backdropFilter: "blur(6px)" }}>
+              ★ Best
+            </div>
+          )}
+          <h3 className="text-[14px] font-black leading-tight text-white drop-shadow-md">
+            {type.shortName}
+          </h3>
+          <span className="text-[10px] font-bold" style={{ color: accent, textShadow: `0 0 12px ${accent}` }}>
+            {type.duration} days
+          </span>
+        </div>
       </div>
 
       {/* Feature / stat rows — like the check list in reference */}
