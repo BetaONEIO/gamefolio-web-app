@@ -41,6 +41,7 @@ export default function GameProfileTab() {
 
   const { data, isLoading } = useQuery<{ profile: Profile; fieldMeta: FieldMeta }>({
     queryKey: ["/api/indie/profile"],
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   const profile = (data?.profile ?? null) as Profile | null;
