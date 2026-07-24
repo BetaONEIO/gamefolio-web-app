@@ -188,63 +188,98 @@ function AnimatedCheck({ size = 24, color = NEON }: { size?: number; color?: str
 }
 
 // ─────────────────────────────────────────────
-// Shared StepHero — identical visual shell for every wizard step
+// Hero illustration — rich orbital composition
+// ─────────────────────────────────────────────
+
+type SideIcon = { icon: any; top?: string; bottom?: string; left?: string; right?: string };
+
+function StepIllustration({ icon: Icon, accent, rgb, sideIcons = [] }: {
+  icon: any; accent: string; rgb: string; sideIcons?: SideIcon[];
+}) {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      {/* Dot grid */}
+      <div className="absolute inset-0" style={{
+        backgroundImage: `radial-gradient(circle, rgba(${rgb},0.65) 1px, transparent 1px)`,
+        backgroundSize: "28px 28px", opacity: 0.065,
+      }} />
+      {/* Ambient glow */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div style={{ width: "380px", height: "380px", background: `radial-gradient(circle, rgba(${rgb},0.10) 0%, transparent 63%)`, borderRadius: "50%" }} />
+      </div>
+      {/* Orbital rings */}
+      <div className="absolute rounded-full"
+        style={{ width: "196px", height: "196px", border: `1px solid rgba(${rgb},0.11)` }} />
+      <div className="absolute rounded-full"
+        style={{ width: "270px", height: "270px", border: `1px solid rgba(${rgb},0.06)` }} />
+      {/* Satellite icons */}
+      {sideIcons.map(({ icon: SIcon, top, bottom, left, right }, i) => (
+        <div key={i} className="absolute flex items-center justify-center"
+          style={{ top, bottom, left, right, width: "40px", height: "40px", borderRadius: "12px", background: `rgba(${rgb},0.08)`, border: `1px solid rgba(${rgb},0.15)` }}>
+          <SIcon style={{ width: "18px", height: "18px", color: accent, opacity: 0.6 }} />
+        </div>
+      ))}
+      {/* Central icon */}
+      <div className="relative">
+        <div className="flex items-center justify-center"
+          style={{ width: "96px", height: "96px", borderRadius: "28px",
+            background: `linear-gradient(145deg, rgba(${rgb},0.18) 0%, rgba(${rgb},0.07) 100%)`,
+            border: `1.5px solid rgba(${rgb},0.30)`,
+            boxShadow: `0 0 80px 0 rgba(${rgb},0.13), 0 0 0 6px rgba(${rgb},0.04), inset 0 1px 0 rgba(255,255,255,0.07)`,
+          }}>
+          <Icon style={{ width: "48px", height: "48px", color: accent, filter: `drop-shadow(0 0 22px ${accent}90)` }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Shared StepHero — premium feature-card shell
 // ─────────────────────────────────────────────
 
 function StepHero({
   icon: Icon, title, description,
   accent = NEON, rgb = "183,255,27",
+  sideIcons,
   features, banner, children,
 }: {
   icon: any; title: string; description: string;
   accent?: string; rgb?: string;
+  sideIcons?: SideIcon[];
   features?: { icon: any; title: string; desc: string }[];
   banner?: { icon: any; text: ReactNode; accent: string; rgb: string };
   children?: ReactNode;
 }) {
   return (
-    <div className="space-y-5 gf-fade-up">
-      {/* ── Hero illustration ── */}
-      <div className="relative rounded-2xl overflow-hidden flex items-center justify-center"
-        style={{ height: "180px", background: `linear-gradient(160deg, rgba(${rgb},0.11) 0%, rgba(7,11,16,0.98) 65%)`, border: `1px solid rgba(${rgb},0.15)` }}>
-        <div className="absolute inset-0" style={{
-          backgroundImage: `radial-gradient(circle, rgba(${rgb},0.7) 1px, transparent 1px)`,
-          backgroundSize: "22px 22px", opacity: 0.07,
-        }} />
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div style={{ width: "280px", height: "280px", background: `radial-gradient(circle, rgba(${rgb},0.10) 0%, transparent 65%)`, borderRadius: "50%" }} />
-        </div>
-        <div className="relative">
-          <div className="w-20 h-20 rounded-3xl flex items-center justify-center"
-            style={{ background: `rgba(${rgb},0.10)`, border: `1.5px solid rgba(${rgb},0.22)`, boxShadow: `0 0 40px 0 rgba(${rgb},0.12)` }}>
-            <Icon className="w-10 h-10" style={{ color: accent, filter: `drop-shadow(0 0 14px ${accent}70)` }} />
-          </div>
-        </div>
+    <div className="space-y-7 gf-fade-up">
+      {/* ── Large hero illustration (~40% of card) ── */}
+      <div className="relative rounded-2xl overflow-hidden"
+        style={{ height: "260px", background: `linear-gradient(160deg, rgba(${rgb},0.09) 0%, rgba(5,8,14,1) 70%)`, border: `1px solid rgba(${rgb},0.11)` }}>
+        <StepIllustration icon={Icon} accent={accent} rgb={rgb} sideIcons={sideIcons} />
       </div>
 
-      {/* ── Title & description ── */}
-      <div>
-        <h3 className="text-xl font-black text-white mb-1.5 leading-tight">{title}</h3>
-        <p className="text-[13px] leading-relaxed" style={{ color: "rgba(255,255,255,0.4)" }}>{description}</p>
+      {/* ── Title & description — centered ── */}
+      <div className="text-center">
+        <h3 className="text-[22px] font-black text-white mb-2.5 leading-tight tracking-tight">{title}</h3>
+        <p className="text-[13px] leading-relaxed mx-auto" style={{ color: "rgba(255,255,255,0.42)", maxWidth: "360px" }}>{description}</p>
       </div>
 
-      {/* ── Feature list ── */}
+      {/* ── Feature list — borderless, landing-page style ── */}
       {features && features.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-5 px-1">
           {features.map((f, i) => {
             const FIcon = f.icon;
             return (
-              <div key={i} className="flex items-start gap-3 p-3.5 rounded-xl"
-                style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <div className="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center"
-                  style={{ background: `rgba(${rgb},0.09)`, border: `1px solid rgba(${rgb},0.16)` }}>
-                  <FIcon className="w-4 h-4" style={{ color: accent }} />
+              <div key={i} className="flex items-start gap-4">
+                <div className="shrink-0 flex items-center justify-center"
+                  style={{ width: "44px", height: "44px", borderRadius: "14px", background: `rgba(${rgb},0.09)`, border: `1px solid rgba(${rgb},0.15)` }}>
+                  <FIcon style={{ width: "20px", height: "20px", color: accent }} />
                 </div>
-                <div className="flex-1 min-w-0 pt-0.5">
-                  <div className="text-[12px] font-bold text-white leading-tight">{f.title}</div>
-                  <div className="text-[11px] mt-0.5 leading-snug" style={{ color: "rgba(255,255,255,0.33)" }}>{f.desc}</div>
+                <div className="flex-1 min-w-0 pt-1">
+                  <div className="text-[13px] font-bold text-white leading-tight">{f.title}</div>
+                  <div className="text-[12px] mt-1.5 leading-snug" style={{ color: "rgba(255,255,255,0.38)" }}>{f.desc}</div>
                 </div>
-                <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" style={{ color: `rgba(${rgb},0.45)` }} />
               </div>
             );
           })}
@@ -255,13 +290,13 @@ function StepHero({
       {banner && (
         <div className="flex items-start gap-3 px-4 py-3.5 rounded-xl"
           style={{ background: `rgba(${banner.rgb},0.05)`, border: `1px solid rgba(${banner.rgb},0.16)` }}>
-          <banner.icon className="w-4 h-4 mt-0.5 shrink-0" style={{ color: banner.accent }} />
+          <banner.icon style={{ width: "16px", height: "16px", marginTop: "2px", flexShrink: 0, color: banner.accent }} />
           <p className="text-[11px] leading-relaxed" style={{ color: `rgba(${banner.rgb},0.85)` }}>{banner.text}</p>
         </div>
       )}
 
       {/* ── Functional step content ── */}
-      {children && <div className="space-y-5 pt-1">{children}</div>}
+      {children && <div className="space-y-5">{children}</div>}
     </div>
   );
 }
@@ -604,6 +639,11 @@ function StepPersonalise({ type, settings, onChange }: {
       icon={Gamepad2}
       title="Personalise Your Campaign"
       description="Tell us when you'd like to launch and which platforms your game supports. We'll match you with the right creators."
+      sideIcons={[
+        { icon: Calendar,  top: "32px",    left: "56px"  },
+        { icon: Users,     bottom: "32px", right: "56px" },
+        { icon: Sparkles,  top: "28px",    right: "80px" },
+      ]}
       features={[
         { icon: Gamepad2,  title: "Your Verified Game",  desc: "Pre-filled from your indie developer profile." },
         { icon: Calendar,  title: "Flexible Launch Timing", desc: "Go live immediately or schedule a specific start date." },
@@ -847,6 +887,11 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull, onDemo
       icon={KeyRound}
       title="Secure Key Vault"
       description="Your game keys are encrypted and held in escrow. Creators receive a demo key on join, and a full game key when they complete the campaign."
+      sideIcons={[
+        { icon: ShieldCheck,  top: "28px",    right: "60px" },
+        { icon: Lock,         bottom: "30px", left:  "60px" },
+        { icon: CheckCircle2, bottom: "28px", right: "80px" },
+      ]}
       features={[
         { icon: Lock,         title: "Encrypted Escrow",        desc: "Keys are locked in the vault at launch and securely stored." },
         { icon: CheckCircle2, title: "Automatic Validation",    desc: "Duplicate and invalid keys are detected automatically." },
@@ -898,6 +943,11 @@ function StepLaunch({ type, settings, confirmed, onConfirm, submitting, onLaunch
       icon={Rocket}
       title="Launch Your Campaign"
       description="Review your campaign and send it live. Your game will be discovered by verified creators on Gamefolio."
+      sideIcons={[
+        { icon: ShieldCheck, top:    "28px", left:  "64px" },
+        { icon: Users,       top:    "28px", right: "64px" },
+        { icon: Zap,         bottom: "28px", left:  "80px" },
+      ]}
       features={[
         { icon: Users,      title: `${capacity} Verified Creators`,  desc: `${duration}-day campaign · ${type.demoKeys} demo keys · ${type.fullKeys} full game keys.` },
         { icon: ShieldCheck, title: "GF Verified Campaign",          desc: "Only eligible creators can apply — Gamefolio handles all moderation." },
@@ -1146,6 +1196,11 @@ function AutoCampaignInfo() {
       title="Automatic Campaigns"
       description="Upload your keys once and let Gamefolio continuously create, launch and manage creator campaigns for your game. You set the limits — we handle the rest."
       accent="#a78bfa" rgb="167,139,250"
+      sideIcons={[
+        { icon: KeyRound, top:    "30px", left:  "56px" },
+        { icon: Film,     top:    "30px", right: "56px" },
+        { icon: Users,    bottom: "28px", right: "72px" },
+      ]}
       features={[
         { icon: Upload,     title: "Upload Keys Once",            desc: "Add your game keys to the Gamefolio key pool — one time setup." },
         { icon: Bot,        title: "Gamefolio Manages Everything", desc: "Campaigns are created, launched and managed automatically." },
@@ -1177,6 +1232,11 @@ function AutoStepUploadKeys({ demoKeys, fullKeys, poolDemo, poolFull, onDemoChan
       title="Build Your Key Pool"
       description="Upload your game keys once. Gamefolio draws from this pool to fuel every campaign it creates for you — automatically and within your set limits."
       accent="#a78bfa" rgb="167,139,250"
+      sideIcons={[
+        { icon: KeyRound,    top:    "28px", left:  "56px" },
+        { icon: ShieldCheck, top:    "28px", right: "56px" },
+        { icon: Rocket,      bottom: "30px", left:  "80px" },
+      ]}
       features={[
         { icon: KeyRound,   title: "Demo Keys",             desc: "Issued to creators automatically when they join a campaign." },
         { icon: Rocket,     title: "Full Game Keys",        desc: "Rewarded when creators complete their campaign deliverables." },
@@ -1260,6 +1320,11 @@ function AutoStepLimits({ limits, onChange }: { limits: AutoLimits; onChange: (l
       title="Set Your Limits"
       description="Stay in control of how many creators participate and how often campaigns run. Gamefolio handles everything within these limits."
       accent="#a78bfa" rgb="167,139,250"
+      sideIcons={[
+        { icon: Users,  top:    "32px", left:  "52px" },
+        { icon: Clock,  top:    "32px", right: "52px" },
+        { icon: Lock,   bottom: "30px", left:  "72px" },
+      ]}
       features={[
         { icon: Users,      title: "Creator Cap",       desc: "Maximum creators per campaign — Gamefolio never exceeds this." },
         { icon: Clock,      title: "Campaign Frequency", desc: "Control how often new campaigns are automatically created." },
@@ -1364,6 +1429,11 @@ function AutoStepConfirm({ limits, poolDemo, poolFull, indieProfile, confirmed, 
       title="Ready to Activate"
       description="Gamefolio will manage your campaigns automatically within these limits. You can pause or adjust everything from your dashboard at any time."
       accent="#a78bfa" rgb="167,139,250"
+      sideIcons={[
+        { icon: ShieldCheck,  top:    "28px", left:  "52px" },
+        { icon: CheckCircle2, top:    "28px", right: "52px" },
+        { icon: Rocket,       bottom: "30px", right: "72px" },
+      ]}
       features={[
         { icon: ShieldCheck,  title: "Safeguards Always Active",    desc: "Campaigns never launch without sufficient keys in your pool." },
         { icon: Sliders,      title: "Always Respects Your Limits", desc: "Creator caps, frequency, and key reserves are always enforced." },
