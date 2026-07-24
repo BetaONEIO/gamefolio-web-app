@@ -608,107 +608,251 @@ function CreateBountyDialog({ open, onClose, gameId, onCreated }: {
   const labelStyle = { fontSize: "11px", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "1px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "6px" };
   const totalXP = (parseInt(xpJoin) || 0) + (parseInt(xpPerClip) || 0) * (parseInt(requiredClips) || 0) + (parseInt(xpPerReel) || 0) * (parseInt(requiredReels) || 0) + (parseInt(xpPerScreenshot) || 0) * (parseInt(requiredScreenshots) || 0) + (parseInt(xpViewMilestone) || 0) + (parseInt(xpCompletionBonus) || 0);
 
+  const DIALOG_BG = "#0e1520";
+  const DIALOG_BORDER = "rgba(255,255,255,0.10)";
+  const HUB_NEON = "#B8FF1B";
+
+  const sectionCard = { background: "rgba(255,255,255,0.03)", border: `1px solid ${DIALOG_BORDER}`, borderRadius: "12px", padding: "16px" };
+  const inputStyle2 = { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.10)", color: "#fff", borderRadius: "10px", padding: "10px 14px", width: "100%", outline: "none", fontSize: "14px", transition: "border-color 0.2s" };
+  const labelStyle2 = { fontSize: "10px", fontWeight: 800, textTransform: "uppercase" as const, letterSpacing: "1.2px", color: "rgba(255,255,255,0.45)", display: "block", marginBottom: "6px" };
+
+  const steps = [
+    { num: 1, label: "Basics" },
+    { num: 2, label: "Keys" },
+    { num: 3, label: "Objectives" },
+    { num: 4, label: "Rewards" },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && (onClose(), resetForm())}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto p-0" style={{ background: "#0B1218", border: "1px solid rgba(193,255,0,0.2)" }}>
-        <DialogHeader className="px-6 pt-6 pb-0">
-          <div className="flex items-center gap-2 mb-1">
-            <Sword className="w-5 h-5" style={{ color: NEON }} />
-            <DialogTitle className="text-white font-black text-lg">Create Creator Campaign</DialogTitle>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto p-0 border-0" style={{ background: DIALOG_BG }}>
+        {/* Header bar */}
+        <div className="px-6 pt-6 pb-4" style={{ borderBottom: `1px solid ${DIALOG_BORDER}` }}>
+          <div className="flex items-center gap-2.5 mb-2">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(184,255,27,0.12)", border: "1px solid rgba(184,255,27,0.25)" }}>
+              <Sword className="w-4 h-4" style={{ color: HUB_NEON }} />
+            </div>
+            <DialogTitle className="text-white font-black text-lg tracking-tight">Create Creator Campaign</DialogTitle>
           </div>
-          <p className="text-sm text-gray-400">Launch a full bounty campaign with demo keys, content objectives, and XP rewards.</p>
-        </DialogHeader>
+          <p className="text-xs" style={{ color: "rgba(255,255,255,0.40)" }}>Launch a bounty campaign with demo keys, content objectives, and XP rewards.</p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
-          {/* Step indicator */}
-          <div className="flex items-center gap-2 mb-2">
-            <button type="button" onClick={() => setStep(1)} className="text-xs font-bold px-2.5 py-1 rounded-full"
-              style={{ background: step === 1 ? "rgba(193,255,0,0.2)" : "rgba(255,255,255,0.06)", color: step === 1 ? NEON : "rgba(255,255,255,0.4)" }}>1. Basics</button>
-            <button type="button" onClick={() => setStep(2)} className="text-xs font-bold px-2.5 py-1 rounded-full"
-              style={{ background: step === 2 ? "rgba(193,255,0,0.2)" : "rgba(255,255,255,0.06)", color: step === 2 ? NEON : "rgba(255,255,255,0.4)" }}>2. Keys</button>
-            <button type="button" onClick={() => setStep(3)} className="text-xs font-bold px-2.5 py-1 rounded-full"
-              style={{ background: step === 3 ? "rgba(193,255,0,0.2)" : "rgba(255,255,255,0.06)", color: step === 3 ? NEON : "rgba(255,255,255,0.4)" }}>3. Objectives</button>
-            <button type="button" onClick={() => setStep(4)} className="text-xs font-bold px-2.5 py-1 rounded-full"
-              style={{ background: step === 4 ? "rgba(193,255,0,0.2)" : "rgba(255,255,255,0.06)", color: step === 4 ? NEON : "rgba(255,255,255,0.4)" }}>4. Rewards</button>
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
+          {/* Connected step indicator */}
+          <div className="flex items-center gap-0">
+            {steps.map((s, i) => {
+              const active = step === s.num;
+              const done = step > s.num;
+              const isLast = i === steps.length - 1;
+              return (
+                <div key={s.num} className="flex items-center flex-1">
+                  <button type="button" onClick={() => setStep(s.num)}
+                    className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all"
+                      style={{
+                        background: active ? HUB_NEON : done ? "rgba(184,255,27,0.15)" : "rgba(255,255,255,0.06)",
+                        color: active ? "#070b10" : done ? HUB_NEON : "rgba(255,255,255,0.35)",
+                        border: active ? "none" : done ? `1px solid rgba(184,255,27,0.30)` : `1px solid rgba(255,255,255,0.12)`,
+                      }}>
+                      {done ? <Check className="w-3.5 h-3.5" /> : s.num}
+                    </div>
+                    <span className="text-[9px] font-bold uppercase tracking-wider truncate"
+                      style={{ color: active ? HUB_NEON : done ? "rgba(184,255,27,0.70)" : "rgba(255,255,255,0.30)" }}>
+                      {s.label}
+                    </span>
+                  </button>
+                  {!isLast && (
+                    <div className="w-8 h-px flex-shrink-0 mx-1"
+                      style={{ background: step > s.num ? HUB_NEON : "rgba(255,255,255,0.10)" }} />
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {step === 1 && (
             <div className="space-y-4">
-              <div><label style={labelStyle}>Campaign Title *</label><input style={inputStyle} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Early Creator Access" required /></div>
-              <div><label style={labelStyle}>Display Name (optional)</label><input style={inputStyle} value={campaignTitle} onChange={e => setCampaignTitle(e.target.value)} placeholder="e.g. Creator Week One Challenge" /></div>
-              <div><label style={labelStyle}>Description</label><textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical" }} value={description} onChange={e => setDescription(e.target.value)} placeholder="What should creators do to earn rewards?" /></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label style={labelStyle}>Creator Slots</label><input style={inputStyle} type="number" min="1" value={creatorSlots} onChange={e => setCreatorSlots(e.target.value)} /></div>
-                <div><label style={labelStyle}>End Date (optional)</label><input style={inputStyle} type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
+              <div style={sectionCard}>
+                <div className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: HUB_NEON }}>Campaign Info</div>
+                <div className="space-y-3">
+                  <div>
+                    <label style={labelStyle2}>Campaign Title *</label>
+                    <input style={inputStyle2} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Early Creator Access" required
+                      onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                  </div>
+                  <div>
+                    <label style={labelStyle2}>Display Name (optional)</label>
+                    <input style={inputStyle2} value={campaignTitle} onChange={e => setCampaignTitle(e.target.value)} placeholder="e.g. Creator Week One Challenge"
+                      onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                  </div>
+                  <div>
+                    <label style={labelStyle2}>Description</label>
+                    <textarea style={{ ...inputStyle2, minHeight: "72px", resize: "vertical" }} value={description} onChange={e => setDescription(e.target.value)} placeholder="What should creators do to earn rewards?"
+                      onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label style={labelStyle2}>Creator Slots</label>
+                      <input style={inputStyle2} type="number" min="1" value={creatorSlots} onChange={e => setCreatorSlots(e.target.value)}
+                        onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                        onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                    </div>
+                    <div>
+                      <label style={labelStyle2}>End Date</label>
+                      <input style={inputStyle2} type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                        onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                        onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-4">
-              <div><label style={labelStyle}>Demo Keys (one per line)</label>
-                <textarea style={{ ...inputStyle, minHeight: "100px", resize: "vertical" }} value={demoKeyPool} onChange={e => setDemoKeyPool(e.target.value)} placeholder="ABC-123-DEF
-GHI-456-JKL" />
-                <div className="text-xs text-gray-500 mt-1">{demoKeyPool.split(/\n|,/).filter(k => k.trim()).length} demo keys available</div>
+              <div style={sectionCard}>
+                <div className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: HUB_NEON }}>
+                  <Key className="w-3.5 h-3.5" /> Demo Keys
+                </div>
+                <textarea style={{ ...inputStyle2, minHeight: "100px", resize: "vertical", fontFamily: "monospace", fontSize: "13px" }}
+                  value={demoKeyPool} onChange={e => setDemoKeyPool(e.target.value)} placeholder="ABC-123-DEF&#10;GHI-456-JKL"
+                  onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                <div className="flex items-center gap-1.5 mt-2">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: demoKeyPool.trim() ? HUB_NEON : "rgba(255,255,255,0.15)" }} />
+                  <span className="text-[11px] font-bold" style={{ color: "rgba(255,255,255,0.40)" }}>
+                    {demoKeyPool.split(/\n|,/).filter(k => k.trim()).length} keys ready
+                  </span>
+                </div>
               </div>
-              <div><label style={labelStyle}>Full Keys (one per line)</label>
-                <textarea style={{ ...inputStyle, minHeight: "100px", resize: "vertical" }} value={fullKeyPool} onChange={e => setFullKeyPool(e.target.value)} placeholder="FULL-KEY-001
-FULL-KEY-002" />
-                <div className="text-xs text-gray-500 mt-1">{fullKeyPool.split(/\n|,/).filter(k => k.trim()).length} full keys available</div>
+              <div style={sectionCard}>
+                <div className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: HUB_NEON }}>
+                  <Unlock className="w-3.5 h-3.5" /> Full Keys
+                </div>
+                <textarea style={{ ...inputStyle2, minHeight: "100px", resize: "vertical", fontFamily: "monospace", fontSize: "13px" }}
+                  value={fullKeyPool} onChange={e => setFullKeyPool(e.target.value)} placeholder="FULL-KEY-001&#10;FULL-KEY-002"
+                  onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                <div className="flex items-center gap-1.5 mt-2">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: fullKeyPool.trim() ? HUB_NEON : "rgba(255,255,255,0.15)" }} />
+                  <span className="text-[11px] font-bold" style={{ color: "rgba(255,255,255,0.40)" }}>
+                    {fullKeyPool.split(/\n|,/).filter(k => k.trim()).length} keys ready
+                  </span>
+                </div>
               </div>
             </div>
           )}
 
           {step === 3 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div><label style={labelStyle}>Required Clips</label><input style={inputStyle} type="number" min="0" value={requiredClips} onChange={e => setRequiredClips(e.target.value)} /></div>
-                <div><label style={labelStyle}>Required Reels</label><input style={inputStyle} type="number" min="0" value={requiredReels} onChange={e => setRequiredReels(e.target.value)} /></div>
+              <div style={sectionCard}>
+                <div className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: HUB_NEON }}>
+                  <Target className="w-3.5 h-3.5" /> Content Objectives
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label style={labelStyle2}>Required Clips</label>
+                    <input style={inputStyle2} type="number" min="0" value={requiredClips} onChange={e => setRequiredClips(e.target.value)}
+                      onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                  </div>
+                  <div>
+                    <label style={labelStyle2}>Required Reels</label>
+                    <input style={inputStyle2} type="number" min="0" value={requiredReels} onChange={e => setRequiredReels(e.target.value)}
+                      onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                  </div>
+                  <div>
+                    <label style={labelStyle2}>Screenshots</label>
+                    <input style={inputStyle2} type="number" min="0" value={requiredScreenshots} onChange={e => setRequiredScreenshots(e.target.value)}
+                      onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                  </div>
+                  <div>
+                    <label style={labelStyle2}>Views Milestone</label>
+                    <input style={inputStyle2} type="number" min="0" value={requiredViews} onChange={e => setRequiredViews(e.target.value)}
+                      onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label style={labelStyle}>Required Screenshots</label><input style={inputStyle} type="number" min="0" value={requiredScreenshots} onChange={e => setRequiredScreenshots(e.target.value)} /></div>
-                <div><label style={labelStyle}>Views Milestone</label><input style={inputStyle} type="number" min="0" value={requiredViews} onChange={e => setRequiredViews(e.target.value)} /></div>
+              <div style={sectionCard}>
+                <div className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: HUB_NEON }}>
+                  <Trophy className="w-3.5 h-3.5" /> Completion Badge
+                </div>
+                <input style={inputStyle2} value={completionBadge} onChange={e => setCompletionBadge(e.target.value)} placeholder="e.g. Early Supporter"
+                  onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
               </div>
-              <div><label style={labelStyle}>Completion Badge Name (optional)</label><input style={inputStyle} value={completionBadge} onChange={e => setCompletionBadge(e.target.value)} placeholder="e.g. Early Supporter" /></div>
             </div>
           )}
 
           {step === 4 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-2">
-                <div><label style={labelStyle}>Join XP</label><input style={inputStyle} type="number" min="0" value={xpJoin} onChange={e => setXpJoin(e.target.value)} /></div>
-                <div><label style={labelStyle}>Per Clip XP</label><input style={inputStyle} type="number" min="0" value={xpPerClip} onChange={e => setXpPerClip(e.target.value)} /></div>
-                <div><label style={labelStyle}>Per Reel XP</label><input style={inputStyle} type="number" min="0" value={xpPerReel} onChange={e => setXpPerReel(e.target.value)} /></div>
+              <div style={sectionCard}>
+                <div className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: HUB_NEON }}>
+                  <Zap className="w-3.5 h-3.5" /> XP Rewards
+                </div>
+                <div className="grid grid-cols-3 gap-2.5">
+                  {[
+                    { label: "Join XP", value: xpJoin, setter: setXpJoin },
+                    { label: "Per Clip", value: xpPerClip, setter: setXpPerClip },
+                    { label: "Per Reel", value: xpPerReel, setter: setXpPerReel },
+                    { label: "Per Screenshot", value: xpPerScreenshot, setter: setXpPerScreenshot },
+                    { label: "View Milestone", value: xpViewMilestone, setter: setXpViewMilestone },
+                    { label: "Completion", value: xpCompletionBonus, setter: setXpCompletionBonus },
+                  ].map((field) => (
+                    <div key={field.label}>
+                      <label style={labelStyle2}>{field.label}</label>
+                      <input style={inputStyle2} type="number" min="0" value={field.value} onChange={e => field.setter(e.target.value)}
+                        onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                        onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div><label style={labelStyle}>Per Screenshot XP</label><input style={inputStyle} type="number" min="0" value={xpPerScreenshot} onChange={e => setXpPerScreenshot(e.target.value)} /></div>
-                <div><label style={labelStyle}>View Milestone XP</label><input style={inputStyle} type="number" min="0" value={xpViewMilestone} onChange={e => setXpViewMilestone(e.target.value)} /></div>
-                <div><label style={labelStyle}>Completion Bonus</label><input style={inputStyle} type="number" min="0" value={xpCompletionBonus} onChange={e => setXpCompletionBonus(e.target.value)} /></div>
-              </div>
-              <div className="rounded-xl p-3 text-center" style={{ background: "rgba(193,255,0,0.06)", border: "1px solid rgba(193,255,0,0.15)" }}>
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total XP Available</div>
-                <div className="text-xl font-black" style={{ color: NEON }}>{totalXP.toLocaleString()} XP</div>
+              <div className="rounded-xl p-4 text-center flex flex-col items-center gap-1"
+                style={{ background: "rgba(184,255,27,0.06)", border: "1px solid rgba(184,255,27,0.18)" }}>
+                <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: "rgba(184,255,27,0.60)" }}>Total XP Available</div>
+                <div className="text-2xl font-black" style={{ color: HUB_NEON }}>{totalXP.toLocaleString()} <span className="text-sm">XP</span></div>
               </div>
             </div>
           )}
 
-          <div className="flex items-center gap-3 pt-2">
-            {step > 1 && (
-              <Button type="button" variant="ghost" className="text-gray-400" onClick={() => setStep(s => s - 1)}>Back</Button>
+          {/* Footer actions */}
+          <div className="flex items-center gap-3 pt-1" style={{ borderTop: `1px solid ${DIALOG_BORDER}` }}>
+            {step > 1 ? (
+              <button type="button" onClick={() => setStep(s => s - 1)}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-white/5"
+                style={{ color: "rgba(255,255,255,0.50)", border: `1px solid ${DIALOG_BORDER}` }}>
+                Back
+              </button>
+            ) : (
+              <button type="button" onClick={() => { onClose(); resetForm(); }}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-white/5"
+                style={{ color: "rgba(255,255,255,0.50)", border: `1px solid ${DIALOG_BORDER}` }}>
+                Cancel
+              </button>
             )}
             <div className="flex-1" />
             {step < 4 ? (
-              <Button type="button" className="font-bold"
-                style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.12)" }}
-                onClick={() => setStep(s => s + 1)}>Next</Button>
+              <button type="button" onClick={() => setStep(s => s + 1)}
+                className="px-5 py-2.5 rounded-xl text-xs font-black transition-all hover:brightness-110"
+                style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: `1px solid rgba(255,255,255,0.15)` }}>
+                Next Step
+              </button>
             ) : (
-              <Button type="submit" disabled={mutation.isPending || !title.trim()} className="font-bold"
-                style={{ background: NEON, color: "#0a0f1c", boxShadow: "0 8px 24px rgba(193,255,0,0.25)" }}>
-                {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-                Create Campaign
-              </Button>
+              <button type="submit" disabled={mutation.isPending || !title.trim()}
+                className="px-5 py-2.5 rounded-xl text-xs font-black transition-all hover:brightness-110 disabled:opacity-40 flex items-center gap-2"
+                style={{ background: HUB_NEON, color: "#070b10", boxShadow: "0 8px 24px rgba(184,255,27,0.25)" }}>
+                {mutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                Launch Campaign
+              </button>
             )}
-            <Button type="button" variant="ghost" className="text-gray-400" onClick={() => { onClose(); resetForm(); }}>Cancel</Button>
           </div>
         </form>
       </DialogContent>
