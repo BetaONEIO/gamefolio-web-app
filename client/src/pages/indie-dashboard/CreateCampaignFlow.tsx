@@ -613,17 +613,25 @@ function StepCustomise({ type, settings, onChange }: {
 // Step 3: Review
 // ─────────────────────────────────────────────
 
-function StepReview({ type, settings, keysOk, onConfirm, confirmed }: {
+function StepReview({ type, settings, keysOk, onConfirm, confirmed, pendingDemoKeys, pendingFullKeys, onPendingKeys }: {
   type: CampaignType; settings: CampaignSettings; keysOk: boolean;
   onConfirm: (v: boolean) => void; confirmed: boolean;
+  pendingDemoKeys: string; pendingFullKeys: string;
+  onPendingKeys: (demo: string, full: string) => void;
 }) {
+  const [uploadOpen, setUploadOpen] = useState(false);
+
   const { data: bountyStatus } = useQuery<any>({
     queryKey: ["/api/indie/bounty-status"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
-  const demoAvail = bountyStatus?.demoKeys?.available ?? 0;
-  const fullAvail = bountyStatus?.fullGameKeys?.available ?? 0;
+  const demoAvail  = bountyStatus?.demoKeys?.available ?? 0;
+  const fullAvail  = bountyStatus?.fullGameKeys?.available ?? 0;
+  const pendDemo   = pendingDemoKeys.split("\n").map(l => l.trim()).filter(Boolean).length;
+  const pendFull   = pendingFullKeys.split("\n").map(l => l.trim()).filter(Boolean).length;
+  const effectiveKeysOk = keysOk ||
+    (demoAvail + pendDemo >= type.demoKeys && fullAvail + pendFull >= type.fullKeys);
   const duration  = type.custom && settings.customDuration ? settings.customDuration : type.duration;
   const capacity  = type.custom && settings.customCapacity ? settings.customCapacity : type.capacity;
 
@@ -666,18 +674,74 @@ function StepReview({ type, settings, keysOk, onConfirm, confirmed }: {
         ))}
       </div>
 
-      {!keysOk && (
-        <div className="rounded-2xl p-4"
-          style={{ background: "rgba(248,113,113,0.05)", border: "1px solid rgba(248,113,113,0.2)" }}>
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-            <div>
+      {!effectiveKeysOk && (
+        <div className="rounded-2xl overflow-hidden"
+          style={{ border: "1px solid rgba(248,113,113,0.25)" }}>
+          {/* Header row */}
+          <button
+            className="w-full flex items-center gap-3 p-4 text-left transition-colors"
+            style={{ background: "rgba(248,113,113,0.06)" }}
+            onClick={() => setUploadOpen(o => !o)}>
+            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+            <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-red-300">More keys needed</p>
-              <p className="text-xs text-red-300/60 mt-1">
-                Upload the required keys to your Key Vault before launching. Every campaign needs both demo keys (for creators to join) and full game keys (for completion rewards).
+              <p className="text-[11px] text-red-300/50 mt-0.5">
+                Need {Math.max(0, type.demoKeys - demoAvail - pendDemo)} more demo · {Math.max(0, type.fullKeys - fullAvail - pendFull)} more full game keys
               </p>
             </div>
-          </div>
+            <span className="text-xs font-bold px-2.5 py-1 rounded-lg shrink-0 transition-all"
+              style={{ background: "rgba(248,113,113,0.15)", color: "#f87171" }}>
+              {uploadOpen ? "Cancel" : "Upload Keys ↑"}
+            </span>
+          </button>
+
+          {/* Expandable paste panel */}
+          {uploadOpen && (
+            <div className="p-4 space-y-4" style={{ borderTop: "1px solid rgba(248,113,113,0.15)", background: "rgba(0,0,0,0.2)" }}>
+              <p className="text-[11px] text-white/40 leading-relaxed">
+                Paste one key per line. Keys are committed to the Campaign Key Vault when you launch.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] font-bold text-white/30 uppercase tracking-wider">
+                      Demo Keys
+                    </label>
+                    <span className="text-[10px] font-bold" style={{ color: pendDemo > 0 ? NEON : "rgba(255,255,255,0.2)" }}>
+                      {demoAvail + pendDemo} / {type.demoKeys}
+                    </span>
+                  </div>
+                  <textarea
+                    style={{ ...fieldStyle, minHeight: "100px", resize: "vertical", fontSize: "11px", fontFamily: "monospace" } as any}
+                    value={pendingDemoKeys}
+                    onChange={e => onPendingKeys(e.target.value, pendingFullKeys)}
+                    placeholder={"DEMO-XXXX-XXXX\nDEMO-YYYY-YYYY"}
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] font-bold text-white/30 uppercase tracking-wider">
+                      Full Game Keys
+                    </label>
+                    <span className="text-[10px] font-bold" style={{ color: pendFull > 0 ? NEON : "rgba(255,255,255,0.2)" }}>
+                      {fullAvail + pendFull} / {type.fullKeys}
+                    </span>
+                  </div>
+                  <textarea
+                    style={{ ...fieldStyle, minHeight: "100px", resize: "vertical", fontSize: "11px", fontFamily: "monospace" } as any}
+                    value={pendingFullKeys}
+                    onChange={e => onPendingKeys(pendingDemoKeys, e.target.value)}
+                    placeholder={"FULL-XXXX-XXXX\nFULL-YYYY-YYYY"}
+                  />
+                </div>
+              </div>
+              {demoAvail + pendDemo >= type.demoKeys && fullAvail + pendFull >= type.fullKeys && (
+                <div className="flex items-center gap-2 text-xs font-bold" style={{ color: NEON }}>
+                  <Check className="w-3.5 h-3.5" /> Key requirements met — ready to launch
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -722,6 +786,8 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
   const [selectedType, setSelectedType] = useState<CampaignType | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingDemoKeys, setPendingDemoKeys] = useState("");
+  const [pendingFullKeys, setPendingFullKeys] = useState("");
   const [settings, setSettings] = useState<CampaignSettings>({
     description: "",
     startType: "asap",
@@ -759,10 +825,23 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
   const effectiveStep = hasCustomStep ? step : (step >= 2 ? step + 1 : step);
   const stepLabel     = step <= totalSteps ? STEP_LABELS[effectiveStep - 1] : "Launch";
 
+  const pendDemo = pendingDemoKeys.split("\n").map(l => l.trim()).filter(Boolean).length;
+  const pendFull = pendingFullKeys.split("\n").map(l => l.trim()).filter(Boolean).length;
+  const { data: bountyStatusMain } = useQuery<any>({
+    queryKey: ["/api/indie/bounty-status"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+  });
+  const demoAvailMain = bountyStatusMain?.demoKeys?.available ?? 0;
+  const fullAvailMain = bountyStatusMain?.fullGameKeys?.available ?? 0;
+  const effectiveKeysOk = !!selectedType && (
+    (demoAvailMain + pendDemo >= selectedType.demoKeys) &&
+    (fullAvailMain + pendFull >= selectedType.fullKeys)
+  );
+
   const canAdvance = (): boolean => {
     if (step === 1) return !!selectedType;
     if (step === 2) return true;
-    if (step === 3) return keysOk && confirmed;
+    if (step === 3) return effectiveKeysOk && confirmed;
     return false;
   };
 
@@ -786,13 +865,24 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
       const instData = await inst.json();
       if (!inst.ok) throw new Error(instData.message || "Failed to create campaign");
 
+      // Upload any inline-pasted keys before submitting
+      const demoKeyList = pendingDemoKeys.split("\n").map(l => l.trim()).filter(Boolean);
+      const fullKeyList = pendingFullKeys.split("\n").map(l => l.trim()).filter(Boolean);
+      if (demoKeyList.length > 0 || fullKeyList.length > 0) {
+        await apiRequest("POST", `/api/campaigns/instances/${instData.id}/keys`, {
+          demoKeys: demoKeyList,
+          fullKeys: fullKeyList,
+        });
+      }
+
       const submitRes = await apiRequest("POST", `/api/campaigns/instances/${instData.id}/submit`, {});
       if (!submitRes.ok) throw new Error("Failed to submit campaign for review");
 
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns/instances"] });
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns/overview"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/indie/bounty-status"] });
 
-      toast({ description: "Campaign submitted for review. You'll hear back within 24 hours." });
+      toast({ description: "Campaign launched successfully." });
       onComplete();
     } catch (err: any) {
       toast({ description: err.message || "Failed to launch campaign", variant: "gamefolioError" as any });
@@ -833,7 +923,9 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
             <StepCustomise type={selectedType} settings={settings} onChange={updateSettings} />
           )}
           {((step === 2 && !hasCustomStep) || (step === 3 && hasCustomStep) || (step === totalSteps && selectedType)) && selectedType && (
-            <StepReview type={selectedType} settings={settings} keysOk={keysOk} confirmed={confirmed} onConfirm={setConfirmed} />
+            <StepReview type={selectedType} settings={settings} keysOk={keysOk} confirmed={confirmed} onConfirm={setConfirmed}
+              pendingDemoKeys={pendingDemoKeys} pendingFullKeys={pendingFullKeys}
+              onPendingKeys={(d, f) => { setPendingDemoKeys(d); setPendingFullKeys(f); }} />
           )}
         </div>
 
