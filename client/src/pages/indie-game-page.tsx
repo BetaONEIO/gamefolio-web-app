@@ -14,7 +14,6 @@ import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
 import { openExternal } from "@/lib/platform";
-import { CampaignCard, type Campaign } from "@/components/indie-bounty/CampaignCard";
 import { CreatorDashboard } from "@/components/indie-bounty/CreatorDashboard";
 import { DeveloperDashboard } from "@/components/indie-bounty/DeveloperDashboard";
 import {
@@ -23,6 +22,7 @@ import {
   ChevronRight, Loader2, Radio, Target, Shield, Flame,
   BarChart3, Video, Globe, Heart, Gamepad2, Check,
   Gamepad, Monitor, Smartphone,
+  Film, MessageSquare, AlertCircle, ShieldCheck, Unlock,
 } from "lucide-react";
 
 const UploadPage = lazy(() => import("./UploadPage"));
@@ -55,6 +55,268 @@ const REWARD_ICONS: Record<string, any> = {
   early_access:  Shield,
   digital:       Gift,
 };
+
+/* ── Bounty Hub style card helpers (matches BountiesPage visual language) ── */
+const HUB_NEON = "#B8FF1B";
+const HUB_CARD_BG = "#0e1520";
+const HUB_CARD_BORDER = "rgba(255,255,255,0.10)";
+
+const REQ_ICON: Record<string, any> = {
+  clip: Film, screenshot: Camera, feedback: MessageSquare,
+  reel: Film, session: Zap, bug: AlertCircle, stream: Zap,
+};
+
+function reqPillLabel(ct: string, qty: number) {
+  if (ct === "clip")       return `×${qty} Clips`;
+  if (ct === "screenshot") return `×${qty} Screenshots`;
+  if (ct === "feedback")   return "Feedback";
+  if (ct === "reel")       return `×${qty} Reels`;
+  if (ct === "stream")     return "Livestream";
+  if (ct === "session")    return "Play Session";
+  if (ct === "bug")        return `×${qty} Bug Reports`;
+  return ct;
+}
+
+function timeRemaining(endDate: string | null) {
+  if (!endDate) return "Ongoing";
+  const diff = new Date(endDate).getTime() - Date.now();
+  if (diff <= 0) return "Ended";
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  if (days > 0) return `${days}d ${hours}h left`;
+  return `${hours}h left`;
+}
+
+function HubRewardCol({ icon, label, sublabel, value, active }: { icon: any; label: string; sublabel: string; value: string; active: boolean }) {
+  return (
+    <div className="flex flex-col items-center gap-1.5 py-3 rounded-xl transition-all duration-200 hover:scale-[1.04]"
+      style={{
+        background: active ? "rgba(184,255,27,0.07)" : "rgba(255,255,255,0.04)",
+        border: `1px solid ${active ? "rgba(184,255,27,0.20)" : "rgba(255,255,255,0.07)"}`,
+      }}>
+      <div className="w-[54px] h-[54px] flex items-center justify-center">{icon}</div>
+      <span className="text-[11px] font-black leading-tight text-center px-1" style={{ color: active ? HUB_NEON : "rgba(255,255,255,0.85)" }}>{value}</span>
+      <span className="text-[9px] font-bold leading-tight text-center px-1" style={{ color: "rgba(255,255,255,0.40)" }}>{label}</span>
+      <span className="text-[8px] leading-tight text-center px-1 uppercase tracking-wider" style={{ color: active ? "rgba(184,255,27,0.55)" : "rgba(255,255,255,0.20)" }}>{sublabel}</span>
+    </div>
+  );
+}
+
+/* Build requirement pills from a GameBounty */
+function bountyRequirementPills(bounty: GameBounty & { participantCount?: number }): { ct: string; qty: number }[] {
+  const pills: { ct: string; qty: number }[] = [];
+  if ((bounty.requiredClips ?? 0) > 0) pills.push({ ct: "clip", qty: bounty.requiredClips ?? 1 });
+  if ((bounty.requiredReels ?? 0) > 0) pills.push({ ct: "reel", qty: bounty.requiredReels ?? 1 });
+  if ((bounty.requiredScreenshots ?? 0) > 0) pills.push({ ct: "screenshot", qty: bounty.requiredScreenshots ?? 1 });
+  if ((bounty.requiredViews ?? 0) > 0) pills.push({ ct: "stream", qty: bounty.requiredViews ?? 1 });
+  return pills;
+}
+
+/* Rich campaign card matching BountiesPage visual language */
+function HubCampaignCard({
+  bounty,
+  gameImageUrl,
+  gameName,
+  onJoin,
+  onViewDashboard,
+  onClaimKey,
+  joining = false,
+  joined = false,
+  completed = false,
+  fullKey = null,
+  progressPercent = 0,
+  isFeatured = false,
+}: {
+  bounty: GameBounty & { participantCount?: number };
+  gameImageUrl?: string;
+  gameName?: string;
+  onJoin: () => void;
+  onViewDashboard: () => void;
+  onClaimKey: () => void;
+  joining?: boolean;
+  joined?: boolean;
+  completed?: boolean;
+  fullKey?: string | null;
+  progressPercent?: number;
+  isFeatured?: boolean;
+}) {
+  const { user } = useAuth();
+  const demoLeft = Number(bounty.demoKeysRemaining ?? 0);
+  const fullLeft = Number(bounty.fullKeysRemaining ?? 0);
+  const totalXP = bounty.totalXpAvailable ?? 0;
+  const endDate = bounty.endDate ? new Date(bounty.endDate).toISOString() : null;
+  const tLeft = timeRemaining(endDate);
+  const nearlyFull = demoLeft > 0 && demoLeft <= 5;
+  const trending = Number(bounty.participantCount ?? 0) >= 10;
+  const slotsUsed = bounty.participantCount ?? 0;
+  const totalSlots = bounty.creatorSlots ?? bounty.maxParticipants ?? 10;
+  const isFull = slotsUsed >= totalSlots;
+  const pills = bountyRequirementPills(bounty);
+
+  const cardStyle = isFeatured ? {
+    background: "linear-gradient(135deg, rgba(193,255,0,0.08) 0%, rgba(120,40,200,0.10) 100%)",
+    border: "1px solid rgba(193,255,0,0.2)",
+    boxShadow: "0 0 40px rgba(193,255,0,0.06)",
+  } : {
+    background: HUB_CARD_BG,
+    border: `1px solid ${HUB_CARD_BORDER}`,
+  };
+
+  return (
+    <div
+      className="rounded-2xl overflow-hidden group transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/60"
+      style={cardStyle}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(184,255,27,0.28)")}
+      onMouseLeave={e => (e.currentTarget.style.borderColor = isFeatured ? "rgba(193,255,0,0.2)" : HUB_CARD_BORDER)}
+    >
+      {/* Hero artwork */}
+      <div className="relative h-48 overflow-hidden">
+        {gameImageUrl ? (
+          <img src={gameImageUrl} alt={gameName || bounty.title}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, #0d1624 0%, #0a1020 100%)" }}>
+            <Target size={44} color="rgba(184,255,27,0.12)" />
+          </div>
+        )}
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #0e1520 0%, rgba(14,21,32,0.18) 60%, transparent 100%)" }} />
+        {/* Badges */}
+        <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+          <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full"
+            style={{ background: HUB_NEON, color: "#070b10" }}>
+            <ShieldCheck size={9} /> GF Verified
+          </span>
+          {trending && (
+            <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full"
+              style={{ background: "rgba(239,68,68,0.85)", color: "white" }}>
+              <Flame size={8} /> Trending
+            </span>
+          )}
+        </div>
+        {nearlyFull && (
+          <div className="absolute top-3 right-3">
+            <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full"
+              style={{ background: "rgba(245,158,11,0.90)", color: "#070b10" }}>
+              ⚡ {demoLeft} Left
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Body */}
+      <div className="px-5 pb-5 pt-4 space-y-3.5">
+        {/* Title + description */}
+        <div>
+          <h3 className="text-lg font-black text-white leading-tight tracking-tight">
+            {bounty.campaignTitle || bounty.title}
+          </h3>
+          {bounty.description && (
+            <p className="text-[12px] mt-1 line-clamp-1" style={{ color: "rgba(255,255,255,0.45)" }}>
+              {bounty.description}
+            </p>
+          )}
+        </div>
+
+        {/* Requirement pills */}
+        {pills.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {pills.map(({ ct, qty }) => {
+              const Icon = REQ_ICON[ct] ?? Target;
+              return (
+                <span key={ct} className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg"
+                  style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.70)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                  <Icon size={11} /> {reqPillLabel(ct, qty)}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Urgency row */}
+        <div className="flex items-center gap-3 text-[11px]">
+          {demoLeft > 0 && (
+            <span style={{ color: HUB_NEON }} className="font-bold">{demoLeft} / {Number(bounty.keyCount ?? demoLeft)} demo keys</span>
+          )}
+          {tLeft !== "Ended" && tLeft !== "Ongoing" && (
+            <span className="text-white/35 flex items-center gap-1"><Clock size={10} /> {tLeft}</span>
+          )}
+          {Number(bounty.participantCount ?? 0) > 0 && (
+            <span className="text-white/35 flex items-center gap-1"><Users size={10} /> {bounty.participantCount}</span>
+          )}
+        </div>
+
+        {/* Rewards — 4 equal columns */}
+        <div className="grid grid-cols-4 gap-1.5">
+          <HubRewardCol
+            icon={<img src="/icons/demo-key-icon.png" alt="Demo" className="w-[45px] h-[45px] object-contain" />}
+            sublabel="Immediate" label="Demo Key"
+            value={demoLeft > 0 ? `${demoLeft}` : "—"} active={demoLeft > 0} />
+          <HubRewardCol
+            icon={<img src="/icons/full-game-icon.png" alt="Full" className="w-[45px] h-[45px] object-contain" />}
+            sublabel="Reward" label="Full Game"
+            value={fullLeft > 0 ? `${fullLeft}` : "—"} active={fullLeft > 0} />
+          <HubRewardCol
+            icon={<Zap size={45} color={HUB_NEON} />}
+            sublabel="Progress" label="XP"
+            value={totalXP > 0 ? totalXP.toLocaleString() : "—"} active={totalXP > 0} />
+          <HubRewardCol
+            icon={<img src="/icons/token-icon.png" alt="Token" className="w-[45px] h-[45px] object-contain" />}
+            sublabel="Bonus" label="GFT"
+            value="—" active={false} />
+        </div>
+
+        {/* CTA */}
+        {joined ? (
+          completed ? (
+            fullKey ? (
+              <button
+                disabled
+                className="w-full py-3 rounded-xl text-sm font-black tracking-wide flex items-center justify-center gap-2"
+                style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.3)", border: HUB_CARD_BORDER }}>
+                <Trophy size={15} style={{ color: HUB_NEON }} /> Campaign Complete
+              </button>
+            ) : (
+              <button
+                className="w-full py-3 rounded-xl text-sm font-black tracking-wide flex items-center justify-center gap-2 transition-all hover:brightness-110 hover:scale-[1.01] active:scale-[0.98]"
+                style={{ background: HUB_NEON, color: "#070b10" }}
+                onClick={onClaimKey}>
+                <Unlock size={15} /> Claim Full Key
+              </button>
+            )
+          ) : (
+            <button
+              className="w-full py-3 rounded-xl text-sm font-black tracking-wide flex items-center justify-center gap-2 transition-all hover:brightness-110"
+              style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: `1px solid ${HUB_CARD_BORDER}` }}
+              onClick={onViewDashboard}>
+              View Objectives <ChevronRight size={15} />
+              {progressPercent > 0 && (
+                <span className="ml-2 text-[10px] font-black px-1.5 py-0.5 rounded" style={{ background: "rgba(193,255,0,0.2)", color: HUB_NEON }}>
+                  {progressPercent}%
+                </span>
+              )}
+            </button>
+          )
+        ) : (
+          <button
+            disabled={isFull || joining || !user}
+            className="w-full py-3 rounded-xl text-sm font-black tracking-wide flex items-center justify-center gap-2 transition-all hover:brightness-110 hover:scale-[1.01] active:scale-[0.98]"
+            style={isFull ? {
+              background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.3)", border: HUB_CARD_BORDER
+            } : {
+              background: HUB_NEON, color: "#070b10"
+            }}
+            onClick={onJoin}>
+            {joining ? <Loader2 size={15} className="animate-spin" /> :
+              isFull ? "Campaign Full" :
+              !user ? "Sign In to Join" :
+              <><ShieldCheck size={15} /> Accept Mission</>}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function DifficultyBadge({ difficulty }: { difficulty?: string | null }) {
   const cfg = DIFFICULTY_CONFIG[difficulty ?? "medium"] ?? DIFFICULTY_CONFIG.medium;
@@ -1485,12 +1747,14 @@ const IndieGamePage = () => {
                           </Button>
                         </div>
                       )}
-                      <CampaignCard
-                        campaign={{ ...(b0 as Campaign), imageUrl: game?.imageUrl ?? undefined }}
+                      <HubCampaignCard
+                        bounty={b0}
+                        gameImageUrl={game?.imageUrl ?? undefined}
+                        gameName={game?.name}
                         isFeatured={true}
-                        onJoin={handleJoinCampaign}
-                        onViewDashboard={handleViewDashboard}
-                        onClaimKey={(id) => { setSelectedBountyId(id); setShowCreatorDashboard(true); }}
+                        onJoin={() => handleJoinCampaign(b0.id)}
+                        onViewDashboard={() => handleViewDashboard(b0.id)}
+                        onClaimKey={() => { setSelectedBountyId(b0.id); setShowCreatorDashboard(true); }}
                         joining={acceptingBountyId === b0.id}
                         joined={isJoined0}
                         completed={s0?.status === "completed"}
@@ -1520,11 +1784,13 @@ const IndieGamePage = () => {
                                 </Button>
                               </div>
                             )}
-                            <CampaignCard
-                              campaign={{ ...(bounty as Campaign), imageUrl: game?.imageUrl ?? undefined }}
-                              onJoin={handleJoinCampaign}
-                              onViewDashboard={handleViewDashboard}
-                              onClaimKey={(id) => { setSelectedBountyId(id); setShowCreatorDashboard(true); }}
+                            <HubCampaignCard
+                              bounty={bounty}
+                              gameImageUrl={game?.imageUrl ?? undefined}
+                              gameName={game?.name}
+                              onJoin={() => handleJoinCampaign(bounty.id)}
+                              onViewDashboard={() => handleViewDashboard(bounty.id)}
+                              onClaimKey={() => { setSelectedBountyId(bounty.id); setShowCreatorDashboard(true); }}
                               joining={acceptingBountyId === bounty.id}
                               joined={isJoined}
                               completed={s?.status === "completed"}
