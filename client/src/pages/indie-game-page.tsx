@@ -584,8 +584,9 @@ const TEMPLATES = [
   { slug: "custom", name: "Custom Campaign", duration: 14, capacity: 20, desc: "Full control over duration, capacity and targeting.", icon: Star, recommended: false },
 ];
 
-function CreateBountyDialog({ open, onClose, gameId, onCreated }: {
+function CreateBountyDialog({ open, onClose, gameId, onCreated, gameImageUrl, gameName }: {
   open: boolean; onClose: () => void; gameId: number; onCreated: () => void;
+  gameImageUrl?: string; gameName?: string;
 }) {
   const { toast } = useToast();
   const [, navigate] = useLocation();
@@ -917,98 +918,248 @@ function CreateBountyDialog({ open, onClose, gameId, onCreated }: {
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent ref={dialogRef as any} className="max-w-xl max-h-[90vh] overflow-y-auto p-0 border-0" style={{ background: DIALOG_BG }}>
-        {/* Header */}
-        <div className="px-6 pt-6 pb-4" style={{ borderBottom: `1px solid ${DIALOG_BORDER}` }}>
-          <div className="flex items-center gap-2.5 mb-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(184,255,27,0.12)", border: "1px solid rgba(184,255,27,0.25)" }}>
-              <Sword className="w-4 h-4" style={{ color: HUB_NEON }} />
+  /* ── Live preview computed values ── */
+  const previewClips = parseInt(requiredClips) || 0;
+  const previewReels = parseInt(requiredReels) || 0;
+  const previewShots = parseInt(requiredScreenshots) || 0;
+  const previewTitle = title.trim() || (gameName ? `${gameName} Creator Campaign` : "Your Campaign Title");
+  const previewDesc = description.trim() || "Add a description to tell creators what to do and what they'll earn.";
+  const previewDemoCount = demoKeys.length;
+  const previewFullCount = fullKeys.length;
+  const previewSlots = parseInt(creatorSlots) || 10;
+
+  /* ── Left panel — live card preview ── */
+  const PreviewPanel = () => (
+    <div className="flex flex-col h-full" style={{ background: "rgba(255,255,255,0.02)", borderRight: `1px solid ${DIALOG_BORDER}` }}>
+      {/* Label */}
+      <div className="px-5 pt-5 pb-3 flex items-center gap-2" style={{ borderBottom: `1px solid ${DIALOG_BORDER}` }}>
+        <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: success ? HUB_NEON : "rgba(255,255,255,0.25)" }} />
+        <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: success ? HUB_NEON : "rgba(255,255,255,0.30)" }}>
+          {success ? "Live" : "Preview"}
+        </span>
+      </div>
+
+      {/* Card */}
+      <div className="flex-1 overflow-y-auto px-5 py-5">
+        <div className="rounded-2xl overflow-hidden" style={{ background: HUB_CARD_BG, border: `1px solid ${success ? "rgba(184,255,27,0.35)" : HUB_CARD_BORDER}`, boxShadow: success ? "0 0 32px rgba(184,255,27,0.10)" : "none" }}>
+          {/* Hero image */}
+          <div className="relative h-44 overflow-hidden">
+            {gameImageUrl ? (
+              <img src={gameImageUrl} alt={gameName} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #0d1624 0%, #0a1020 100%)" }}>
+                <Gamepad2 size={44} color="rgba(184,255,27,0.10)" />
+              </div>
+            )}
+            <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #0e1520 0%, rgba(14,21,32,0.18) 55%, transparent 100%)" }} />
+            <div className="absolute top-3 left-3">
+              <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full" style={{ background: HUB_NEON, color: "#070b10" }}>
+                <ShieldCheck size={9} /> GF Verified
+              </span>
             </div>
-            <DialogTitle className="text-white font-black text-lg tracking-tight">
-              {success ? "Campaign Launched" : "Launch Campaign"}
-            </DialogTitle>
           </div>
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.40)" }}>
-            {success
-              ? "Your campaign is live and ready for creators."
-              : "Choose a template, add keys, and launch instantly."}
-          </p>
+
+          {/* Body */}
+          <div className="px-4 pb-4 pt-3 space-y-3">
+            {/* Title + desc */}
+            <div>
+              <h3 className={`text-base font-black leading-tight tracking-tight ${title.trim() ? "text-white" : ""}`}
+                style={{ color: title.trim() ? "white" : "rgba(255,255,255,0.25)" }}>
+                {previewTitle}
+              </h3>
+              <p className="text-[11px] mt-1 line-clamp-2" style={{ color: description.trim() ? "rgba(255,255,255,0.45)" : "rgba(255,255,255,0.18)" }}>
+                {previewDesc}
+              </p>
+            </div>
+
+            {/* Requirement pills */}
+            {(previewClips > 0 || previewReels > 0 || previewShots > 0) ? (
+              <div className="flex flex-wrap gap-1.5">
+                {previewClips > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg"
+                    style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.70)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                    <Film size={10} /> ×{previewClips} Clips
+                  </span>
+                )}
+                {previewShots > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg"
+                    style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.70)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                    <Camera size={10} /> ×{previewShots} Screenshots
+                  </span>
+                )}
+                {previewReels > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg"
+                    style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.70)", border: "1px solid rgba(255,255,255,0.09)" }}>
+                    <Film size={10} /> ×{previewReels} Reels
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="flex gap-1.5">
+                {["Clips", "Screenshots", "Reels"].map(l => (
+                  <span key={l} className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-lg"
+                    style={{ background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    ×0 {l}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Keys / slots row */}
+            <div className="flex items-center gap-3 text-[11px]">
+              {previewDemoCount > 0 ? (
+                <span className="font-bold" style={{ color: HUB_NEON }}>{previewDemoCount} / {previewDemoCount} demo keys</span>
+              ) : (
+                <span style={{ color: "rgba(255,255,255,0.20)" }}>0 demo keys</span>
+              )}
+              <span className="flex items-center gap-1" style={{ color: "rgba(255,255,255,0.30)" }}>
+                <Users size={10} /> {previewSlots}
+              </span>
+            </div>
+
+            {/* Reward grid */}
+            <div className="grid grid-cols-4 gap-1">
+              {[
+                { src: "/icons/demo-key-icon.png", label: "Demo Key", sub: "IMMEDIATE", value: previewDemoCount > 0 ? String(previewDemoCount) : "—", active: previewDemoCount > 0 },
+                { src: "/icons/full-game-icon.png", label: "Full Game", sub: "REWARD", value: previewFullCount > 0 ? String(previewFullCount) : "—", active: previewFullCount > 0 },
+                { icon: <Zap size={32} color={totalXP > 0 ? HUB_NEON : "rgba(255,255,255,0.15)"} />, label: "XP", sub: "PROGRESS", value: totalXP > 0 ? totalXP.toLocaleString() : "—", active: totalXP > 0 },
+                { src: "/icons/token-icon.png", label: "GFT", sub: "BONUS", value: "—", active: false },
+              ].map(col => (
+                <div key={col.label} className="flex flex-col items-center gap-1 py-2.5 rounded-xl"
+                  style={{ background: col.active ? "rgba(184,255,27,0.07)" : "rgba(255,255,255,0.04)", border: `1px solid ${col.active ? "rgba(184,255,27,0.20)" : "rgba(255,255,255,0.07)"}` }}>
+                  <div className="w-8 h-8 flex items-center justify-center">
+                    {col.src ? <img src={col.src} alt={col.label} className="w-8 h-8 object-contain" /> : col.icon}
+                  </div>
+                  <span className="text-[10px] font-black" style={{ color: col.active ? HUB_NEON : "rgba(255,255,255,0.85)" }}>{col.value}</span>
+                  <span className="text-[8px] font-bold" style={{ color: "rgba(255,255,255,0.35)" }}>{col.label}</span>
+                  <span className="text-[7px] uppercase tracking-wider" style={{ color: col.active ? "rgba(184,255,27,0.55)" : "rgba(255,255,255,0.18)" }}>{col.sub}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA preview */}
+            <div className="w-full py-2.5 rounded-xl text-sm font-black tracking-wide flex items-center justify-center gap-2"
+              style={{ background: HUB_NEON, color: "#070b10" }}>
+              <ShieldCheck size={14} /> Accept Mission
+            </div>
+          </div>
         </div>
 
-        <form onSubmit={handleLaunch} className="px-6 py-5 space-y-5">
-          {/* Step indicator (hidden on success) */}
-          {!success && (
-            <div className="flex items-center gap-0">
-              {steps.map((s, i) => {
-                const active = step === s.num;
-                const done = step > s.num;
-                const isLast = i === steps.length - 1;
-                return (
-                  <div key={s.num} className="flex items-center flex-1">
-                    <button type="button" onClick={() => setStep(s.num)}
-                      className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all"
-                        style={{
-                          background: active ? HUB_NEON : done ? "rgba(184,255,27,0.15)" : "rgba(255,255,255,0.06)",
-                          color: active ? "#070b10" : done ? HUB_NEON : "rgba(255,255,255,0.35)",
-                          border: active ? "none" : done ? `1px solid rgba(184,255,27,0.30)` : `1px solid rgba(255,255,255,0.12)`,
-                        }}>
-                        {done ? <Check className="w-3.5 h-3.5" /> : s.num}
+        {/* Helper text */}
+        {!success && (
+          <p className="text-[10px] text-center mt-3" style={{ color: "rgba(255,255,255,0.18)" }}>
+            Updates as you fill in the form
+          </p>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
+      <DialogContent ref={dialogRef as any} className="p-0 border-0 overflow-hidden"
+        style={{ background: DIALOG_BG, maxWidth: "900px", width: "95vw", maxHeight: "90vh" }}>
+        <div className="flex" style={{ height: "min(650px, 90vh)" }}>
+
+          {/* ── Left: live preview ── */}
+          <div className="w-[360px] shrink-0 flex flex-col overflow-hidden">
+            <PreviewPanel />
+          </div>
+
+          {/* ── Right: form wizard ── */}
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+            {/* Header */}
+            <div className="px-6 pt-5 pb-4 shrink-0" style={{ borderBottom: `1px solid ${DIALOG_BORDER}` }}>
+              <div className="flex items-center gap-2.5 mb-1.5">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: "rgba(184,255,27,0.12)", border: "1px solid rgba(184,255,27,0.25)" }}>
+                  <Sword className="w-3.5 h-3.5" style={{ color: HUB_NEON }} />
+                </div>
+                <DialogTitle className="text-white font-black text-base tracking-tight">
+                  {success ? "Campaign Launched" : "Launch Campaign"}
+                </DialogTitle>
+              </div>
+              <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                {success ? "Your campaign is live and ready for creators." : "Choose a template, add keys, and launch instantly."}
+              </p>
+            </div>
+
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+              {/* Step indicator */}
+              {!success && (
+                <div className="flex items-center gap-0">
+                  {steps.map((s, i) => {
+                    const active = step === s.num;
+                    const done = step > s.num;
+                    const isLast = i === steps.length - 1;
+                    return (
+                      <div key={s.num} className="flex items-center flex-1">
+                        <button type="button" onClick={() => setStep(s.num)}
+                          className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all"
+                            style={{
+                              background: active ? HUB_NEON : done ? "rgba(184,255,27,0.15)" : "rgba(255,255,255,0.06)",
+                              color: active ? "#070b10" : done ? HUB_NEON : "rgba(255,255,255,0.35)",
+                              border: active ? "none" : done ? "1px solid rgba(184,255,27,0.30)" : "1px solid rgba(255,255,255,0.12)",
+                            }}>
+                            {done ? <Check className="w-3.5 h-3.5" /> : s.num}
+                          </div>
+                          <span className="text-[9px] font-bold uppercase tracking-wider truncate"
+                            style={{ color: active ? HUB_NEON : done ? "rgba(184,255,27,0.70)" : "rgba(255,255,255,0.30)" }}>
+                            {s.label}
+                          </span>
+                        </button>
+                        {!isLast && (
+                          <div className="w-6 h-px flex-shrink-0 mx-1"
+                            style={{ background: step > s.num ? HUB_NEON : "rgba(255,255,255,0.10)" }} />
+                        )}
                       </div>
-                      <span className="text-[9px] font-bold uppercase tracking-wider truncate"
-                        style={{ color: active ? HUB_NEON : done ? "rgba(184,255,27,0.70)" : "rgba(255,255,255,0.30)" }}>
-                        {s.label}
-                      </span>
-                    </button>
-                    {!isLast && (
-                      <div className="w-8 h-px flex-shrink-0 mx-1"
-                        style={{ background: step > s.num ? HUB_NEON : "rgba(255,255,255,0.10)" }} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          <StepContent />
-
-          {/* Footer actions */}
-          {!success && (
-            <div className="flex items-center gap-3 pt-1" style={{ borderTop: `1px solid ${DIALOG_BORDER}` }}>
-              {step > 1 ? (
-                <button type="button" onClick={() => setStep(s => s - 1)}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-white/5"
-                  style={{ color: "rgba(255,255,255,0.50)", border: `1px solid ${DIALOG_BORDER}` }}>
-                  Back
-                </button>
-              ) : (
-                <button type="button" onClick={handleClose}
-                  className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-white/5"
-                  style={{ color: "rgba(255,255,255,0.50)", border: `1px solid ${DIALOG_BORDER}` }}>
-                  Cancel
-                </button>
+                    );
+                  })}
+                </div>
               )}
-              <div className="flex-1" />
-              {step < 4 ? (
-                <button type="button" onClick={() => setStep(s => s + 1)}
-                  disabled={step === 1 && !templateSlug}
-                  className="px-5 py-2.5 rounded-xl text-xs font-black transition-all hover:brightness-110 disabled:opacity-30"
-                  style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: `1px solid rgba(255,255,255,0.15)` }}>
-                  Next
-                </button>
-              ) : (
-                <button type="submit" disabled={mutation.isPending || !title.trim()}
-                  className="px-5 py-2.5 rounded-xl text-xs font-black transition-all hover:brightness-110 disabled:opacity-40 flex items-center gap-2"
-                  style={{ background: HUB_NEON, color: "#070b10", boxShadow: "0 8px 24px rgba(184,255,27,0.25)" }}>
-                  {mutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Rocket className="w-3.5 h-3.5" />}
-                  Launch Campaign
-                </button>
-              )}
+
+              <form onSubmit={handleLaunch} id="launch-form">
+                <StepContent />
+              </form>
             </div>
-          )}
-        </form>
+
+            {/* Footer */}
+            {!success && (
+              <div className="px-6 py-4 shrink-0 flex items-center gap-3" style={{ borderTop: `1px solid ${DIALOG_BORDER}` }}>
+                {step > 1 ? (
+                  <button type="button" onClick={() => setStep(s => s - 1)}
+                    className="px-4 py-2 rounded-xl text-xs font-bold transition-all hover:bg-white/5"
+                    style={{ color: "rgba(255,255,255,0.50)", border: `1px solid ${DIALOG_BORDER}` }}>
+                    Back
+                  </button>
+                ) : (
+                  <button type="button" onClick={handleClose}
+                    className="px-4 py-2 rounded-xl text-xs font-bold transition-all hover:bg-white/5"
+                    style={{ color: "rgba(255,255,255,0.50)", border: `1px solid ${DIALOG_BORDER}` }}>
+                    Cancel
+                  </button>
+                )}
+                <div className="flex-1" />
+                {step < 4 ? (
+                  <button type="button" onClick={() => setStep(s => s + 1)}
+                    disabled={step === 1 && !templateSlug}
+                    className="px-5 py-2 rounded-xl text-xs font-black transition-all hover:brightness-110 disabled:opacity-30"
+                    style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.15)" }}>
+                    Next →
+                  </button>
+                ) : (
+                  <button type="submit" form="launch-form" disabled={mutation.isPending || !title.trim()}
+                    className="px-5 py-2 rounded-xl text-xs font-black transition-all hover:brightness-110 disabled:opacity-40 flex items-center gap-2"
+                    style={{ background: HUB_NEON, color: "#070b10", boxShadow: "0 8px 24px rgba(184,255,27,0.25)" }}>
+                    {mutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Rocket className="w-3.5 h-3.5" />}
+                    Launch Campaign
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -2117,7 +2268,8 @@ const IndieGamePage = () => {
       </Dialog>
 
       <CreateBountyDialog open={showCreateBounty} onClose={() => setShowCreateBounty(false)}
-        gameId={game?.id ?? 0} onCreated={() => queryClient.invalidateQueries({ queryKey: ["/api/games", game?.id, "bounties"] })} />
+        gameId={game?.id ?? 0} onCreated={() => queryClient.invalidateQueries({ queryKey: ["/api/games", game?.id, "bounties"] })}
+        gameImageUrl={game?.imageUrl ?? undefined} gameName={game?.name} />
 
       {/* Creator Dashboard */}
       <CreatorDashboard
