@@ -265,7 +265,7 @@ function StepCard({
 }
 
 // ─────────────────────────────────────────────
-// Step 1: Choose Campaign Type
+// Step 1: Choose Campaign Type — premium grid
 // ─────────────────────────────────────────────
 
 const TYPE_ACCENT: Record<string, string> = {
@@ -275,89 +275,234 @@ const TYPE_ACCENT: Record<string, string> = {
   "custom-campaign":  "#a78bfa",
 };
 
-function TypeCard({ type, selected, onSelect }: { type: CampaignType; selected: boolean; onSelect: () => void }) {
-  const Icon   = type.icon;
-  const accent = TYPE_ACCENT[type.slug] ?? NEON;
+// Hex accent → rgb components for rgba() usage
+const ACCENT_RGB: Record<string, string> = {
+  "#60a5fa": "96,165,250",
+  [NEON]:    "183,255,27",
+  "#fb923c": "251,146,60",
+  "#a78bfa": "167,139,250",
+};
+
+// Per-campaign floating decoration sets
+const TYPE_DECOS: Record<string, Array<{ Icon: any; x: string; y: string; size: number; op: number }>> = {
+  "quick-creator": [
+    { Icon: Film,          x: "12%",  y: "18%", size: 15, op: 0.30 },
+    { Icon: Camera,        x: "78%",  y: "14%", size: 13, op: 0.22 },
+    { Icon: Gamepad2,      x: "82%",  y: "68%", size: 14, op: 0.18 },
+    { Icon: MessageSquare, x: "10%",  y: "72%", size: 12, op: 0.20 },
+  ],
+  "content-boost": [
+    { Icon: Film,          x: "10%",  y: "16%", size: 14, op: 0.28 },
+    { Icon: Camera,        x: "80%",  y: "12%", size: 13, op: 0.24 },
+    { Icon: MessageSquare, x: "8%",   y: "70%", size: 12, op: 0.22 },
+    { Icon: Target,        x: "80%",  y: "70%", size: 13, op: 0.20 },
+  ],
+  "creator-showcase": [
+    { Icon: Users,         x: "10%",  y: "15%", size: 15, op: 0.28 },
+    { Icon: Film,          x: "78%",  y: "14%", size: 14, op: 0.24 },
+    { Icon: Camera,        x: "10%",  y: "68%", size: 13, op: 0.20 },
+    { Icon: Zap,           x: "80%",  y: "68%", size: 13, op: 0.22 },
+  ],
+  "custom-campaign": [
+    { Icon: Zap,           x: "10%",  y: "16%", size: 14, op: 0.24 },
+    { Icon: Target,        x: "80%",  y: "14%", size: 13, op: 0.22 },
+    { Icon: Users,         x: "10%",  y: "68%", size: 13, op: 0.20 },
+    { Icon: Film,          x: "80%",  y: "70%", size: 12, op: 0.18 },
+  ],
+};
+
+function CampaignIllustration({ slug, accent, selected }: { slug: string; accent: string; selected: boolean }) {
+  const Icon  = CAMPAIGN_TYPES.find(t => t.slug === slug)?.icon ?? Sparkles;
+  const rgb   = ACCENT_RGB[accent] ?? "183,255,27";
+  const decos = TYPE_DECOS[slug] ?? [];
   return (
-    <button onClick={onSelect}
-      className="w-full text-left rounded-2xl transition-all duration-300 group"
-      style={{
-        transform: selected ? "scale(1.015)" : "scale(1)",
-        background: selected ? `rgba(${accent === NEON ? "183,255,24" : "255,255,255"},0.04)` : "rgba(255,255,255,0.025)",
-        border: `1.5px solid ${selected ? accent : "rgba(255,255,255,0.08)"}`,
-        boxShadow: selected ? `0 0 24px 0 ${accent}18` : "none",
-        padding: "18px 20px",
-      }}>
-      <div className="flex items-start gap-4">
-        {/* Icon */}
-        <div className="w-11 h-11 rounded-xl shrink-0 flex items-center justify-center transition-all duration-300"
-          style={{
-            background: selected ? `${accent}18` : "rgba(255,255,255,0.06)",
-            border: `1px solid ${selected ? `${accent}30` : "rgba(255,255,255,0.08)"}`,
-          }}>
-          <Icon className="w-5 h-5" style={{ color: selected ? accent : "rgba(255,255,255,0.4)" }} />
+    <div className="relative w-full overflow-hidden transition-all duration-500"
+      style={{ height: selected ? "112px" : "96px" }}>
+      {/* Gradient background */}
+      <div className="absolute inset-0 transition-opacity duration-500"
+        style={{
+          background: `radial-gradient(ellipse 80% 90% at 50% 60%, rgba(${rgb},${selected ? 0.18 : 0.10}) 0%, rgba(7,11,16,0) 100%)`,
+        }} />
+      {/* Subtle grid lines */}
+      <div className="absolute inset-0 opacity-5"
+        style={{
+          backgroundImage: `linear-gradient(rgba(${rgb},0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(${rgb},0.5) 1px, transparent 1px)`,
+          backgroundSize: "20px 20px",
+        }} />
+      {/* Floating decorative icons */}
+      {decos.map((d, i) => (
+        <div key={i} className="absolute transition-all duration-500"
+          style={{ left: d.x, top: d.y, opacity: selected ? d.op * 1.5 : d.op }}>
+          <d.Icon size={d.size} color={accent} />
         </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="text-sm font-black text-white">{type.name}</span>
-            {type.recommended && (
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
-                style={{ background: "rgba(251,146,60,0.12)", color: "#fb923c" }}>
-                ⭐ Recommended
-              </span>
-            )}
-            {type.custom && (
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
-                style={{ background: "rgba(167,139,250,0.12)", color: "#a78bfa" }}>
-                Advanced
-              </span>
-            )}
-          </div>
-          <p className="text-[12px] mb-2" style={{ color: selected ? accent : "rgba(255,255,255,0.4)" }}>
-            {type.tagline}
-          </p>
-          <p className="text-[11px] text-white/30 leading-relaxed line-clamp-2">{type.description}</p>
-
-          {/* Stats row */}
-          <div className="flex items-center gap-3 mt-3 flex-wrap">
-            {[
-              { label: `${type.duration}d`, desc: "duration" },
-              { label: `${type.capacity}`, desc: "creators" },
-              { label: `${type.demoKeys}`, desc: "demo keys" },
-              { label: `${type.fullKeys}`, desc: "full keys" },
-            ].map(s => (
-              <div key={s.desc} className="flex items-baseline gap-1">
-                <span className="text-xs font-black" style={{ color: selected ? accent : "rgba(255,255,255,0.6)" }}>
-                  {s.label}
-                </span>
-                <span className="text-[10px] text-white/25">{s.desc}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Pills */}
-          <div className="flex flex-wrap gap-1.5 mt-2.5">
-            {type.pills.map(({ ct, qty }) => {
-              const PIcon = REQ_ICON[ct] ?? Target;
-              return (
-                <span key={ct} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg"
-                  style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <PIcon size={9} /> {reqPillLabel(ct, qty)}
-                </span>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Check */}
-        <div className="w-6 h-6 rounded-full border-2 shrink-0 flex items-center justify-center mt-0.5 transition-all duration-300"
-          style={{ borderColor: selected ? accent : "rgba(255,255,255,0.15)", background: selected ? accent : "transparent" }}>
-          {selected && <Check className="w-3.5 h-3.5" style={{ color: "#070b10" }} />}
+      ))}
+      {/* Centre main icon */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="transition-all duration-500"
+          style={{ transform: selected ? "scale(1.15)" : "scale(1)" }}>
+          <Icon size={selected ? 44 : 36}
+            style={{
+              color: accent,
+              filter: selected ? `drop-shadow(0 0 12px ${accent}80)` : "none",
+              transition: "all 0.4s ease",
+            }} />
         </div>
       </div>
-    </button>
+      {/* Bottom fade */}
+      <div className="absolute bottom-0 inset-x-0 h-8"
+        style={{ background: `linear-gradient(to bottom, transparent, ${CARD_BG})` }} />
+    </div>
+  );
+}
+
+function TypeCard({
+  type, selected, anySelected, onSelect,
+}: {
+  type: CampaignType; selected: boolean; anySelected: boolean; onSelect: () => void;
+}) {
+  const accent = TYPE_ACCENT[type.slug] ?? NEON;
+  const rgb    = ACCENT_RGB[accent] ?? "183,255,27";
+
+  return (
+    <div
+      onClick={onSelect}
+      className={`rounded-2xl cursor-pointer transition-all duration-400 flex flex-col overflow-hidden ${selected ? "gf-step-glow" : ""}`}
+      style={{
+        background: selected
+          ? `linear-gradient(160deg, rgba(${rgb},0.07) 0%, rgba(7,11,16,0.95) 60%)`
+          : CARD_BG,
+        border: `1.5px solid ${selected ? accent : "rgba(255,255,255,0.07)"}`,
+        boxShadow: selected ? `0 8px 40px 0 rgba(${rgb},0.14)` : "0 1px 3px 0 rgba(0,0,0,0.4)",
+        transform: selected ? "translateY(-2px) scale(1.012)" : "translateY(0) scale(1)",
+        opacity: anySelected && !selected ? 0.55 : 1,
+        filter: anySelected && !selected ? "saturate(0.5)" : "saturate(1)",
+      }}>
+
+      {/* Illustration */}
+      <CampaignIllustration slug={type.slug} accent={accent} selected={selected} />
+
+      {/* Body */}
+      <div className="flex-1 flex flex-col px-5 pt-3 pb-5 gap-3">
+
+        {/* Name + badge row */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-black text-white leading-tight">{type.name}</h3>
+            <p className="text-[11px] mt-0.5 transition-colors duration-300"
+              style={{ color: selected ? accent : "rgba(255,255,255,0.35)" }}>
+              {type.tagline}
+            </p>
+          </div>
+          {/* Selection check */}
+          <div className="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center mt-0.5 transition-all duration-300"
+            style={{
+              borderColor: selected ? accent : "rgba(255,255,255,0.2)",
+              background: selected ? accent : "transparent",
+              transform: selected ? "scale(1)" : "scale(0.85)",
+            }}>
+            {selected && <Check className="w-3 h-3" style={{ color: "#070b10" }} />}
+          </div>
+        </div>
+
+        {/* Badges */}
+        <div className="flex flex-wrap gap-1.5">
+          {type.recommended && (
+            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+              style={{ background: "rgba(251,146,60,0.12)", color: "#fb923c", border: "1px solid rgba(251,146,60,0.2)" }}>
+              ⭐ Recommended
+            </span>
+          )}
+          {type.custom && (
+            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+              style={{ background: "rgba(167,139,250,0.12)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.2)" }}>
+              Advanced
+            </span>
+          )}
+          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+            style={{ background: "rgba(183,255,24,0.07)", color: NEON, border: "1px solid rgba(183,255,24,0.15)" }}>
+            GF Verified
+          </span>
+        </div>
+
+        {/* Description */}
+        <p className="text-[11px] text-white/35 leading-relaxed line-clamp-2">{type.description}</p>
+
+        {/* Metrics grid */}
+        <div className="grid grid-cols-2 gap-1.5">
+          {[
+            { v: `${type.duration}d`, l: "Campaign" },
+            { v: type.capacity,       l: "Creators" },
+            { v: type.demoKeys,       l: "Demo Keys" },
+            { v: type.fullKeys,       l: "Full Keys" },
+          ].map(m => (
+            <div key={m.l} className="rounded-xl p-2.5 text-center transition-all duration-300"
+              style={{
+                background: selected ? `rgba(${rgb},0.08)` : "rgba(255,255,255,0.04)",
+                border: `1px solid ${selected ? `rgba(${rgb},0.2)` : "rgba(255,255,255,0.06)"}`,
+              }}>
+              <div className="text-sm font-black transition-colors duration-300"
+                style={{ color: selected ? accent : "rgba(255,255,255,0.7)" }}>
+                {m.v}
+              </div>
+              <div className="text-[9px] uppercase tracking-wider text-white/25 mt-0.5">{m.l}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Expanded section — only when selected */}
+        {selected && (
+          <div className="gf-fade-up space-y-3" style={{ marginTop: "4px" }}>
+            {/* Content requirements */}
+            <div>
+              <div className="text-[9px] uppercase tracking-widest text-white/25 mb-2">Creator Requirements</div>
+              <div className="flex flex-wrap gap-1.5">
+                {type.pills.map(({ ct, qty }) => {
+                  const PIcon = REQ_ICON[ct] ?? Target;
+                  return (
+                    <span key={ct} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
+                      style={{ background: `rgba(${rgb},0.09)`, color: accent, border: `1px solid rgba(${rgb},0.2)` }}>
+                      <PIcon size={9} /> {reqPillLabel(ct, qty)}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Expected reach */}
+            <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="text-[9px] uppercase tracking-widest text-white/25 mb-2">Expected Reach</div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                {[
+                  { l: "Clips", v: type.estimated.clips },
+                  { l: "Reels", v: type.estimated.reels },
+                  { l: "Screenshots", v: type.estimated.screenshots },
+                  { l: "Reviews", v: type.estimated.feedback },
+                ].map(e => (
+                  <div key={e.l} className="flex justify-between text-[10px]">
+                    <span className="text-white/30">{e.l}</span>
+                    <span className="font-bold text-white/60">{e.v}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="text-[10px] text-white/20 mt-2 pt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                {type.estimated.viewsMin.toLocaleString()}–{type.estimated.viewsMax.toLocaleString()} est. views
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CTA */}
+        <div className="mt-auto pt-1">
+          <div className="w-full py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all duration-300"
+            style={selected
+              ? { background: accent, color: "#070b10", boxShadow: `0 0 16px 0 rgba(${rgb},0.3)` }
+              : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.08)" }
+            }>
+            {selected ? <><Check className="w-3.5 h-3.5" /> Selected</> : "Select Plan"}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -945,27 +1090,31 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
         <SuccessScreen type={selectedType} onDashboard={onComplete} />
       )}
 
-      <div className="space-y-3 max-w-2xl">
+      <div className="space-y-3">
 
         {/* ── Step 1: Choose Campaign ── */}
         <StepCard number={1} title="Choose Campaign Type" icon={Sparkles}
           state={stepState(1)} completedLine={step1Summary}
           onEdit={() => { setCurrentStep(1); setConfirmed(false); }}>
-          <div className="space-y-3">
-            <p className="text-[12px] text-white/40 mb-4">
+          <div>
+            <p className="text-[12px] text-white/40 mb-5">
               Every campaign gives creators a <strong className="text-white/60">demo key on join</strong> and a <strong className="text-white/60">full game key on completion</strong>.
             </p>
-            {CAMPAIGN_TYPES.map(t => (
-              <TypeCard key={t.slug} type={t}
-                selected={selectedType?.slug === t.slug}
-                onSelect={() => { setSelectedType(t); setConfirmed(false); }} />
-            ))}
+            {/* Premium 3-column grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-5">
+              {CAMPAIGN_TYPES.map(t => (
+                <TypeCard key={t.slug} type={t}
+                  selected={selectedType?.slug === t.slug}
+                  anySelected={!!selectedType}
+                  onSelect={() => { setSelectedType(t); setConfirmed(false); }} />
+              ))}
+            </div>
             <button
               onClick={() => selectedType && setCurrentStep(2)}
               disabled={!selectedType}
-              className="w-full mt-2 py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-35 hover:brightness-110"
+              className="w-full py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-35 hover:brightness-110"
               style={{ background: NEON, color: "#070b10" }}>
-              Continue <ArrowRight className="w-4 h-4" />
+              {selectedType ? `Continue with ${selectedType.name}` : "Select a Campaign Type"} <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </StepCard>
