@@ -1,4 +1,4 @@
-import { useState, useMemo, lazy, Suspense } from "react";
+import { useState, useMemo, useEffect, useRef, lazy, Suspense } from "react";
 import { useRoute, useLocation, Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import {
   ChevronRight, Loader2, Radio, Target, Shield, Flame,
   BarChart3, Video, Globe, Heart, Gamepad2, Check,
   Gamepad, Monitor, Smartphone,
-  Film, MessageSquare, AlertCircle, ShieldCheck, Unlock,
+  Film, MessageSquare, AlertCircle, ShieldCheck, Unlock, Rocket,
 } from "lucide-react";
 
 const UploadPage = lazy(() => import("./UploadPage"));
@@ -534,10 +534,66 @@ function FeaturedBountyCard({ bounty, onAccept, accepting, alreadyAccepted }: {
   );
 }
 
+/* Inline confetti burst — no external dependency */
+function fireConfetti(container: HTMLElement) {
+  const canvas = document.createElement('canvas');
+  canvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:9999;';
+  container.appendChild(canvas);
+  const ctx = canvas.getContext('2d')!;
+  const w = canvas.width = window.innerWidth;
+  const h = canvas.height = window.innerHeight;
+  const particles: { x: number; y: number; vx: number; vy: number; color: string; size: number; life: number }[] = [];
+  const colors = ['#B8FF1B', '#00FF88', '#FFD700', '#FF6B6B', '#4ECDC4', '#FFFFFF', '#45B7D1'];
+  for (let i = 0; i < 150; i++) {
+    particles.push({
+      x: w / 2, y: h / 2,
+      vx: (Math.random() - 0.5) * 16,
+      vy: (Math.random() - 1) * 14 - 2,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: Math.random() * 5 + 2,
+      life: 1,
+    });
+  }
+  let anim = 0;
+  const loop = () => {
+    ctx.clearRect(0, 0, w, h);
+    let alive = 0;
+    for (const p of particles) {
+      if (p.life <= 0) continue;
+      alive++;
+      p.x += p.vx; p.y += p.vy; p.vy += 0.35;
+      p.life -= 0.012;
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (alive > 0) anim = requestAnimationFrame(loop);
+    else canvas.remove();
+  };
+  anim = requestAnimationFrame(loop);
+  setTimeout(() => cancelAnimationFrame(anim), 4000);
+}
+
+const TEMPLATES = [
+  { slug: "quick-creator", name: "Quick Creator Campaign", duration: 5, capacity: 20, desc: "Fast exposure with quick creator participation and first impressions.", icon: Zap, recommended: false },
+  { slug: "content-boost", name: "Content Boost Campaign", duration: 10, capacity: 35, desc: "Generate lots of promotional content across multiple formats.", icon: Film, recommended: true },
+  { slug: "creator-showcase", name: "Creator Showcase Campaign", duration: 21, capacity: 25, desc: "Deep creator engagement with premium content including streams.", icon: Trophy, recommended: false },
+  { slug: "custom", name: "Custom Campaign", duration: 14, capacity: 20, desc: "Full control over duration, capacity and targeting.", icon: Star, recommended: false },
+];
+
 function CreateBountyDialog({ open, onClose, gameId, onCreated }: {
   open: boolean; onClose: () => void; gameId: number; onCreated: () => void;
 }) {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  /* ── Wizard State ── */
+  const [step, setStep] = useState(1);
+  const [templateSlug, setTemplateSlug] = useState("");
   const [title, setTitle] = useState("");
   const [campaignTitle, setCampaignTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -556,29 +612,61 @@ function CreateBountyDialog({ open, onClose, gameId, onCreated }: {
   const [xpViewMilestone, setXpViewMilestone] = useState("2500");
   const [xpCompletionBonus, setXpCompletionBonus] = useState("5000");
   const [completionBadge, setCompletionBadge] = useState("");
-  const [step, setStep] = useState(1);
 
-  const mutation = useMutation({
-    mutationFn: (data: any) => apiRequest("POST", `/api/games/${gameId}/bounties`, data),
-    onSuccess: () => {
-      toast({ title: "Campaign created!", description: "Your creator campaign is now live.", variant: "gamefolioSuccess" });
-      onCreated();
-      onClose();
-      resetForm();
-    },
-    onError: () => toast({ title: "Error", description: "Failed to create campaign.", variant: "gamefolioError" }),
-  });
+  /* ── Success State ── */
+  const [success, setSuccess] = useState(false);
+  const [createdCampaign, setCreatedCampaign] = useState<any>(null);
+  const [showTick, setShowTick] = useState(false);
+
+  const DIALOG_BG = "#0e1520";
+  const DIALOG_BORDER = "rgba(255,255,255,0.10)";
+  const HUB_NEON = "#B8FF1B";
+
+  const sectionCard = { background: "rgba(255,255,255,0.03)", border: `1px solid ${DIALOG_BORDER}`, borderRadius: "12px", padding: "16px" };
+  const inputStyle2 = { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.10)", color: "#fff", borderRadius: "10px", padding: "10px 14px", width: "100%", outline: "none", fontSize: "14px", transition: "border-color 0.2s" };
+  const labelStyle2 = { fontSize: "10px", fontWeight: 800, textTransform: "uppercase" as const, letterSpacing: "1.2px", color: "rgba(255,255,255,0.45)", display: "block", marginBottom: "6px" };
+
+  const steps = [
+    { num: 1, label: "Choose" },
+    { num: 2, label: "Settings" },
+    { num: 3, label: "Keys" },
+    { num: 4, label: "Launch" },
+  ];
 
   const resetForm = () => {
-    setTitle(""); setCampaignTitle(""); setDescription(""); setCreatorSlots("10"); setEndDate("");
+    setStep(1); setTemplateSlug(""); setTitle(""); setCampaignTitle(""); setDescription("");
+    setCreatorSlots("10"); setEndDate("");
     setDemoKeyPool(""); setFullKeyPool("");
     setRequiredClips("2"); setRequiredReels("1"); setRequiredScreenshots("0"); setRequiredViews("500");
     setXpJoin("500"); setXpPerClip("1000"); setXpPerReel("2500"); setXpPerScreenshot("200");
     setXpViewMilestone("2500"); setXpCompletionBonus("5000"); setCompletionBadge("");
-    setStep(1);
+    setSuccess(false); setCreatedCampaign(null); setShowTick(false);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const totalXP = (parseInt(xpJoin) || 0)
+    + (parseInt(xpPerClip) || 0) * (parseInt(requiredClips) || 0)
+    + (parseInt(xpPerReel) || 0) * (parseInt(requiredReels) || 0)
+    + (parseInt(xpPerScreenshot) || 0) * (parseInt(requiredScreenshots) || 0)
+    + (parseInt(xpViewMilestone) || 0)
+    + (parseInt(xpCompletionBonus) || 0);
+
+  const demoKeys = demoKeyPool.split(/\n|,/).map(k => k.trim()).filter(Boolean);
+  const fullKeys = fullKeyPool.split(/\n|,/).map(k => k.trim()).filter(Boolean);
+  const selectedTemplate = TEMPLATES.find(t => t.slug === templateSlug);
+
+  const mutation = useMutation({
+    mutationFn: (data: any) => apiRequest("POST", `/api/games/${gameId}/bounties`, data),
+    onSuccess: (data: any) => {
+      setCreatedCampaign(data);
+      setSuccess(true);
+      setShowTick(true);
+      onCreated();
+      if (dialogRef.current) fireConfetti(dialogRef.current);
+    },
+    onError: () => toast({ title: "Error", description: "Failed to launch campaign.", variant: "gamefolioError" }),
+  });
+
+  const handleLaunch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     const payload = {
@@ -587,8 +675,8 @@ function CreateBountyDialog({ open, onClose, gameId, onCreated }: {
       description: description.trim() || null,
       maxParticipants: parseInt(creatorSlots) || 10,
       endDate: endDate || null,
-      demoKeyPool: demoKeyPool.split(/\n|,/).map(k => k.trim()).filter(Boolean),
-      fullKeyPool: fullKeyPool.split(/\n|,/).map(k => k.trim()).filter(Boolean),
+      demoKeyPool: demoKeys,
+      fullKeyPool: fullKeys,
       requiredClips: parseInt(requiredClips) || 0,
       requiredReels: parseInt(requiredReels) || 0,
       requiredScreenshots: parseInt(requiredScreenshots) || 0,
@@ -600,260 +688,326 @@ function CreateBountyDialog({ open, onClose, gameId, onCreated }: {
       xpViewMilestone: parseInt(xpViewMilestone) || 0,
       xpCompletionBonus: parseInt(xpCompletionBonus) || 0,
       completionBadge: completionBadge.trim() || null,
+      manualApprovalRequired: false,
+      status: "active",
     };
     mutation.mutate(payload);
   };
 
-  const inputStyle = { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff", borderRadius: "10px", padding: "10px 14px", width: "100%", outline: "none", fontSize: "14px" };
-  const labelStyle = { fontSize: "11px", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "1px", color: "rgba(255,255,255,0.5)", display: "block", marginBottom: "6px" };
-  const totalXP = (parseInt(xpJoin) || 0) + (parseInt(xpPerClip) || 0) * (parseInt(requiredClips) || 0) + (parseInt(xpPerReel) || 0) * (parseInt(requiredReels) || 0) + (parseInt(xpPerScreenshot) || 0) * (parseInt(requiredScreenshots) || 0) + (parseInt(xpViewMilestone) || 0) + (parseInt(xpCompletionBonus) || 0);
+  const handleClose = () => { onClose(); resetForm(); };
 
-  const DIALOG_BG = "#0e1520";
-  const DIALOG_BORDER = "rgba(255,255,255,0.10)";
-  const HUB_NEON = "#B8FF1B";
+  /* ── STEP CONTENT ── */
 
-  const sectionCard = { background: "rgba(255,255,255,0.03)", border: `1px solid ${DIALOG_BORDER}`, borderRadius: "12px", padding: "16px" };
-  const inputStyle2 = { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.10)", color: "#fff", borderRadius: "10px", padding: "10px 14px", width: "100%", outline: "none", fontSize: "14px", transition: "border-color 0.2s" };
-  const labelStyle2 = { fontSize: "10px", fontWeight: 800, textTransform: "uppercase" as const, letterSpacing: "1.2px", color: "rgba(255,255,255,0.45)", display: "block", marginBottom: "6px" };
+  const StepContent = () => {
+    if (success) {
+      return (
+        <div className="space-y-5 text-center">
+          {/* Animated tick */}
+          <div className="flex flex-col items-center gap-3 pt-2">
+            <div className="relative w-20 h-20 rounded-full flex items-center justify-center"
+              style={{ background: "rgba(184,255,27,0.10)", border: "2px solid rgba(184,255,27,0.30)" }}>
+              <div className={`transition-all duration-700 ${showTick ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}>
+                <Check className="w-10 h-10" style={{ color: HUB_NEON }} strokeWidth={3} />
+              </div>
+              <div className="absolute inset-0 rounded-full animate-ping opacity-20" style={{ border: `2px solid ${HUB_NEON}` }} />
+            </div>
+            <h2 className="text-2xl font-black text-white">Campaign Live!</h2>
+            <p className="text-sm" style={{ color: "rgba(255,255,255,0.50)" }}>
+              Your campaign is now live and eligible creators can begin joining immediately.
+            </p>
+          </div>
 
-  const steps = [
-    { num: 1, label: "Basics" },
-    { num: 2, label: "Keys" },
-    { num: 3, label: "Objectives" },
-    { num: 4, label: "Rewards" },
-  ];
+          {/* Campaign Summary */}
+          <div style={sectionCard} className="text-left space-y-3">
+            <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: HUB_NEON }}>Campaign Summary</div>
+            <div className="space-y-2">
+              {[
+                { label: "Campaign", value: createdCampaign?.title || title || "—" },
+                { label: "Status", value: (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full" style={{ background: HUB_NEON }} />
+                    <span className="font-bold" style={{ color: HUB_NEON }}>Live</span>
+                  </span>
+                )},
+                { label: "Creator Capacity", value: `${creatorSlots} Creators` },
+                { label: "Duration", value: endDate ? `${Math.ceil((new Date(endDate).getTime() - Date.now()) / 86400000)} Days` : "No end date" },
+                { label: "Reserved Keys", value: `${demoKeys.length} Demo / ${fullKeys.length} Full` },
+              ].map(row => (
+                <div key={row.label} className="flex items-center justify-between text-sm">
+                  <span style={{ color: "rgba(255,255,255,0.40)" }}>{row.label}</span>
+                  <span className="font-semibold text-white">{row.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Live info */}
+          <div style={sectionCard} className="text-left">
+            <div className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: HUB_NEON }}>Live Information</div>
+            <p className="text-xs mb-2" style={{ color: "rgba(255,255,255,0.50)" }}>Creators can now:</p>
+            <ul className="space-y-1.5">
+              {["Discover your campaign", "Join instantly (if eligible)", "Receive Demo Keys", "Begin creating content"].map(item => (
+                <li key={item} className="flex items-center gap-2 text-xs text-white">
+                  <Check className="w-3 h-3 shrink-0" style={{ color: HUB_NEON }} />{item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-3 pt-1">
+            <button type="button" onClick={() => { handleClose(); navigate(`/game/${gameId}/bounties`); }}
+              className="flex-1 px-4 py-3 rounded-xl text-xs font-black transition-all hover:brightness-110"
+              style={{ background: HUB_NEON, color: "#070b10", boxShadow: "0 8px 24px rgba(184,255,27,0.25)" }}>
+              View Live Campaign
+            </button>
+            <button type="button" onClick={handleClose}
+              className="px-4 py-3 rounded-xl text-xs font-bold transition-all hover:bg-white/5"
+              style={{ color: "rgba(255,255,255,0.50)", border: `1px solid ${DIALOG_BORDER}` }}>
+              Return to Dashboard
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    switch (step) {
+      case 1:
+        return (
+          <div className="space-y-3">
+            <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: HUB_NEON }}>Choose Campaign Type</div>
+            {TEMPLATES.map(t => {
+              const Icon = t.icon;
+              const active = templateSlug === t.slug;
+              return (
+                <button key={t.slug} type="button" onClick={() => { setTemplateSlug(t.slug); setCreatorSlots(String(t.capacity)); setEndDate(""); }}
+                  className="w-full text-left p-4 rounded-xl transition-all hover:brightness-110"
+                  style={{
+                    background: active ? "rgba(184,255,27,0.08)" : "rgba(255,255,255,0.03)",
+                    border: active ? `1px solid rgba(184,255,27,0.35)` : `1px solid ${DIALOG_BORDER}`,
+                  }}>
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                      style={{ background: active ? "rgba(184,255,27,0.15)" : "rgba(255,255,255,0.05)" }}>
+                      <Icon className="w-4.5 h-4.5" style={{ color: active ? HUB_NEON : "rgba(255,255,255,0.40)" }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-white">{t.name}</span>
+                        {t.recommended && <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: HUB_NEON, color: "#070b10" }}>RECOMMENDED</span>}
+                      </div>
+                      <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.40)" }}>{t.desc}</p>
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="text-[10px] font-semibold" style={{ color: "rgba(255,255,255,0.35)" }}>{t.duration} Days</span>
+                        <span className="text-[10px] font-semibold" style={{ color: "rgba(255,255,255,0.35)" }}>{t.capacity} Creators</span>
+                      </div>
+                    </div>
+                    {active && <Check className="w-5 h-5 shrink-0" style={{ color: HUB_NEON }} />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-4">
+            <div style={sectionCard}>
+              <div className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: HUB_NEON }}>Campaign Settings</div>
+              <div className="space-y-3">
+                <div>
+                  <label style={labelStyle2}>Campaign Title *</label>
+                  <input style={inputStyle2} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Early Creator Access" required
+                    onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                </div>
+                <div>
+                  <label style={labelStyle2}>Display Name (optional)</label>
+                  <input style={inputStyle2} value={campaignTitle} onChange={e => setCampaignTitle(e.target.value)} placeholder="e.g. Creator Week One Challenge"
+                    onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                </div>
+                <div>
+                  <label style={labelStyle2}>Description</label>
+                  <textarea style={{ ...inputStyle2, minHeight: "72px", resize: "vertical" }} value={description} onChange={e => setDescription(e.target.value)} placeholder="What should creators do to earn rewards?"
+                    onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label style={labelStyle2}>Creator Slots</label>
+                    <input style={inputStyle2} type="number" min="1" value={creatorSlots} onChange={e => setCreatorSlots(e.target.value)}
+                      onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                  </div>
+                  <div>
+                    <label style={labelStyle2}>End Date</label>
+                    <input style={inputStyle2} type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                      onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-4">
+            <div style={sectionCard}>
+              <div className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: HUB_NEON }}>
+                <Key className="w-3.5 h-3.5" /> Demo Keys
+              </div>
+              <textarea style={{ ...inputStyle2, minHeight: "100px", resize: "vertical", fontFamily: "monospace", fontSize: "13px" }}
+                value={demoKeyPool} onChange={e => setDemoKeyPool(e.target.value)} placeholder="ABC-123-DEF&#10;GHI-456-JKL"
+                onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+              <div className="flex items-center gap-1.5 mt-2">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: demoKeys.length ? HUB_NEON : "rgba(255,255,255,0.15)" }} />
+                <span className="text-[11px] font-bold" style={{ color: "rgba(255,255,255,0.40)" }}>{demoKeys.length} keys ready</span>
+              </div>
+            </div>
+            <div style={sectionCard}>
+              <div className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: HUB_NEON }}>
+                <Unlock className="w-3.5 h-3.5" /> Full Keys
+              </div>
+              <textarea style={{ ...inputStyle2, minHeight: "100px", resize: "vertical", fontFamily: "monospace", fontSize: "13px" }}
+                value={fullKeyPool} onChange={e => setFullKeyPool(e.target.value)} placeholder="FULL-KEY-001&#10;FULL-KEY-002"
+                onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
+                onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+              <div className="flex items-center gap-1.5 mt-2">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: fullKeys.length ? HUB_NEON : "rgba(255,255,255,0.15)" }} />
+                <span className="text-[11px] font-bold" style={{ color: "rgba(255,255,255,0.40)" }}>{fullKeys.length} keys ready</span>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-4">
+            {/* Review summary */}
+            <div style={sectionCard}>
+              <div className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: HUB_NEON }}>Confirm & Launch</div>
+              <div className="space-y-2.5">
+                {[
+                  { label: "Campaign", value: title || "—" },
+                  { label: "Type", value: selectedTemplate?.name || "Custom" },
+                  { label: "Creators", value: `${creatorSlots} slots` },
+                  { label: "Demo Keys", value: `${demoKeys.length} reserved` },
+                  { label: "Full Keys", value: `${fullKeys.length} reserved` },
+                  { label: "Total XP", value: `${totalXP.toLocaleString()} XP` },
+                ].map(row => (
+                  <div key={row.label} className="flex items-center justify-between text-sm">
+                    <span style={{ color: "rgba(255,255,255,0.40)" }}>{row.label}</span>
+                    <span className="font-semibold text-white">{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-xl p-3 text-center" style={{ background: "rgba(184,255,27,0.06)", border: "1px solid rgba(184,255,27,0.18)" }}>
+              <div className="text-xs font-bold" style={{ color: HUB_NEON }}>Your campaign will go live immediately. No approval required.</div>
+            </div>
+          </div>
+        );
+
+      default: return null;
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && (onClose(), resetForm())}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto p-0 border-0" style={{ background: DIALOG_BG }}>
-        {/* Header bar */}
+    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
+      <DialogContent ref={dialogRef as any} className="max-w-xl max-h-[90vh] overflow-y-auto p-0 border-0" style={{ background: DIALOG_BG }}>
+        {/* Header */}
         <div className="px-6 pt-6 pb-4" style={{ borderBottom: `1px solid ${DIALOG_BORDER}` }}>
           <div className="flex items-center gap-2.5 mb-2">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(184,255,27,0.12)", border: "1px solid rgba(184,255,27,0.25)" }}>
               <Sword className="w-4 h-4" style={{ color: HUB_NEON }} />
             </div>
-            <DialogTitle className="text-white font-black text-lg tracking-tight">Create Creator Campaign</DialogTitle>
+            <DialogTitle className="text-white font-black text-lg tracking-tight">
+              {success ? "Campaign Launched" : "Launch Campaign"}
+            </DialogTitle>
           </div>
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.40)" }}>Launch a bounty campaign with demo keys, content objectives, and XP rewards.</p>
+          <p className="text-xs" style={{ color: "rgba(255,255,255,0.40)" }}>
+            {success
+              ? "Your campaign is live and ready for creators."
+              : "Choose a template, add keys, and launch instantly."}
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
-          {/* Connected step indicator */}
-          <div className="flex items-center gap-0">
-            {steps.map((s, i) => {
-              const active = step === s.num;
-              const done = step > s.num;
-              const isLast = i === steps.length - 1;
-              return (
-                <div key={s.num} className="flex items-center flex-1">
-                  <button type="button" onClick={() => setStep(s.num)}
-                    className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all"
-                      style={{
-                        background: active ? HUB_NEON : done ? "rgba(184,255,27,0.15)" : "rgba(255,255,255,0.06)",
-                        color: active ? "#070b10" : done ? HUB_NEON : "rgba(255,255,255,0.35)",
-                        border: active ? "none" : done ? `1px solid rgba(184,255,27,0.30)` : `1px solid rgba(255,255,255,0.12)`,
-                      }}>
-                      {done ? <Check className="w-3.5 h-3.5" /> : s.num}
-                    </div>
-                    <span className="text-[9px] font-bold uppercase tracking-wider truncate"
-                      style={{ color: active ? HUB_NEON : done ? "rgba(184,255,27,0.70)" : "rgba(255,255,255,0.30)" }}>
-                      {s.label}
-                    </span>
-                  </button>
-                  {!isLast && (
-                    <div className="w-8 h-px flex-shrink-0 mx-1"
-                      style={{ background: step > s.num ? HUB_NEON : "rgba(255,255,255,0.10)" }} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {step === 1 && (
-            <div className="space-y-4">
-              <div style={sectionCard}>
-                <div className="text-[10px] font-black uppercase tracking-widest mb-3" style={{ color: HUB_NEON }}>Campaign Info</div>
-                <div className="space-y-3">
-                  <div>
-                    <label style={labelStyle2}>Campaign Title *</label>
-                    <input style={inputStyle2} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Early Creator Access" required
-                      onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
-                      onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
+        <form onSubmit={handleLaunch} className="px-6 py-5 space-y-5">
+          {/* Step indicator (hidden on success) */}
+          {!success && (
+            <div className="flex items-center gap-0">
+              {steps.map((s, i) => {
+                const active = step === s.num;
+                const done = step > s.num;
+                const isLast = i === steps.length - 1;
+                return (
+                  <div key={s.num} className="flex items-center flex-1">
+                    <button type="button" onClick={() => setStep(s.num)}
+                      className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-black transition-all"
+                        style={{
+                          background: active ? HUB_NEON : done ? "rgba(184,255,27,0.15)" : "rgba(255,255,255,0.06)",
+                          color: active ? "#070b10" : done ? HUB_NEON : "rgba(255,255,255,0.35)",
+                          border: active ? "none" : done ? `1px solid rgba(184,255,27,0.30)` : `1px solid rgba(255,255,255,0.12)`,
+                        }}>
+                        {done ? <Check className="w-3.5 h-3.5" /> : s.num}
+                      </div>
+                      <span className="text-[9px] font-bold uppercase tracking-wider truncate"
+                        style={{ color: active ? HUB_NEON : done ? "rgba(184,255,27,0.70)" : "rgba(255,255,255,0.30)" }}>
+                        {s.label}
+                      </span>
+                    </button>
+                    {!isLast && (
+                      <div className="w-8 h-px flex-shrink-0 mx-1"
+                        style={{ background: step > s.num ? HUB_NEON : "rgba(255,255,255,0.10)" }} />
+                    )}
                   </div>
-                  <div>
-                    <label style={labelStyle2}>Display Name (optional)</label>
-                    <input style={inputStyle2} value={campaignTitle} onChange={e => setCampaignTitle(e.target.value)} placeholder="e.g. Creator Week One Challenge"
-                      onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
-                      onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
-                  </div>
-                  <div>
-                    <label style={labelStyle2}>Description</label>
-                    <textarea style={{ ...inputStyle2, minHeight: "72px", resize: "vertical" }} value={description} onChange={e => setDescription(e.target.value)} placeholder="What should creators do to earn rewards?"
-                      onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
-                      onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label style={labelStyle2}>Creator Slots</label>
-                      <input style={inputStyle2} type="number" min="1" value={creatorSlots} onChange={e => setCreatorSlots(e.target.value)}
-                        onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
-                        onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
-                    </div>
-                    <div>
-                      <label style={labelStyle2}>End Date</label>
-                      <input style={inputStyle2} type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
-                        onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
-                        onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
-                    </div>
-                  </div>
-                </div>
-              </div>
+                );
+              })}
             </div>
           )}
 
-          {step === 2 && (
-            <div className="space-y-4">
-              <div style={sectionCard}>
-                <div className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: HUB_NEON }}>
-                  <Key className="w-3.5 h-3.5" /> Demo Keys
-                </div>
-                <textarea style={{ ...inputStyle2, minHeight: "100px", resize: "vertical", fontFamily: "monospace", fontSize: "13px" }}
-                  value={demoKeyPool} onChange={e => setDemoKeyPool(e.target.value)} placeholder="ABC-123-DEF&#10;GHI-456-JKL"
-                  onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
-                <div className="flex items-center gap-1.5 mt-2">
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: demoKeyPool.trim() ? HUB_NEON : "rgba(255,255,255,0.15)" }} />
-                  <span className="text-[11px] font-bold" style={{ color: "rgba(255,255,255,0.40)" }}>
-                    {demoKeyPool.split(/\n|,/).filter(k => k.trim()).length} keys ready
-                  </span>
-                </div>
-              </div>
-              <div style={sectionCard}>
-                <div className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: HUB_NEON }}>
-                  <Unlock className="w-3.5 h-3.5" /> Full Keys
-                </div>
-                <textarea style={{ ...inputStyle2, minHeight: "100px", resize: "vertical", fontFamily: "monospace", fontSize: "13px" }}
-                  value={fullKeyPool} onChange={e => setFullKeyPool(e.target.value)} placeholder="FULL-KEY-001&#10;FULL-KEY-002"
-                  onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
-                <div className="flex items-center gap-1.5 mt-2">
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: fullKeyPool.trim() ? HUB_NEON : "rgba(255,255,255,0.15)" }} />
-                  <span className="text-[11px] font-bold" style={{ color: "rgba(255,255,255,0.40)" }}>
-                    {fullKeyPool.split(/\n|,/).filter(k => k.trim()).length} keys ready
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-4">
-              <div style={sectionCard}>
-                <div className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: HUB_NEON }}>
-                  <Target className="w-3.5 h-3.5" /> Content Objectives
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label style={labelStyle2}>Required Clips</label>
-                    <input style={inputStyle2} type="number" min="0" value={requiredClips} onChange={e => setRequiredClips(e.target.value)}
-                      onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
-                      onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
-                  </div>
-                  <div>
-                    <label style={labelStyle2}>Required Reels</label>
-                    <input style={inputStyle2} type="number" min="0" value={requiredReels} onChange={e => setRequiredReels(e.target.value)}
-                      onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
-                      onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
-                  </div>
-                  <div>
-                    <label style={labelStyle2}>Screenshots</label>
-                    <input style={inputStyle2} type="number" min="0" value={requiredScreenshots} onChange={e => setRequiredScreenshots(e.target.value)}
-                      onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
-                      onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
-                  </div>
-                  <div>
-                    <label style={labelStyle2}>Views Milestone</label>
-                    <input style={inputStyle2} type="number" min="0" value={requiredViews} onChange={e => setRequiredViews(e.target.value)}
-                      onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
-                      onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
-                  </div>
-                </div>
-              </div>
-              <div style={sectionCard}>
-                <div className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: HUB_NEON }}>
-                  <Trophy className="w-3.5 h-3.5" /> Completion Badge
-                </div>
-                <input style={inputStyle2} value={completionBadge} onChange={e => setCompletionBadge(e.target.value)} placeholder="e.g. Early Supporter"
-                  onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div className="space-y-4">
-              <div style={sectionCard}>
-                <div className="text-[10px] font-black uppercase tracking-widest mb-3 flex items-center gap-2" style={{ color: HUB_NEON }}>
-                  <Zap className="w-3.5 h-3.5" /> XP Rewards
-                </div>
-                <div className="grid grid-cols-3 gap-2.5">
-                  {[
-                    { label: "Join XP", value: xpJoin, setter: setXpJoin },
-                    { label: "Per Clip", value: xpPerClip, setter: setXpPerClip },
-                    { label: "Per Reel", value: xpPerReel, setter: setXpPerReel },
-                    { label: "Per Screenshot", value: xpPerScreenshot, setter: setXpPerScreenshot },
-                    { label: "View Milestone", value: xpViewMilestone, setter: setXpViewMilestone },
-                    { label: "Completion", value: xpCompletionBonus, setter: setXpCompletionBonus },
-                  ].map((field) => (
-                    <div key={field.label}>
-                      <label style={labelStyle2}>{field.label}</label>
-                      <input style={inputStyle2} type="number" min="0" value={field.value} onChange={e => field.setter(e.target.value)}
-                        onFocus={e => e.currentTarget.style.borderColor = "rgba(184,255,27,0.35)"}
-                        onBlur={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="rounded-xl p-4 text-center flex flex-col items-center gap-1"
-                style={{ background: "rgba(184,255,27,0.06)", border: "1px solid rgba(184,255,27,0.18)" }}>
-                <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: "rgba(184,255,27,0.60)" }}>Total XP Available</div>
-                <div className="text-2xl font-black" style={{ color: HUB_NEON }}>{totalXP.toLocaleString()} <span className="text-sm">XP</span></div>
-              </div>
-            </div>
-          )}
+          <StepContent />
 
           {/* Footer actions */}
-          <div className="flex items-center gap-3 pt-1" style={{ borderTop: `1px solid ${DIALOG_BORDER}` }}>
-            {step > 1 ? (
-              <button type="button" onClick={() => setStep(s => s - 1)}
-                className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-white/5"
-                style={{ color: "rgba(255,255,255,0.50)", border: `1px solid ${DIALOG_BORDER}` }}>
-                Back
-              </button>
-            ) : (
-              <button type="button" onClick={() => { onClose(); resetForm(); }}
-                className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-white/5"
-                style={{ color: "rgba(255,255,255,0.50)", border: `1px solid ${DIALOG_BORDER}` }}>
-                Cancel
-              </button>
-            )}
-            <div className="flex-1" />
-            {step < 4 ? (
-              <button type="button" onClick={() => setStep(s => s + 1)}
-                className="px-5 py-2.5 rounded-xl text-xs font-black transition-all hover:brightness-110"
-                style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: `1px solid rgba(255,255,255,0.15)` }}>
-                Next Step
-              </button>
-            ) : (
-              <button type="submit" disabled={mutation.isPending || !title.trim()}
-                className="px-5 py-2.5 rounded-xl text-xs font-black transition-all hover:brightness-110 disabled:opacity-40 flex items-center gap-2"
-                style={{ background: HUB_NEON, color: "#070b10", boxShadow: "0 8px 24px rgba(184,255,27,0.25)" }}>
-                {mutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                Launch Campaign
-              </button>
-            )}
-          </div>
+          {!success && (
+            <div className="flex items-center gap-3 pt-1" style={{ borderTop: `1px solid ${DIALOG_BORDER}` }}>
+              {step > 1 ? (
+                <button type="button" onClick={() => setStep(s => s - 1)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-white/5"
+                  style={{ color: "rgba(255,255,255,0.50)", border: `1px solid ${DIALOG_BORDER}` }}>
+                  Back
+                </button>
+              ) : (
+                <button type="button" onClick={handleClose}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-white/5"
+                  style={{ color: "rgba(255,255,255,0.50)", border: `1px solid ${DIALOG_BORDER}` }}>
+                  Cancel
+                </button>
+              )}
+              <div className="flex-1" />
+              {step < 4 ? (
+                <button type="button" onClick={() => setStep(s => s + 1)}
+                  disabled={step === 1 && !templateSlug}
+                  className="px-5 py-2.5 rounded-xl text-xs font-black transition-all hover:brightness-110 disabled:opacity-30"
+                  style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: `1px solid rgba(255,255,255,0.15)` }}>
+                  Next
+                </button>
+              ) : (
+                <button type="submit" disabled={mutation.isPending || !title.trim()}
+                  className="px-5 py-2.5 rounded-xl text-xs font-black transition-all hover:brightness-110 disabled:opacity-40 flex items-center gap-2"
+                  style={{ background: HUB_NEON, color: "#070b10", boxShadow: "0 8px 24px rgba(184,255,27,0.25)" }}>
+                  {mutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Rocket className="w-3.5 h-3.5" />}
+                  Launch Campaign
+                </button>
+              )}
+            </div>
+          )}
         </form>
       </DialogContent>
     </Dialog>
