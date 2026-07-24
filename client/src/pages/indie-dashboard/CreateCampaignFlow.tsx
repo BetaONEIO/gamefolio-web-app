@@ -8,6 +8,7 @@ import {
   MessageSquare, Target, AlertCircle, Gamepad2,
   Sparkles, Cog, Upload, FileText, X, ArrowRight,
   CheckCircle2, Calendar, Bot, Sliders,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { NEON } from "./constants";
 
@@ -434,15 +435,15 @@ const TYPE_DECOS: Record<string, Array<{ Icon: any; x: string; y: string; size: 
   ],
 };
 
-function CampaignIllustration({ slug, accent, selected, hovered }: {
-  slug: string; accent: string; selected: boolean; hovered?: boolean;
+function CampaignIllustration({ slug, accent, selected, hovered, height = "120px" }: {
+  slug: string; accent: string; selected: boolean; hovered?: boolean; height?: string;
 }) {
   const Icon  = CAMPAIGN_TYPES.find(t => t.slug === slug)?.icon ?? Sparkles;
   const rgb   = ACCENT_RGB[accent] ?? "183,255,27";
   const decos = TYPE_DECOS[slug] ?? [];
   const lit   = selected || hovered;
   return (
-    <div className="relative w-full overflow-hidden" style={{ height: "120px" }}>
+    <div className="relative w-full overflow-hidden" style={{ height }}>
       {/* Deep gradient bg */}
       <div className="absolute inset-0 transition-all duration-500"
         style={{
@@ -601,6 +602,169 @@ function TypeCard({
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Campaign type carousel — left/right navigation
+// ─────────────────────────────────────────────
+
+function TypeCardCarousel({
+  selectedType,
+  onSelectAndContinue,
+}: {
+  selectedType: CampaignType | null;
+  onSelectAndContinue: (type: CampaignType) => void;
+}) {
+  const initIdx = selectedType
+    ? Math.max(0, CAMPAIGN_TYPES.findIndex(t => t.slug === selectedType.slug))
+    : 0;
+  const [idx, setIdx] = useState(initIdx);
+  const [dir, setDir] = useState<"left" | "right">("right");
+  const [animKey, setAnimKey] = useState(0);
+
+  const current = CAMPAIGN_TYPES[idx];
+  const accent  = TYPE_ACCENT[current.slug] ?? NEON;
+  const rgb     = ACCENT_RGB[accent] ?? "183,255,27";
+
+  function go(next: number) {
+    setDir(next > idx || (idx === CAMPAIGN_TYPES.length - 1 && next === 0) ? "right" : "left");
+    setIdx((next + CAMPAIGN_TYPES.length) % CAMPAIGN_TYPES.length);
+    setAnimKey(k => k + 1);
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Arrow + card row */}
+      <div className="flex items-center gap-3">
+        {/* Left arrow */}
+        <button
+          onClick={() => go(idx - 1)}
+          className="shrink-0 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+          style={{ width: "40px", height: "40px", borderRadius: "50%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)" }}>
+          <ChevronLeft style={{ width: "18px", height: "18px", color: "rgba(255,255,255,0.7)" }} />
+        </button>
+
+        {/* The card itself */}
+        <div
+          key={animKey}
+          className="flex-1 rounded-2xl overflow-hidden gf-fade-up"
+          style={{
+            background: `linear-gradient(180deg, rgba(${rgb},0.10) 0%, ${CARD_BG} 38%)`,
+            border: `1.5px solid rgba(${rgb},0.22)`,
+            boxShadow: `0 20px 60px 0 rgba(${rgb},0.12), 0 0 0 1px rgba(${rgb},0.06)`,
+          }}>
+
+          {/* Illustration — 200px tall */}
+          <div className="relative">
+            <CampaignIllustration slug={current.slug} accent={accent} selected={false} hovered height="200px" />
+
+            {/* Recommended badge */}
+            {current.recommended && (
+              <div className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-full"
+                style={{ background: "rgba(251,146,60,0.18)", color: "#fb923c", border: "1px solid rgba(251,146,60,0.28)", backdropFilter: "blur(6px)" }}>
+                ★ Recommended
+              </div>
+            )}
+
+            {/* Position counter — top right */}
+            <div className="absolute top-3 right-3 text-[11px] font-bold"
+              style={{ color: "rgba(255,255,255,0.35)" }}>
+              {idx + 1} / {CAMPAIGN_TYPES.length}
+            </div>
+
+            {/* Best-for pill — bottom left */}
+            <div className="absolute bottom-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
+              style={{ background: `rgba(${rgb},0.14)`, color: accent, border: `1px solid rgba(${rgb},0.28)`, backdropFilter: "blur(8px)" }}>
+              {current.bestFor}
+            </div>
+          </div>
+
+          {/* Card body */}
+          <div className="px-5 pt-4 pb-5 space-y-4">
+            {/* Name + tagline */}
+            <div>
+              <h3 className="text-lg font-black text-white leading-tight">{current.name}</h3>
+              <p className="text-[13px] mt-1.5 leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>{current.description}</p>
+            </div>
+
+            {/* Stats grid — 4 tiles */}
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: "Days",     value: current.duration },
+                { label: "Creators", value: current.capacity },
+                { label: "Demo",     value: `${current.demoKeys} keys` },
+                { label: "Full",     value: `${current.fullKeys} keys` },
+              ].map(s => (
+                <div key={s.label} className="flex flex-col items-center py-2.5 rounded-xl"
+                  style={{ background: `rgba(${rgb},0.07)`, border: `1px solid rgba(${rgb},0.12)` }}>
+                  <span className="text-[15px] font-black" style={{ color: accent }}>{s.value}</span>
+                  <span className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{s.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Content requirement pills */}
+            <div className="flex flex-wrap gap-2">
+              {current.pills.map(({ ct, qty }) => {
+                const PIcon = REQ_ICON[ct] ?? Target;
+                return (
+                  <span key={ct} className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg"
+                    style={{ background: `rgba(${rgb},0.08)`, color: accent, border: `1px solid rgba(${rgb},0.16)` }}>
+                    <PIcon size={10} /> {reqPillLabel(ct, qty)}
+                  </span>
+                );
+              })}
+            </div>
+
+            {/* Est. views */}
+            <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+              Est. {current.estimated.viewsMin.toLocaleString()}–{current.estimated.viewsMax.toLocaleString()} views
+            </p>
+
+            {/* Primary CTA */}
+            <button
+              onClick={() => onSelectAndContinue(current)}
+              className="w-full py-4 rounded-2xl text-[14px] font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-98"
+              style={{
+                background: accent,
+                color: "#070b10",
+                boxShadow: `0 0 40px 0 rgba(${rgb},0.25)`,
+              }}>
+              <ArrowRight style={{ width: "16px", height: "16px" }} />
+              Use {current.shortName}
+            </button>
+          </div>
+        </div>
+
+        {/* Right arrow */}
+        <button
+          onClick={() => go(idx + 1)}
+          className="shrink-0 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+          style={{ width: "40px", height: "40px", borderRadius: "50%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)" }}>
+          <ChevronRight style={{ width: "18px", height: "18px", color: "rgba(255,255,255,0.7)" }} />
+        </button>
+      </div>
+
+      {/* Dot indicators */}
+      <div className="flex justify-center items-center gap-2">
+        {CAMPAIGN_TYPES.map((t, i) => {
+          const a = TYPE_ACCENT[t.slug] ?? NEON;
+          return (
+            <button
+              key={t.slug}
+              onClick={() => go(i)}
+              className="transition-all duration-300"
+              style={{
+                height: "8px",
+                width: i === idx ? "24px" : "8px",
+                borderRadius: "9999px",
+                background: i === idx ? a : "rgba(255,255,255,0.18)",
+              }} />
+          );
+        })}
       </div>
     </div>
   );
@@ -1848,35 +2012,14 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
               </>
             ) : (
               <>
-                {/* Campaign grid — 2 columns */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  {CAMPAIGN_TYPES.map(t => (
-                    <TypeCard key={t.slug} type={t}
-                      selected={selectedType?.slug === t.slug}
-                      anySelected={!!selectedType}
-                      onSelect={() => { setSelectedType(t); setConfirmed(false); }} />
-                  ))}
-                </div>
-
-                {/* Smart continue button */}
-                <button
-                  onClick={() => selectedType && setCurrentStep(2)}
-                  disabled={!selectedType}
-                  className="w-full py-4 rounded-2xl text-sm font-black flex items-center justify-center gap-2.5 transition-all duration-300"
-                  style={{
-                    background: selectedType ? NEON : "rgba(255,255,255,0.04)",
-                    color: selectedType ? "#070b10" : "rgba(255,255,255,0.25)",
-                    border: selectedType ? "none" : "1px solid rgba(255,255,255,0.07)",
-                    boxShadow: selectedType ? "0 0 40px 0 rgba(183,255,24,0.2)" : "none",
-                    cursor: selectedType ? "pointer" : "default",
-                    transform: selectedType ? "scale(1)" : "scale(0.99)",
-                  }}>
-                  {selectedType ? (
-                    <><ArrowRight className="w-4 h-4" /> Use {selectedType.shortName}</>
-                  ) : (
-                    "Choose a campaign to continue"
-                  )}
-                </button>
+                <TypeCardCarousel
+                  selectedType={selectedType}
+                  onSelectAndContinue={(t) => {
+                    setSelectedType(t);
+                    setConfirmed(false);
+                    setCurrentStep(2);
+                  }}
+                />
               </>
             )}
           </div>
