@@ -608,7 +608,120 @@ function TypeCard({
 }
 
 // ─────────────────────────────────────────────
-// Campaign type carousel — left/right navigation
+// Thin pricing card (used inside carousel)
+// ─────────────────────────────────────────────
+
+function ThinTypeCard({
+  type, isCenter, onClick,
+}: {
+  type: CampaignType; isCenter: boolean; onClick: () => void;
+}) {
+  const accent = TYPE_ACCENT[type.slug] ?? NEON;
+  const rgb    = ACCENT_RGB[accent] ?? "183,255,27";
+  const Icon   = type.icon;
+
+  return (
+    <div
+      onClick={onClick}
+      className="relative flex flex-col overflow-hidden cursor-pointer select-none"
+      style={{
+        flex: isCenter ? "1.08" : "1",
+        borderRadius: "18px",
+        background: isCenter
+          ? `linear-gradient(180deg, rgba(${rgb},0.13) 0%, ${CARD_BG} 42%)`
+          : "rgba(255,255,255,0.03)",
+        border: `1.5px solid ${isCenter ? `rgba(${rgb},0.30)` : "rgba(255,255,255,0.07)"}`,
+        boxShadow: isCenter
+          ? `0 28px 64px 0 rgba(${rgb},0.18), 0 0 0 1px rgba(${rgb},0.06)`
+          : "none",
+        transform: isCenter ? "translateY(-14px) scale(1.03)" : "scale(0.97)",
+        opacity: isCenter ? 1 : 0.55,
+        filter: isCenter ? "none" : "saturate(0.5) brightness(0.85)",
+        transition: "all 0.35s cubic-bezier(0.22,1,0.36,1)",
+        padding: "0 0 20px 0",
+        zIndex: isCenter ? 2 : 1,
+      }}>
+
+      {/* Decorative corner triangle (top-right, like reference) */}
+      <div className="absolute top-0 right-0 overflow-hidden" style={{ width: "36px", height: "36px" }}>
+        <div style={{
+          position: "absolute", top: 0, right: 0,
+          borderStyle: "solid", borderWidth: "0 36px 36px 0",
+          borderColor: `transparent rgba(${rgb},${isCenter ? 0.45 : 0.20}) transparent transparent`,
+        }} />
+      </div>
+
+      {/* Best-for label top-left */}
+      <div className="px-4 pt-4 mb-3">
+        {type.recommended && (
+          <div className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mb-1.5"
+            style={{ background: "rgba(251,146,60,0.18)", color: "#fb923c" }}>
+            ★ Best
+          </div>
+        )}
+        <h3 className="text-[14px] font-black leading-tight" style={{ color: isCenter ? "#fff" : "rgba(255,255,255,0.65)" }}>
+          {type.shortName}
+        </h3>
+      </div>
+
+      {/* Large circle with icon (like the price badge in reference) */}
+      <div className="mx-auto mb-4 flex flex-col items-center justify-center rounded-full"
+        style={{
+          width: "84px", height: "84px",
+          background: `radial-gradient(circle, rgba(${rgb},0.22) 0%, rgba(${rgb},0.08) 100%)`,
+          border: `2px solid rgba(${rgb},${isCenter ? 0.40 : 0.20})`,
+          boxShadow: isCenter ? `0 0 32px 0 rgba(${rgb},0.25)` : "none",
+        }}>
+        <Icon size={36} style={{ color: accent, filter: isCenter ? `drop-shadow(0 0 14px ${accent}90)` : "none" }} />
+        <span className="text-[9px] font-bold mt-0.5" style={{ color: `rgba(${rgb},0.7)` }}>
+          {type.duration}d
+        </span>
+      </div>
+
+      {/* Feature / stat rows — like the check list in reference */}
+      <div className="px-4 space-y-0">
+        {[
+          { ok: true,  label: `${type.capacity} Creators` },
+          { ok: true,  label: `${type.demoKeys} Demo Keys` },
+          { ok: true,  label: `${type.fullKeys} Full Keys` },
+          { ok: type.recommended ?? false, label: `${type.xpReward.toLocaleString()} XP` },
+        ].map((row, i) => (
+          <div key={i} className="flex items-center gap-2.5 py-2"
+            style={{ borderBottom: i < 3 ? `1px solid ${isCenter ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)"}` : "none" }}>
+            <div className="shrink-0 flex items-center justify-center rounded-full"
+              style={{
+                width: "18px", height: "18px",
+                background: row.ok ? `rgba(${rgb},0.14)` : "rgba(255,255,255,0.04)",
+              }}>
+              {row.ok
+                ? <Check style={{ width: "10px", height: "10px", color: accent }} />
+                : <X    style={{ width: "10px", height: "10px", color: "rgba(255,255,255,0.25)" }} />
+              }
+            </div>
+            <span className="text-[12px]" style={{ color: isCenter ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.35)" }}>
+              {row.label}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Select button */}
+      <div className="px-4 mt-4">
+        <div className="w-full py-2.5 rounded-xl text-[12px] font-black text-center transition-all"
+          style={{
+            background: isCenter ? accent : "rgba(255,255,255,0.05)",
+            color: isCenter ? "#070b10" : "rgba(255,255,255,0.35)",
+            border: isCenter ? "none" : "1px solid rgba(255,255,255,0.08)",
+          }}>
+          {isCenter ? "Select →" : type.shortName}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Campaign type carousel — 3 cards visible, center elevated
 // ─────────────────────────────────────────────
 
 function TypeCardCarousel({
@@ -618,134 +731,62 @@ function TypeCardCarousel({
   selectedType: CampaignType | null;
   onSelectAndContinue: (type: CampaignType) => void;
 }) {
+  const n = CAMPAIGN_TYPES.length;
   const initIdx = selectedType
     ? Math.max(0, CAMPAIGN_TYPES.findIndex(t => t.slug === selectedType.slug))
-    : 0;
-  const [idx, setIdx] = useState(initIdx);
-  const [dir, setDir] = useState<"left" | "right">("right");
-  const [animKey, setAnimKey] = useState(0);
+    : 1;
+  const [centerIdx, setCenterIdx] = useState(initIdx);
 
-  const current = CAMPAIGN_TYPES[idx];
-  const accent  = TYPE_ACCENT[current.slug] ?? NEON;
-  const rgb     = ACCENT_RGB[accent] ?? "183,255,27";
+  const prev = (centerIdx - 1 + n) % n;
+  const next = (centerIdx + 1) % n;
 
-  function go(next: number) {
-    setDir(next > idx || (idx === CAMPAIGN_TYPES.length - 1 && next === 0) ? "right" : "left");
-    setIdx((next + CAMPAIGN_TYPES.length) % CAMPAIGN_TYPES.length);
-    setAnimKey(k => k + 1);
-  }
+  const visible = [
+    { type: CAMPAIGN_TYPES[prev],      isCenter: false, idx: prev },
+    { type: CAMPAIGN_TYPES[centerIdx], isCenter: true,  idx: centerIdx },
+    { type: CAMPAIGN_TYPES[next],      isCenter: false, idx: next },
+  ];
+
+  const centerAccent = TYPE_ACCENT[CAMPAIGN_TYPES[centerIdx].slug] ?? NEON;
 
   return (
     <div className="space-y-5">
-      {/* Arrow + card row */}
-      <div className="flex items-center gap-3">
-        {/* Left arrow */}
+      {/* Arrow row above cards */}
+      <div className="flex items-center justify-between px-1">
         <button
-          onClick={() => go(idx - 1)}
-          className="shrink-0 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
-          style={{ width: "40px", height: "40px", borderRadius: "50%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)" }}>
-          <ChevronLeft style={{ width: "18px", height: "18px", color: "rgba(255,255,255,0.7)" }} />
+          onClick={() => setCenterIdx(prev)}
+          className="flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full transition-all hover:opacity-80"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.55)" }}>
+          <ChevronLeft style={{ width: "14px", height: "14px" }} /> Prev
         </button>
 
-        {/* The card itself */}
-        <div
-          key={animKey}
-          className="flex-1 rounded-2xl overflow-hidden gf-fade-up"
-          style={{
-            background: `linear-gradient(180deg, rgba(${rgb},0.10) 0%, ${CARD_BG} 38%)`,
-            border: `1.5px solid rgba(${rgb},0.22)`,
-            boxShadow: `0 20px 60px 0 rgba(${rgb},0.12), 0 0 0 1px rgba(${rgb},0.06)`,
-          }}>
+        <span className="text-[11px] font-bold" style={{ color: "rgba(255,255,255,0.28)" }}>
+          {centerIdx + 1} / {n}
+        </span>
 
-          {/* Illustration — 200px tall */}
-          <div className="relative">
-            <CampaignIllustration slug={current.slug} accent={accent} selected={false} hovered height="200px" />
-
-            {/* Recommended badge */}
-            {current.recommended && (
-              <div className="absolute top-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-full"
-                style={{ background: "rgba(251,146,60,0.18)", color: "#fb923c", border: "1px solid rgba(251,146,60,0.28)", backdropFilter: "blur(6px)" }}>
-                ★ Recommended
-              </div>
-            )}
-
-            {/* Position counter — top right */}
-            <div className="absolute top-3 right-3 text-[11px] font-bold"
-              style={{ color: "rgba(255,255,255,0.35)" }}>
-              {idx + 1} / {CAMPAIGN_TYPES.length}
-            </div>
-
-            {/* Best-for pill — bottom left */}
-            <div className="absolute bottom-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg"
-              style={{ background: `rgba(${rgb},0.14)`, color: accent, border: `1px solid rgba(${rgb},0.28)`, backdropFilter: "blur(8px)" }}>
-              {current.bestFor}
-            </div>
-          </div>
-
-          {/* Card body */}
-          <div className="px-5 pt-4 pb-5 space-y-4">
-            {/* Name + tagline */}
-            <div>
-              <h3 className="text-lg font-black text-white leading-tight">{current.name}</h3>
-              <p className="text-[13px] mt-1.5 leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>{current.description}</p>
-            </div>
-
-            {/* Stats grid — 4 tiles */}
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { label: "Days",     value: current.duration },
-                { label: "Creators", value: current.capacity },
-                { label: "Demo",     value: `${current.demoKeys} keys` },
-                { label: "Full",     value: `${current.fullKeys} keys` },
-              ].map(s => (
-                <div key={s.label} className="flex flex-col items-center py-2.5 rounded-xl"
-                  style={{ background: `rgba(${rgb},0.07)`, border: `1px solid rgba(${rgb},0.12)` }}>
-                  <span className="text-[15px] font-black" style={{ color: accent }}>{s.value}</span>
-                  <span className="text-[10px] mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{s.label}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Content requirement pills */}
-            <div className="flex flex-wrap gap-2">
-              {current.pills.map(({ ct, qty }) => {
-                const PIcon = REQ_ICON[ct] ?? Target;
-                return (
-                  <span key={ct} className="inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg"
-                    style={{ background: `rgba(${rgb},0.08)`, color: accent, border: `1px solid rgba(${rgb},0.16)` }}>
-                    <PIcon size={10} /> {reqPillLabel(ct, qty)}
-                  </span>
-                );
-              })}
-            </div>
-
-            {/* Est. views */}
-            <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.25)" }}>
-              Est. {current.estimated.viewsMin.toLocaleString()}–{current.estimated.viewsMax.toLocaleString()} views
-            </p>
-
-            {/* Primary CTA */}
-            <button
-              onClick={() => onSelectAndContinue(current)}
-              className="w-full py-4 rounded-2xl text-[14px] font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-98"
-              style={{
-                background: accent,
-                color: "#070b10",
-                boxShadow: `0 0 40px 0 rgba(${rgb},0.25)`,
-              }}>
-              <ArrowRight style={{ width: "16px", height: "16px" }} />
-              Use {current.shortName}
-            </button>
-          </div>
-        </div>
-
-        {/* Right arrow */}
         <button
-          onClick={() => go(idx + 1)}
-          className="shrink-0 flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
-          style={{ width: "40px", height: "40px", borderRadius: "50%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)" }}>
-          <ChevronRight style={{ width: "18px", height: "18px", color: "rgba(255,255,255,0.7)" }} />
+          onClick={() => setCenterIdx(next)}
+          className="flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full transition-all hover:opacity-80"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.55)" }}>
+          Next <ChevronRight style={{ width: "14px", height: "14px" }} />
         </button>
+      </div>
+
+      {/* Three cards */}
+      <div className="flex items-end gap-3 pb-4">
+        {visible.map(({ type, isCenter, idx: i }) => (
+          <ThinTypeCard
+            key={type.slug}
+            type={type}
+            isCenter={isCenter}
+            onClick={() => {
+              if (!isCenter) {
+                setCenterIdx(i);
+              } else {
+                onSelectAndContinue(type);
+              }
+            }}
+          />
+        ))}
       </div>
 
       {/* Dot indicators */}
@@ -755,13 +796,13 @@ function TypeCardCarousel({
           return (
             <button
               key={t.slug}
-              onClick={() => go(i)}
+              onClick={() => setCenterIdx(i)}
               className="transition-all duration-300"
               style={{
-                height: "8px",
-                width: i === idx ? "24px" : "8px",
+                height: "7px",
+                width: i === centerIdx ? "22px" : "7px",
                 borderRadius: "9999px",
-                background: i === idx ? a : "rgba(255,255,255,0.18)",
+                background: i === centerIdx ? a : "rgba(255,255,255,0.16)",
               }} />
           );
         })}
