@@ -644,34 +644,34 @@ function ThinTypeCard({
         opacity: isCenter ? 1 : 0.55,
         filter: isCenter ? "none" : "saturate(0.4) brightness(0.75)",
         transition: "all 0.35s cubic-bezier(0.22,1,0.36,1)",
-        padding: "0 0 20px 0",
+        padding: "0 0 28px 0",
         zIndex: isCenter ? 2 : 1,
       }}>
 
       {/* ── Full-width gaming image header ── */}
-      <div className="relative w-full overflow-hidden shrink-0" style={{ height: "120px", borderRadius: "18px 18px 0 0" }}>
+      <div className="relative w-full overflow-hidden shrink-0" style={{ height: "190px", borderRadius: "18px 18px 0 0" }}>
         <img
-          src={`https://picsum.photos/seed/${seed}/400/240`}
+          src={`https://picsum.photos/seed/${seed}/400/380`}
           alt=""
           draggable={false}
           className="w-full h-full object-cover"
           style={{ display: "block" }}
         />
         {/* dark base overlay so text is always readable */}
-        <div className="absolute inset-0" style={{ background: "rgba(7,11,16,0.45)" }} />
-        {/* accent colour tint from the bottom */}
+        <div className="absolute inset-0" style={{ background: "rgba(7,11,16,0.40)" }} />
+        {/* accent colour tint rising from the bottom */}
         <div className="absolute inset-0" style={{
-          background: `linear-gradient(to top, rgba(${rgb},0.28) 0%, transparent 60%)`,
+          background: `linear-gradient(to top, rgba(${rgb},0.32) 0%, transparent 55%)`,
         }} />
         {/* title + badge sit over the image */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
+        <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
           {type.recommended && (
-            <div className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mb-1.5"
+            <div className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mb-2"
               style={{ background: "rgba(251,146,60,0.22)", color: "#fb923c", backdropFilter: "blur(6px)" }}>
               ★ Best
             </div>
           )}
-          <h3 className="text-[14px] font-black leading-tight text-white drop-shadow-md">
+          <h3 className="text-[15px] font-black leading-tight text-white drop-shadow-md">
             {type.shortName}
           </h3>
           <span className="text-[10px] font-bold" style={{ color: accent, textShadow: `0 0 12px ${accent}` }}>
@@ -680,15 +680,21 @@ function ThinTypeCard({
         </div>
       </div>
 
-      {/* Feature / stat rows — like the check list in reference */}
-      <div className="px-4 space-y-0">
+      {/* Short description */}
+      <p className="px-4 pt-4 text-[11px] leading-relaxed line-clamp-2"
+        style={{ color: isCenter ? "rgba(255,255,255,0.50)" : "rgba(255,255,255,0.25)", minHeight: "36px" }}>
+        {type.description}
+      </p>
+
+      {/* Feature / stat rows */}
+      <div className="px-4 mt-3 space-y-0 flex-1">
         {[
           { ok: true,  label: `${type.capacity} Creators` },
           { ok: true,  label: `${type.demoKeys} Demo Keys` },
           { ok: true,  label: `${type.fullKeys} Full Keys` },
           { ok: type.recommended ?? false, label: `${type.xpReward.toLocaleString()} XP` },
         ].map((row, i) => (
-          <div key={i} className="flex items-center gap-2.5 py-2"
+          <div key={i} className="flex items-center gap-2.5 py-3"
             style={{ borderBottom: i < 3 ? `1px solid ${isCenter ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)"}` : "none" }}>
             <div className="shrink-0 flex items-center justify-center rounded-full"
               style={{
@@ -708,12 +714,13 @@ function ThinTypeCard({
       </div>
 
       {/* Select button */}
-      <div className="px-4 mt-4">
-        <div className="w-full py-2.5 rounded-xl text-[12px] font-black text-center transition-all"
+      <div className="px-4 mt-5">
+        <div className="w-full py-3.5 rounded-xl text-[13px] font-black text-center transition-all"
           style={{
             background: isCenter ? accent : "rgba(255,255,255,0.05)",
             color: isCenter ? "#070b10" : "rgba(255,255,255,0.35)",
             border: isCenter ? "none" : "1px solid rgba(255,255,255,0.08)",
+            boxShadow: isCenter ? `0 0 24px 0 rgba(${rgb},0.30)` : "none",
           }}>
           {isCenter ? "Select →" : type.shortName}
         </div>
