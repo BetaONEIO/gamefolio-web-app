@@ -5,10 +5,10 @@ import { getQueryFn } from "@/lib/queryClient";
 import {
   Rocket, Users, Target, BarChart3,
   Gamepad, KeyRound, Loader2,
-  BookOpen, TrendingUp, AlertTriangle,
+  TrendingUp, AlertTriangle,
   CheckCircle2, ChevronRight,
-  Upload, Film, Camera,
-  Video, Plus, ArrowUpRight,
+  Film, Camera,
+  Video, ArrowUpRight,
   Crosshair, Settings, LayoutDashboard,
   AlertCircle, Star, Circle,
 } from "lucide-react";
@@ -103,15 +103,15 @@ function IndieDevSubscriptionTab() {
           Indie Developer Subscription
         </p>
         <h3 className="text-xl font-black text-white mb-3">
-          {isSubscriber ? "You're subscribed" : "Run more bounties at once"}
+          {isSubscriber ? "You're subscribed" : "Run more campaigns at once"}
         </h3>
         <p className="text-sm text-white/50 mb-2">
-          Active bounty limit: <span className="font-bold text-white">{isSubscriber ? 5 : 1}</span>
+          Active campaign limit: <span className="font-bold text-white">{isSubscriber ? 5 : 1}</span>
         </p>
         <p className="text-sm text-white/50 mb-5">
           {isSubscriber
             ? `Billed ${user?.indieDevSubscriptionType === "yearly" ? "yearly (£49.99/yr)" : "monthly (£4.99/mo)"}.`
-            : "Upgrade to run up to 5 active bounties at once, plus get featured on gamefolio.com/games and included in Gamefolio's social promotion."}
+            : "Upgrade to run up to 5 active campaigns at once, plus get featured on gamefolio.com/games and included in Gamefolio's social promotion."}
         </p>
         {!isSubscriber && (
           <button onClick={() => setShowUpgrade(true)}
@@ -215,17 +215,8 @@ function DashboardTab({
       icon: Rocket, color: NEON,
       title: "Launch your first campaign",
       desc: "Recruit creators to build buzz for your game",
-      cta: "Browse Templates",
-      action: () => onGoTo("campaigns", "library"),
-    });
-  }
-  if (!user?.isIndieDevSubscriber) {
-    attentionItems.push({
-      icon: Rocket, color: NEON,
-      title: "Free accounts can run 1 active bounty at a time",
-      desc: "Upgrade to Indie Developer to run up to 5 at once, plus promotion perks",
-      cta: "Upgrade",
-      action: () => setShowIndieDevUpgrade(true),
+      cta: "Create Campaign",
+      action: () => onGoTo("campaigns", "create"),
     });
   }
 
@@ -261,83 +252,204 @@ function DashboardTab({
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: NEON }}>
-              Your Game
-            </p>
-            <h2 className="text-2xl sm:text-3xl font-black text-white mb-5 leading-tight">
+            <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight mb-1">
               {profile?.gameName ?? "Set up your game"}
             </h2>
+            <div className="flex items-center gap-2 mb-4">
+              {profile?.releaseStatus && (
+                <span className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.45)" }}>
+                  {profile.releaseStatus.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                </span>
+              )}
+              {(profile?.steamUrl || profile?.epicUrl || profile?.itchUrl) && (
+                <>
+                  <span className="text-white/20">·</span>
+                  <span className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    {profile.steamUrl ? "Steam" : profile.epicUrl ? "Epic" : "itch.io"}
+                  </span>
+                </>
+              )}
+            </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
-              {[
-                {
-                  label: "Game Profile",
-                  value: `${profilePct}%`,
-                  sub: profilePct < 100 ? "complete" : "Complete ✓",
-                  color: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171",
-                  badge: undefined as string | undefined,
-                },
-                {
-                  label: "Active Campaign",
-                  value: activeCampaigns.length > 0 ? "Live" : "None",
-                  sub: activeCampaigns.length > 0
-                    ? (activeCampaigns[0].template_name ?? activeCampaigns[0].name ?? "Campaign")
-                    : "No active campaign",
-                  color: activeCampaigns.length > 0 ? NEON : "#475569",
-                  badge: activeCampaigns.length > 0 ? "LIVE" : undefined,
-                },
-                {
-                  label: "Active Creators",
-                  value: String(d.totalParticipants),
-                  sub: "Across campaigns",
-                  color: d.totalParticipants > 0 ? NEON : "#475569",
-                  badge: undefined as string | undefined,
-                },
-                {
-                  label: "Demo Keys",
-                  value: String(demoKeys.available),
-                  sub: "remaining",
-                  color: demoKeys.available < 5 ? "#f87171" : demoKeys.available < 15 ? "#f59e0b" : NEON,
-                  badge: undefined as string | undefined,
-                },
-              ].map(({ label, value, sub, color, badge }) => (
-                <div key={label}>
-                  <div className="text-[10px] text-white/35 uppercase tracking-wider mb-0.5">{label}</div>
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-xl sm:text-2xl font-black" style={{ color }}>{value}</span>
-                    {badge && (
-                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full animate-pulse"
-                        style={{ background: "rgba(183,255,24,0.14)", color: NEON }}>
-                        {badge}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[11px] text-white/25 mt-0.5 truncate">{sub}</div>
-                </div>
-              ))}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold" style={{ color: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171" }}>
+                  {missingEssential.length === 0 ? "Profile Ready" : "Setup in Progress"}
+                </span>
+                <span className="text-xs text-white/30">·</span>
+                <span className="text-xs text-white/40">{profilePct}% strength</span>
+              </div>
+              {profilePct < 100 && nextSteps.length > 0 && (
+                <span className="text-[10px] text-white/25 hidden sm:inline">
+                  Next: {nextSteps[0].label} (+{nextSteps[0].pct}%)
+                </span>
+              )}
+            </div>
+
+            {missingEssential.length > 0 && (
+              <p className="text-xs text-white/30 max-w-md mb-4">
+                Complete essential information so creators know what your game is about.
+              </p>
+            )}
+
+            <div className="flex flex-wrap items-center gap-2">
+              {missingEssential.length > 0 ? (
+                <button onClick={() => onGoTo("settings", "profile")}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110"
+                  style={{ background: NEON, color: "#070b10" }}>
+                  Continue Setup <ArrowUpRight className="w-4 h-4" />
+                </button>
+              ) : activeCampaigns.length === 0 ? (
+                <button onClick={() => onGoTo("campaigns", "create")}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110"
+                  style={{ background: NEON, color: "#070b10" }}>
+                  Create Your First Campaign <ArrowUpRight className="w-4 h-4" />
+                </button>
+              ) : (
+                <button onClick={() => onGoTo("campaigns", "my")}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110"
+                  style={{ background: NEON, color: "#070b10" }}>
+                  View Active Campaign <ArrowUpRight className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 shrink-0">
-            {profilePct < 100 && (
-              <button onClick={() => onGoTo("settings", "profile")}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 whitespace-nowrap"
-                style={{ background: NEON, color: "#070b10" }}>
-                Continue Setup <ArrowUpRight className="w-4 h-4" />
-              </button>
-            )}
-            <button onClick={onRunCampaign}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all whitespace-nowrap"
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                color: "rgba(255,255,255,0.6)",
-                border: "1px solid rgba(255,255,255,0.09)",
-              }}>
-              <Plus className="w-4 h-4" /> New Campaign
-            </button>
+          {/* Secondary metrics — muted, smaller */}
+          <div className="shrink-0 grid grid-cols-3 gap-4 sm:w-56">
+            {[
+              {
+                label: "Active Campaign",
+                value: activeCampaigns.length > 0 ? "Live" : "None",
+                sub: activeCampaigns.length > 0
+                  ? (activeCampaigns[0].template_name ?? activeCampaigns[0].name ?? "Campaign")
+                  : "No active campaign",
+                color: activeCampaigns.length > 0 ? NEON : "#475569",
+              },
+              {
+                label: "Active Creators",
+                value: String(d.totalParticipants),
+                sub: "Across campaigns",
+                color: d.totalParticipants > 0 ? NEON : "#475569",
+              },
+              {
+                label: "Demo Keys",
+                value: String(demoKeys.available),
+                sub: "remaining",
+                color: demoKeys.available < 5 ? "#f87171" : demoKeys.available < 15 ? "#f59e0b" : NEON,
+              },
+            ].map(({ label, value, sub, color }) => (
+              <div key={label} className="text-center">
+                <div className="text-[10px] text-white/25 uppercase tracking-wider mb-0.5">{label}</div>
+                <div className="text-lg font-black" style={{ color }}>{value}</div>
+                <div className="text-[10px] text-white/20 truncate">{sub}</div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
+
+      {/* NEW-ACCOUNT ONBOARDING STATE */}
+      {activeCampaigns.length === 0 && (
+        <div className="rounded-2xl p-6 sm:p-8 space-y-5"
+          style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: "rgba(183,255,24,0.09)" }}>
+              <Rocket className="w-4 h-4" style={{ color: NEON }} />
+            </div>
+            <h3 className="text-base font-black text-white">Get Your Game Ready</h3>
+          </div>
+          <p className="text-xs text-white/30 max-w-lg">
+            Complete these steps to begin recruiting creators:
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Step 1: Game Profile */}
+            <div className="rounded-xl p-4 space-y-3"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black"
+                  style={missingEssential.length === 0
+                    ? { background: "rgba(74,222,128,0.15)", color: "#4ade80" }
+                    : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>
+                  {missingEssential.length === 0 ? <CheckCircle2 className="w-3.5 h-3.5" /> : "1"}
+                </div>
+                <span className="text-xs font-bold text-white">Complete Game Profile</span>
+              </div>
+              <div className="text-[10px] text-white/25 leading-relaxed">
+                {missingEssential.length === 0
+                  ? "All essential fields are filled. Add recommended information to make your campaign more attractive."
+                  : `${missingEssential.length} essential field${missingEssential.length > 1 ? "s" : ""} still missing.`}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold" style={{ color: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171" }}>
+                  {profilePct}% complete
+                </span>
+              </div>
+              <button onClick={() => onGoTo("settings", "profile")}
+                className="w-full text-[10px] font-bold py-2 rounded-lg transition-all hover:brightness-110"
+                style={{ background: `${missingEssential.length === 0 ? "rgba(74,222,128,0.1)" : "rgba(183,255,24,0.09)"}`,
+                  color: missingEssential.length === 0 ? "#4ade80" : NEON,
+                  border: `1px solid ${missingEssential.length === 0 ? "rgba(74,222,128,0.2)" : "rgba(183,255,24,0.18)"}` }}>
+                {missingEssential.length === 0 ? "Edit Profile" : "Continue Setup"}
+              </button>
+            </div>
+
+            {/* Step 2: Upload Keys */}
+            <div className="rounded-xl p-4 space-y-3"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black"
+                  style={demoKeys.available > 0
+                    ? { background: "rgba(74,222,128,0.15)", color: "#4ade80" }
+                    : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>
+                  {demoKeys.available > 0 ? <CheckCircle2 className="w-3.5 h-3.5" /> : "2"}
+                </div>
+                <span className="text-xs font-bold text-white">Upload Game Keys</span>
+              </div>
+              <div className="text-[10px] text-white/25 leading-relaxed">
+                Secure the keys required for creator campaigns and completion rewards.
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-white/40">
+                  {demoKeys.available} demo key{demoKeys.available !== 1 ? "s" : ""} · {fullKeys.available} full-game key{fullKeys.available !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <button onClick={() => onGoTo("keys")}
+                className="w-full text-[10px] font-bold py-2 rounded-lg transition-all hover:brightness-110"
+                style={{ background: `${demoKeys.available > 0 ? "rgba(74,222,128,0.1)" : "rgba(183,255,24,0.09)"}`,
+                  color: demoKeys.available > 0 ? "#4ade80" : NEON,
+                  border: `1px solid ${demoKeys.available > 0 ? "rgba(74,222,128,0.2)" : "rgba(183,255,24,0.18)"}` }}>
+                {demoKeys.available > 0 ? "Manage Keys" : "Upload Keys"}
+              </button>
+            </div>
+
+            {/* Step 3: Create Campaign */}
+            <div className="rounded-xl p-4 space-y-3"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black"
+                  style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>
+                  3
+                </div>
+                <span className="text-xs font-bold text-white">Create Your First Campaign</span>
+              </div>
+              <div className="text-[10px] text-white/25 leading-relaxed">
+                Choose your goal and Gamefolio will automatically create the correct creator bounties.
+              </div>
+              <div className="text-[10px] text-white/20">
+                Each campaign contains Gamefolio-generated creator bounties.
+              </div>
+              <button onClick={() => onGoTo("campaigns", "create")}
+                className="w-full text-[10px] font-bold py-2 rounded-lg transition-all hover:brightness-110"
+                style={{ background: NEON, color: "#070b10" }}>
+                Create Campaign
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TWO-COLUMN BODY */}
       <div className="flex flex-col lg:flex-row gap-8 items-start">
@@ -345,77 +457,81 @@ function DashboardTab({
         {/* ── LEFT COLUMN (70%) — primary content ── */}
         <div className="flex-1 min-w-0 space-y-10">
 
-          {/* Metric cards */}
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              {
-                icon: Users, label: "Active Creators",
-                value: String(d.totalParticipants),
-                desc: "Across all campaigns",
-                color: d.totalParticipants > 0 ? NEON : "#334155",
-                onClick: () => onGoTo("campaigns", "my"),
-              },
-              {
-                icon: TrendingUp, label: "Exposure",
-                value: exposureEst,
-                desc: "Estimated this week",
-                color: contentTotal > 0 ? NEON : "#334155",
-                onClick: () => onGoTo("analytics"),
-              },
-              {
-                icon: Film, label: "Community Content",
-                value: String(contentTotal),
-                desc: `${clipsTotal} clips · ${reelsTotal} reels · ${screenshotsTotal} ss`,
-                color: contentTotal > 0 ? "#a78bfa" : "#334155",
-                onClick: () => onGoTo("community", "content"),
-              },
-              {
-                icon: KeyRound, label: "Keys Remaining",
-                value: String(demoKeys.available + fullKeys.available),
-                desc: `${demoKeys.available} demo · ${fullKeys.available} full`,
-                color: (demoKeys.available + fullKeys.available) < 5 ? "#f87171" : NEON,
-                onClick: () => onGoTo("keys"),
-              },
-            ].map(({ icon: Icon, label, value, desc, color, onClick }) => (
-              <button key={label} onClick={onClick}
-                className="rounded-2xl p-5 text-left group transition-all hover:scale-[1.01] active:scale-[0.99]"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{ background: `${color}12` }}>
-                    <Icon className="w-4 h-4" style={{ color }} />
+          {/* Metric cards — only when campaigns exist */}
+          {activeCampaigns.length > 0 && (
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                {
+                  icon: Users, label: "Active Creators",
+                  value: String(d.totalParticipants),
+                  desc: "Across all campaigns",
+                  color: d.totalParticipants > 0 ? NEON : "#334155",
+                  onClick: () => onGoTo("campaigns", "my"),
+                },
+                {
+                  icon: TrendingUp, label: "Exposure",
+                  value: exposureEst,
+                  desc: "Estimated this week",
+                  color: contentTotal > 0 ? NEON : "#334155",
+                  onClick: () => onGoTo("analytics"),
+                },
+                {
+                  icon: Film, label: "Community Content",
+                  value: String(contentTotal),
+                  desc: `${clipsTotal} clips · ${reelsTotal} reels · ${screenshotsTotal} ss`,
+                  color: contentTotal > 0 ? "#a78bfa" : "#334155",
+                  onClick: () => onGoTo("community", "content"),
+                },
+                {
+                  icon: KeyRound, label: "Keys Remaining",
+                  value: String(demoKeys.available + fullKeys.available),
+                  desc: `${demoKeys.available} demo · ${fullKeys.available} full`,
+                  color: (demoKeys.available + fullKeys.available) < 5 ? "#f87171" : NEON,
+                  onClick: () => onGoTo("keys"),
+                },
+              ].map(({ icon: Icon, label, value, desc, color, onClick }) => (
+                <button key={label} onClick={onClick}
+                  className="rounded-2xl p-5 text-left group transition-all hover:scale-[1.01] active:scale-[0.99]"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+                      style={{ background: `${color}12` }}>
+                      <Icon className="w-4 h-4" style={{ color }} />
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-white/15 group-hover:text-white/40 transition-colors" />
                   </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-white/15 group-hover:text-white/40 transition-colors" />
-                </div>
-                <div className="text-2xl font-black text-white mb-0.5">{value}</div>
-                <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">{label}</div>
-                <div className="text-[11px] text-white/20 leading-snug">{desc}</div>
-              </button>
-            ))}
-          </div>
+                  <div className="text-2xl font-black text-white mb-0.5">{value}</div>
+                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">{label}</div>
+                  <div className="text-[11px] text-white/20 leading-snug">{desc}</div>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Active Campaigns */}
           <div>
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-base font-black text-white">Active Campaigns</h3>
-              <button onClick={() => onGoTo("campaigns", "my")}
-                className="text-xs font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
-                View all <ChevronRight className="w-3.5 h-3.5" />
-              </button>
+              {activeCampaigns.length > 0 && (
+                <button onClick={() => onGoTo("campaigns", "my")}
+                  className="text-xs font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
+                  View all <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             {activeCampaigns.length === 0 ? (
               <div className="rounded-2xl px-8 py-12 text-center"
                 style={{ background: "rgba(255,255,255,0.018)", border: "1px dashed rgba(255,255,255,0.07)" }}>
                 <Crosshair className="w-9 h-9 mx-auto mb-3 text-white/10" />
-                <p className="text-sm font-semibold text-white/35 mb-1">No active campaigns</p>
+                <p className="text-sm font-semibold text-white/35 mb-1">No campaigns yet</p>
                 <p className="text-xs text-white/20 mb-6 max-w-xs mx-auto">
-                  Create your first campaign to start recruiting creators and build community buzz.
+                  Choose what you want to achieve and Gamefolio will automatically create the correct creator bounties for your game.
                 </p>
-                <button onClick={() => onGoTo("campaigns", "library")}
+                <button onClick={() => onGoTo("campaigns", "create")}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110"
                   style={{ background: NEON, color: "#070b10" }}>
-                  <BookOpen className="w-4 h-4" /> Browse Campaign Library
+                  <Rocket className="w-4 h-4" /> Create Your First Campaign
                 </button>
               </div>
             ) : (
@@ -476,76 +592,78 @@ function DashboardTab({
             )}
           </div>
 
-          {/* Latest Creator Content */}
-          <div>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-black text-white">Latest Creator Content</h3>
-              <button onClick={() => onGoTo("community", "content")}
-                className="text-xs font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
-                View all <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+          {/* Latest Creator Content — only when campaigns exist */}
+          {activeCampaigns.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-base font-black text-white">Latest Creator Content</h3>
+                <button onClick={() => onGoTo("community", "content")}
+                  className="text-xs font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
+                  View all <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
 
-            {content.length === 0 ? (
-              <div className="rounded-2xl px-8 py-12 text-center"
-                style={{ background: "rgba(255,255,255,0.018)", border: "1px dashed rgba(255,255,255,0.07)" }}>
-                <Film className="w-9 h-9 mx-auto mb-3 text-white/10" />
-                <p className="text-sm font-semibold text-white/35 mb-1">No creator content yet</p>
-                <p className="text-xs text-white/20">
-                  Once creators participate in your campaigns, their clips and screenshots will appear here.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {content.slice(0, 6).map((item: any, i: number) => (
-                  <div key={item.id ?? i}
-                    className="rounded-xl overflow-hidden group"
-                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                    <div className="aspect-video relative overflow-hidden">
-                      {item.thumbnail_url ? (
-                        <img src={item.thumbnail_url} alt=""
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center"
-                          style={{ background: "rgba(255,255,255,0.035)" }}>
-                          {item.type === "screenshot" ? <Camera className="w-5 h-5 text-white/15" />
-                            : item.type === "reel" ? <Video className="w-5 h-5 text-white/15" />
-                            : <Film className="w-5 h-5 text-white/15" />}
-                        </div>
-                      )}
-                      <div className="absolute top-1.5 left-1.5">
-                        <span className="text-[8px] font-bold px-1.5 py-0.5 rounded uppercase"
-                          style={{ background: "rgba(0,0,0,0.6)", color: "rgba(255,255,255,0.65)" }}>
-                          {item.type ?? "clip"}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-2.5">
-                      <div className="text-[10px] font-semibold text-white/60 truncate">
-                        @{item.creator_username ?? "creator"}
-                      </div>
-                      <div className="flex items-center justify-between mt-0.5">
-                        <span className="text-[9px] text-white/25">{(item.views ?? 0).toLocaleString()} views</span>
-                        {item.fires > 0 && (
-                          <span className="text-[9px] text-orange-400">⚡{item.fires}</span>
+              {content.length === 0 ? (
+                <div className="rounded-2xl px-8 py-12 text-center"
+                  style={{ background: "rgba(255,255,255,0.018)", border: "1px dashed rgba(255,255,255,0.07)" }}>
+                  <Film className="w-9 h-9 mx-auto mb-3 text-white/10" />
+                  <p className="text-sm font-semibold text-white/35 mb-1">No creator content yet</p>
+                  <p className="text-xs text-white/20">
+                    Creator clips, reels and screenshots will appear here once your first campaign begins.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {content.slice(0, 6).map((item: any, i: number) => (
+                    <div key={item.id ?? i}
+                      className="rounded-xl overflow-hidden group"
+                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                      <div className="aspect-video relative overflow-hidden">
+                        {item.thumbnail_url ? (
+                          <img src={item.thumbnail_url} alt=""
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center"
+                            style={{ background: "rgba(255,255,255,0.035)" }}>
+                            {item.type === "screenshot" ? <Camera className="w-5 h-5 text-white/15" />
+                              : item.type === "reel" ? <Video className="w-5 h-5 text-white/15" />
+                              : <Film className="w-5 h-5 text-white/15" />}
+                          </div>
                         )}
+                        <div className="absolute top-1.5 left-1.5">
+                          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded uppercase"
+                            style={{ background: "rgba(0,0,0,0.6)", color: "rgba(255,255,255,0.65)" }}>
+                            {item.type ?? "clip"}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex gap-1 mt-2">
-                        <button className="flex-1 text-[9px] font-bold py-1 rounded transition-all hover:brightness-110"
-                          style={{ background: "rgba(183,255,24,0.09)", color: NEON }}>
-                          Feature
-                        </button>
-                        <button className="text-[9px] font-bold px-2 py-1 rounded"
-                          style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.3)" }}>
-                          Hide
-                        </button>
+                      <div className="p-2.5">
+                        <div className="text-[10px] font-semibold text-white/60 truncate">
+                          @{item.creator_username ?? "creator"}
+                        </div>
+                        <div className="flex items-center justify-between mt-0.5">
+                          <span className="text-[9px] text-white/25">{(item.views ?? 0).toLocaleString()} views</span>
+                          {item.fires > 0 && (
+                            <span className="text-[9px] text-orange-400">⚡{item.fires}</span>
+                          )}
+                        </div>
+                        <div className="flex gap-1 mt-2">
+                          <button className="flex-1 text-[9px] font-bold py-1 rounded transition-all hover:brightness-110"
+                            style={{ background: "rgba(183,255,24,0.09)", color: NEON }}>
+                            Feature
+                          </button>
+                          <button className="text-[9px] font-bold px-2 py-1 rounded"
+                            style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.3)" }}>
+                            Hide
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
         </div>{/* end left column */}
 
@@ -597,50 +715,66 @@ function DashboardTab({
                 Manage <ChevronRight className="w-3 h-3" />
               </button>
             </div>
-            <div className="space-y-5">
-              {[
-                { label: "Demo Keys", avail: demoKeys.available, used: demoKeys.claimed ?? 0, usedLabel: "claimed" },
-                { label: "Full Game Keys", avail: fullKeys.available, used: fullKeys.awarded ?? 0, usedLabel: "awarded" },
-              ].map(({ label, avail, used, usedLabel }) => {
-                const total = avail + used;
-                const pct = total > 0 ? Math.round((avail / total) * 100) : 0;
-                const isLow = avail <= 3;
-                const isWarn = !isLow && avail <= 10;
-                const barColor = isLow ? "#f87171" : isWarn ? "#f59e0b" : NEON;
-                return (
-                  <div key={label}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs font-semibold text-white/70">{label}</span>
-                      <div className="flex items-center gap-1">
-                        {isLow && <AlertTriangle className="w-3 h-3 text-red-400" />}
-                        <span className="text-xs font-black" style={{ color: barColor }}>{avail}</span>
+
+            {(demoKeys.available === 0 && fullKeys.available === 0) ? (
+              <div className="rounded-xl p-4 text-center"
+                style={{ background: "rgba(255,255,255,0.015)", border: "1px dashed rgba(255,255,255,0.08)" }}>
+                <KeyRound className="w-6 h-6 mx-auto mb-2 text-white/10" />
+                <p className="text-xs font-semibold text-white/30 mb-1">No keys uploaded</p>
+                <p className="text-[10px] text-white/20 mb-3">
+                  Upload demo and full-game keys before launching your first campaign.
+                </p>
+                <button onClick={() => onGoTo("keys")}
+                  className="text-[10px] font-bold py-1.5 px-3 rounded-lg transition-all hover:brightness-110"
+                  style={{ background: "rgba(183,255,24,0.09)", color: NEON, border: "1px solid rgba(183,255,24,0.18)" }}>
+                  Upload Keys
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {[
+                  { label: "Demo Keys", avail: demoKeys.available, committed: demoKeys.claimed ?? 0, issued: (demoKeys as any).issued ?? 0 },
+                  { label: "Full Game Keys", avail: fullKeys.available, committed: fullKeys.awarded ?? 0, awarded: (fullKeys as any).awarded ?? 0 },
+                ].map((item) => {
+                  const isDemo = item.label === "Demo Keys";
+                  const committed = item.committed ?? 0;
+                  const out = isDemo ? (item as any).issued ?? 0 : (item as any).awarded ?? 0;
+                  const avail = item.avail ?? 0;
+                  const total = avail + committed + out;
+                  const pct = total > 0 ? Math.round((avail / total) * 100) : 0;
+                  const isLow = avail <= 3;
+                  const isWarn = !isLow && avail <= 10;
+                  const barColor = isLow ? "#f87171" : isWarn ? "#f59e0b" : NEON;
+                  return (
+                    <div key={item.label}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-semibold text-white/70">{item.label}</span>
+                        <div className="flex items-center gap-1">
+                          {isLow && <AlertTriangle className="w-3 h-3 text-red-400" />}
+                          <span className="text-xs font-black" style={{ color: barColor }}>{avail}</span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 rounded-full overflow-hidden mb-1"
+                        style={{ background: "rgba(255,255,255,0.06)" }}>
+                        <div className="h-full rounded-full transition-all duration-700"
+                          style={{ width: `${pct}%`, background: barColor }} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.25)" }}>
+                          {avail} available · {committed} committed · {out} {isDemo ? "issued" : "awarded"}
+                        </span>
                       </div>
                     </div>
-                    <div className="h-1.5 rounded-full overflow-hidden mb-1"
-                      style={{ background: "rgba(255,255,255,0.06)" }}>
-                      <div className="h-full rounded-full transition-all duration-700"
-                        style={{ width: `${pct}%`, background: barColor }} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.2)" }}>
-                        {used} {usedLabel} · {total} total
-                      </span>
-                      <button onClick={() => onGoTo("keys")}
-                        className="text-[9px] font-bold flex items-center gap-0.5 hover:opacity-70 transition-opacity"
-                        style={{ color: NEON }}>
-                        <Upload className="w-2.5 h-2.5" /> Upload
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Profile Completion */}
+          {/* Profile Strength */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-black text-white">Profile Completion</h3>
+              <h3 className="text-sm font-black text-white">Profile Strength</h3>
               <button onClick={() => onGoTo("settings", "profile")}
                 className="text-[10px] font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
                 Edit <ChevronRight className="w-3 h-3" />
@@ -665,77 +799,101 @@ function DashboardTab({
                 </div>
                 <div>
                   <div className="text-sm font-black text-white">
-                    {profilePct === 100 ? "Complete!" : `${100 - profilePct}% left`}
+                    {missingEssential.length === 0 ? "Profile Ready" : "Setup in Progress"}
                   </div>
                   <div className="text-[10px] text-white/30 mt-0.5">
-                    {profilePct === 100 ? "Fully set up" : "Attract more creators"}
+                    {allFilled} of {ALL_PROFILE_FIELDS.length} fields complete
                   </div>
                 </div>
               </div>
 
               {profilePct < 100 && nextSteps.length > 0 && (
                 <div className="space-y-2">
-                  {nextSteps.map(({ field, label, pct }) => (
-                    <button key={field} onClick={() => onGoTo("settings", "profile")}
-                      className="w-full flex items-center gap-2.5 text-left group">
-                      <div className="w-4 h-4 rounded-full border shrink-0 flex items-center justify-center"
-                        style={{ borderColor: "rgba(255,255,255,0.1)" }}>
-                        <Circle className="w-1.5 h-1.5 text-white/15" />
-                      </div>
-                      <span className="flex-1 text-xs text-white/40 group-hover:text-white/65 transition-colors truncate">
-                        {label}
-                      </span>
-                      <span className="text-[9px] font-bold shrink-0" style={{ color: NEON }}>+{pct}%</span>
-                    </button>
-                  ))}
+                  <p className="text-[10px] text-white/25 mb-1">Recommended next step:</p>
+                  <button onClick={() => onGoTo("settings", "profile")}
+                    className="w-full flex items-center gap-2.5 text-left group">
+                    <div className="w-4 h-4 rounded-full border shrink-0 flex items-center justify-center"
+                      style={{ borderColor: "rgba(255,255,255,0.1)" }}>
+                      <Circle className="w-1.5 h-1.5 text-white/15" />
+                    </div>
+                    <span className="flex-1 text-xs text-white/40 group-hover:text-white/65 transition-colors truncate">
+                      {nextSteps[0].label}
+                    </span>
+                    <span className="text-[9px] font-bold shrink-0" style={{ color: NEON }}>+{nextSteps[0].pct}%</span>
+                  </button>
                 </div>
               )}
 
               {profilePct === 100 && (
                 <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: NEON }}>
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Profile complete!
+                  <CheckCircle2 className="w-3.5 h-3.5" /> All fields complete
                 </div>
               )}
             </div>
           </div>
 
-          {/* Weekly Analytics */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-black text-white">This Week</h3>
-              <button onClick={() => onGoTo("analytics")}
-                className="text-[10px] font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
-                Full report <ChevronRight className="w-3 h-3" />
+          {/* Indie Pro panel — separate from Needs Attention */}
+          {!user?.isIndieDevSubscriber && (
+            <div className="rounded-xl p-4"
+              style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="flex items-center gap-2 mb-2">
+                <Star className="w-3.5 h-3.5" style={{ color: NEON }} />
+                <span className="text-xs font-bold text-white">Indie Pro</span>
+              </div>
+              <p className="text-[10px] text-white/25 mb-3 leading-relaxed">
+                Run unlimited campaigns and access advanced promotional tools.
+              </p>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] text-white/40">Free Plan</span>
+                <span className="text-[10px] font-bold text-white/60">1 active campaign</span>
+              </div>
+              <button onClick={() => setShowIndieDevUpgrade(true)}
+                className="w-full text-[10px] font-bold py-2 rounded-lg transition-all hover:brightness-110"
+                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                View Indie Pro
               </button>
             </div>
-            <div className="space-y-2.5">
-              {[
-                { label: "Community Clips",   value: clipsTotal,             icon: Film,   color: "#818cf8" },
-                { label: "Community Reels",   value: reelsTotal,             icon: Video,  color: "#f472b6" },
-                { label: "Screenshots",       value: screenshotsTotal,       icon: Camera, color: "#34d399" },
-                { label: "Active Creators",   value: d.totalParticipants,    icon: Users,  color: NEON },
-                { label: "Campaigns Running", value: d.activeCampaigns ?? 0, icon: Target, color: "#60a5fa" },
-              ].map(({ label, value, icon: Icon, color }) => (
-                <div key={label} className="flex items-center gap-2.5">
-                  <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
-                    style={{ background: `${color}12` }}>
-                    <Icon className="w-3 h-3" style={{ color }} />
+          )}
+
+          {/* Weekly Analytics — hide for new accounts */}
+          {activeCampaigns.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-black text-white">This Week</h3>
+                <button onClick={() => onGoTo("analytics")}
+                  className="text-[10px] font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
+                  Full report <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="space-y-2.5">
+                {[
+                  { label: "Community Clips",   value: clipsTotal,             icon: Film,   color: "#818cf8" },
+                  { label: "Community Reels",   value: reelsTotal,             icon: Video,  color: "#f472b6" },
+                  { label: "Screenshots",       value: screenshotsTotal,       icon: Camera, color: "#34d399" },
+                  { label: "Active Creators",   value: d.totalParticipants,    icon: Users,  color: NEON },
+                  { label: "Campaigns Running", value: d.activeCampaigns ?? 0, icon: Target, color: "#60a5fa" },
+                ].map(({ label, value, icon: Icon, color }) => (
+                  <div key={label} className="flex items-center gap-2.5">
+                    <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+                      style={{ background: `${color}12` }}>
+                      <Icon className="w-3 h-3" style={{ color }} />
+                    </div>
+                    <span className="flex-1 text-xs text-white/45">{label}</span>
+                    <span className="text-xs font-black text-white">{Number(value).toLocaleString()}</span>
                   </div>
-                  <span className="flex-1 text-xs text-white/45">{label}</span>
-                  <span className="text-xs font-black text-white">{Number(value).toLocaleString()}</span>
-                </div>
-              ))}
+                ))}
+              </div>
+              <button onClick={() => onGoTo("analytics")}
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold mt-4 transition-all hover:brightness-110"
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  color: "rgba(255,255,255,0.4)",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                }}>
+                View Full Analytics <ArrowUpRight className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <button onClick={() => onGoTo("analytics")}
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold mt-4 transition-all hover:brightness-110"
-              style={{
-                background: "rgba(255,255,255,0.03)",
-                color: "rgba(255,255,255,0.4)",
-                border: "1px solid rgba(255,255,255,0.07)",
-              }}>
-              View Full Analytics <ArrowUpRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          )}
 
         </div>{/* end right column */}
 
@@ -792,12 +950,6 @@ export default function IndieDashboardPage() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => openRunWizard()}
-            className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all hover:brightness-110"
-            style={{ background: NEON, color: "#070b10" }}>
-            <Plus className="w-3.5 h-3.5" /> New Campaign
-          </button>
         </div>
 
         {/* Top tab bar — underline style */}
