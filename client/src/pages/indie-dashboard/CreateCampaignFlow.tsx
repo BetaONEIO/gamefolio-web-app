@@ -2019,40 +2019,63 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
         ) : (
           /* Active — open, breathable, no heavy box */
           <div className="gf-fade-up">
-            {/* Heading */}
-            <div className="mb-8">
-              <p className="text-[10px] uppercase tracking-widest text-white/25 mb-2 font-bold">Step 1</p>
-              <h2 className="text-2xl font-black text-white leading-tight mb-2">
-                How would you like to promote your game?
-              </h2>
-              <p className="text-sm text-white/35">
-                Choose the creator campaign approach that best matches your marketing goals.
-              </p>
+            {/* Title row + Automatic toggle */}
+            <div className="flex items-start justify-between mb-8 gap-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-widest mb-1.5 font-bold" style={{ color: "rgba(255,255,255,0.25)" }}>Step 1</p>
+                <h2 className="text-2xl font-black text-white leading-tight">Create a Campaign</h2>
+              </div>
+
+              {/* Inline toggle pill */}
+              <button
+                onClick={() => {
+                  const next = mode === "auto" ? "manual" : "auto";
+                  setMode(next);
+                  setAutoStep(1);
+                  setCurrentStep(1);
+                  setConfirmed(false);
+                  setAutoConfirmed(false);
+                  setSelectedType(null);
+                }}
+                className="shrink-0 flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl transition-all duration-300"
+                style={{
+                  background: mode === "auto" ? "rgba(167,139,250,0.12)" : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${mode === "auto" ? "rgba(167,139,250,0.32)" : "rgba(255,255,255,0.10)"}`,
+                }}>
+                {/* Toggle track */}
+                <div className="relative shrink-0"
+                  style={{ width: "34px", height: "18px", borderRadius: "9999px",
+                    background: mode === "auto" ? "#a78bfa" : "rgba(255,255,255,0.15)",
+                    transition: "background 0.25s ease" }}>
+                  <div style={{
+                    position: "absolute", top: "2px",
+                    width: "14px", height: "14px", borderRadius: "50%",
+                    background: "#fff",
+                    left: mode === "auto" ? "18px" : "2px",
+                    transition: "left 0.25s cubic-bezier(0.22,1,0.36,1)",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
+                  }} />
+                </div>
+                <span className="text-[12px] font-bold whitespace-nowrap"
+                  style={{ color: mode === "auto" ? "#a78bfa" : "rgba(255,255,255,0.40)" }}>
+                  Automatic
+                </span>
+              </button>
             </div>
 
-            {/* Mode selector */}
-            <ModeSelector mode={mode} onChange={m => {
-              setMode(m);
-              setAutoStep(1);
-              setCurrentStep(1);
-              setConfirmed(false);
-              setAutoConfirmed(false);
-              setSelectedType(null);
-            }} />
-
-            {/* Mode-specific content */}
-            {mode === "auto" ? (
-              <>
-                <AutoCampaignInfo />
-                <button
-                  onClick={() => setAutoStep(2)}
-                  className="w-full mt-6 py-4 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110"
-                  style={{ background: "#a78bfa", color: "#070b10", boxShadow: "0 0 32px 0 rgba(167,139,250,0.2)" }}>
-                  Continue with Automatic Campaigns <ArrowRight className="w-4 h-4" />
-                </button>
-              </>
-            ) : (
-              <>
+            {/* Mode content — keyed so React remounts it on toggle, triggering animation */}
+            <div key={mode} className="gf-fade-up">
+              {mode === "auto" ? (
+                <>
+                  <AutoCampaignInfo />
+                  <button
+                    onClick={() => setAutoStep(2)}
+                    className="w-full mt-6 py-4 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110"
+                    style={{ background: "#a78bfa", color: "#070b10", boxShadow: "0 0 32px 0 rgba(167,139,250,0.2)" }}>
+                    Continue with Automatic Campaigns <ArrowRight className="w-4 h-4" />
+                  </button>
+                </>
+              ) : (
                 <TypeCardCarousel
                   selectedType={selectedType}
                   onSelectAndContinue={(t) => {
@@ -2061,8 +2084,8 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
                     setCurrentStep(2);
                   }}
                 />
-              </>
-            )}
+              )}
+            </div>
           </div>
         )}
 
