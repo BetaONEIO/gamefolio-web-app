@@ -892,9 +892,14 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
 
       const demoKeyList = parseKeyLines(pendingDemoKeys);
       const fullKeyList = parseKeyLines(pendingFullKeys);
-      if (demoKeyList.length > 0 || fullKeyList.length > 0) {
+      if (demoKeyList.length > 0) {
         await apiRequest("POST", `/api/campaigns/instances/${instData.id}/keys`, {
-          demoKeys: demoKeyList, fullKeys: fullKeyList,
+          keyType: "demo", keys: demoKeyList,
+        });
+      }
+      if (fullKeyList.length > 0) {
+        await apiRequest("POST", `/api/campaigns/instances/${instData.id}/keys`, {
+          keyType: "full", keys: fullKeyList,
         });
       }
 
