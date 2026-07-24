@@ -175,7 +175,7 @@ function PreviewCard({ type, settings }: { type: CampaignType | null; settings: 
   const xp       = type?.xpReward ?? 0;
   const duration = type?.custom && settings.customDuration ? settings.customDuration : (type?.duration ?? 0);
   const pills    = type?.pills ?? [];
-  const title    = settings.campaignName.trim() || type?.name || "Your Campaign";
+  const title    = type?.name || "Your Campaign";
   const desc     = settings.description.trim();
   const imgUrl   = settings.gameImageUrl;
 
