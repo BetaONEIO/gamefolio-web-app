@@ -48,7 +48,8 @@ const ANIM_CSS = `
 // ─────────────────────────────────────────────
 
 interface CampaignType {
-  slug: string; name: string; tagline: string; description: string;
+  slug: string; name: string; shortName: string; tagline: string; description: string;
+  shortDesc: string; bestFor: string;
   duration: number; capacity: number; demoKeys: number; fullKeys: number;
   xpReward: number; recommended?: boolean; custom?: boolean; icon: any;
   pills: { ct: string; qty: number }[];
@@ -57,32 +58,40 @@ interface CampaignType {
 
 const CAMPAIGN_TYPES: CampaignType[] = [
   {
-    slug: "quick-creator", name: "Quick Creator Campaign",
+    slug: "quick-creator", name: "Quick Creator Campaign", shortName: "Quick Creator",
     tagline: "Get your first creators playing fast",
+    shortDesc: "Perfect for launching a new game and getting your first creator content.",
+    bestFor: "🚀 New Launches",
     description: "5-day sprint to get creators engaged with quick clips and first impressions. Great for new launches or building momentum.",
     duration: 5, capacity: 20, demoKeys: 20, fullKeys: 20, xpReward: 750, icon: Zap,
     pills: [{ ct: "clip", qty: 2 }, { ct: "screenshot", qty: 2 }],
     estimated: { clips: 40, reels: 10, screenshots: 40, feedback: 20, viewsMin: 3000, viewsMax: 15000 },
   },
   {
-    slug: "content-boost", name: "Content Boost Campaign",
+    slug: "content-boost", name: "Content Boost Campaign", shortName: "Content Boost",
     tagline: "Build a content library fast",
+    shortDesc: "Generate a larger library of clips, reels and screenshots.",
+    bestFor: "📈 Building Content",
     description: "10-day multi-format campaign to generate clips, reels and screenshots. Best for marketing assets and discovery.",
     duration: 10, capacity: 35, demoKeys: 35, fullKeys: 35, xpReward: 1200, recommended: true, icon: Sparkles,
     pills: [{ ct: "clip", qty: 2 }, { ct: "reel", qty: 1 }, { ct: "screenshot", qty: 3 }],
     estimated: { clips: 70, reels: 35, screenshots: 105, feedback: 35, viewsMin: 10000, viewsMax: 50000 },
   },
   {
-    slug: "creator-showcase", name: "Creator Showcase Campaign",
+    slug: "creator-showcase", name: "Creator Showcase Campaign", shortName: "Creator Showcase",
     tagline: "Maximum exposure with premium content",
+    shortDesc: "Maximum exposure with higher creator commitment.",
+    bestFor: "⭐ Maximum Exposure",
     description: "21-day deep engagement with streams, reviews and clips. The premium option for serious developer marketing.",
     duration: 21, capacity: 25, demoKeys: 25, fullKeys: 25, xpReward: 2500, icon: Rocket,
     pills: [{ ct: "clip", qty: 2 }, { ct: "reel", qty: 1 }, { ct: "screenshot", qty: 3 }, { ct: "stream", qty: 1 }],
     estimated: { clips: 50, reels: 25, screenshots: 75, feedback: 25, viewsMin: 15000, viewsMax: 80000 },
   },
   {
-    slug: "custom-campaign", name: "Custom Campaign",
+    slug: "custom-campaign", name: "Custom Campaign", shortName: "Custom",
     tagline: "Full control for experienced developers",
+    shortDesc: "Create your own campaign using Gamefolio's campaign builder.",
+    bestFor: "⚙ Advanced Users",
     description: "Set your own duration, capacity, regions and platforms. For developers who know exactly what they need.",
     duration: 14, capacity: 20, demoKeys: 20, fullKeys: 20, xpReward: 1000, custom: true, icon: Cog,
     pills: [{ ct: "clip", qty: 2 }, { ct: "screenshot", qty: 2 }, { ct: "feedback", qty: 1 }],
@@ -311,46 +320,49 @@ const TYPE_DECOS: Record<string, Array<{ Icon: any; x: string; y: string; size: 
   ],
 };
 
-function CampaignIllustration({ slug, accent, selected }: { slug: string; accent: string; selected: boolean }) {
+function CampaignIllustration({ slug, accent, selected, hovered }: {
+  slug: string; accent: string; selected: boolean; hovered?: boolean;
+}) {
   const Icon  = CAMPAIGN_TYPES.find(t => t.slug === slug)?.icon ?? Sparkles;
   const rgb   = ACCENT_RGB[accent] ?? "183,255,27";
   const decos = TYPE_DECOS[slug] ?? [];
+  const lit   = selected || hovered;
   return (
-    <div className="relative w-full overflow-hidden transition-all duration-500"
-      style={{ height: selected ? "112px" : "96px" }}>
-      {/* Gradient background */}
+    <div className="relative w-full overflow-hidden" style={{ height: "120px" }}>
+      {/* Deep gradient bg */}
+      <div className="absolute inset-0 transition-all duration-500"
+        style={{
+          background: `radial-gradient(ellipse 90% 110% at 50% 65%, rgba(${rgb},${selected ? 0.22 : lit ? 0.14 : 0.08}) 0%, rgba(7,11,16,0) 100%)`,
+        }} />
+      {/* Subtle dot grid */}
       <div className="absolute inset-0 transition-opacity duration-500"
         style={{
-          background: `radial-gradient(ellipse 80% 90% at 50% 60%, rgba(${rgb},${selected ? 0.18 : 0.10}) 0%, rgba(7,11,16,0) 100%)`,
+          opacity: selected ? 0.12 : 0.06,
+          backgroundImage: `radial-gradient(circle, rgba(${rgb},0.8) 1px, transparent 1px)`,
+          backgroundSize: "18px 18px",
         }} />
-      {/* Subtle grid lines */}
-      <div className="absolute inset-0 opacity-5"
-        style={{
-          backgroundImage: `linear-gradient(rgba(${rgb},0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(${rgb},0.5) 1px, transparent 1px)`,
-          backgroundSize: "20px 20px",
-        }} />
-      {/* Floating decorative icons */}
+      {/* Floating decos */}
       {decos.map((d, i) => (
         <div key={i} className="absolute transition-all duration-500"
-          style={{ left: d.x, top: d.y, opacity: selected ? d.op * 1.5 : d.op }}>
+          style={{ left: d.x, top: d.y, opacity: lit ? d.op * 1.8 : d.op, transform: selected ? "scale(1.1)" : "scale(1)" }}>
           <d.Icon size={d.size} color={accent} />
         </div>
       ))}
-      {/* Centre main icon */}
+      {/* Central icon */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="transition-all duration-500"
-          style={{ transform: selected ? "scale(1.15)" : "scale(1)" }}>
-          <Icon size={selected ? 44 : 36}
+          style={{ transform: selected ? "scale(1.18)" : lit ? "scale(1.06)" : "scale(1)" }}>
+          <Icon size={48}
             style={{
               color: accent,
-              filter: selected ? `drop-shadow(0 0 12px ${accent}80)` : "none",
+              filter: selected ? `drop-shadow(0 0 20px ${accent}90)` : lit ? `drop-shadow(0 0 8px ${accent}50)` : "none",
               transition: "all 0.4s ease",
             }} />
         </div>
       </div>
       {/* Bottom fade */}
-      <div className="absolute bottom-0 inset-x-0 h-8"
-        style={{ background: `linear-gradient(to bottom, transparent, ${CARD_BG})` }} />
+      <div className="absolute bottom-0 inset-x-0 h-10"
+        style={{ background: `linear-gradient(to bottom, transparent, rgba(7,11,16,0.95))` }} />
     </div>
   );
 }
@@ -360,147 +372,121 @@ function TypeCard({
 }: {
   type: CampaignType; selected: boolean; anySelected: boolean; onSelect: () => void;
 }) {
+  const [hovered, setHovered] = useState(false);
   const accent = TYPE_ACCENT[type.slug] ?? NEON;
   const rgb    = ACCENT_RGB[accent] ?? "183,255,27";
 
   return (
     <div
       onClick={onSelect}
-      className={`rounded-2xl cursor-pointer transition-all duration-400 flex flex-col overflow-hidden ${selected ? "gf-step-glow" : ""}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="rounded-2xl cursor-pointer flex flex-col overflow-hidden"
       style={{
         background: selected
-          ? `linear-gradient(160deg, rgba(${rgb},0.07) 0%, rgba(7,11,16,0.95) 60%)`
-          : CARD_BG,
-        border: `1.5px solid ${selected ? accent : "rgba(255,255,255,0.07)"}`,
-        boxShadow: selected ? `0 8px 40px 0 rgba(${rgb},0.14)` : "0 1px 3px 0 rgba(0,0,0,0.4)",
-        transform: selected ? "translateY(-2px) scale(1.012)" : "translateY(0) scale(1)",
-        opacity: anySelected && !selected ? 0.55 : 1,
-        filter: anySelected && !selected ? "saturate(0.5)" : "saturate(1)",
+          ? `linear-gradient(180deg, rgba(${rgb},0.09) 0%, rgba(7,11,16,0.98) 55%)`
+          : "rgba(255,255,255,0.03)",
+        border: `1.5px solid ${selected ? accent : hovered ? `rgba(${rgb},0.25)` : "rgba(255,255,255,0.07)"}`,
+        boxShadow: selected
+          ? `0 16px 56px 0 rgba(${rgb},0.2), 0 0 0 1px rgba(${rgb},0.1)`
+          : hovered ? `0 8px 32px 0 rgba(0,0,0,0.5)` : "none",
+        transform: selected
+          ? "translateY(-4px) scale(1.02)"
+          : hovered && !anySelected ? "translateY(-3px) scale(1.01)"
+          : anySelected && !selected ? "scale(0.98)" : "scale(1)",
+        opacity: anySelected && !selected ? 0.45 : 1,
+        filter: anySelected && !selected ? "saturate(0.35) brightness(0.8)" : "saturate(1) brightness(1)",
+        transition: "all 0.28s cubic-bezier(0.22,1,0.36,1)",
       }}>
 
-      {/* Illustration */}
-      <CampaignIllustration slug={type.slug} accent={accent} selected={selected} />
+      {/* Large illustration zone */}
+      <div className="relative">
+        <CampaignIllustration slug={type.slug} accent={accent} selected={selected} hovered={hovered} />
 
-      {/* Body */}
-      <div className="flex-1 flex flex-col px-5 pt-3 pb-5 gap-3">
-
-        {/* Name + badge row */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-black text-white leading-tight">{type.name}</h3>
-            <p className="text-[11px] mt-0.5 transition-colors duration-300"
-              style={{ color: selected ? accent : "rgba(255,255,255,0.35)" }}>
-              {type.tagline}
-            </p>
-          </div>
-          {/* Selection check */}
-          <div className="w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center mt-0.5 transition-all duration-300"
-            style={{
-              borderColor: selected ? accent : "rgba(255,255,255,0.2)",
-              background: selected ? accent : "transparent",
-              transform: selected ? "scale(1)" : "scale(0.85)",
-            }}>
-            {selected && <Check className="w-3 h-3" style={{ color: "#070b10" }} />}
-          </div>
+        {/* Animated selection tick — top right */}
+        <div className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300"
+          style={{
+            background: selected ? accent : "rgba(7,11,16,0.65)",
+            border: `1.5px solid ${selected ? "transparent" : "rgba(255,255,255,0.18)"}`,
+            backdropFilter: "blur(6px)",
+            transform: selected ? "scale(1)" : "scale(0.8)",
+            opacity: selected ? 1 : hovered ? 0.7 : 0.5,
+          }}>
+          {selected
+            ? <Check className="w-3.5 h-3.5" style={{ color: "#070b10" }} />
+            : <div className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.3)" }} />
+          }
         </div>
 
-        {/* Badges */}
-        <div className="flex flex-wrap gap-1.5">
-          {type.recommended && (
-            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
-              style={{ background: "rgba(251,146,60,0.12)", color: "#fb923c", border: "1px solid rgba(251,146,60,0.2)" }}>
-              ⭐ Recommended
-            </span>
-          )}
-          {type.custom && (
-            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
-              style={{ background: "rgba(167,139,250,0.12)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.2)" }}>
-              Advanced
-            </span>
-          )}
-          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
-            style={{ background: "rgba(183,255,24,0.07)", color: NEON, border: "1px solid rgba(183,255,24,0.15)" }}>
-            GF Verified
-          </span>
+        {/* Best-for pill — bottom left of illustration */}
+        <div className="absolute bottom-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all duration-300"
+          style={{
+            background: selected ? `rgba(${rgb},0.15)` : "rgba(7,11,16,0.7)",
+            color: selected ? accent : "rgba(255,255,255,0.55)",
+            border: `1px solid ${selected ? `rgba(${rgb},0.3)` : "rgba(255,255,255,0.1)"}`,
+            backdropFilter: "blur(8px)",
+          }}>
+          {type.bestFor}
         </div>
 
-        {/* Description */}
-        <p className="text-[11px] text-white/35 leading-relaxed line-clamp-2">{type.description}</p>
+        {/* Recommended badge */}
+        {type.recommended && (
+          <div className="absolute top-3 left-3 text-[9px] font-bold px-2 py-0.5 rounded-full"
+            style={{ background: "rgba(251,146,60,0.15)", color: "#fb923c", border: "1px solid rgba(251,146,60,0.25)", backdropFilter: "blur(6px)" }}>
+            ★ Recommended
+          </div>
+        )}
+      </div>
 
-        {/* Metrics grid */}
-        <div className="grid grid-cols-2 gap-1.5">
+      {/* Card body */}
+      <div className="flex-1 flex flex-col px-4 pt-3 pb-4 gap-3">
+        {/* Name */}
+        <div>
+          <h3 className="text-sm font-black text-white leading-tight">{type.shortName}</h3>
+          <p className="text-[11px] mt-1 leading-relaxed transition-colors duration-300"
+            style={{ color: selected ? `rgba(${rgb},0.85)` : "rgba(255,255,255,0.38)" }}>
+            {type.shortDesc}
+          </p>
+        </div>
+
+        {/* Inline stats — no boxes */}
+        <div className="flex flex-wrap gap-x-3 gap-y-1 pt-2.5"
+          style={{ borderTop: `1px solid ${selected ? `rgba(${rgb},0.15)` : "rgba(255,255,255,0.06)"}` }}>
           {[
-            { v: `${type.duration}d`, l: "Campaign" },
-            { v: type.capacity,       l: "Creators" },
-            { v: type.demoKeys,       l: "Demo Keys" },
-            { v: type.fullKeys,       l: "Full Keys" },
-          ].map(m => (
-            <div key={m.l} className="rounded-xl p-2.5 text-center transition-all duration-300"
-              style={{
-                background: selected ? `rgba(${rgb},0.08)` : "rgba(255,255,255,0.04)",
-                border: `1px solid ${selected ? `rgba(${rgb},0.2)` : "rgba(255,255,255,0.06)"}`,
-              }}>
-              <div className="text-sm font-black transition-colors duration-300"
-                style={{ color: selected ? accent : "rgba(255,255,255,0.7)" }}>
-                {m.v}
-              </div>
-              <div className="text-[9px] uppercase tracking-wider text-white/25 mt-0.5">{m.l}</div>
-            </div>
+            { e: "🕒", v: `${type.duration} Days` },
+            { e: "👥", v: `${type.capacity} Creators` },
+            { e: "🔑", v: `${type.demoKeys} Demo` },
+            { e: "🏆", v: `${type.fullKeys} Full` },
+          ].map(s => (
+            <span key={s.e} className="text-[10px] transition-colors duration-300"
+              style={{ color: selected ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.32)" }}>
+              {s.e} {s.v}
+            </span>
           ))}
         </div>
 
-        {/* Expanded section — only when selected */}
+        {/* Expanded: content requirements — shown only when selected */}
         {selected && (
-          <div className="gf-fade-up space-y-3" style={{ marginTop: "4px" }}>
-            {/* Content requirements */}
+          <div className="gf-fade-up space-y-2.5" style={{ marginTop: "2px" }}>
             <div>
-              <div className="text-[9px] uppercase tracking-widest text-white/25 mb-2">Creator Requirements</div>
+              <div className="text-[9px] uppercase tracking-widest mb-1.5" style={{ color: "rgba(255,255,255,0.2)" }}>Creator Requirements</div>
               <div className="flex flex-wrap gap-1.5">
                 {type.pills.map(({ ct, qty }) => {
                   const PIcon = REQ_ICON[ct] ?? Target;
                   return (
-                    <span key={ct} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg"
-                      style={{ background: `rgba(${rgb},0.09)`, color: accent, border: `1px solid rgba(${rgb},0.2)` }}>
+                    <span key={ct} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md"
+                      style={{ background: `rgba(${rgb},0.08)`, color: accent, border: `1px solid rgba(${rgb},0.18)` }}>
                       <PIcon size={9} /> {reqPillLabel(ct, qty)}
                     </span>
                   );
                 })}
               </div>
             </div>
-
-            {/* Expected reach */}
-            <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <div className="text-[9px] uppercase tracking-widest text-white/25 mb-2">Expected Reach</div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-                {[
-                  { l: "Clips", v: type.estimated.clips },
-                  { l: "Reels", v: type.estimated.reels },
-                  { l: "Screenshots", v: type.estimated.screenshots },
-                  { l: "Reviews", v: type.estimated.feedback },
-                ].map(e => (
-                  <div key={e.l} className="flex justify-between text-[10px]">
-                    <span className="text-white/30">{e.l}</span>
-                    <span className="font-bold text-white/60">{e.v}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="text-[10px] text-white/20 mt-2 pt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                {type.estimated.viewsMin.toLocaleString()}–{type.estimated.viewsMax.toLocaleString()} est. views
-              </div>
+            <div className="text-[10px] pt-1" style={{ color: "rgba(255,255,255,0.22)", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+              Est. {type.estimated.viewsMin.toLocaleString()}–{type.estimated.viewsMax.toLocaleString()} views
             </div>
           </div>
         )}
-
-        {/* CTA */}
-        <div className="mt-auto pt-1">
-          <div className="w-full py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all duration-300"
-            style={selected
-              ? { background: accent, color: "#070b10", boxShadow: `0 0 16px 0 rgba(${rgb},0.3)` }
-              : { background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.08)" }
-            }>
-            {selected ? <><Check className="w-3.5 h-3.5" /> Selected</> : "Select Plan"}
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -976,57 +962,79 @@ function ModeSelector({ mode, onChange }: { mode: "auto" | "manual"; onChange: (
       id: "auto" as const,
       icon: Bot,
       title: "Automatic Campaigns",
-      desc: "Gamefolio handles everything — upload keys and let the platform create, launch and manage campaigns for you.",
-      badge: "Hands-off",
+      desc: "Upload your keys once and let Gamefolio continuously create and manage campaigns for your game.",
       accent: "#a78bfa",
       rgb: "167,139,250",
+      feature: "Gamefolio manages everything",
     },
     {
       id: "manual" as const,
       icon: Sparkles,
       title: "Choose a Campaign",
-      desc: "Pick a campaign template, personalise it, upload your keys and launch it yourself.",
-      badge: "Full control",
+      desc: "Choose a specific campaign template and launch campaigns yourself.",
       accent: NEON,
       rgb: "183,255,27",
+      feature: "You stay in full control",
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 mb-6">
+    <div className="grid grid-cols-2 gap-4 mb-8">
       {opts.map(opt => {
         const Icon = opt.icon;
         const sel = mode === opt.id;
         return (
           <button key={opt.id} onClick={() => onChange(opt.id)}
-            className={`relative text-left rounded-2xl p-5 transition-all duration-300 ${sel ? "gf-step-glow" : ""}`}
+            className="relative text-left rounded-2xl overflow-hidden transition-all duration-300"
             style={{
-              background: sel ? `rgba(${opt.rgb},0.07)` : "rgba(255,255,255,0.025)",
-              border: `1.5px solid ${sel ? opt.accent : "rgba(255,255,255,0.08)"}`,
-              transform: sel ? "scale(1.01)" : "scale(1)",
-              boxShadow: sel ? `0 0 28px 0 rgba(${opt.rgb},0.12)` : "none",
+              background: sel
+                ? `linear-gradient(135deg, rgba(${opt.rgb},0.10) 0%, rgba(7,11,16,0.98) 60%)`
+                : "rgba(255,255,255,0.02)",
+              border: `1.5px solid ${sel ? `rgba(${opt.rgb},0.45)` : "rgba(255,255,255,0.07)"}`,
+              boxShadow: sel ? `0 8px 48px 0 rgba(${opt.rgb},0.14), 0 0 0 1px rgba(${opt.rgb},0.08) inset` : "none",
+              transform: sel ? "translateY(-1px)" : "none",
             }}>
-            {/* Selection tick */}
-            <div className="absolute top-4 right-4 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300"
-              style={{ borderColor: sel ? opt.accent : "rgba(255,255,255,0.2)", background: sel ? opt.accent : "transparent" }}>
-              {sel && <Check className="w-3 h-3" style={{ color: "#070b10" }} />}
-            </div>
 
-            {/* Icon */}
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-all duration-300"
-              style={{ background: sel ? `rgba(${opt.rgb},0.12)` : "rgba(255,255,255,0.06)", border: `1px solid ${sel ? `rgba(${opt.rgb},0.25)` : "rgba(255,255,255,0.08)"}` }}>
-              <Icon className="w-6 h-6" style={{ color: sel ? opt.accent : "rgba(255,255,255,0.4)" }} />
-            </div>
+            {/* Colored left bar */}
+            <div className="absolute left-0 top-0 bottom-0 w-[3px] transition-all duration-300 rounded-l-2xl"
+              style={{ background: sel ? opt.accent : "transparent" }} />
 
-            <div className="pr-6">
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <span className="text-sm font-black text-white">{opt.title}</span>
-                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                  style={{ background: `rgba(${opt.rgb},0.1)`, color: opt.accent, border: `1px solid rgba(${opt.rgb},0.2)` }}>
-                  {opt.badge}
+            <div className="p-5 pl-6">
+              {/* Icon row */}
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300"
+                  style={{
+                    background: sel ? `rgba(${opt.rgb},0.12)` : "rgba(255,255,255,0.05)",
+                    border: `1px solid ${sel ? `rgba(${opt.rgb},0.2)` : "rgba(255,255,255,0.07)"}`,
+                  }}>
+                  <Icon className="w-5 h-5" style={{ color: sel ? opt.accent : "rgba(255,255,255,0.35)" }} />
+                </div>
+
+                {/* Animated check */}
+                <div className="w-5 h-5 rounded-full flex items-center justify-center transition-all duration-300"
+                  style={{
+                    background: sel ? opt.accent : "transparent",
+                    border: `1.5px solid ${sel ? "transparent" : "rgba(255,255,255,0.18)"}`,
+                    transform: sel ? "scale(1)" : "scale(0.9)",
+                  }}>
+                  {sel && <Check className="w-3 h-3" style={{ color: "#070b10" }} />}
+                </div>
+              </div>
+
+              {/* Text */}
+              <h4 className="text-[13px] font-black text-white mb-1.5">{opt.title}</h4>
+              <p className="text-[11px] leading-relaxed mb-3" style={{ color: "rgba(255,255,255,0.38)" }}>
+                {opt.desc}
+              </p>
+
+              {/* Feature line */}
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3 h-3 shrink-0" style={{ color: sel ? opt.accent : "rgba(255,255,255,0.2)" }} />
+                <span className="text-[10px] font-semibold transition-colors duration-300"
+                  style={{ color: sel ? opt.accent : "rgba(255,255,255,0.25)" }}>
+                  {opt.feature}
                 </span>
               </div>
-              <p className="text-[11px] text-white/40 leading-relaxed">{opt.desc}</p>
             </div>
           </button>
         );
@@ -1681,18 +1689,50 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
 
       <div className="space-y-3">
 
-        {/* ── Step 1: Mode + Campaign Selection ── */}
-        <StepCard number={1}
-          title={mode === "auto" ? "Automatic Campaigns" : "Choose Campaign Type"}
-          icon={mode === "auto" ? Bot : Sparkles}
-          state={mode === "auto" ? autoStepState(1) : manualStepState(1)}
-          completedLine={mode === "auto" ? autoStep1Summary : step1ManualSummary}
-          onEdit={() => {
-            if (mode === "auto") setAutoStep(1);
-            else { setCurrentStep(1); setConfirmed(false); }
-          }}>
-          <div>
-            {/* Mode selector — always shown in step 1 active state */}
+        {/* ── Step 1: open layout when active, compact row when completed ── */}
+        {(mode === "auto" ? autoStep > 1 : currentStep > 1) ? (
+          /* Completed row — compact, no heavy border */
+          <div className="flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all"
+            style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(183,255,24,0.12)" }}>
+            <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+              style={{ background: NEON }}>
+              <Check className="w-4 h-4" style={{ color: "#070b10" }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-xs font-black text-white/70">
+                {mode === "auto" ? "Automatic Campaigns" : selectedType?.shortName ?? ""}
+              </span>
+              {mode === "manual" && selectedType && (
+                <span className="text-[10px] text-white/30 ml-2">{selectedType.bestFor}</span>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                if (mode === "auto") setAutoStep(1);
+                else { setCurrentStep(1); setConfirmed(false); }
+              }}
+              className="text-[11px] font-bold px-3 py-1 rounded-lg transition-colors"
+              style={{ color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.04)" }}
+              onMouseOver={e => (e.currentTarget.style.color = "#fff")}
+              onMouseOut={e => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}>
+              Change
+            </button>
+          </div>
+        ) : (
+          /* Active — open, breathable, no heavy box */
+          <div className="gf-fade-up">
+            {/* Heading */}
+            <div className="mb-8">
+              <p className="text-[10px] uppercase tracking-widest text-white/25 mb-2 font-bold">Step 1</p>
+              <h2 className="text-2xl font-black text-white leading-tight mb-2">
+                How would you like to promote your game?
+              </h2>
+              <p className="text-sm text-white/35">
+                Choose the creator campaign approach that best matches your marketing goals.
+              </p>
+            </div>
+
+            {/* Mode selector */}
             <ModeSelector mode={mode} onChange={m => {
               setMode(m);
               setAutoStep(1);
@@ -1702,22 +1742,21 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
               setSelectedType(null);
             }} />
 
+            {/* Mode-specific content */}
             {mode === "auto" ? (
               <>
                 <AutoCampaignInfo />
                 <button
                   onClick={() => setAutoStep(2)}
-                  className="w-full mt-5 py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110"
-                  style={{ background: "#a78bfa", color: "#070b10" }}>
+                  className="w-full mt-6 py-4 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110"
+                  style={{ background: "#a78bfa", color: "#070b10", boxShadow: "0 0 32px 0 rgba(167,139,250,0.2)" }}>
                   Continue with Automatic Campaigns <ArrowRight className="w-4 h-4" />
                 </button>
               </>
             ) : (
               <>
-                <p className="text-[12px] text-white/40 mb-5">
-                  Every campaign gives creators a <strong className="text-white/60">demo key on join</strong> and a <strong className="text-white/60">full game key on completion</strong>.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-5">
+                {/* Campaign grid — 2 columns */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
                   {CAMPAIGN_TYPES.map(t => (
                     <TypeCard key={t.slug} type={t}
                       selected={selectedType?.slug === t.slug}
@@ -1725,17 +1764,30 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
                       onSelect={() => { setSelectedType(t); setConfirmed(false); }} />
                   ))}
                 </div>
+
+                {/* Smart continue button */}
                 <button
                   onClick={() => selectedType && setCurrentStep(2)}
                   disabled={!selectedType}
-                  className="w-full py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-35 hover:brightness-110"
-                  style={{ background: NEON, color: "#070b10" }}>
-                  {selectedType ? `Continue with ${selectedType.name}` : "Select a Campaign Type"} <ArrowRight className="w-4 h-4" />
+                  className="w-full py-4 rounded-2xl text-sm font-black flex items-center justify-center gap-2.5 transition-all duration-300"
+                  style={{
+                    background: selectedType ? NEON : "rgba(255,255,255,0.04)",
+                    color: selectedType ? "#070b10" : "rgba(255,255,255,0.25)",
+                    border: selectedType ? "none" : "1px solid rgba(255,255,255,0.07)",
+                    boxShadow: selectedType ? "0 0 40px 0 rgba(183,255,24,0.2)" : "none",
+                    cursor: selectedType ? "pointer" : "default",
+                    transform: selectedType ? "scale(1)" : "scale(0.99)",
+                  }}>
+                  {selectedType ? (
+                    <><ArrowRight className="w-4 h-4" /> Use {selectedType.shortName}</>
+                  ) : (
+                    "Choose a campaign to continue"
+                  )}
                 </button>
               </>
             )}
           </div>
-        </StepCard>
+        )}
 
         {/* ════════ AUTO FLOW ════════ */}
         {mode === "auto" && (
