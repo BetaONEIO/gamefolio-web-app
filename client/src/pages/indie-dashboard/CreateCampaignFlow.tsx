@@ -7,7 +7,7 @@ import {
   Check, ShieldCheck, Zap, Film, Camera,
   MessageSquare, Target, AlertCircle, Gamepad2,
   Sparkles, Cog, Upload, FileText, X, ArrowRight,
-  CheckCircle2, Calendar,
+  CheckCircle2, Calendar, Bot, Sliders,
 } from "lucide-react";
 import { NEON } from "./constants";
 
@@ -967,11 +967,522 @@ function SuccessScreen({ type, onDashboard }: { type: CampaignType; onDashboard:
 }
 
 // ─────────────────────────────────────────────
+// Mode Selector (Auto vs Manual)
+// ─────────────────────────────────────────────
+
+function ModeSelector({ mode, onChange }: { mode: "auto" | "manual"; onChange: (m: "auto" | "manual") => void }) {
+  const opts = [
+    {
+      id: "auto" as const,
+      icon: Bot,
+      title: "Automatic Campaigns",
+      desc: "Gamefolio handles everything — upload keys and let the platform create, launch and manage campaigns for you.",
+      badge: "Hands-off",
+      accent: "#a78bfa",
+      rgb: "167,139,250",
+    },
+    {
+      id: "manual" as const,
+      icon: Sparkles,
+      title: "Choose a Campaign",
+      desc: "Pick a campaign template, personalise it, upload your keys and launch it yourself.",
+      badge: "Full control",
+      accent: NEON,
+      rgb: "183,255,27",
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 gap-3 mb-6">
+      {opts.map(opt => {
+        const Icon = opt.icon;
+        const sel = mode === opt.id;
+        return (
+          <button key={opt.id} onClick={() => onChange(opt.id)}
+            className={`relative text-left rounded-2xl p-5 transition-all duration-300 ${sel ? "gf-step-glow" : ""}`}
+            style={{
+              background: sel ? `rgba(${opt.rgb},0.07)` : "rgba(255,255,255,0.025)",
+              border: `1.5px solid ${sel ? opt.accent : "rgba(255,255,255,0.08)"}`,
+              transform: sel ? "scale(1.01)" : "scale(1)",
+              boxShadow: sel ? `0 0 28px 0 rgba(${opt.rgb},0.12)` : "none",
+            }}>
+            {/* Selection tick */}
+            <div className="absolute top-4 right-4 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300"
+              style={{ borderColor: sel ? opt.accent : "rgba(255,255,255,0.2)", background: sel ? opt.accent : "transparent" }}>
+              {sel && <Check className="w-3 h-3" style={{ color: "#070b10" }} />}
+            </div>
+
+            {/* Icon */}
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-all duration-300"
+              style={{ background: sel ? `rgba(${opt.rgb},0.12)` : "rgba(255,255,255,0.06)", border: `1px solid ${sel ? `rgba(${opt.rgb},0.25)` : "rgba(255,255,255,0.08)"}` }}>
+              <Icon className="w-6 h-6" style={{ color: sel ? opt.accent : "rgba(255,255,255,0.4)" }} />
+            </div>
+
+            <div className="pr-6">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className="text-sm font-black text-white">{opt.title}</span>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                  style={{ background: `rgba(${opt.rgb},0.1)`, color: opt.accent, border: `1px solid rgba(${opt.rgb},0.2)` }}>
+                  {opt.badge}
+                </span>
+              </div>
+              <p className="text-[11px] text-white/40 leading-relaxed">{opt.desc}</p>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Auto Campaign info card (shown in Step 1 when auto is selected)
+// ─────────────────────────────────────────────
+
+const AUTO_PROCESS = [
+  { label: "Upload Keys",                    icon: Upload },
+  { label: "Gamefolio Selects a Campaign",   icon: Bot },
+  { label: "Eligible Creators Join",         icon: Users },
+  { label: "Content Is Created",             icon: Film },
+  { label: "Full Game Keys Are Rewarded",    icon: KeyRound },
+];
+const AUTO_HANDLES = [
+  "Chooses the most suitable campaign template",
+  "Creates and launches creator bounties",
+  "Sets duration, requirements, and capacity",
+  "Issues demo keys when creators join",
+  "Tracks content creation and XP",
+  "Releases full game keys on valid completion",
+  "Ends completed campaigns and starts the next",
+];
+
+function AutoCampaignInfo() {
+  return (
+    <div className="space-y-5">
+      {/* Hero */}
+      <div className="rounded-2xl overflow-hidden relative"
+        style={{ background: "linear-gradient(135deg, rgba(167,139,250,0.08) 0%, rgba(14,21,32,0.9) 60%)", border: "1px solid rgba(167,139,250,0.15)" }}>
+        <div className="absolute top-0 right-0 w-48 h-48 opacity-5"
+          style={{ background: "radial-gradient(circle, #a78bfa 0%, transparent 70%)" }} />
+        <div className="p-6 relative">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.25)" }}>
+              <Bot className="w-6 h-6" style={{ color: "#a78bfa" }} />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-white">Automatic Campaigns</h3>
+              <p className="text-[11px] text-white/40">Upload keys. Gamefolio does the rest.</p>
+            </div>
+            <div className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold"
+              style={{ background: "rgba(167,139,250,0.1)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.2)" }}>
+              <div className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" /> Automated
+            </div>
+          </div>
+          <p className="text-[12px] text-white/50 leading-relaxed mb-5">
+            Upload your game keys and let Gamefolio automatically create, launch and manage creator campaigns for your game.
+            You set the limits — Gamefolio handles the entire campaign cycle.
+          </p>
+
+          {/* Process flow */}
+          <div className="space-y-2">
+            {AUTO_PROCESS.map((step, i) => (
+              <div key={step.label} className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center"
+                  style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.15)" }}>
+                  <step.icon className="w-3.5 h-3.5" style={{ color: "#a78bfa" }} />
+                </div>
+                <span className="text-[11px] font-semibold text-white/70">{step.label}</span>
+                {i < AUTO_PROCESS.length - 1 && (
+                  <div className="w-px h-4 absolute" style={{ display: "none" }} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* What Gamefolio handles */}
+      <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="text-[9px] uppercase tracking-widest text-white/25 mb-3">Gamefolio handles automatically</div>
+        <div className="grid grid-cols-2 gap-y-1.5 gap-x-4">
+          {AUTO_HANDLES.map(h => (
+            <div key={h} className="flex items-center gap-2">
+              <CheckCircle2 className="w-3 h-3 shrink-0" style={{ color: "#a78bfa" }} />
+              <span className="text-[10px] text-white/50">{h}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Uses curated templates */}
+      <div className="flex items-center gap-3 p-3.5 rounded-xl"
+        style={{ background: "rgba(183,255,24,0.04)", border: "1px solid rgba(183,255,24,0.10)" }}>
+        <ShieldCheck className="w-4 h-4 shrink-0" style={{ color: NEON }} />
+        <p className="text-[11px] text-white/50">
+          Uses only <strong className="text-white/70">Quick Creator</strong>, <strong className="text-white/70">Content Boost</strong>, and <strong className="text-white/70">Creator Showcase</strong> verified templates. No custom campaigns run automatically.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Auto Step 2: Upload Keys to Pool
+// ─────────────────────────────────────────────
+
+function AutoStepUploadKeys({ demoKeys, fullKeys, poolDemo, poolFull, onDemoChange, onFullChange }: {
+  demoKeys: string; fullKeys: string; poolDemo: number; poolFull: number;
+  onDemoChange: (v: string) => void; onFullChange: (v: string) => void;
+}) {
+  const pendDemo = parseKeyLines(demoKeys).length;
+  const pendFull = parseKeyLines(fullKeys).length;
+  const totalDemo = poolDemo + pendDemo;
+  const totalFull = poolFull + pendFull;
+  const hasKeys = totalDemo > 0 && totalFull > 0;
+
+  return (
+    <div className="space-y-6">
+      {/* Vault visual */}
+      <div className="flex items-center gap-4 p-4 rounded-2xl"
+        style={{ background: "rgba(167,139,250,0.05)", border: "1px solid rgba(167,139,250,0.15)" }}>
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)" }}>
+          <KeyRound className="w-6 h-6" style={{ color: "#a78bfa" }} />
+        </div>
+        <div>
+          <div className="text-sm font-black text-white">Gamefolio Key Pool</div>
+          <div className="text-[11px] text-white/40 mt-0.5">
+            Keys are held in the pool. Gamefolio draws from this pool when creating each campaign — never exceeding your set limits.
+          </div>
+        </div>
+        {(poolDemo > 0 || poolFull > 0) && (
+          <div className="ml-auto shrink-0 text-right">
+            <div className="text-xs font-black" style={{ color: "#a78bfa" }}>{poolDemo + poolFull}</div>
+            <div className="text-[9px] text-white/25">in pool</div>
+          </div>
+        )}
+      </div>
+
+      {/* Two-column upload */}
+      <div className="grid grid-cols-2 gap-6">
+        <KeyUploadArea label="Demo Keys" accent="#60a5fa"
+          keys={demoKeys} needed={1} vaultAvail={poolDemo}
+          onChange={onDemoChange} />
+        <KeyUploadArea label="Full Game Keys" accent="#fb923c"
+          keys={fullKeys} needed={1} vaultAvail={poolFull}
+          onChange={onFullChange} />
+      </div>
+
+      {/* Totals */}
+      {hasKeys && (
+        <div className="grid grid-cols-2 gap-3 gf-scale-in">
+          {[
+            { label: "Demo Keys in Pool", value: totalDemo, color: "#60a5fa" },
+            { label: "Full Keys in Pool", value: totalFull, color: "#fb923c" },
+          ].map(s => (
+            <div key={s.label} className="rounded-xl p-4 text-center"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div className="text-2xl font-black mb-0.5" style={{ color: s.color }}>{s.value}</div>
+              <div className="text-[10px] text-white/30">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!hasKeys && (poolDemo === 0 && poolFull === 0) && (
+        <div className="flex items-center gap-2 p-3 rounded-xl"
+          style={{ background: "rgba(251,146,60,0.05)", border: "1px solid rgba(251,146,60,0.12)" }}>
+          <AlertCircle className="w-4 h-4 text-orange-400 shrink-0" />
+          <p className="text-[11px] text-orange-300/70">Upload at least some demo and full game keys to continue.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Auto Step 3: Set Limits
+// ─────────────────────────────────────────────
+
+interface AutoLimits {
+  maxCreators: number;
+  frequency: string;
+  minDemoReserve: number;
+  minFullReserve: number;
+  maxActive: number;
+}
+
+const FREQUENCY_OPTS = [
+  { id: "after_previous", label: "After previous campaign ends" },
+  { id: "weekly",         label: "Weekly" },
+  { id: "fortnightly",    label: "Fortnightly" },
+  { id: "monthly",        label: "Monthly" },
+];
+
+function AutoStepLimits({ limits, onChange }: { limits: AutoLimits; onChange: (l: Partial<AutoLimits>) => void }) {
+  const labelStyle = "text-[10px] font-bold text-white/30 uppercase tracking-wider block mb-2";
+
+  return (
+    <div className="space-y-6">
+      <p className="text-[12px] text-white/40 leading-relaxed">
+        Gamefolio manages the campaign details — you stay in control of how many creators participate and how often campaigns run.
+      </p>
+
+      {/* Max creators */}
+      <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <div>
+          <label className="text-sm font-bold text-white block mb-0.5">Maximum Creators per Campaign</label>
+          <p className="text-[11px] text-white/30">How many creators can join each campaign. Default: 20</p>
+        </div>
+        <div className="flex items-center gap-2 ml-4 shrink-0">
+          <button onClick={() => onChange({ maxCreators: Math.max(5, limits.maxCreators - 5) })}
+            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-lg transition-all"
+            style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>−</button>
+          <span className="text-xl font-black text-white w-12 text-center">{limits.maxCreators}</span>
+          <button onClick={() => onChange({ maxCreators: Math.min(100, limits.maxCreators + 5) })}
+            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-lg transition-all"
+            style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>+</button>
+        </div>
+      </div>
+
+      {/* Frequency */}
+      <div>
+        <label className={labelStyle}>Campaign Frequency</label>
+        <div className="grid grid-cols-2 gap-2">
+          {FREQUENCY_OPTS.map(opt => (
+            <button key={opt.id} onClick={() => onChange({ frequency: opt.id })}
+              className="flex items-start gap-2.5 p-3.5 rounded-xl text-left transition-all"
+              style={{
+                background: limits.frequency === opt.id ? "rgba(167,139,250,0.07)" : "rgba(255,255,255,0.03)",
+                border: `1px solid ${limits.frequency === opt.id ? "rgba(167,139,250,0.3)" : "rgba(255,255,255,0.07)"}`,
+              }}>
+              <div className="w-4 h-4 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center"
+                style={{ borderColor: limits.frequency === opt.id ? "#a78bfa" : "rgba(255,255,255,0.2)", background: limits.frequency === opt.id ? "#a78bfa" : "transparent" }}>
+                {limits.frequency === opt.id && <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#070b10" }} />}
+              </div>
+              <span className="text-[11px] font-semibold" style={{ color: limits.frequency === opt.id ? "#a78bfa" : "rgba(255,255,255,0.55)" }}>{opt.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Min key reserve */}
+      <div className="grid grid-cols-2 gap-4">
+        {[
+          { key: "minDemoReserve" as const, label: "Minimum Demo Key Reserve", color: "#60a5fa" },
+          { key: "minFullReserve" as const, label: "Minimum Full Key Reserve", color: "#fb923c" },
+        ].map(f => (
+          <div key={f.key} className="p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <label className={labelStyle}>{f.label}</label>
+            <p className="text-[10px] text-white/25 mb-3">Campaigns won't launch if pool drops below this</p>
+            <div className="flex items-center gap-2">
+              <button onClick={() => onChange({ [f.key]: Math.max(0, limits[f.key] - 5) })}
+                className="w-7 h-7 rounded-lg flex items-center justify-center font-black text-base"
+                style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>−</button>
+              <span className="text-lg font-black w-10 text-center" style={{ color: f.color }}>{limits[f.key]}</span>
+              <button onClick={() => onChange({ [f.key]: Math.min(200, limits[f.key] + 5) })}
+                className="w-7 h-7 rounded-lg flex items-center justify-center font-black text-base"
+                style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>+</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Max active */}
+      <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <div>
+          <label className="text-sm font-bold text-white block mb-0.5">Maximum Active Campaigns</label>
+          <p className="text-[11px] text-white/30">How many campaigns can run simultaneously. Default: 1</p>
+        </div>
+        <div className="flex items-center gap-2 ml-4 shrink-0">
+          <button onClick={() => onChange({ maxActive: Math.max(1, limits.maxActive - 1) })}
+            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-lg transition-all"
+            style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>−</button>
+          <span className="text-xl font-black text-white w-12 text-center">{limits.maxActive}</span>
+          <button onClick={() => onChange({ maxActive: Math.min(5, limits.maxActive + 1) })}
+            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-lg transition-all"
+            style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>+</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Auto Step 4: Confirm & Activate
+// ─────────────────────────────────────────────
+
+function AutoStepConfirm({ limits, poolDemo, poolFull, indieProfile, confirmed, onConfirm, submitting, onActivate }: {
+  limits: AutoLimits; poolDemo: number; poolFull: number; indieProfile: any;
+  confirmed: boolean; onConfirm: (v: boolean) => void; submitting: boolean; onActivate: () => void;
+}) {
+  const freqLabel = FREQUENCY_OPTS.find(f => f.id === limits.frequency)?.label ?? limits.frequency;
+  const gameName = indieProfile?.profile?.gameName ?? "Your Game";
+  const gameImage = indieProfile?.profile?.headerImageUrl ?? null;
+
+  return (
+    <div className="space-y-5">
+      {/* Summary card */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: "#0a0f18", border: "1px solid rgba(167,139,250,0.15)" }}>
+        <div className="flex items-center gap-3 p-5"
+          style={{ background: "linear-gradient(135deg, rgba(167,139,250,0.08) 0%, transparent 70%)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          {gameImage ? (
+            <img src={gameImage} alt={gameName} className="w-12 h-12 rounded-xl object-cover shrink-0"
+              style={{ border: "1px solid rgba(167,139,250,0.25)" }} />
+          ) : (
+            <div className="w-12 h-12 rounded-xl shrink-0 flex items-center justify-center" style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)" }}>
+              <Gamepad2 className="w-6 h-6" style={{ color: "#a78bfa" }} />
+            </div>
+          )}
+          <div>
+            <div className="text-xs text-white/35">{gameName}</div>
+            <div className="text-base font-black text-white">Automatic Campaigns</div>
+            <div className="flex items-center gap-1 mt-0.5">
+              <Bot className="w-3 h-3" style={{ color: "#a78bfa" }} />
+              <span className="text-[10px] font-bold" style={{ color: "#a78bfa" }}>Gamefolio Managed</span>
+            </div>
+          </div>
+          <div className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10px] font-bold"
+            style={{ background: "rgba(167,139,250,0.1)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.2)" }}>
+            <div className="w-1.5 h-1.5 rounded-full bg-current" /> Ready to Activate
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 divide-x divide-white/5">
+          {[
+            { label: "Demo Keys Available",     value: poolDemo,              color: "#60a5fa" },
+            { label: "Full Keys Available",      value: poolFull,              color: "#fb923c" },
+            { label: "Max Creators / Campaign",  value: limits.maxCreators,    color: "rgba(255,255,255,0.8)" },
+            { label: "Frequency",               value: freqLabel,             color: "rgba(255,255,255,0.8)" },
+            { label: "Min Demo Reserve",         value: limits.minDemoReserve, color: "#60a5fa" },
+            { label: "Min Full Key Reserve",     value: limits.minFullReserve, color: "#fb923c" },
+          ].map(s => (
+            <div key={s.label} className="p-3.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+              <div className="text-[9px] text-white/25 uppercase tracking-wider mb-1">{s.label}</div>
+              <div className="text-sm font-black" style={{ color: s.color }}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="p-4 text-[11px] text-white/30 leading-relaxed"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+          Gamefolio will automatically create and launch campaigns within these limits. You can pause, adjust or add keys at any time from your dashboard.
+        </div>
+      </div>
+
+      {/* Safeguards notice */}
+      <div className="flex items-start gap-3 p-4 rounded-xl"
+        style={{ background: "rgba(167,139,250,0.05)", border: "1px solid rgba(167,139,250,0.12)" }}>
+        <Lock className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#a78bfa" }} />
+        <p className="text-[11px] leading-relaxed" style={{ color: "rgba(167,139,250,0.8)" }}>
+          <strong style={{ color: "#a78bfa" }}>Safeguards active</strong> — Gamefolio will never launch a campaign without sufficient keys, and will always respect your minimum key reserve.
+        </p>
+      </div>
+
+      {/* Confirmation checkbox */}
+      <button onClick={() => onConfirm(!confirmed)}
+        className="w-full flex items-start gap-3 text-left p-4 rounded-2xl transition-all"
+        style={{
+          background: confirmed ? "rgba(167,139,250,0.07)" : "rgba(255,255,255,0.02)",
+          border: `1px solid ${confirmed ? "rgba(167,139,250,0.3)" : "rgba(255,255,255,0.09)"}`,
+        }}>
+        <div className="w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center mt-0.5 transition-all"
+          style={{ borderColor: confirmed ? "#a78bfa" : "rgba(255,255,255,0.2)", background: confirmed ? "#a78bfa" : "transparent" }}>
+          {confirmed && <Check className="w-3 h-3" style={{ color: "#070b10" }} />}
+        </div>
+        <span className="text-sm text-white/70 leading-snug">
+          I understand that Gamefolio will automatically manage campaigns using these settings and the keys in my pool.
+        </span>
+      </button>
+
+      {/* Activate button */}
+      <button onClick={onActivate} disabled={!confirmed || submitting}
+        className="w-full py-4 rounded-2xl text-base font-black tracking-wide transition-all flex items-center justify-center gap-2.5 disabled:opacity-40"
+        style={{
+          background: confirmed && !submitting ? "#a78bfa" : "rgba(167,139,250,0.3)",
+          color: "#070b10",
+          boxShadow: confirmed && !submitting ? "0 0 32px 0 rgba(167,139,250,0.25)" : "none",
+        }}>
+        {submitting ? (
+          <><Loader2 className="w-5 h-5 animate-spin" /> Activating…</>
+        ) : (
+          <><Bot className="w-5 h-5" /> Activate Automatic Campaigns</>
+        )}
+      </button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Auto Success Screen
+// ─────────────────────────────────────────────
+
+function AutoSuccessScreen({ poolDemo, poolFull, onView, onDashboard }: {
+  poolDemo: number; poolFull: number; onView: () => void; onDashboard: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 flex items-center justify-center" style={{ zIndex: 9998, background: "rgba(7,11,16,0.96)" }}>
+      <Confetti />
+      <div className="relative text-center max-w-sm mx-auto px-6 gf-scale-in">
+        <div className="w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center"
+          style={{ background: "rgba(167,139,250,0.1)", border: "2px solid rgba(167,139,250,0.3)" }}>
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <polyline points="10,24 20,34 38,14" stroke="#a78bfa" strokeWidth="4"
+              strokeLinecap="round" strokeLinejoin="round" className="gf-check-draw" />
+          </svg>
+        </div>
+
+        <h2 className="text-3xl font-black text-white mb-2">Automatic Campaigns Activated</h2>
+        <p className="text-sm text-white/45 mb-6">Gamefolio will now create and manage creator campaigns for your game automatically.</p>
+
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          {[
+            { label: "Status",      value: "Active",      color: "#a78bfa" },
+            { label: "Demo Keys",   value: `${poolDemo}`, color: "#60a5fa" },
+            { label: "Full Keys",   value: `${poolFull}`, color: "#fb923c" },
+          ].map(s => (
+            <div key={s.label} className="rounded-xl p-3"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="text-base font-black mb-0.5" style={{ color: s.color }}>{s.value}</div>
+              <div className="text-[9px] text-white/30 uppercase tracking-wider">{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-xl p-3 mb-6 text-[11px] text-white/40"
+          style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.12)" }}>
+          <Bot className="w-4 h-4 inline mr-1.5 mb-0.5" style={{ color: "#a78bfa" }} />
+          Gamefolio is preparing your first campaign
+        </div>
+
+        <div className="space-y-2.5">
+          <button onClick={onView}
+            className="w-full py-3.5 rounded-2xl font-black text-sm transition-all hover:brightness-110"
+            style={{ background: "#a78bfa", color: "#070b10" }}>
+            View Automatic Campaigns
+          </button>
+          <button onClick={onDashboard}
+            className="w-full py-3 rounded-2xl font-bold text-sm transition-all"
+            style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.09)" }}>
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Main Flow
 // ─────────────────────────────────────────────
 
 export default function CreateCampaignFlow({ onComplete }: { onComplete: () => void }) {
   const { toast } = useToast();
+
+  // ── Mode ───────────────────────────────────
+  const [mode, setMode] = useState<"auto" | "manual">("manual");
+
+  // ── Manual mode state ──────────────────────
   const [currentStep, setCurrentStep] = useState(1);
   const [launched, setLaunched] = useState(false);
   const [selectedType, setSelectedType] = useState<CampaignType | null>(null);
@@ -985,6 +1496,19 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
     regions: "worldwide", platforms: [],
   });
 
+  // ── Auto mode state ────────────────────────
+  const [autoStep, setAutoStep]       = useState(1);
+  const [autoSuccess, setAutoSuccess] = useState(false);
+  const [autoConfirmed, setAutoConfirmed] = useState(false);
+  const [autoSubmitting, setAutoSubmitting] = useState(false);
+  const [autoDemoKeys, setAutoDemoKeys] = useState("");
+  const [autoFullKeys, setAutoFullKeys] = useState("");
+  const [autoLimits, setAutoLimits]   = useState<AutoLimits>({
+    maxCreators: 20, frequency: "after_previous",
+    minDemoReserve: 20, minFullReserve: 20, maxActive: 1,
+  });
+
+  // ── Shared queries ─────────────────────────
   const { data: bountyStatus } = useQuery<any>({
     queryKey: ["/api/indie/bounty-status"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -993,15 +1517,28 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
     queryKey: ["/api/campaigns/templates"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
+  const { data: poolStatus, refetch: refetchPool } = useQuery<any>({
+    queryKey: ["/api/campaigns/auto/pool"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+  });
+  const { data: indieProfile } = useQuery<any>({
+    queryKey: ["/api/indie/profile"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+  });
 
+  // Manual keys
   const vaultDemo = bountyStatus?.demoKeys?.available ?? 0;
   const vaultFull = bountyStatus?.fullGameKeys?.available ?? 0;
-
   const pendDemo  = parseKeyLines(pendingDemoKeys).length;
   const pendFull  = parseKeyLines(pendingFullKeys).length;
   const keysReady = !!selectedType &&
     (vaultDemo + pendDemo >= selectedType.demoKeys) &&
     (vaultFull + pendFull >= selectedType.fullKeys);
+
+  // Auto pool counts (adds pasted keys to pool live count)
+  const poolDemo    = (poolStatus?.demoKeys ?? 0) + parseKeyLines(autoDemoKeys).length;
+  const poolFull    = (poolStatus?.fullKeys  ?? 0) + parseKeyLines(autoFullKeys).length;
+  const autoHasKeys = poolDemo > 0 && poolFull > 0;
 
   const getTemplateId = (): number | null => {
     if (!selectedType) return null;
@@ -1010,14 +1547,9 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
   };
 
   const updateSettings = (partial: Partial<CampaignSettings>) => setSettings(s => ({ ...s, ...partial }));
+  const updateAutoLimits = (partial: Partial<AutoLimits>) => setAutoLimits(l => ({ ...l, ...partial }));
 
-  const canAdvance = (): boolean => {
-    if (currentStep === 1) return !!selectedType;
-    if (currentStep === 2) return true;
-    if (currentStep === 3) return keysReady;
-    return false;
-  };
-
+  // ── Manual launch ──────────────────────────
   const handleLaunch = async () => {
     const templateId = getTemplateId();
     if (!templateId || !selectedType) return;
@@ -1038,14 +1570,10 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
       const demoKeyList = parseKeyLines(pendingDemoKeys);
       const fullKeyList = parseKeyLines(pendingFullKeys);
       if (demoKeyList.length > 0) {
-        await apiRequest("POST", `/api/campaigns/instances/${instData.id}/keys`, {
-          keyType: "demo", keys: demoKeyList,
-        });
+        await apiRequest("POST", `/api/campaigns/instances/${instData.id}/keys`, { keyType: "demo", keys: demoKeyList });
       }
       if (fullKeyList.length > 0) {
-        await apiRequest("POST", `/api/campaigns/instances/${instData.id}/keys`, {
-          keyType: "full", keys: fullKeyList,
-        });
+        await apiRequest("POST", `/api/campaigns/instances/${instData.id}/keys`, { keyType: "full", keys: fullKeyList });
       }
 
       const submitRes = await apiRequest("POST", `/api/campaigns/instances/${instData.id}/submit`, {});
@@ -1054,7 +1582,6 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns/instances"] });
       queryClient.invalidateQueries({ queryKey: ["/api/campaigns/overview"] });
       queryClient.invalidateQueries({ queryKey: ["/api/indie/bounty-status"] });
-
       setLaunched(true);
     } catch (err: any) {
       toast({ description: err.message || "Failed to launch campaign", variant: "gamefolioError" as any });
@@ -1063,109 +1590,248 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
     }
   };
 
-  // Computed state for each step card
-  function stepState(n: number): StepState {
+  // ── Auto activate ──────────────────────────
+  const handleActivate = async () => {
+    setAutoSubmitting(true);
+    try {
+      // Upload pending pool keys
+      const demoKeyList = parseKeyLines(autoDemoKeys);
+      const fullKeyList = parseKeyLines(autoFullKeys);
+      if (demoKeyList.length > 0) {
+        await apiRequest("POST", "/api/campaigns/auto/keys", { keyType: "demo", keys: demoKeyList });
+      }
+      if (fullKeyList.length > 0) {
+        await apiRequest("POST", "/api/campaigns/auto/keys", { keyType: "full", keys: fullKeyList });
+      }
+
+      // Get curated template IDs (all 3 non-custom)
+      const curatedSlugs = ["quick-creator", "content-boost", "creator-showcase"];
+      const allowedTemplates = (templates as any[])
+        .filter((t: any) => curatedSlugs.includes(t.slug))
+        .map((t: any) => t.id);
+
+      const gameName     = indieProfile?.profile?.gameName ?? "";
+      const gameArtwork  = indieProfile?.profile?.headerImageUrl ?? "";
+
+      const res = await apiRequest("POST", "/api/campaigns/auto/settings", {
+        enabled: true,
+        allowedTemplates,
+        frequency: autoLimits.frequency,
+        maxCreatorsPerCampaign: autoLimits.maxCreators,
+        minKeyReserve: Math.min(autoLimits.minDemoReserve, autoLimits.minFullReserve),
+        keyPoolSize: poolDemo + poolFull,
+        gameName,
+        gameArtworkUrl: gameArtwork,
+      });
+      if (!res.ok) throw new Error("Failed to activate automatic campaigns");
+
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns/auto/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/campaigns/auto/pool"] });
+      refetchPool();
+      setAutoSuccess(true);
+    } catch (err: any) {
+      toast({ description: err.message || "Failed to activate", variant: "gamefolioError" as any });
+    } finally {
+      setAutoSubmitting(false);
+    }
+  };
+
+  // ── Step state helpers ─────────────────────
+  function manualStepState(n: number): StepState {
     if (n < currentStep) return "completed";
     if (n === currentStep) return "active";
     return "upcoming";
   }
+  function autoStepState(n: number): StepState {
+    if (n < autoStep) return "completed";
+    if (n === autoStep) return "active";
+    return "upcoming";
+  }
 
-  // Completed summaries
-  const step1Summary = selectedType?.name ?? "";
-  const step2Summary = [
+  const step1ManualSummary = selectedType?.name ?? "";
+  const step2ManualSummary = [
     settings.startType === "asap" ? "Launch Immediately" : `Scheduled: ${settings.scheduledDate}`,
     settings.platforms.length ? settings.platforms.join(", ") : "All platforms",
   ].join(" · ");
-  const step3Summary = keysReady
+  const step3ManualSummary = keysReady
     ? `${vaultDemo + pendDemo} demo · ${vaultFull + pendFull} full game keys ready`
     : "Keys pending";
 
+  const autoStep1Summary = mode === "auto" ? "Automatic Campaigns" : "";
+  const autoStep2Summary = `${poolDemo} demo · ${poolFull} full keys in pool`;
+  const autoStep3Summary = `${autoLimits.maxCreators} creators · ${FREQUENCY_OPTS.find(f => f.id === autoLimits.frequency)?.label}`;
+
   return (
     <>
-      {/* Inject CSS animations */}
       <style>{ANIM_CSS}</style>
 
-      {/* Success overlay */}
+      {/* Manual success overlay */}
       {launched && selectedType && (
         <SuccessScreen type={selectedType} onDashboard={onComplete} />
       )}
 
+      {/* Auto success overlay */}
+      {autoSuccess && (
+        <AutoSuccessScreen
+          poolDemo={poolStatus?.demoKeys ?? 0}
+          poolFull={poolStatus?.fullKeys  ?? 0}
+          onView={onComplete}
+          onDashboard={onComplete} />
+      )}
+
       <div className="space-y-3">
 
-        {/* ── Step 1: Choose Campaign ── */}
-        <StepCard number={1} title="Choose Campaign Type" icon={Sparkles}
-          state={stepState(1)} completedLine={step1Summary}
-          onEdit={() => { setCurrentStep(1); setConfirmed(false); }}>
+        {/* ── Step 1: Mode + Campaign Selection ── */}
+        <StepCard number={1}
+          title={mode === "auto" ? "Automatic Campaigns" : "Choose Campaign Type"}
+          icon={mode === "auto" ? Bot : Sparkles}
+          state={mode === "auto" ? autoStepState(1) : manualStepState(1)}
+          completedLine={mode === "auto" ? autoStep1Summary : step1ManualSummary}
+          onEdit={() => {
+            if (mode === "auto") setAutoStep(1);
+            else { setCurrentStep(1); setConfirmed(false); }
+          }}>
           <div>
-            <p className="text-[12px] text-white/40 mb-5">
-              Every campaign gives creators a <strong className="text-white/60">demo key on join</strong> and a <strong className="text-white/60">full game key on completion</strong>.
-            </p>
-            {/* Premium 3-column grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-5">
-              {CAMPAIGN_TYPES.map(t => (
-                <TypeCard key={t.slug} type={t}
-                  selected={selectedType?.slug === t.slug}
-                  anySelected={!!selectedType}
-                  onSelect={() => { setSelectedType(t); setConfirmed(false); }} />
-              ))}
-            </div>
-            <button
-              onClick={() => selectedType && setCurrentStep(2)}
-              disabled={!selectedType}
-              className="w-full py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-35 hover:brightness-110"
-              style={{ background: NEON, color: "#070b10" }}>
-              {selectedType ? `Continue with ${selectedType.name}` : "Select a Campaign Type"} <ArrowRight className="w-4 h-4" />
-            </button>
+            {/* Mode selector — always shown in step 1 active state */}
+            <ModeSelector mode={mode} onChange={m => {
+              setMode(m);
+              setAutoStep(1);
+              setCurrentStep(1);
+              setConfirmed(false);
+              setAutoConfirmed(false);
+              setSelectedType(null);
+            }} />
+
+            {mode === "auto" ? (
+              <>
+                <AutoCampaignInfo />
+                <button
+                  onClick={() => setAutoStep(2)}
+                  className="w-full mt-5 py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110"
+                  style={{ background: "#a78bfa", color: "#070b10" }}>
+                  Continue with Automatic Campaigns <ArrowRight className="w-4 h-4" />
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-[12px] text-white/40 mb-5">
+                  Every campaign gives creators a <strong className="text-white/60">demo key on join</strong> and a <strong className="text-white/60">full game key on completion</strong>.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-5">
+                  {CAMPAIGN_TYPES.map(t => (
+                    <TypeCard key={t.slug} type={t}
+                      selected={selectedType?.slug === t.slug}
+                      anySelected={!!selectedType}
+                      onSelect={() => { setSelectedType(t); setConfirmed(false); }} />
+                  ))}
+                </div>
+                <button
+                  onClick={() => selectedType && setCurrentStep(2)}
+                  disabled={!selectedType}
+                  className="w-full py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-35 hover:brightness-110"
+                  style={{ background: NEON, color: "#070b10" }}>
+                  {selectedType ? `Continue with ${selectedType.name}` : "Select a Campaign Type"} <ArrowRight className="w-4 h-4" />
+                </button>
+              </>
+            )}
           </div>
         </StepCard>
 
-        {/* ── Step 2: Personalise ── */}
-        <StepCard number={2} title="Personalise Your Campaign" icon={Gamepad2}
-          state={stepState(2)} completedLine={step2Summary}
-          onEdit={() => setCurrentStep(2)}>
-          {selectedType && (
-            <div>
-              <StepPersonalise type={selectedType} settings={settings} onChange={updateSettings} />
-              <button
-                onClick={() => setCurrentStep(3)}
-                className="w-full mt-6 py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110"
-                style={{ background: NEON, color: "#070b10" }}>
-                Continue <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-        </StepCard>
+        {/* ════════ AUTO FLOW ════════ */}
+        {mode === "auto" && (
+          <>
+            <StepCard number={2} title="Upload Game Keys" icon={KeyRound}
+              state={autoStepState(2)} completedLine={autoStep2Summary}
+              onEdit={() => setAutoStep(2)}>
+              <div>
+                <AutoStepUploadKeys
+                  demoKeys={autoDemoKeys} fullKeys={autoFullKeys}
+                  poolDemo={poolStatus?.demoKeys ?? 0} poolFull={poolStatus?.fullKeys ?? 0}
+                  onDemoChange={setAutoDemoKeys} onFullChange={setAutoFullKeys} />
+                <button
+                  onClick={() => autoHasKeys && setAutoStep(3)}
+                  disabled={!autoHasKeys}
+                  className="w-full mt-6 py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-35"
+                  style={{ background: "#a78bfa", color: "#070b10" }}>
+                  Continue <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </StepCard>
 
-        {/* ── Step 3: Upload Keys ── */}
-        <StepCard number={3} title="Upload Game Keys" icon={KeyRound}
-          state={stepState(3)} completedLine={step3Summary}
-          onEdit={() => setCurrentStep(3)}>
-          {selectedType && (
-            <div>
-              <StepUploadKeys type={selectedType}
-                demoKeys={pendingDemoKeys} fullKeys={pendingFullKeys}
-                vaultDemo={vaultDemo} vaultFull={vaultFull}
-                onDemoChange={setPendingDemoKeys} onFullChange={setPendingFullKeys} />
-              <button
-                onClick={() => keysReady && setCurrentStep(4)}
-                disabled={!keysReady}
-                className="w-full mt-6 py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-35"
-                style={{ background: NEON, color: "#070b10" }}>
-                Continue <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-        </StepCard>
+            <StepCard number={3} title="Set Limits" icon={Sliders}
+              state={autoStepState(3)} completedLine={autoStep3Summary}
+              onEdit={() => setAutoStep(3)}>
+              <div>
+                <AutoStepLimits limits={autoLimits} onChange={updateAutoLimits} />
+                <button
+                  onClick={() => setAutoStep(4)}
+                  className="w-full mt-6 py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110"
+                  style={{ background: "#a78bfa", color: "#070b10" }}>
+                  Continue <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </StepCard>
 
-        {/* ── Step 4: Launch ── */}
-        <StepCard number={4} title="Launch Campaign" icon={Rocket}
-          state={stepState(4)}>
-          {selectedType && (
-            <StepLaunch type={selectedType} settings={settings}
-              confirmed={confirmed} onConfirm={setConfirmed}
-              submitting={submitting} onLaunch={handleLaunch} />
-          )}
-        </StepCard>
+            <StepCard number={4} title="Confirm & Activate" icon={Rocket}
+              state={autoStepState(4)}>
+              <AutoStepConfirm
+                limits={autoLimits} poolDemo={poolDemo} poolFull={poolFull}
+                indieProfile={indieProfile}
+                confirmed={autoConfirmed} onConfirm={setAutoConfirmed}
+                submitting={autoSubmitting} onActivate={handleActivate} />
+            </StepCard>
+          </>
+        )}
+
+        {/* ════════ MANUAL FLOW ════════ */}
+        {mode === "manual" && (
+          <>
+            <StepCard number={2} title="Personalise Your Campaign" icon={Gamepad2}
+              state={manualStepState(2)} completedLine={step2ManualSummary}
+              onEdit={() => setCurrentStep(2)}>
+              {selectedType && (
+                <div>
+                  <StepPersonalise type={selectedType} settings={settings} onChange={updateSettings} />
+                  <button
+                    onClick={() => setCurrentStep(3)}
+                    className="w-full mt-6 py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110"
+                    style={{ background: NEON, color: "#070b10" }}>
+                    Continue <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </StepCard>
+
+            <StepCard number={3} title="Upload Game Keys" icon={KeyRound}
+              state={manualStepState(3)} completedLine={step3ManualSummary}
+              onEdit={() => setCurrentStep(3)}>
+              {selectedType && (
+                <div>
+                  <StepUploadKeys type={selectedType}
+                    demoKeys={pendingDemoKeys} fullKeys={pendingFullKeys}
+                    vaultDemo={vaultDemo} vaultFull={vaultFull}
+                    onDemoChange={setPendingDemoKeys} onFullChange={setPendingFullKeys} />
+                  <button
+                    onClick={() => keysReady && setCurrentStep(4)}
+                    disabled={!keysReady}
+                    className="w-full mt-6 py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-35"
+                    style={{ background: NEON, color: "#070b10" }}>
+                    Continue <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </StepCard>
+
+            <StepCard number={4} title="Launch Campaign" icon={Rocket}
+              state={manualStepState(4)}>
+              {selectedType && (
+                <StepLaunch type={selectedType} settings={settings}
+                  confirmed={confirmed} onConfirm={setConfirmed}
+                  submitting={submitting} onLaunch={handleLaunch} />
+              )}
+            </StepCard>
+          </>
+        )}
 
       </div>
     </>

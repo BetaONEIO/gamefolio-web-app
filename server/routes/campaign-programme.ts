@@ -1060,4 +1060,71 @@ router.post('/auto/trigger', requirePartner, async (req, res) => {
   }
 });
 
+// GET /api/campaigns/auto/pool — pool key counts for automatic campaigns
+router.get('/auto/pool', requirePartner, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const demoRows = toRows(await db.execute(sql`
+      SELECT COUNT(*) AS count FROM game_keys
+      WHERE developer_user_id = ${userId} AND instance_id IS NULL AND key_type = 'demo' AND status = 'available'
+    `)) as any[];
+    const fullRows = toRows(await db.execute(sql`
+      SELECT COUNT(*) AS count FROM game_keys
+      WHERE developer_user_id = ${userId} AND instance_id IS NULL AND key_type = 'full' AND status = 'available'
+    `)) as any[];
+    res.json({
+      demoKeys: Number(demoRows[0].count ?? 0),
+      fullKeys:  Number(fullRows[0].count  ?? 0),
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to load pool counts' });
+  }
+});
+
+// POST /api/campaigns/auto/keys — upload keys to the unassigned pool
+router.post('/auto/keys', requirePartner, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const { keyType, keys } = req.body;
+    if (!keyType || !['demo', 'full'].includes(keyType)) {
+      return res.status(400).json({ error: 'keyType must be demo or full' });
+    }
+    if (!Array.isArray(keys) || keys.length === 0) {
+      return res.status(400).json({ error: 'keys array is required' });
+    }
+
+    const trimmed  = keys.map((k: string) => k.trim()).filter((k: string) => k.length > 0);
+    const cleaned  = [...new Set(trimmed)];
+
+    const existing = toRows(await db.execute(sql`
+      SELECT key_value FROM game_keys
+      WHERE developer_user_id = ${userId} AND key_type = ${keyType} AND instance_id IS NULL
+    `)) as any[];
+    const existingSet = new Set(existing.map((r: any) => r.key_value));
+    const newKeys  = cleaned.filter((k: string) => !existingSet.has(k));
+    const duplicates = cleaned.length - newKeys.length;
+
+    // Create a pool batch (instance_id = NULL)
+    const batchRows = toRows(await db.execute(sql`
+      INSERT INTO game_key_batches (instance_id, key_type, total_keys, valid_keys, duplicate_keys, invalid_keys)
+      VALUES (NULL, ${keyType}, ${trimmed.length}, ${newKeys.length}, ${duplicates}, 0)
+      RETURNING id
+    `)) as any[];
+    const batchId = batchRows[0]?.id ?? null;
+
+    for (const keyValue of newKeys) {
+      await db.execute(sql`
+        INSERT INTO game_keys (batch_id, developer_user_id, key_type, key_value, status)
+        VALUES (${batchId}, ${userId}, ${keyType}, ${keyValue}, 'available')
+        ON CONFLICT DO NOTHING
+      `);
+    }
+
+    res.json({ added: newKeys.length, duplicates, total: trimmed.length });
+  } catch (err) {
+    console.error('POST /api/campaigns/auto/keys error:', err);
+    res.status(500).json({ error: 'Failed to upload pool keys' });
+  }
+});
+
 export default router;
