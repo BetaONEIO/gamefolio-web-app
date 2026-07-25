@@ -603,8 +603,132 @@ const CARD_IMG_SEED: Record<string, string> = {
   "custom-campaign":  "0842",  // dark architecture
 };
 
+function ThinTypeCard({
+  type, isCenter, onClick,
+}: {
+  type: CampaignType; isCenter: boolean; onClick: () => void;
+}) {
+  const accent = TYPE_ACCENT[type.slug] ?? NEON;
+  const rgb    = ACCENT_RGB[accent] ?? "183,255,27";
+  const seed   = CARD_IMG_SEED[type.slug] ?? "1000";
+
+  return (
+    <div
+      onClick={onClick}
+      className="relative flex flex-col overflow-hidden cursor-pointer select-none"
+      style={{
+        flex: isCenter ? "1.08" : "1",
+        borderRadius: "18px",
+        background: CARD_BG,
+        border: `1.5px solid ${isCenter ? `rgba(${rgb},0.30)` : "rgba(255,255,255,0.07)"}`,
+        boxShadow: isCenter
+          ? `0 28px 64px 0 rgba(${rgb},0.18), 0 0 0 1px rgba(${rgb},0.06)`
+          : "none",
+        transform: isCenter ? "translateY(-14px) scale(1.03)" : "scale(0.97)",
+        opacity: isCenter ? 1 : 0.55,
+        filter: isCenter ? "none" : "saturate(0.4) brightness(0.75)",
+        transition: "all 0.35s cubic-bezier(0.22,1,0.36,1)",
+        padding: "0 0 28px 0",
+        zIndex: isCenter ? 2 : 1,
+      }}>
+
+      {/* Full-width gaming image header */}
+      <div className="relative w-full overflow-hidden shrink-0" style={{ height: "190px", borderRadius: "18px 18px 0 0" }}>
+        <img
+          src={`https://picsum.photos/seed/${seed}/400/380`}
+          alt=""
+          draggable={false}
+          className="w-full h-full object-cover"
+          style={{ display: "block" }}
+        />
+        <div className="absolute inset-0" style={{ background: "rgba(7,11,16,0.40)" }} />
+        <div className="absolute inset-0" style={{
+          background: `linear-gradient(to top, rgba(${rgb},0.32) 0%, transparent 55%)`,
+        }} />
+        <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
+          {type.recommended && (
+            <div className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mb-2"
+              style={{ background: "rgba(251,146,60,0.22)", color: "#fb923c", backdropFilter: "blur(6px)" }}>
+              ★ Best
+            </div>
+          )}
+          <h3 className="text-[15px] font-black leading-tight text-white drop-shadow-md">
+            {type.shortName}
+          </h3>
+          <span className="text-[10px] font-bold" style={{ color: accent, textShadow: `0 0 12px ${accent}` }}>
+            {type.duration} days
+          </span>
+        </div>
+      </div>
+
+      {/* Short description */}
+      <p className="px-4 pt-4 text-[11px] leading-relaxed line-clamp-2"
+        style={{ color: isCenter ? "rgba(255,255,255,0.50)" : "rgba(255,255,255,0.25)", minHeight: "36px" }}>
+        {type.description}
+      </p>
+
+      {/* Estimated results */}
+      <div className="px-4 mt-3 flex-1">
+        <div className="text-[9px] font-bold uppercase tracking-widest mb-2"
+          style={{ color: isCenter ? `rgba(${rgb},0.55)` : "rgba(255,255,255,0.20)" }}>
+          Estimated Results
+        </div>
+        <div className="space-y-0">
+          {[
+            { e: "🎥", label: `${type.estimated.clips}+ Clips` },
+            { e: "📸", label: `${type.estimated.screenshots} Screenshots` },
+            { e: "💬", label: `${type.estimated.feedback} Creator Reviews` },
+          ].map((row, i) => (
+            <div key={i} className="flex items-center gap-2 py-2.5"
+              style={{ borderBottom: i < 2 ? `1px solid ${isCenter ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)"}` : "none" }}>
+              <span className="text-[13px]">{row.e}</span>
+              <span className="text-[11px]" style={{ color: isCenter ? "rgba(255,255,255,0.65)" : "rgba(255,255,255,0.30)" }}>
+                {row.label}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Creator tasks */}
+        <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${isCenter ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)"}` }}>
+          <div className="text-[9px] font-bold uppercase tracking-widest mb-2"
+            style={{ color: isCenter ? `rgba(${rgb},0.55)` : "rgba(255,255,255,0.20)" }}>
+            Creators Complete
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {type.pills.map(({ ct }) => (
+              <span key={ct} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md"
+                style={{
+                  background: isCenter ? `rgba(${rgb},0.10)` : "rgba(255,255,255,0.04)",
+                  color: isCenter ? accent : "rgba(255,255,255,0.30)",
+                  border: `1px solid ${isCenter ? `rgba(${rgb},0.20)` : "rgba(255,255,255,0.06)"}`,
+                }}>
+                <Check style={{ width: "9px", height: "9px" }} />
+                {ct === "clip" ? "Gameplay Clip" : ct === "screenshot" ? "Screenshot" : ct === "reel" ? "Reel" : ct === "stream" ? "Livestream" : ct === "feedback" ? "Feedback" : ct}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* CTA button */}
+      <div className="px-4 mt-5">
+        <div className="w-full py-3.5 rounded-xl text-[13px] font-black text-center transition-all"
+          style={{
+            background: isCenter ? accent : "rgba(255,255,255,0.05)",
+            color: isCenter ? "#070b10" : "rgba(255,255,255,0.35)",
+            border: isCenter ? "none" : "1px solid rgba(255,255,255,0.08)",
+            boxShadow: isCenter ? `0 0 24px 0 rgba(${rgb},0.30)` : "none",
+          }}>
+          {isCenter ? "Use Campaign →" : type.shortName}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────
-// Campaign type list — clean row items
+// Campaign type carousel — 3 cards visible, center elevated
 // ─────────────────────────────────────────────
 
 function TypeCardCarousel({
@@ -614,56 +738,80 @@ function TypeCardCarousel({
   selectedType: CampaignType | null;
   onSelectAndContinue: (type: CampaignType) => void;
 }) {
-  const [hovered, setHovered] = useState<string | null>(null);
+  const n = CAMPAIGN_TYPES.length;
+  const initIdx = selectedType
+    ? Math.max(0, CAMPAIGN_TYPES.findIndex(t => t.slug === selectedType.slug))
+    : 1;
+  const [centerIdx, setCenterIdx] = useState(initIdx);
+
+  const prev = (centerIdx - 1 + n) % n;
+  const next = (centerIdx + 1) % n;
+
+  const visible = [
+    { type: CAMPAIGN_TYPES[prev],      isCenter: false, idx: prev },
+    { type: CAMPAIGN_TYPES[centerIdx], isCenter: true,  idx: centerIdx },
+    { type: CAMPAIGN_TYPES[next],      isCenter: false, idx: next },
+  ];
 
   return (
-    <div className="space-y-1">
-      {CAMPAIGN_TYPES.map(type => {
-        const accent  = TYPE_ACCENT[type.slug] ?? NEON;
-        const rgb     = ACCENT_RGB[accent] ?? "183,255,27";
-        const sel     = selectedType?.slug === type.slug;
-        const hov     = hovered === type.slug;
-        const Icon    = type.icon;
+    <div className="space-y-5">
+      {/* Arrow row above cards */}
+      <div className="flex items-center justify-between px-1">
+        <button
+          onClick={() => setCenterIdx(prev)}
+          className="flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full transition-all hover:opacity-80"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.55)" }}>
+          <ChevronLeft style={{ width: "14px", height: "14px" }} /> Prev
+        </button>
 
-        return (
-          <button
+        <span className="text-[11px] font-bold" style={{ color: "rgba(255,255,255,0.28)" }}>
+          {centerIdx + 1} / {n}
+        </span>
+
+        <button
+          onClick={() => setCenterIdx(next)}
+          className="flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full transition-all hover:opacity-80"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.55)" }}>
+          Next <ChevronRight style={{ width: "14px", height: "14px" }} />
+        </button>
+      </div>
+
+      {/* Three cards */}
+      <div className="flex items-end gap-3 pb-4">
+        {visible.map(({ type, isCenter, idx: i }) => (
+          <ThinTypeCard
             key={type.slug}
-            onClick={() => onSelectAndContinue(type)}
-            onMouseEnter={() => setHovered(type.slug)}
-            onMouseLeave={() => setHovered(null)}
-            className="w-full flex items-center gap-4 px-3 py-3.5 rounded-2xl text-left transition-all group"
-            style={{ background: sel ? `rgba(${rgb},0.07)` : hov ? "rgba(255,255,255,0.03)" : "transparent" }}>
+            type={type}
+            isCenter={isCenter}
+            onClick={() => {
+              if (!isCenter) {
+                setCenterIdx(i);
+              } else {
+                onSelectAndContinue(type);
+              }
+            }}
+          />
+        ))}
+      </div>
 
-            {/* Icon */}
-            <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center transition-all"
-              style={{ background: `rgba(${rgb},${sel || hov ? 0.15 : 0.08})` }}>
-              <Icon className="w-5 h-5 transition-colors" style={{ color: accent }} />
-            </div>
-
-            {/* Name + description */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-sm font-black text-white leading-none">{type.shortName}</span>
-                {type.recommended && (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
-                    style={{ background: "rgba(251,146,60,0.15)", color: "#fb923c" }}>★ Best</span>
-                )}
-              </div>
-              <p className="text-[11px] leading-snug text-white/38 truncate">{type.shortDesc}</p>
-            </div>
-
-            {/* Key stats */}
-            <div className="text-right shrink-0 hidden sm:block">
-              <div className="text-xs font-bold text-white/55">{type.duration} days</div>
-              <div className="text-[10px] text-white/28">{type.capacity} creators</div>
-            </div>
-
-            {/* Arrow */}
-            <ChevronRight className="w-4 h-4 shrink-0 transition-all group-hover:translate-x-0.5"
-              style={{ color: sel ? accent : "rgba(255,255,255,0.18)" }} />
-          </button>
-        );
-      })}
+      {/* Dot indicators */}
+      <div className="flex justify-center items-center gap-2">
+        {CAMPAIGN_TYPES.map((t, i) => {
+          const a = TYPE_ACCENT[t.slug] ?? NEON;
+          return (
+            <button
+              key={t.slug}
+              onClick={() => setCenterIdx(i)}
+              className="transition-all duration-300"
+              style={{
+                height: "7px",
+                width: i === centerIdx ? "22px" : "7px",
+                borderRadius: "9999px",
+                background: i === centerIdx ? a : "rgba(255,255,255,0.16)",
+              }} />
+          );
+        })}
+      </div>
     </div>
   );
 }
