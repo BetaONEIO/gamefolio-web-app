@@ -116,11 +116,13 @@ const REGION_OPTIONS = [
 ];
 
 const PLATFORM_OPTIONS = [
-  { id: "pc",     label: "PC (Windows / Mac / Linux)" },
-  { id: "ps",     label: "PlayStation" },
-  { id: "xbox",   label: "Xbox" },
-  { id: "switch", label: "Nintendo Switch" },
-  { id: "mobile", label: "Mobile (iOS / Android)" },
+  { id: "windows", label: "Windows" },
+  { id: "mac",     label: "Mac" },
+  { id: "linux",   label: "Linux" },
+  { id: "ps",      label: "PlayStation" },
+  { id: "xbox",    label: "Xbox" },
+  { id: "switch",  label: "Nintendo Switch" },
+  { id: "mobile",  label: "Mobile" },
 ];
 
 const REQ_ICON: Record<string, any> = {
@@ -686,34 +688,51 @@ function ThinTypeCard({
         {type.description}
       </p>
 
-      {/* Feature / stat rows */}
-      <div className="px-4 mt-3 space-y-0 flex-1">
-        {[
-          { ok: true,  label: `${type.capacity} Creators` },
-          { ok: true,  label: `${type.demoKeys} Demo Keys` },
-          { ok: true,  label: `${type.fullKeys} Full Keys` },
-          { ok: type.recommended ?? false, label: `${type.xpReward.toLocaleString()} XP` },
-        ].map((row, i) => (
-          <div key={i} className="flex items-center gap-2.5 py-3"
-            style={{ borderBottom: i < 3 ? `1px solid ${isCenter ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)"}` : "none" }}>
-            <div className="shrink-0 flex items-center justify-center rounded-full"
-              style={{
-                width: "18px", height: "18px",
-                background: row.ok ? `rgba(${rgb},0.14)` : "rgba(255,255,255,0.04)",
-              }}>
-              {row.ok
-                ? <Check style={{ width: "10px", height: "10px", color: accent }} />
-                : <X    style={{ width: "10px", height: "10px", color: "rgba(255,255,255,0.25)" }} />
-              }
+      {/* Estimated results */}
+      <div className="px-4 mt-3 flex-1">
+        <div className="text-[9px] font-bold uppercase tracking-widest mb-2"
+          style={{ color: isCenter ? `rgba(${rgb},0.55)` : "rgba(255,255,255,0.20)" }}>
+          Estimated Results
+        </div>
+        <div className="space-y-0">
+          {[
+            { e: "🎥", label: `${type.estimated.clips}+ Clips` },
+            { e: "📸", label: `${type.estimated.screenshots} Screenshots` },
+            { e: "💬", label: `${type.estimated.feedback} Creator Reviews` },
+          ].map((row, i) => (
+            <div key={i} className="flex items-center gap-2 py-2.5"
+              style={{ borderBottom: i < 2 ? `1px solid ${isCenter ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)"}` : "none" }}>
+              <span className="text-[13px]">{row.e}</span>
+              <span className="text-[11px]" style={{ color: isCenter ? "rgba(255,255,255,0.65)" : "rgba(255,255,255,0.30)" }}>
+                {row.label}
+              </span>
             </div>
-            <span className="text-[12px]" style={{ color: isCenter ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.35)" }}>
-              {row.label}
-            </span>
+          ))}
+        </div>
+
+        {/* Creator tasks */}
+        <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${isCenter ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)"}` }}>
+          <div className="text-[9px] font-bold uppercase tracking-widest mb-2"
+            style={{ color: isCenter ? `rgba(${rgb},0.55)` : "rgba(255,255,255,0.20)" }}>
+            Creators Complete
           </div>
-        ))}
+          <div className="flex flex-wrap gap-1.5">
+            {type.pills.map(({ ct }) => (
+              <span key={ct} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md"
+                style={{
+                  background: isCenter ? `rgba(${rgb},0.10)` : "rgba(255,255,255,0.04)",
+                  color: isCenter ? accent : "rgba(255,255,255,0.30)",
+                  border: `1px solid ${isCenter ? `rgba(${rgb},0.20)` : "rgba(255,255,255,0.06)"}`,
+                }}>
+                <Check style={{ width: "9px", height: "9px" }} />
+                {ct === "clip" ? "Gameplay Clip" : ct === "screenshot" ? "Screenshot" : ct === "reel" ? "Reel" : ct === "stream" ? "Livestream" : ct === "feedback" ? "Feedback" : ct}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Select button */}
+      {/* CTA button */}
       <div className="px-4 mt-5">
         <div className="w-full py-3.5 rounded-xl text-[13px] font-black text-center transition-all"
           style={{
@@ -722,7 +741,7 @@ function ThinTypeCard({
             border: isCenter ? "none" : "1px solid rgba(255,255,255,0.08)",
             boxShadow: isCenter ? `0 0 24px 0 rgba(${rgb},0.30)` : "none",
           }}>
-          {isCenter ? "Select →" : type.shortName}
+          {isCenter ? "Use Campaign →" : type.shortName}
         </div>
       </div>
     </div>
@@ -842,129 +861,128 @@ function StepPersonalise({ type, settings, onChange }: {
     }
   }, [indieProfile]);
 
-  const gameName  = settings.gameName || indieProfile?.profile?.gameName;
-  const gameImage = settings.gameImageUrl || indieProfile?.profile?.headerImageUrl;
-  const labelStyle = "text-[10px] font-bold text-white/30 uppercase tracking-wider block mb-2";
-  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+  const accent      = TYPE_ACCENT[type.slug] ?? NEON;
+  const rgb         = ACCENT_RGB[accent] ?? "183,255,27";
+  const seed        = CARD_IMG_SEED[type.slug] ?? "1000";
+  const labelStyle  = "text-[10px] font-bold text-white/30 uppercase tracking-wider block mb-2.5";
+  const tomorrow    = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
   return (
-    <StepHero
-      icon={Gamepad2}
-      title="Personalise Your Campaign"
-      description="Tell us when you'd like to launch and which platforms your game supports. We'll match you with the right creators."
-      sideIcons={[
-        { icon: Calendar,  top: "32px",    left: "56px"  },
-        { icon: Users,     bottom: "32px", right: "56px" },
-        { icon: Sparkles,  top: "28px",    right: "80px" },
-      ]}
-      features={[
-        { icon: Gamepad2,  title: "Your Verified Game",  desc: "Pre-filled from your indie developer profile." },
-        { icon: Calendar,  title: "Flexible Launch Timing", desc: "Go live immediately or schedule a specific start date." },
-        { icon: Users,     title: "Targeted Distribution",  desc: "Choose platforms and regions to reach the right audience." },
-      ]}
-    >
-      {/* Game (read-only) */}
-      <div className="flex items-center gap-3 p-4 rounded-xl"
-        style={{ background: "rgba(183,255,24,0.04)", border: "1px solid rgba(183,255,24,0.12)" }}>
-        {gameImage ? (
-          <img src={gameImage} alt={gameName} className="w-12 h-12 rounded-xl object-cover shrink-0" />
-        ) : (
-          <div className="w-12 h-12 rounded-xl shrink-0 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.06)" }}>
-            <Gamepad2 className="w-6 h-6 text-white/20" />
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-black text-white truncate">{gameName || "Your game"}</div>
-          <div className="text-[10px] flex items-center gap-1 mt-0.5" style={{ color: NEON }}>
-            <ShieldCheck className="w-2.5 h-2.5" /> Verified Indie Game
-          </div>
+    <div className="space-y-6 gf-fade-up">
+
+      {/* ── Compact campaign summary card ── */}
+      <div className="flex items-center gap-3.5 p-4 rounded-2xl"
+        style={{ background: `rgba(${rgb},0.05)`, border: `1px solid rgba(${rgb},0.18)` }}>
+        {/* Tiny artwork thumbnail */}
+        <div className="relative shrink-0 rounded-xl overflow-hidden" style={{ width: "52px", height: "52px" }}>
+          <img src={`https://picsum.photos/seed/${seed}/120/120`} alt="" className="w-full h-full object-cover" draggable={false} />
+          <div className="absolute inset-0" style={{ background: `rgba(${rgb},0.20)` }} />
         </div>
-        <div className="flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg"
-          style={{ background: "rgba(183,255,24,0.1)", color: NEON }}>
-          {type.duration}d · {type.capacity} creators
+
+        <div className="flex-1 min-w-0">
+          <div className="text-[9px] font-bold uppercase tracking-widest mb-0.5" style={{ color: `rgba(${rgb},0.65)` }}>
+            Selected Campaign
+          </div>
+          <div className="text-sm font-black text-white leading-tight">{type.shortName}</div>
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-1.5">
+            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.45)" }}>⏱ {type.duration} Days</span>
+            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.18)" }}>·</span>
+            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.45)" }}>👥 {type.capacity} Creators</span>
+            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.18)" }}>·</span>
+            <span className="text-[10px] inline-flex items-center gap-0.5" style={{ color: accent }}>
+              <ShieldCheck style={{ width: "10px", height: "10px" }} /> Verified Campaign
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Description */}
+      {/* ── Campaign Description ── */}
       <div>
-        <label className={labelStyle}>Campaign Description <span className="text-white/20 normal-case font-normal">(optional)</span></label>
-        <textarea style={{ ...fieldStyle, minHeight: "80px", resize: "vertical" } as any}
+        <label className={labelStyle}>
+          Campaign Description{" "}
+          <span className="text-white/20 normal-case font-normal tracking-normal">— optional</span>
+        </label>
+        <textarea
+          style={{ ...fieldStyle, minHeight: "72px", resize: "none" } as any}
           value={settings.description}
           onChange={e => onChange({ description: e.target.value })}
-          placeholder="Tell creators why your game is worth playing — what makes it unique?" />
+          placeholder="What makes your game worth playing? One sentence is plenty." />
       </div>
 
-      {/* Launch timing */}
+      {/* ── Launch Timing ── */}
       <div>
         <label className={labelStyle}>Launch Timing</label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="flex gap-2">
           {([
-            { value: "asap",      label: "Launch Immediately", desc: "Goes live right after confirmation." },
-            { value: "scheduled", label: "Schedule Date",      desc: "Pick a specific go-live date." },
-          ] as const).map(opt => (
-            <button key={opt.value} onClick={() => onChange({ startType: opt.value })}
-              className="flex items-start gap-3 p-3.5 rounded-xl text-left transition-all"
-              style={{
-                background: settings.startType === opt.value ? "rgba(183,255,24,0.07)" : "rgba(255,255,255,0.03)",
-                border: `1px solid ${settings.startType === opt.value ? "rgba(183,255,24,0.25)" : "rgba(255,255,255,0.07)"}`,
-              }}>
-              <div className="w-4 h-4 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center"
-                style={{ borderColor: settings.startType === opt.value ? NEON : "rgba(255,255,255,0.2)", background: settings.startType === opt.value ? NEON : "transparent" }}>
-                {settings.startType === opt.value && <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#070b10" }} />}
-              </div>
-              <div>
-                <div className="text-xs font-bold text-white">{opt.label}</div>
-                <div className="text-[10px] text-white/30 mt-0.5">{opt.desc}</div>
-              </div>
-              {opt.value === "asap" && (
-                <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0"
-                  style={{ background: "rgba(183,255,24,0.1)", color: NEON }}>Recommended</span>
-              )}
-            </button>
-          ))}
+            { value: "asap",      label: "Launch Immediately" },
+            { value: "scheduled", label: "Schedule Launch" },
+          ] as const).map(opt => {
+            const on = settings.startType === opt.value;
+            return (
+              <button key={opt.value} onClick={() => onChange({ startType: opt.value })}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[12px] font-bold transition-all"
+                style={{
+                  background: on ? `rgba(${rgb},0.10)` : "rgba(255,255,255,0.03)",
+                  border: `1.5px solid ${on ? `rgba(${rgb},0.35)` : "rgba(255,255,255,0.07)"}`,
+                  color: on ? accent : "rgba(255,255,255,0.42)",
+                }}>
+                <div className="w-3.5 h-3.5 rounded-full border-2 shrink-0 flex items-center justify-center"
+                  style={{ borderColor: on ? accent : "rgba(255,255,255,0.22)", background: on ? accent : "transparent" }}>
+                  {on && <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#070b10" }} />}
+                </div>
+                {opt.label}
+                {opt.value === "asap" && on && (
+                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded"
+                    style={{ background: `rgba(${rgb},0.15)`, color: accent }}>Now</span>
+                )}
+              </button>
+            );
+          })}
         </div>
         {settings.startType === "scheduled" && (
-          <input type="date" style={{ ...fieldStyle, colorScheme: "dark", marginTop: "8px" } as any}
+          <input type="date"
+            style={{ ...fieldStyle, colorScheme: "dark", marginTop: "10px" } as any}
             value={settings.scheduledDate} min={tomorrowStr}
             onChange={e => onChange({ scheduledDate: e.target.value })} />
         )}
       </div>
 
-      {/* Platforms */}
+      {/* ── Supported Platforms — chip style ── */}
       <div>
-        <label className={labelStyle}>Supported Platforms <span className="text-white/20 normal-case font-normal">(select all that apply)</span></label>
-        <div className="grid grid-cols-2 gap-2">
+        <label className={labelStyle}>Supported Platforms</label>
+        <div className="flex flex-wrap gap-2">
           {PLATFORM_OPTIONS.map(p => {
             const on = settings.platforms.includes(p.id);
             return (
               <button key={p.id}
                 onClick={() => onChange({ platforms: on ? settings.platforms.filter(x => x !== p.id) : [...settings.platforms, p.id] })}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-left transition-all"
-                style={{ background: on ? "rgba(183,255,24,0.07)" : "rgba(255,255,255,0.03)", border: `1px solid ${on ? "rgba(183,255,24,0.25)" : "rgba(255,255,255,0.07)"}` }}>
-                <div className="w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center"
-                  style={{ borderColor: on ? NEON : "rgba(255,255,255,0.2)", background: on ? NEON : "transparent" }}>
-                  {on && <Check className="w-2.5 h-2.5" style={{ color: "#070b10" }} />}
-                </div>
-                <span className="text-[11px] font-semibold" style={{ color: on ? NEON : "rgba(255,255,255,0.55)" }}>{p.label}</span>
+                className="px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all duration-200"
+                style={{
+                  background: on ? NEON : "rgba(255,255,255,0.04)",
+                  color: on ? "#070b10" : "rgba(255,255,255,0.45)",
+                  border: `1.5px solid ${on ? "transparent" : "rgba(255,255,255,0.10)"}`,
+                  boxShadow: on ? `0 0 14px 0 rgba(183,255,27,0.22)` : "none",
+                }}>
+                {p.label}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Regions */}
+      {/* ── Eligible Region ── */}
       <div>
-        <label className={labelStyle}>Eligible Regions</label>
+        <label className={labelStyle}>Eligible Region</label>
         <select style={{ ...fieldStyle, paddingRight: "32px" } as any}
           value={settings.regions} onChange={e => onChange({ regions: e.target.value })}>
           {REGION_OPTIONS.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
         </select>
       </div>
 
-      {/* Custom overrides */}
+      {/* ── Custom overrides (custom campaign only) ── */}
       {type.custom && (
-        <div className="grid grid-cols-2 gap-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="grid grid-cols-2 gap-4 pt-5" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
           <div>
             <label className={labelStyle}>Duration (days)</label>
             <input type="number" min={3} max={60} style={fieldStyle}
@@ -979,7 +997,7 @@ function StepPersonalise({ type, settings, onChange }: {
           </div>
         </div>
       )}
-    </StepHero>
+    </div>
   );
 }
 
