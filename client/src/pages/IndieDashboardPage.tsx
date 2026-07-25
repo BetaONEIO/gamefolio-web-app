@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
-import { getQueryFn } from "@/lib/queryClient";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { getQueryFn, queryClient } from "@/lib/queryClient";
 import {
   Rocket, Users, Target, BarChart3,
   Gamepad, KeyRound, Loader2,
@@ -10,7 +10,7 @@ import {
   Film, Camera,
   Video, ArrowUpRight,
   Crosshair, Settings, LayoutDashboard,
-  AlertCircle, Star, Circle, Upload, Zap, Activity,
+  AlertCircle, Star, Circle, Upload, Zap, Activity, ImagePlus,
 } from "lucide-react";
 import CreateCampaignFlow from "./indie-dashboard/CreateCampaignFlow";
 import MyCampaignsTab from "./indie-dashboard/MyCampaignsTab";
@@ -136,6 +136,22 @@ function DashboardTab({
 }) {
   const { user } = useAuth();
   const [showIndieDevUpgrade, setShowIndieDevUpgrade] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const artworkInputRef = useRef<HTMLInputElement>(null);
+  const uploadImageMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const fd = new FormData();
+      fd.append("image", file);
+      fd.append("field", "capsuleImageUrl");
+      const res = await fetch("/api/indie/profile/upload-image", { method: "POST", body: fd });
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json() as Promise<{ url: string; field: string }>;
+    },
+    onSuccess: () => {
+      setImgError(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+    },
+  });
   const { data: overview, isLoading } = useQuery<any>({
     queryKey: ["/api/campaigns/overview"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -243,16 +259,44 @@ function DashboardTab({
           style={{ background: "radial-gradient(circle, rgba(183,255,24,0.07) 0%, transparent 65%)" }} />
 
         <div className="flex flex-col sm:flex-row sm:items-start gap-6 relative z-10">
-          {/* Game artwork — larger */}
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl shrink-0 overflow-hidden flex items-center justify-center transition-transform hover:scale-[1.02]"
-            style={{ background: "rgba(183,255,24,0.08)", border: "1px solid rgba(183,255,24,0.18)", boxShadow: "0 8px 32px rgba(183,255,24,0.08)" }}>
-            {(profile?.capsuleImageUrl || profile?.headerImageUrl) ? (
-              <img src={profile.capsuleImageUrl ?? profile.headerImageUrl} alt=""
-                className="w-full h-full object-cover" />
+          {/* Game artwork — clickable upload */}
+          <button
+            onClick={() => artworkInputRef.current?.click()}
+            className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl shrink-0 overflow-hidden flex items-center justify-center relative group transition-transform hover:scale-[1.02]"
+            style={{ background: "rgba(183,255,24,0.08)", border: "1px solid rgba(183,255,24,0.18)", boxShadow: "0 8px 32px rgba(183,255,24,0.08)" }}
+            title="Upload game artwork">
+            {uploadImageMutation.isPending ? (
+              <Loader2 className="w-7 h-7 animate-spin" style={{ color: NEON }} />
+            ) : (profile?.capsuleImageUrl || profile?.headerImageUrl) && !imgError ? (
+              <>
+                <img
+                  src={profile.capsuleImageUrl ?? profile.headerImageUrl}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  onError={() => setImgError(true)}
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                  <ImagePlus className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </>
             ) : (
-              <Gamepad className="w-9 h-9" style={{ color: NEON }} />
+              <div className="flex flex-col items-center gap-1.5 px-2 text-center">
+                <ImagePlus className="w-7 h-7" style={{ color: NEON }} />
+                <span className="text-[9px] font-bold leading-tight" style={{ color: NEON }}>Upload Art</span>
+              </div>
             )}
-          </div>
+          </button>
+          <input
+            ref={artworkInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) uploadImageMutation.mutate(file);
+              e.target.value = "";
+            }}
+          />
 
           <div className="flex-1 min-w-0">
             <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight mb-1">

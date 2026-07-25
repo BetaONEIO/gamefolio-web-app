@@ -10496,6 +10496,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/indie/profile/upload-image — upload capsule or header image for the indie game profile
+  app.post("/api/indie/profile/upload-image", upload.single('image'), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file provided" });
+      if (!req.file.path || !fs.existsSync(req.file.path)) return res.status(400).json({ message: "Uploaded file not found" });
+      const field = (req.body?.field === "headerImageUrl") ? "headerImageUrl" : "capsuleImageUrl";
+      const sharpInstance = sharp(req.file.path);
+      const metadata = await sharpInstance.metadata();
+      if (!metadata.width || !metadata.height) return res.status(400).json({ message: "Invalid image" });
+      const processedBuffer = await sharpInstance
+        .resize(field === "headerImageUrl" ? 1920 : 460, undefined, { fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+      const fileName = `indie-${field === "headerImageUrl" ? "header" : "capsule"}-${req.user.id}-${Date.now()}.jpg`;
+      const { url: imageUrl } = await supabaseStorage.uploadBuffer(processedBuffer, fileName, "image/jpeg", "image", req.user.id);
+      try { await fsPromises.unlink(req.file.path); } catch {}
+      const { indieGameProfiles } = await import("@shared/schema");
+      const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      if (ex.length > 0) {
+        await db.update(indieGameProfiles).set({ [field]: imageUrl }).where(eq(indieGameProfiles.userId, req.user.id));
+      } else {
+        await db.insert(indieGameProfiles).values({ userId: req.user.id, [field]: imageUrl });
+      }
+      res.json({ url: imageUrl, field });
+    } catch (err) {
+      console.error("Error uploading indie profile image:", err);
+      res.status(500).json({ message: "Upload failed" });
+    }
+  });
+
   // ─── Indie Game Profile API ──────────────────────────────────────────────────
 
   // Internal helpers for indie profile
