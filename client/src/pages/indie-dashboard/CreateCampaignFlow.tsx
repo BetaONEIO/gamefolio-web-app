@@ -1232,69 +1232,52 @@ function StepLaunch({ type, settings, confirmed, onConfirm, submitting, onLaunch
   const duration = type.custom && settings.customDuration ? settings.customDuration : type.duration;
   const capacity = type.custom && settings.customCapacity ? settings.customCapacity : type.capacity;
   const regionLabel = REGION_OPTIONS.find(r => r.id === settings.regions)?.label ?? "Worldwide";
+  const accent = TYPE_ACCENT[type.slug] ?? NEON;
+  const rgb    = ACCENT_RGB[accent] ?? "183,255,27";
 
   return (
-    <StepHero
-      icon={Rocket}
-      title="Launch Your Campaign"
-      description="Review your campaign and send it live. Your game will be discovered by verified creators on Gamefolio."
-      sideIcons={[
-        { icon: ShieldCheck, top:    "28px", left:  "64px" },
-        { icon: Users,       top:    "28px", right: "64px" },
-        { icon: Zap,         bottom: "28px", left:  "80px" },
-      ]}
-      features={[
-        { icon: Users,      title: `${capacity} Verified Creators`,  desc: `${duration}-day campaign · ${type.demoKeys} demo keys · ${type.fullKeys} full game keys.` },
-        { icon: ShieldCheck, title: "GF Verified Campaign",          desc: "Only eligible creators can apply — Gamefolio handles all moderation." },
-        { icon: Zap,        title: `${type.xpReward.toLocaleString()} XP Rewarded`, desc: "Creators earn XP on completion, driving high-quality participation." },
-      ]}
-    >
-      {/* Campaign summary card */}
-      <div className="rounded-2xl overflow-hidden" style={{ background: "#0a0f18", border: "1px solid rgba(255,255,255,0.08)" }}>
-        {/* Header banner */}
-        <div className="relative h-24 overflow-hidden flex items-center justify-center"
-          style={{ background: "linear-gradient(135deg, #0d1624 0%, #0a1020 50%, #0d1624 100%)" }}>
-          {settings.gameImageUrl && (
-            <img src={settings.gameImageUrl} alt="" className="absolute inset-0 w-full h-full object-cover opacity-20" />
-          )}
-          <div className="relative flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl overflow-hidden border-2"
-              style={{ borderColor: "rgba(183,255,24,0.3)" }}>
-              {settings.gameImageUrl ? (
-                <img src={settings.gameImageUrl} alt={settings.gameName} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center" style={{ background: "rgba(183,255,24,0.08)" }}>
-                  <Gamepad2 className="w-6 h-6" style={{ color: NEON }} />
-                </div>
-              )}
-            </div>
-            <div>
-              {settings.gameName && <div className="text-[10px] text-white/40">{settings.gameName}</div>}
-              <div className="text-base font-black text-white leading-tight">{type.name}</div>
-              <div className="flex items-center gap-1 mt-0.5">
-                <ShieldCheck className="w-3 h-3" style={{ color: NEON }} />
-                <span className="text-[10px] font-bold" style={{ color: NEON }}>GF Verified Campaign</span>
-              </div>
+    <div className="space-y-5 gf-fade-up">
+
+      {/* Campaign summary */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        {/* Game identity row */}
+        <div className="flex items-center gap-4 px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
+            style={{ background: `rgba(${rgb},0.08)`, border: `1px solid rgba(${rgb},0.15)` }}>
+            {settings.gameImageUrl ? (
+              <img src={settings.gameImageUrl} alt={settings.gameName} className="w-full h-full object-cover" />
+            ) : (
+              <Gamepad2 className="w-6 h-6" style={{ color: accent }} />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            {settings.gameName && <div className="text-[11px] text-white/40 truncate">{settings.gameName}</div>}
+            <div className="text-base font-black text-white leading-tight">{type.name}</div>
+            <div className="flex items-center gap-1 mt-0.5">
+              <ShieldCheck className="w-3 h-3" style={{ color: NEON }} />
+              <span className="text-[10px] font-bold" style={{ color: NEON }}>GF Verified Campaign</span>
             </div>
           </div>
         </div>
+
         {/* Stats grid */}
-        <div className="grid grid-cols-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="grid grid-cols-4">
           {[
             { label: "Duration",  value: `${duration}d` },
             { label: "Creators",  value: capacity },
             { label: "Demo Keys", value: type.demoKeys },
             { label: "Full Keys", value: type.fullKeys },
           ].map((s, i) => (
-            <div key={s.label} className="flex flex-col items-center py-3"
+            <div key={s.label} className="flex flex-col items-center py-3.5"
               style={{ borderRight: i < 3 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
               <div className="text-base font-black text-white">{s.value}</div>
-              <div className="text-[9px] text-white/25 uppercase tracking-wider">{s.label}</div>
+              <div className="text-[9px] text-white/25 uppercase tracking-wider mt-0.5">{s.label}</div>
             </div>
           ))}
         </div>
+
         {/* Details row */}
-        <div className="flex items-center gap-3 px-4 py-2.5 text-[10px] text-white/30 flex-wrap"
+        <div className="flex items-center flex-wrap gap-3 px-5 py-2.5 text-[10px] text-white/30"
           style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
           <span>{settings.startType === "asap" ? "🚀 Launches immediately" : `📅 Launches ${settings.scheduledDate}`}</span>
           <span>· {regionLabel}</span>
@@ -1306,31 +1289,31 @@ function StepLaunch({ type, settings, confirmed, onConfirm, submitting, onLaunch
       <button onClick={() => onConfirm(!confirmed)}
         className="w-full flex items-start gap-3 text-left p-4 rounded-2xl transition-all"
         style={{
-          background: confirmed ? "rgba(183,255,24,0.06)" : "rgba(255,255,255,0.02)",
-          border: `1px solid ${confirmed ? "rgba(183,255,24,0.3)" : "rgba(255,255,255,0.09)"}`,
+          background: confirmed ? "rgba(183,255,24,0.05)" : "rgba(255,255,255,0.02)",
+          border: `1px solid ${confirmed ? "rgba(183,255,24,0.25)" : "rgba(255,255,255,0.08)"}`,
         }}>
         <div className="w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center mt-0.5 transition-all"
           style={{ borderColor: confirmed ? NEON : "rgba(255,255,255,0.2)", background: confirmed ? NEON : "transparent" }}>
           {confirmed && <Check className="w-3 h-3" style={{ color: "#070b10" }} />}
         </div>
-        <span className="text-sm text-white/70 leading-snug">
-          I confirm I am ready to launch this campaign. Keys will be committed to the Campaign Key Vault and cannot be withdrawn after creators join.
+        <span className="text-sm text-white/60 leading-snug">
+          I confirm I am ready to launch this campaign. Keys will be committed to the vault and cannot be withdrawn once creators join.
         </span>
       </button>
 
       {/* Launch button */}
       <button onClick={onLaunch} disabled={!confirmed || submitting}
-        className="w-full py-4 rounded-2xl text-base font-black tracking-wide transition-all flex items-center justify-center gap-2.5 disabled:opacity-40"
-        style={{ background: confirmed && !submitting ? NEON : "rgba(183,255,24,0.3)", color: "#070b10",
-          boxShadow: confirmed && !submitting ? "0 0 32px 0 rgba(183,255,24,0.25)" : "none",
+        className="w-full py-4 rounded-2xl text-sm font-black transition-all flex items-center justify-center gap-2.5 disabled:opacity-40"
+        style={{ background: confirmed && !submitting ? NEON : "rgba(183,255,24,0.25)", color: "#070b10",
+          boxShadow: confirmed && !submitting ? "0 4px 24px rgba(183,255,24,0.28)" : "none",
         }}>
         {submitting ? (
-          <><Loader2 className="w-5 h-5 animate-spin" /> Launching Campaign…</>
+          <><Loader2 className="w-4 h-4 animate-spin" /> Launching Campaign…</>
         ) : (
-          <><Rocket className="w-5 h-5" /> Launch Campaign</>
+          <><Rocket className="w-4 h-4" /> Launch Campaign</>
         )}
       </button>
-    </StepHero>
+    </div>
   );
 }
 
@@ -1486,24 +1469,37 @@ const AUTO_HANDLES = [
 
 function AutoCampaignInfo() {
   return (
-    <StepHero
-      icon={Bot}
-      title="Automatic Campaigns"
-      description="Upload your keys once and let Gamefolio continuously create, launch and manage creator campaigns for your game. You set the limits — we handle the rest."
-      accent="#a78bfa" rgb="167,139,250"
-      sideIcons={[
-        { icon: KeyRound, top:    "30px", left:  "56px" },
-        { icon: Film,     top:    "30px", right: "56px" },
-        { icon: Users,    bottom: "28px", right: "72px" },
-      ]}
-      features={[
-        { icon: Upload,     title: "Upload Keys Once",            desc: "Add your game keys to the Gamefolio key pool — one time setup." },
-        { icon: Bot,        title: "Gamefolio Manages Everything", desc: "Campaigns are created, launched and managed automatically." },
-        { icon: KeyRound,   title: "Smart Key Distribution",      desc: "Demo keys on join · full game keys on completion. All automatic." },
-        { icon: ShieldCheck, title: "Safeguards Always Active",   desc: "Campaigns stop if your key reserve drops below your set limit." },
-      ]}
-      banner={{ icon: ShieldCheck, text: <>Uses only <strong style={{color:"#a78bfa"}}>Quick Creator</strong>, <strong style={{color:"#a78bfa"}}>Content Boost</strong>, and <strong style={{color:"#a78bfa"}}>Creator Showcase</strong> verified templates — no custom campaigns run automatically.</>, accent: "#a78bfa", rgb: "167,139,250" }}
-    />
+    <div className="space-y-5 gf-fade-up">
+      <p className="text-sm text-white/50 leading-relaxed">
+        Upload your game keys once. Gamefolio selects the right campaign template, manages creator onboarding, distributes keys automatically, and starts the next campaign when one ends — all within limits you control.
+      </p>
+
+      {/* Process steps — clean vertical list */}
+      <div className="space-y-0">
+        {AUTO_PROCESS.map((step, i) => {
+          const Icon = step.icon;
+          return (
+            <div key={i} className="flex items-center gap-3 py-2.5"
+              style={{ borderBottom: i < AUTO_PROCESS.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
+              <div className="w-6 h-6 rounded-lg shrink-0 flex items-center justify-center"
+                style={{ background: "rgba(167,139,250,0.10)" }}>
+                <Icon className="w-3.5 h-3.5" style={{ color: "#a78bfa" }} />
+              </div>
+              <span className="text-[12px] text-white/60 font-medium">{step.label}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Safeguard note */}
+      <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl"
+        style={{ background: "rgba(167,139,250,0.05)", border: "1px solid rgba(167,139,250,0.12)" }}>
+        <ShieldCheck className="w-3.5 h-3.5 text-purple-400 shrink-0 mt-0.5" />
+        <p className="text-[11px] text-purple-300/60">
+          Uses only <strong className="text-purple-300/90">Quick Creator</strong>, <strong className="text-purple-300/90">Content Boost</strong>, and <strong className="text-purple-300/90">Creator Showcase</strong> templates — no custom campaigns run automatically.
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -1522,57 +1518,46 @@ function AutoStepUploadKeys({ demoKeys, fullKeys, poolDemo, poolFull, onDemoChan
   const hasKeys = totalDemo > 0 && totalFull > 0;
 
   return (
-    <StepHero
-      icon={Upload}
-      title="Build Your Key Pool"
-      description="Upload your game keys once. Gamefolio draws from this pool to fuel every campaign it creates for you — automatically and within your set limits."
-      accent="#a78bfa" rgb="167,139,250"
-      sideIcons={[
-        { icon: KeyRound,    top:    "28px", left:  "56px" },
-        { icon: ShieldCheck, top:    "28px", right: "56px" },
-        { icon: Rocket,      bottom: "30px", left:  "80px" },
-      ]}
-      features={[
-        { icon: KeyRound,   title: "Demo Keys",             desc: "Issued to creators automatically when they join a campaign." },
-        { icon: Rocket,     title: "Full Game Keys",        desc: "Rewarded when creators complete their campaign deliverables." },
-        { icon: ShieldCheck, title: "Automatic Safeguards", desc: "New campaigns only launch when your pool has enough keys." },
-      ]}
-    >
-      {/* Pool status */}
+    <div className="space-y-5 gf-fade-up">
+
+      {/* Existing pool counter — only when pool already has keys */}
       {(poolDemo > 0 || poolFull > 0) && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex items-center gap-4 px-4 py-3 rounded-xl"
+          style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
           {[
             { label: "Demo Keys in Pool", value: poolDemo, color: "#60a5fa" },
             { label: "Full Keys in Pool", value: poolFull, color: "#fb923c" },
-          ].map(s => (
-            <div key={s.label} className="rounded-xl p-3.5 text-center"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <div className="text-xl font-black mb-0.5" style={{ color: s.color }}>{s.value}</div>
-              <div className="text-[10px] text-white/30">{s.label}</div>
+          ].map((s, i) => (
+            <div key={s.label} className="flex items-center gap-2.5" style={{ borderLeft: i > 0 ? "1px solid rgba(255,255,255,0.07)" : "none", paddingLeft: i > 0 ? "16px" : "0" }}>
+              <span className="text-xl font-black" style={{ color: s.color }}>{s.value}</span>
+              <span className="text-[10px] text-white/35">{s.label}</span>
             </div>
           ))}
         </div>
       )}
 
-      {/* Two-column upload */}
-      <div className="grid grid-cols-2 gap-6">
-        <KeyUploadArea label="Demo Keys" accent="#60a5fa"
+      {/* Two upload cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <KeyUploadArea
+          label="Demo Keys" accent="#60a5fa" accentRgb="96,165,250"
+          description="Issued automatically when a creator joins a campaign."
           keys={demoKeys} needed={1} vaultAvail={poolDemo}
           onChange={onDemoChange} />
-        <KeyUploadArea label="Full Game Keys" accent="#fb923c"
+        <KeyUploadArea
+          label="Full Game Keys" accent="#fb923c" accentRgb="251,146,60"
+          description="Rewarded when a creator completes their campaign deliverables."
           keys={fullKeys} needed={1} vaultAvail={poolFull}
           onChange={onFullChange} />
       </div>
 
-      {/* All ready */}
+      {/* Status messages */}
       {hasKeys && (
         <div className="flex items-center gap-3 p-3.5 rounded-xl gf-scale-in"
-          style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.2)" }}>
-          <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: "#a78bfa" }} />
-          <div>
-            <div className="text-sm font-bold" style={{ color: "#a78bfa" }}>Pool ready</div>
-            <div className="text-[11px] text-white/40 mt-0.5">{totalDemo} demo · {totalFull} full game keys in pool</div>
-          </div>
+          style={{ background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.18)" }}>
+          <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: "#a78bfa" }} />
+          <span className="text-sm font-bold" style={{ color: "#a78bfa" }}>
+            Pool ready — {totalDemo} demo · {totalFull} full game keys
+          </span>
         </div>
       )}
 
@@ -1580,10 +1565,10 @@ function AutoStepUploadKeys({ demoKeys, fullKeys, poolDemo, poolFull, onDemoChan
         <div className="flex items-center gap-2 p-3 rounded-xl"
           style={{ background: "rgba(251,146,60,0.05)", border: "1px solid rgba(251,146,60,0.12)" }}>
           <AlertCircle className="w-4 h-4 text-orange-400 shrink-0" />
-          <p className="text-[11px] text-orange-300/70">Upload at least some demo and full game keys to continue.</p>
+          <p className="text-[11px] text-orange-300/70">Upload at least one demo and one full game key to continue.</p>
         </div>
       )}
-    </StepHero>
+    </div>
   );
 }
 
@@ -1607,102 +1592,90 @@ const FREQUENCY_OPTS = [
 ];
 
 function AutoStepLimits({ limits, onChange }: { limits: AutoLimits; onChange: (l: Partial<AutoLimits>) => void }) {
-  const labelStyle = "text-[10px] font-bold text-white/30 uppercase tracking-wider block mb-2";
+  const labelStyle = "text-[10px] font-bold text-white/30 uppercase tracking-wider block mb-2.5";
+  const spinnerBtn = "w-8 h-8 rounded-lg flex items-center justify-center font-black text-base transition-colors hover:bg-white/10";
+  const spinnerBtnStyle = { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.65)" };
 
   return (
-    <StepHero
-      icon={Sliders}
-      title="Set Your Limits"
-      description="Stay in control of how many creators participate and how often campaigns run. Gamefolio handles everything within these limits."
-      accent="#a78bfa" rgb="167,139,250"
-      sideIcons={[
-        { icon: Users,  top:    "32px", left:  "52px" },
-        { icon: Clock,  top:    "32px", right: "52px" },
-        { icon: Lock,   bottom: "30px", left:  "72px" },
-      ]}
-      features={[
-        { icon: Users,      title: "Creator Cap",       desc: "Maximum creators per campaign — Gamefolio never exceeds this." },
-        { icon: Clock,      title: "Campaign Frequency", desc: "Control how often new campaigns are automatically created." },
-        { icon: Lock,       title: "Key Reserve",        desc: "Set a minimum — campaigns pause if your pool drops below it." },
-      ]}
-    >
+    <div className="space-y-6 gf-fade-up">
+
       {/* Max creators */}
-      <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <div>
-          <label className="text-sm font-bold text-white block mb-0.5">Maximum Creators per Campaign</label>
-          <p className="text-[11px] text-white/30">How many creators can join each campaign. Default: 20</p>
-        </div>
-        <div className="flex items-center gap-2 ml-4 shrink-0">
-          <button onClick={() => onChange({ maxCreators: Math.max(5, limits.maxCreators - 5) })}
-            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-lg transition-all"
-            style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>−</button>
-          <span className="text-xl font-black text-white w-12 text-center">{limits.maxCreators}</span>
-          <button onClick={() => onChange({ maxCreators: Math.min(100, limits.maxCreators + 5) })}
-            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-lg transition-all"
-            style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>+</button>
+      <div>
+        <label className={labelStyle}>Maximum Creators per Campaign</label>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-white/50">How many creators can join each campaign</p>
+          <div className="flex items-center gap-3 shrink-0">
+            <button onClick={() => onChange({ maxCreators: Math.max(5, limits.maxCreators - 5) })}
+              className={spinnerBtn} style={spinnerBtnStyle}>−</button>
+            <span className="text-xl font-black text-white w-10 text-center">{limits.maxCreators}</span>
+            <button onClick={() => onChange({ maxCreators: Math.min(100, limits.maxCreators + 5) })}
+              className={spinnerBtn} style={spinnerBtnStyle}>+</button>
+          </div>
         </div>
       </div>
 
       {/* Frequency */}
-      <div>
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "20px" }}>
         <label className={labelStyle}>Campaign Frequency</label>
         <div className="grid grid-cols-2 gap-2">
           {FREQUENCY_OPTS.map(opt => (
             <button key={opt.id} onClick={() => onChange({ frequency: opt.id })}
-              className="flex items-start gap-2.5 p-3.5 rounded-xl text-left transition-all"
+              className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-left transition-all"
               style={{
-                background: limits.frequency === opt.id ? "rgba(167,139,250,0.07)" : "rgba(255,255,255,0.03)",
-                border: `1px solid ${limits.frequency === opt.id ? "rgba(167,139,250,0.3)" : "rgba(255,255,255,0.07)"}`,
+                background: limits.frequency === opt.id ? "rgba(167,139,250,0.08)" : "rgba(255,255,255,0.02)",
+                border: `1px solid ${limits.frequency === opt.id ? "rgba(167,139,250,0.28)" : "rgba(255,255,255,0.06)"}`,
               }}>
-              <div className="w-4 h-4 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center"
+              <div className="w-3.5 h-3.5 rounded-full border-2 shrink-0 flex items-center justify-center"
                 style={{ borderColor: limits.frequency === opt.id ? "#a78bfa" : "rgba(255,255,255,0.2)", background: limits.frequency === opt.id ? "#a78bfa" : "transparent" }}>
                 {limits.frequency === opt.id && <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#070b10" }} />}
               </div>
-              <span className="text-[11px] font-semibold" style={{ color: limits.frequency === opt.id ? "#a78bfa" : "rgba(255,255,255,0.55)" }}>{opt.label}</span>
+              <span className="text-[12px] font-semibold" style={{ color: limits.frequency === opt.id ? "#a78bfa" : "rgba(255,255,255,0.50)" }}>{opt.label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Min key reserve */}
-      <div className="grid grid-cols-2 gap-4">
-        {[
-          { key: "minDemoReserve" as const, label: "Min Demo Key Reserve", color: "#60a5fa" },
-          { key: "minFullReserve" as const, label: "Min Full Key Reserve", color: "#fb923c" },
-        ].map(f => (
-          <div key={f.key} className="p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <label className={labelStyle}>{f.label}</label>
-            <p className="text-[10px] text-white/25 mb-3">Campaigns pause if pool drops below this</p>
-            <div className="flex items-center gap-2">
-              <button onClick={() => onChange({ [f.key]: Math.max(0, limits[f.key] - 5) })}
-                className="w-7 h-7 rounded-lg flex items-center justify-center font-black text-base"
-                style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>−</button>
-              <span className="text-lg font-black w-10 text-center" style={{ color: f.color }}>{limits[f.key]}</span>
-              <button onClick={() => onChange({ [f.key]: Math.min(200, limits[f.key] + 5) })}
-                className="w-7 h-7 rounded-lg flex items-center justify-center font-black text-base"
-                style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>+</button>
+      {/* Key reserves */}
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "20px" }}>
+        <label className={labelStyle}>Minimum Key Reserve</label>
+        <p className="text-[11px] text-white/35 mb-4">Campaigns pause if your pool drops below these amounts</p>
+        <div className="space-y-3">
+          {[
+            { key: "minDemoReserve" as const, label: "Demo Keys", color: "#60a5fa" },
+            { key: "minFullReserve" as const, label: "Full Game Keys", color: "#fb923c" },
+          ].map(f => (
+            <div key={f.key} className="flex items-center justify-between">
+              <span className="text-sm text-white/50">{f.label}</span>
+              <div className="flex items-center gap-3 shrink-0">
+                <button onClick={() => onChange({ [f.key]: Math.max(0, limits[f.key] - 5) })}
+                  className={spinnerBtn} style={spinnerBtnStyle}>−</button>
+                <span className="text-lg font-black w-10 text-center" style={{ color: f.color }}>{limits[f.key]}</span>
+                <button onClick={() => onChange({ [f.key]: Math.min(200, limits[f.key] + 5) })}
+                  className={spinnerBtn} style={spinnerBtnStyle}>+</button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* Max active */}
-      <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-        <div>
-          <label className="text-sm font-bold text-white block mb-0.5">Maximum Active Campaigns</label>
-          <p className="text-[11px] text-white/30">How many campaigns can run simultaneously. Default: 1</p>
-        </div>
-        <div className="flex items-center gap-2 ml-4 shrink-0">
-          <button onClick={() => onChange({ maxActive: Math.max(1, limits.maxActive - 1) })}
-            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-lg transition-all"
-            style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>−</button>
-          <span className="text-xl font-black text-white w-12 text-center">{limits.maxActive}</span>
-          <button onClick={() => onChange({ maxActive: Math.min(5, limits.maxActive + 1) })}
-            className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-lg transition-all"
-            style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>+</button>
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "20px" }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <label className={labelStyle}>Maximum Active Campaigns</label>
+            <p className="text-sm text-white/50">How many campaigns run simultaneously</p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <button onClick={() => onChange({ maxActive: Math.max(1, limits.maxActive - 1) })}
+              className={spinnerBtn} style={spinnerBtnStyle}>−</button>
+            <span className="text-xl font-black text-white w-10 text-center">{limits.maxActive}</span>
+            <button onClick={() => onChange({ maxActive: Math.min(5, limits.maxActive + 1) })}
+              className={spinnerBtn} style={spinnerBtnStyle}>+</button>
+          </div>
         </div>
       </div>
-    </StepHero>
+
+    </div>
   );
 }
 
@@ -1719,31 +1692,17 @@ function AutoStepConfirm({ limits, poolDemo, poolFull, indieProfile, confirmed, 
   const gameImage = indieProfile?.profile?.headerImageUrl ?? null;
 
   return (
-    <StepHero
-      icon={Bot}
-      title="Ready to Activate"
-      description="Gamefolio will manage your campaigns automatically within these limits. You can pause or adjust everything from your dashboard at any time."
-      accent="#a78bfa" rgb="167,139,250"
-      sideIcons={[
-        { icon: ShieldCheck,  top:    "28px", left:  "52px" },
-        { icon: CheckCircle2, top:    "28px", right: "52px" },
-        { icon: Rocket,       bottom: "30px", right: "72px" },
-      ]}
-      features={[
-        { icon: ShieldCheck,  title: "Safeguards Always Active",    desc: "Campaigns never launch without sufficient keys in your pool." },
-        { icon: Sliders,      title: "Always Respects Your Limits", desc: "Creator caps, frequency, and key reserves are always enforced." },
-        { icon: CheckCircle2, title: "Full Dashboard Control",      desc: "Pause, adjust or stop automatic campaigns from your dashboard." },
-      ]}
-    >
-      {/* Summary card */}
-      <div className="rounded-2xl overflow-hidden" style={{ background: "#0a0f18", border: "1px solid rgba(167,139,250,0.15)" }}>
-        <div className="flex items-center gap-3 p-4"
-          style={{ background: "linear-gradient(135deg, rgba(167,139,250,0.08) 0%, transparent 70%)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+    <div className="space-y-5 gf-fade-up">
+
+      {/* Summary */}
+      <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        {/* Game identity */}
+        <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
           {gameImage ? (
-            <img src={gameImage} alt={gameName} className="w-10 h-10 rounded-xl object-cover shrink-0"
-              style={{ border: "1px solid rgba(167,139,250,0.25)" }} />
+            <img src={gameImage} alt={gameName} className="w-10 h-10 rounded-xl object-cover shrink-0" />
           ) : (
-            <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center" style={{ background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.2)" }}>
+            <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
+              style={{ background: "rgba(167,139,250,0.08)" }}>
               <Gamepad2 className="w-5 h-5" style={{ color: "#a78bfa" }} />
             </div>
           )}
@@ -1751,23 +1710,27 @@ function AutoStepConfirm({ limits, poolDemo, poolFull, indieProfile, confirmed, 
             <div className="text-[10px] text-white/35 truncate">{gameName}</div>
             <div className="text-sm font-black text-white">Automatic Campaigns</div>
           </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-[10px] font-bold shrink-0"
-            style={{ background: "rgba(167,139,250,0.1)", color: "#a78bfa", border: "1px solid rgba(167,139,250,0.2)" }}>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
+            style={{ background: "rgba(167,139,250,0.10)", color: "#a78bfa" }}>
             <div className="w-1.5 h-1.5 rounded-full bg-current" /> Ready
           </div>
         </div>
 
+        {/* Stats grid */}
         <div className="grid grid-cols-2">
           {[
-            { label: "Demo Keys",          value: poolDemo,              color: "#60a5fa" },
-            { label: "Full Keys",          value: poolFull,              color: "#fb923c" },
-            { label: "Max Creators",       value: limits.maxCreators,    color: "rgba(255,255,255,0.8)" },
-            { label: "Frequency",          value: freqLabel,             color: "rgba(255,255,255,0.8)" },
-            { label: "Min Demo Reserve",   value: limits.minDemoReserve, color: "#60a5fa" },
-            { label: "Min Full Reserve",   value: limits.minFullReserve, color: "#fb923c" },
+            { label: "Demo Keys",        value: poolDemo,              color: "#60a5fa" },
+            { label: "Full Keys",        value: poolFull,              color: "#fb923c" },
+            { label: "Max Creators",     value: limits.maxCreators,    color: "rgba(255,255,255,0.8)" },
+            { label: "Frequency",        value: freqLabel,             color: "rgba(255,255,255,0.8)" },
+            { label: "Min Demo Reserve", value: limits.minDemoReserve, color: "#60a5fa" },
+            { label: "Min Full Reserve", value: limits.minFullReserve, color: "#fb923c" },
           ].map((s, i) => (
-            <div key={s.label} className="p-3"
-              style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", borderRight: i % 2 === 0 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
+            <div key={s.label} className="px-4 py-3"
+              style={{
+                borderBottom: i < 4 ? "1px solid rgba(255,255,255,0.05)" : "none",
+                borderRight: i % 2 === 0 ? "1px solid rgba(255,255,255,0.05)" : "none",
+              }}>
               <div className="text-[9px] text-white/25 uppercase tracking-wider mb-1">{s.label}</div>
               <div className="text-sm font-black truncate" style={{ color: s.color }}>{s.value}</div>
             </div>
@@ -1775,37 +1738,37 @@ function AutoStepConfirm({ limits, poolDemo, poolFull, indieProfile, confirmed, 
         </div>
       </div>
 
-      {/* Confirmation checkbox */}
+      {/* Confirmation */}
       <button onClick={() => onConfirm(!confirmed)}
         className="w-full flex items-start gap-3 text-left p-4 rounded-2xl transition-all"
         style={{
-          background: confirmed ? "rgba(167,139,250,0.07)" : "rgba(255,255,255,0.02)",
-          border: `1px solid ${confirmed ? "rgba(167,139,250,0.3)" : "rgba(255,255,255,0.09)"}`,
+          background: confirmed ? "rgba(167,139,250,0.06)" : "rgba(255,255,255,0.02)",
+          border: `1px solid ${confirmed ? "rgba(167,139,250,0.25)" : "rgba(255,255,255,0.08)"}`,
         }}>
         <div className="w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center mt-0.5 transition-all"
           style={{ borderColor: confirmed ? "#a78bfa" : "rgba(255,255,255,0.2)", background: confirmed ? "#a78bfa" : "transparent" }}>
           {confirmed && <Check className="w-3 h-3" style={{ color: "#070b10" }} />}
         </div>
-        <span className="text-sm text-white/70 leading-snug">
-          I understand that Gamefolio will automatically manage campaigns using these settings and the keys in my pool.
+        <span className="text-sm text-white/60 leading-snug">
+          I understand Gamefolio will automatically manage campaigns using these settings and keys in my pool.
         </span>
       </button>
 
       {/* Activate button */}
       <button onClick={onActivate} disabled={!confirmed || submitting}
-        className="w-full py-4 rounded-2xl text-base font-black tracking-wide transition-all flex items-center justify-center gap-2.5 disabled:opacity-40"
+        className="w-full py-4 rounded-2xl text-sm font-black transition-all flex items-center justify-center gap-2.5 disabled:opacity-40"
         style={{
-          background: confirmed && !submitting ? "#a78bfa" : "rgba(167,139,250,0.3)",
+          background: confirmed && !submitting ? "#a78bfa" : "rgba(167,139,250,0.25)",
           color: "#070b10",
-          boxShadow: confirmed && !submitting ? "0 0 32px 0 rgba(167,139,250,0.25)" : "none",
+          boxShadow: confirmed && !submitting ? "0 4px 24px rgba(167,139,250,0.28)" : "none",
         }}>
         {submitting ? (
-          <><Loader2 className="w-5 h-5 animate-spin" /> Activating…</>
+          <><Loader2 className="w-4 h-4 animate-spin" /> Activating…</>
         ) : (
-          <><Bot className="w-5 h-5" /> Activate Automatic Campaigns</>
+          <><Bot className="w-4 h-4" /> Activate Automatic Campaigns</>
         )}
       </button>
-    </StepHero>
+    </div>
   );
 }
 
