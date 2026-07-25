@@ -8,7 +8,7 @@ import {
   MessageSquare, Target, AlertCircle, Gamepad2,
   Sparkles, Cog, Upload, FileText, X, ArrowRight,
   CheckCircle2, Calendar, Bot, Sliders,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, ChevronDown, ClipboardList,
 } from "lucide-react";
 import { NEON } from "./constants";
 
