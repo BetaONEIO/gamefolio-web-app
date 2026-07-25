@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop, Zap, Star, Target, Gift, Tv, Globe, Swords, Users, Flame, ChevronLeft, ChevronRight, X, ExternalLink } from "lucide-react";
-import { SiSteam, SiItchdotio } from "react-icons/si";
+import { SiSteam, SiItchdotio, SiEpicgames } from "react-icons/si";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
@@ -336,7 +336,7 @@ export default function OnboardingFlow({
     websiteLink: '',
     description: '',
   });
-  const [platformExpanded, setPlatformExpanded] = useState<{ steam: boolean; itch: boolean }>({ steam: false, itch: false });
+  const [platformExpanded, setPlatformExpanded] = useState<{ steam: boolean; itch: boolean; epic: boolean }>({ steam: false, itch: false, epic: false });
 
   // Wallet state
   const { walletAddress: sequenceWalletAddress, isReady: isWalletReady, isConnecting: isCreatingWallet, connect: connectWallet } = useWallet();
@@ -1146,7 +1146,7 @@ export default function OnboardingFlow({
           },
           {
             id: 'indie' as UserPath,
-            title: 'INDIE GAME',
+            title: 'GAME DEVELOPER',
             ctaLabel: 'Continue as Indie',
             visual: (
               <div className="relative flex items-center justify-center flex-shrink-0 w-full"
@@ -1561,6 +1561,27 @@ export default function OnboardingFlow({
                       </button>
                     )}
                   </button>
+
+                  {/* Epic Games */}
+                  <button
+                    type="button"
+                    onClick={() => setPlatformExpanded(p => ({ ...p, epic: !p.epic }))}
+                    className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl font-bold text-sm transition-all border"
+                    style={indieGameData.epicLink
+                      ? { background: "rgba(183,255,26,0.08)", border: "1px solid rgba(183,255,26,0.40)", color: "#B7FF1A" }
+                      : { background: "#2a2a2a", border: "1px solid rgba(255,255,255,0.10)", color: "white" }
+                    }
+                  >
+                    <SiEpicgames className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left text-xs">
+                      {indieGameData.epicLink ? "Epic Games ✓" : "Connect Epic Games"}
+                    </span>
+                    {indieGameData.epicLink && (
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setIndieGameData(d => ({ ...d, epicLink: '' })); setPlatformExpanded(p => ({ ...p, epic: false })); }}>
+                        <X className="w-3 h-3 opacity-60 hover:opacity-100" />
+                      </button>
+                    )}
+                  </button>
                 </div>
 
                 {/* Steam URL input (expanded) */}
@@ -1604,12 +1625,29 @@ export default function OnboardingFlow({
                     </button>
                   </div>
                 )}
+
+                {/* Epic Games URL input (expanded) */}
+                {platformExpanded.epic && (
+                  <div className="mb-2 flex gap-2 items-center">
+                    <Input
+                      autoFocus
+                      value={indieGameData.epicLink}
+                      onChange={(e) => setIndieGameData({ ...indieGameData, epicLink: e.target.value })}
+                      placeholder="https://store.epicgames.com/..."
+                      className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPlatformExpanded(p => ({ ...p, epic: false }))}
+                      className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
+                      style={{ background: "rgba(255,255,255,0.06)" }}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
 
-              <div>
-                <Label className="text-gray-400 text-sm mb-1.5 block">Epic Games Link</Label>
-                <Input value={indieGameData.epicLink} onChange={(e) => setIndieGameData({ ...indieGameData, epicLink: e.target.value })} placeholder="https://store.epicgames.com/..." className="bg-[#0B1218] border-[#1B2A33] text-white" />
-              </div>
               <div>
                 <Label className="text-gray-400 text-sm mb-1.5 block">Website</Label>
                 <Input value={indieGameData.websiteLink} onChange={(e) => setIndieGameData({ ...indieGameData, websiteLink: e.target.value })} placeholder="https://yourgame.com" className="bg-[#0B1218] border-[#1B2A33] text-white" />
