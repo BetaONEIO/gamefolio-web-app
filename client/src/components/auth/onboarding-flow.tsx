@@ -1147,7 +1147,7 @@ export default function OnboardingFlow({
           {
             id: 'indie' as UserPath,
             title: 'GAME DEVELOPER',
-            ctaLabel: 'Continue as Indie',
+            ctaLabel: 'Continue as Game Developer',
             visual: (
               <div className="relative flex items-center justify-center flex-shrink-0 w-full"
                 style={{ height: isMobile ? 'clamp(240px, calc(100dvh - 467px), 336px)' : 'clamp(200px, calc(100dvh - 467px), 280px)' }}>
