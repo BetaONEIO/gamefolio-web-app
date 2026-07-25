@@ -416,12 +416,6 @@ function requireAuth(req: any, res: any, next: any) {
   next();
 }
 
-function requirePartner(req: any, res: any, next: any) {
-  if (!req.isAuthenticated?.() || !req.user) return res.status(401).json({ error: 'Unauthorized' });
-  if (!req.user.isPartner) return res.status(403).json({ error: 'Indie partner access required' });
-  next();
-}
-
 function requireAdmin(req: any, res: any, next: any) {
   if (!req.isAuthenticated?.() || !req.user) return res.status(401).json({ error: 'Unauthorized' });
   if (!req.user.isAdmin) return res.status(403).json({ error: 'Admin access required' });
@@ -637,7 +631,7 @@ router.get('/templates/:id', async (req, res) => {
 // ─────────────────────────────────────────────
 
 // GET /api/campaigns/overview — stats for the overview tab
-router.get('/overview', requirePartner, async (req, res) => {
+router.get('/overview', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
     const stats = await db.execute(sql`
@@ -681,7 +675,7 @@ router.get('/overview', requirePartner, async (req, res) => {
 });
 
 // GET /api/campaigns/instances — list developer's campaign instances
-router.get('/instances', requirePartner, async (req, res) => {
+router.get('/instances', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
     const instances = await db.execute(sql`
@@ -707,7 +701,7 @@ router.get('/instances', requirePartner, async (req, res) => {
 });
 
 // POST /api/campaigns/instances — create a new campaign instance (draft)
-router.post('/instances', requirePartner, async (req, res) => {
+router.post('/instances', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
     const {
@@ -719,6 +713,28 @@ router.post('/instances', requirePartner, async (req, res) => {
 
     const [tmpl] = toRows(await db.execute(sql`SELECT id FROM campaign_templates WHERE id = ${Number(templateId)}`));
     if (!tmpl) return res.status(404).json({ error: 'Campaign template not found' });
+
+    // Active-campaign concurrency cap: free accounts get 1 active campaign at
+    // a time, paid Indie Developer subscribers get up to 5. Drafts don't
+    // count — only campaigns actually in flight (submitted, approved, live).
+    const [subRow] = toRows(await db.execute(sql`
+      SELECT is_indie_dev_subscriber AS "isIndieDevSubscriber" FROM users WHERE id = ${userId}
+    `));
+    const isIndieDevSubscriber = !!subRow?.isIndieDevSubscriber;
+    const campaignLimit = isIndieDevSubscriber ? 5 : 1;
+
+    const [{ count: activeCampaignCount }] = toRows(await db.execute(sql`
+      SELECT COUNT(*)::int AS count FROM campaign_instances
+      WHERE developer_user_id = ${userId} AND status NOT IN ('draft', 'completed', 'cancelled', 'rejected')
+    `));
+
+    if (activeCampaignCount >= campaignLimit) {
+      return res.status(403).json({
+        error: isIndieDevSubscriber
+          ? `You've reached your active campaign limit (${campaignLimit}).`
+          : `Free accounts can run 1 active campaign at a time. Upgrade to Indie Developer to run up to 5.`,
+      });
+    }
 
     const [instance] = toRows(await db.execute(sql`
       INSERT INTO campaign_instances
@@ -740,7 +756,7 @@ router.post('/instances', requirePartner, async (req, res) => {
 });
 
 // PATCH /api/campaigns/instances/:id — update draft (artwork, dates, game)
-router.patch('/instances/:id', requirePartner, async (req, res) => {
+router.patch('/instances/:id', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
     const instanceId = Number(req.params.id);
@@ -785,7 +801,7 @@ router.patch('/instances/:id', requirePartner, async (req, res) => {
 });
 
 // POST /api/campaigns/instances/:id/keys — upload keys for a campaign
-router.post('/instances/:id/keys', requirePartner, async (req, res) => {
+router.post('/instances/:id/keys', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
     const instanceId = Number(req.params.id);
@@ -847,7 +863,7 @@ router.post('/instances/:id/keys', requirePartner, async (req, res) => {
 });
 
 // POST /api/campaigns/instances/:id/submit — submit for Gamefolio review
-router.post('/instances/:id/submit', requirePartner, async (req, res) => {
+router.post('/instances/:id/submit', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
     const instanceId = Number(req.params.id);
@@ -954,7 +970,7 @@ router.patch('/admin/templates/:id', requireAdmin, async (req, res) => {
 // ─────────────────────────────────────────────
 
 // GET /api/campaigns/auto/settings — get current auto-campaign config
-router.get('/auto/settings', requirePartner, async (req, res) => {
+router.get('/auto/settings', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
     const rows = toRows(await db.execute(sql`
@@ -983,7 +999,7 @@ router.get('/auto/settings', requirePartner, async (req, res) => {
 });
 
 // POST /api/campaigns/auto/settings — save auto-campaign config
-router.post('/auto/settings', requirePartner, async (req, res) => {
+router.post('/auto/settings', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
     const {
@@ -1032,7 +1048,7 @@ router.post('/auto/settings', requirePartner, async (req, res) => {
 });
 
 // GET /api/campaigns/auto/queue — auto-campaign history
-router.get('/auto/queue', requirePartner, async (req, res) => {
+router.get('/auto/queue', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
     const rows = toRows(await db.execute(sql`
@@ -1050,7 +1066,7 @@ router.get('/auto/queue', requirePartner, async (req, res) => {
 });
 
 // POST /api/campaigns/auto/trigger — manually trigger auto-campaign check (dev/admin)
-router.post('/auto/trigger', requirePartner, async (req, res) => {
+router.post('/auto/trigger', requireAuth, async (req, res) => {
   try {
     const result = await runAutoCampaignCheck(req.user!.id);
     res.json(result);
@@ -1061,7 +1077,7 @@ router.post('/auto/trigger', requirePartner, async (req, res) => {
 });
 
 // GET /api/campaigns/auto/pool — pool key counts for automatic campaigns
-router.get('/auto/pool', requirePartner, async (req, res) => {
+router.get('/auto/pool', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
     const demoRows = toRows(await db.execute(sql`
@@ -1082,7 +1098,7 @@ router.get('/auto/pool', requirePartner, async (req, res) => {
 });
 
 // POST /api/campaigns/auto/keys — upload keys to the unassigned pool
-router.post('/auto/keys', requirePartner, async (req, res) => {
+router.post('/auto/keys', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
     const { keyType, keys } = req.body;
