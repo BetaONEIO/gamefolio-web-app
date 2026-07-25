@@ -10,7 +10,7 @@ import {
   Film, Camera,
   Video, ArrowUpRight,
   Crosshair, Settings, LayoutDashboard,
-  AlertCircle, Star, Circle,
+  AlertCircle, Star, Circle, Upload, Zap, Activity,
 } from "lucide-react";
 import CreateCampaignFlow from "./indie-dashboard/CreateCampaignFlow";
 import MyCampaignsTab from "./indie-dashboard/MyCampaignsTab";
@@ -182,11 +182,12 @@ function DashboardTab({
   const exposureEst = contentTotal > 0 ? `+${Math.min(99, contentTotal * 3)}%` : "—";
 
   const attentionItems: {
-    icon: any; color: string; title: string; desc: string; cta: string; action: () => void;
+    icon: any; color: string; priority: "critical" | "warning" | "suggestion";
+    title: string; desc: string; cta: string; action: () => void;
   }[] = [];
   if (missingEssential.length > 0) {
     attentionItems.push({
-      icon: AlertCircle, color: "#f87171",
+      icon: AlertCircle, color: "#f87171", priority: "critical",
       title: "Complete your game profile",
       desc: `${missingEssential.length} essential field${missingEssential.length > 1 ? "s" : ""} still missing`,
       cta: "Edit Profile",
@@ -195,17 +196,17 @@ function DashboardTab({
   }
   if (demoKeys.available < 5) {
     attentionItems.push({
-      icon: AlertTriangle, color: "#f59e0b",
-      title: "Demo key stock is running low",
-      desc: `Only ${demoKeys.available} key${demoKeys.available === 1 ? "" : "s"} remaining`,
+      icon: AlertTriangle, color: "#fb923c", priority: "critical",
+      title: "No demo keys available",
+      desc: `${demoKeys.available === 0 ? "Upload keys before creators can join your campaign" : `Only ${demoKeys.available} remaining`}`,
       cta: "Upload Keys",
       action: () => onGoTo("keys"),
     });
   }
   if (content.length > 0) {
     attentionItems.push({
-      icon: Star, color: "#a78bfa",
-      title: `Review ${content.length} creator submission${content.length > 1 ? "s" : ""}`,
+      icon: Star, color: "#a78bfa", priority: "suggestion",
+      title: `${content.length} creator submission${content.length > 1 ? "s" : ""} to review`,
       desc: "Feature the best community content",
       cta: "Review",
       action: () => onGoTo("community", "submissions"),
@@ -213,7 +214,7 @@ function DashboardTab({
   }
   if (activeCampaigns.length === 0) {
     attentionItems.push({
-      icon: Rocket, color: NEON,
+      icon: Rocket, color: NEON, priority: "suggestion",
       title: "Launch your first campaign",
       desc: "Recruit creators to build buzz for your game",
       cta: "Create Campaign",
@@ -238,17 +239,18 @@ function DashboardTab({
           background: "linear-gradient(135deg, rgba(183,255,24,0.055) 0%, rgba(255,255,255,0.018) 100%)",
           border: "1px solid rgba(183,255,24,0.13)",
         }}>
-        <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, rgba(183,255,24,0.06) 0%, transparent 65%)" }} />
+        <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full pointer-events-none"
+          style={{ background: "radial-gradient(circle, rgba(183,255,24,0.07) 0%, transparent 65%)" }} />
 
         <div className="flex flex-col sm:flex-row sm:items-start gap-6 relative z-10">
-          <div className="w-16 h-16 rounded-2xl shrink-0 overflow-hidden flex items-center justify-center"
-            style={{ background: "rgba(183,255,24,0.08)", border: "1px solid rgba(183,255,24,0.18)" }}>
+          {/* Game artwork — larger */}
+          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl shrink-0 overflow-hidden flex items-center justify-center transition-transform hover:scale-[1.02]"
+            style={{ background: "rgba(183,255,24,0.08)", border: "1px solid rgba(183,255,24,0.18)", boxShadow: "0 8px 32px rgba(183,255,24,0.08)" }}>
             {(profile?.capsuleImageUrl || profile?.headerImageUrl) ? (
               <img src={profile.capsuleImageUrl ?? profile.headerImageUrl} alt=""
                 className="w-full h-full object-cover" />
             ) : (
-              <Gamepad className="w-7 h-7" style={{ color: NEON }} />
+              <Gamepad className="w-9 h-9" style={{ color: NEON }} />
             )}
           </div>
 
@@ -256,7 +258,7 @@ function DashboardTab({
             <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight mb-1">
               {profile?.gameName ?? "Set up your game"}
             </h2>
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-5">
               {profile?.releaseStatus && (
                 <span className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.45)" }}>
                   {profile.releaseStatus.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
@@ -272,55 +274,58 @@ function DashboardTab({
               )}
             </div>
 
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold" style={{ color: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171" }}>
-                  {missingEssential.length === 0 ? "Profile Ready" : "Setup in Progress"}
+            {/* Profile Strength — progress bar */}
+            <div className="mb-5 max-w-xs">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  Profile Strength
                 </span>
-                <span className="text-xs text-white/30">·</span>
-                <span className="text-xs text-white/40">{profilePct}% strength</span>
+                <span className="text-[11px] font-black" style={{ color: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171" }}>
+                  {profilePct}%
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+                <div className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${profilePct}%`,
+                    background: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171",
+                  }} />
               </div>
               {profilePct < 100 && nextSteps.length > 0 && (
-                <span className="text-[10px] text-white/25 hidden sm:inline">
-                  Next: {nextSteps[0].label} (+{nextSteps[0].pct}%)
-                </span>
+                <p className="text-[10px] mt-1.5" style={{ color: "rgba(255,255,255,0.25)" }}>
+                  Next: {nextSteps[0].label} <span style={{ color: NEON }}>+{nextSteps[0].pct}%</span>
+                </p>
               )}
             </div>
-
-            {missingEssential.length > 0 && (
-              <p className="text-xs text-white/30 max-w-md mb-4">
-                Complete essential information so creators know what your game is about.
-              </p>
-            )}
 
             <div className="flex flex-wrap items-center gap-2">
               {missingEssential.length > 0 ? (
                 <button onClick={() => onGoTo("settings", "profile")}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110"
-                  style={{ background: NEON, color: "#070b10" }}>
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
+                  style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 20px rgba(183,255,24,0.25)" }}>
                   Continue Setup <ArrowUpRight className="w-4 h-4" />
                 </button>
               ) : activeCampaigns.length === 0 ? (
                 <button onClick={() => onGoTo("campaigns", "create")}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110"
-                  style={{ background: NEON, color: "#070b10" }}>
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
+                  style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 20px rgba(183,255,24,0.25)" }}>
                   Create Your First Campaign <ArrowUpRight className="w-4 h-4" />
                 </button>
               ) : (
                 <button onClick={() => onGoTo("campaigns", "my")}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110"
-                  style={{ background: NEON, color: "#070b10" }}>
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
+                  style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 20px rgba(183,255,24,0.25)" }}>
                   View Active Campaign <ArrowUpRight className="w-4 h-4" />
                 </button>
               )}
             </div>
           </div>
 
-          {/* Secondary metrics — muted, smaller */}
+          {/* Secondary metrics */}
           <div className="shrink-0 grid grid-cols-3 gap-4 sm:w-56">
             {[
               {
-                label: "Active Campaign",
+                label: "Campaign",
                 value: activeCampaigns.length > 0 ? "Live" : "None",
                 sub: activeCampaigns.length > 0
                   ? (activeCampaigns[0].template_name ?? activeCampaigns[0].name ?? "Campaign")
@@ -328,15 +333,15 @@ function DashboardTab({
                 color: activeCampaigns.length > 0 ? NEON : "#475569",
               },
               {
-                label: "Active Creators",
+                label: "Creators",
                 value: String(d.totalParticipants),
-                sub: "Across campaigns",
+                sub: "Active now",
                 color: d.totalParticipants > 0 ? NEON : "#475569",
               },
               {
                 label: "Demo Keys",
                 value: String(demoKeys.available),
-                sub: "remaining",
+                sub: "Available",
                 color: demoKeys.available < 5 ? "#f87171" : demoKeys.available < 15 ? "#f59e0b" : NEON,
               },
             ].map(({ label, value, sub, color }) => (
@@ -350,85 +355,111 @@ function DashboardTab({
         </div>
       </div>
 
-      {/* NEW-ACCOUNT ONBOARDING STATE */}
+      {/* GET YOUR GAME READY — onboarding steps */}
       {activeCampaigns.length === 0 && (
-        <div className="rounded-2xl p-6 sm:p-8 space-y-5"
+        <div className="rounded-2xl p-6 sm:p-8 space-y-6"
           style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.07)" }}>
-          <div className="flex items-center gap-3 mb-1">
+          <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{ background: "rgba(183,255,24,0.09)" }}>
               <Rocket className="w-4 h-4" style={{ color: NEON }} />
             </div>
-            <h3 className="text-base font-black text-white">Get Your Game Ready</h3>
+            <div>
+              <h3 className="text-base font-black text-white">Get Your Game Ready</h3>
+              <p className="text-[11px] text-white/30 mt-0.5">Complete three steps to start recruiting creators</p>
+            </div>
           </div>
-          <p className="text-xs text-white/30 max-w-lg">
-            Complete these steps to begin recruiting creators:
-          </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Step 1: Game Profile */}
-            <div className="rounded-xl p-4 space-y-3"
-              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black"
-                  style={missingEssential.length === 0
-                    ? { background: "rgba(74,222,128,0.15)", color: "#4ade80" }
-                    : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>
-                  {missingEssential.length === 0 ? <CheckCircle2 className="w-3.5 h-3.5" /> : "1"}
+            {(() => {
+              const done = missingEssential.length === 0;
+              return (
+                <div className="rounded-xl p-4 space-y-3 transition-all hover:scale-[1.01]"
+                  style={{
+                    background: done ? "rgba(74,222,128,0.04)" : "rgba(255,255,255,0.025)",
+                    border: `1px solid ${done ? "rgba(74,222,128,0.18)" : "rgba(255,255,255,0.07)"}`,
+                    boxShadow: done ? "0 0 24px rgba(74,222,128,0.06)" : "none",
+                  }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black"
+                        style={done
+                          ? { background: "rgba(74,222,128,0.20)", color: "#4ade80" }
+                          : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>
+                        {done ? <CheckCircle2 className="w-3.5 h-3.5" /> : "1"}
+                      </div>
+                      <span className="text-xs font-bold text-white">Complete Game Profile</span>
+                    </div>
+                    {done && <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: "rgba(74,222,128,0.12)", color: "#4ade80" }}>Done</span>}
+                  </div>
+                  {/* Progress bar */}
+                  <div>
+                    <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                      <div className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${profilePct}%`, background: done ? "#4ade80" : profilePct >= 50 ? "#f59e0b" : "#f87171" }} />
+                    </div>
+                    <div className="flex justify-between mt-1">
+                      <span className="text-[9px] text-white/25">{profilePct}% complete</span>
+                      {!done && <span className="text-[9px]" style={{ color: "#f59e0b" }}>{missingEssential.length} fields missing</span>}
+                    </div>
+                  </div>
+                  <button onClick={() => onGoTo("settings", "profile")}
+                    className="w-full text-[11px] font-bold py-2 rounded-lg transition-all hover:brightness-110"
+                    style={{
+                      background: done ? "rgba(74,222,128,0.10)" : "rgba(183,255,24,0.09)",
+                      color: done ? "#4ade80" : NEON,
+                      border: `1px solid ${done ? "rgba(74,222,128,0.20)" : "rgba(183,255,24,0.18)"}`,
+                    }}>
+                    {done ? "Edit Profile" : "Continue Setup →"}
+                  </button>
                 </div>
-                <span className="text-xs font-bold text-white">Complete Game Profile</span>
-              </div>
-              <div className="text-[10px] text-white/25 leading-relaxed">
-                {missingEssential.length === 0
-                  ? "All essential fields are filled. Add recommended information to make your campaign more attractive."
-                  : `${missingEssential.length} essential field${missingEssential.length > 1 ? "s" : ""} still missing.`}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold" style={{ color: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171" }}>
-                  {profilePct}% complete
-                </span>
-              </div>
-              <button onClick={() => onGoTo("settings", "profile")}
-                className="w-full text-[10px] font-bold py-2 rounded-lg transition-all hover:brightness-110"
-                style={{ background: `${missingEssential.length === 0 ? "rgba(74,222,128,0.1)" : "rgba(183,255,24,0.09)"}`,
-                  color: missingEssential.length === 0 ? "#4ade80" : NEON,
-                  border: `1px solid ${missingEssential.length === 0 ? "rgba(74,222,128,0.2)" : "rgba(183,255,24,0.18)"}` }}>
-                {missingEssential.length === 0 ? "Edit Profile" : "Continue Setup"}
-              </button>
-            </div>
+              );
+            })()}
 
             {/* Step 2: Upload Keys */}
-            <div className="rounded-xl p-4 space-y-3"
-              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black"
-                  style={demoKeys.available > 0
-                    ? { background: "rgba(74,222,128,0.15)", color: "#4ade80" }
-                    : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>
-                  {demoKeys.available > 0 ? <CheckCircle2 className="w-3.5 h-3.5" /> : "2"}
+            {(() => {
+              const done = demoKeys.available > 0;
+              return (
+                <div className="rounded-xl p-4 space-y-3 transition-all hover:scale-[1.01]"
+                  style={{
+                    background: done ? "rgba(74,222,128,0.04)" : "rgba(255,255,255,0.025)",
+                    border: `1px solid ${done ? "rgba(74,222,128,0.18)" : "rgba(255,255,255,0.07)"}`,
+                    boxShadow: done ? "0 0 24px rgba(74,222,128,0.06)" : "none",
+                  }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black"
+                        style={done
+                          ? { background: "rgba(74,222,128,0.20)", color: "#4ade80" }
+                          : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>
+                        {done ? <CheckCircle2 className="w-3.5 h-3.5" /> : "2"}
+                      </div>
+                      <span className="text-xs font-bold text-white">Upload Game Keys</span>
+                    </div>
+                    {done && <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: "rgba(74,222,128,0.12)", color: "#4ade80" }}>Done</span>}
+                  </div>
+                  <div className="text-[10px] text-white/30 leading-relaxed">
+                    {done
+                      ? `${demoKeys.available} demo · ${fullKeys.available} full game keys ready`
+                      : "Keys are required for creators to claim access to your game."}
+                  </div>
+                  <button onClick={() => onGoTo("keys")}
+                    className="w-full text-[11px] font-bold py-2 rounded-lg transition-all hover:brightness-110 flex items-center justify-center gap-1.5"
+                    style={{
+                      background: done ? "rgba(74,222,128,0.10)" : "rgba(183,255,24,0.09)",
+                      color: done ? "#4ade80" : NEON,
+                      border: `1px solid ${done ? "rgba(74,222,128,0.20)" : "rgba(183,255,24,0.18)"}`,
+                    }}>
+                    {done ? "Manage Keys" : <><Upload className="w-3 h-3" /> Upload Keys</>}
+                  </button>
                 </div>
-                <span className="text-xs font-bold text-white">Upload Game Keys</span>
-              </div>
-              <div className="text-[10px] text-white/25 leading-relaxed">
-                Secure the keys required for creator campaigns and completion rewards.
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-white/40">
-                  {demoKeys.available} demo key{demoKeys.available !== 1 ? "s" : ""} · {fullKeys.available} full-game key{fullKeys.available !== 1 ? "s" : ""}
-                </span>
-              </div>
-              <button onClick={() => onGoTo("keys")}
-                className="w-full text-[10px] font-bold py-2 rounded-lg transition-all hover:brightness-110"
-                style={{ background: `${demoKeys.available > 0 ? "rgba(74,222,128,0.1)" : "rgba(183,255,24,0.09)"}`,
-                  color: demoKeys.available > 0 ? "#4ade80" : NEON,
-                  border: `1px solid ${demoKeys.available > 0 ? "rgba(74,222,128,0.2)" : "rgba(183,255,24,0.18)"}` }}>
-                {demoKeys.available > 0 ? "Manage Keys" : "Upload Keys"}
-              </button>
-            </div>
+              );
+            })()}
 
             {/* Step 3: Create Campaign */}
-            <div className="rounded-xl p-4 space-y-3"
-              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+            <div className="rounded-xl p-4 space-y-3 transition-all hover:scale-[1.01]"
+              style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black"
                   style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>
@@ -436,16 +467,13 @@ function DashboardTab({
                 </div>
                 <span className="text-xs font-bold text-white">Create Your First Campaign</span>
               </div>
-              <div className="text-[10px] text-white/25 leading-relaxed">
-                Choose your goal and Gamefolio will automatically create the correct creator bounties.
-              </div>
-              <div className="text-[10px] text-white/20">
-                Each campaign contains Gamefolio-generated creator bounties.
+              <div className="text-[10px] text-white/30 leading-relaxed">
+                Select a campaign type and Gamefolio recruits creators automatically.
               </div>
               <button onClick={() => onGoTo("campaigns", "create")}
-                className="w-full text-[10px] font-bold py-2 rounded-lg transition-all hover:brightness-110"
-                style={{ background: NEON, color: "#070b10" }}>
-                Create Campaign
+                className="w-full text-[11px] font-bold py-2 rounded-lg transition-all hover:brightness-110"
+                style={{ background: NEON, color: "#070b10", boxShadow: "0 0 16px rgba(183,255,24,0.18)" }}>
+                Create Campaign →
               </button>
             </div>
           </div>
@@ -522,18 +550,41 @@ function DashboardTab({
             </div>
 
             {activeCampaigns.length === 0 ? (
-              <div className="rounded-2xl px-8 py-12 text-center"
+              <div className="rounded-2xl px-8 py-10"
                 style={{ background: "rgba(255,255,255,0.018)", border: "1px dashed rgba(255,255,255,0.07)" }}>
-                <Crosshair className="w-9 h-9 mx-auto mb-3 text-white/10" />
-                <p className="text-sm font-semibold text-white/35 mb-1">No campaigns yet</p>
-                <p className="text-xs text-white/20 mb-6 max-w-xs mx-auto">
-                  Choose what you want to achieve and Gamefolio will automatically create the correct creator bounties for your game.
+                {/* Flow illustration */}
+                <div className="flex items-center justify-center gap-2 mb-6">
+                  {[
+                    { icon: Gamepad, label: "Your Game", color: NEON, rgb: "183,255,27" },
+                    { icon: Users,   label: "Creators",  color: "#60a5fa", rgb: "96,165,250" },
+                    { icon: Film,    label: "Content",   color: "#f472b6", rgb: "244,114,182" },
+                    { icon: TrendingUp, label: "Exposure", color: "#34d399", rgb: "52,211,153" },
+                  ].map(({ icon: Icon, label, color, rgb }, i, arr) => (
+                    <div key={label} className="flex items-center gap-2">
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                          style={{ background: `rgba(${rgb},0.10)`, border: `1px solid rgba(${rgb},0.18)` }}>
+                          <Icon className="w-5 h-5" style={{ color }} />
+                        </div>
+                        <span className="text-[9px] font-bold text-white/30">{label}</span>
+                      </div>
+                      {i < arr.length - 1 && (
+                        <div className="text-white/15 mb-4">→</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm font-semibold text-white/50 text-center mb-1">Launch your first campaign</p>
+                <p className="text-xs text-white/25 text-center mb-6 max-w-xs mx-auto">
+                  Once live, you'll track active creators, content submitted, keys issued, and campaign progress here.
                 </p>
-                <button onClick={() => onGoTo("campaigns", "create")}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110"
-                  style={{ background: NEON, color: "#070b10" }}>
-                  <Rocket className="w-4 h-4" /> Create Your First Campaign
-                </button>
+                <div className="flex justify-center">
+                  <button onClick={() => onGoTo("campaigns", "create")}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02]"
+                    style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 20px rgba(183,255,24,0.22)" }}>
+                    <Rocket className="w-4 h-4" /> Create Your First Campaign
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -682,27 +733,35 @@ function DashboardTab({
                 </span>
               </div>
               <div className="space-y-2">
-                {attentionItems.map(({ icon: Icon, color, title, desc, cta, action }, i) => (
-                  <div key={i}
-                    className="rounded-xl p-3.5"
-                    style={{ background: "rgba(255,255,255,0.022)", border: "1px solid rgba(255,255,255,0.055)" }}>
-                    <div className="flex items-start gap-3 mb-2.5">
-                      <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-                        style={{ background: `${color}10` }}>
-                        <Icon className="w-3.5 h-3.5" style={{ color }} />
+                {attentionItems.map(({ icon: Icon, color, priority, title, desc, cta, action }, i) => {
+                  const priorityLabel = priority === "critical" ? "Critical" : priority === "warning" ? "Warning" : "Suggestion";
+                  const priorityColor = priority === "critical" ? "#f87171" : priority === "warning" ? "#fb923c" : "#a78bfa";
+                  return (
+                    <div key={i}
+                      className="rounded-xl p-3.5"
+                      style={{ background: "rgba(255,255,255,0.022)", border: `1px solid ${color}22` }}>
+                      <div className="flex items-start gap-3 mb-2.5">
+                        <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                          style={{ background: `${color}12` }}>
+                          <Icon className="w-3.5 h-3.5" style={{ color }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="text-[8px] font-black uppercase tracking-widest"
+                              style={{ color: priorityColor }}>{priorityLabel}</span>
+                          </div>
+                          <div className="text-xs font-semibold text-white/85 leading-snug">{title}</div>
+                          <div className="text-[10px] text-white/30 mt-0.5">{desc}</div>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold text-white/85 leading-snug">{title}</div>
-                        <div className="text-[10px] text-white/30 mt-0.5">{desc}</div>
-                      </div>
+                      <button onClick={action}
+                        className="w-full text-[10px] font-bold py-1.5 rounded-lg transition-all hover:brightness-110"
+                        style={{ background: `${color}15`, color }}>
+                        {cta}
+                      </button>
                     </div>
-                    <button onClick={action}
-                      className="w-full text-[10px] font-bold py-1.5 rounded-lg transition-all hover:brightness-110"
-                      style={{ background: `${color}13`, color }}>
-                      {cta}
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -718,17 +777,28 @@ function DashboardTab({
             </div>
 
             {(demoKeys.available === 0 && fullKeys.available === 0) ? (
-              <div className="rounded-xl p-4 text-center"
-                style={{ background: "rgba(255,255,255,0.015)", border: "1px dashed rgba(255,255,255,0.08)" }}>
-                <KeyRound className="w-6 h-6 mx-auto mb-2 text-white/10" />
-                <p className="text-xs font-semibold text-white/30 mb-1">No keys uploaded</p>
-                <p className="text-[10px] text-white/20 mb-3">
-                  Upload demo and full-game keys before launching your first campaign.
-                </p>
+              <div className="rounded-xl p-5"
+                style={{ background: "rgba(255,255,255,0.015)", border: "1px dashed rgba(255,255,255,0.09)" }}>
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl mx-auto mb-3"
+                  style={{ background: "rgba(183,255,24,0.07)", border: "1px solid rgba(183,255,24,0.12)" }}>
+                  <KeyRound className="w-5 h-5" style={{ color: NEON }} />
+                </div>
+                <p className="text-xs font-bold text-white/50 text-center mb-1">No keys uploaded yet</p>
+                <div className="flex items-center justify-center gap-4 my-3">
+                  <div className="text-center">
+                    <div className="text-lg font-black text-white/20">0</div>
+                    <div className="text-[9px] text-white/20 uppercase tracking-wider">Demo Keys</div>
+                  </div>
+                  <div className="w-px h-6 bg-white/10" />
+                  <div className="text-center">
+                    <div className="text-lg font-black text-white/20">0</div>
+                    <div className="text-[9px] text-white/20 uppercase tracking-wider">Full Keys</div>
+                  </div>
+                </div>
                 <button onClick={() => onGoTo("keys")}
-                  className="text-[10px] font-bold py-1.5 px-3 rounded-lg transition-all hover:brightness-110"
-                  style={{ background: "rgba(183,255,24,0.09)", color: NEON, border: "1px solid rgba(183,255,24,0.18)" }}>
-                  Upload Keys
+                  className="w-full text-[11px] font-bold py-2 rounded-lg transition-all hover:brightness-110 flex items-center justify-center gap-1.5 mt-1"
+                  style={{ background: "rgba(183,255,24,0.10)", color: NEON, border: "1px solid rgba(183,255,24,0.20)" }}>
+                  <Upload className="w-3 h-3" /> Upload Keys
                 </button>
               </div>
             ) : (
@@ -809,25 +879,83 @@ function DashboardTab({
               </div>
 
               {profilePct < 100 && nextSteps.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[10px] text-white/25 mb-1">Recommended next step:</p>
-                  <button onClick={() => onGoTo("settings", "profile")}
-                    className="w-full flex items-center gap-2.5 text-left group">
-                    <div className="w-4 h-4 rounded-full border shrink-0 flex items-center justify-center"
-                      style={{ borderColor: "rgba(255,255,255,0.1)" }}>
-                      <Circle className="w-1.5 h-1.5 text-white/15" />
-                    </div>
-                    <span className="flex-1 text-xs text-white/40 group-hover:text-white/65 transition-colors truncate">
-                      {nextSteps[0].label}
-                    </span>
-                    <span className="text-[9px] font-bold shrink-0" style={{ color: NEON }}>+{nextSteps[0].pct}%</span>
-                  </button>
+                <div className="space-y-1.5">
+                  <p className="text-[10px] text-white/25 mb-2">Recommended actions:</p>
+                  {nextSteps.map((step, i) => (
+                    <button key={step.field ?? i} onClick={() => onGoTo("settings", "profile")}
+                      className="w-full flex items-center gap-2.5 text-left group py-1 rounded-lg px-2 transition-colors hover:bg-white/[0.03]">
+                      <div className="w-4 h-4 rounded-full border shrink-0 flex items-center justify-center"
+                        style={{ borderColor: "rgba(255,255,255,0.12)" }}>
+                        <Circle className="w-1.5 h-1.5 text-white/15" />
+                      </div>
+                      <span className="flex-1 text-xs text-white/40 group-hover:text-white/65 transition-colors truncate">
+                        {step.label}
+                      </span>
+                      <span className="text-[9px] font-black shrink-0" style={{ color: NEON }}>+{step.pct}%</span>
+                    </button>
+                  ))}
                 </div>
               )}
 
               {profilePct === 100 && (
                 <div className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: NEON }}>
                   <CheckCircle2 className="w-3.5 h-3.5" /> All fields complete
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Recent Activity */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-sm font-black text-white">Recent Activity</h3>
+            </div>
+            <div className="rounded-2xl p-4"
+              style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              {activeCampaigns.length === 0 ? (
+                <div className="flex flex-col items-center py-4 text-center">
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2"
+                    style={{ background: "rgba(255,255,255,0.04)" }}>
+                    <Activity className="w-4 h-4 text-white/15" />
+                  </div>
+                  <p className="text-[11px] font-semibold text-white/25 mb-1">No activity yet</p>
+                  <p className="text-[10px] text-white/15 leading-relaxed">
+                    Creator joins, key claims, and content submissions will appear here once your campaign is live.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {[
+                    d.totalParticipants > 0 && {
+                      icon: Users, color: NEON,
+                      text: `${d.totalParticipants} creator${d.totalParticipants === 1 ? "" : "s"} enrolled`,
+                      sub: "Active campaign",
+                    },
+                    contentTotal > 0 && {
+                      icon: Film, color: "#f472b6",
+                      text: `${contentTotal} piece${contentTotal === 1 ? "" : "s"} of content`,
+                      sub: "Submitted this cycle",
+                    },
+                    demoKeys.available < 10 && {
+                      icon: KeyRound, color: "#fb923c",
+                      text: `${demoKeys.available} demo keys remaining`,
+                      sub: "Consider uploading more",
+                    },
+                  ].filter(Boolean).slice(0, 3).map((item: any, i) => (
+                    <div key={i} className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
+                        style={{ background: `${item.color}12` }}>
+                        <item.icon className="w-3 h-3" style={{ color: item.color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[11px] font-semibold text-white/70 truncate">{item.text}</div>
+                        <div className="text-[9px] text-white/30">{item.sub}</div>
+                      </div>
+                    </div>
+                  ))}
+                  {[d.totalParticipants > 0, contentTotal > 0, demoKeys.available < 10].filter(Boolean).length === 0 && (
+                    <p className="text-[11px] text-white/25 text-center py-2">Campaign is warming up…</p>
+                  )}
                 </div>
               )}
             </div>
