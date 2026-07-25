@@ -320,72 +320,54 @@ function StepCard({
   const isCompleted = state === "completed";
   const isUpcoming  = state === "upcoming";
 
-  return (
-    <div className={`rounded-2xl transition-all duration-500 ${isActive ? "gf-step-glow" : ""}`}
-      style={{
-        background: isUpcoming ? "rgba(255,255,255,0.015)" : CARD_BG,
-        border: `1px solid ${isActive ? "rgba(183,255,24,0.35)" : isCompleted ? "rgba(183,255,24,0.12)" : "rgba(255,255,255,0.06)"}`,
-        opacity: isUpcoming ? 0.45 : 1,
-        filter: isUpcoming ? "grayscale(0.6)" : "none",
-        pointerEvents: isUpcoming ? "none" : "auto",
-      }}>
-
-      {/* Step header row */}
-      <div className="flex items-center gap-4 px-6 py-4">
-        {/* Number badge */}
-        <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-sm font-black transition-all duration-300"
-          style={{
-            background: isCompleted ? NEON : isActive ? "rgba(183,255,24,0.12)" : "rgba(255,255,255,0.06)",
-            color: isCompleted ? "#070b10" : isActive ? NEON : "rgba(255,255,255,0.4)",
-            border: `1.5px solid ${isActive ? "rgba(183,255,24,0.4)" : "transparent"}`,
-          }}>
-          {isCompleted ? <Check className="w-4 h-4" /> : number}
+  if (isUpcoming) {
+    return (
+      <div className="flex items-center gap-3.5 py-2" style={{ opacity: 0.25, pointerEvents: "none" }}>
+        <div className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[11px] font-black"
+          style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.4)" }}>
+          {number}
         </div>
+        <span className="text-sm text-white/40">{title}</span>
+      </div>
+    );
+  }
 
-        {/* Title */}
+  if (isCompleted) {
+    return (
+      <div className="flex items-center gap-3.5 py-2.5"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+        <div className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center"
+          style={{ background: NEON }}>
+          <Check className="w-3.5 h-3.5" style={{ color: "#070b10" }} />
+        </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-black transition-colors duration-300"
-              style={{ color: isActive ? "#fff" : isCompleted ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.35)" }}>
-              {title}
-            </h3>
-            {isCompleted && (
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded"
-                style={{ background: "rgba(183,255,24,0.1)", color: NEON }}>
-                Complete
-              </span>
-            )}
-          </div>
-          {isCompleted && completedLine && (
-            <p className="text-[11px] text-white/35 mt-0.5 truncate">{completedLine}</p>
+          <span className="text-sm font-bold text-white/65">{title}</span>
+          {completedLine && (
+            <span className="text-[11px] text-white/30 ml-2">{completedLine}</span>
           )}
         </div>
-
-        {/* Edit link for completed steps */}
-        {isCompleted && onEdit && (
+        {onEdit && (
           <button onClick={onEdit}
-            className="text-[11px] font-bold transition-colors px-3 py-1 rounded-lg"
-            style={{ color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.04)" }}
-            onMouseOver={e => (e.currentTarget.style.color = "#fff")}
-            onMouseOut={e => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}>
+            className="text-[11px] font-bold text-white/30 hover:text-white/70 transition-colors shrink-0 px-2 py-1">
             Edit
           </button>
         )}
-
-        {/* Icon for upcoming */}
-        {isUpcoming && (
-          <Icon className="w-4 h-4 shrink-0" style={{ color: "rgba(255,255,255,0.2)" }} />
-        )}
       </div>
+    );
+  }
 
-      {/* Step content (only shown when active) */}
-      {isActive && (
-        <div className="px-6 pb-6 gf-fade-up">
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "20px" }}>
-            {children}
-          </div>
+  return (
+    <div className="gf-fade-up">
+      <div className="flex items-center gap-3.5 mb-7">
+        <div className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[11px] font-black"
+          style={{ background: NEON, color: "#070b10" }}>
+          {number}
         </div>
-      )}
+        <h3 className="text-base font-black text-white">{title}</h3>
+      </div>
+      <div className="pl-[42px]">
+        {children}
+      </div>
     </div>
   );
 }
@@ -621,135 +603,8 @@ const CARD_IMG_SEED: Record<string, string> = {
   "custom-campaign":  "0842",  // dark architecture
 };
 
-function ThinTypeCard({
-  type, isCenter, onClick,
-}: {
-  type: CampaignType; isCenter: boolean; onClick: () => void;
-}) {
-  const accent = TYPE_ACCENT[type.slug] ?? NEON;
-  const rgb    = ACCENT_RGB[accent] ?? "183,255,27";
-  const seed   = CARD_IMG_SEED[type.slug] ?? "1000";
-
-  return (
-    <div
-      onClick={onClick}
-      className="relative flex flex-col overflow-hidden cursor-pointer select-none"
-      style={{
-        flex: isCenter ? "1.08" : "1",
-        borderRadius: "18px",
-        background: CARD_BG,
-        border: `1.5px solid ${isCenter ? `rgba(${rgb},0.30)` : "rgba(255,255,255,0.07)"}`,
-        boxShadow: isCenter
-          ? `0 28px 64px 0 rgba(${rgb},0.18), 0 0 0 1px rgba(${rgb},0.06)`
-          : "none",
-        transform: isCenter ? "translateY(-14px) scale(1.03)" : "scale(0.97)",
-        opacity: isCenter ? 1 : 0.55,
-        filter: isCenter ? "none" : "saturate(0.4) brightness(0.75)",
-        transition: "all 0.35s cubic-bezier(0.22,1,0.36,1)",
-        padding: "0 0 28px 0",
-        zIndex: isCenter ? 2 : 1,
-      }}>
-
-      {/* ── Full-width gaming image header ── */}
-      <div className="relative w-full overflow-hidden shrink-0" style={{ height: "190px", borderRadius: "18px 18px 0 0" }}>
-        <img
-          src={`https://picsum.photos/seed/${seed}/400/380`}
-          alt=""
-          draggable={false}
-          className="w-full h-full object-cover"
-          style={{ display: "block" }}
-        />
-        {/* dark base overlay so text is always readable */}
-        <div className="absolute inset-0" style={{ background: "rgba(7,11,16,0.40)" }} />
-        {/* accent colour tint rising from the bottom */}
-        <div className="absolute inset-0" style={{
-          background: `linear-gradient(to top, rgba(${rgb},0.32) 0%, transparent 55%)`,
-        }} />
-        {/* title + badge sit over the image */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
-          {type.recommended && (
-            <div className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mb-2"
-              style={{ background: "rgba(251,146,60,0.22)", color: "#fb923c", backdropFilter: "blur(6px)" }}>
-              ★ Best
-            </div>
-          )}
-          <h3 className="text-[15px] font-black leading-tight text-white drop-shadow-md">
-            {type.shortName}
-          </h3>
-          <span className="text-[10px] font-bold" style={{ color: accent, textShadow: `0 0 12px ${accent}` }}>
-            {type.duration} days
-          </span>
-        </div>
-      </div>
-
-      {/* Short description */}
-      <p className="px-4 pt-4 text-[11px] leading-relaxed line-clamp-2"
-        style={{ color: isCenter ? "rgba(255,255,255,0.50)" : "rgba(255,255,255,0.25)", minHeight: "36px" }}>
-        {type.description}
-      </p>
-
-      {/* Estimated results */}
-      <div className="px-4 mt-3 flex-1">
-        <div className="text-[9px] font-bold uppercase tracking-widest mb-2"
-          style={{ color: isCenter ? `rgba(${rgb},0.55)` : "rgba(255,255,255,0.20)" }}>
-          Estimated Results
-        </div>
-        <div className="space-y-0">
-          {[
-            { e: "🎥", label: `${type.estimated.clips}+ Clips` },
-            { e: "📸", label: `${type.estimated.screenshots} Screenshots` },
-            { e: "💬", label: `${type.estimated.feedback} Creator Reviews` },
-          ].map((row, i) => (
-            <div key={i} className="flex items-center gap-2 py-2.5"
-              style={{ borderBottom: i < 2 ? `1px solid ${isCenter ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)"}` : "none" }}>
-              <span className="text-[13px]">{row.e}</span>
-              <span className="text-[11px]" style={{ color: isCenter ? "rgba(255,255,255,0.65)" : "rgba(255,255,255,0.30)" }}>
-                {row.label}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* Creator tasks */}
-        <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${isCenter ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)"}` }}>
-          <div className="text-[9px] font-bold uppercase tracking-widest mb-2"
-            style={{ color: isCenter ? `rgba(${rgb},0.55)` : "rgba(255,255,255,0.20)" }}>
-            Creators Complete
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {type.pills.map(({ ct }) => (
-              <span key={ct} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md"
-                style={{
-                  background: isCenter ? `rgba(${rgb},0.10)` : "rgba(255,255,255,0.04)",
-                  color: isCenter ? accent : "rgba(255,255,255,0.30)",
-                  border: `1px solid ${isCenter ? `rgba(${rgb},0.20)` : "rgba(255,255,255,0.06)"}`,
-                }}>
-                <Check style={{ width: "9px", height: "9px" }} />
-                {ct === "clip" ? "Gameplay Clip" : ct === "screenshot" ? "Screenshot" : ct === "reel" ? "Reel" : ct === "stream" ? "Livestream" : ct === "feedback" ? "Feedback" : ct}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* CTA button */}
-      <div className="px-4 mt-5">
-        <div className="w-full py-3.5 rounded-xl text-[13px] font-black text-center transition-all"
-          style={{
-            background: isCenter ? accent : "rgba(255,255,255,0.05)",
-            color: isCenter ? "#070b10" : "rgba(255,255,255,0.35)",
-            border: isCenter ? "none" : "1px solid rgba(255,255,255,0.08)",
-            boxShadow: isCenter ? `0 0 24px 0 rgba(${rgb},0.30)` : "none",
-          }}>
-          {isCenter ? "Use Campaign →" : type.shortName}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─────────────────────────────────────────────
-// Campaign type carousel — 3 cards visible, center elevated
+// Campaign type list — clean row items
 // ─────────────────────────────────────────────
 
 function TypeCardCarousel({
@@ -759,82 +614,56 @@ function TypeCardCarousel({
   selectedType: CampaignType | null;
   onSelectAndContinue: (type: CampaignType) => void;
 }) {
-  const n = CAMPAIGN_TYPES.length;
-  const initIdx = selectedType
-    ? Math.max(0, CAMPAIGN_TYPES.findIndex(t => t.slug === selectedType.slug))
-    : 1;
-  const [centerIdx, setCenterIdx] = useState(initIdx);
-
-  const prev = (centerIdx - 1 + n) % n;
-  const next = (centerIdx + 1) % n;
-
-  const visible = [
-    { type: CAMPAIGN_TYPES[prev],      isCenter: false, idx: prev },
-    { type: CAMPAIGN_TYPES[centerIdx], isCenter: true,  idx: centerIdx },
-    { type: CAMPAIGN_TYPES[next],      isCenter: false, idx: next },
-  ];
-
-  const centerAccent = TYPE_ACCENT[CAMPAIGN_TYPES[centerIdx].slug] ?? NEON;
+  const [hovered, setHovered] = useState<string | null>(null);
 
   return (
-    <div className="space-y-5">
-      {/* Arrow row above cards */}
-      <div className="flex items-center justify-between px-1">
-        <button
-          onClick={() => setCenterIdx(prev)}
-          className="flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full transition-all hover:opacity-80"
-          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.55)" }}>
-          <ChevronLeft style={{ width: "14px", height: "14px" }} /> Prev
-        </button>
+    <div className="space-y-1">
+      {CAMPAIGN_TYPES.map(type => {
+        const accent  = TYPE_ACCENT[type.slug] ?? NEON;
+        const rgb     = ACCENT_RGB[accent] ?? "183,255,27";
+        const sel     = selectedType?.slug === type.slug;
+        const hov     = hovered === type.slug;
+        const Icon    = type.icon;
 
-        <span className="text-[11px] font-bold" style={{ color: "rgba(255,255,255,0.28)" }}>
-          {centerIdx + 1} / {n}
-        </span>
-
-        <button
-          onClick={() => setCenterIdx(next)}
-          className="flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full transition-all hover:opacity-80"
-          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.55)" }}>
-          Next <ChevronRight style={{ width: "14px", height: "14px" }} />
-        </button>
-      </div>
-
-      {/* Three cards */}
-      <div className="flex items-end gap-3 pb-4">
-        {visible.map(({ type, isCenter, idx: i }) => (
-          <ThinTypeCard
+        return (
+          <button
             key={type.slug}
-            type={type}
-            isCenter={isCenter}
-            onClick={() => {
-              if (!isCenter) {
-                setCenterIdx(i);
-              } else {
-                onSelectAndContinue(type);
-              }
-            }}
-          />
-        ))}
-      </div>
+            onClick={() => onSelectAndContinue(type)}
+            onMouseEnter={() => setHovered(type.slug)}
+            onMouseLeave={() => setHovered(null)}
+            className="w-full flex items-center gap-4 px-3 py-3.5 rounded-2xl text-left transition-all group"
+            style={{ background: sel ? `rgba(${rgb},0.07)` : hov ? "rgba(255,255,255,0.03)" : "transparent" }}>
 
-      {/* Dot indicators */}
-      <div className="flex justify-center items-center gap-2">
-        {CAMPAIGN_TYPES.map((t, i) => {
-          const a = TYPE_ACCENT[t.slug] ?? NEON;
-          return (
-            <button
-              key={t.slug}
-              onClick={() => setCenterIdx(i)}
-              className="transition-all duration-300"
-              style={{
-                height: "7px",
-                width: i === centerIdx ? "22px" : "7px",
-                borderRadius: "9999px",
-                background: i === centerIdx ? a : "rgba(255,255,255,0.16)",
-              }} />
-          );
-        })}
-      </div>
+            {/* Icon */}
+            <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center transition-all"
+              style={{ background: `rgba(${rgb},${sel || hov ? 0.15 : 0.08})` }}>
+              <Icon className="w-5 h-5 transition-colors" style={{ color: accent }} />
+            </div>
+
+            {/* Name + description */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-sm font-black text-white leading-none">{type.shortName}</span>
+                {type.recommended && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
+                    style={{ background: "rgba(251,146,60,0.15)", color: "#fb923c" }}>★ Best</span>
+                )}
+              </div>
+              <p className="text-[11px] leading-snug text-white/38 truncate">{type.shortDesc}</p>
+            </div>
+
+            {/* Key stats */}
+            <div className="text-right shrink-0 hidden sm:block">
+              <div className="text-xs font-bold text-white/55">{type.duration} days</div>
+              <div className="text-[10px] text-white/28">{type.capacity} creators</div>
+            </div>
+
+            {/* Arrow */}
+            <ChevronRight className="w-4 h-4 shrink-0 transition-all group-hover:translate-x-0.5"
+              style={{ color: sel ? accent : "rgba(255,255,255,0.18)" }} />
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -870,32 +699,6 @@ function StepPersonalise({ type, settings, onChange }: {
 
   return (
     <div className="space-y-6 gf-fade-up">
-
-      {/* ── Compact campaign summary card ── */}
-      <div className="flex items-center gap-3.5 p-4 rounded-2xl"
-        style={{ background: `rgba(${rgb},0.05)`, border: `1px solid rgba(${rgb},0.18)` }}>
-        {/* Tiny artwork thumbnail */}
-        <div className="relative shrink-0 rounded-xl overflow-hidden" style={{ width: "52px", height: "52px" }}>
-          <img src={`https://picsum.photos/seed/${seed}/120/120`} alt="" className="w-full h-full object-cover" draggable={false} />
-          <div className="absolute inset-0" style={{ background: `rgba(${rgb},0.20)` }} />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="text-[9px] font-bold uppercase tracking-widest mb-0.5" style={{ color: `rgba(${rgb},0.65)` }}>
-            Selected Campaign
-          </div>
-          <div className="text-sm font-black text-white leading-tight">{type.shortName}</div>
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-1.5">
-            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.45)" }}>⏱ {type.duration} Days</span>
-            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.18)" }}>·</span>
-            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.45)" }}>👥 {type.capacity} Creators</span>
-            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.18)" }}>·</span>
-            <span className="text-[10px] inline-flex items-center gap-0.5" style={{ color: accent }}>
-              <ShieldCheck style={{ width: "10px", height: "10px" }} /> Verified Campaign
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* ── Campaign Description ── */}
       <div>
@@ -1043,103 +846,81 @@ function KeyUploadArea({
   }, [onChange]);
 
   return (
-    <div className="rounded-2xl flex flex-col overflow-hidden"
-      style={{ background: `rgba(${accentRgb},0.04)`, border: `1px solid rgba(${accentRgb},0.16)` }}>
-
-      {/* Header */}
-      <div className="px-5 pt-5 pb-3">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center"
-            style={{ background: `rgba(${accentRgb},0.14)` }}>
-            <KeyRound className="w-3.5 h-3.5" style={{ color: accent }} />
-          </div>
+    <div className="space-y-3">
+      {/* Label + count */}
+      <div className="flex items-start justify-between gap-2">
+        <div>
           <span className="text-sm font-black text-white">{label}</span>
+          <p className="text-[11px] text-white/35 mt-0.5 leading-snug">{description}</p>
         </div>
-        <p className="text-[11px] text-white/35 leading-relaxed pl-10">{description}</p>
+        {total > 0 && (
+          <span className="text-sm font-black shrink-0 mt-0.5" style={{ color: met ? NEON : accent }}>
+            {total}{needed > 0 ? ` / ${needed}` : ""}
+          </span>
+        )}
       </div>
 
-      {/* Progress */}
-      <div className="px-5 pb-4">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-white/30">
-            {needed > 0 ? `${total} / ${needed} Imported` : `${total} Imported`}
-          </span>
-          {met && (
-            <span className="flex items-center gap-1 text-[10px] font-black" style={{ color: NEON }}>
-              <CheckCircle2 className="w-3 h-3" /> Ready
-            </span>
-          )}
-        </div>
-        <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+      {/* Progress bar */}
+      {needed > 0 && (
+        <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
           <div className="h-full rounded-full transition-all duration-500"
             style={{ width: `${pct}%`, background: met ? NEON : accent }} />
         </div>
-        {needed > 0 && !met && total > 0 && (
-          <p className="text-[10px] mt-1 text-white/20">{needed - total} remaining</p>
-        )}
-      </div>
+      )}
 
       {/* Drop zone */}
-      <div className="px-5 pb-4 flex-1 flex flex-col gap-3">
-        <div
-          onDragOver={e => { e.preventDefault(); setDragging(true); }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
-          onClick={() => fileRef.current?.click()}
-          className="flex flex-col items-center justify-center gap-2 rounded-xl cursor-pointer transition-all duration-200 text-center"
-          style={{
-            minHeight: "110px",
-            border: `2px dashed ${dragging ? accent : justLoaded ? "rgba(183,255,24,0.4)" : "rgba(255,255,255,0.09)"}`,
-            background: dragging ? `rgba(${accentRgb},0.1)` : justLoaded ? "rgba(183,255,24,0.04)" : "rgba(255,255,255,0.02)",
-            boxShadow: dragging ? `0 0 20px rgba(${accentRgb},0.15)` : "none",
-          }}>
-          {justLoaded ? (
-            <>
-              <CheckCircle2 className="w-7 h-7" style={{ color: NEON }} />
-              <span className="text-xs font-black" style={{ color: NEON }}>Keys loaded!</span>
-            </>
-          ) : (
-            <>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200"
-                style={{ background: dragging ? `rgba(${accentRgb},0.2)` : "rgba(255,255,255,0.04)" }}>
-                <Upload className="w-4 h-4 transition-colors" style={{ color: dragging ? accent : "rgba(255,255,255,0.25)" }} />
-              </div>
-              <p className="text-xs font-semibold text-white/40">
-                {dragging ? "Drop to import" : "Drag CSV here"}
-              </p>
-              <p className="text-[10px] font-bold" style={{ color: accent }}>Browse Files</p>
-            </>
-          )}
-        </div>
-        <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden"
-          onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
-
-        {/* Paste toggle */}
-        <button
-          onClick={() => setPasteOpen(v => !v)}
-          className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-white/30 hover:text-white/55 transition-colors">
-          <ClipboardList className="w-3.5 h-3.5" />
-          Paste Keys Manually
-          {pasteOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-        </button>
-
-        {pasteOpen && (
-          <textarea
-            value={keys}
-            onChange={e => onChange(e.target.value)}
-            placeholder={"One key per line:\nXXXXX-XXXXX-XXXXX"}
-            rows={5}
-            className="w-full rounded-xl text-[11px] font-mono text-white/70 resize-none p-3 outline-none transition-all"
-            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-          />
-        )}
-
-        {vaultAvail > 0 && (
-          <p className="text-[10px] text-white/25 text-center">
-            ↳ {vaultAvail} already in your key vault
-          </p>
+      <div
+        onDragOver={e => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
+        onClick={() => fileRef.current?.click()}
+        className="flex flex-col items-center justify-center gap-2 rounded-2xl cursor-pointer transition-all duration-200 text-center"
+        style={{
+          minHeight: "100px",
+          border: `1.5px dashed ${dragging ? accent : justLoaded ? "rgba(183,255,24,0.35)" : "rgba(255,255,255,0.09)"}`,
+          background: dragging ? `rgba(${accentRgb},0.07)` : "transparent",
+        }}>
+        {justLoaded ? (
+          <>
+            <CheckCircle2 className="w-6 h-6" style={{ color: NEON }} />
+            <span className="text-xs font-black" style={{ color: NEON }}>Keys loaded!</span>
+          </>
+        ) : (
+          <>
+            <Upload className="w-4 h-4" style={{ color: dragging ? accent : "rgba(255,255,255,0.22)" }} />
+            <p className="text-[11px] text-white/35">
+              {dragging ? "Drop to import" : "Drag a CSV here, or "}
+              {!dragging && <span className="font-bold" style={{ color: accent }}>browse</span>}
+            </p>
+          </>
         )}
       </div>
+      <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
+
+      {/* Paste toggle */}
+      <button
+        onClick={() => setPasteOpen(v => !v)}
+        className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/55 transition-colors">
+        <ClipboardList className="w-3.5 h-3.5" />
+        Paste keys manually
+        {pasteOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+      </button>
+
+      {pasteOpen && (
+        <textarea
+          value={keys}
+          onChange={e => onChange(e.target.value)}
+          placeholder={"One key per line:\nXXXXX-XXXXX-XXXXX"}
+          rows={4}
+          className="w-full rounded-xl text-[11px] font-mono text-white/65 resize-none p-3 outline-none transition-all"
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+        />
+      )}
+
+      {vaultAvail > 0 && !met && (
+        <p className="text-[10px] text-white/25">↳ {vaultAvail} already in your vault</p>
+      )}
     </div>
   );
 }
@@ -1155,66 +936,31 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull, onDemo
   return (
     <div className="space-y-6 gf-fade-up">
 
-      {/* Compact hero */}
-      <div className="flex items-start gap-4">
-        <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
-          style={{ background: "rgba(183,255,24,0.08)", border: "1px solid rgba(183,255,24,0.14)" }}>
-          <KeyRound className="w-5 h-5" style={{ color: NEON }} />
-        </div>
-        <div>
-          <h3 className="text-base font-black text-white mb-0.5">Secure Key Vault</h3>
-          <p className="text-xs text-white/40 leading-relaxed max-w-sm">
-            Upload your demo and full game keys. Gamefolio validates them automatically and securely stores them until they're distributed to creators.
-          </p>
-          <div className="flex flex-wrap items-center gap-2 mt-3">
-            {[
-              { icon: "🔒", label: "Secure Escrow" },
-              { icon: "✓",  label: "Automatic Validation" },
-              { icon: "🔑", label: "Smart Distribution" },
-            ].map(({ icon, label }) => (
-              <span key={label} className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full"
-                style={{ background: "rgba(183,255,24,0.07)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(183,255,24,0.14)" }}>
-                {icon} {label}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* Minimal lock note */}
+      <p className="text-[11px] text-white/35 flex items-center gap-1.5">
+        <Lock className="w-3 h-3 text-orange-400/70 shrink-0" />
+        Keys lock when the campaign goes live — they cannot be withdrawn once creators join.
+      </p>
 
-      {/* Compact warning */}
-      <div className="flex items-start gap-2.5 rounded-xl px-4 py-3"
-        style={{ background: "rgba(251,146,60,0.06)", border: "1px solid rgba(251,146,60,0.14)" }}>
-        <Lock className="w-3.5 h-3.5 text-orange-400 shrink-0 mt-0.5" />
-        <p className="text-[11px] text-orange-300/70">
-          Keys become locked when your campaign goes live and cannot be withdrawn once creators begin participating.
-        </p>
-      </div>
-
-      {/* Two upload cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      {/* Two upload areas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
         <KeyUploadArea
           label="Demo Keys" accent="#60a5fa" accentRgb="96,165,250"
-          description="Creators receive these immediately after joining your campaign."
+          description="Issued to creators when they join."
           keys={demoKeys} needed={type.demoKeys} vaultAvail={vaultDemo}
           onChange={onDemoChange} />
         <KeyUploadArea
           label="Full Game Keys" accent="#fb923c" accentRgb="251,146,60"
-          description="Creators receive these after successfully completing the campaign."
+          description="Rewarded on completion."
           keys={fullKeys} needed={type.fullKeys} vaultAvail={vaultFull}
           onChange={onFullChange} />
       </div>
 
-      {/* All ready banner */}
+      {/* All ready */}
       {allReady && (
-        <div className="flex items-center gap-3 p-4 rounded-xl gf-scale-in"
-          style={{ background: "rgba(183,255,24,0.06)", border: "1px solid rgba(183,255,24,0.2)" }}>
-          <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: NEON }} />
-          <div>
-            <div className="text-sm font-bold" style={{ color: NEON }}>All keys ready</div>
-            <div className="text-[11px] text-white/40 mt-0.5">
-              {type.demoKeys} demo keys · {type.fullKeys} full game keys committed to vault on launch
-            </div>
-          </div>
+        <div className="flex items-center gap-2 text-sm font-bold gf-scale-in" style={{ color: NEON }}>
+          <CheckCircle2 className="w-4 h-4" />
+          All keys ready — {type.demoKeys} demo · {type.fullKeys} full game
         </div>
       )}
     </div>
@@ -2042,19 +1788,19 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
 
         {/* ── Step 1: open layout when active, compact row when completed ── */}
         {(mode === "auto" ? autoStep > 1 : currentStep > 1) ? (
-          /* Completed row — compact, no heavy border */
-          <div className="flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all"
-            style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(183,255,24,0.12)" }}>
-            <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+          /* Completed row — matches StepCard completed style */
+          <div className="flex items-center gap-3.5 py-2.5"
+            style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+            <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
               style={{ background: NEON }}>
-              <Check className="w-4 h-4" style={{ color: "#070b10" }} />
+              <Check className="w-3.5 h-3.5" style={{ color: "#070b10" }} />
             </div>
             <div className="flex-1 min-w-0">
-              <span className="text-xs font-black text-white/70">
+              <span className="text-sm font-bold text-white/65">
                 {mode === "auto" ? "Automatic Campaigns" : selectedType?.shortName ?? ""}
               </span>
               {mode === "manual" && selectedType && (
-                <span className="text-[10px] text-white/30 ml-2">{selectedType.bestFor}</span>
+                <span className="text-[11px] text-white/30 ml-2">{selectedType.bestFor}</span>
               )}
             </div>
             <button
@@ -2062,10 +1808,7 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
                 if (mode === "auto") setAutoStep(1);
                 else { setCurrentStep(1); setConfirmed(false); }
               }}
-              className="text-[11px] font-bold px-3 py-1 rounded-lg transition-colors"
-              style={{ color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.04)" }}
-              onMouseOver={e => (e.currentTarget.style.color = "#fff")}
-              onMouseOut={e => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}>
+              className="text-[11px] font-bold text-white/30 hover:text-white/70 transition-colors shrink-0 px-2 py-1">
               Change
             </button>
           </div>
