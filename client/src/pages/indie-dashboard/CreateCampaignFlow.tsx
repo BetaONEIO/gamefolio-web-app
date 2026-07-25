@@ -1015,16 +1015,19 @@ function parseCSVKeys(csv: string): string[] {
 }
 
 function KeyUploadArea({
-  label, accent, keys, needed, vaultAvail, onChange,
+  label, accent, accentRgb, description, keys, needed, vaultAvail, onChange,
 }: {
-  label: string; accent: string; keys: string; needed: number; vaultAvail: number; onChange: (v: string) => void;
+  label: string; accent: string; accentRgb: string; description: string;
+  keys: string; needed: number; vaultAvail: number; onChange: (v: string) => void;
 }) {
   const [dragging, setDragging] = useState(false);
   const [justLoaded, setJustLoaded] = useState(false);
+  const [pasteOpen, setPasteOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const pasted = parseKeyLines(keys).length;
   const total  = vaultAvail + pasted;
-  const met    = total >= needed;
+  const met    = total >= needed && needed > 0;
+  const pct    = needed > 0 ? Math.min(100, Math.round((total / needed) * 100)) : (total > 0 ? 100 : 0);
 
   const handleFile = useCallback((file: File) => {
     const reader = new FileReader();
@@ -1034,74 +1037,109 @@ function KeyUploadArea({
       const extracted = isCSV ? parseCSVKeys(text) : parseKeyLines(text);
       onChange(extracted.join("\n"));
       setJustLoaded(true);
-      setTimeout(() => setJustLoaded(false), 1800);
+      setTimeout(() => setJustLoaded(false), 2000);
     };
     reader.readAsText(file);
   }, [onChange]);
 
   return (
-    <div className="space-y-3">
+    <div className="rounded-2xl flex flex-col overflow-hidden"
+      style={{ background: `rgba(${accentRgb},0.04)`, border: `1px solid rgba(${accentRgb},0.16)` }}>
+
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="text-sm font-black text-white">{label}</div>
-          <div className="text-[11px] text-white/30 mt-0.5">{needed} required</div>
-        </div>
-        {/* Counter badge */}
-        <div className="text-right">
-          <div className="text-2xl font-black transition-all duration-300 gf-scale-in" style={{ color: met ? NEON : "rgba(255,255,255,0.6)", lineHeight: 1 }}>
-            {total}
+      <div className="px-5 pt-5 pb-3">
+        <div className="flex items-center gap-3 mb-1">
+          <div className="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center"
+            style={{ background: `rgba(${accentRgb},0.14)` }}>
+            <KeyRound className="w-3.5 h-3.5" style={{ color: accent }} />
           </div>
-          <div className="text-[9px] text-white/25 uppercase tracking-wider">{met ? "✓ Ready" : `of ${needed}`}</div>
+          <span className="text-sm font-black text-white">{label}</span>
         </div>
+        <p className="text-[11px] text-white/35 leading-relaxed pl-10">{description}</p>
       </div>
 
-      {/* Progress bar */}
-      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
-        <div className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${Math.min(100, (total / needed) * 100)}%`, background: met ? NEON : accent }} />
-      </div>
-
-      {/* Drag & drop area */}
-      <div
-        onDragOver={e => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
-        onClick={() => fileRef.current?.click()}
-        className="flex flex-col items-center justify-center gap-2 py-5 rounded-xl cursor-pointer transition-all"
-        style={{
-          border: `1.5px dashed ${dragging ? NEON : justLoaded ? "rgba(183,255,24,0.4)" : "rgba(255,255,255,0.1)"}`,
-          background: dragging ? "rgba(183,255,24,0.04)" : justLoaded ? "rgba(183,255,24,0.03)" : "rgba(255,255,255,0.02)",
-        }}>
-        {justLoaded ? (
-          <>
-            <CheckCircle2 className="w-6 h-6" style={{ color: NEON }} />
-            <span className="text-xs font-bold" style={{ color: NEON }}>Keys loaded!</span>
-          </>
-        ) : (
-          <>
-            <Upload className="w-5 h-5 text-white/30" />
-            <span className="text-xs font-semibold text-white/40">Drop CSV or TXT file</span>
-            <span className="text-[10px] text-white/20">or click to browse</span>
-          </>
+      {/* Progress */}
+      <div className="px-5 pb-4">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-white/30">
+            {needed > 0 ? `${total} / ${needed} Imported` : `${total} Imported`}
+          </span>
+          {met && (
+            <span className="flex items-center gap-1 text-[10px] font-black" style={{ color: NEON }}>
+              <CheckCircle2 className="w-3 h-3" /> Ready
+            </span>
+          )}
+        </div>
+        <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+          <div className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${pct}%`, background: met ? NEON : accent }} />
+        </div>
+        {needed > 0 && !met && total > 0 && (
+          <p className="text-[10px] mt-1 text-white/20">{needed - total} remaining</p>
         )}
       </div>
-      <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden"
-        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
 
-      {/* Paste textarea */}
-      <textarea
-        style={{ ...fieldStyle, minHeight: "80px", resize: "vertical", fontSize: "11px", fontFamily: "monospace" } as any}
-        value={keys}
-        onChange={e => onChange(e.target.value)}
-        placeholder={"Or paste one key per line…\nKEY-XXXX-XXXX\nKEY-YYYY-YYYY"}
-      />
+      {/* Drop zone */}
+      <div className="px-5 pb-4 flex-1 flex flex-col gap-3">
+        <div
+          onDragOver={e => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
+          onClick={() => fileRef.current?.click()}
+          className="flex flex-col items-center justify-center gap-2 rounded-xl cursor-pointer transition-all duration-200 text-center"
+          style={{
+            minHeight: "110px",
+            border: `2px dashed ${dragging ? accent : justLoaded ? "rgba(183,255,24,0.4)" : "rgba(255,255,255,0.09)"}`,
+            background: dragging ? `rgba(${accentRgb},0.1)` : justLoaded ? "rgba(183,255,24,0.04)" : "rgba(255,255,255,0.02)",
+            boxShadow: dragging ? `0 0 20px rgba(${accentRgb},0.15)` : "none",
+          }}>
+          {justLoaded ? (
+            <>
+              <CheckCircle2 className="w-7 h-7" style={{ color: NEON }} />
+              <span className="text-xs font-black" style={{ color: NEON }}>Keys loaded!</span>
+            </>
+          ) : (
+            <>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200"
+                style={{ background: dragging ? `rgba(${accentRgb},0.2)` : "rgba(255,255,255,0.04)" }}>
+                <Upload className="w-4 h-4 transition-colors" style={{ color: dragging ? accent : "rgba(255,255,255,0.25)" }} />
+              </div>
+              <p className="text-xs font-semibold text-white/40">
+                {dragging ? "Drop to import" : "Drag CSV here"}
+              </p>
+              <p className="text-[10px] font-bold" style={{ color: accent }}>Browse Files</p>
+            </>
+          )}
+        </div>
+        <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
 
-      {vaultAvail > 0 && (
-        <p className="text-[10px] text-white/30">
-          ↳ {vaultAvail} already in your key vault
-        </p>
-      )}
+        {/* Paste toggle */}
+        <button
+          onClick={() => setPasteOpen(v => !v)}
+          className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-white/30 hover:text-white/55 transition-colors">
+          <ClipboardList className="w-3.5 h-3.5" />
+          Paste Keys Manually
+          {pasteOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+        </button>
+
+        {pasteOpen && (
+          <textarea
+            value={keys}
+            onChange={e => onChange(e.target.value)}
+            placeholder={"One key per line:\nXXXXX-XXXXX-XXXXX"}
+            rows={5}
+            className="w-full rounded-xl text-[11px] font-mono text-white/70 resize-none p-3 outline-none transition-all"
+            style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+          />
+        )}
+
+        {vaultAvail > 0 && (
+          <p className="text-[10px] text-white/25 text-center">
+            ↳ {vaultAvail} already in your key vault
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -1115,28 +1153,53 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull, onDemo
     (vaultFull + parseKeyLines(fullKeys).length) >= type.fullKeys;
 
   return (
-    <StepHero
-      icon={KeyRound}
-      title="Secure Key Vault"
-      description="Your game keys are encrypted and held in escrow. Creators receive a demo key on join, and a full game key when they complete the campaign."
-      sideIcons={[
-        { icon: ShieldCheck,  top: "28px",    right: "60px" },
-        { icon: Lock,         bottom: "30px", left:  "60px" },
-        { icon: CheckCircle2, bottom: "28px", right: "80px" },
-      ]}
-      features={[
-        { icon: Lock,         title: "Encrypted Escrow",        desc: "Keys are locked in the vault at launch and securely stored." },
-        { icon: CheckCircle2, title: "Automatic Validation",    desc: "Duplicate and invalid keys are detected automatically." },
-        { icon: KeyRound,     title: "Smart Distribution",      desc: "Demo keys on join · full game keys on completion." },
-      ]}
-      banner={{ icon: Lock, text: "Keys committed to the vault at launch cannot be withdrawn once creators join.", accent: "#fb923c", rgb: "251,146,60" }}
-    >
-      {/* Two-column key areas */}
-      <div className="grid grid-cols-2 gap-6">
-        <KeyUploadArea label="Demo Keys" accent="#60a5fa"
+    <div className="space-y-6 gf-fade-up">
+
+      {/* Compact hero */}
+      <div className="flex items-start gap-4">
+        <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
+          style={{ background: "rgba(183,255,24,0.08)", border: "1px solid rgba(183,255,24,0.14)" }}>
+          <KeyRound className="w-5 h-5" style={{ color: NEON }} />
+        </div>
+        <div>
+          <h3 className="text-base font-black text-white mb-0.5">Secure Key Vault</h3>
+          <p className="text-xs text-white/40 leading-relaxed max-w-sm">
+            Upload your demo and full game keys. Gamefolio validates them automatically and securely stores them until they're distributed to creators.
+          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            {[
+              { icon: "🔒", label: "Secure Escrow" },
+              { icon: "✓",  label: "Automatic Validation" },
+              { icon: "🔑", label: "Smart Distribution" },
+            ].map(({ icon, label }) => (
+              <span key={label} className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full"
+                style={{ background: "rgba(183,255,24,0.07)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(183,255,24,0.14)" }}>
+                {icon} {label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Compact warning */}
+      <div className="flex items-start gap-2.5 rounded-xl px-4 py-3"
+        style={{ background: "rgba(251,146,60,0.06)", border: "1px solid rgba(251,146,60,0.14)" }}>
+        <Lock className="w-3.5 h-3.5 text-orange-400 shrink-0 mt-0.5" />
+        <p className="text-[11px] text-orange-300/70">
+          Keys become locked when your campaign goes live and cannot be withdrawn once creators begin participating.
+        </p>
+      </div>
+
+      {/* Two upload cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <KeyUploadArea
+          label="Demo Keys" accent="#60a5fa" accentRgb="96,165,250"
+          description="Creators receive these immediately after joining your campaign."
           keys={demoKeys} needed={type.demoKeys} vaultAvail={vaultDemo}
           onChange={onDemoChange} />
-        <KeyUploadArea label="Full Game Keys" accent="#fb923c"
+        <KeyUploadArea
+          label="Full Game Keys" accent="#fb923c" accentRgb="251,146,60"
+          description="Creators receive these after successfully completing the campaign."
           keys={fullKeys} needed={type.fullKeys} vaultAvail={vaultFull}
           onChange={onFullChange} />
       </div>
@@ -1154,7 +1217,7 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull, onDemo
           </div>
         </div>
       )}
-    </StepHero>
+    </div>
   );
 }
 
