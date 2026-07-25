@@ -165,9 +165,11 @@ function downloadErrorReport(validation: UploadValidation) {
 
 function UploadModal({
   bounties,
+  initialKeyType = "demo",
   onClose,
 }: {
   bounties: BountyData[];
+  initialKeyType?: KeyType;
   onClose: () => void;
 }) {
   const { toast } = useToast();
@@ -175,7 +177,7 @@ function UploadModal({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [method, setMethod] = useState<UploadMethod>("paste");
-  const [keyType, setKeyType] = useState<KeyType>("demo");
+  const [keyType, setKeyType] = useState<KeyType>(initialKeyType);
   const [platform, setPlatform] = useState<Platform>("steam");
   const [selectedBountyId, setSelectedBountyId] = useState<number | null>(
     bounties.length === 1 ? bounties[0].id : null
@@ -189,13 +191,22 @@ function UploadModal({
 
   const uploadMutation = useMutation({
     mutationFn: async (keys: ParsedKey[]) => {
-      if (!selectedBountyId) throw new Error("No campaign selected");
-      const demoKeys = keyType === "demo" ? keys.map(k => k.value) : [];
-      const fullKeys = keyType === "full" ? keys.map(k => k.value) : [];
-      const res = await apiRequest("POST", `/api/games/bounties/${selectedBountyId}/keys`, {
-        demoKeys, fullKeys,
-      });
-      return res.json();
+      const keyValues = keys.map(k => k.value);
+      if (selectedBountyId) {
+        // Upload to a specific campaign vault
+        const demoKeys = keyType === "demo" ? keyValues : [];
+        const fullKeys = keyType === "full" ? keyValues : [];
+        const res = await apiRequest("POST", `/api/games/bounties/${selectedBountyId}/keys`, { demoKeys, fullKeys });
+        return res.json();
+      } else {
+        // Upload to the general key pool (no campaign required)
+        const res = await apiRequest("POST", "/api/campaigns/auto/keys", { keyType, keys: keyValues });
+        const data = await res.json();
+        return {
+          demoKeysAdded: keyType === "demo" ? (data.added ?? 0) : 0,
+          fullKeysAdded: keyType === "full" ? (data.added ?? 0) : 0,
+        };
+      }
     },
     onSuccess: (data) => {
       setDoneResult({ demo: data.demoKeysAdded ?? 0, full: data.fullKeysAdded ?? 0 });
@@ -649,7 +660,7 @@ function VaultCard({ bounty }: { bounty: BountyData }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function KeyManagementTab() {
-  const [showUpload, setShowUpload] = useState(false);
+  const [showUpload, setShowUpload] = useState<KeyType | null>(null);
   const [showStatusInfo, setShowStatusInfo] = useState(false);
 
   const { data: bounties = [], isLoading: bounciesLoading } = useQuery<BountyData[]>({
@@ -694,13 +705,20 @@ export default function KeyManagementTab() {
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <Info className="w-4 h-4" />
           </button>
-          <button
-            onClick={() => setShowUpload(true)}
-            disabled={bounties.length === 0}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 disabled:opacity-40"
-            style={{ background: NEON, color: "#070b10" }}>
-            <Upload className="w-4 h-4" /> Upload Keys
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowUpload("demo")}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-black transition-all hover:brightness-110"
+              style={{ background: "rgba(96,165,250,0.14)", color: "#60a5fa", border: "1px solid rgba(96,165,250,0.25)" }}>
+              <Upload className="w-3.5 h-3.5" /> Demo Keys
+            </button>
+            <button
+              onClick={() => setShowUpload("full")}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-black transition-all hover:brightness-110"
+              style={{ background: "rgba(251,146,60,0.14)", color: "#fb923c", border: "1px solid rgba(251,146,60,0.25)" }}>
+              <Upload className="w-3.5 h-3.5" /> Full Keys
+            </button>
+          </div>
         </div>
       </div>
 
@@ -741,7 +759,10 @@ export default function KeyManagementTab() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {[
               {
+                keyTypeId: "demo" as KeyType,
                 label: "Demo Keys",
+                accent: "#60a5fa",
+                rgb: "96,165,250",
                 stats: [
                   { label: "Available",  value: demoKeys.available,  color: NEON },
                   { label: "Committed",  value: totalDemoCommitted,  color: "#60a5fa" },
@@ -750,7 +771,10 @@ export default function KeyManagementTab() {
                 ],
               },
               {
+                keyTypeId: "full" as KeyType,
                 label: "Full Game Keys",
+                accent: "#fb923c",
+                rgb: "251,146,60",
                 stats: [
                   { label: "Available",  value: fullKeys.available,  color: NEON },
                   { label: "Committed",  value: totalFullCommitted,  color: "#60a5fa" },
@@ -758,15 +782,23 @@ export default function KeyManagementTab() {
                   { label: "Invalid",    value: Math.max(0, (fullKeys.uploaded ?? 0) - (fullKeys.valid ?? fullKeys.available)), color: "#f87171" },
                 ],
               },
-            ].map(({ label, stats }) => (
+            ].map(({ keyTypeId, label, accent, rgb, stats }) => (
               <div key={label} className="rounded-2xl p-5"
                 style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <div className="flex items-center gap-2.5 mb-5">
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-                    style={{ background: "rgba(183,255,24,0.08)" }}>
-                    <KeyRound className="w-4 h-4" style={{ color: NEON }} />
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                      style={{ background: `rgba(${rgb},0.10)` }}>
+                      <KeyRound className="w-4 h-4" style={{ color: accent }} />
+                    </div>
+                    <span className="text-sm font-black text-white">{label}</span>
                   </div>
-                  <span className="text-sm font-black text-white">{label}</span>
+                  <button
+                    onClick={() => setShowUpload(keyTypeId)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black transition-all hover:brightness-110"
+                    style={{ background: `rgba(${rgb},0.12)`, color: accent, border: `1px solid rgba(${rgb},0.25)` }}>
+                    <Upload className="w-3.5 h-3.5" /> Upload
+                  </button>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {stats.map(({ label: sl, value, color }) => (
@@ -867,25 +899,16 @@ export default function KeyManagementTab() {
             </p>
           </div>
 
-          {/* ── No campaigns notice for upload ── */}
-          {bounties.length === 0 && (
-            <div className="flex items-start gap-3 rounded-xl p-4"
-              style={{ background: "rgba(251,146,60,0.07)", border: "1px solid rgba(251,146,60,0.15)" }}>
-              <AlertCircle className="w-4 h-4 text-orange-400 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs font-bold text-orange-300">Create a campaign first</p>
-                <p className="text-[11px] text-orange-300/60 mt-0.5">
-                  You need at least one campaign before you can upload keys. Go to Campaigns → Campaign Library to launch your first campaign.
-                </p>
-              </div>
-            </div>
-          )}
         </>
       )}
 
-      {/* Upload modal */}
-      {showUpload && (
-        <UploadModal bounties={bounties} onClose={() => setShowUpload(false)} />
+      {/* Upload modal — opens pre-set to whichever key type was clicked */}
+      {showUpload !== null && (
+        <UploadModal
+          bounties={bounties}
+          initialKeyType={showUpload}
+          onClose={() => setShowUpload(null)}
+        />
       )}
     </div>
   );
