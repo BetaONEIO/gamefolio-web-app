@@ -249,155 +249,176 @@ function DashboardTab({
   return (
     <div className="space-y-8">
 
-      {/* HERO — full width */}
-      <div className="rounded-2xl p-6 sm:p-8 relative overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, rgba(183,255,24,0.055) 0%, rgba(255,255,255,0.018) 100%)",
-          border: "1px solid rgba(183,255,24,0.13)",
-        }}>
-        <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full pointer-events-none"
-          style={{ background: "radial-gradient(circle, rgba(183,255,24,0.07) 0%, transparent 65%)" }} />
+      {/* HERO — banner background fills the whole card */}
+      {(() => {
+        const bannerUrl = (!imgError && (profile?.headerImageUrl || profile?.capsuleImageUrl)) ? (profile.headerImageUrl ?? profile.capsuleImageUrl) : null;
+        return (
+          <div className="rounded-2xl relative overflow-hidden group/hero"
+            style={{
+              background: bannerUrl
+                ? "transparent"
+                : "linear-gradient(135deg, rgba(183,255,24,0.055) 0%, rgba(255,255,255,0.018) 100%)",
+              border: bannerUrl ? "none" : "1px solid rgba(183,255,24,0.13)",
+              minHeight: "200px",
+            }}>
 
-        <div className="flex flex-col sm:flex-row sm:items-start gap-6 relative z-10">
-          {/* Game artwork — clickable upload */}
-          <button
-            onClick={() => artworkInputRef.current?.click()}
-            className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl shrink-0 overflow-hidden flex items-center justify-center relative group transition-transform hover:scale-[1.02]"
-            style={{ background: "rgba(183,255,24,0.08)", border: "1px solid rgba(183,255,24,0.18)", boxShadow: "0 8px 32px rgba(183,255,24,0.08)" }}
-            title="Upload game artwork">
-            {uploadImageMutation.isPending ? (
-              <Loader2 className="w-7 h-7 animate-spin" style={{ color: NEON }} />
-            ) : (profile?.capsuleImageUrl || profile?.headerImageUrl) && !imgError ? (
-              <>
-                <img
-                  src={profile.capsuleImageUrl ?? profile.headerImageUrl}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  onError={() => setImgError(true)}
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-                  <ImagePlus className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center gap-1.5 px-2 text-center">
-                <ImagePlus className="w-7 h-7" style={{ color: NEON }} />
-                <span className="text-[9px] font-bold leading-tight" style={{ color: NEON }}>Upload Art</span>
-              </div>
+            {/* Background banner image */}
+            {bannerUrl && (
+              <img
+                src={bannerUrl}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+                onError={() => setImgError(true)}
+              />
             )}
-          </button>
-          <input
-            ref={artworkInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) uploadImageMutation.mutate(file);
-              e.target.value = "";
-            }}
-          />
 
-          <div className="flex-1 min-w-0">
-            <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight mb-1">
-              {profile?.gameName ?? "Set up your game"}
-            </h2>
-            <div className="flex items-center gap-2 mb-5">
-              {profile?.releaseStatus && (
-                <span className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.45)" }}>
-                  {profile.releaseStatus.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
-                </span>
-              )}
-              {(profile?.steamUrl || profile?.epicUrl || profile?.itchUrl) && (
-                <>
-                  <span className="text-white/20">·</span>
-                  <span className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.35)" }}>
-                    {profile.steamUrl ? "Steam" : profile.epicUrl ? "Epic" : "itch.io"}
-                  </span>
-                </>
-              )}
-            </div>
+            {/* Dark overlay — always present when image exists, deeper at bottom */}
+            {bannerUrl && (
+              <div className="absolute inset-0"
+                style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.72) 60%, rgba(0,0,0,0.88) 100%)" }} />
+            )}
 
-            {/* Profile Strength — progress bar */}
-            <div className="mb-5 max-w-xs">
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>
-                  Profile Strength
-                </span>
-                <span className="text-[11px] font-black" style={{ color: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171" }}>
-                  {profilePct}%
-                </span>
+            {/* Ambient glow — only when no image */}
+            {!bannerUrl && (
+              <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full pointer-events-none"
+                style={{ background: "radial-gradient(circle, rgba(183,255,24,0.07) 0%, transparent 65%)" }} />
+            )}
+
+            {/* Change / Upload banner button — top-right corner */}
+            <button
+              onClick={() => artworkInputRef.current?.click()}
+              className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all"
+              style={{
+                background: bannerUrl
+                  ? "rgba(0,0,0,0.45)"
+                  : "rgba(183,255,24,0.08)",
+                color: bannerUrl ? "rgba(255,255,255,0.55)" : NEON,
+                border: bannerUrl ? "1px solid rgba(255,255,255,0.12)" : "1px dashed rgba(183,255,24,0.35)",
+                backdropFilter: bannerUrl ? "blur(8px)" : "none",
+              }}>
+              {uploadImageMutation.isPending
+                ? <Loader2 className="w-3 h-3 animate-spin" />
+                : <ImagePlus className="w-3 h-3" />}
+              {uploadImageMutation.isPending ? "Uploading…" : bannerUrl ? "Change Banner" : "Upload Banner Art"}
+            </button>
+            <input
+              ref={artworkInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) { setImgError(false); uploadImageMutation.mutate(file); }
+                e.target.value = "";
+              }}
+            />
+
+            {/* Content */}
+            <div className="relative z-10 p-6 sm:p-8 pt-10 sm:pt-10">
+              <div className="flex flex-col sm:flex-row sm:items-end gap-6">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight mb-1 drop-shadow-md">
+                    {profile?.gameName ?? "Set up your game"}
+                  </h2>
+                  <div className="flex items-center gap-2 mb-5">
+                    {profile?.releaseStatus && (
+                      <span className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.55)" }}>
+                        {profile.releaseStatus.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                      </span>
+                    )}
+                    {(profile?.steamUrl || profile?.epicUrl || profile?.itchUrl) && (
+                      <>
+                        <span className="text-white/25">·</span>
+                        <span className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.4)" }}>
+                          {profile.steamUrl ? "Steam" : profile.epicUrl ? "Epic" : "itch.io"}
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Profile Strength bar */}
+                  <div className="mb-5 max-w-xs">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.40)" }}>
+                        Profile Strength
+                      </span>
+                      <span className="text-[11px] font-black" style={{ color: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171" }}>
+                        {profilePct}%
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.12)" }}>
+                      <div className="h-full rounded-full transition-all duration-700"
+                        style={{
+                          width: `${profilePct}%`,
+                          background: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171",
+                        }} />
+                    </div>
+                    {profilePct < 100 && nextSteps.length > 0 && (
+                      <p className="text-[10px] mt-1.5" style={{ color: "rgba(255,255,255,0.30)" }}>
+                        Next: {nextSteps[0].label} <span style={{ color: NEON }}>+{nextSteps[0].pct}%</span>
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {missingEssential.length > 0 ? (
+                      <button onClick={() => onGoTo("settings", "profile")}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
+                        style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 20px rgba(183,255,24,0.25)" }}>
+                        Continue Setup <ArrowUpRight className="w-4 h-4" />
+                      </button>
+                    ) : activeCampaigns.length === 0 ? (
+                      <button onClick={() => onGoTo("campaigns", "create")}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
+                        style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 20px rgba(183,255,24,0.25)" }}>
+                        Create Your First Campaign <ArrowUpRight className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button onClick={() => onGoTo("campaigns", "my")}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
+                        style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 20px rgba(183,255,24,0.25)" }}>
+                        View Active Campaign <ArrowUpRight className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Secondary metrics — bottom-right */}
+                <div className="shrink-0 grid grid-cols-3 gap-4 sm:w-52">
+                  {[
+                    {
+                      label: "Campaign",
+                      value: activeCampaigns.length > 0 ? "Live" : "None",
+                      sub: activeCampaigns.length > 0
+                        ? (activeCampaigns[0].template_name ?? activeCampaigns[0].name ?? "Campaign")
+                        : "No active campaign",
+                      color: activeCampaigns.length > 0 ? NEON : "#475569",
+                    },
+                    {
+                      label: "Creators",
+                      value: String(d.totalParticipants),
+                      sub: "Active now",
+                      color: d.totalParticipants > 0 ? NEON : "#475569",
+                    },
+                    {
+                      label: "Demo Keys",
+                      value: String(demoKeys.available),
+                      sub: "Available",
+                      color: demoKeys.available < 5 ? "#f87171" : demoKeys.available < 15 ? "#f59e0b" : NEON,
+                    },
+                  ].map(({ label, value, sub, color }) => (
+                    <div key={label} className="text-center">
+                      <div className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">{label}</div>
+                      <div className="text-lg font-black drop-shadow-md" style={{ color }}>{value}</div>
+                      <div className="text-[10px] text-white/25 truncate">{sub}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
-                <div className="h-full rounded-full transition-all duration-700"
-                  style={{
-                    width: `${profilePct}%`,
-                    background: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171",
-                  }} />
-              </div>
-              {profilePct < 100 && nextSteps.length > 0 && (
-                <p className="text-[10px] mt-1.5" style={{ color: "rgba(255,255,255,0.25)" }}>
-                  Next: {nextSteps[0].label} <span style={{ color: NEON }}>+{nextSteps[0].pct}%</span>
-                </p>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {missingEssential.length > 0 ? (
-                <button onClick={() => onGoTo("settings", "profile")}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
-                  style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 20px rgba(183,255,24,0.25)" }}>
-                  Continue Setup <ArrowUpRight className="w-4 h-4" />
-                </button>
-              ) : activeCampaigns.length === 0 ? (
-                <button onClick={() => onGoTo("campaigns", "create")}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
-                  style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 20px rgba(183,255,24,0.25)" }}>
-                  Create Your First Campaign <ArrowUpRight className="w-4 h-4" />
-                </button>
-              ) : (
-                <button onClick={() => onGoTo("campaigns", "my")}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
-                  style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 20px rgba(183,255,24,0.25)" }}>
-                  View Active Campaign <ArrowUpRight className="w-4 h-4" />
-                </button>
-              )}
             </div>
           </div>
-
-          {/* Secondary metrics */}
-          <div className="shrink-0 grid grid-cols-3 gap-4 sm:w-56">
-            {[
-              {
-                label: "Campaign",
-                value: activeCampaigns.length > 0 ? "Live" : "None",
-                sub: activeCampaigns.length > 0
-                  ? (activeCampaigns[0].template_name ?? activeCampaigns[0].name ?? "Campaign")
-                  : "No active campaign",
-                color: activeCampaigns.length > 0 ? NEON : "#475569",
-              },
-              {
-                label: "Creators",
-                value: String(d.totalParticipants),
-                sub: "Active now",
-                color: d.totalParticipants > 0 ? NEON : "#475569",
-              },
-              {
-                label: "Demo Keys",
-                value: String(demoKeys.available),
-                sub: "Available",
-                color: demoKeys.available < 5 ? "#f87171" : demoKeys.available < 15 ? "#f59e0b" : NEON,
-              },
-            ].map(({ label, value, sub, color }) => (
-              <div key={label} className="text-center">
-                <div className="text-[10px] text-white/25 uppercase tracking-wider mb-0.5">{label}</div>
-                <div className="text-lg font-black" style={{ color }}>{value}</div>
-                <div className="text-[10px] text-white/20 truncate">{sub}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* GET YOUR GAME READY — onboarding steps */}
       {activeCampaigns.length === 0 && (
