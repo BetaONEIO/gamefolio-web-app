@@ -134,7 +134,7 @@ export function FieldRow({ fieldName, label, profile, fieldMeta, type, selectOpt
   const canRevert = meta?.isManualOverride && !!(meta?.importedValue);
 
   const startEdit = () => {
-    setEditVal(type.includes("array") || type === "platform-select" ? [...(Array.isArray(currentVal) ? currentVal : [])] : (currentVal ?? ""));
+    setEditVal(type.includes("array") || type === "platform-select" ? [] : "");
     setEditing(true);
   };
   const cancelEdit = () => { setEditing(false); setEditVal(null); };
