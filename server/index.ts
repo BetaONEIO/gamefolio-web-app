@@ -427,9 +427,15 @@ app.use((req, res, next) => {
     const port = Number(process.env.PORT) || 5000;
     // reusePort uses SO_REUSEPORT, which macOS sockets reject with ENOTSUP —
     // only enable it off-darwin (Linux/Replit), where it's supported.
+    // Overridable via HOST for local dev — on at least one dev machine, some
+    // local network/security software silently intercepted connections to a
+    // *specific* port (5050) with no error and no visible LISTEN socket;
+    // switching PORT resolved it, HOST=127.0.0.1 didn't independently confirm
+    // as necessary. Left here as a defensive knob for the same symptom
+    // elsewhere. Production/Replit still needs 0.0.0.0, so default unchanged.
     const listenOptions: { port: number; host: string; reusePort?: boolean } = {
       port,
-      host: "0.0.0.0",
+      host: process.env.HOST || "0.0.0.0",
     };
     if (process.platform !== "darwin") {
       listenOptions.reusePort = true;
