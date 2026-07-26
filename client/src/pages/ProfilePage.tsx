@@ -5601,7 +5601,19 @@ const ProfilePage = () => {
         {/* Screenshot viewer — mobile snap-scroll or desktop lightbox */}
         {selectedScreenshot && isMobile ? (
           <MobileScreenshotsViewer
-            screenshots={(screenshots as any[]) || [selectedScreenshot]}
+            screenshots={((screenshots as any[]) || [selectedScreenshot]).map((s: any) => ({
+              ...s,
+              user: s.user || {
+                id: profile?.id,
+                username: profile?.username,
+                displayName: profile?.displayName,
+                avatarUrl: profile?.avatarUrl,
+                isPro: profile?.isPro,
+                isPartner: profile?.isPartner,
+                isAmbassador: profile?.isAmbassador,
+                selectedVerificationBadgeId: profile?.selectedVerificationBadgeId,
+              },
+            }))}
             startId={selectedScreenshot.id}
             onBack={() => setSelectedScreenshot(null)}
           />
