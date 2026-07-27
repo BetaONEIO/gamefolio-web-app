@@ -4,17 +4,17 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { getQueryFn, queryClient } from "@/lib/queryClient";
 import {
   Rocket, Users, Target, BarChart3,
-  Gamepad, KeyRound, Loader2,
+  KeyRound, Loader2,
   TrendingUp, AlertTriangle,
   CheckCircle2, ChevronRight,
   Film, Camera,
   Video, ArrowUpRight,
-  Crosshair, Settings, LayoutDashboard,
-  AlertCircle, Star, Circle, Upload, Zap, Activity, ImagePlus,
+  Settings, LayoutDashboard,
+  AlertCircle, Star, Circle, Upload, Activity, ImagePlus,
 } from "lucide-react";
 import CreateCampaignFlow from "./indie-dashboard/CreateCampaignFlow";
 import MyCampaignsTab from "./indie-dashboard/MyCampaignsTab";
-import SubmissionReviewTab from "./indie-dashboard/SubmissionReviewTab";
+import CreatorContentTab from "./indie-dashboard/CreatorContentTab";
 import KeyManagementTab from "./indie-dashboard/KeyManagementTab";
 import AnalyticsTab from "./indie-dashboard/AnalyticsTab";
 import GameProfileTab from "./indie-dashboard/GameProfileTab";
@@ -24,11 +24,8 @@ import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
 export { NEON, CARD_BG, CARD_BORDER, PAGE_BG } from "./indie-dashboard/constants";
 import { NEON, PAGE_BG } from "./indie-dashboard/constants";
 
-type TopTabId = "overview" | "campaigns" | "community" | "keys" | "analytics" | "settings";
+type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "analytics" | "game-profile";
 type CampaignSubTab = "create" | "my";
-type CommunitySubTab = "content" | "submissions";
-type SettingsSubTab = "profile" | "store" | "subscription" | "auto";
-import AutoCampaignSettingsTab from "./indie-dashboard/AutoCampaignSettingsTab";
 
 const ESSENTIAL_FIELDS = ["gameName", "shortDescription", "headerImageUrl", "steamUrl", "epicUrl", "itchUrl"];
 const ALL_PROFILE_FIELDS = [
@@ -65,28 +62,6 @@ const STATUS_COLORS: Record<string, string> = {
   draft: "#94a3b8", completed: "#4ade80", cancelled: "#f87171", paused: "#94a3b8",
 };
 
-function SubNav({ items, active, onChange }: {
-  items: { id: string; label: string }[];
-  active: string;
-  onChange: (id: string) => void;
-}) {
-  return (
-    <div className="flex items-center gap-1 mb-7"
-      style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-      {items.map(({ id, label }) => (
-        <button key={id} onClick={() => onChange(id)}
-          className="relative px-4 py-2.5 text-xs font-bold transition-colors"
-          style={{ color: active === id ? NEON : "rgba(255,255,255,0.4)" }}>
-          {label}
-          {active === id && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full"
-              style={{ background: NEON }} />
-          )}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 function IndieDevSubscriptionTab() {
   const { user } = useAuth();
@@ -207,7 +182,7 @@ function DashboardTab({
       title: "Complete your game profile",
       desc: `${missingEssential.length} essential field${missingEssential.length > 1 ? "s" : ""} still missing`,
       cta: "Edit Profile",
-      action: () => onGoTo("settings", "profile"),
+      action: () => onGoTo("game-profile"),
     });
   }
   if (demoKeys.available < 5) {
@@ -225,7 +200,7 @@ function DashboardTab({
       title: `${content.length} creator submission${content.length > 1 ? "s" : ""} to review`,
       desc: "Feature the best community content",
       cta: "Review",
-      action: () => onGoTo("community", "submissions"),
+      action: () => onGoTo("creator-content"),
     });
   }
   if (activeCampaigns.length === 0) {
@@ -249,63 +224,40 @@ function DashboardTab({
   return (
     <div className="space-y-8">
 
-      {/* HERO — banner background fills the whole card */}
+      {/* ── CINEMATIC GAME HERO BANNER ── */}
       {(() => {
-        const bannerUrl = (!imgError && (profile?.headerImageUrl || profile?.capsuleImageUrl)) ? (profile.headerImageUrl ?? profile.capsuleImageUrl) : null;
+        const bannerUrl = (!imgError && (profile?.headerImageUrl || profile?.capsuleImageUrl))
+          ? (profile.headerImageUrl ?? profile.capsuleImageUrl) : null;
+        const capsuleUrl = profile?.capsuleImageUrl ?? null;
         return (
-          <div className="rounded-2xl relative overflow-hidden group/hero"
-            style={{
-              background: bannerUrl
-                ? "transparent"
-                : "linear-gradient(135deg, rgba(183,255,24,0.055) 0%, rgba(255,255,255,0.018) 100%)",
-              border: bannerUrl ? "none" : "1px solid rgba(183,255,24,0.13)",
-              minHeight: "200px",
-            }}>
+          <div className="relative overflow-hidden rounded-2xl"
+            style={{ minHeight: "280px", background: "#0a0f14" }}>
 
             {/* Background banner image */}
             {bannerUrl && (
-              <img
-                src={bannerUrl}
-                alt=""
+              <img src={bannerUrl} alt=""
                 className="absolute inset-0 w-full h-full object-cover"
-                onError={() => setImgError(true)}
-              />
+                onError={() => setImgError(true)} />
             )}
+            {/* Dark gradient overlay */}
+            <div className="absolute inset-0"
+              style={{ background: "linear-gradient(90deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.40) 100%)" }} />
+            <div className="absolute inset-0"
+              style={{ background: "linear-gradient(to top, rgba(0,0,0,0.88) 0%, transparent 40%)" }} />
 
-            {/* Dark overlay — always present when image exists, deeper at bottom */}
-            {bannerUrl && (
-              <div className="absolute inset-0"
-                style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.72) 60%, rgba(0,0,0,0.88) 100%)" }} />
-            )}
-
-            {/* Ambient glow — only when no image */}
-            {!bannerUrl && (
-              <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full pointer-events-none"
-                style={{ background: "radial-gradient(circle, rgba(183,255,24,0.07) 0%, transparent 65%)" }} />
-            )}
-
-            {/* Change / Upload banner button — top-right corner */}
+            {/* Change banner button — top-right */}
             <button
               onClick={() => artworkInputRef.current?.click()}
-              className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all"
-              style={{
-                background: bannerUrl
-                  ? "rgba(0,0,0,0.45)"
-                  : "rgba(183,255,24,0.08)",
-                color: bannerUrl ? "rgba(255,255,255,0.55)" : NEON,
-                border: bannerUrl ? "1px solid rgba(255,255,255,0.12)" : "1px dashed rgba(183,255,24,0.35)",
-                backdropFilter: bannerUrl ? "blur(8px)" : "none",
-              }}>
+              className="absolute top-4 right-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all backdrop-blur-md"
+              style={{ background: "rgba(0,0,0,0.45)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}>
               {uploadImageMutation.isPending
                 ? <Loader2 className="w-3 h-3 animate-spin" />
                 : <ImagePlus className="w-3 h-3" />}
-              {uploadImageMutation.isPending ? "Uploading…" : bannerUrl ? "Change Banner" : "Upload Banner Art"}
+              {uploadImageMutation.isPending ? "Uploading…" : "Change Banner"}
             </button>
             <input
               ref={artworkInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
+              type="file" accept="image/*" className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) { setImgError(false); uploadImageMutation.mutate(file); }
@@ -313,294 +265,146 @@ function DashboardTab({
               }}
             />
 
-            {/* Content */}
-            <div className="relative z-10 p-6 sm:p-8 pt-10 sm:pt-10">
-              <div className="flex flex-col sm:flex-row sm:items-end gap-6">
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight mb-1 drop-shadow-md">
-                    {profile?.gameName ?? "Set up your game"}
+            {/* Hero content — left capsule + right stats */}
+            <div className="relative z-10 p-6 sm:p-8 flex flex-col lg:flex-row lg:items-end gap-8">
+              {/* LEFT — Capsule + game info */}
+              <div className="flex items-end gap-5 flex-1 min-w-0">
+                {/* Capsule image */}
+                {capsuleUrl ? (
+                  <div className="shrink-0 rounded-lg overflow-hidden shadow-2xl"
+                    style={{ width: 112, aspectRatio: "3/4", border: "1px solid rgba(255,255,255,0.10)" }}>
+                    <img src={capsuleUrl} alt="" className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="shrink-0 rounded-lg flex items-center justify-center"
+                    style={{ width: 112, aspectRatio: "3/4", background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(255,255,255,0.12)" }}>
+                    <ImagePlus className="w-6 h-6 text-white/15" />
+                  </div>
+                )}
+
+                <div className="min-w-0 pb-1">
+                  <h2 className="text-3xl sm:text-4xl font-black text-white leading-tight mb-2 drop-shadow-lg">
+                    {profile?.gameName ?? "Your Game"}
                   </h2>
-                  <div className="flex items-center gap-2 mb-5">
+                  <div className="flex flex-wrap items-center gap-3 mb-4">
                     {profile?.releaseStatus && (
-                      <span className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.55)" }}>
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded uppercase tracking-wider"
+                        style={{ background: "rgba(183,255,24,0.12)", color: "#B7FF18", border: "1px solid rgba(183,255,24,0.20)" }}>
                         {profile.releaseStatus.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
                       </span>
                     )}
-                    {(profile?.steamUrl || profile?.epicUrl || profile?.itchUrl) && (
-                      <>
-                        <span className="text-white/25">·</span>
-                        <span className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.4)" }}>
-                          {profile.steamUrl ? "Steam" : profile.epicUrl ? "Epic" : "itch.io"}
-                        </span>
-                      </>
+                    {profile?.platforms?.[0] && (
+                      <span className="text-[11px] text-white/40">
+                        {profile.platforms[0]}
+                      </span>
+                    )}
+                    {profile?.studioName && (
+                      <span className="text-[11px] text-white/40">
+                        {profile.studioName}
+                      </span>
                     )}
                   </div>
 
-                  {/* Profile Strength bar */}
-                  <div className="mb-5 max-w-xs">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.40)" }}>
-                        Profile Strength
-                      </span>
-                      <span className="text-[11px] font-black" style={{ color: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171" }}>
+                  {/* Profile Strength */}
+                  <div className="mb-4 max-w-xs">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">Profile Strength</span>
+                      <span className="text-[11px] font-black"
+                        style={{ color: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171" }}>
                         {profilePct}%
                       </span>
                     </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.12)" }}>
+                    <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.10)" }}>
                       <div className="h-full rounded-full transition-all duration-700"
-                        style={{
-                          width: `${profilePct}%`,
-                          background: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171",
-                        }} />
+                        style={{ width: `${profilePct}%`,
+                          background: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171" }} />
                     </div>
                     {profilePct < 100 && nextSteps.length > 0 && (
-                      <p className="text-[10px] mt-1.5" style={{ color: "rgba(255,255,255,0.30)" }}>
+                      <p className="text-[10px] mt-1 text-white/30">
                         Next: {nextSteps[0].label} <span style={{ color: NEON }}>+{nextSteps[0].pct}%</span>
                       </p>
                     )}
                   </div>
 
+                  {/* Primary CTA */}
                   <div className="flex flex-wrap items-center gap-2">
                     {missingEssential.length > 0 ? (
-                      <button onClick={() => onGoTo("settings", "profile")}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
-                        style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 20px rgba(183,255,24,0.25)" }}>
-                        Continue Setup <ArrowUpRight className="w-4 h-4" />
+                      <button onClick={() => onGoTo("game-profile")}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
+                        style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 24px rgba(183,255,24,0.25)" }}>
+                        Complete Setup <ArrowUpRight className="w-4 h-4" />
                       </button>
                     ) : activeCampaigns.length === 0 ? (
                       <button onClick={() => onGoTo("campaigns", "create")}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
-                        style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 20px rgba(183,255,24,0.25)" }}>
-                        Create Your First Campaign <ArrowUpRight className="w-4 h-4" />
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
+                        style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 24px rgba(183,255,24,0.25)" }}>
+                        <Rocket className="w-4 h-4" /> Create Campaign
                       </button>
                     ) : (
                       <button onClick={() => onGoTo("campaigns", "my")}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
-                        style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 20px rgba(183,255,24,0.25)" }}>
-                        View Active Campaign <ArrowUpRight className="w-4 h-4" />
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
+                        style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 24px rgba(183,255,24,0.25)" }}>
+                        View Campaign <ArrowUpRight className="w-4 h-4" />
                       </button>
                     )}
                   </div>
                 </div>
+              </div>
 
-                {/* Secondary metrics — bottom-right */}
-                <div className="shrink-0 grid grid-cols-3 gap-4 sm:w-52">
-                  {[
-                    {
-                      label: "Campaign",
-                      value: activeCampaigns.length > 0 ? "Live" : "None",
-                      sub: activeCampaigns.length > 0
-                        ? (activeCampaigns[0].template_name ?? activeCampaigns[0].name ?? "Campaign")
-                        : "No active campaign",
-                      color: activeCampaigns.length > 0 ? NEON : "#475569",
-                    },
-                    {
-                      label: "Creators",
-                      value: String(d.totalParticipants),
-                      sub: "Active now",
-                      color: d.totalParticipants > 0 ? NEON : "#475569",
-                    },
-                    {
-                      label: "Demo Keys",
-                      value: String(demoKeys.available),
-                      sub: "Available",
-                      color: demoKeys.available < 5 ? "#f87171" : demoKeys.available < 15 ? "#f59e0b" : NEON,
-                    },
-                  ].map(({ label, value, sub, color }) => (
-                    <div key={label} className="text-center">
-                      <div className="text-[10px] text-white/30 uppercase tracking-wider mb-0.5">{label}</div>
-                      <div className="text-lg font-black drop-shadow-md" style={{ color }}>{value}</div>
-                      <div className="text-[10px] text-white/25 truncate">{sub}</div>
-                    </div>
-                  ))}
-                </div>
+              {/* RIGHT — Compact stats */}
+              <div className="shrink-0 grid grid-cols-2 sm:grid-cols-3 gap-3 lg:w-[320px]">
+                {[
+                  { label: "Active Campaign", value: activeCampaigns.length > 0 ? "Live" : "None",
+                    sub: activeCampaigns.length > 0 ? (activeCampaigns[0].template_name ?? "Campaign") : "No campaign", color: activeCampaigns.length > 0 ? NEON : "#475569" },
+                  { label: "Active Creators", value: String(d.totalParticipants),
+                    sub: "Enrolled", color: d.totalParticipants > 0 ? NEON : "#475569" },
+                  { label: "Demo Keys", value: String(demoKeys.available),
+                    sub: "Available", color: demoKeys.available < 5 ? "#f87171" : demoKeys.available < 15 ? "#f59e0b" : NEON },
+                  { label: "Content Created", value: String(contentTotal),
+                    sub: `${clipsTotal} clips · ${reelsTotal} reels`, color: contentTotal > 0 ? "#a78bfa" : "#475569" },
+                  { label: "Total Views", value: (d.totalViews ?? 0).toLocaleString(),
+                    sub: "Across all content", color: (d.totalViews ?? 0) > 0 ? "#60a5fa" : "#475569" },
+                  { label: "Profile", value: `${profilePct}%`,
+                    sub: profilePct >= 80 ? "Complete" : "Needs work", color: profilePct >= 80 ? "#4ade80" : profilePct >= 50 ? "#f59e0b" : "#f87171" },
+                ].map(({ label, value, sub, color }) => (
+                  <div key={label} className="rounded-xl p-3 text-center"
+                    style={{ background: "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
+                    <div className="text-[9px] text-white/30 uppercase tracking-wider mb-1">{label}</div>
+                    <div className="text-base font-black" style={{ color }}>{value}</div>
+                    <div className="text-[9px] text-white/20 truncate">{sub}</div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         );
       })()}
 
-      {/* GET YOUR GAME READY — onboarding steps */}
-      {activeCampaigns.length === 0 && (
-        <div className="rounded-2xl p-6 sm:p-8 space-y-6"
-          style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.07)" }}>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ background: "rgba(183,255,24,0.09)" }}>
-              <Rocket className="w-4 h-4" style={{ color: NEON }} />
-            </div>
-            <div>
-              <h3 className="text-base font-black text-white">Get Your Game Ready</h3>
-              <p className="text-[11px] text-white/30 mt-0.5">Complete three steps to start recruiting creators</p>
-            </div>
+      {/* ── ONBOARDING ── hidden when profile ready + campaigns exist ── */}
+      {activeCampaigns.length === 0 && missingEssential.length > 0 && (
+        <div className="rounded-2xl p-5 flex items-center gap-4"
+          style={{ background: "rgba(183,255,24,0.03)", border: "1px solid rgba(183,255,24,0.10)" }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: "rgba(183,255,24,0.10)" }}>
+            <Rocket className="w-5 h-5" style={{ color: NEON }} />
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Step 1: Game Profile */}
-            {(() => {
-              const done = missingEssential.length === 0;
-              return (
-                <div className="rounded-xl p-4 space-y-3 transition-all hover:scale-[1.01]"
-                  style={{
-                    background: done ? "rgba(74,222,128,0.04)" : "rgba(255,255,255,0.025)",
-                    border: `1px solid ${done ? "rgba(74,222,128,0.18)" : "rgba(255,255,255,0.07)"}`,
-                    boxShadow: done ? "0 0 24px rgba(74,222,128,0.06)" : "none",
-                  }}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black"
-                        style={done
-                          ? { background: "rgba(74,222,128,0.20)", color: "#4ade80" }
-                          : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>
-                        {done ? <CheckCircle2 className="w-3.5 h-3.5" /> : "1"}
-                      </div>
-                      <span className="text-xs font-bold text-white">Complete Game Profile</span>
-                    </div>
-                    {done && <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: "rgba(74,222,128,0.12)", color: "#4ade80" }}>Done</span>}
-                  </div>
-                  {/* Progress bar */}
-                  <div>
-                    <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                      <div className="h-full rounded-full transition-all duration-700"
-                        style={{ width: `${profilePct}%`, background: done ? "#4ade80" : profilePct >= 50 ? "#f59e0b" : "#f87171" }} />
-                    </div>
-                    <div className="flex justify-between mt-1">
-                      <span className="text-[9px] text-white/25">{profilePct}% complete</span>
-                      {!done && <span className="text-[9px]" style={{ color: "#f59e0b" }}>{missingEssential.length} fields missing</span>}
-                    </div>
-                  </div>
-                  <button onClick={() => onGoTo("settings", "profile")}
-                    className="w-full text-[11px] font-bold py-2 rounded-lg transition-all hover:brightness-110"
-                    style={{
-                      background: done ? "rgba(74,222,128,0.10)" : "rgba(183,255,24,0.09)",
-                      color: done ? "#4ade80" : NEON,
-                      border: `1px solid ${done ? "rgba(74,222,128,0.20)" : "rgba(183,255,24,0.18)"}`,
-                    }}>
-                    {done ? "Edit Profile" : "Continue Setup →"}
-                  </button>
-                </div>
-              );
-            })()}
-
-            {/* Step 2: Upload Keys */}
-            {(() => {
-              const done = demoKeys.available > 0;
-              return (
-                <div className="rounded-xl p-4 space-y-3 transition-all hover:scale-[1.01]"
-                  style={{
-                    background: done ? "rgba(74,222,128,0.04)" : "rgba(255,255,255,0.025)",
-                    border: `1px solid ${done ? "rgba(74,222,128,0.18)" : "rgba(255,255,255,0.07)"}`,
-                    boxShadow: done ? "0 0 24px rgba(74,222,128,0.06)" : "none",
-                  }}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black"
-                        style={done
-                          ? { background: "rgba(74,222,128,0.20)", color: "#4ade80" }
-                          : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>
-                        {done ? <CheckCircle2 className="w-3.5 h-3.5" /> : "2"}
-                      </div>
-                      <span className="text-xs font-bold text-white">Upload Game Keys</span>
-                    </div>
-                    {done && <span className="text-[9px] font-black px-1.5 py-0.5 rounded" style={{ background: "rgba(74,222,128,0.12)", color: "#4ade80" }}>Done</span>}
-                  </div>
-                  <div className="text-[10px] text-white/30 leading-relaxed">
-                    {done
-                      ? `${demoKeys.available} demo · ${fullKeys.available} full game keys ready`
-                      : "Keys are required for creators to claim access to your game."}
-                  </div>
-                  <button onClick={() => onGoTo("keys")}
-                    className="w-full text-[11px] font-bold py-2 rounded-lg transition-all hover:brightness-110 flex items-center justify-center gap-1.5"
-                    style={{
-                      background: done ? "rgba(74,222,128,0.10)" : "rgba(183,255,24,0.09)",
-                      color: done ? "#4ade80" : NEON,
-                      border: `1px solid ${done ? "rgba(74,222,128,0.20)" : "rgba(183,255,24,0.18)"}`,
-                    }}>
-                    {done ? "Manage Keys" : <><Upload className="w-3 h-3" /> Upload Keys</>}
-                  </button>
-                </div>
-              );
-            })()}
-
-            {/* Step 3: Create Campaign */}
-            <div className="rounded-xl p-4 space-y-3 transition-all hover:scale-[1.01]"
-              style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black"
-                  style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)" }}>
-                  3
-                </div>
-                <span className="text-xs font-bold text-white">Create Your First Campaign</span>
-              </div>
-              <div className="text-[10px] text-white/30 leading-relaxed">
-                Select a campaign type and Gamefolio recruits creators automatically.
-              </div>
-              <button onClick={() => onGoTo("campaigns", "create")}
-                className="w-full text-[11px] font-bold py-2 rounded-lg transition-all hover:brightness-110"
-                style={{ background: NEON, color: "#070b10", boxShadow: "0 0 16px rgba(183,255,24,0.18)" }}>
-                Create Campaign →
-              </button>
-            </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-white mb-0.5">Complete your game profile to start</p>
+            <p className="text-xs text-white/30">{missingEssential.length} essential field{missingEssential.length > 1 ? "s" : ""} still missing</p>
           </div>
+          <button onClick={() => onGoTo("game-profile")}
+            className="shrink-0 px-4 py-2 rounded-lg text-xs font-black transition-all hover:brightness-110"
+            style={{ background: NEON, color: "#070b10" }}>
+            Continue Setup
+          </button>
         </div>
       )}
 
       {/* TWO-COLUMN BODY */}
       <div className="flex flex-col lg:flex-row gap-8 items-start">
 
-        {/* ── LEFT COLUMN (70%) — primary content ── */}
+        {/* ── LEFT COLUMN — primary content ── */}
         <div className="flex-1 min-w-0 space-y-10">
-
-          {/* Metric cards — only when campaigns exist */}
-          {activeCampaigns.length > 0 && (
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                {
-                  icon: Users, label: "Active Creators",
-                  value: String(d.totalParticipants),
-                  desc: "Across all campaigns",
-                  color: d.totalParticipants > 0 ? NEON : "#334155",
-                  onClick: () => onGoTo("campaigns", "my"),
-                },
-                {
-                  icon: TrendingUp, label: "Exposure",
-                  value: exposureEst,
-                  desc: "Estimated this week",
-                  color: contentTotal > 0 ? NEON : "#334155",
-                  onClick: () => onGoTo("analytics"),
-                },
-                {
-                  icon: Film, label: "Community Content",
-                  value: String(contentTotal),
-                  desc: `${clipsTotal} clips · ${reelsTotal} reels · ${screenshotsTotal} ss`,
-                  color: contentTotal > 0 ? "#a78bfa" : "#334155",
-                  onClick: () => onGoTo("community", "content"),
-                },
-                {
-                  icon: KeyRound, label: "Keys Remaining",
-                  value: String(demoKeys.available + fullKeys.available),
-                  desc: `${demoKeys.available} demo · ${fullKeys.available} full`,
-                  color: (demoKeys.available + fullKeys.available) < 5 ? "#f87171" : NEON,
-                  onClick: () => onGoTo("keys"),
-                },
-              ].map(({ icon: Icon, label, value, desc, color, onClick }) => (
-                <button key={label} onClick={onClick}
-                  className="rounded-2xl p-5 text-left group transition-all hover:scale-[1.01] active:scale-[0.99]"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-                      style={{ background: `${color}12` }}>
-                      <Icon className="w-4 h-4" style={{ color }} />
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-white/15 group-hover:text-white/40 transition-colors" />
-                  </div>
-                  <div className="text-2xl font-black text-white mb-0.5">{value}</div>
-                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">{label}</div>
-                  <div className="text-[11px] text-white/20 leading-snug">{desc}</div>
-                </button>
-              ))}
-            </div>
-          )}
 
           {/* Active Campaigns */}
           <div>
@@ -709,76 +513,39 @@ function DashboardTab({
             )}
           </div>
 
-          {/* Latest Creator Content — only when campaigns exist */}
-          {activeCampaigns.length > 0 && (
+          {/* Latest Creator Content — compact teaser */}
+          {activeCampaigns.length > 0 && content.length > 0 && (
             <div>
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-black text-white">Latest Creator Content</h3>
-                <button onClick={() => onGoTo("community", "content")}
+                <button onClick={() => onGoTo("creator-content")}
                   className="text-xs font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
                   View all <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
-
-              {content.length === 0 ? (
-                <div className="rounded-2xl px-8 py-12 text-center"
-                  style={{ background: "rgba(255,255,255,0.018)", border: "1px dashed rgba(255,255,255,0.07)" }}>
-                  <Film className="w-9 h-9 mx-auto mb-3 text-white/10" />
-                  <p className="text-sm font-semibold text-white/35 mb-1">No creator content yet</p>
-                  <p className="text-xs text-white/20">
-                    Creator clips, reels and screenshots will appear here once your first campaign begins.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {content.slice(0, 6).map((item: any, i: number) => (
-                    <div key={item.id ?? i}
-                      className="rounded-xl overflow-hidden group"
-                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                      <div className="aspect-video relative overflow-hidden">
-                        {item.thumbnail_url ? (
-                          <img src={item.thumbnail_url} alt=""
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center"
-                            style={{ background: "rgba(255,255,255,0.035)" }}>
-                            {item.type === "screenshot" ? <Camera className="w-5 h-5 text-white/15" />
-                              : item.type === "reel" ? <Video className="w-5 h-5 text-white/15" />
-                              : <Film className="w-5 h-5 text-white/15" />}
-                          </div>
-                        )}
-                        <div className="absolute top-1.5 left-1.5">
-                          <span className="text-[8px] font-bold px-1.5 py-0.5 rounded uppercase"
-                            style={{ background: "rgba(0,0,0,0.6)", color: "rgba(255,255,255,0.65)" }}>
-                            {item.type ?? "clip"}
-                          </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+                {content.slice(0, 5).map((item: any, i: number) => (
+                  <button key={item.id ?? i} onClick={() => onGoTo("creator-content")}
+                    className="rounded-xl overflow-hidden group text-left"
+                    style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                    <div className="aspect-video relative overflow-hidden">
+                      {item.thumbnail_url ? (
+                        <img src={item.thumbnail_url} alt=""
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center"
+                          style={{ background: "rgba(255,255,255,0.035)" }}>
+                          <Film className="w-4 h-4 text-white/15" />
                         </div>
-                      </div>
-                      <div className="p-2.5">
-                        <div className="text-[10px] font-semibold text-white/60 truncate">
-                          @{item.creator_username ?? "creator"}
-                        </div>
-                        <div className="flex items-center justify-between mt-0.5">
-                          <span className="text-[9px] text-white/25">{(item.views ?? 0).toLocaleString()} views</span>
-                          {item.fires > 0 && (
-                            <span className="text-[9px] text-orange-400">⚡{item.fires}</span>
-                          )}
-                        </div>
-                        <div className="flex gap-1 mt-2">
-                          <button className="flex-1 text-[9px] font-bold py-1 rounded transition-all hover:brightness-110"
-                            style={{ background: "rgba(183,255,24,0.09)", color: NEON }}>
-                            Feature
-                          </button>
-                          <button className="text-[9px] font-bold px-2 py-1 rounded"
-                            style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.3)" }}>
-                            Hide
-                          </button>
-                        </div>
-                      </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
+                    <div className="p-2">
+                      <div className="text-[9px] text-white/40 truncate">@{item.creator_username ?? "creator"}</div>
+                      <div className="text-[9px] text-white/20 mt-0.5">{(item.views ?? 0).toLocaleString()} views</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -911,7 +678,7 @@ function DashboardTab({
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-black text-white">Profile Strength</h3>
-              <button onClick={() => onGoTo("settings", "profile")}
+              <button onClick={() => onGoTo("game-profile")}
                 className="text-[10px] font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
                 Edit <ChevronRight className="w-3 h-3" />
               </button>
@@ -947,7 +714,7 @@ function DashboardTab({
                 <div className="space-y-1.5">
                   <p className="text-[10px] text-white/25 mb-2">Recommended actions:</p>
                   {nextSteps.map((step, i) => (
-                    <button key={step.field ?? i} onClick={() => onGoTo("settings", "profile")}
+                    <button key={step.field ?? i} onClick={() => onGoTo("game-profile")}
                       className="w-full flex items-center gap-2.5 text-left group py-1 rounded-lg px-2 transition-colors hover:bg-white/[0.03]">
                       <div className="w-4 h-4 rounded-full border shrink-0 flex items-center justify-center"
                         style={{ borderColor: "rgba(255,255,255,0.12)" }}>
@@ -1099,27 +866,23 @@ function DashboardTab({
 }
 
 const TOP_TABS: { id: TopTabId; label: string; icon: any }[] = [
-  { id: "overview",   label: "Dashboard",  icon: LayoutDashboard },
-  { id: "campaigns",  label: "Campaigns",  icon: Target },
-  { id: "community",  label: "Community",  icon: Users },
-  { id: "keys",       label: "Keys",       icon: KeyRound },
-  { id: "analytics",  label: "Analytics",  icon: BarChart3 },
-  { id: "settings",   label: "Settings",   icon: Settings },
+  { id: "overview",        label: "Overview",       icon: LayoutDashboard },
+  { id: "campaigns",       label: "Campaigns",      icon: Target },
+  { id: "creator-content", label: "Creator Content", icon: Film },
+  { id: "keys",            label: "Keys",           icon: KeyRound },
+  { id: "analytics",       label: "Analytics",      icon: BarChart3 },
+  { id: "game-profile",    label: "Game Profile",   icon: Settings },
 ];
 
 export default function IndieDashboardPage() {
   const { user } = useAuth();
   const [tab, setTab] = useState<TopTabId>("overview");
   const [campaignSub, setCampaignSub] = useState<CampaignSubTab>("my");
-  const [communitySub, setCommunitySub] = useState<CommunitySubTab>("content");
-  const [settingsSub, setSettingsSub] = useState<SettingsSubTab>("profile");
   const [runWizardTemplate, setRunWizardTemplate] = useState<any>(null);
 
   const goTo = (toTab: TopTabId, sub?: string) => {
     setTab(toTab);
     if (toTab === "campaigns" && sub) setCampaignSub(sub as CampaignSubTab);
-    if (toTab === "community" && sub) setCommunitySub(sub as CommunitySubTab);
-    if (toTab === "settings" && sub) setSettingsSub(sub as SettingsSubTab);
   };
 
   const openRunWizard = (template?: any) => {
@@ -1129,7 +892,7 @@ export default function IndieDashboardPage() {
 
   return (
     <div className="min-h-screen" style={{ background: PAGE_BG }}>
-      <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
@@ -1166,77 +929,34 @@ export default function IndieDashboardPage() {
           })}
         </div>
 
+        {/* ── OVERVIEW ── */}
         {tab === "overview" && (
           <DashboardTab onGoTo={goTo} onRunCampaign={openRunWizard} />
         )}
 
+        {/* ── CAMPAIGNS ── */}
         {tab === "campaigns" && (
           <>
-            <SubNav
-              items={[
-                { id: "my",     label: "My Campaigns" },
-                { id: "create", label: "Create Campaign" },
-              ]}
-              active={campaignSub}
-              onChange={v => setCampaignSub(v as CampaignSubTab)}
-            />
             {campaignSub === "my" && (
               <MyCampaignsTab onCreateCampaign={() => setCampaignSub("create")} />
             )}
             {campaignSub === "create" && (
-              <CreateCampaignFlow
-                onComplete={() => goTo("campaigns", "my")}
-              />
+              <CreateCampaignFlow onComplete={() => goTo("campaigns", "my")} />
             )}
           </>
         )}
 
-        {tab === "community" && (
-          <>
-            <SubNav
-              items={[
-                { id: "content",     label: "Creator Content" },
-                { id: "submissions", label: "Submissions" },
-              ]}
-              active={communitySub}
-              onChange={v => setCommunitySub(v as CommunitySubTab)}
-            />
-            {communitySub === "submissions" && <SubmissionReviewTab />}
-            {communitySub === "content" && (
-              <div className="text-center py-24" style={{ color: "rgba(255,255,255,0.2)" }}>
-                <Film className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                <p className="text-sm">Creator content feed coming soon</p>
-              </div>
-            )}
-          </>
-        )}
+        {/* ── CREATOR CONTENT ── */}
+        {tab === "creator-content" && <CreatorContentTab />}
 
+        {/* ── KEYS ── */}
         {tab === "keys" && <KeyManagementTab />}
+
+        {/* ── ANALYTICS ── */}
         {tab === "analytics" && <AnalyticsTab />}
 
-        {tab === "settings" && (
-          <>
-            <SubNav
-              items={[
-                { id: "profile",      label: "Game Profile" },
-                { id: "auto",         label: "Auto Campaigns" },
-                { id: "store",        label: "Store & Media" },
-                { id: "subscription", label: "Subscription" },
-              ]}
-              active={settingsSub}
-              onChange={v => setSettingsSub(v as SettingsSubTab)}
-            />
-            {settingsSub === "profile" && <GameProfileTab />}
-            {settingsSub === "auto" && <AutoCampaignSettingsTab />}
-            {settingsSub === "store" && (
-              <div className="text-center py-24" style={{ color: "rgba(255,255,255,0.2)" }}>
-                <Settings className="w-10 h-10 mx-auto mb-3 opacity-20" />
-                <p className="text-sm">Store &amp; Media settings — use Game Profile for now</p>
-              </div>
-            )}
-            {settingsSub === "subscription" && <IndieDevSubscriptionTab />}
-          </>
-        )}
+        {/* ── GAME PROFILE ── */}
+        {tab === "game-profile" && <GameProfileTab />}
 
       </div>
 
