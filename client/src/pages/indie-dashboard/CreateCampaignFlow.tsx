@@ -50,53 +50,45 @@ const ANIM_CSS = `
 
 interface CampaignType {
   slug: string; name: string; shortName: string; tagline: string; description: string;
-  shortDesc: string; bestFor: string;
+  shortDesc: string; subtitle: string; bestFor: string; bestForList: string[];
   duration: number; capacity: number; demoKeys: number; fullKeys: number;
   xpReward: number; recommended?: boolean; custom?: boolean; icon: any;
   pills: { ct: string; qty: number }[];
-  estimated: { clips: number; reels: number; screenshots: number; feedback: number; viewsMin: number; viewsMax: number };
 }
 
 const CAMPAIGN_TYPES: CampaignType[] = [
   {
     slug: "quick-creator", name: "Quick Creator Campaign", shortName: "Quick Creator",
-    tagline: "Get your first creators playing fast",
-    shortDesc: "Perfect for launching a new game and getting your first creator content.",
+    tagline: "Get your first creators playing fast.",
+    subtitle: "Get your first creators playing fast.",
+    shortDesc: "A short campaign designed to generate first impressions, gameplay content and useful creator feedback.",
+    description: "A short campaign designed to generate first impressions, gameplay content and useful creator feedback.",
     bestFor: "🚀 New Launches",
-    description: "5-day sprint to get creators engaged with quick clips and first impressions. Great for new launches or building momentum.",
+    bestForList: ["New game launches", "Steam demos", "Early Access", "First wave of creator content"],
     duration: 5, capacity: 20, demoKeys: 20, fullKeys: 20, xpReward: 750, icon: Zap,
-    pills: [{ ct: "clip", qty: 2 }, { ct: "screenshot", qty: 2 }],
-    estimated: { clips: 40, reels: 10, screenshots: 40, feedback: 20, viewsMin: 3000, viewsMax: 15000 },
+    pills: [{ ct: "clip", qty: 2 }, { ct: "screenshot", qty: 2 }, { ct: "feedback", qty: 1 }],
   },
   {
     slug: "content-boost", name: "Content Boost Campaign", shortName: "Content Boost",
-    tagline: "Build a content library fast",
-    shortDesc: "Generate a larger library of clips, reels and screenshots.",
-    bestFor: "📈 Building Content",
-    description: "10-day multi-format campaign to generate clips, reels and screenshots. Best for marketing assets and discovery.",
+    tagline: "Build a reusable content library for your game.",
+    subtitle: "Build a reusable content library for your game.",
+    shortDesc: "A multi-format campaign to generate gameplay clips, vertical content, screenshots and creator feedback.",
+    description: "A multi-format campaign designed to generate gameplay clips, vertical content, screenshots and creator feedback for future marketing.",
+    bestFor: "📈 Content Library",
+    bestForList: ["Social media marketing", "Building a content library", "Steam page promotion", "Increasing game discovery"],
     duration: 10, capacity: 35, demoKeys: 35, fullKeys: 35, xpReward: 1200, recommended: true, icon: Sparkles,
-    pills: [{ ct: "clip", qty: 2 }, { ct: "reel", qty: 1 }, { ct: "screenshot", qty: 3 }],
-    estimated: { clips: 70, reels: 35, screenshots: 105, feedback: 35, viewsMin: 10000, viewsMax: 50000 },
+    pills: [{ ct: "clip", qty: 2 }, { ct: "reel", qty: 3 }, { ct: "screenshot", qty: 2 }, { ct: "feedback", qty: 1 }],
   },
   {
     slug: "creator-showcase", name: "Creator Showcase Campaign", shortName: "Creator Showcase",
-    tagline: "Maximum exposure with premium content",
-    shortDesc: "Maximum exposure with higher creator commitment.",
-    bestFor: "⭐ Maximum Exposure",
-    description: "21-day deep engagement with streams, reviews and clips. The premium option for serious developer marketing.",
+    tagline: "Generate deeper engagement and premium creator coverage.",
+    subtitle: "Generate deeper engagement and premium creator coverage.",
+    shortDesc: "A longer campaign for creators who will spend more time playing, streaming and producing higher-value content.",
+    description: "A longer campaign for creators who will spend more time playing, streaming and producing higher-value content.",
+    bestFor: "⭐ Deep Engagement",
+    bestForList: ["Full game launches", "Major updates", "DLC releases", "Seasonal events", "Deep creator engagement"],
     duration: 21, capacity: 25, demoKeys: 25, fullKeys: 25, xpReward: 2500, icon: Rocket,
-    pills: [{ ct: "clip", qty: 2 }, { ct: "reel", qty: 1 }, { ct: "screenshot", qty: 3 }, { ct: "stream", qty: 1 }],
-    estimated: { clips: 50, reels: 25, screenshots: 75, feedback: 25, viewsMin: 15000, viewsMax: 80000 },
-  },
-  {
-    slug: "custom-campaign", name: "Custom Campaign", shortName: "Custom",
-    tagline: "Full control for experienced developers",
-    shortDesc: "Create your own campaign using Gamefolio's campaign builder.",
-    bestFor: "⚙ Advanced Users",
-    description: "Set your own duration, capacity, regions and platforms. For developers who know exactly what they need.",
-    duration: 14, capacity: 20, demoKeys: 20, fullKeys: 20, xpReward: 1000, custom: true, icon: Cog,
-    pills: [{ ct: "clip", qty: 2 }, { ct: "screenshot", qty: 2 }, { ct: "feedback", qty: 1 }],
-    estimated: { clips: 40, reels: 20, screenshots: 60, feedback: 20, viewsMin: 5000, viewsMax: 30000 },
+    pills: [{ ct: "clip", qty: 3 }, { ct: "reel", qty: 3 }, { ct: "screenshot", qty: 3 }, { ct: "stream", qty: 1 }, { ct: "feedback", qty: 1 }],
   },
 ];
 
@@ -377,10 +369,9 @@ function StepCard({
 // ─────────────────────────────────────────────
 
 const TYPE_ACCENT: Record<string, string> = {
-  "quick-creator":    "#60a5fa",
-  "content-boost":    NEON,
+  "quick-creator":    NEON,
+  "content-boost":    "#60a5fa",
   "creator-showcase": "#fb923c",
-  "custom-campaign":  "#a78bfa",
 };
 
 // Hex accent → rgb components for rgba() usage
@@ -632,8 +623,8 @@ function ThinTypeCard({
         zIndex: isCenter ? 2 : 1,
       }}>
 
-      {/* Full-width gaming image header */}
-      <div className="relative w-full overflow-hidden shrink-0" style={{ height: "190px", borderRadius: "18px 18px 0 0" }}>
+      {/* Artwork header */}
+      <div className="relative w-full overflow-hidden shrink-0" style={{ height: "180px", borderRadius: "18px 18px 0 0" }}>
         <img
           src={`https://picsum.photos/seed/${seed}/400/380`}
           alt=""
@@ -641,78 +632,113 @@ function ThinTypeCard({
           className="w-full h-full object-cover"
           style={{ display: "block" }}
         />
-        <div className="absolute inset-0" style={{ background: "rgba(7,11,16,0.40)" }} />
-        <div className="absolute inset-0" style={{
-          background: `linear-gradient(to top, rgba(${rgb},0.32) 0%, transparent 55%)`,
-        }} />
+        <div className="absolute inset-0" style={{ background: "rgba(7,11,16,0.45)" }} />
+        <div className="absolute inset-0" style={{ background: `linear-gradient(to top, rgba(${rgb},0.38) 0%, transparent 60%)` }} />
         <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
           {type.recommended && (
             <div className="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full mb-2"
-              style={{ background: "rgba(251,146,60,0.22)", color: "#fb923c", backdropFilter: "blur(6px)" }}>
-              ★ Best
+              style={{ background: "rgba(251,146,60,0.25)", color: "#fb923c", backdropFilter: "blur(6px)" }}>
+              ★ Recommended
             </div>
           )}
-          <h3 className="text-[15px] font-black leading-tight text-white drop-shadow-md">
-            {type.shortName}
-          </h3>
-          <span className="text-[10px] font-bold" style={{ color: accent, textShadow: `0 0 12px ${accent}` }}>
-            {type.duration} days
-          </span>
+          <h3 className="text-[16px] font-black leading-tight text-white drop-shadow-md">{type.shortName}</h3>
+          <p className="text-[11px] mt-0.5 leading-snug font-semibold"
+            style={{ color: `rgba(${rgb},0.9)`, textShadow: `0 0 10px rgba(${rgb},0.4)` }}>
+            {type.subtitle}
+          </p>
         </div>
       </div>
 
-      {/* Short description */}
-      <p className="px-4 pt-4 text-[11px] leading-relaxed line-clamp-2"
-        style={{ color: isCenter ? "rgba(255,255,255,0.50)" : "rgba(255,255,255,0.25)", minHeight: "36px" }}>
-        {type.description}
-      </p>
+      {/* Card body */}
+      <div className="flex-1 flex flex-col px-4 pt-4 gap-4">
 
-      {/* Estimated results */}
-      <div className="px-4 mt-3 flex-1">
-        <div className="text-[9px] font-bold uppercase tracking-widest mb-2"
-          style={{ color: isCenter ? `rgba(${rgb},0.55)` : "rgba(255,255,255,0.20)" }}>
-          Estimated Results
-        </div>
-        <div className="space-y-0">
-          {[
-            { e: "🎥", label: `${type.estimated.clips}+ Clips` },
-            { e: "📸", label: `${type.estimated.screenshots} Screenshots` },
-            { e: "💬", label: `${type.estimated.feedback} Creator Reviews` },
-          ].map((row, i) => (
-            <div key={i} className="flex items-center gap-2 py-2.5"
-              style={{ borderBottom: i < 2 ? `1px solid ${isCenter ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)"}` : "none" }}>
-              <span className="text-[13px]">{row.e}</span>
-              <span className="text-[11px]" style={{ color: isCenter ? "rgba(255,255,255,0.65)" : "rgba(255,255,255,0.30)" }}>
-                {row.label}
-              </span>
-            </div>
-          ))}
+        {/* Description */}
+        <p className="text-[11px] leading-relaxed"
+          style={{ color: isCenter ? "rgba(255,255,255,0.52)" : "rgba(255,255,255,0.24)" }}>
+          {type.description}
+        </p>
+
+        {/* Campaign Details */}
+        <div>
+          <div className="text-[9px] font-bold uppercase tracking-widest mb-2.5"
+            style={{ color: isCenter ? `rgba(${rgb},0.65)` : "rgba(255,255,255,0.22)" }}>
+            Campaign Details
+          </div>
+          <div className="space-y-1.5">
+            {[
+              `${type.duration}-day campaign`,
+              `${type.capacity} creator slots`,
+              `${type.demoKeys} demo keys required`,
+              `${type.fullKeys} full game keys required`,
+            ].map((label, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div className="w-1 h-1 rounded-full shrink-0"
+                  style={{ background: isCenter ? accent : "rgba(255,255,255,0.2)" }} />
+                <span className="text-[11px]"
+                  style={{ color: isCenter ? "rgba(255,255,255,0.65)" : "rgba(255,255,255,0.28)" }}>
+                  {label}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Creator tasks */}
-        <div className="mt-3 pt-3" style={{ borderTop: `1px solid ${isCenter ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.04)"}` }}>
+        {/* Creator Objectives */}
+        <div>
           <div className="text-[9px] font-bold uppercase tracking-widest mb-2"
-            style={{ color: isCenter ? `rgba(${rgb},0.55)` : "rgba(255,255,255,0.20)" }}>
-            Creators Complete
+            style={{ color: isCenter ? `rgba(${rgb},0.65)` : "rgba(255,255,255,0.22)" }}>
+            Creator Objectives
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {type.pills.map(({ ct }) => (
-              <span key={ct} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md"
+            {type.pills.map(({ ct, qty }) => {
+              const label =
+                ct === "clip"       ? `${qty} Gameplay Clip${qty > 1 ? "s" : ""}` :
+                ct === "screenshot" ? `${qty} Screenshot${qty > 1 ? "s" : ""}` :
+                ct === "reel"       ? `${qty} Vertical Reel${qty > 1 ? "s" : ""}` :
+                ct === "stream"     ? "1 Livestream (30+ min)" :
+                ct === "feedback"   ? "1 Creator Review" : `${qty} ${ct}`;
+              return (
+                <span key={ct}
+                  className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full"
+                  style={{
+                    background: isCenter ? `rgba(${rgb},0.10)` : "rgba(255,255,255,0.04)",
+                    color: isCenter ? accent : "rgba(255,255,255,0.30)",
+                    border: `1px solid ${isCenter ? `rgba(${rgb},0.20)` : "rgba(255,255,255,0.06)"}`,
+                  }}>
+                  <Check style={{ width: "9px", height: "9px" }} />
+                  {label}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Best For */}
+        <div>
+          <div className="text-[9px] font-bold uppercase tracking-widest mb-2"
+            style={{ color: isCenter ? `rgba(${rgb},0.65)` : "rgba(255,255,255,0.22)" }}>
+            Best For
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {type.bestForList.map(label => (
+              <span key={label}
+                className="text-[10px] px-2 py-0.5 rounded-full"
                 style={{
-                  background: isCenter ? `rgba(${rgb},0.10)` : "rgba(255,255,255,0.04)",
-                  color: isCenter ? accent : "rgba(255,255,255,0.30)",
-                  border: `1px solid ${isCenter ? `rgba(${rgb},0.20)` : "rgba(255,255,255,0.06)"}`,
+                  background: "rgba(255,255,255,0.04)",
+                  color: isCenter ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.22)",
+                  border: `1px solid rgba(255,255,255,${isCenter ? "0.09" : "0.05"})`,
                 }}>
-                <Check style={{ width: "9px", height: "9px" }} />
-                {ct === "clip" ? "Gameplay Clip" : ct === "screenshot" ? "Screenshot" : ct === "reel" ? "Reel" : ct === "stream" ? "Livestream" : ct === "feedback" ? "Feedback" : ct}
+                {label}
               </span>
             ))}
           </div>
         </div>
+
+        <div className="flex-1" />
       </div>
 
       {/* CTA button */}
-      <div className="px-4 mt-5">
+      <div className="px-4 mt-4">
         <div className="w-full py-3.5 rounded-xl text-[13px] font-black text-center transition-all"
           style={{
             background: isCenter ? accent : "rgba(255,255,255,0.05)",
