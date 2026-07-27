@@ -9,7 +9,7 @@ import {
   CheckCircle2, ChevronRight,
   Film, Camera,
   Video, ArrowUpRight,
-  Settings, LayoutDashboard,
+  Gamepad2, Settings, LayoutDashboard,
   AlertCircle, Star, Circle, Upload, Activity, ImagePlus,
 } from "lucide-react";
 import CreateCampaignFlow from "./indie-dashboard/CreateCampaignFlow";
@@ -424,7 +424,7 @@ function DashboardTab({
                 {/* Flow illustration */}
                 <div className="flex items-center justify-center gap-2 mb-6">
                   {[
-                    { icon: Gamepad, label: "Your Game", color: NEON, rgb: "183,255,27" },
+                    { icon: Gamepad2, label: "Your Game", color: NEON, rgb: "183,255,27" },
                     { icon: Users,   label: "Creators",  color: "#60a5fa", rgb: "96,165,250" },
                     { icon: Film,    label: "Content",   color: "#f472b6", rgb: "244,114,182" },
                     { icon: TrendingUp, label: "Exposure", color: "#34d399", rgb: "52,211,153" },
