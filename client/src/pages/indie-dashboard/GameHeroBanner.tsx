@@ -114,8 +114,8 @@ export default function GameHeroBanner({ onGoTo }: { onGoTo: (tab: TopTabId, sub
   const capsuleUrl = profile?.capsuleImageUrl ?? null;
 
   return (
-    <div className="relative w-full overflow-hidden"
-      style={{ minHeight: "420px", background: "#0a0f14" }}>
+    <div className="relative w-full overflow-hidden min-h-[420px] sm:min-h-[560px] md:min-h-[640px]"
+      style={{ background: "#0a0f14" }}>
 
       {/* Background banner image — full width, no rounding */}
       {bannerUrl && (
@@ -155,8 +155,7 @@ export default function GameHeroBanner({ onGoTo }: { onGoTo: (tab: TopTabId, sub
       />
 
       {/* Hero content — vertically centred */}
-      <div className="relative z-10 max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center"
-        style={{ minHeight: "420px" }}>
+      <div className="relative z-10 max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center min-h-[420px] sm:min-h-[560px] md:min-h-[640px]">
         <div className="flex flex-col lg:flex-row lg:items-end gap-8 py-10">
 
           {/* LEFT — Capsule + game info */}
