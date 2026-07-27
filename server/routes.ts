@@ -10541,7 +10541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return storage.getIndieFieldMeta(userId);
   }
 
-  async function _indieUpsertMeta(userId: number, fieldName: string, patch: Partial<{ importedValue: string; importSource: string; isManualOverride: boolean; lastImportedAt: Date; lastEditedAt: Date }>) {
+  async function _indieUpsertMeta(userId: number, fieldName: string, patch: Partial<{ importedValue: string; importSource: string; isManualOverride: boolean; useImported: boolean; lastImportedAt: Date; lastEditedAt: Date }>) {
     return storage.upsertIndieFieldMeta(userId, fieldName, patch);
   }
 
@@ -10648,7 +10648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const now = new Date();
       for (const key of Object.keys(patch)) {
         if (key === "updatedAt") continue;
-        await _indieUpsertMeta(req.user.id, key, { isManualOverride: true, lastEditedAt: now });
+        await _indieUpsertMeta(req.user.id, key, { isManualOverride: true, useImported: false, lastEditedAt: now });
       }
       const fieldMeta = await _indieFieldMetaMap(req.user.id);
       res.json({ profile, fieldMeta });
