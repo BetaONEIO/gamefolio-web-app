@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation, Link } from 'wouter';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { UserWithStats, ClipWithUser, Screenshot, GameBounty, IndieGameProfile } from '@shared/schema';
-import { queryClient } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import PlatformConnections from '@/components/profile/PlatformConnections';
@@ -32,6 +32,10 @@ import {
   ExternalLink,
   Tag,
   SlidersHorizontal,
+  Settings,
+  Pencil,
+  X,
+  Save,
 } from 'lucide-react';
 
 const MessageDialog = React.lazy(() =>
@@ -63,6 +67,12 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState('OVERVIEW');
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+
+  // ── Inline edit panel state ──
+  const [showEditPanel, setShowEditPanel] = useState(false);
+  const [editDisplayName, setEditDisplayName] = useState(profile.displayName ?? '');
+  const [editDescription, setEditDescription] = useState((profile as any).bio ?? '');
+  const [bannerUploading, setBannerUploading] = useState(false);
 
   const brand = {
     bg: '#0B1319',
@@ -199,6 +209,43 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
   const gameClips = (clips || []).filter((c) => c.videoType !== 'reel');
   const reels = (clips || []).filter((c) => c.videoType === 'reel');
 
+  // ── Save mutations ──
+  const saveProfileMutation = useMutation({
+    mutationFn: async (payload: { displayName?: string; bio?: string; fullDescription?: string; shortDescription?: string }) => {
+      const res = await apiRequest("PATCH", `/api/users/${profile.id}`, payload);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${profile.username}`] });
+      toast({ description: "Profile updated.", variant: "default" });
+      setShowEditPanel(false);
+    },
+    onError: (err: Error) => {
+      toast({ description: err.message || "Failed to save.", variant: "gamefolioError" });
+    },
+  });
+
+  const handleSaveEdit = () => {
+    const payload: any = {};
+    if (editDisplayName.trim() && editDisplayName.trim() !== profile.displayName) {
+      payload.displayName = editDisplayName.trim();
+    }
+    const desc = editDescription.trim();
+    if (desc) {
+      payload.fullDescription = desc;
+      payload.shortDescription = desc.slice(0, 280);
+    } else {
+      payload.bio = "";
+      payload.fullDescription = "";
+      payload.shortDescription = "";
+    }
+    if (Object.keys(payload).length === 0) {
+      setShowEditPanel(false);
+      return;
+    }
+    saveProfileMutation.mutate(payload);
+  };
+
   return (
     <div style={{ background: brand.bg, minHeight: '100vh', fontFamily: 'Inter, sans-serif', color: 'white' }}>
       <section
@@ -218,6 +265,114 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
         )}
         {!igHeaderImageUrl && (
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.15)_0%,transparent_50%)] pointer-events-none"></div>
+        )}
+
+        {/* Settings cog — top-right: opens unified edit panel */}
+        {isOwnProfile && (
+          <div className="absolute top-6 right-6 z-50">
+            {showEditPanel ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowEditPanel(false)}
+                  className="p-2.5 rounded-full border border-white/15 bg-black/40 backdrop-blur-md hover:bg-white/10 transition-colors"
+                  aria-label="Close edit panel"
+                >
+                  <X size={18} />
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={saveProfileMutation.isPending || bannerUploading}
+                  className="p-2.5 rounded-full border border-white/15 bg-black/40 backdrop-blur-md hover:bg-white/10 transition-colors disabled:opacity-50"
+                  aria-label="Save changes"
+                >
+                  {saveProfileMutation.isPending || bannerUploading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  ) : (
+                    <Save size={18} />
+                  )}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setEditDisplayName(profile.displayName ?? '');
+                  setEditDescription((profile as any).bio ?? '');
+                  setShowEditPanel(true);
+                }}
+                className="p-2.5 rounded-full border border-white/15 bg-black/40 backdrop-blur-md hover:bg-white/10 transition-colors"
+                aria-label="Edit profile"
+              >
+                <Settings size={18} />
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Hidden banner file picker — direct upload + crop */}
+        {isOwnProfile && (
+          <input
+            id="ig-profile-banner-input"
+            type="file"
+            accept={profile.isPro ? 'image/jpeg,image/png,image/webp,image/gif' : 'image/jpeg,image/png,image/webp'}
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              e.currentTarget.value = '';
+
+              // Basic validation
+              const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+              if (isGif && !profile.isPro) {
+                toast({ title: 'Pro feature', description: 'Animated GIF banners are a Pro perk.', variant: 'destructive' });
+                return;
+              }
+              const maxSize = isGif ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+              if (file.size > maxSize) {
+                toast({ title: 'File too large', description: isGif ? 'GIF must be under 10MB.' : 'Image must be under 5MB.', variant: 'destructive' });
+                return;
+              }
+
+              setBannerUploading(true);
+              try {
+                // Simple canvas resize to 1600x457 (banner ratio)
+                const blob = await new Promise<Blob>((resolve, reject) => {
+                  const img = new Image();
+                  img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 1600;
+                    canvas.height = 457;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) { reject(new Error('No canvas')); return; }
+                    // Cover-crop to fill the canvas
+                    const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
+                    const sw = canvas.width / scale;
+                    const sh = canvas.height / scale;
+                    const sx = (img.width - sw) / 2;
+                    const sy = (img.height - sh) / 2;
+                    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob(b => b ? resolve(b) : reject(new Error('Canvas to blob failed')), 'image/jpeg', 0.92);
+                  };
+                  img.onerror = () => reject(new Error('Failed to load image'));
+                  img.src = URL.createObjectURL(file);
+                });
+
+                const formData = new FormData();
+                formData.append('banner', blob, 'banner.jpg');
+
+                const res = await fetch('/api/upload/banner', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (!res.ok || !data.url) throw new Error(data.message || 'Upload failed');
+
+                await apiRequest("PATCH", `/api/users/${profile.id}`, { bannerUrl: data.url });
+                queryClient.invalidateQueries({ queryKey: [`/api/users/${profile.username}`] });
+                toast({ description: "Banner updated.", variant: "default" });
+              } catch (err: any) {
+                toast({ title: 'Upload failed', description: err?.message || 'Please try again.', variant: 'destructive' });
+              } finally {
+                setBannerUploading(false);
+              }
+            }}
+          />
         )}
 
         <div className="relative z-20 max-w-5xl w-full mx-auto flex flex-col items-center text-center">
@@ -244,19 +399,62 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
             </div>
           )}
 
-          <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-3 text-transparent bg-clip-text bg-gradient-to-br from-white to-gray-400 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-            {profile.displayName}
-          </h1>
-          <p className="text-white/50 mb-8">@{profile.username}</p>
+          {/* Inline edit panel */}
+          {isOwnProfile && showEditPanel ? (
+            <div className="w-full max-w-2xl mb-8 space-y-4">
+              <input
+                value={editDisplayName}
+                onChange={(e) => setEditDisplayName(e.target.value)}
+                className="w-full bg-black/30 border border-white/15 rounded-lg px-4 py-3 text-4xl md:text-6xl font-black tracking-tighter text-white placeholder-white/30 outline-none focus:border-[#B7FF18]/50 transition-colors text-center"
+                placeholder="Game name"
+                maxLength={60}
+              />
+              <textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                className="w-full bg-black/30 border border-white/15 rounded-lg px-4 py-3 text-base text-white/80 placeholder-white/30 outline-none focus:border-[#B7FF18]/50 transition-colors resize-none"
+                placeholder="Add a short description"
+                rows={3}
+                maxLength={500}
+              />
+              <button
+                onClick={() => {
+                  const picker = document.getElementById('ig-profile-banner-input') as HTMLInputElement | null;
+                  picker?.click();
+                }}
+                disabled={bannerUploading}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/15 bg-black/30 hover:bg-white/5 transition-colors text-sm font-medium text-white/70 disabled:opacity-50 mx-auto"
+              >
+                {bannerUploading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
+                    Uploading banner…
+                  </>
+                ) : (
+                  <>
+                    <Pencil size={14} />
+                    Upload banner image
+                  </>
+                )}
+              </button>
+            </div>
+          ) : (
+            <>
+              <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-3 text-transparent bg-clip-text bg-gradient-to-br from-white to-gray-400 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                {profile.displayName}
+              </h1>
+              <p className="text-white/50 mb-8">@{profile.username}</p>
 
-          {profile.bio && (
-            <p className="max-w-2xl text-white/70 mb-8">{profile.bio}</p>
+              {profile.bio && (
+                <p className="max-w-2xl text-white/70 mb-8">{profile.bio}</p>
+              )}
+            </>
           )}
 
           {isOwnProfile ? (
             <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
               <a
-                href="/studio-dashboard"
+                href="/indie/dashboard"
                 className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-lg font-bold text-black transition-all hover:scale-105"
                 style={{ background: brand.accent }}
               >
