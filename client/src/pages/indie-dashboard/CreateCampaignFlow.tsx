@@ -992,19 +992,21 @@ function parseCSVKeys(csv: string): string[] {
 }
 
 function KeyUploadArea({
-  label, accent, accentRgb, description, keys, needed, vaultAvail, onChange,
+  label, accent, accentRgb, description, keys, needed, vaultAvail, useVault, onUseVaultChange, onChange,
 }: {
   label: string; accent: string; accentRgb: string; description: string;
-  keys: string; needed: number; vaultAvail: number; onChange: (v: string) => void;
+  keys: string; needed: number; vaultAvail: number; useVault: boolean;
+  onUseVaultChange: (v: boolean) => void; onChange: (v: string) => void;
 }) {
   const [dragging, setDragging] = useState(false);
   const [justLoaded, setJustLoaded] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const pasted = parseKeyLines(keys).length;
-  const total  = vaultAvail + pasted;
-  const met    = total >= needed && needed > 0;
-  const pct    = needed > 0 ? Math.min(100, Math.round((total / needed) * 100)) : (total > 0 ? 100 : 0);
+  const pasted          = parseKeyLines(keys).length;
+  const effectiveVault  = useVault ? vaultAvail : 0;
+  const total           = effectiveVault + pasted;
+  const met             = total >= needed && needed > 0;
+  const pct             = needed > 0 ? Math.min(100, Math.round((total / needed) * 100)) : (total > 0 ? 100 : 0);
 
   const handleFile = useCallback((file: File) => {
     const reader = new FileReader();
@@ -1021,6 +1023,43 @@ function KeyUploadArea({
 
   return (
     <div className="space-y-3">
+
+      {/* Vault banner — shown whenever vault has keys */}
+      {vaultAvail > 0 && (
+        <div className="rounded-2xl p-3 flex items-center justify-between gap-3 transition-all duration-200"
+          style={{
+            background: useVault ? `rgba(${accentRgb},0.08)` : "rgba(255,255,255,0.04)",
+            border: `1.5px solid ${useVault ? `rgba(${accentRgb},0.22)` : "rgba(255,255,255,0.07)"}`,
+          }}>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <KeyRound className="w-4 h-4 shrink-0" style={{ color: useVault ? accent : "rgba(255,255,255,0.28)" }} />
+            <div className="min-w-0">
+              <p className="text-[12px] font-bold leading-tight" style={{ color: useVault ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.40)" }}>
+                {vaultAvail} {label.toLowerCase()} in your vault
+              </p>
+              <p className="text-[10px] leading-tight mt-0.5" style={{ color: useVault ? `rgba(${accentRgb},0.70)` : "rgba(255,255,255,0.28)" }}>
+                {useVault
+                  ? vaultAvail >= needed
+                    ? "Enough to cover this campaign"
+                    : `${needed - vaultAvail} more needed`
+                  : "Not using vault keys for this campaign"}
+              </p>
+            </div>
+          </div>
+          {/* Toggle switch */}
+          <button
+            onClick={() => onUseVaultChange(!useVault)}
+            className="shrink-0 rounded-full flex items-center transition-all duration-200"
+            style={{
+              width: "40px", height: "22px", padding: "2px",
+              background: useVault ? accent : "rgba(255,255,255,0.14)",
+            }}>
+            <div className="rounded-full bg-white shadow-sm transition-all duration-200"
+              style={{ width: "18px", height: "18px", transform: useVault ? "translateX(18px)" : "translateX(0)" }} />
+          </button>
+        </div>
+      )}
+
       {/* Label + count */}
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -1092,20 +1131,22 @@ function KeyUploadArea({
         />
       )}
 
-      {vaultAvail > 0 && !met && (
-        <p className="text-[10px] text-white/25">↳ {vaultAvail} already in your vault</p>
-      )}
     </div>
   );
 }
 
-function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull, onDemoChange, onFullChange }: {
+function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
+  useVaultDemo, useVaultFull, onUseVaultDemoChange, onUseVaultFullChange,
+  onDemoChange, onFullChange }: {
   type: CampaignType;
   demoKeys: string; fullKeys: string; vaultDemo: number; vaultFull: number;
+  useVaultDemo: boolean; useVaultFull: boolean;
+  onUseVaultDemoChange: (v: boolean) => void; onUseVaultFullChange: (v: boolean) => void;
   onDemoChange: (v: string) => void; onFullChange: (v: string) => void;
 }) {
-  const allReady = (vaultDemo + parseKeyLines(demoKeys).length) >= type.demoKeys &&
-    (vaultFull + parseKeyLines(fullKeys).length) >= type.fullKeys;
+  const effectiveDemo = (useVaultDemo ? vaultDemo : 0) + parseKeyLines(demoKeys).length;
+  const effectiveFull = (useVaultFull ? vaultFull : 0) + parseKeyLines(fullKeys).length;
+  const allReady = effectiveDemo >= type.demoKeys && effectiveFull >= type.fullKeys;
 
   return (
     <div className="space-y-6 gf-fade-up">
@@ -1122,11 +1163,13 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull, onDemo
           label="Demo Keys" accent="#60a5fa" accentRgb="96,165,250"
           description="Issued to creators when they join."
           keys={demoKeys} needed={type.demoKeys} vaultAvail={vaultDemo}
+          useVault={useVaultDemo} onUseVaultChange={onUseVaultDemoChange}
           onChange={onDemoChange} />
         <KeyUploadArea
           label="Full Game Keys" accent="#fb923c" accentRgb="251,146,60"
           description="Rewarded on completion."
           keys={fullKeys} needed={type.fullKeys} vaultAvail={vaultFull}
+          useVault={useVaultFull} onUseVaultChange={onUseVaultFullChange}
           onChange={onFullChange} />
       </div>
 
@@ -1769,6 +1812,8 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
   const [submitting, setSubmitting] = useState(false);
   const [pendingDemoKeys, setPendingDemoKeys] = useState("");
   const [pendingFullKeys, setPendingFullKeys] = useState("");
+  const [useVaultDemo, setUseVaultDemo] = useState(true);
+  const [useVaultFull, setUseVaultFull] = useState(true);
   const [settings, setSettings] = useState<CampaignSettings>({
     description: "", startType: "asap", scheduledDate: "",
     gameName: "", gameId: null, gameImageUrl: null,
@@ -1810,9 +1855,11 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
   const vaultFull = bountyStatus?.fullGameKeys?.available ?? 0;
   const pendDemo  = parseKeyLines(pendingDemoKeys).length;
   const pendFull  = parseKeyLines(pendingFullKeys).length;
+  const effectiveVaultDemo = useVaultDemo ? vaultDemo : 0;
+  const effectiveVaultFull = useVaultFull ? vaultFull : 0;
   const keysReady = !!selectedType &&
-    (vaultDemo + pendDemo >= selectedType.demoKeys) &&
-    (vaultFull + pendFull >= selectedType.fullKeys);
+    (effectiveVaultDemo + pendDemo >= selectedType.demoKeys) &&
+    (effectiveVaultFull + pendFull >= selectedType.fullKeys);
 
   // Auto pool counts (adds pasted keys to pool live count)
   const poolDemo    = (poolStatus?.demoKeys ?? 0) + parseKeyLines(autoDemoKeys).length;
@@ -2132,6 +2179,8 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
                   <StepUploadKeys type={selectedType}
                     demoKeys={pendingDemoKeys} fullKeys={pendingFullKeys}
                     vaultDemo={vaultDemo} vaultFull={vaultFull}
+                    useVaultDemo={useVaultDemo} useVaultFull={useVaultFull}
+                    onUseVaultDemoChange={setUseVaultDemo} onUseVaultFullChange={setUseVaultFull}
                     onDemoChange={setPendingDemoKeys} onFullChange={setPendingFullKeys} />
                   <button
                     onClick={() => keysReady && setCurrentStep(4)}
