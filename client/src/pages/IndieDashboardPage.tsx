@@ -12,8 +12,7 @@ import RunCampaignWizard from "./indie-dashboard/RunCampaignWizard";
 import GameHeroBanner from "./indie-dashboard/GameHeroBanner";
 import DashboardTab from "./indie-dashboard/DashboardTab";
 
-export { NEON, CARD_BG, CARD_BORDER, PAGE_BG } from "./indie-dashboard/constants";
-import { PAGE_BG } from "./indie-dashboard/constants";
+import { NEON, PAGE_BG } from "./indie-dashboard/constants";
 
 type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "analytics" | "game-profile";
 type CampaignSubTab = "create" | "my";
