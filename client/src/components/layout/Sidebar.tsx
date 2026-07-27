@@ -288,7 +288,7 @@ const Sidebar = () => {
     { icon: GamefolioProfileIcon, label: "My Gamefolio", href: user ? `/profile/${user.username}` : "/auth", themed: true, gamefolioIcon: true },
 
     // Partner dashboards — visible only to the matching paid partner (admins see both).
-    ...(user ? [{ icon: Rocket, label: "Indie Dashboard", href: "/indie/dashboard" }] : []),
+    ...(user ? [{ icon: Rocket, label: "Game Dashboard", href: "/indie/dashboard" }] : []),
     ...(isPartnerType(user, "streamer") || user?.role === "admin" ? [{ icon: Radio, label: "Streamer Dashboard", href: "/streamer/dashboard" }] : []),
 
     { icon: GamefolioHelpIcon, label: "Help & Support", href: "/help" },
