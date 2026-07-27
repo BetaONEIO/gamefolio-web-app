@@ -258,11 +258,24 @@ export function FieldRow({ fieldName, label, profile, fieldMeta, type, selectOpt
 
 // ─── Accordion Section Wrapper ────────────────────────────────────────────────
 
-export function Section({ id: _id, title, children, filledCount, totalCount, open, onToggle }: {
+export function Section({ id: _id, title, children, filledCount, totalCount, open, onToggle, statusLabel, statusColor }: {
   id: string; title: string; children: React.ReactNode;
   filledCount: number; totalCount: number; open: boolean; onToggle: () => void;
+  statusLabel?: string; statusColor?: string;
 }) {
   const pct = totalCount > 0 ? Math.round((filledCount / totalCount) * 100) : 0;
+  const label = statusLabel ?? (
+    pct === 100 ? "Complete" :
+    pct >= 75 ? "Excellent" :
+    pct >= 50 ? "Good" :
+    pct > 0 ? "Needs Attention" : "Not started"
+  );
+  const color = statusColor ?? (
+    pct === 100 ? NEON :
+    pct >= 75 ? "#4ade80" :
+    pct >= 50 ? "#60a5fa" :
+    "#f59e0b"
+  );
   return (
     <div className="rounded-xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
       <button className="w-full flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors" onClick={onToggle}>
@@ -270,13 +283,9 @@ export function Section({ id: _id, title, children, filledCount, totalCount, ope
           {open ? <ChevronDown size={16} className="text-white/50" /> : <ChevronRight size={16} className="text-white/50" />}
           <span className="font-bold text-white text-sm">{title}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold" style={{ color: pct === 100 ? NEON : "rgba(255,255,255,0.3)" }}>
-            {filledCount}/{totalCount}
-          </span>
-          <div className="w-16 h-1 rounded-full bg-white/10 overflow-hidden">
-            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: pct === 100 ? NEON : "#fff4" }} />
-          </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
+          <span className="text-[11px] font-semibold" style={{ color }}>{label}</span>
         </div>
       </button>
       {open && <div className="px-5 pb-4">{children}</div>}

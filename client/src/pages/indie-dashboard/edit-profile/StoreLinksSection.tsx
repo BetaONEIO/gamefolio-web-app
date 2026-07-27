@@ -1,10 +1,10 @@
 import { FieldRow, Section } from "./FieldRow";
 import type { SectionWrapperProps } from "./types";
 
-export function StoreLinksSection({ profile, fieldMeta, onSave, onRevert, isSaving, open, onToggle, filledCount, totalCount }: SectionWrapperProps) {
+export function StoreLinksSection({ profile, fieldMeta, onSave, onRevert, isSaving, open, onToggle, filledCount, totalCount, statusLabel, statusColor }: SectionWrapperProps) {
   const fp = { profile, fieldMeta, onSave, onRevert, isSaving };
   return (
-    <Section id="stores" title="Store Links" open={open} onToggle={onToggle} filledCount={filledCount} totalCount={totalCount}>
+    <Section id="stores" title="Store Links" open={open} onToggle={onToggle} filledCount={filledCount} totalCount={totalCount} statusLabel={statusLabel} statusColor={statusColor}>
       <p className="text-[10px] text-white/30 pb-2">
         Store IDs enable automatic import and sync. Slug/URL pairs let visitors jump straight to your store pages.
       </p>

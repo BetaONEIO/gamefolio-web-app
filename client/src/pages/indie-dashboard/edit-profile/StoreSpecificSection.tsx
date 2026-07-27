@@ -1,10 +1,10 @@
 import { FieldRow, Section } from "./FieldRow";
 import type { SectionWrapperProps } from "./types";
 
-export function StoreSpecificSection({ profile, fieldMeta, onSave, onRevert, isSaving, open, onToggle, filledCount, totalCount }: SectionWrapperProps) {
+export function StoreSpecificSection({ profile, fieldMeta, onSave, onRevert, isSaving, open, onToggle, filledCount, totalCount, statusLabel, statusColor }: SectionWrapperProps) {
   const fp = { profile, fieldMeta, onSave, onRevert, isSaving };
   return (
-    <Section id="store-specific" title="Store-Specific Info" open={open} onToggle={onToggle} filledCount={filledCount} totalCount={totalCount}>
+    <Section id="store-specific" title="Store-Specific Info" open={open} onToggle={onToggle} filledCount={filledCount} totalCount={totalCount} statusLabel={statusLabel} statusColor={statusColor}>
       <p className="text-[10px] text-white/30 pb-2">
         Age ratings, language support, and content details shown on store pages and in listing metadata.
       </p>

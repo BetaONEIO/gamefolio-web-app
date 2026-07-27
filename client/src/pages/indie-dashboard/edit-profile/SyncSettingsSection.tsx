@@ -9,12 +9,12 @@ const SYNC_SOURCE_OPTIONS = [
   { value: "itch", label: "itch.io", icon: SiItchdotio, color: "#fa5c5c" },
 ];
 
-export function SyncSettingsSection({ profile, onSave, isSaving, open, onToggle, filledCount, totalCount }: SectionWrapperProps) {
+export function SyncSettingsSection({ profile, onSave, isSaving, open, onToggle, filledCount, totalCount, statusLabel, statusColor }: SectionWrapperProps) {
   const autoSync = !!(profile as any)?.autoSyncEnabled;
   const preferred = (profile as any)?.preferredSyncSource ?? "";
 
   return (
-    <Section id="sync-settings" title="Sync Settings" open={open} onToggle={onToggle} filledCount={filledCount} totalCount={totalCount}>
+    <Section id="sync-settings" title="Sync Settings" open={open} onToggle={onToggle} filledCount={filledCount} totalCount={totalCount} statusLabel={statusLabel} statusColor={statusColor}>
       <p className="text-[10px] text-white/30 pb-3">
         Control how store data is pulled into your profile. Manual overrides always take precedence over synced values when set.
       </p>

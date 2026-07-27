@@ -19,6 +19,8 @@ export interface SectionWrapperProps extends SharedFieldProps {
   onToggle: () => void;
   filledCount: number;
   totalCount: number;
+  statusLabel?: string;
+  statusColor?: string;
 }
 
 // Essential fields reflect the minimum for a useful public-facing profile
