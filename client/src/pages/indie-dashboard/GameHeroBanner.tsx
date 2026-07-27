@@ -2,16 +2,9 @@ import { useState, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getQueryFn, queryClient } from "@/lib/queryClient";
-import {
-  Rocket, Users, Loader2,
-  TrendingUp,
-  ArrowUpRight,
-  Film,
-  ImagePlus,
-} from "lucide-react";
+import { Loader2, ImagePlus } from "lucide-react";
 import { NEON } from "./constants";
 
-const ESSENTIAL_FIELDS = ["gameName", "shortDescription", "headerImageUrl", "steamUrl", "epicUrl", "itchUrl"];
 const ALL_PROFILE_FIELDS = [
   "gameName", "shortDescription", "headerImageUrl", "steamUrl", "epicUrl", "itchUrl",
   "fullDescription", "releaseDate", "studioName", "genres", "tags", "platforms",
@@ -38,9 +31,7 @@ function isFieldFilled(profile: any, field: string) {
   return true;
 }
 
-type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "analytics" | "game-profile";
-
-export default function GameHeroBanner({ onGoTo }: { onGoTo: (tab: TopTabId, sub?: string) => void }) {
+export default function GameHeroBanner() {
   const { user } = useAuth();
   const [imgError, setImgError] = useState(false);
   const artworkInputRef = useRef<HTMLInputElement>(null);
@@ -60,54 +51,15 @@ export default function GameHeroBanner({ onGoTo }: { onGoTo: (tab: TopTabId, sub
     },
   });
 
-  const { data: overview } = useQuery<any>({
-    queryKey: ["/api/campaigns/overview"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-  });
   const { data: profileData } = useQuery<any>({
     queryKey: ["/api/indie/profile"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-  });
-  const { data: analyticsData } = useQuery<any>({
-    queryKey: ["/api/indie/analytics"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-  });
-  const { data: bountyStatus } = useQuery<any>({
-    queryKey: ["/api/indie/bounty-status"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-  });
-  const { data: contentData } = useQuery<any[]>({
-    queryKey: ["/api/indie/creator-content"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-  });
-  const { data: campaigns } = useQuery<any[]>({
-    queryKey: ["/api/campaigns/my"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   const profile = profileData?.profile ?? null;
   const allFilled = ALL_PROFILE_FIELDS.filter((f) => isFieldFilled(profile, f)).length;
   const profilePct = Math.round((allFilled / ALL_PROFILE_FIELDS.length) * 100);
-  const missingEssential = ESSENTIAL_FIELDS.filter((f) => !isFieldFilled(profile, f));
   const nextSteps = PROFILE_STEPS.filter((s) => !isFieldFilled(profile, s.field)).slice(0, 3);
-
-  const d = overview ?? {
-    activeCampaigns: 0, totalParticipants: 0,
-    demoKeysRemaining: 0, fullKeysRemaining: 0, recentCampaigns: [],
-  };
-  const demoKeys = bountyStatus?.demoKeys ?? { available: d.demoKeysRemaining ?? 0, claimed: 0 };
-  const fullKeys = bountyStatus?.fullGameKeys ?? { available: d.fullKeysRemaining ?? 0, awarded: 0 };
-
-  const activeCampaigns = (campaigns ?? []).filter((c: any) => {
-    const s = (c.status ?? "").toLowerCase();
-    return s === "active" || s === "live" || s === "running" || s === "approved";
-  });
-
-  const content = Array.isArray(contentData) ? contentData : [];
-  const contentTotal = content.length;
-  const clipsTotal = content.filter((c: any) => (c.type ?? "clip") === "clip").length;
-  const reelsTotal = content.filter((c: any) => (c.type ?? "clip") === "reel").length;
-  const screenshotsTotal = content.filter((c: any) => (c.type ?? "clip") === "screenshot").length;
 
   const bannerUrl = (!imgError && (profile?.headerImageUrl || profile?.capsuleImageUrl))
     ? (profile.headerImageUrl ?? profile.capsuleImageUrl) : null;
@@ -212,55 +164,7 @@ export default function GameHeroBanner({ onGoTo }: { onGoTo: (tab: TopTabId, sub
                   </p>
                 )}
               </div>
-
-              {/* Primary CTA */}
-              <div className="flex flex-wrap items-center gap-2">
-                {missingEssential.length > 0 ? (
-                  <button onClick={() => onGoTo("game-profile")}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
-                    style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 24px rgba(183,255,24,0.25)" }}>
-                    Complete Setup <ArrowUpRight className="w-4 h-4" />
-                  </button>
-                ) : activeCampaigns.length === 0 ? (
-                  <button onClick={() => onGoTo("campaigns", "create")}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
-                    style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 24px rgba(183,255,24,0.25)" }}>
-                    <Rocket className="w-4 h-4" /> Create Campaign
-                  </button>
-                ) : (
-                  <button onClick={() => onGoTo("campaigns", "my")}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
-                    style={{ background: NEON, color: "#070b10", boxShadow: "0 4px 24px rgba(183,255,24,0.25)" }}>
-                    View Campaign <ArrowUpRight className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
             </div>
-          </div>
-
-          {/* RIGHT — Compact stats */}
-          <div className="shrink-0 grid grid-cols-2 sm:grid-cols-3 gap-3 lg:w-[340px]">
-            {[
-              { label: "Active Campaign", value: activeCampaigns.length > 0 ? "Live" : "None",
-                sub: activeCampaigns.length > 0 ? (activeCampaigns[0].template_name ?? "Campaign") : "No campaign", color: activeCampaigns.length > 0 ? NEON : "#475569" },
-              { label: "Active Creators", value: String(d.totalParticipants),
-                sub: "Enrolled", color: d.totalParticipants > 0 ? NEON : "#475569" },
-              { label: "Demo Keys", value: String(demoKeys.available),
-                sub: "Available", color: demoKeys.available < 5 ? "#f87171" : demoKeys.available < 15 ? "#f59e0b" : NEON },
-              { label: "Content Created", value: String(contentTotal),
-                sub: `${clipsTotal} clips \u00b7 ${reelsTotal} reels`, color: contentTotal > 0 ? "#a78bfa" : "#475569" },
-              { label: "Total Views", value: (analyticsData?.totalViews ?? d.totalViews ?? 0).toLocaleString(),
-                sub: "Across all content", color: (analyticsData?.totalViews ?? d.totalViews ?? 0) > 0 ? "#60a5fa" : "#475569" },
-              { label: "Profile", value: `${profilePct}%`,
-                sub: profilePct >= 80 ? "Complete" : "Needs work", color: profilePct >= 80 ? "#4ade80" : profilePct >= 50 ? "#f59e0b" : "#f87171" },
-            ].map(({ label, value, sub, color }) => (
-              <div key={label} className="rounded-xl p-3 text-center"
-                style={{ background: "rgba(0,0,0,0.40)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
-                <div className="text-[9px] text-white/30 uppercase tracking-wider mb-1">{label}</div>
-                <div className="text-base font-black" style={{ color }}>{value}</div>
-                <div className="text-[9px] text-white/20 truncate">{sub}</div>
-              </div>
-            ))}
           </div>
         </div>
       </div>
