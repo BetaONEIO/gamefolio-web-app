@@ -159,7 +159,8 @@ router.post('/bounties/upload-media', bountyMediaUpload.single('file'), async (r
 });
 
 // List bounties for a game
-router.get('/:gameId/bounties', async (req, res) => {
+router.get('/:gameId/bounties', async (req, res, next) => {
+  if (req.params.gameId === 'indie') return next();
   try {
     const gameId = parseInt(req.params.gameId);
     if (isNaN(gameId)) return res.status(400).json({ message: 'Invalid game ID' });
