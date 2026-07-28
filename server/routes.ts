@@ -10520,6 +10520,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         await db.insert(indieGameProfiles).values({ userId: req.user.id, [field]: imageUrl });
       }
+      // Clear useImported so GET /api/indie/profile returns the uploaded URL, not a stale imported value
+      await _indieUpsertMeta(req.user.id, field, { isManualOverride: true, useImported: false, lastEditedAt: new Date() });
       res.json({ url: imageUrl, field });
     } catch (err) {
       console.error("Error uploading indie profile image:", err);
