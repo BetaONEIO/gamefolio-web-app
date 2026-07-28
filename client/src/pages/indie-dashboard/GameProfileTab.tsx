@@ -5,9 +5,9 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Pencil, X, Check, Loader2, Upload, Plus, Trash2, ExternalLink,
   Image as ImageIcon, Video, Globe, Gamepad2, Monitor, Smartphone,
-  Play, Sparkles, Building2, Package, Download,
+  Play, Sparkles, Building2, Package, Download, Twitter,
 } from "lucide-react";
-import { SiSteam, SiEpicgames, SiItchdotio, SiTwitter, SiDiscord } from "react-icons/si";
+import { SiSteam, SiEpicgames, SiItchdotio, SiDiscord } from "react-icons/si";
 import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 import { StoreImportPanel } from "./edit-profile/StoreImportPanel";
 import { SyncPanel } from "./edit-profile/SyncPanel";
@@ -837,7 +837,7 @@ function StudioCard({ profile }: { profile: Profile | null }) {
                   <a href={profile.twitterUrl} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-colors"
                     style={{ background: "rgba(29,161,242,0.08)", border: "1px solid rgba(29,161,242,0.2)" }}>
-                    <SiTwitter size={10} className="text-[#1da1f2]" /> Twitter / X
+                    <Twitter size={10} className="text-[#1da1f2]" /> Twitter / X
                   </a>
                 )}
                 {profile?.discordUrl && (
