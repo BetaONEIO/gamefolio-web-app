@@ -1,490 +1,947 @@
-import { useState, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, RefreshCw, CheckCircle2, ChevronDown, ChevronUp, ArrowRight, Play } from "lucide-react";
-import { SiSteam } from "react-icons/si";
+import {
+  Pencil, X, Check, Loader2, Upload, Plus, Trash2, ExternalLink,
+  Image as ImageIcon, Video, Globe, Gamepad2, Monitor, Smartphone,
+  Play, Sparkles, Building2, Package, Download,
+} from "lucide-react";
+import { SiSteam, SiEpicgames, SiItchdotio, SiTwitter, SiDiscord } from "react-icons/si";
 import { NEON, CARD_BG, CARD_BORDER } from "./constants";
-import { ESSENTIAL_FIELDS, formatFieldName, isFieldFilled, type Profile, type FieldMeta } from "./edit-profile/types";
-import { BasicInfoSection } from "./edit-profile/BasicInfoSection";
-import { StudioSection } from "./edit-profile/StudioSection";
-import { DescriptionSection } from "./edit-profile/DescriptionSection";
-import { FeaturesSection } from "./edit-profile/FeaturesSection";
-import { MediaSection } from "./edit-profile/MediaSection";
-import { PlatformsSection } from "./edit-profile/PlatformsSection";
-import { StoreLinksSection } from "./edit-profile/StoreLinksSection";
-import { SocialSection } from "./edit-profile/SocialSection";
-import { StoreSpecificSection } from "./edit-profile/StoreSpecificSection";
-import { SyncSettingsSection } from "./edit-profile/SyncSettingsSection";
 import { StoreImportPanel } from "./edit-profile/StoreImportPanel";
 import { SyncPanel } from "./edit-profile/SyncPanel";
+import {
+  isFieldFilled, RELEASE_STATUS_OPTIONS, PLATFORM_OPTIONS,
+  type Profile, type FieldMeta,
+} from "./edit-profile/types";
 
-// ── Section field groups ───────────────────────────────────────────────────────
-const SECTION_FIELDS: Record<string, string[]> = {
-  basic: ["gameName", "releaseStatus", "releaseDate", "price"],
-  studio: ["studioName", "studioFoundedYear", "studioTeamSize", "studioWebsite", "studioCountry"],
-  description: ["shortDescription", "fullDescription"],
-  features: ["keyFeatures", "genres", "tags"],
-  media: ["headerImageUrl", "capsuleImageUrl", "trailerUrl", "screenshotUrls"],
-  platforms: ["platforms"],
-  stores: ["steamAppId", "steamUrl", "epicSlug", "epicUrl", "itchUrl"],
-  social: ["websiteUrl", "twitterUrl", "discordUrl"],
-  "store-specific": ["ageRating", "supportedLanguages", "contentDescriptors"],
-  "sync-settings": ["autoSyncEnabled", "preferredSyncSource"],
-};
+// ─── Health scoring ────────────────────────────────────────────────────────────
+const HEALTH_FIELDS = [
+  { key: "gameName",        label: "Game name",          pts: 15, section: "about"  },
+  { key: "shortDescription",label: "Short description",  pts: 12, section: "about"  },
+  { key: "fullDescription", label: "Full description",   pts: 8,  section: "about"  },
+  { key: "headerImageUrl",  label: "Banner image",       pts: 15, section: "media"  },
+  { key: "capsuleImageUrl", label: "Capsule artwork",    pts: 10, section: "media"  },
+  { key: "trailerUrl",      label: "Game trailer",       pts: 10, section: "media"  },
+  { key: "genres",          label: "Genres",             pts: 5,  section: "about"  },
+  { key: "keyFeatures",     label: "Key features",       pts: 5,  section: "about"  },
+  { key: "platforms",       label: "Platforms",          pts: 5,  section: "platforms"},
+  { key: "studioName",      label: "Studio name",        pts: 5,  section: "studio" },
+  { key: "releaseStatus",   label: "Release status",     pts: 5,  section: "about"  },
+  { key: "screenshotUrls",  label: "Screenshots",        pts: 5,  section: "media"  },
+] as const;
 
-// ── Profile Optimisation recommendations ──────────────────────────────────────
-const RECOMMENDATIONS = [
-  { field: "trailerUrl",         icon: "🎬", label: "Upload a Trailer",           reason: "Creators are more likely to request keys for games with gameplay footage.", section: "media" },
-  { field: "screenshotUrls",     icon: "🖼️", label: "Add Screenshots",            reason: "Games with screenshots get significantly more creator attention.", section: "media" },
-  { field: "genres",             icon: "🏷️", label: "Add Genres",                 reason: "Genres help creators find your game when filtering by their content style.", section: "features" },
-  { field: "releaseDate",        icon: "📅", label: "Set a Release Date",          reason: "Creators prefer to plan coverage around a known launch window.", section: "basic" },
-  { field: "keyFeatures",        icon: "⚡", label: "Add Key Features",            reason: "Key features give creators talking points to highlight in their videos.", section: "features" },
-  { field: "fullDescription",    icon: "📝", label: "Write a Full Description",    reason: "A detailed description helps creators pitch your game confidently.", section: "description" },
-  { field: "platforms",          icon: "💻", label: "Confirm Platforms",           reason: "Creators need to know which platforms your game runs on.", section: "platforms" },
-  { field: "capsuleImageUrl",    icon: "🖼️", label: "Add Capsule Image",           reason: "Used as a thumbnail in search results and campaign listings.", section: "media" },
-  { field: "twitterUrl",         icon: "🐦", label: "Add Twitter / X Link",        reason: "Lets creators tag you when sharing their content.", section: "social" },
-  { field: "discordUrl",         icon: "💬", label: "Add Discord Server Link",     reason: "A community hub for creators to discuss your game.", section: "social" },
-  { field: "price",              icon: "💰", label: "Set Your Game Price",          reason: "Creators often mention pricing to help their audience decide.", section: "basic" },
-  { field: "studioName",         icon: "🏢", label: "Add Studio Name",             reason: "Helps creators credit your studio correctly in their content.", section: "studio" },
-  { field: "tags",               icon: "🏷️", label: "Add Tags",                   reason: "Tags improve discoverability when creators search by genre or style.", section: "features" },
-  { field: "websiteUrl",         icon: "🌐", label: "Add Your Website",            reason: "Gives creators a link to share for players who want to learn more.", section: "social" },
-  { field: "supportedLanguages", icon: "🌍", label: "Add Supported Languages",     reason: "Helps match your game with creators whose audience speaks the right language.", section: "store-specific" },
-  { field: "ageRating",          icon: "🔞", label: "Add Age Rating",              reason: "Required for some platform listings.", section: "store-specific" },
-  { field: "contentDescriptors", icon: "⚠️", label: "Add Content Descriptors",    reason: "Informs creators of any sensitive content.", section: "store-specific" },
-  { field: "studioCountry",      icon: "📍", label: "Add Studio Location",         reason: "Provides context about your team to regional creator audiences.", section: "studio" },
-];
-
-// ── Status computation ─────────────────────────────────────────────────────────
-function computeSectionStatus(id: string, profile: Profile | null, filledCount: number, totalCount: number): { label: string; color: string } {
-  if (!profile) return { label: "Not started", color: "#f59e0b" };
-  const pct = totalCount > 0 ? Math.round((filledCount / totalCount) * 100) : 0;
-
-  if (id === "media") {
-    const hasHeader = isFieldFilled(profile, "headerImageUrl");
-    const hasTrailer = isFieldFilled(profile, "trailerUrl");
-    const hasScreenshots = isFieldFilled(profile, "screenshotUrls");
-    if (!hasHeader) return { label: "⚠ Missing Banner", color: "#f59e0b" };
-    if (!hasTrailer && !hasScreenshots) return { label: "Missing Trailer & Screenshots", color: "#f59e0b" };
-    if (!hasTrailer) return { label: "Missing Trailer", color: "#f59e0b" };
-    if (!hasScreenshots) return { label: "Missing Screenshots", color: "#f59e0b" };
-    return { label: "✓ Complete", color: NEON };
+function computeHealth(profile: Profile | null) {
+  let earned = 0;
+  const missing: typeof HEALTH_FIELDS[number][] = [];
+  for (const f of HEALTH_FIELDS) {
+    if (isFieldFilled(profile, f.key)) earned += f.pts;
+    else missing.push(f);
   }
-
-  if (id === "stores") {
-    const hasSteam = isFieldFilled(profile, "steamUrl");
-    const hasEpic = isFieldFilled(profile, "epicUrl");
-    const hasItch = isFieldFilled(profile, "itchUrl");
-    const connected = ([hasSteam && "Steam", hasEpic && "Epic", hasItch && "itch.io"] as (string | false)[]).filter(Boolean) as string[];
-    if (connected.length === 0) return { label: "No stores linked", color: "#f59e0b" };
-    if (connected.length >= 3) return { label: "✓ All stores linked", color: NEON };
-    return { label: connected.join(" + ") + " connected", color: "#60a5fa" };
-  }
-
-  if (id === "platforms") {
-    const platforms = (profile as any)?.platforms ?? [];
-    if (!platforms.length) return { label: "No platforms set", color: "#f59e0b" };
-    return { label: `${platforms.length} platform${platforms.length === 1 ? "" : "s"}`, color: platforms.length >= 2 ? NEON : "#60a5fa" };
-  }
-
-  if (id === "social") {
-    if (pct === 0) return { label: "No links added", color: "#f59e0b" };
-    if (pct === 100) return { label: "✓ Complete", color: NEON };
-    return { label: "Some links missing", color: "#60a5fa" };
-  }
-
-  if (id === "sync-settings") {
-    const autoSync = !!(profile as any)?.autoSyncEnabled;
-    const preferred = (profile as any)?.preferredSyncSource;
-    if (autoSync) return { label: "Auto-sync on", color: "#60a5fa" };
-    if (preferred) return { label: `Preferred: ${preferred}`, color: "#60a5fa" };
-    return { label: "Manual only", color: "rgba(255,255,255,0.3)" };
-  }
-
-  if (pct === 0) return { label: "Not started", color: "#f59e0b" };
-  if (pct === 100) return { label: "✓ Complete", color: NEON };
-  if (pct >= 75) return { label: "Excellent", color: "#4ade80" };
-  if (pct >= 50) return { label: "Good", color: "#60a5fa" };
-  return { label: "⚠ Needs Attention", color: "#f59e0b" };
+  const total = HEALTH_FIELDS.reduce((s, f) => s + f.pts, 0);
+  const pct = Math.round((earned / total) * 100);
+  return { pct, top3: missing.sort((a, b) => b.pts - a.pts).slice(0, 3) };
 }
 
-function computeGroupStatus(sectionIds: string[], sectionFilled: (id: string) => number, sectionTotal: (id: string) => number): { label: string; color: string } {
-  const totalFilled = sectionIds.reduce((acc, id) => acc + sectionFilled(id), 0);
-  const total = sectionIds.reduce((acc, id) => acc + sectionTotal(id), 0);
-  const pct = total > 0 ? Math.round((totalFilled / total) * 100) : 0;
-  if (pct === 100) return { label: "✓ Complete", color: NEON };
-  if (pct >= 75) return { label: "Excellent", color: "#4ade80" };
-  if (pct >= 50) return { label: "Good", color: "#60a5fa" };
-  if (pct > 0) return { label: "Needs Attention", color: "#f59e0b" };
-  return { label: "Not started", color: "#f59e0b" };
-}
-
-// ── Group header ───────────────────────────────────────────────────────────────
-function GroupHeader({ icon, label, status, statusColor }: { icon: string; label: string; status: string; statusColor: string }) {
-  return (
-    <div className="flex items-center justify-between pt-4 pb-2 px-1">
-      <div className="flex items-center gap-2">
-        <span className="text-base leading-none">{icon}</span>
-        <span className="text-[11px] font-black uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.45)" }}>{label}</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-1.5 h-1.5 rounded-full" style={{ background: statusColor }} />
-        <span className="text-[10px] font-semibold" style={{ color: statusColor }}>{status}</span>
-      </div>
-    </div>
-  );
-}
-
-// ── Media visual preview ───────────────────────────────────────────────────────
-function MediaPreviewPanel({ profile }: { profile: Profile | null }) {
-  const header = (profile as any)?.headerImageUrl as string | null;
-  const capsule = (profile as any)?.capsuleImageUrl as string | null;
-  const trailer = (profile as any)?.trailerUrl as string | null;
-  const screenshots = ((profile as any)?.screenshotUrls ?? []) as string[];
-
-  return (
-    <div className="rounded-xl overflow-hidden p-4 space-y-3" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-      {/* Banner */}
-      <div className="relative rounded-lg overflow-hidden flex items-center justify-center"
-        style={{ background: "rgba(255,255,255,0.04)", aspectRatio: "2.5 / 1" }}>
-        {header ? (
-          <img src={header} alt="Banner" className="w-full h-full object-cover" />
-        ) : (
-          <p className="text-[11px] text-white/20">No banner image — add one below</p>
-        )}
-        {header && (
-          <div className="absolute bottom-0 left-0 right-0 px-2.5 py-1.5 flex items-center justify-between"
-            style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55), transparent)" }}>
-            <span className="text-[10px] font-semibold text-white/60">Banner</span>
-          </div>
-        )}
-      </div>
-
-      <div className="grid gap-3" style={{ gridTemplateColumns: capsule ? "100px 1fr" : "1fr" }}>
-        {/* Capsule */}
-        {capsule && (
-          <div className="rounded-lg overflow-hidden flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,0.04)", aspectRatio: "3/4" }}>
-            <img src={capsule} alt="Capsule" className="w-full h-full object-cover" />
-          </div>
-        )}
-
-        <div className="space-y-2 min-w-0">
-          {/* Trailer */}
-          {trailer ? (
-            <a href={trailer} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-xs font-bold transition-opacity hover:opacity-80"
-              style={{ background: "rgba(184,255,27,0.07)", border: "1px solid rgba(184,255,27,0.2)", color: NEON }}>
-              <Play size={12} fill={NEON} /> Watch Trailer
-            </a>
-          ) : (
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-[11px]"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.28)" }}>
-              🎬 No trailer — recommended
-            </div>
-          )}
-
-          {/* Screenshots */}
-          {screenshots.length > 0 ? (
-            <div className="grid grid-cols-3 gap-1">
-              {screenshots.slice(0, 6).map((url: string, i: number) => (
-                <a key={i} href={url} target="_blank" rel="noopener noreferrer"
-                  className="rounded overflow-hidden block" style={{ aspectRatio: "16/9" }}>
-                  <img src={url} alt={`Screenshot ${i + 1}`}
-                    className="w-full h-full object-cover opacity-80 hover:opacity-100 transition-opacity" />
-                </a>
-              ))}
-              {screenshots.length > 6 && (
-                <div className="rounded flex items-center justify-center text-[10px] font-bold"
-                  style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.35)", aspectRatio: "16/9" }}>
-                  +{screenshots.length - 6}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-[11px]"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.28)" }}>
-              🖼 No screenshots — recommended
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Main component ─────────────────────────────────────────────────────────────
-export default function GameProfileTab() {
+// ─── Save hook ─────────────────────────────────────────────────────────────────
+function useSaveProfile(onSuccess?: () => void) {
   const { toast } = useToast();
-  const [openSections, setOpenSections] = useState<Set<string>>(new Set(["basic"]));
-  const [importOpen, setImportOpen] = useState(false);
-  const [syncOpen, setSyncOpen] = useState(false);
-  const [showAllRecs, setShowAllRecs] = useState(false);
-
-  const { data, isLoading } = useQuery<{ profile: Profile; fieldMeta: FieldMeta }>({
-    queryKey: ["/api/indie/profile"],
-    queryFn: getQueryFn({ on401: "throw" }),
-  });
-
-  const profile = (data?.profile ?? null) as Profile | null;
-  const fieldMeta = (data?.fieldMeta ?? {}) as FieldMeta;
-
-  const saveMutation = useMutation({
-    mutationFn: async ({ fieldName, value }: { fieldName: string; value: any }) =>
-      apiRequest("PUT", "/api/indie/profile", { [fieldName]: value }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] }); toast({ description: "Saved." }); },
-    onError: () => toast({ description: "Save failed.", variant: "gamefolioError" }),
-  });
-
-  const revertMutation = useMutation({
-    mutationFn: async ({ fieldName }: { fieldName: string }) =>
-      apiRequest("POST", "/api/indie/field-revert", { fieldName }),
-    onSuccess: (_data: any, { fieldName }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
-      toast({ description: `${formatFieldName(fieldName)} reverted to store value.` });
+  return useMutation({
+    mutationFn: (fields: Record<string, any>) =>
+      apiRequest("PUT", "/api/indie/profile", fields).then(r => r.json()),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+      toast({ description: "Saved" });
+      onSuccess?.();
     },
-    onError: (err: any) => toast({ description: err?.message ?? "Revert failed.", variant: "gamefolioError" }),
+    onError: () => toast({ description: "Save failed", variant: "gamefolioError" }),
   });
+}
 
-  const handleSave = useCallback((fieldName: string, value: any) => saveMutation.mutate({ fieldName, value }), [saveMutation]);
-  const handleRevert = useCallback((fieldName: string) => revertMutation.mutate({ fieldName }), [revertMutation]);
-  const toggleSection = (id: string) => setOpenSections(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+// ─── Image upload hook ─────────────────────────────────────────────────────────
+function useUploadImage() {
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async ({ file, field }: { file: File; field: "headerImageUrl" | "capsuleImageUrl" }) => {
+      const fd = new FormData();
+      fd.append("image", file);
+      fd.append("field", field);
+      const res = await fetch("/api/indie/profile/upload-image", {
+        method: "POST", body: fd, credentials: "include",
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json() as Promise<{ url: string; field: string }>;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+      toast({ description: "Image uploaded" });
+    },
+    onError: () => toast({ description: "Upload failed", variant: "gamefolioError" }),
+  });
+}
 
-  const sectionFilled = (id: string) => (SECTION_FIELDS[id] ?? []).filter(f => isFieldFilled(profile, f)).length;
-  const sectionTotal = (id: string) => (SECTION_FIELDS[id] ?? []).length;
-  const essentialFilled = ESSENTIAL_FIELDS.filter(f => isFieldFilled(profile, f)).length;
-  const essentialPct = Math.round((essentialFilled / ESSENTIAL_FIELDS.length) * 100);
-  const missingEssential = ESSENTIAL_FIELDS.filter(f => !isFieldFilled(profile, f));
-  const isSaving = saveMutation.isPending || revertMutation.isPending;
+// ─── EditModal ─────────────────────────────────────────────────────────────────
+function EditModal({
+  title, onClose, children, onSave, isSaving, saveLabel = "Save changes",
+}: {
+  title: string; onClose: () => void; children: React.ReactNode;
+  onSave?: () => void; isSaving?: boolean; saveLabel?: string;
+}) {
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, [onClose]);
 
-  const pendingRecs = RECOMMENDATIONS.filter(r => !isFieldFilled(profile, r.field));
-  const VISIBLE_COUNT = 4;
-  const visibleRecs = showAllRecs ? pendingRecs : pendingRecs.slice(0, VISIBLE_COUNT);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)" }}>
+      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden"
+        style={{ background: "#0e1419", border: `1px solid ${CARD_BORDER}`, boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0"
+          style={{ borderColor: CARD_BORDER }}>
+          <h3 className="text-base font-bold text-white">{title}</h3>
+          <button onClick={onClose}
+            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-white/10 text-white/50 hover:text-white">
+            <X size={16} />
+          </button>
+        </div>
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 min-h-0">
+          {children}
+        </div>
+        {/* Footer */}
+        {onSave && (
+          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t shrink-0"
+            style={{ borderColor: CARD_BORDER }}>
+            <button onClick={onClose}
+              className="px-4 py-2 rounded-lg text-sm text-white/50 hover:text-white transition-colors">
+              Cancel
+            </button>
+            <button onClick={onSave} disabled={isSaving}
+              className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-all"
+              style={{ background: NEON, color: "#070b10", opacity: isSaving ? 0.7 : 1 }}>
+              {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+              {saveLabel}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
-  const openSection = (id: string) => {
-    setOpenSections(prev => { const n = new Set(prev); n.add(id); return n; });
-    setTimeout(() => {
-      document.getElementById(`gp-section-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 80);
+// ─── TagInput ──────────────────────────────────────────────────────────────────
+function TagInput({ value = [], onChange, placeholder }: { value?: string[]; onChange: (v: string[]) => void; placeholder?: string }) {
+  const [input, setInput] = useState("");
+  const add = () => {
+    const t = input.trim();
+    if (t && !value.includes(t)) onChange([...value, t]);
+    setInput("");
+  };
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {value.map((tag, i) => (
+          <span key={i} className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
+            style={{ background: `${NEON}18`, color: NEON, border: `1px solid ${NEON}44` }}>
+            {tag}
+            <button onClick={() => onChange(value.filter((_, j) => j !== i))} className="hover:text-white/80">
+              <X size={10} />
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+          placeholder={placeholder || "Type and press Enter…"}
+          className="flex-1 bg-transparent border rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+          style={{ borderColor: CARD_BORDER }} />
+        <button onClick={add} className="px-3 py-2 rounded-lg text-xs font-bold text-white/60 border border-white/10 hover:text-white hover:border-white/30 transition-all">
+          <Plus size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── FieldInput ────────────────────────────────────────────────────────────────
+function FieldInput({ label, value, onChange, type = "text", placeholder, rows }: {
+  label: string; value: string; onChange: (v: string) => void;
+  type?: string; placeholder?: string; rows?: number;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-medium text-white/50 uppercase tracking-wider">{label}</label>
+      {rows ? (
+        <textarea value={value} onChange={e => onChange(e.target.value)} rows={rows}
+          placeholder={placeholder}
+          className="w-full bg-transparent border rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-white/30 resize-none"
+          style={{ borderColor: CARD_BORDER }} />
+      ) : (
+        <input type={type} value={value} onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full bg-transparent border rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-white/30"
+          style={{ borderColor: CARD_BORDER }} />
+      )}
+    </div>
+  );
+}
+
+// ─── DropZone ──────────────────────────────────────────────────────────────────
+function DropZone({
+  currentUrl, field, onUploaded, label, aspect, className = "",
+}: {
+  currentUrl?: string | null; field: "headerImageUrl" | "capsuleImageUrl";
+  onUploaded?: () => void; label?: string; aspect?: string; className?: string;
+}) {
+  const [dragging, setDragging] = useState(false);
+  const upload = useUploadImage();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    upload.mutate({ file, field }, { onSuccess: () => onUploaded?.() });
+  }, [upload, field, onUploaded]);
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault(); setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
   };
 
-  const sharedProps = { profile, fieldMeta, onSave: handleSave, onRevert: handleRevert, isSaving };
+  return (
+    <div className={`relative rounded-xl overflow-hidden cursor-pointer group ${className}`}
+      style={{ border: `2px dashed ${dragging ? NEON : CARD_BORDER}`, transition: "border-color 0.15s" }}
+      onDragOver={e => { e.preventDefault(); setDragging(true); }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={onDrop}
+      onClick={() => inputRef.current?.click()}>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
 
-  // Per-section statuses
-  const ss = (id: string) => computeSectionStatus(id, profile, sectionFilled(id), sectionTotal(id));
+      {currentUrl ? (
+        <>
+          <img src={currentUrl} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+            style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}>
+            {upload.isPending
+              ? <Loader2 size={20} className="animate-spin text-white mb-1" />
+              : <Upload size={20} className="text-white mb-1" />}
+            <span className="text-xs font-bold text-white">Replace image</span>
+            {aspect && <span className="text-[10px] text-white/50 mt-0.5">{aspect}</span>}
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-8 px-4">
+          {upload.isPending
+            ? <Loader2 size={22} className="animate-spin mb-2" style={{ color: NEON }} />
+            : <Upload size={22} className="mb-2 text-white/20 group-hover:text-white/50 transition-colors" />}
+          <span className="text-sm font-medium text-white/30 group-hover:text-white/60 transition-colors text-center">
+            {label || "Drop image or click to upload"}
+          </span>
+          {aspect && <span className="text-[11px] text-white/20 mt-1">{aspect}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-white/30" /></div>;
-  }
+// ─── Profile Health Card ────────────────────────────────────────────────────────
+function ProfileHealthCard({ profile }: { profile: Profile | null }) {
+  const { pct, top3 } = computeHealth(profile);
+  const color = pct >= 80 ? NEON : pct >= 50 ? "#f59e0b" : "#ef4444";
+  const label = pct >= 80 ? "Looking great" : pct >= 50 ? "Good progress" : "Needs attention";
 
   return (
-    <div className="space-y-4 max-w-3xl">
-
-      {/* ── Launch Ready ──────────────────────────────────────────────────── */}
-      <div className="rounded-xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${essentialPct === 100 ? "rgba(184,255,27,0.22)" : CARD_BORDER}` }}>
-        <div className="flex items-center gap-3 px-5 pt-5 pb-4">
-          <span className="text-xl leading-none">🚀</span>
-          <div className="flex-1 min-w-0">
-            <span className="text-sm font-black text-white">Launch Ready</span>
-            <p className="text-[11px] text-white/40 mt-0.5">Required to publish and run creator campaigns</p>
-          </div>
-          <div className="shrink-0 flex items-center gap-2">
-            <span className="text-xs font-black" style={{ color: essentialPct === 100 ? NEON : "rgba(255,255,255,0.45)" }}>
-              {essentialFilled}/{ESSENTIAL_FIELDS.length}
-            </span>
-            {essentialPct === 100 && <CheckCircle2 size={15} style={{ color: NEON }} />}
-          </div>
+    <div className="rounded-2xl p-5 flex items-center gap-6"
+      style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+      {/* Circle */}
+      <div className="relative shrink-0 w-20 h-20">
+        <svg viewBox="0 0 80 80" className="w-full h-full -rotate-90">
+          <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+          <circle cx="40" cy="40" r="32" fill="none" stroke={color} strokeWidth="8"
+            strokeDasharray={`${2 * Math.PI * 32}`}
+            strokeDashoffset={`${2 * Math.PI * 32 * (1 - pct / 100)}`}
+            strokeLinecap="round" style={{ transition: "stroke-dashoffset 0.8s ease" }} />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-lg font-black" style={{ color }}>{pct}%</span>
         </div>
-        {essentialPct === 100 ? (
-          <div className="mx-5 mb-5 rounded-xl p-3.5 flex items-center gap-3"
-            style={{ background: "rgba(184,255,27,0.07)", border: "1px solid rgba(184,255,27,0.18)" }}>
-            <CheckCircle2 size={18} style={{ color: NEON, flexShrink: 0 }} />
-            <div>
-              <p className="text-sm font-bold leading-tight" style={{ color: NEON }}>Your game is ready for creator campaigns.</p>
-              <p className="text-[11px] text-white/40 mt-0.5">All {ESSENTIAL_FIELDS.length} required fields are complete.</p>
-            </div>
-          </div>
-        ) : (
-          <div className="px-5 pb-5 space-y-3">
-            <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${essentialPct}%`, background: "linear-gradient(90deg,rgba(255,255,255,0.4),rgba(255,255,255,0.65))" }} />
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {missingEssential.map(f => (
-                <span key={f} className="text-[10px] px-2.5 py-1 rounded-full font-semibold"
-                  style={{ background: "rgba(250,204,21,0.08)", border: "1px solid rgba(250,204,21,0.22)", color: "#fde047" }}>
-                  {formatFieldName(f)} required
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
-
-      {/* ── Profile Optimisation ──────────────────────────────────────────── */}
-      {pendingRecs.length > 0 && (
-        <div className="rounded-xl p-5 space-y-1" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-          <div className="flex items-start justify-between gap-3 mb-4">
-            <div>
-              <span className="text-sm font-black text-white">Profile Optimisation</span>
-              <p className="text-[11px] text-white/40 mt-0.5">Improvements that increase creator interest and game discovery</p>
-            </div>
-            <span className="shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full mt-0.5"
-              style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.38)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              {pendingRecs.length} available
-            </span>
-          </div>
-          <div className="divide-y" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-            {visibleRecs.map((rec, i) => (
-              <div key={rec.field} className="flex items-start gap-3 py-3.5" style={{ paddingTop: i === 0 ? 0 : undefined }}>
-                <span className="text-base leading-none mt-0.5 shrink-0">{rec.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-white leading-tight">{rec.label}</p>
-                  <p className="text-[11px] text-white/40 mt-0.5 leading-snug">{rec.reason}</p>
-                </div>
-                <button onClick={() => openSection(rec.section)}
-                  className="shrink-0 flex items-center gap-0.5 text-[11px] font-bold mt-0.5 transition-opacity hover:opacity-70"
-                  style={{ color: NEON }}>
-                  Add <ArrowRight size={11} />
-                </button>
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-sm font-bold text-white">Profile Health</span>
+          <span className="text-xs px-2 py-0.5 rounded-full font-medium"
+            style={{ background: `${color}18`, color, border: `1px solid ${color}44` }}>
+            {label}
+          </span>
+        </div>
+        {top3.length === 0 ? (
+          <p className="text-xs text-white/40">Your profile is fully complete. Nice work!</p>
+        ) : (
+          <div className="space-y-1">
+            {top3.map(f => (
+              <div key={f.key} className="flex items-center gap-2">
+                <div className="w-1 h-1 rounded-full shrink-0" style={{ background: color }} />
+                <span className="text-xs text-white/50">Add {f.label}</span>
+                <span className="text-[10px] ml-auto" style={{ color: `${color}80` }}>+{f.pts}pts</span>
               </div>
             ))}
           </div>
-          {pendingRecs.length > VISIBLE_COUNT && (
-            <button onClick={() => setShowAllRecs(v => !v)}
-              className="flex items-center gap-1.5 text-[11px] text-white/35 hover:text-white/55 transition-colors pt-2">
-              {showAllRecs
-                ? <><ChevronUp size={13} /> Show fewer</>
-                : <><ChevronDown size={13} /> Show {pendingRecs.length - VISIBLE_COUNT} more improvements</>}
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── About Card ────────────────────────────────────────────────────────────────
+function AboutCard({ profile }: { profile: Profile | null }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [short, setShort] = useState("");
+  const [full, setFull] = useState("");
+  const [genres, setGenres] = useState<string[]>([]);
+  const [features, setFeatures] = useState<string[]>([]);
+  const [status, setStatus] = useState("");
+  const [price, setPrice] = useState("");
+
+  const save = useSaveProfile(() => setOpen(false));
+
+  const openModal = () => {
+    setName(profile?.gameName ?? "");
+    setShort(profile?.shortDescription ?? "");
+    setFull(profile?.fullDescription ?? "");
+    setGenres((profile?.genres as string[]) ?? []);
+    setFeatures((profile?.keyFeatures as string[]) ?? []);
+    setStatus(profile?.releaseStatus ?? "");
+    setPrice(profile?.price ?? "");
+    setOpen(true);
+  };
+
+  const genreList = (profile?.genres as string[] | null) ?? [];
+  const featureList = (profile?.keyFeatures as string[] | null) ?? [];
+
+  return (
+    <>
+      <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+        <div className="flex items-center justify-between px-5 py-4"
+          style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
+          <div className="flex items-center gap-2.5">
+            <Sparkles size={16} style={{ color: NEON }} />
+            <span className="text-sm font-bold text-white">About Your Game</span>
+          </div>
+          <button onClick={openModal}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/10"
+            style={{ border: `1px solid ${CARD_BORDER}`, color: "white" }}>
+            <Pencil size={11} /> Edit
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          {/* Game name */}
+          {profile?.gameName ? (
+            <h2 className="text-2xl font-black text-white">{profile.gameName}</h2>
+          ) : (
+            <p className="text-white/20 text-sm italic">No game name set</p>
+          )}
+          {/* Release status + price row */}
+          <div className="flex flex-wrap gap-2">
+            {profile?.releaseStatus && (
+              <span className="text-xs px-2.5 py-1 rounded-full font-medium"
+                style={{ background: `${NEON}18`, color: NEON, border: `1px solid ${NEON}33` }}>
+                {RELEASE_STATUS_OPTIONS.find(o => o.value === profile.releaseStatus)?.label ?? profile.releaseStatus}
+              </span>
+            )}
+            {profile?.price && (
+              <span className="text-xs px-2.5 py-1 rounded-full font-medium text-white/60"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                ${profile.price}
+              </span>
+            )}
+            {profile?.isFree && (
+              <span className="text-xs px-2.5 py-1 rounded-full font-medium text-green-400"
+                style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.25)" }}>
+                Free to Play
+              </span>
+            )}
+          </div>
+          {/* Short description */}
+          {profile?.shortDescription && (
+            <p className="text-sm text-white/70 leading-relaxed">{profile.shortDescription}</p>
+          )}
+          {/* Genres */}
+          {genreList.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {genreList.map((g, i) => (
+                <span key={i} className="text-xs px-2 py-0.5 rounded-md text-white/50"
+                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  {g}
+                </span>
+              ))}
+            </div>
+          )}
+          {/* Key features */}
+          {featureList.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs text-white/30 uppercase tracking-wider font-medium">Key Features</p>
+              <div className="grid gap-1.5">
+                {featureList.slice(0, 4).map((f, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <div className="w-1 h-1 rounded-full mt-1.5 shrink-0" style={{ background: NEON }} />
+                    <span className="text-sm text-white/60">{f}</span>
+                  </div>
+                ))}
+                {featureList.length > 4 && (
+                  <p className="text-xs text-white/30 ml-3">+{featureList.length - 4} more</p>
+                )}
+              </div>
+            </div>
+          )}
+          {!profile?.gameName && !profile?.shortDescription && genreList.length === 0 && (
+            <button onClick={openModal}
+              className="w-full py-6 flex flex-col items-center justify-center gap-2 rounded-xl transition-all hover:bg-white/5"
+              style={{ border: `1px dashed ${CARD_BORDER}` }}>
+              <Plus size={20} className="text-white/20" />
+              <span className="text-sm text-white/30">Fill in your game details</span>
             </button>
           )}
         </div>
-      )}
+      </div>
 
-      {pendingRecs.length === 0 && essentialPct === 100 && (
-        <div className="rounded-xl p-4 flex items-center gap-3" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-          <span className="text-xl">✨</span>
+      {open && (
+        <EditModal title="About Your Game" onClose={() => setOpen(false)}
+          onSave={() => save.mutate({ gameName: name, shortDescription: short, fullDescription: full, genres, keyFeatures: features, releaseStatus: status, price })}
+          isSaving={save.isPending}>
+          <FieldInput label="Game Name" value={name} onChange={setName} placeholder="My Awesome Game" />
           <div>
-            <p className="text-sm font-bold text-white">Profile fully optimised</p>
-            <p className="text-[11px] text-white/40 mt-0.5">Your game page is in great shape for creators.</p>
+            <label className="text-xs font-medium text-white/50 uppercase tracking-wider block mb-1.5">Release Status</label>
+            <div className="flex gap-2">
+              {RELEASE_STATUS_OPTIONS.map(o => (
+                <button key={o.value} onClick={() => setStatus(o.value)}
+                  className="flex-1 py-2 rounded-lg text-xs font-bold transition-all"
+                  style={{
+                    background: status === o.value ? `${NEON}22` : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${status === o.value ? `${NEON}88` : CARD_BORDER}`,
+                    color: status === o.value ? NEON : "rgba(255,255,255,0.5)",
+                  }}>
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <FieldInput label="Price (USD)" value={price} onChange={setPrice} placeholder="19.99" />
+          <FieldInput label="Short Description" value={short} onChange={setShort} rows={2}
+            placeholder="One or two sentences about your game…" />
+          <FieldInput label="Full Description" value={full} onChange={setFull} rows={5}
+            placeholder="Detailed description for store pages, campaign listings, and press kits…" />
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-white/50 uppercase tracking-wider block">Genres</label>
+            <TagInput value={genres} onChange={setGenres} placeholder="e.g. Action, RPG, Platformer" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-white/50 uppercase tracking-wider block">Key Features</label>
+            <TagInput value={features} onChange={setFeatures} placeholder="e.g. Open world, Co-op, Procedural generation" />
+          </div>
+        </EditModal>
+      )}
+    </>
+  );
+}
+
+// ─── Media Card ────────────────────────────────────────────────────────────────
+function MediaCard({ profile }: { profile: Profile | null }) {
+  const [open, setOpen] = useState(false);
+  const [trailer, setTrailer] = useState("");
+  const [screenshots, setScreenshots] = useState<string[]>([]);
+  const [newShot, setNewShot] = useState("");
+  const save = useSaveProfile(() => setOpen(false));
+
+  const openModal = () => {
+    setTrailer(profile?.trailerUrl ?? "");
+    setScreenshots((profile?.screenshotUrls as string[] | null) ?? []);
+    setOpen(true);
+  };
+
+  const addShot = () => {
+    if (newShot.trim() && !screenshots.includes(newShot.trim())) {
+      setScreenshots([...screenshots, newShot.trim()]);
+      setNewShot("");
+    }
+  };
+
+  const shotList = (profile?.screenshotUrls as string[] | null) ?? [];
+
+  return (
+    <>
+      <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+        <div className="flex items-center justify-between px-5 py-4"
+          style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
+          <div className="flex items-center gap-2.5">
+            <ImageIcon size={16} style={{ color: NEON }} />
+            <span className="text-sm font-bold text-white">Media & Artwork</span>
+          </div>
+          <button onClick={openModal}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/10"
+            style={{ border: `1px solid ${CARD_BORDER}`, color: "white" }}>
+            <Pencil size={11} /> Edit
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          {/* Banner + Capsule row */}
+          <div className="grid grid-cols-[1fr_160px] gap-3">
+            <div>
+              <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">Banner · 16:9</p>
+              <DropZone currentUrl={profile?.headerImageUrl} field="headerImageUrl"
+                label="Drop banner or click to upload" aspect="1920 × 1080 recommended"
+                className="h-40" />
+            </div>
+            <div>
+              <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">Capsule · 2:3</p>
+              <DropZone currentUrl={profile?.capsuleImageUrl} field="capsuleImageUrl"
+                label="Drop capsule" aspect="460 × 215 min"
+                className="h-40" />
+            </div>
+          </div>
+
+          {/* Trailer */}
+          <div>
+            <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">Trailer</p>
+            {profile?.trailerUrl ? (
+              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl group cursor-pointer hover:bg-white/5 transition-all"
+                style={{ border: `1px solid ${CARD_BORDER}` }}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: "rgba(239,68,68,0.15)" }}>
+                  <Play size={14} className="text-red-400 ml-0.5" />
+                </div>
+                <span className="text-sm text-white/60 truncate flex-1">{profile.trailerUrl}</span>
+                <button onClick={openModal}
+                  className="text-[11px] text-white/30 hover:text-white transition-colors shrink-0">
+                  <Pencil size={12} />
+                </button>
+              </div>
+            ) : (
+              <button onClick={openModal}
+                className="w-full flex items-center justify-center gap-2 py-4 rounded-xl transition-all hover:bg-white/5"
+                style={{ border: `1px dashed ${CARD_BORDER}` }}>
+                <Video size={16} className="text-white/20" />
+                <span className="text-sm text-white/30">Add trailer URL</span>
+              </button>
+            )}
+          </div>
+
+          {/* Screenshots */}
+          <div>
+            <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">
+              Screenshots ({shotList.length})
+            </p>
+            {shotList.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2">
+                {shotList.slice(0, 5).map((url, i) => (
+                  <img key={i} src={url} alt="" className="rounded-lg w-full aspect-video object-cover"
+                    style={{ border: `1px solid ${CARD_BORDER}` }} />
+                ))}
+                {shotList.length > 5 && (
+                  <div className="rounded-lg aspect-video flex items-center justify-center"
+                    style={{ border: `1px solid ${CARD_BORDER}`, background: "rgba(255,255,255,0.04)" }}>
+                    <span className="text-sm font-bold text-white/40">+{shotList.length - 5}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button onClick={openModal}
+                className="w-full flex items-center justify-center gap-2 py-4 rounded-xl transition-all hover:bg-white/5"
+                style={{ border: `1px dashed ${CARD_BORDER}` }}>
+                <ImageIcon size={16} className="text-white/20" />
+                <span className="text-sm text-white/30">Add screenshot URLs</span>
+              </button>
+            )}
           </div>
         </div>
-      )}
-
-      {/* ── Store toolbar ─────────────────────────────────────────────────── */}
-      <div className="flex gap-2 flex-wrap">
-        <button onClick={() => { setImportOpen(p => !p); setSyncOpen(false); }}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all"
-          style={{ background: importOpen ? `${NEON}22` : CARD_BG, border: `1px solid ${importOpen ? NEON : CARD_BORDER}`, color: importOpen ? NEON : "white" }}>
-          <SiSteam size={14} /> Import from Store
-        </button>
-        <button onClick={() => { setSyncOpen(p => !p); setImportOpen(false); }}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all"
-          style={{ background: syncOpen ? "rgba(99,102,241,0.15)" : CARD_BG, border: `1px solid ${syncOpen ? "#6366f1" : CARD_BORDER}`, color: syncOpen ? "#818cf8" : "white" }}>
-          <RefreshCw size={14} /> Check for Updates
-        </button>
       </div>
 
-      {importOpen && (
-        <div className="rounded-xl p-5" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-          <h3 className="text-sm font-bold text-white mb-4">Import from Store</h3>
-          <StoreImportPanel profile={profile} fieldMeta={fieldMeta} onImported={() => setImportOpen(false)}
-            onGoToStoreLinks={() => {
-              setOpenSections(prev => { const n = new Set(prev); n.add("stores"); return n; });
-              setImportOpen(false);
-              setTimeout(() => document.getElementById("gp-section-stores")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
-            }} />
+      {open && (
+        <EditModal title="Media & Artwork" onClose={() => setOpen(false)}
+          onSave={() => save.mutate({ trailerUrl: trailer, screenshotUrls: screenshots })}
+          isSaving={save.isPending}>
+          <FieldInput label="Trailer URL (YouTube / Vimeo)" value={trailer} onChange={setTrailer}
+            type="url" placeholder="https://youtu.be/…" />
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-white/50 uppercase tracking-wider block">
+              Screenshots ({screenshots.length})
+            </label>
+            <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
+              {screenshots.map((url, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input value={url}
+                    onChange={e => setScreenshots(screenshots.map((s, j) => j === i ? e.target.value : s))}
+                    className="flex-1 bg-transparent border rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+                    style={{ borderColor: CARD_BORDER }} />
+                  <button onClick={() => setScreenshots(screenshots.filter((_, j) => j !== i))}
+                    className="text-white/30 hover:text-red-400 transition-colors">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-1">
+              <input value={newShot} onChange={e => setNewShot(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addShot(); } }}
+                placeholder="https://…"
+                className="flex-1 bg-transparent border rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+                style={{ borderColor: CARD_BORDER }} />
+              <button onClick={addShot}
+                className="px-3 py-2 rounded-lg text-xs font-bold text-white/60 border border-white/10 hover:text-white hover:border-white/30 transition-all">
+                <Plus size={14} />
+              </button>
+            </div>
+          </div>
+          <div className="rounded-xl p-4 space-y-1" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${CARD_BORDER}` }}>
+            <p className="text-xs font-bold text-white/50">Upload Banner & Capsule</p>
+            <p className="text-xs text-white/30">
+              Drag and drop images directly onto the banner and capsule zones on the card below this modal. Uploads save immediately.
+            </p>
+          </div>
+        </EditModal>
+      )}
+    </>
+  );
+}
+
+// ─── Store Listing Card ────────────────────────────────────────────────────────
+function StoreListingCard({ profile, onGoToStoreLinks }: { profile: Profile | null; onGoToStoreLinks?: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [steamAppId, setSteamAppId] = useState("");
+  const [steamUrl, setSteamUrl] = useState("");
+  const [epicSlug, setEpicSlug] = useState("");
+  const [epicUrl, setEpicUrl] = useState("");
+  const [itchUrl, setItchUrl] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const save = useSaveProfile(() => setOpen(false));
+
+  const openModal = () => {
+    setSteamAppId(profile?.steamAppId ?? "");
+    setSteamUrl(profile?.steamUrl ?? "");
+    setEpicSlug(profile?.epicSlug ?? "");
+    setEpicUrl(profile?.epicUrl ?? "");
+    setItchUrl(profile?.itchUrl ?? "");
+    setWebsiteUrl(profile?.websiteUrl ?? "");
+    setOpen(true);
+  };
+
+  const stores = [
+    { key: "steam", icon: <SiSteam size={20} className="text-[#66c0f4]" />, label: "Steam", filled: !!(profile?.steamUrl || profile?.steamAppId), url: profile?.steamUrl, bg: "rgba(102,192,244,0.08)", border: "rgba(102,192,244,0.2)" },
+    { key: "epic",  icon: <SiEpicgames size={20} className="text-white" />, label: "Epic Games", filled: !!(profile?.epicUrl || profile?.epicSlug), url: profile?.epicUrl, bg: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.12)" },
+    { key: "itch",  icon: <SiItchdotio size={20} className="text-[#fa5c5c]" />, label: "itch.io", filled: !!(profile?.itchUrl), url: profile?.itchUrl, bg: "rgba(250,92,92,0.08)", border: "rgba(250,92,92,0.2)" },
+    { key: "web",   icon: <Globe size={20} className="text-white/50" />, label: "Website", filled: !!(profile?.websiteUrl), url: profile?.websiteUrl, bg: "rgba(255,255,255,0.04)", border: CARD_BORDER },
+  ];
+
+  return (
+    <>
+      <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+        <div className="flex items-center justify-between px-5 py-4"
+          style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
+          <div className="flex items-center gap-2.5">
+            <Package size={16} style={{ color: NEON }} />
+            <span className="text-sm font-bold text-white">Store Listing</span>
+          </div>
+          <button onClick={openModal}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/10"
+            style={{ border: `1px solid ${CARD_BORDER}`, color: "white" }}>
+            <Pencil size={11} /> Edit
+          </button>
         </div>
-      )}
-
-      {syncOpen && (
-        <div className="rounded-xl p-5" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-          <h3 className="text-sm font-bold text-white mb-4">Sync with Store</h3>
-          <SyncPanel profile={profile} onSynced={() => setSyncOpen(false)} />
+        <div className="p-5 grid grid-cols-2 gap-3">
+          {stores.map(s => (
+            <div key={s.key}
+              className="flex items-center gap-3 p-4 rounded-xl transition-all"
+              style={{ background: s.filled ? s.bg : "rgba(255,255,255,0.02)", border: `1px solid ${s.filled ? s.border : CARD_BORDER}` }}>
+              <div className="shrink-0">{s.icon}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-bold text-white/70">{s.label}</div>
+                {s.filled && s.url ? (
+                  <a href={s.url} target="_blank" rel="noopener noreferrer"
+                    className="text-[10px] text-white/30 hover:text-white/60 flex items-center gap-1 truncate transition-colors">
+                    View page <ExternalLink size={8} />
+                  </a>
+                ) : (
+                  <button onClick={openModal} className="text-[10px] text-white/20 hover:text-white/40 transition-colors">
+                    Add link →
+                  </button>
+                )}
+              </div>
+              <div className={`w-2 h-2 rounded-full shrink-0 ${s.filled ? "" : "opacity-20"}`}
+                style={{ background: s.filled ? NEON : "white" }} />
+            </div>
+          ))}
         </div>
+      </div>
+
+      {open && (
+        <EditModal title="Store Listing" onClose={() => setOpen(false)}
+          onSave={() => save.mutate({ steamAppId, steamUrl, epicSlug, epicUrl, itchUrl, websiteUrl })}
+          isSaving={save.isPending}>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <SiSteam size={14} className="text-[#66c0f4]" />
+              <span className="text-xs font-bold text-white/70 uppercase tracking-wider">Steam</span>
+            </div>
+            <FieldInput label="Steam App ID" value={steamAppId} onChange={setSteamAppId} placeholder="e.g. 730" />
+            <FieldInput label="Steam Store URL" value={steamUrl} onChange={setSteamUrl} type="url"
+              placeholder="https://store.steampowered.com/app/…" />
+          </div>
+          <div className="h-px" style={{ background: CARD_BORDER }} />
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <SiEpicgames size={14} className="text-white/70" />
+              <span className="text-xs font-bold text-white/70 uppercase tracking-wider">Epic Games</span>
+            </div>
+            <FieldInput label="Epic Slug" value={epicSlug} onChange={setEpicSlug} placeholder="e.g. my-game" />
+            <FieldInput label="Epic Store URL" value={epicUrl} onChange={setEpicUrl} type="url"
+              placeholder="https://store.epicgames.com/…" />
+          </div>
+          <div className="h-px" style={{ background: CARD_BORDER }} />
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <SiItchdotio size={14} className="text-[#fa5c5c]" />
+              <span className="text-xs font-bold text-white/70 uppercase tracking-wider">itch.io</span>
+            </div>
+            <FieldInput label="itch.io URL" value={itchUrl} onChange={setItchUrl} type="url"
+              placeholder="https://user.itch.io/game" />
+          </div>
+          <div className="h-px" style={{ background: CARD_BORDER }} />
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Globe size={14} className="text-white/50" />
+              <span className="text-xs font-bold text-white/70 uppercase tracking-wider">Website</span>
+            </div>
+            <FieldInput label="Game / Studio Website" value={websiteUrl} onChange={setWebsiteUrl} type="url"
+              placeholder="https://mygame.com" />
+          </div>
+        </EditModal>
       )}
+    </>
+  );
+}
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          GROUP 1 — GAME
-      ══════════════════════════════════════════════════════════════════════ */}
-      <GroupHeader icon="🎮" label="Game"
-        {...computeGroupStatus(["basic", "description", "features"], sectionFilled, sectionTotal)} />
+// ─── Platforms Card ─────────────────────────────────────────────────────────────
+function PlatformCard({ profile }: { profile: Profile | null }) {
+  const { toast } = useToast();
+  const selected: string[] = (profile?.platforms as string[] | null) ?? [];
 
-      <div id="gp-section-basic">
-        <BasicInfoSection {...sharedProps} open={openSections.has("basic")} onToggle={() => toggleSection("basic")}
-          filledCount={sectionFilled("basic")} totalCount={sectionTotal("basic")}
-          {...ss("basic")} />
+  const toggle = async (id: string) => {
+    const next = selected.includes(id) ? selected.filter(p => p !== id) : [...selected, id];
+    try {
+      await apiRequest("PUT", "/api/indie/profile", { platforms: next });
+      await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+    } catch { toast({ description: "Save failed", variant: "gamefolioError" }); }
+  };
+
+  const platformIcons: Record<string, React.ReactNode> = {
+    windows: <Monitor size={18} />, mac: <Monitor size={18} />, linux: <Globe size={18} />,
+    ps5: <Gamepad2 size={18} />, xbox: <Gamepad2 size={18} />, switch: <Gamepad2 size={18} />,
+    ios: <Smartphone size={18} />, android: <Smartphone size={18} />,
+  };
+
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+      <div className="flex items-center gap-2.5 px-5 py-4"
+        style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
+        <Gamepad2 size={16} style={{ color: NEON }} />
+        <span className="text-sm font-bold text-white">Platforms</span>
       </div>
-      <div id="gp-section-description">
-        <DescriptionSection {...sharedProps} open={openSections.has("description")} onToggle={() => toggleSection("description")}
-          filledCount={sectionFilled("description")} totalCount={sectionTotal("description")}
-          {...ss("description")} />
+      <div className="p-5 grid grid-cols-4 gap-2">
+        {PLATFORM_OPTIONS.map(p => {
+          const on = selected.includes(p.id);
+          return (
+            <button key={p.id} onClick={() => toggle(p.id)}
+              className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all"
+              style={{
+                background: on ? `${NEON}14` : "rgba(255,255,255,0.03)",
+                border: `1px solid ${on ? `${NEON}55` : CARD_BORDER}`,
+                color: on ? NEON : "rgba(255,255,255,0.3)",
+              }}>
+              {platformIcons[p.id]}
+              <span className="text-[10px] font-bold">{p.label}</span>
+            </button>
+          );
+        })}
       </div>
-      <div id="gp-section-features">
-        <FeaturesSection {...sharedProps} open={openSections.has("features")} onToggle={() => toggleSection("features")}
-          filledCount={sectionFilled("features")} totalCount={sectionTotal("features")}
-          {...ss("features")} />
+    </div>
+  );
+}
+
+// ─── Studio Card ───────────────────────────────────────────────────────────────
+function StudioCard({ profile }: { profile: Profile | null }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [country, setCountry] = useState("");
+  const [year, setYear] = useState("");
+  const [team, setTeam] = useState("");
+  const [website, setWebsite] = useState("");
+  const [twitter, setTwitter] = useState("");
+  const [discord, setDiscord] = useState("");
+  const save = useSaveProfile(() => setOpen(false));
+
+  const openModal = () => {
+    setName(profile?.studioName ?? "");
+    setCountry(profile?.studioCountry ?? "");
+    setYear(profile?.studioFoundedYear ? String(profile.studioFoundedYear) : "");
+    setTeam(profile?.studioTeamSize ? String(profile.studioTeamSize) : "");
+    setWebsite(profile?.studioWebsite ?? "");
+    setTwitter(profile?.twitterUrl ?? "");
+    setDiscord(profile?.discordUrl ?? "");
+    setOpen(true);
+  };
+
+  const hasInfo = profile?.studioName || profile?.studioCountry || profile?.studioFoundedYear;
+
+  return (
+    <>
+      <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+        <div className="flex items-center justify-between px-5 py-4"
+          style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
+          <div className="flex items-center gap-2.5">
+            <Building2 size={16} style={{ color: NEON }} />
+            <span className="text-sm font-bold text-white">Studio</span>
+          </div>
+          <button onClick={openModal}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/10"
+            style={{ border: `1px solid ${CARD_BORDER}`, color: "white" }}>
+            <Pencil size={11} /> Edit
+          </button>
+        </div>
+        <div className="p-5">
+          {hasInfo ? (
+            <div className="space-y-3">
+              {profile?.studioName && (
+                <h3 className="text-lg font-bold text-white">{profile.studioName}</h3>
+              )}
+              <div className="flex flex-wrap gap-3 text-sm text-white/50">
+                {profile?.studioCountry && <span>📍 {profile.studioCountry}</span>}
+                {profile?.studioFoundedYear && <span>Est. {profile.studioFoundedYear}</span>}
+                {profile?.studioTeamSize && <span>{profile.studioTeamSize} person{profile.studioTeamSize !== 1 ? "s" : ""}</span>}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {profile?.studioWebsite && (
+                  <a href={profile.studioWebsite} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-colors"
+                    style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${CARD_BORDER}` }}>
+                    <Globe size={11} /> Website
+                  </a>
+                )}
+                {profile?.twitterUrl && (
+                  <a href={profile.twitterUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-colors"
+                    style={{ background: "rgba(29,161,242,0.08)", border: "1px solid rgba(29,161,242,0.2)" }}>
+                    <SiTwitter size={10} className="text-[#1da1f2]" /> Twitter / X
+                  </a>
+                )}
+                {profile?.discordUrl && (
+                  <a href={profile.discordUrl} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-colors"
+                    style={{ background: "rgba(88,101,242,0.08)", border: "1px solid rgba(88,101,242,0.2)" }}>
+                    <SiDiscord size={10} className="text-[#5865f2]" /> Discord
+                  </a>
+                )}
+              </div>
+            </div>
+          ) : (
+            <button onClick={openModal}
+              className="w-full py-6 flex flex-col items-center justify-center gap-2 rounded-xl transition-all hover:bg-white/5"
+              style={{ border: `1px dashed ${CARD_BORDER}` }}>
+              <Building2 size={20} className="text-white/20" />
+              <span className="text-sm text-white/30">Add studio information</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          GROUP 2 — MEDIA
-      ══════════════════════════════════════════════════════════════════════ */}
-      <GroupHeader icon="🖼️" label="Media"
-        {...computeGroupStatus(["media"], sectionFilled, sectionTotal)} />
+      {open && (
+        <EditModal title="Studio" onClose={() => setOpen(false)}
+          onSave={() => save.mutate({
+            studioName: name, studioCountry: country,
+            studioFoundedYear: year ? parseInt(year) : null,
+            studioTeamSize: team ? parseInt(team) : null,
+            studioWebsite: website, twitterUrl: twitter, discordUrl: discord,
+          })} isSaving={save.isPending}>
+          <FieldInput label="Studio Name" value={name} onChange={setName} placeholder="Acme Games" />
+          <div className="grid grid-cols-2 gap-3">
+            <FieldInput label="Country" value={country} onChange={setCountry} placeholder="e.g. UK" />
+            <FieldInput label="Founded Year" value={year} onChange={setYear} placeholder="e.g. 2022" />
+          </div>
+          <FieldInput label="Team Size" value={team} onChange={setTeam} placeholder="e.g. 3" />
+          <FieldInput label="Studio Website" value={website} onChange={setWebsite} type="url" placeholder="https://…" />
+          <div className="h-px" style={{ background: CARD_BORDER }} />
+          <FieldInput label="Twitter / X URL" value={twitter} onChange={setTwitter} type="url" placeholder="https://twitter.com/…" />
+          <FieldInput label="Discord Server URL" value={discord} onChange={setDiscord} type="url" placeholder="https://discord.gg/…" />
+        </EditModal>
+      )}
+    </>
+  );
+}
 
-      <MediaPreviewPanel profile={profile} />
+// ─── Advanced Card ─────────────────────────────────────────────────────────────
+function AdvancedCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta: FieldMeta }) {
+  const [tab, setTab] = useState<"import" | "sync">("import");
 
-      <div id="gp-section-media">
-        <MediaSection {...sharedProps} open={openSections.has("media")} onToggle={() => toggleSection("media")}
-          filledCount={sectionFilled("media")} totalCount={sectionTotal("media")}
-          {...ss("media")} />
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+      <div className="px-5 py-4"
+        style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
+        <div className="flex items-center gap-2.5 mb-3">
+          <Download size={16} style={{ color: NEON }} />
+          <span className="text-sm font-bold text-white">Advanced</span>
+        </div>
+        <div className="flex gap-1 p-1 rounded-lg" style={{ background: "rgba(0,0,0,0.3)" }}>
+          {(["import", "sync"] as const).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className="flex-1 py-1.5 rounded text-xs font-bold transition-all"
+              style={{
+                background: tab === t ? CARD_BG : "transparent",
+                border: tab === t ? `1px solid ${CARD_BORDER}` : "1px solid transparent",
+                color: tab === t ? "white" : "rgba(255,255,255,0.35)",
+              }}>
+              {t === "import" ? "Import from Store" : "Sync Updates"}
+            </button>
+          ))}
+        </div>
       </div>
+      <div className="p-5">
+        {tab === "import" && (
+          <StoreImportPanel profile={profile} fieldMeta={fieldMeta}
+            onImported={() => queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] })} />
+        )}
+        {tab === "sync" && (
+          <SyncPanel profile={profile}
+            onSynced={() => queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] })} />
+        )}
+      </div>
+    </div>
+  );
+}
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          GROUP 3 — DISTRIBUTION
-      ══════════════════════════════════════════════════════════════════════ */}
-      <GroupHeader icon="🚀" label="Distribution"
-        {...computeGroupStatus(["platforms", "stores", "store-specific"], sectionFilled, sectionTotal)} />
+// ─── Main export ───────────────────────────────────────────────────────────────
+export default function GameProfileTab() {
+  const { data } = useQuery<{ profile: Profile; fieldMeta: FieldMeta }>({
+    queryKey: ["/api/indie/profile"],
+  });
 
-      <div id="gp-section-platforms">
-        <PlatformsSection {...sharedProps} open={openSections.has("platforms")} onToggle={() => toggleSection("platforms")}
-          filledCount={sectionFilled("platforms")} totalCount={sectionTotal("platforms")}
-          {...ss("platforms")} />
-      </div>
-      <div id="gp-section-stores">
-        <StoreLinksSection {...sharedProps} open={openSections.has("stores")} onToggle={() => toggleSection("stores")}
-          filledCount={sectionFilled("stores")} totalCount={sectionTotal("stores")}
-          {...ss("stores")} />
-      </div>
-      <div id="gp-section-store-specific">
-        <StoreSpecificSection {...sharedProps} open={openSections.has("store-specific")} onToggle={() => toggleSection("store-specific")}
-          filledCount={sectionFilled("store-specific")} totalCount={sectionTotal("store-specific")}
-          {...ss("store-specific")} />
-      </div>
+  const profile = (data as any)?.profile ?? null;
+  const fieldMeta: FieldMeta = (data as any)?.fieldMeta ?? {};
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          GROUP 4 — STUDIO
-      ══════════════════════════════════════════════════════════════════════ */}
-      <GroupHeader icon="🏢" label="Studio"
-        {...computeGroupStatus(["studio", "social", "sync-settings"], sectionFilled, sectionTotal)} />
-
-      <div id="gp-section-studio">
-        <StudioSection {...sharedProps} open={openSections.has("studio")} onToggle={() => toggleSection("studio")}
-          filledCount={sectionFilled("studio")} totalCount={sectionTotal("studio")}
-          {...ss("studio")} />
-      </div>
-      <div id="gp-section-social">
-        <SocialSection {...sharedProps} open={openSections.has("social")} onToggle={() => toggleSection("social")}
-          filledCount={sectionFilled("social")} totalCount={sectionTotal("social")}
-          {...ss("social")} />
-      </div>
-      <div id="gp-section-sync-settings">
-        <SyncSettingsSection {...sharedProps} open={openSections.has("sync-settings")} onToggle={() => toggleSection("sync-settings")}
-          filledCount={sectionFilled("sync-settings")} totalCount={sectionTotal("sync-settings")}
-          {...ss("sync-settings")} />
-      </div>
-
+  return (
+    <div className="space-y-4 pb-10">
+      <ProfileHealthCard profile={profile} />
+      <AboutCard profile={profile} />
+      <MediaCard profile={profile} />
+      <StoreListingCard profile={profile} />
+      <PlatformCard profile={profile} />
+      <StudioCard profile={profile} />
+      <AdvancedCard profile={profile} fieldMeta={fieldMeta} />
     </div>
   );
 }
