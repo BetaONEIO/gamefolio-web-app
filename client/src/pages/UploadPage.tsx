@@ -623,10 +623,6 @@ const UploadPage = () => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      if (uploadAbortRef.current) {
-        uploadAbortRef.current.abort();
-        uploadAbortRef.current = null;
-      }
     };
   }, [isUploading]);
 
