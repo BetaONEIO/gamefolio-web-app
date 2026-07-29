@@ -4228,6 +4228,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Deactivate duplicate active banners and remove exact duplicate clip rows.
+  // This remains admin-triggered so production data is never changed by boot.
+  app.post("/api/admin/cleanup-duplicate-uploads", authMiddleware, async (req, res) => {
+    try {
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      const { runDuplicateUploadCleanup } = await import("./duplicate-upload-cleanup");
+      const result = await runDuplicateUploadCleanup();
+      console.log("✅ Duplicate upload cleanup complete:", JSON.stringify(result));
+      res.json(result);
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error cleaning duplicate uploads:", error);
+      res.status(500).json({
+        message: "Error cleaning duplicate uploads",
+        detail: (error as Error).message,
+      });
+    }
+  });
+
   // Award monthly top contributor badges retroactively
   app.post("/api/admin/award-monthly-badges", authMiddleware, async (req, res) => {
     try {
