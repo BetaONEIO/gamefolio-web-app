@@ -14,10 +14,12 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Copy, Loader2 } from 'lucide-react';
+import type { OAuthClientType } from '@shared/schema';
 
 interface DeveloperApp {
   id: number;
   clientId: string;
+  clientType: OAuthClientType;
   name: string;
   description: string | null;
   logoUrl: string | null;
@@ -81,7 +83,12 @@ export default function AppDetailPage() {
   return (
     <div className="max-w-lg mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">{app.name}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold">{app.name}</h1>
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground capitalize">
+            {app.clientType}
+          </span>
+        </div>
         {app.description && <p className="text-muted-foreground">{app.description}</p>}
       </div>
 
@@ -126,27 +133,33 @@ export default function AppDetailPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Client secret</CardTitle>
-          <CardDescription>Regenerating revokes all existing tokens for this app — every connected user will need to re-authorize.</CardDescription>
+          <CardDescription>
+            {app.clientType === 'public'
+              ? "Public clients authenticate with PKCE only — there's no client secret to manage."
+              : 'Regenerating revokes all existing tokens for this app — every connected user will need to re-authorize.'}
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" disabled={regenerateMutation.isPending}>Regenerate secret</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Regenerate client secret?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This immediately revokes every access and refresh token issued to this app. Anyone using it will be signed out until they reconnect with the new secret.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={() => regenerateMutation.mutate()}>Regenerate</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </CardContent>
+        {app.clientType !== 'public' && (
+          <CardContent>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" disabled={regenerateMutation.isPending}>Regenerate secret</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Regenerate client secret?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This immediately revokes every access and refresh token issued to this app. Anyone using it will be signed out until they reconnect with the new secret.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => regenerateMutation.mutate()}>Regenerate</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardContent>
+        )}
       </Card>
 
       {app.isActive && (
