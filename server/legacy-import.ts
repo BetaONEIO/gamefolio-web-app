@@ -47,6 +47,7 @@ export async function runLegacyImport(db: any) {
   // and released on the same connection. A pooled `pg.unsafe()` call can use
   // different connections for those two statements.
   const connection = await pg.reserve();
+  let lockAcquired = false;
   try {
     const lock = await connection.unsafe(
       `SELECT pg_try_advisory_lock(872634001) AS ok`,
@@ -54,9 +55,12 @@ export async function runLegacyImport(db: any) {
     if (!lock?.[0]?.ok) {
       throw new Error("A legacy import is already running — try again later.");
     }
+    lockAcquired = true;
     return await doImport(payload, connection);
   } finally {
-    await connection.unsafe(`SELECT pg_advisory_unlock(872634001)`);
+    if (lockAcquired) {
+      await connection.unsafe(`SELECT pg_advisory_unlock(872634001)`);
+    }
     await connection.release();
   }
 }
