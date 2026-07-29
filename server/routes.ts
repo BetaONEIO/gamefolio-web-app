@@ -4209,6 +4209,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // One-time merge of legacy data from the pre-remix project's database dump
+  // (missing clips/users/history/ambassador flags). See server/legacy-import.ts.
+  app.post("/api/admin/import-legacy-data", authMiddleware, async (req, res) => {
+    try {
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      const { db } = await import("./db");
+      const { runLegacyImport } = await import("./legacy-import");
+      const result = await runLegacyImport(db);
+      console.log("✅ Legacy import complete:", JSON.stringify(result));
+      res.json(result);
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error importing legacy data:", error);
+      res.status(500).json({ message: "Error importing legacy data", detail: (error as Error).message });
+    }
+  });
+
   // Award monthly top contributor badges retroactively
   app.post("/api/admin/award-monthly-badges", authMiddleware, async (req, res) => {
     try {
