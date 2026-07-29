@@ -76,6 +76,19 @@ class UploadLimitError extends Error {
   }
 }
 
+// Thrown for any rejection that results from the user's own cancel action —
+// including tus-js-client's internal "setRequestHeader on aborted XHR"
+// InvalidStateError, which fires when abort() lands mid-chunk while a
+// pending source.slice() is about to set headers on the now-UNSENT XHR.
+// Both are expected outcomes of cancelling, not real failures, so they're
+// kept out of Sentry and don't show the "Upload failed" toast.
+class UploadCancelledError extends Error {
+  constructor() {
+    super("Upload cancelled");
+    this.name = "UploadCancelledError";
+  }
+}
+
 // Define filter options
 const FILTERS = [
   { id: 'none', name: 'None', className: '' },
@@ -683,6 +696,15 @@ const UploadPage = () => {
               },
               onError: (error) => {
                 signal.removeEventListener('abort', onAbort);
+                // If the user already cancelled, any error tus-js-client
+                // surfaces here — including its own internal
+                // "setRequestHeader on aborted XHR" InvalidStateError race —
+                // is just noise from tearing down the abort, not a real
+                // failure.
+                if (signal.aborted) {
+                  rejectUpload(new UploadCancelledError());
+                  return;
+                }
                 // Tier-limit rejections surface as a plain HTTP error to
                 // tus-js-client — recover the {message, limits} contract
                 // onUploadFinish returns so the "Upgrade to Pro" CTA still
@@ -725,7 +747,7 @@ const UploadPage = () => {
 
             const onAbort = () => {
               tusUpload.abort();
-              rejectUpload(new Error('Upload cancelled'));
+              rejectUpload(new UploadCancelledError());
             };
             signal.addEventListener('abort', onAbort, { once: true });
 
@@ -780,9 +802,9 @@ const UploadPage = () => {
           
         } catch (error: any) {
           uploadAbortRef.current = null;
-          if (error?.name === 'AbortError') {
+          if (error?.name === 'AbortError' || error instanceof UploadCancelledError) {
             console.log('Upload was cancelled');
-            reject(new Error('Upload cancelled'));
+            reject(error instanceof UploadCancelledError ? error : new UploadCancelledError());
           } else {
             console.error('Upload error:', error);
             // Always reject with a real Error. If a raw event (e.g. a
@@ -830,6 +852,14 @@ const UploadPage = () => {
     },
     onError: (error: Error) => {
       console.error('Upload mutation error:', error);
+      // A user-initiated cancel already reset the UI synchronously in the
+      // Cancel button's onClick — it's an expected outcome, not a failure,
+      // so it shouldn't reach Sentry or show an "Upload failed" toast.
+      if (error instanceof UploadCancelledError) {
+        setIsUploading(false);
+        setUploadProgress(0);
+        return;
+      }
       const limits = error instanceof UploadLimitError ? error.limits : undefined;
       const showUpgradeCta = limits ? limits.isPro === false : false;
       // Tier-limit rejections are expected, not bugs - only report genuine
