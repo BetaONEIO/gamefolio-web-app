@@ -4126,6 +4126,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // One-time repair: re-sync users.banner_url from active uploaded banners and
+  // recompute users.total_xp (points) + level from user_points_history.
+  // Fixes historical drift where history and totals fell out of sync.
+  app.post("/api/admin/repair-user-data", authMiddleware, async (req, res) => {
+    try {
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+
+      // 0) Fix user_points_history id sequence (production logs show duplicate-key
+      // failures on insert — the sequence fell behind max(id), blocking new awards)
+      await db.execute(sql`
+        SELECT setval(
+          pg_get_serial_sequence('user_points_history', 'id'),
+          GREATEST((SELECT COALESCE(MAX(id), 0) FROM user_points_history), 1)
+        )
+      `);
+
+      // db.execute returns rows directly with the postgres-js driver, but be
+      // defensive in case of a `.rows` wrapper
+      const asRows = (r: any): any[] => (Array.isArray(r) ? r : r?.rows ?? []);
+
+      // 1) Banner repair: users.banner_url must match their active uploaded banner
+      const bannerResult = asRows(await db.execute(sql`
+        UPDATE users u
+        SET banner_url = b.banner_url
+        FROM uploaded_banners b
+        WHERE b.user_id = u.id
+          AND b.is_active
+          AND u.banner_url IS DISTINCT FROM b.banner_url
+        RETURNING u.id, u.username
+      `));
+
+      // 2) XP repair: totalXP is fed by BOTH ledgers — user_points_history
+      // (leaderboard-service points) AND user_xp_history (xp-service: views,
+      // lootboxes, referrals...). It must equal the sum of both (0 for users
+      // with no history); recompute level. Only touch users whose totals
+      // drifted by more than 1 point (view points are fractional).
+      const driftedResult = asRows(await db.execute(sql`
+        UPDATE users u
+        SET total_xp = h.hist
+        FROM (
+          SELECT u2.id AS user_id,
+                 COALESCE(p.pts, 0) + COALESCE(x.xp, 0) AS hist
+          FROM users u2
+          LEFT JOIN (
+            SELECT user_id, SUM(points) AS pts FROM user_points_history GROUP BY user_id
+          ) p ON p.user_id = u2.id
+          LEFT JOIN (
+            SELECT user_id, SUM(xp_amount) AS xp FROM user_xp_history GROUP BY user_id
+          ) x ON x.user_id = u2.id
+        ) h
+        WHERE h.user_id = u.id
+          AND ABS(u.total_xp - h.hist) > 1
+        RETURNING u.id, u.username, u.total_xp, u.level
+      `));
+
+      // Recalculate levels for the repaired users
+      const { calculateLevel } = await import("./level-system");
+      let levelsUpdated = 0;
+      for (const row of driftedResult) {
+        const newLevel = calculateLevel(Number(row.total_xp));
+        if (newLevel !== Number(row.level)) {
+          await db.execute(sql`UPDATE users SET level = ${newLevel} WHERE id = ${row.id}`);
+          levelsUpdated++;
+          console.log(`✨ Repaired ${row.username}: level ${row.level} -> ${newLevel} (${row.total_xp} pts)`);
+        }
+      }
+
+      const bannersFixed = bannerResult.length;
+      const xpFixed = driftedResult.length;
+      console.log(`✅ Repair complete: ${bannersFixed} banners re-synced, ${xpFixed} XP totals recomputed, ${levelsUpdated} levels changed`);
+      res.json({ bannersFixed, xpTotalsFixed: xpFixed, levelsUpdated });
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error repairing user data:", error);
+      res.status(500).json({ message: "Error repairing user data" });
+    }
+  });
+
   // Award monthly top contributor badges retroactively
   app.post("/api/admin/award-monthly-badges", authMiddleware, async (req, res) => {
     try {
@@ -5453,6 +5536,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const safeBody = Object.fromEntries(
         Object.entries(req.body).filter(([key]) => ALLOWED_PROFILE_FIELDS.has(key))
       );
+
+      // Guard against stale banner overwrites: uploaded-banner activation goes
+      // through PUT /api/user/banners/:id/activate. If the PATCH carries a
+      // bannerUrl that matches one of the user's *inactive* uploaded banners,
+      // it's a stale cached profile object — drop it so it can't clobber the
+      // currently active banner. Preset/external/empty banner URLs still apply.
+      if (typeof safeBody.bannerUrl === "string" && safeBody.bannerUrl) {
+        try {
+          const uploaded = await storage.getUserUploadedBanners(userId);
+          const match = uploaded.find(b => b.bannerUrl === safeBody.bannerUrl);
+          if (match && !match.isActive) {
+            delete safeBody.bannerUrl;
+          }
+        } catch (e) {
+          console.error("Banner staleness check failed, dropping bannerUrl from update:", e);
+          delete safeBody.bannerUrl;
+        }
+      }
 
       // Prevent the onboarding test account from ever completing onboarding
       if (req.user?.email === 'onboarding@gamefolio.com') {
