@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import * as Sentry from "@sentry/capacitor";
 import { useLocation } from "wouter";
 import { queryClient, authedFetch } from "@/lib/queryClient";
+import { getAccessToken, getAccessTokenSync } from "@/lib/auth-token";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -659,87 +660,80 @@ const UploadPage = () => {
 
       return new Promise(async (resolve, reject) => {
         try {
-          console.log('Starting direct Supabase upload from client');
-          
-          const timestamp = Date.now();
-          const randomId = Math.random().toString(36).substring(2, 15);
-          const extension = file.name.split('.').pop();
-          const prefix = videoType === 'reel' ? 'reels' : 'videos';
-          const fileName = `${prefix}/${timestamp}-${randomId}.${extension}`;
-          const filePath = `users/${user.id}/${fileName}`;
-          
+          console.log('Starting chunked TUS upload from client');
+
           setUploadProgress(5);
-          
-          const credsResponse = await authedFetch('/api/upload/supabase-creds', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filePath, contentType: file.type }),
-            signal,
-          });
-          
-          if (!credsResponse.ok) {
-            throw new Error('Failed to get upload credentials');
-          }
-          
-          const credsData = await credsResponse.json();
-          const { uploadUrl, publicUrl } = credsData;
-          console.log('Got upload URL for direct upload');
-          setUploadProgress(15);
-          
-          await new Promise<void>((resolveUpload, rejectUpload) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open('PUT', uploadUrl);
-            xhr.setRequestHeader('Content-Type', file.type);
-            xhr.setRequestHeader('x-upsert', 'false');
-            
-            xhr.upload.onprogress = (event) => {
-              if (event.lengthComputable) {
-                const uploadPercent = Math.round((event.loaded / event.total) * 100);
+
+          const token = (await getAccessToken()) ?? getAccessTokenSync();
+
+          const uploadResult = await new Promise<{ url: string; path: string }>((resolveUpload, rejectUpload) => {
+            const tusUpload = new tus.Upload(file, {
+              endpoint: '/api/upload/tus',
+              // Small, fixed chunk size means peak client memory stays flat
+              // regardless of total file size — a single large PUT (the old
+              // approach) needs the whole file buffered for the request body,
+              // which is what exhausts the WebView's heap on big clips.
+              chunkSize: 6 * 1024 * 1024,
+              retryDelays: [0, 1000, 3000, 5000],
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+              metadata: {
+                filename: file.name,
+                filetype: file.type,
+                uploadType: videoType,
+              },
+              onError: (error) => {
+                signal.removeEventListener('abort', onAbort);
+                // Tier-limit rejections surface as a plain HTTP error to
+                // tus-js-client — recover the {message, limits} contract
+                // onUploadFinish returns so the "Upgrade to Pro" CTA still
+                // renders, matching the /process-video error path below.
+                const detailed = error as tus.DetailedError;
+                const body = detailed.originalResponse?.getBody();
+                if (body) {
+                  try {
+                    const parsed = JSON.parse(body);
+                    if (parsed?.message) {
+                      rejectUpload(new UploadLimitError(parsed.message, parsed.limits));
+                      return;
+                    }
+                  } catch {
+                    // Not JSON — fall through to the generic error below.
+                  }
+                }
+                console.error('TUS upload error:', error);
+                rejectUpload(error instanceof Error ? error : new Error(String(error)));
+              },
+              onProgress: (bytesUploaded, bytesTotal) => {
+                const uploadPercent = Math.round((bytesUploaded / bytesTotal) * 100);
                 setUploadProgress(20 + Math.round(uploadPercent * 0.65));
-              }
-            };
-            
+              },
+              onSuccess: (payload) => {
+                signal.removeEventListener('abort', onAbort);
+                try {
+                  const parsed = JSON.parse(payload.lastResponse.getBody());
+                  if (!parsed?.success || !parsed?.result?.url || !parsed?.result?.path) {
+                    throw new Error('Malformed upload-finish response');
+                  }
+                  console.log('TUS upload complete');
+                  setUploadProgress(85);
+                  resolveUpload({ url: parsed.result.url, path: parsed.result.path });
+                } catch (parseError) {
+                  rejectUpload(parseError instanceof Error ? parseError : new Error('Malformed upload-finish response'));
+                }
+              },
+            });
+
             const onAbort = () => {
-              xhr.abort();
+              tusUpload.abort();
               rejectUpload(new Error('Upload cancelled'));
             };
-
-            xhr.onload = () => {
-              signal.removeEventListener('abort', onAbort);
-              if (xhr.status >= 200 && xhr.status < 300) {
-                console.log('Direct Supabase upload complete');
-                setUploadProgress(85);
-                resolveUpload();
-              } else {
-                console.error('Supabase upload error:', xhr.responseText);
-                rejectUpload(new Error(`Direct upload to Supabase failed: ${xhr.status}`));
-              }
-            };
-
-            // Both the request and the upload stream can emit `error` — the
-            // latter fires a raw ProgressEvent that, left unhandled, surfaced in
-            // Sentry as an unhandled "[object ProgressEvent]" rejection. Reject
-            // with a proper Error from every failure path.
-            xhr.onerror = () => {
-              signal.removeEventListener('abort', onAbort);
-              rejectUpload(new Error('Upload network error'));
-            };
-            xhr.upload.onerror = () => {
-              signal.removeEventListener('abort', onAbort);
-              rejectUpload(new Error('Upload stream error'));
-            };
-            xhr.onabort = () => {
-              signal.removeEventListener('abort', onAbort);
-              rejectUpload(new Error('Upload cancelled'));
-            };
-
             signal.addEventListener('abort', onAbort, { once: true });
 
-            xhr.send(file);
+            tusUpload.start();
           });
-          
+
           const processData = {
-            uploadResult: { url: publicUrl, path: filePath },
+            uploadResult,
             title: titleRef.current || title,
             description: descriptionRef.current || description,
             gameId: selectedGame ? parseInt(selectedGame.id.toString()) : null,

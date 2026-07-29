@@ -106,6 +106,20 @@ const avatarUpload = multer({
   }
 });
 
+// `@tus/server` (via srvx) reconstructs its own fetch-standard Request before
+// invoking hooks like `onUploadFinish`, so `req.user` set by Express's
+// `hybridFullAccess` middleware earlier in the chain doesn't carry over onto
+// that object directly. srvx does, however, stash the original Node
+// `req`/`res` it was built from at `req.runtime.node.req` — and since Express
+// middleware mutates that same `IncomingMessage` in place (rather than
+// cloning it), `.user` is still there, just one level deeper. Falls back to
+// `req.user` directly for the direct-invocation contract tests rely on
+// (see tests/upload-limits.test.ts, which calls this function with a
+// hand-built `{ user: { id } }` and no `runtime`).
+function resolveTusRequestUserId(req: Record<string, any>): number | undefined {
+  return req?.user?.id ?? req?.runtime?.node?.req?.user?.id;
+}
+
 // TUS `onUploadFinish` handler — exported so tests can exercise the
 // upload-error contract directly without requiring the underlying TUS HTTP
 // transport (the contract that desktop and mobile clients depend on lives in
@@ -116,7 +130,7 @@ export async function tusOnUploadFinish(
 ): Promise<{ status_code: number; headers?: Record<string, string>; body: string }> {
   let limits: UploadLimits | undefined;
   try {
-    const userId = req.user?.id;
+    const userId = resolveTusRequestUserId(req);
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -173,6 +187,13 @@ export async function tusOnUploadFinish(
     const message = error?.message || 'Upload processing failed';
     // Surface limit errors as 4xx so the client gets a clear, actionable message.
     const isLimitError = typeof message === 'string' && message.startsWith('Maximum ');
+    // Tier-limit rejections are expected, not bugs — same exclusion the
+    // client applies for UploadLimitError — so only genuine transport/finish
+    // failures (e.g. the runtime.node.req auth propagation bug this function
+    // used to hit on every real HTTP upload) reach Sentry.
+    if (!isLimitError) {
+      captureRouteError(error);
+    }
     const errorBody: Record<string, any> = {
       error: isLimitError ? 'Upload exceeds tier limit' : 'Upload processing failed',
       message,
@@ -336,12 +357,38 @@ router.post('/upload/supabase-creds', hybridFullAccess, async (req, res) => {
   }
 });
 
+// srvx (the fetch-Request adapter @tus/server uses internally) finishes a
+// response via `res.end(callback)` — Node's callback-only overload of
+// ServerResponse#end, with no chunk. express-session@1.18.2's res.end patch
+// (installed earlier in the middleware chain, per-request) assumes its first
+// argument is always body data and never checks for this shape, so it hands
+// the callback straight to the real `res.write(chunk)`, which throws because
+// a function isn't valid response data. This only fires for session-cookie
+// requests (web) — JWT requests never touch `req.session`, so express-session
+// never re-wraps the response for them, which is why this stayed invisible
+// until a real cookie-authenticated upload was tested end-to-end. Intercept
+// just that one calling shape before it reaches express-session's patch;
+// every other shape passes through unchanged.
+function patchResEndForSessionCompat(res: express.Response) {
+  const originalEnd = res.end.bind(res);
+  (res as any).end = (...args: any[]) => {
+    if (args.length === 1 && typeof args[0] === 'function') {
+      const callback = args[0];
+      res.once('finish', callback);
+      return originalEnd();
+    }
+    return (originalEnd as any)(...args);
+  };
+}
+
 // TUS endpoints (keep for future use)
 router.all('/tus/*', hybridFullAccess, (req, res) => {
+  patchResEndForSessionCompat(res);
   return tusServer.handle(req, res);
 });
 
 router.all('/tus', hybridFullAccess, (req, res) => {
+  patchResEndForSessionCompat(res);
   return tusServer.handle(req, res);
 });
 
