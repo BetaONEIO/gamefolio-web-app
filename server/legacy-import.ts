@@ -43,18 +43,25 @@ export async function runLegacyImport(db: any) {
   );
 
   // Only one import may run at a time (double-clicks, concurrent admins).
-  const lock = await pg.unsafe(`SELECT pg_try_advisory_lock(872634001) AS ok`);
-  if (!lock?.[0]?.ok) {
-    throw new Error("A legacy import is already running — try again later.");
-  }
+  // Reserve one physical connection: session advisory locks must be acquired
+  // and released on the same connection. A pooled `pg.unsafe()` call can use
+  // different connections for those two statements.
+  const connection = await pg.reserve();
   try {
-    return await doImport(payload);
+    const lock = await connection.unsafe(
+      `SELECT pg_try_advisory_lock(872634001) AS ok`,
+    );
+    if (!lock?.[0]?.ok) {
+      throw new Error("A legacy import is already running — try again later.");
+    }
+    return await doImport(payload, connection);
   } finally {
-    await pg.unsafe(`SELECT pg_advisory_unlock(872634001)`);
+    await connection.unsafe(`SELECT pg_advisory_unlock(872634001)`);
+    await connection.release();
   }
 }
 
-async function doImport(payload: Payload) {
+async function doImport(payload: Payload, connection: any) {
   const db = (await import("./db")).db;
 
   // old id -> current id, per identity table
@@ -84,7 +91,7 @@ async function doImport(payload: Payload) {
       vals.push(values[i]);
     }
     // parameterized insert via the postgres-js session (drizzle sql.raw cannot bind params)
-    const res = await pg.unsafe(
+    const res = await connection.unsafe(
       `INSERT INTO ${qi(table)} (${cols.join(",")}) VALUES (${vals
         .map((_, i) => `$${i + 1}`)
         .join(",")}) RETURNING id`,
@@ -119,7 +126,7 @@ async function doImport(payload: Payload) {
           const nkVals = keyCols.map((c) => row[colIdx[c]]);
           // skip all-null keys (e.g. users without email)
           if (nkVals.every((v) => v == null)) continue;
-          const byNk = await pg.unsafe(
+           const byNk = await connection.unsafe(
             `SELECT id FROM ${qi(table)} WHERE ${nkWhere} LIMIT 1`,
             nkVals,
           );
@@ -131,7 +138,7 @@ async function doImport(payload: Payload) {
           continue;
         }
         // natural key absent -> we need to insert. Is the dump id free?
-        const byId = await pg.unsafe(`SELECT id FROM ${qi(table)} WHERE id = $1`, [oldId]);
+        const byId = await connection.unsafe(`SELECT id FROM ${qi(table)} WHERE id = $1`, [oldId]);
         if (byId.length) {
           // id taken by a different (post-cutover) row: insert with fresh id
           const newId = await insertRow(table, data.columns, row, false);
@@ -146,14 +153,14 @@ async function doImport(payload: Payload) {
             remap[table].set(oldId, oldId);
             r.inserted++;
           } catch (e: any) {
-            if (e?.code === "23505") {
-              const newId = await insertRow(table, data.columns, row, false);
-              remap[table].set(oldId, newId!);
-              r.inserted++;
-              r.remapped++;
-            } else {
-              throw e;
-            }
+            if (e?.code !== "23505") throw e;
+            // A live insert may have taken the id after the probe, or the
+            // sequence may still be behind max(id). Always retry without the
+            // legacy id so PostgreSQL allocates a current sequence value.
+            const newId = await insertRow(table, data.columns, row, false);
+            remap[table].set(oldId, newId!);
+            r.inserted++;
+            r.remapped++;
           }
         }
       } catch (e) {
@@ -182,7 +189,7 @@ async function doImport(payload: Payload) {
           .map((c, i) => `${qi(c)} IS NOT DISTINCT FROM $${i + 1}`)
           .join(" AND ");
         const nkVals = naturalKeyCols.map((c) => row[colIdx[c]]);
-        const exists = await pg.unsafe(
+        const exists = await connection.unsafe(
           `SELECT 1 FROM ${qi(table)} WHERE ${nkWhere} LIMIT 1`,
           nkVals,
         );
@@ -271,7 +278,7 @@ async function doImport(payload: Payload) {
   // ---- restore ambassador flags ----
   let ambassadorsFlagged = 0;
   for (const username of payload.ambassador_usernames ?? []) {
-    const res = await pg.unsafe(
+    const res = await connection.unsafe(
       `UPDATE users SET is_ambassador = true WHERE username = $1 AND is_ambassador = false RETURNING id`,
       [username],
     );

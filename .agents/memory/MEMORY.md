@@ -4,3 +4,4 @@
 - [Fullscreen mobile overlays need body portal](mobile-overlay-stacking-context.md) — page wrapper divs with position+zIndex trap high z-index overlays below the sticky Header; portal to document.body to escape.
 - [Points/XP drift & stale banners](points-xp-drift.md) — total_xp must equal points-history sum; banner_url must match active uploaded banner; admin repair endpoint fixes both + the id sequence.
 - [returnNull query data bypasses destructure defaults](react-query-null-vs-undefined-default.md) — `getQueryFn({on401:"returnNull"})` can set query `data` to `null`; a `const {data: x = []} = useQuery(...)` default only fires on `undefined`, not `null`, so `.length`/`.map` calls on `x` can throw.
+- [Legacy import advisory lock](legacy-import-advisory-lock.md) — session locks must acquire, run, and release through one reserved postgres-js connection.
