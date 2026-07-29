@@ -557,10 +557,24 @@ export const VALID_OAUTH_SCOPES = [
 ] as const;
 export type OAuthScope = typeof VALID_OAUTH_SCOPES[number];
 
+// RFC 8252 §8.5: "public" clients (desktop/mobile/CLI apps) can't keep a
+// secret confidential since it ships inside the binary — they authenticate
+// with PKCE (code_challenge/code_verifier, already mandatory on every
+// client regardless of type) instead of a client_secret. "confidential"
+// clients (server-side apps that can hold a secret) keep the existing
+// secret-based flow. Fixed at registration — not editable after creation,
+// since flipping types mid-life would mean either fabricating a secret out
+// of nowhere (public -> confidential) or silently dropping one that was
+// already handed out (confidential -> public).
+export const OAUTH_CLIENT_TYPES = ['confidential', 'public'] as const;
+export type OAuthClientType = typeof OAUTH_CLIENT_TYPES[number];
+
 export const oauthClients = pgTable("oauth_clients", {
   id: serial("id").primaryKey(),
   clientId: uuid("client_id").defaultRandom().notNull().unique(),
-  clientSecretHash: text("client_secret_hash").notNull(), // scrypt hash.salt, same format as users.password
+  // Null for public clients — they never get a secret to begin with.
+  clientSecretHash: text("client_secret_hash"), // scrypt hash.salt, same format as users.password
+  clientType: text("client_type").notNull().default("confidential"), // OAuthClientType
   name: text("name").notNull(),
   description: text("description"),
   logoUrl: text("logo_url"),
@@ -578,6 +592,7 @@ export const insertOauthClientSchema = createInsertSchema(oauthClients)
   .extend({
     name: z.string().min(1).max(100),
     redirectUris: z.array(z.string().url()).min(1),
+    clientType: z.enum(OAUTH_CLIENT_TYPES).default('confidential'),
   });
 
 // Short-lived authorization codes (Authorization Code grant, step 1). PKCE required.

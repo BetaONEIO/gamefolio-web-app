@@ -102,7 +102,7 @@ export default function DeveloperHomePage() {
           <CardHeader>
             <KeyRound className="h-6 w-6 text-primary mb-1" />
             <CardTitle className="text-base">Your own app</CardTitle>
-            <CardDescription>Register an app to get a client ID and secret.</CardDescription>
+            <CardDescription>Register an app to get a client ID (and a secret, for confidential apps).</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -113,11 +113,19 @@ export default function DeveloperHomePage() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-            <li>Register an app and add a redirect URI.</li>
+            <li>Register an app, choose a client type, and add a redirect URI.</li>
             <li>Redirect users to <code className="text-foreground">/oauth/authorize</code> with your client_id, redirect_uri, scope, state, and a PKCE code_challenge.</li>
             <li>Exchange the returned code for tokens at <code className="text-foreground">POST /oauth/token</code>.</li>
             <li>Call the API at <code className="text-foreground">/api/public/v1/*</code> with <code className="text-foreground">Authorization: Bearer &lt;access_token&gt;</code>.</li>
           </ol>
+          <p className="text-muted-foreground">
+            PKCE (S256) is required on every request to <code className="text-foreground">/oauth/authorize</code>, regardless of client type.
+            {' '}<strong className="text-foreground">Confidential</strong> apps (a server you control) also send a <code className="text-foreground">client_secret</code> at
+            {' '}<code className="text-foreground">/oauth/token</code>. <strong className="text-foreground">Public</strong> apps (desktop, mobile, or CLI — anything
+            whose code ships to end users, per{' '}
+            <a href="https://datatracker.ietf.org/doc/html/rfc8252#section-8.5" target="_blank" rel="noreferrer" className="underline">RFC 8252 §8.5</a>)
+            get no secret and omit <code className="text-foreground">client_secret</code> entirely — PKCE alone is their proof of possession.
+          </p>
         </CardContent>
       </Card>
 

@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Plus } from 'lucide-react';
+import type { OAuthClientType } from '@shared/schema';
 
 interface DeveloperApp {
   id: number;
   name: string;
   description: string | null;
   logoUrl: string | null;
+  clientType: OAuthClientType;
   isActive: boolean;
   createdAt: string;
 }
@@ -60,9 +62,12 @@ export default function MyAppsPage() {
                       {app.description && <p className="text-sm text-muted-foreground">{app.description}</p>}
                     </div>
                   </div>
-                  <Badge variant={app.isActive ? 'default' : 'secondary'}>
-                    {app.isActive ? 'Active' : 'Deactivated'}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="capitalize">{app.clientType}</Badge>
+                    <Badge variant={app.isActive ? 'default' : 'secondary'}>
+                      {app.isActive ? 'Active' : 'Deactivated'}
+                    </Badge>
+                  </div>
                 </CardHeader>
               </Card>
             </Link>

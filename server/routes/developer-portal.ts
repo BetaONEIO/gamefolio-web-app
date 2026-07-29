@@ -58,8 +58,11 @@ router.post('/apps', hybridAuth, createAppRateLimiter, async (req: Request, res:
       return res.status(400).json({ error: 'invalid_request', message: 'redirectUris must be https:// (or http://localhost for dev)' });
     }
 
-    const rawSecret = generateOpaqueToken();
-    const clientSecretHash = await hashClientSecret(rawSecret);
+    // Public clients (RFC 8252 §8.5) never get a secret — there's nothing to
+    // hash or hand back, PKCE alone authenticates them at /oauth/token.
+    const isPublic = parsed.data.clientType === 'public';
+    const rawSecret = isPublic ? null : generateOpaqueToken();
+    const clientSecretHash = rawSecret ? await hashClientSecret(rawSecret) : null;
 
     const [client] = await db.insert(oauthClients).values({
       ...parsed.data,
@@ -69,7 +72,10 @@ router.post('/apps', hybridAuth, createAppRateLimiter, async (req: Request, res:
 
     return res.status(201).json({
       ...toPublicClient(client),
-      clientSecret: rawSecret, // returned once — never retrievable again
+      // Returned once — never retrievable again. Omitted entirely for
+      // public clients rather than sent as null, so callers can't confuse
+      // "no secret because public" with "secret fetch failed".
+      ...(rawSecret ? { clientSecret: rawSecret } : {}),
     });
   } catch (error) {
     captureRouteError(error);
@@ -145,6 +151,9 @@ router.post('/apps/:id/regenerate-secret', hybridAuth, async (req: Request, res:
     const id = Number(req.params.id);
     const existing = await getOwnedClient(id, ownerUserId);
     if (!existing) return res.status(404).json({ error: 'not_found' });
+    if (existing.clientType === 'public') {
+      return res.status(400).json({ error: 'invalid_request', message: 'Public clients do not use a client secret.' });
+    }
 
     const rawSecret = generateOpaqueToken();
     const clientSecretHash = await hashClientSecret(rawSecret);
