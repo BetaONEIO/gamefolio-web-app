@@ -90,6 +90,32 @@ class UploadCancelledError extends Error {
   }
 }
 
+// Capacitor Android's CapacitorHttp XHR shim (native-bridge.js) converts
+// request bodies for its native bridge in convertBody(), which has explicit
+// branches for ReadableStream/Uint8Array, URLSearchParams, FormData, and
+// File — but NOT Blob. tus-js-client's chunk source (File.slice()) always
+// returns a plain Blob, never a File, so every chunk silently falls through
+// to convertBody's final `return { data: body, type: 'json' }` — the raw
+// Blob object gets sent as-is, mislabeled as JSON, instead of the chunk's
+// actual bytes. That corrupts (or empties) the uploaded body, which is what
+// produced the generic "ProgressEvent" chunk failures at inconsistent
+// offsets after the InvalidStateError fix. Converting each chunk to a
+// Uint8Array before handing it to send() routes it through convertBody's
+// working ReadableStream/Uint8Array branch instead.
+class BlobSafeHttpStack extends tus.DefaultHttpStack {
+  createRequest(method: string, url: string) {
+    const req = super.createRequest(method, url);
+    const originalSend = req.send.bind(req);
+    req.send = (body?: unknown) => {
+      if (typeof Blob !== 'undefined' && body instanceof Blob) {
+        return body.arrayBuffer().then((buf) => originalSend(new Uint8Array(buf)));
+      }
+      return originalSend(body);
+    };
+    return req;
+  }
+}
+
 // Define filter options
 const FILTERS = [
   { id: 'none', name: 'None', className: '' },
@@ -712,6 +738,10 @@ const UploadPage = () => {
                 // every time. An absolute URL keeps both calls on the
                 // shim's consistent path.
                 endpoint: resolveApiUrl('/api/upload/tus'),
+                // See BlobSafeHttpStack above — CapacitorHttp's XHR shim
+                // silently mishandles plain Blob bodies (every chunk here),
+                // so route sends through a Uint8Array conversion first.
+                httpStack: new BlobSafeHttpStack(undefined),
                 // Small, fixed chunk size means peak client memory stays flat
                 // regardless of total file size — a single large PUT (the old
                 // approach) needs the whole file buffered for the request body,
