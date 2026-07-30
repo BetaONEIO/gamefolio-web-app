@@ -4,7 +4,7 @@ import * as Sentry from "@sentry/capacitor";
 import { useLocation } from "wouter";
 import { queryClient, authedFetch } from "@/lib/queryClient";
 import { getAccessToken, getAccessTokenSync } from "@/lib/auth-token";
-import { isNative, resolveApiUrl, getUnpatchedXHR } from "@/lib/platform";
+import { isNative, resolveApiUrl, getUnpatchedXHR, getUnpatchedFetch } from "@/lib/platform";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -771,6 +771,26 @@ const UploadPage = () => {
 
           const token = (await getAccessToken()) ?? getAccessTokenSync();
 
+          // Per-chunk timing/retry instrumentation — added after a report of
+          // uploads "stuck" for minutes near the end of a file before
+          // eventually succeeding. Sentry never sees a successful-but-slow
+          // upload by default (no error is thrown), so this captures enough
+          // to see which chunk stalled and how many retries it took, whether
+          // the upload ultimately succeeds or fails.
+          const chunkTimings: Array<{ ms: number; status: number }> = [];
+          const requestStartTimes = new WeakMap<tus.HttpRequest, number>();
+          let retryCount = 0;
+          const buildUploadDiagnostics = () => ({
+            chunkCount: chunkTimings.length,
+            retryCount,
+            maxChunkMs: chunkTimings.length ? Math.round(Math.max(...chunkTimings.map((c) => c.ms))) : 0,
+            totalChunkMs: Math.round(chunkTimings.reduce((sum, c) => sum + c.ms, 0)),
+            slowChunks: chunkTimings
+              .filter((c) => c.ms > 2000)
+              .map((c) => ({ ms: Math.round(c.ms), status: c.status })),
+            fileSize: file.size,
+          });
+
           const uploadResult = await new Promise<{ url: string; path: string }>((resolveUpload, rejectUpload) => {
             const tusUpload = new tus.Upload(file, {
               endpoint: resolveApiUrl('/api/upload/tus'),
@@ -788,6 +808,27 @@ const UploadPage = () => {
                 filename: file.name,
                 filetype: file.type,
                 uploadType: videoType,
+              },
+              onBeforeRequest: (req) => {
+                requestStartTimes.set(req, performance.now());
+              },
+              onAfterResponse: (req, res) => {
+                const start = requestStartTimes.get(req);
+                const ms = start != null ? performance.now() - start : -1;
+                chunkTimings.push({ ms, status: res.getStatus() });
+                if (ms > 2000) {
+                  console.warn(`[tus] slow chunk request: ${Math.round(ms)}ms (status ${res.getStatus()})`);
+                }
+              },
+              onShouldRetry: (error, retryAttempt, opts) => {
+                retryCount++;
+                const status = error.originalResponse ? error.originalResponse.getStatus() : 0;
+                console.warn(`[tus] retry #${retryAttempt + 1} after error (status ${status}):`, error.message);
+                // Same policy as tus-js-client's default — this hook only adds
+                // visibility, it doesn't change what gets retried.
+                const isClientError = status >= 400 && status < 500;
+                const online = typeof navigator === 'undefined' || navigator.onLine !== false;
+                return (!isClientError || status === 409 || status === 423) && online;
               },
               onError: (error) => {
                 signal.removeEventListener('abort', onAbort);
@@ -818,7 +859,9 @@ const UploadPage = () => {
                   }
                 }
                 console.error('TUS upload error:', error);
-                rejectUpload(error instanceof Error ? error : new Error(String(error)));
+                const finalError = error instanceof Error ? error : new Error(String(error));
+                (finalError as Error & { uploadDiagnostics?: unknown }).uploadDiagnostics = buildUploadDiagnostics();
+                rejectUpload(finalError);
               },
               onProgress: (bytesUploaded, bytesTotal) => {
                 const uploadPercent = Math.round((bytesUploaded / bytesTotal) * 100);
@@ -832,6 +875,18 @@ const UploadPage = () => {
                     throw new Error('Malformed upload-finish response');
                   }
                   console.log('TUS upload complete');
+                  const diagnostics = buildUploadDiagnostics();
+                  if (retryCount > 0 || diagnostics.slowChunks.length > 0) {
+                    // Succeeded, but not cleanly — this is the "stuck for a
+                    // few minutes then completes" case, which throws no
+                    // error and would otherwise leave zero trace in Sentry.
+                    console.warn('[tus] upload succeeded after retries/slow chunks:', diagnostics);
+                    Sentry.captureMessage('tus upload succeeded after retries/slow chunks', {
+                      level: 'warning',
+                      tags: { module: 'upload-page', op: 'video-upload' },
+                      extra: diagnostics,
+                    });
+                  }
                   setUploadProgress(85);
                   resolveUpload({ url: parsed.result.url, path: parsed.result.path });
                 } catch (parseError) {
@@ -867,13 +922,99 @@ const UploadPage = () => {
             fullProcessData: processData
           });
           
-          const processResponse = await authedFetch('/api/upload/process-video', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(processData),
-            signal,
-          });
-          
+          // process-video isn't just a network call — server-side it
+          // synchronously downloads the uploaded video, runs it through
+          // ffmpeg (trim/re-encode/thumbnail), and re-uploads the result,
+          // all within this one request (see clip-processing.ts). For a
+          // ~90MB clip that can legitimately take minutes, which is why the
+          // "stuck at 85%" screen recording eventually completed on its own.
+          // A short client timeout was the wrong read on that — it doesn't
+          // hang, it's just slow. This one is a generous last-resort safety
+          // net against a *true* stall (e.g. CapacitorHttp's own bridge, if
+          // still in play), not a normal-latency budget.
+          class ProcessVideoTimeoutError extends Error {}
+          const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
+            new Promise<T>((resolve, reject) => {
+              const timer = setTimeout(
+                () => reject(new ProcessVideoTimeoutError(`process-video request timed out after ${ms}ms`)),
+                ms,
+              );
+              promise.then(
+                (v) => { clearTimeout(timer); resolve(v); },
+                (e) => { clearTimeout(timer); reject(e); },
+              );
+            });
+
+          // Retries only apply to *fast* connection-level failures (e.g. DNS
+          // resolution failing right as the app backgrounds) — fetch()
+          // rejecting outright means the request never reached the server,
+          // so it's safe to retry without risking a duplicate clip from
+          // processAndCreateClip. A timeout is NOT safe to retry: the
+          // original request may still be genuinely processing server-side,
+          // and firing a second one could create a duplicate clip once both
+          // complete. So a timeout ends the loop immediately, no retry.
+          const processVideoRetryDelaysMs = [1500, 4000];
+          let processVideoRetries = 0;
+          let processResponse: Response | undefined;
+          let processVideoNetworkError: unknown;
+          for (let attempt = 1; attempt <= processVideoRetryDelaysMs.length + 1; attempt++) {
+            try {
+              processResponse = isNative
+                ? await withTimeout(
+                    getUnpatchedFetch()(resolveApiUrl('/api/upload/process-video'), {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                      },
+                      body: JSON.stringify(processData),
+                      signal,
+                    }),
+                    5 * 60 * 1000,
+                  )
+                : await authedFetch('/api/upload/process-video', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(processData),
+                    signal,
+                  });
+              processVideoNetworkError = undefined;
+              break;
+            } catch (fetchError) {
+              processVideoNetworkError = fetchError;
+              const isTimeout = fetchError instanceof ProcessVideoTimeoutError;
+              if (signal.aborted || isTimeout || attempt > processVideoRetryDelaysMs.length) break;
+              const delay = processVideoRetryDelaysMs[attempt - 1];
+              processVideoRetries++;
+              console.warn(`[process-video] network error on attempt ${attempt}, retrying in ${delay}ms:`, fetchError);
+              await new Promise((r) => setTimeout(r, delay));
+            }
+          }
+          if (processVideoNetworkError || !processResponse) {
+            const err = processVideoNetworkError instanceof ProcessVideoTimeoutError
+              // The request may well still be processing server-side — this
+              // isn't the same as a clean failure, so say so rather than a
+              // generic "upload failed" that implies nothing happened.
+              ? new Error('Your video is still processing — this can take a few minutes for larger clips. Check your profile shortly before uploading again.')
+              : processVideoNetworkError instanceof Error
+                ? processVideoNetworkError
+                : new Error(String(processVideoNetworkError));
+            (err as Error & { uploadDiagnostics?: Record<string, unknown> }).uploadDiagnostics = {
+              phase: 'process-video',
+              processVideoRetries,
+              fileSize: file.size,
+            };
+            throw err;
+          }
+          if (processVideoRetries > 0) {
+            console.warn(`[process-video] succeeded after ${processVideoRetries} retr${processVideoRetries === 1 ? 'y' : 'ies'}`);
+            Sentry.captureMessage('process-video succeeded after network retry', {
+              level: 'warning',
+              tags: { module: 'upload-page', op: 'video-upload' },
+              extra: { processVideoRetries, fileSize: file.size },
+            });
+          }
+
           if (!processResponse.ok) {
             // /api/upload/process-video returns { error, message, limits }
             // for tier-limit rejections (HTTP 403). Use the friendly
@@ -962,6 +1103,7 @@ const UploadPage = () => {
       if (!(error instanceof UploadLimitError)) {
         Sentry.captureException(error, {
           tags: { module: "upload-page", op: "video-upload", videoType: contentType === 'reels' ? 'reel' : 'clip' },
+          extra: (error as Error & { uploadDiagnostics?: Record<string, unknown> }).uploadDiagnostics,
         });
       }
       toast({
