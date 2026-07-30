@@ -94,6 +94,52 @@ export async function openExternal(url: string): Promise<void> {
   window.location.href = url;
 }
 
+let cachedNativeBypassWindow: (Window & typeof globalThis) | null = null;
+
+/**
+ * CapacitorHttp (enabled in capacitor.config.ts, needed for cross-origin
+ * cookie/CORS support against app.gamefolio.com from the capacitor://
+ * /https://localhost webview) replaces the global fetch/XMLHttpRequest on
+ * native platforms, marshalling every request body across the JS<->native
+ * bridge. That bridge reliably breaks large chunked uploads (tus PATCH
+ * requests dying ~90MB into a file, offset identical across retries — see
+ * GAMEFOLIO-MOBILE-12 in Sentry) and can also leave a plain fetch() call
+ * hanging indefinitely — neither resolving nor rejecting — rather than
+ * failing fast, which defeats retry logic entirely (see the process-video
+ * finishing call getting stuck at 85% with no error ever thrown).
+ *
+ * A same-origin iframe never gets Capacitor's bridge injected into it (the
+ * injection is tied to top-level page navigation), so its fetch/
+ * XMLHttpRequest are the WebView's real, unpatched implementations, which
+ * talk to the network directly instead of round-tripping through native.
+ * The server already whitelists the webview origin for CORS (see
+ * server/index.ts), so genuine cross-origin requests from here are allowed.
+ */
+function getNativeBypassWindow(): Window & typeof globalThis {
+  if (cachedNativeBypassWindow) return cachedNativeBypassWindow;
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+  const win = iframe.contentWindow as (Window & typeof globalThis) | null;
+  if (!win?.XMLHttpRequest || !win?.fetch) {
+    iframe.remove();
+    throw new Error('Unable to obtain unpatched fetch/XMLHttpRequest from iframe');
+  }
+  // Left attached deliberately — detaching the iframe can tear down its
+  // realm and invalidate requests made from it later.
+  cachedNativeBypassWindow = win;
+  return cachedNativeBypassWindow;
+}
+
+export function getUnpatchedXHR(): typeof XMLHttpRequest {
+  return getNativeBypassWindow().XMLHttpRequest;
+}
+
+export function getUnpatchedFetch(): typeof fetch {
+  const win = getNativeBypassWindow();
+  return win.fetch.bind(win);
+}
+
 /**
  * Subscribe to the in-app Capacitor Browser's "finished" (dismissed) event.
  * Useful for resetting transient UI state (e.g. an OAuth "Connecting…"
