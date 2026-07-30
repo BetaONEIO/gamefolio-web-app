@@ -4249,6 +4249,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // One-time repair: rebuild weekly/monthly leaderboard tables from the XP history ledgers
+  app.post("/api/admin/rebuild-leaderboards", authMiddleware, async (req, res) => {
+    try {
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      const { runLeaderboardRebuild } = await import("./leaderboard-rebuild");
+      const result = await runLeaderboardRebuild();
+      console.log("✅ Leaderboard rebuild complete:", JSON.stringify(result));
+      res.json(result);
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error rebuilding leaderboards:", error);
+      res.status(500).json({
+        message: "Error rebuilding leaderboards",
+        detail: (error as Error).message,
+      });
+    }
+  });
+
   // Award monthly top contributor badges retroactively
   app.post("/api/admin/award-monthly-badges", authMiddleware, async (req, res) => {
     try {
