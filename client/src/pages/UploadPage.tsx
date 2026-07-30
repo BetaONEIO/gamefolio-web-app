@@ -680,78 +680,104 @@ const UploadPage = () => {
           const token = (await getAccessToken()) ?? getAccessTokenSync();
 
           const uploadResult = await new Promise<{ url: string; path: string }>((resolveUpload, rejectUpload) => {
-            const tusUpload = new tus.Upload(file, {
-              endpoint: '/api/upload/tus',
-              // Small, fixed chunk size means peak client memory stays flat
-              // regardless of total file size — a single large PUT (the old
-              // approach) needs the whole file buffered for the request body,
-              // which is what exhausts the WebView's heap on big clips.
-              chunkSize: 6 * 1024 * 1024,
-              retryDelays: [0, 1000, 3000, 5000],
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
-              metadata: {
-                filename: file.name,
-                filetype: file.type,
-                uploadType: videoType,
-              },
-              onError: (error) => {
-                signal.removeEventListener('abort', onAbort);
-                // If the user already cancelled, any error tus-js-client
-                // surfaces here — including its own internal
-                // "setRequestHeader on aborted XHR" InvalidStateError race —
-                // is just noise from tearing down the abort, not a real
-                // failure.
-                if (signal.aborted) {
-                  rejectUpload(new UploadCancelledError());
-                  return;
-                }
-                // Tier-limit rejections surface as a plain HTTP error to
-                // tus-js-client — recover the {message, limits} contract
-                // onUploadFinish returns so the "Upgrade to Pro" CTA still
-                // renders, matching the /process-video error path below.
-                const detailed = error as tus.DetailedError;
-                const body = detailed.originalResponse?.getBody();
-                if (body) {
-                  try {
-                    const parsed = JSON.parse(body);
-                    if (parsed?.message) {
-                      rejectUpload(new UploadLimitError(parsed.message, parsed.limits));
-                      return;
+            // tus-js-client has an internal race: a pending source.slice()
+            // callback can call setRequestHeader() on an XHR that's already
+            // been reset to UNSENT (by an abort, a retry, or the client's
+            // own request replacement), throwing InvalidStateError. This
+            // isn't specific to user cancellation — it's been observed
+            // firing within ~10ms of a fresh, never-cancelled upload start.
+            // Retrying a couple of times clears it, since it's a stale-XHR
+            // fluke rather than a real transport/server failure.
+            let invalidStateRetries = 0;
+            const MAX_INVALID_STATE_RETRIES = 2;
+            let onAbort: () => void;
+
+            const startTusUpload = () => {
+              const tusUpload = new tus.Upload(file, {
+                endpoint: '/api/upload/tus',
+                // Small, fixed chunk size means peak client memory stays flat
+                // regardless of total file size — a single large PUT (the old
+                // approach) needs the whole file buffered for the request body,
+                // which is what exhausts the WebView's heap on big clips.
+                chunkSize: 6 * 1024 * 1024,
+                retryDelays: [0, 1000, 3000, 5000],
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                metadata: {
+                  filename: file.name,
+                  filetype: file.type,
+                  uploadType: videoType,
+                },
+                onError: (error) => {
+                  signal.removeEventListener('abort', onAbort);
+                  // If the user already cancelled, any error tus-js-client
+                  // surfaces here — including the InvalidStateError race
+                  // below — is just noise from tearing down the abort, not
+                  // a real failure.
+                  if (signal.aborted) {
+                    rejectUpload(new UploadCancelledError());
+                    return;
+                  }
+                  const isStaleXhrRace =
+                    (error as { name?: string })?.name === 'InvalidStateError' &&
+                    /setRequestHeader/.test((error as { message?: string })?.message ?? '');
+                  if (isStaleXhrRace && invalidStateRetries < MAX_INVALID_STATE_RETRIES) {
+                    invalidStateRetries++;
+                    console.warn(
+                      `TUS stale-XHR InvalidStateError, retrying (${invalidStateRetries}/${MAX_INVALID_STATE_RETRIES})`,
+                    );
+                    startTusUpload();
+                    return;
+                  }
+                  // Tier-limit rejections surface as a plain HTTP error to
+                  // tus-js-client — recover the {message, limits} contract
+                  // onUploadFinish returns so the "Upgrade to Pro" CTA still
+                  // renders, matching the /process-video error path below.
+                  const detailed = error as tus.DetailedError;
+                  const body = detailed.originalResponse?.getBody();
+                  if (body) {
+                    try {
+                      const parsed = JSON.parse(body);
+                      if (parsed?.message) {
+                        rejectUpload(new UploadLimitError(parsed.message, parsed.limits));
+                        return;
+                      }
+                    } catch {
+                      // Not JSON — fall through to the generic error below.
                     }
-                  } catch {
-                    // Not JSON — fall through to the generic error below.
                   }
-                }
-                console.error('TUS upload error:', error);
-                rejectUpload(error instanceof Error ? error : new Error(String(error)));
-              },
-              onProgress: (bytesUploaded, bytesTotal) => {
-                const uploadPercent = Math.round((bytesUploaded / bytesTotal) * 100);
-                setUploadProgress(20 + Math.round(uploadPercent * 0.65));
-              },
-              onSuccess: (payload) => {
-                signal.removeEventListener('abort', onAbort);
-                try {
-                  const parsed = JSON.parse(payload.lastResponse.getBody());
-                  if (!parsed?.success || !parsed?.result?.url || !parsed?.result?.path) {
-                    throw new Error('Malformed upload-finish response');
+                  console.error('TUS upload error:', error);
+                  rejectUpload(error instanceof Error ? error : new Error(String(error)));
+                },
+                onProgress: (bytesUploaded, bytesTotal) => {
+                  const uploadPercent = Math.round((bytesUploaded / bytesTotal) * 100);
+                  setUploadProgress(20 + Math.round(uploadPercent * 0.65));
+                },
+                onSuccess: (payload) => {
+                  signal.removeEventListener('abort', onAbort);
+                  try {
+                    const parsed = JSON.parse(payload.lastResponse.getBody());
+                    if (!parsed?.success || !parsed?.result?.url || !parsed?.result?.path) {
+                      throw new Error('Malformed upload-finish response');
+                    }
+                    console.log('TUS upload complete');
+                    setUploadProgress(85);
+                    resolveUpload({ url: parsed.result.url, path: parsed.result.path });
+                  } catch (parseError) {
+                    rejectUpload(parseError instanceof Error ? parseError : new Error('Malformed upload-finish response'));
                   }
-                  console.log('TUS upload complete');
-                  setUploadProgress(85);
-                  resolveUpload({ url: parsed.result.url, path: parsed.result.path });
-                } catch (parseError) {
-                  rejectUpload(parseError instanceof Error ? parseError : new Error('Malformed upload-finish response'));
-                }
-              },
-            });
+                },
+              });
 
-            const onAbort = () => {
-              tusUpload.abort();
-              rejectUpload(new UploadCancelledError());
+              onAbort = () => {
+                tusUpload.abort();
+                rejectUpload(new UploadCancelledError());
+              };
+              signal.addEventListener('abort', onAbort, { once: true });
+
+              tusUpload.start();
             };
-            signal.addEventListener('abort', onAbort, { once: true });
 
-            tusUpload.start();
+            startTusUpload();
           });
 
           const processData = {
