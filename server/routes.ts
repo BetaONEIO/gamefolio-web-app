@@ -131,30 +131,20 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 async function comparePasswords(password: string, hashedPassword: string | null | undefined): Promise<boolean> {
-  console.log(`🔐 comparePasswords called with password length: ${password?.length}, hashedPassword length: ${hashedPassword?.length}`);
-  
   // Handle case where user doesn't have a password (e.g., OAuth users)
   if (!hashedPassword) {
-    console.log(`🔐 No hashed password provided`);
     return false;
   }
   
   const [hash, salt] = hashedPassword.split('.');
   if (!hash || !salt) {
-    console.log(`🔐 Invalid hash format - hash: ${!!hash}, salt: ${!!salt}`);
     return false;
   }
-  
-  console.log(`🔐 Hash parts - hash length: ${hash.length}, salt length: ${salt.length}`);
   
   try {
     const buf = (await scryptAsync(password, salt, 64)) as Buffer;
     const storedHash = Buffer.from(hash, 'hex');
-    const result = timingSafeEqual(storedHash, buf);
-    console.log(`🔐 Password comparison result: ${result}`);
-    console.log(`🔐 Generated hash: ${buf.toString('hex').substring(0, 20)}...`);
-    console.log(`🔐 Stored hash: ${hash.substring(0, 20)}...`);
-    return result;
+    return timingSafeEqual(storedHash, buf);
   } catch (error) {
     console.error(`🔐 Error in password comparison:`, error);
     return false;
@@ -393,7 +383,7 @@ function toPublicUser(user: any): Record<string, unknown> {
 // Use this on any endpoint that returns a full user row.
 function stripUserSecrets<T extends Record<string, any>>(user: T): Partial<T> {
   const {
-    password, twoFactorSecret, encryptedPrivateKey,
+    password, email, twoFactorSecret, encryptedPrivateKey,
     stripeCustomerId, stripeSubscriptionId, revenuecatUserId,
     twitchAccessToken, kickAccessToken,
     walletAddress, dateOfBirth, birthday, externalId,
@@ -661,16 +651,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Error blocking user" });
     }
   });
-
-  // Add debugging middleware for production
-  if (process.env.NODE_ENV === "production") {
-    app.use('/api/user', (req, res, next) => {
-      console.log('User endpoint - Session ID:', req.sessionID);
-      console.log('User endpoint - Is authenticated:', req.isAuthenticated());
-      console.log('User endpoint - Session user:', req.user);
-      next();
-    });
-  }
 
   // Configure passport
   passport.use(
@@ -2108,9 +2088,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const emailSent = await EmailService.sendVerificationEmail(user.email, verificationCode);
 
       if (emailSent) {
-        console.log(`Verification email sent to ${user.email}`);
+        console.log(`Verification email sent to user ${user.id}`);
       } else {
-        console.warn(`Failed to send verification email to ${user.email}`);
+        console.warn(`Failed to send verification email to user ${user.id}`);
       }
 
       // Send new user notification to admin
