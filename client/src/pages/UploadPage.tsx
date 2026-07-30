@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/capacitor";
 import { useLocation } from "wouter";
 import { queryClient, authedFetch } from "@/lib/queryClient";
 import { getAccessToken, getAccessTokenSync } from "@/lib/auth-token";
+import { isNative, resolveApiUrl, getUnpatchedXHR } from "@/lib/platform";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -86,6 +87,97 @@ class UploadCancelledError extends Error {
   constructor() {
     super("Upload cancelled");
     this.name = "UploadCancelledError";
+  }
+}
+
+// tus-js-client's default browser HttpStack constructs `new XMLHttpRequest()`
+// directly, which on native picks up CapacitorHttp's patched global — the
+// bridge that reliably breaks large chunked PATCH uploads (see
+// getUnpatchedXHR in lib/platform.ts for the full story). This mirrors
+// tus-js-client's own XHRHttpStack but takes an injected, unpatched
+// XMLHttpRequest constructor instead of using the (possibly patched) global.
+class NativeBypassHttpRequest implements tus.HttpRequest {
+  private xhr: XMLHttpRequest;
+  private headers: Record<string, string> = {};
+
+  constructor(
+    private method: string,
+    private url: string,
+  ) {
+    this.xhr = new (getUnpatchedXHR())();
+    this.xhr.open(method, url, true);
+  }
+
+  getMethod() {
+    return this.method;
+  }
+
+  getURL() {
+    return this.url;
+  }
+
+  setHeader(header: string, value: string) {
+    this.xhr.setRequestHeader(header, value);
+    this.headers[header] = value;
+  }
+
+  getHeader(header: string) {
+    return this.headers[header];
+  }
+
+  setProgressHandler(progressHandler: (bytesSent: number) => void) {
+    if (!("upload" in this.xhr)) return;
+    this.xhr.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return;
+      progressHandler(e.loaded);
+    };
+  }
+
+  send(body?: XMLHttpRequestBodyInit): Promise<tus.HttpResponse> {
+    return new Promise((resolve, reject) => {
+      this.xhr.onload = () => resolve(new NativeBypassHttpResponse(this.xhr));
+      this.xhr.onerror = (err) => reject(err);
+      this.xhr.send(body);
+    });
+  }
+
+  abort(): Promise<void> {
+    this.xhr.abort();
+    return Promise.resolve();
+  }
+
+  getUnderlyingObject() {
+    return this.xhr;
+  }
+}
+
+class NativeBypassHttpResponse implements tus.HttpResponse {
+  constructor(private xhr: XMLHttpRequest) {}
+
+  getStatus() {
+    return this.xhr.status;
+  }
+
+  getHeader(header: string) {
+    return this.xhr.getResponseHeader(header) ?? undefined;
+  }
+
+  getBody() {
+    return this.xhr.responseText;
+  }
+
+  getUnderlyingObject() {
+    return this.xhr;
+  }
+}
+
+class NativeBypassHttpStack implements tus.HttpStack {
+  createRequest(method: string, url: string) {
+    return new NativeBypassHttpRequest(method, url);
+  }
+
+  getName() {
+    return "NativeBypassHttpStack";
   }
 }
 
@@ -681,7 +773,10 @@ const UploadPage = () => {
 
           const uploadResult = await new Promise<{ url: string; path: string }>((resolveUpload, rejectUpload) => {
             const tusUpload = new tus.Upload(file, {
-              endpoint: '/api/upload/tus',
+              endpoint: resolveApiUrl('/api/upload/tus'),
+              // On native, route chunk PATCHes around CapacitorHttp's
+              // patched XHR — see NativeBypassHttpStack above for why.
+              httpStack: isNative ? new NativeBypassHttpStack() : undefined,
               // Small, fixed chunk size means peak client memory stays flat
               // regardless of total file size — a single large PUT (the old
               // approach) needs the whole file buffered for the request body,

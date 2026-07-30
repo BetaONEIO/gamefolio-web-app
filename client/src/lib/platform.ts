@@ -101,6 +101,40 @@ export async function openExternal(url: string): Promise<void> {
  *
  * On web this is a no-op and returns a noop unsubscribe.
  */
+let cachedUnpatchedXHR: typeof XMLHttpRequest | null = null;
+
+/**
+ * CapacitorHttp (enabled in capacitor.config.ts, needed for cross-origin
+ * cookie/CORS support against app.gamefolio.com from the capacitor://
+ * /https://localhost webview) replaces the global fetch/XMLHttpRequest on
+ * native platforms, marshalling every request body across the JS<->native
+ * bridge. That bridge reliably breaks large chunked uploads (tus PATCH
+ * requests dying ~90MB into a file, offset identical across retries —
+ * see GAMEFOLIO-MOBILE-12 in Sentry).
+ *
+ * A same-origin iframe never gets Capacitor's bridge injected into it
+ * (the injection is tied to top-level page navigation), so its
+ * XMLHttpRequest is the WebView's real, unpatched implementation, which
+ * streams the request body directly instead of round-tripping it through
+ * native. The server already whitelists the webview origin for CORS (see
+ * server/index.ts), so a genuine cross-origin XHR from here is allowed.
+ */
+export function getUnpatchedXHR(): typeof XMLHttpRequest {
+  if (cachedUnpatchedXHR) return cachedUnpatchedXHR;
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+  const win = iframe.contentWindow as (Window & typeof globalThis) | null;
+  if (!win?.XMLHttpRequest) {
+    iframe.remove();
+    throw new Error('Unable to obtain unpatched XMLHttpRequest from iframe');
+  }
+  // Left attached deliberately — detaching the iframe can tear down its
+  // realm and invalidate XHR instances constructed from it later.
+  cachedUnpatchedXHR = win.XMLHttpRequest;
+  return cachedUnpatchedXHR;
+}
+
 export function onExternalBrowserClosed(handler: () => void): () => void {
   if (!isNative) return () => {};
   // The Capacitor listener registration is async, so the unsubscribe
