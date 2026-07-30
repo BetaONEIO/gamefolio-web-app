@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/capacitor";
 import { useLocation } from "wouter";
 import { queryClient, authedFetch } from "@/lib/queryClient";
 import { getAccessToken, getAccessTokenSync } from "@/lib/auth-token";
+import { resolveApiUrl } from "@/lib/platform";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -685,22 +686,43 @@ const UploadPage = () => {
             // been reset to UNSENT (by an abort, a retry, or the client's
             // own request replacement), throwing InvalidStateError. This
             // isn't specific to user cancellation — it's been observed
-            // firing within ~10ms of a fresh, never-cancelled upload start.
-            // Retrying a couple of times clears it, since it's a stale-XHR
-            // fluke rather than a real transport/server failure.
+            // firing within ~10ms of a fresh, never-cancelled upload start,
+            // and on fast/low-latency connections it can recur on every
+            // immediate retry (verified live: 3 consecutive hits in ~45ms
+            // on an emulator). A short backoff before each retry gives
+            // tus-js-client's internal state time to fully settle instead
+            // of racing the same condition again.
             let invalidStateRetries = 0;
-            const MAX_INVALID_STATE_RETRIES = 2;
+            const MAX_INVALID_STATE_RETRIES = 5;
+            const INVALID_STATE_RETRY_DELAY_MS = 250;
             let onAbort: () => void;
 
             const startTusUpload = () => {
               const tusUpload = new tus.Upload(file, {
-                endpoint: '/api/upload/tus',
+                // Must be absolute. tus-js-client drives XMLHttpRequest
+                // directly (it doesn't go through the app's fetch patch),
+                // and Capacitor's CapacitorHttp XHR shim only fully quotes
+                // real XHR semantics for URLs it doesn't classify as
+                // "relative" (see isRelativeOrProxyUrl in
+                // @capacitor/android's native-bridge.js). For a relative
+                // URL, the shim's open() takes its fully-custom path for
+                // non-safe methods (POST/PATCH) — it never opens the real
+                // underlying XHR — but setRequestHeader() then delegates
+                // to that never-opened real XHR, throwing InvalidStateError
+                // every time. An absolute URL keeps both calls on the
+                // shim's consistent path.
+                endpoint: resolveApiUrl('/api/upload/tus'),
                 // Small, fixed chunk size means peak client memory stays flat
                 // regardless of total file size — a single large PUT (the old
                 // approach) needs the whole file buffered for the request body,
                 // which is what exhausts the WebView's heap on big clips.
                 chunkSize: 6 * 1024 * 1024,
-                retryDelays: [0, 1000, 3000, 5000],
+                // No 0ms first retry: an instant internal retry is a
+                // plausible trigger for the stale-XHR InvalidStateError
+                // race above (a new XHR opening before the previous
+                // attempt's chunk-read callback has fully unwound). A
+                // small floor gives that a chance to settle first.
+                retryDelays: [300, 1000, 3000, 5000],
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
                 metadata: {
                   filename: file.name,
@@ -723,9 +745,9 @@ const UploadPage = () => {
                   if (isStaleXhrRace && invalidStateRetries < MAX_INVALID_STATE_RETRIES) {
                     invalidStateRetries++;
                     console.warn(
-                      `TUS stale-XHR InvalidStateError, retrying (${invalidStateRetries}/${MAX_INVALID_STATE_RETRIES})`,
+                      `TUS stale-XHR InvalidStateError, retrying in ${INVALID_STATE_RETRY_DELAY_MS}ms (${invalidStateRetries}/${MAX_INVALID_STATE_RETRIES})`,
                     );
-                    startTusUpload();
+                    setTimeout(startTusUpload, INVALID_STATE_RETRY_DELAY_MS);
                     return;
                   }
                   // Tier-limit rejections surface as a plain HTTP error to
