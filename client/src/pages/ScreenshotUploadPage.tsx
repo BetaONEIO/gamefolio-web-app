@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ToastAction } from '@/components/ui/toast';
 import ProUpgradeDialog from '@/components/ProUpgradeDialog';
 import ImageCropModal from '@/components/shared/ImageCropModal';
+import { ScheduleControl, type ScheduleLimits } from '@/components/upload/ScheduleControl';
 import type { UploadLimits } from '@shared/schema';
 
 // Shape of the structured error payload returned by /api/screenshots/upload
@@ -46,6 +47,8 @@ const ScreenshotUploadPage: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [showProUpgrade, setShowProUpgrade] = useState(false);
   const [cropQueue, setCropQueue] = useState<File[]>([]);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState('');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const dragCounterRef = React.useRef(0);
 
@@ -85,6 +88,11 @@ const ScreenshotUploadPage: React.FC = () => {
   // copy until the limits arrive.
   const { data: uploadLimits } = useQuery<UploadLimits>({
     queryKey: ['/api/upload/limits'],
+    enabled: !!user,
+  });
+
+  const { data: scheduleLimits } = useQuery<ScheduleLimits>({
+    queryKey: ['/api/scheduled-posts/limits'],
     enabled: !!user,
   });
 
@@ -196,6 +204,21 @@ const ScreenshotUploadPage: React.FC = () => {
       return;
     }
 
+    // Validate scheduling selection before uploading.
+    let scheduledIso: string | undefined;
+    if (scheduleEnabled) {
+      const d = scheduledAt ? new Date(scheduledAt) : null;
+      if (!d || isNaN(d.getTime())) {
+        toast({ title: "Pick a time", description: "Choose a date and time to schedule.", variant: "destructive" });
+        return;
+      }
+      if (d.getTime() <= Date.now()) {
+        toast({ title: "Time must be in the future", description: "Pick a later date and time.", variant: "destructive" });
+        return;
+      }
+      scheduledIso = d.toISOString();
+    }
+
     setIsUploading(true);
 
     try {
@@ -205,6 +228,7 @@ const ScreenshotUploadPage: React.FC = () => {
         formData.append('gameId', selectedGameId);
         formData.append('title', title.trim());
         formData.append('description', description);
+        if (scheduledIso) formData.append('scheduledAt', scheduledIso);
 
         const response = await fetch('/api/screenshots/upload', {
           method: 'POST',
@@ -228,16 +252,11 @@ const ScreenshotUploadPage: React.FC = () => {
         return response.json();
       });
 
-      await Promise.all(uploadPromises);
+      const results = await Promise.all(uploadPromises);
 
       // Refresh tier-aware upload limits so the hint reflects any change
       // (e.g. user just hit their cap or upgraded to Pro mid-session).
       queryClient.invalidateQueries({ queryKey: ['/api/upload/limits'] });
-
-      toast({
-        title: "Success",
-        description: `${selectedFiles.length} screenshot${selectedFiles.length > 1 ? 's' : ''} uploaded successfully`,
-      });
 
       // Reset form
       setSelectedFiles([]);
@@ -245,7 +264,26 @@ const ScreenshotUploadPage: React.FC = () => {
       setSelectedGameId('');
       setTitle('');
       setDescription('');
-      
+      setScheduleEnabled(false);
+      setScheduledAt('');
+
+      // Scheduled path: nothing went live — send the user to their queue.
+      if (scheduledIso) {
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduled-posts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduled-posts/limits'] });
+        toast({
+          title: "Scheduled",
+          description: `${results.length} screenshot${results.length > 1 ? 's' : ''} will publish on ${new Date(scheduledIso).toLocaleString()}.`,
+        });
+        navigate('/scheduled-posts');
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: `${results.length} screenshot${results.length > 1 ? 's' : ''} uploaded successfully`,
+      });
+
       // Navigate to user's profile page to view the uploaded content
       navigate(`/profile/${user?.username}`);
 
@@ -461,6 +499,16 @@ const ScreenshotUploadPage: React.FC = () => {
               data-testid="input-description"
             />
           </div>
+
+          {/* Schedule for later */}
+          <ScheduleControl
+            enabled={scheduleEnabled}
+            onEnabledChange={setScheduleEnabled}
+            value={scheduledAt}
+            onValueChange={setScheduledAt}
+            limits={scheduleLimits}
+            contentNoun="screenshot"
+          />
 
           {/* Upload Button */}
           <Button
