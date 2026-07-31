@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import type React from "react";
+import * as Sentry from "@sentry/capacitor";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -140,6 +141,12 @@ export function FireButton({
           variant: "gamefolioError",
         });
       } else {
+        // Anything reaching here is unexpected (auth/network/server failure,
+        // not a known user-facing case) — report it so a repeat shows up in
+        // Sentry instead of only as a toast nobody sees.
+        Sentry.captureException(error, {
+          tags: { feature: "fire-reaction", contentType, contentId: String(contentId) },
+        });
         toast({
           title: "Cannot zap",
           description: error.message,

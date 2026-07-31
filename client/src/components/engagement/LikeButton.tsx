@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import * as Sentry from "@sentry/capacitor";
 import { PixelHeartReaction } from "@/components/ui/PixelHeartReaction";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -110,6 +111,12 @@ export function LikeButton({
           variant: "gamefolioError",
         });
       } else {
+        // Anything reaching here is unexpected (auth/network/server failure,
+        // not a known user-facing case) — report it so a repeat shows up in
+        // Sentry instead of only as a toast nobody sees.
+        Sentry.captureException(error, {
+          tags: { feature: "like", contentType, contentId: String(contentId) },
+        });
         toast({
           title: "Error",
           description: error.message || "Failed to toggle like",
