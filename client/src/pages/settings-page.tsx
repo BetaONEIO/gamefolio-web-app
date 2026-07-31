@@ -1410,10 +1410,19 @@ export default function SettingsPage() {
     const isOAuthPopup = !!window.opener;
 
     const notifyAndClose = (type: string) => {
+      // BroadcastChannel works reliably across same-origin tabs without needing
+      // window.opener (which browsers null out after cross-origin navigation).
+      try {
+        const bc = new BroadcastChannel('oauth_completion');
+        bc.postMessage({ type });
+        setTimeout(() => bc.close(), 2000);
+      } catch {}
+      // Fallback: postMessage to opener if it's still reachable
       if (isOAuthPopup) {
         try { window.opener.postMessage({ type }, window.location.origin); } catch {}
-        setTimeout(() => window.close(), 1500);
       }
+      // Always close the tab after a short delay
+      setTimeout(() => window.close(), 1500);
     };
 
     if (params.get('kick_connected') === 'true') {
@@ -1497,8 +1506,29 @@ export default function SettingsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Listen for OAuth completion messages from new-tab OAuth flow
+  // Listen for OAuth completion messages from new-tab OAuth flow.
+  // Uses BroadcastChannel (reliable cross-tab comms on the same origin even after
+  // cross-origin redirects clear window.opener) with a postMessage fallback.
   useEffect(() => {
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('oauth_completion');
+      bc.onmessage = (event) => {
+        const type = event.data?.type;
+        if (type === 'twitch_connected') {
+          refreshUser();
+          toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
+        } else if (type === 'kick_connected') {
+          refreshUser();
+          toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
+        } else if (type === 'vpzone_connected') {
+          refreshUser();
+          toast({ title: "VPZone connected!", description: "Your VPZone channel has been verified and linked.", duration: 4000 });
+        }
+      };
+    } catch {}
+
+    // Fallback: window.opener postMessage (for browsers without BroadcastChannel)
     const handler = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type === 'twitch_connected') {
@@ -1513,7 +1543,10 @@ export default function SettingsPage() {
       }
     };
     window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
+    return () => {
+      bc?.close();
+      window.removeEventListener('message', handler);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
