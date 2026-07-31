@@ -3,6 +3,7 @@ import { storage } from '../storage';
 import { supabaseStorage } from '../supabase-storage';
 import { hybridFullAccess } from '../middleware/hybrid-auth';
 import { parseScheduledAt } from './upload';
+<<<<<<< HEAD
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 
@@ -46,6 +47,9 @@ import { sql } from 'drizzle-orm';
     console.error('Failed to ensure scheduled_posts table:', err);
   }
 })();
+=======
+import { captureRouteError } from '../sentry';
+>>>>>>> ec5782c1123f43c62140e50c47015c2a06090196
 
 const router = express.Router();
 
@@ -66,6 +70,7 @@ router.get('/', hybridFullAccess, async (req, res) => {
     res.json({ posts: withSignedThumbs });
   } catch (error) {
     console.error('Error listing scheduled posts:', error);
+    captureRouteError(error, { route: 'scheduled-posts', stage: 'list' });
     res.status(500).json({ error: 'Failed to load scheduled posts' });
   }
 });
@@ -77,6 +82,7 @@ router.get('/limits', hybridFullAccess, async (req, res) => {
     res.json(limits);
   } catch (error) {
     console.error('Error fetching scheduled post limits:', error);
+    captureRouteError(error, { route: 'scheduled-posts', stage: 'limits' });
     res.status(500).json({ error: 'Failed to fetch scheduling limits' });
   }
 });
@@ -110,6 +116,7 @@ router.patch('/:id', hybridFullAccess, async (req, res) => {
     res.json({ success: true, post: updated });
   } catch (error) {
     console.error('Error rescheduling post:', error);
+    captureRouteError(error, { route: 'scheduled-posts', stage: 'reschedule', postId: req.params.id });
     res.status(500).json({ error: 'Failed to reschedule post' });
   }
 });
@@ -132,6 +139,7 @@ router.delete('/:id', hybridFullAccess, async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error('Error cancelling scheduled post:', error);
+    captureRouteError(error, { route: 'scheduled-posts', stage: 'cancel', postId: req.params.id });
     res.status(500).json({ error: 'Failed to cancel scheduled post' });
   }
 });
