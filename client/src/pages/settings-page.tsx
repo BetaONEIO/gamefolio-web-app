@@ -5115,7 +5115,7 @@ export default function SettingsPage() {
                   )}
 
                   {/* VPZone OAuth connect option */}
-                  {isStreamingEnabled && oauthConfig?.vpzone && (
+                  {streamPlatform === 'vpzone' && isStreamingEnabled && oauthConfig?.vpzone && (
                     <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.vpzoneVerified ? 'border-[#f9376b]/30 bg-[#f9376b]/5' : 'border-slate-700 bg-slate-800/30'}`}>
                       {(user as any)?.vpzoneVerified ? (
                         <div className="flex items-center justify-between">

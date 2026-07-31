@@ -2660,6 +2660,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           liveEnabled: u.liveEnabled || false,
           twitchShowOnProfile: u.twitchShowOnProfile ?? true,
           kickShowOnProfile: u.kickShowOnProfile ?? true,
+          youtubeChannelName: u.youtubeChannelName || null,
+          youtubeVerified: u.youtubeVerified || false,
+          youtubeShowOnProfile: u.youtubeShowOnProfile ?? true,
+          vpzoneChannelName: u.vpzoneChannelName || null,
+          vpzoneVerified: u.vpzoneVerified || false,
+          vpzoneShowOnProfile: u.vpzoneShowOnProfile ?? true,
           referralCode: u.referralCode || null,
           referredBy: u.referredBy || null,
         });
@@ -2732,6 +2738,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       liveEnabled: u.liveEnabled || false,
       twitchShowOnProfile: u.twitchShowOnProfile ?? true,
       kickShowOnProfile: u.kickShowOnProfile ?? true,
+      youtubeChannelName: u.youtubeChannelName || null,
+      youtubeVerified: u.youtubeVerified || false,
+      youtubeShowOnProfile: u.youtubeShowOnProfile ?? true,
+      vpzoneChannelName: u.vpzoneChannelName || null,
+      vpzoneVerified: u.vpzoneVerified || false,
+      vpzoneShowOnProfile: u.vpzoneShowOnProfile ?? true,
     });
   });
 
