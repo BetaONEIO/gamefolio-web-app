@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { authedFetch } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 
 import { useJoinDialog } from "@/hooks/use-join-dialog";
@@ -45,7 +46,7 @@ export function LikeButton({
   const { data: likeStatus } = useQuery({
     queryKey: [`/api/${contentType}s/${contentId}/likes/status`],
     queryFn: async () => {
-      const res = await fetch(`/api/${contentType}s/${contentId}/likes/status`, { credentials: "include" });
+      const res = await authedFetch(`/api/${contentType}s/${contentId}/likes/status`, {});
       if (!res.ok) throw new Error("Failed to fetch like status");
       return res.json();
     },
@@ -66,9 +67,8 @@ export function LikeButton({
         ? `/api/clips/${contentId}/likes`
         : `/api/screenshots/${contentId}/likes`;
 
-      const response = await fetch(endpoint, {
+      const response = await authedFetch(endpoint, {
         method: 'POST',
-        credentials: 'include',
       });
 
       if (!response.ok) {
