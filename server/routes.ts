@@ -12213,7 +12213,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         LIMIT 20
       `);
 
-      res.json((rows.rows as any[]).map((r) => r.tag));
+      const tagRows = ((rows as any).rows ?? rows) as any[];
+      res.json(tagRows.map((r) => r.tag));
     } catch (err) {
       console.error("Error fetching user top tags:", err);
       captureRouteError(err, { route: "/api/user/top-tags" });
