@@ -169,7 +169,15 @@ export class DatabaseStorage implements IStorage {
     }
     
     this.sessionStore = new PgSession({
-      conString: connectionString, // Use DATABASE_URL connection string
+      // conObject (not conString) so connectionTimeoutMillis actually reaches
+      // pg.Pool — without it, a transient Neon backend blip (one DNS-resolved
+      // IP briefly unreachable — see the ETIMEDOUT/ENETUNREACH incident on
+      // 2026-07-30) can hang far longer than the main app DB pool's 10s
+      // connect_timeout (server/db.ts) before failing.
+      conObject: {
+        connectionString,
+        connectionTimeoutMillis: 10000,
+      },
       tableName: 'session', // Session table name
       createTableIfMissing: true, // Auto-create session table
       pruneSessionInterval: 60 * 15, // Prune expired sessions every 15 minutes
