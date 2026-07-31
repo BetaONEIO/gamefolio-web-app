@@ -2680,7 +2680,7 @@ const UploadPage = () => {
               </span>
 
               <div className="w-full space-y-3 px-2 sm:px-4">
-                <div className="w-full h-1.5 bg-[#1e3a4a]/50 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-[#1e3a4a]/50 rounded-full overflow-hidden relative">
                   <div
                     className="h-full bg-[#B7FF1A] rounded-full transition-all duration-500 ease-out"
                     style={{
@@ -2688,6 +2688,19 @@ const UploadPage = () => {
                       boxShadow: '0 0 20px rgba(183, 255, 26, 0.6)',
                     }}
                   />
+                  {/* The 85→100 stretch is a single long-running server request (ffmpeg
+                      re-encode + thumbnail + re-upload) with no intermediate progress to
+                      report, so the bar itself sits frozen at 85% for a while. Without some
+                      motion there it reads as hung rather than working — this shimmer sweeps
+                      across just that segment so it still looks alive. */}
+                  {uploadProgress >= 85 && uploadProgress < 100 && (
+                    <div
+                      className="absolute inset-y-0 left-0 w-1/3 animate-[upload-processing-shimmer_1.4s_ease-in-out_infinite]"
+                      style={{
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
+                      }}
+                    />
+                  )}
                 </div>
                 <div className="flex justify-between text-[10px] font-bold tracking-[1px] uppercase text-[#4a6a7a]">
                   <span className={uploadProgress >= 25 ? "text-[#B7FF1A]/60" : ""}>25%</span>
@@ -2702,7 +2715,11 @@ const UploadPage = () => {
                   {uploadProgress < 85 ? "Uploading your content..." : uploadProgress < 100 ? "Processing..." : "Complete!"}
                 </h3>
                 <p className="text-[#8fa8b8] text-sm">
-                  Uploading {file?.name || 'video'} ({(file?.size ? file.size / (1024 * 1024) : 0).toFixed(1)} MB)
+                  {uploadProgress < 85
+                    ? `Uploading ${file?.name || 'video'} (${(file?.size ? file.size / (1024 * 1024) : 0).toFixed(1)} MB)`
+                    : uploadProgress < 100
+                      ? "Encoding and generating a thumbnail — large clips can take a couple of minutes here."
+                      : "All done!"}
                 </p>
               </div>
 
