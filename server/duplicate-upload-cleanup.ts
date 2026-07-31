@@ -106,6 +106,49 @@ export async function runDuplicateUploadCleanup() {
 
       for (const group of duplicateGroups) {
         for (const table of referenceTables) {
+          // Pre-dedupe: drop rows on removed clips that would create a logical
+          // duplicate once remapped to the kept clip (e.g. a user who already
+          // liked / reacted to / reported the kept clip). This keeps the remap
+          // idempotent even if unique constraints are added to these tables later.
+          if (table === "likes") {
+            await connection.unsafe(
+              `DELETE FROM "likes"
+               WHERE clip_id = ANY($2::int[])
+                 AND user_id IN (
+                   SELECT user_id FROM "likes" WHERE clip_id = $1
+                 )`,
+              [group.keepId, group.removedIds],
+            );
+          } else if (table === "clip_reactions") {
+            await connection.unsafe(
+              `DELETE FROM "clip_reactions"
+               WHERE clip_id = ANY($2::int[])
+                 AND (user_id, emoji) IN (
+                   SELECT user_id, emoji FROM "clip_reactions" WHERE clip_id = $1
+                 )`,
+              [group.keepId, group.removedIds],
+            );
+          } else if (table === "clip_reports") {
+            await connection.unsafe(
+              `DELETE FROM "clip_reports"
+               WHERE clip_id = ANY($2::int[])
+                 AND reporter_id IN (
+                   SELECT reporter_id FROM "clip_reports" WHERE clip_id = $1
+                 )`,
+              [group.keepId, group.removedIds],
+            );
+          } else if (table === "clip_mentions") {
+            await connection.unsafe(
+              `DELETE FROM "clip_mentions"
+               WHERE clip_id = ANY($2::int[])
+                 AND (mentioned_user_id, mentioned_by_user_id) IN (
+                   SELECT mentioned_user_id, mentioned_by_user_id
+                   FROM "clip_mentions" WHERE clip_id = $1
+                 )`,
+              [group.keepId, group.removedIds],
+            );
+          }
+
           const result = await connection.unsafe(
             `UPDATE "${table}" SET clip_id = $1
              WHERE clip_id = ANY($2::int[])`,
