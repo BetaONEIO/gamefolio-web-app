@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import * as Sentry from "@sentry/capacitor";
 import { useLocation } from "wouter";
 import { ScheduleControl, type ScheduleLimits } from "@/components/upload/ScheduleControl";
-import { queryClient, authedFetch } from "@/lib/queryClient";
+import { queryClient, authedFetch, getQueryFn } from "@/lib/queryClient";
 import { getAccessToken, getAccessTokenSync } from "@/lib/auth-token";
 import { isNative, resolveApiUrl, getUnpatchedXHR, getUnpatchedFetch } from "@/lib/platform";
 import { useToast } from "@/hooks/use-toast";
@@ -379,6 +379,7 @@ const UploadPage = () => {
     maxReelDurationSeconds: number;
   }>({
     queryKey: ['/api/upload/limits'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
     retry: 2,
@@ -387,6 +388,7 @@ const UploadPage = () => {
   // Scheduling quota (unlimited for Pro/Partner, capped pending count for Free).
   const { data: scheduleLimits } = useQuery<ScheduleLimits>({
     queryKey: ['/api/scheduled-posts/limits'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!userId,
   });
 
