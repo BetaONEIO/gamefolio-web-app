@@ -4534,7 +4534,7 @@ export default function SettingsPage() {
                             onClick={() => {
                               const url = "/api/auth/twitch-stream/connect";
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.open(url, '_blank', 'noopener');
+                              else window.open(url, '_blank');
                             }}
                             className="gap-1.5 bg-[#9146FF] hover:bg-[#7d3ce8] text-white border-0"
                           >
@@ -4611,7 +4611,7 @@ export default function SettingsPage() {
                             onClick={() => {
                               const url = "/api/auth/kick/connect";
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.open(url, '_blank', 'noopener');
+                              else window.open(url, '_blank');
                             }}
                             className="gap-1.5 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-[#53FC18] border border-[#53FC18]/30"
                           >
@@ -4689,7 +4689,7 @@ export default function SettingsPage() {
                               setConnectingYouTube(true);
                               const url = "/api/auth/youtube/connect";
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else { window.open(url, '_blank', 'noopener'); setConnectingYouTube(false); }
+                              else { window.open(url, '_blank'); setConnectingYouTube(false); }
                             }}
                             className="gap-1.5 bg-[#FF0000] hover:bg-[#cc0000] text-white border-0"
                           >
@@ -4894,7 +4894,7 @@ export default function SettingsPage() {
                               setConnectingTwitch(true);
                               const url = '/api/auth/twitch-stream/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else { window.open(url, '_blank', 'noopener'); setConnectingTwitch(false); }
+                              else { window.open(url, '_blank'); setConnectingTwitch(false); }
                             }}
                           >
                             {connectingTwitch ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
@@ -4953,7 +4953,7 @@ export default function SettingsPage() {
                               setConnectingKick(true);
                               const url = '/api/auth/kick/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else { window.open(url, '_blank', 'noopener'); setConnectingKick(false); }
+                              else { window.open(url, '_blank'); setConnectingKick(false); }
                             }}
                           >
                             {connectingKick ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
@@ -5011,7 +5011,7 @@ export default function SettingsPage() {
                               setConnectingYouTube(true);
                               const url = '/api/auth/youtube/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else { window.open(url, '_blank', 'noopener'); setConnectingYouTube(false); }
+                              else { window.open(url, '_blank'); setConnectingYouTube(false); }
                             }}
                           >
                             {connectingYouTube ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <SiYoutube className="w-3.5 h-3.5 mr-1" />}
@@ -5117,7 +5117,7 @@ export default function SettingsPage() {
                               setConnectingVpzone(true);
                               const url = '/api/auth/vpzone/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else { window.open(url, '_blank', 'noopener'); setConnectingVpzone(false); }
+                              else { window.open(url, '_blank'); setConnectingVpzone(false); }
                             }}
                           >
                             {connectingVpzone ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
