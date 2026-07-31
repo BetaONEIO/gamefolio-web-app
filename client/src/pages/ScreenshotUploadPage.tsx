@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { apiRequest, queryClient, getQueryFn } from '@/lib/queryClient';
 import { useQuery } from '@tanstack/react-query';
 import { Redirect, useLocation } from 'wouter';
 import { Loader2, Upload, Image as ImageIcon, X, Info } from 'lucide-react';
@@ -88,11 +88,13 @@ const ScreenshotUploadPage: React.FC = () => {
   // copy until the limits arrive.
   const { data: uploadLimits } = useQuery<UploadLimits>({
     queryKey: ['/api/upload/limits'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
   });
 
   const { data: scheduleLimits } = useQuery<ScheduleLimits>({
     queryKey: ['/api/scheduled-posts/limits'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
   });
 
