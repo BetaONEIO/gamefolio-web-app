@@ -12225,7 +12225,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         LIMIT 20
       `);
 
-      res.json((rows.rows as any[]).map((r) => r.tag));
+      const tagRows: any[] = Array.isArray(rows) ? rows : (rows as any)?.rows ?? [];
+      res.json(tagRows.map((r) => r.tag));
     } catch (err) {
       console.error("Error fetching user top tags:", err);
       captureRouteError(err, { route: "/api/user/top-tags" });
@@ -12258,7 +12259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         LIMIT 6
       `);
 
-      res.json(rows.rows);
+      res.json(Array.isArray(rows) ? rows : (rows as any)?.rows ?? []);
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching user top games:", err);
