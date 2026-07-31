@@ -863,7 +863,11 @@ const UploadPage = () => {
               endpoint: resolveApiUrl('/api/upload/tus'),
               // On native, route chunk PATCHes around CapacitorHttp's
               // patched XHR — see NativeBypassHttpStack above for why.
-              httpStack: isNative ? new NativeBypassHttpStack() : undefined,
+              // Do NOT pass httpStack:undefined — tus-js-client calls
+              // options.httpStack.createRequest() without a null-check, so
+              // explicitly passing undefined crashes immediately on web.
+              // Omit the key entirely so tus uses its own DefaultHttpStack.
+              ...(isNative ? { httpStack: new NativeBypassHttpStack() } : {}),
               // Small, fixed chunk size means peak client memory stays flat
               // regardless of total file size — a single large PUT (the old
               // approach) needs the whole file buffered for the request body,
