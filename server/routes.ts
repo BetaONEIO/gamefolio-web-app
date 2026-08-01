@@ -12225,11 +12225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         LIMIT 20
       `);
 
-<<<<<<< HEAD
-      const tagRows: any[] = Array.isArray(rows) ? rows : (rows as any)?.rows ?? [];
-=======
       const tagRows = ((rows as any).rows ?? rows) as any[];
->>>>>>> ec5782c1123f43c62140e50c47015c2a06090196
       res.json(tagRows.map((r) => r.tag));
     } catch (err) {
       console.error("Error fetching user top tags:", err);

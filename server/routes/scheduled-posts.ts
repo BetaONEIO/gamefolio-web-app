@@ -3,9 +3,9 @@ import { storage } from '../storage';
 import { supabaseStorage } from '../supabase-storage';
 import { hybridFullAccess } from '../middleware/hybrid-auth';
 import { parseScheduledAt } from './upload';
-<<<<<<< HEAD
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
+import { captureRouteError } from '../sentry';
 
 // Ensure the scheduled_posts table and its indexes exist. The table is defined
 // in the Drizzle schema (shared/schema.ts) and owned by the migration file, but
@@ -47,9 +47,6 @@ import { sql } from 'drizzle-orm';
     console.error('Failed to ensure scheduled_posts table:', err);
   }
 })();
-=======
-import { captureRouteError } from '../sentry';
->>>>>>> ec5782c1123f43c62140e50c47015c2a06090196
 
 const router = express.Router();
 
