@@ -7162,25 +7162,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gamefolioProfileUrl = `${baseUrl}/profile/${user.username}`;
       const displayName = user.displayName || user.username;
 
-      // Generate social media sharing links with personalized messaging
+      // Generate social media sharing links with personalized messaging.
+      // Each caption mentions the clip but deliberately does NOT embed
+      // gamefolioProfileUrl inline — every platform here already gets the
+      // clip link via its own dedicated url param, and a second link
+      // stuffed into the caption text produces a double-link post (X shows
+      // both the caption's link and the url param's link) and can confuse
+      // which URL the platform unfurls a preview card for.
       const socialMediaLinks = {
         twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! Visit their profile for more amazing content: ${gamefolioProfileUrl}`
+          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio!`
         )}&url=${encodeURIComponent(clipUrl)}`,
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(clipUrl)}&quote=${encodeURIComponent(
-          `🎮 Amazing gaming clip from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
+          `🎮 Amazing gaming clip from ${displayName}'s Gamefolio!`
         )}`,
         reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(clipUrl)}&title=${encodeURIComponent(
           `🎮 Epic gaming clip from ${displayName}'s Gamefolio!`
         )}`,
         linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(clipUrl)}&summary=${encodeURIComponent(
-          `🎮 Check out this gaming clip from ${displayName}'s Gamefolio: ${gamefolioProfileUrl}`
+          `🎮 Check out this gaming clip from ${displayName}'s Gamefolio!`
         )}`,
         whatsapp: `https://wa.me/?text=${encodeURIComponent(
-          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! ${clipUrl} - See more on their profile: ${gamefolioProfileUrl}`
+          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! ${clipUrl}`
         )}`,
         telegram: `https://t.me/share/url?url=${encodeURIComponent(clipUrl)}&text=${encodeURIComponent(
-          `🎮 Epic gaming clip from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
+          `🎮 Epic gaming clip from ${displayName}'s Gamefolio!`
         )}`,
         discord: clipUrl,
         instagram: clipUrl,
@@ -8204,25 +8210,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gamefolioProfileUrl = `${baseUrl}/profile/${shareUsername}`;
       const displayName = shareUser?.displayName || shareUsername;
 
-      // Generate social media sharing links for screenshot with personalized messaging
+      // Generate social media sharing links for screenshot with personalized
+      // messaging. Same rule as the clip-share links above: no
+      // gamefolioProfileUrl embedded in the caption text — every platform
+      // here already gets the screenshot link via its own dedicated url
+      // param, and a second link in the caption produces a double-link post.
       const socialMediaLinks = {
         twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! Visit their profile for more amazing content: ${gamefolioProfileUrl}`
+          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio!`
         )}&url=${encodeURIComponent(screenshotUrl)}`,
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(screenshotUrl)}&quote=${encodeURIComponent(
-          `📸 Amazing gaming screenshot from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
+          `📸 Amazing gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
         reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(screenshotUrl)}&title=${encodeURIComponent(
           `📸 Epic gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
         linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(screenshotUrl)}&summary=${encodeURIComponent(
-          `📸 Check out this gaming screenshot from ${displayName}'s Gamefolio: ${gamefolioProfileUrl}`
+          `📸 Check out this gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
         whatsapp: `https://wa.me/?text=${encodeURIComponent(
-          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! ${screenshotUrl} - See more on their profile: ${gamefolioProfileUrl}`
+          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! ${screenshotUrl}`
         )}`,
         telegram: `https://t.me/share/url?url=${encodeURIComponent(screenshotUrl)}&text=${encodeURIComponent(
-          `📸 Epic gaming screenshot from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
+          `📸 Epic gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
         discord: screenshotUrl,
         instagram: screenshotUrl,
