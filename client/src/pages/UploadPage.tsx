@@ -6,6 +6,7 @@ import { ScheduleControl, type ScheduleLimits } from "@/components/upload/Schedu
 import { queryClient, authedFetch, getQueryFn } from "@/lib/queryClient";
 import { getAccessToken, getAccessTokenSync } from "@/lib/auth-token";
 import { isNative, resolveApiUrl, getUnpatchedXHR, getUnpatchedFetch } from "@/lib/platform";
+import { isAppActive } from "@/lib/mobile-init";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -1025,6 +1026,35 @@ const UploadPage = () => {
           // original request may still be genuinely processing server-side,
           // and firing a second one could create a duplicate clip once both
           // complete. So a timeout ends the loop immediately, no retry.
+          //
+          // If the failure happened while backgrounded, the WebView's network
+          // is typically suspended, so retrying on the usual short delay just
+          // burns the attempt against a dead connection (this is what
+          // happened in Sentry issue 138111665: both retries fired — and
+          // failed — while still backgrounded). Wait for the app to return
+          // to the foreground instead, capped so we don't wait forever if
+          // the user never comes back.
+          const PROCESS_VIDEO_BACKGROUND_WAIT_CAP_MS = 4 * 60 * 1000;
+          const waitBeforeProcessVideoRetry = (delayMs: number): Promise<void> => {
+            if (!isNative || isAppActive()) {
+              return new Promise((resolve) => setTimeout(resolve, delayMs));
+            }
+            return new Promise((resolve) => {
+              let settled = false;
+              const finish = () => {
+                if (settled) return;
+                settled = true;
+                window.removeEventListener('app-active-changed', onActiveChange as EventListener);
+                clearTimeout(cap);
+                resolve();
+              };
+              const onActiveChange = (e: Event) => {
+                if ((e as CustomEvent<{ isActive: boolean }>).detail?.isActive) finish();
+              };
+              window.addEventListener('app-active-changed', onActiveChange as EventListener);
+              const cap = setTimeout(finish, PROCESS_VIDEO_BACKGROUND_WAIT_CAP_MS);
+            });
+          };
           const processVideoRetryDelaysMs = [1500, 4000];
           let processVideoRetries = 0;
           let processResponse: Response | undefined;
@@ -1059,7 +1089,7 @@ const UploadPage = () => {
               const delay = processVideoRetryDelaysMs[attempt - 1];
               processVideoRetries++;
               console.warn(`[process-video] network error on attempt ${attempt}, retrying in ${delay}ms:`, fetchError);
-              await new Promise((r) => setTimeout(r, delay));
+              await waitBeforeProcessVideoRetry(delay);
             }
           }
           if (processVideoNetworkError || !processResponse) {
