@@ -44,7 +44,8 @@ import {
   StopCircle,
   Pause,
   RotateCcw,
-  X
+  X,
+  CalendarClock
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -1902,12 +1903,16 @@ const UploadPage = () => {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <polyline points="7,10 12,15 17,10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                      Upload
+                      {scheduleEnabled ? (
+                        <CalendarClock className="h-4 w-4" />
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <polyline points="7,10 12,15 17,10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                      )}
+                      {scheduleEnabled ? "Schedule" : "Upload"}
                     </div>
                   )}
                 </Button>
@@ -2488,9 +2493,9 @@ const UploadPage = () => {
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <Camera className="h-4 w-4" />
-                        <span className="hidden sm:inline">Upload Reel</span>
-                        <span className="inline sm:hidden">Upload</span>
+                        {scheduleEnabled ? <CalendarClock className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
+                        <span className="hidden sm:inline">{scheduleEnabled ? "Schedule Reel" : "Upload Reel"}</span>
+                        <span className="inline sm:hidden">{scheduleEnabled ? "Schedule" : "Upload"}</span>
                       </div>
                     )}
                   </Button>
@@ -2774,8 +2779,8 @@ const UploadPage = () => {
                       </div>
                     ) : (
                       <>
-                        <span className="hidden sm:inline">Upload {screenshotFiles.length > 0 ? `${screenshotFiles.length} Screenshot${screenshotFiles.length > 1 ? 's' : ''}` : 'Screenshots'}</span>
-                        <span className="inline sm:hidden">Upload</span>
+                        <span className="hidden sm:inline">{scheduleEnabled ? "Schedule" : "Upload"} {screenshotFiles.length > 0 ? `${screenshotFiles.length} Screenshot${screenshotFiles.length > 1 ? 's' : ''}` : 'Screenshots'}</span>
+                        <span className="inline sm:hidden">{scheduleEnabled ? "Schedule" : "Upload"}</span>
                       </>
                     )}
                   </Button>
