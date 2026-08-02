@@ -315,6 +315,9 @@ const Header = () => {
                 src={logoGreen}
                 alt="Gamefolio"
                 className="h-[45px] sm:h-[60px] md:h-[72px] xl:h-24 w-auto object-contain flex-shrink-0"
+                draggable={false}
+                onContextMenu={(e) => e.preventDefault()}
+                style={{ WebkitTouchCallout: "none", WebkitUserDrag: "none" } as React.CSSProperties}
               />
             </div>
           </Link>
