@@ -37,7 +37,12 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
   const ctaText = `${fmt(entry.totalPoints)} ${xpLabel}`;
 
   const recentTitle = entry.recentUpload
-    ? (entry.recentUpload.title ?? entry.recentUpload.gameTitle ?? entry.recentUpload.contentType)
+    ? (() => {
+        const { title, gameTitle, contentType } = entry.recentUpload!;
+        if (title?.trim()) return title.trim();
+        const typeLabel = contentType === 'screenshot' ? 'Screenshot' : contentType === 'reel' ? 'Reel' : 'Clip';
+        return gameTitle?.trim() ? `${typeLabel} · ${gameTitle.trim()}` : typeLabel;
+      })()
     : null;
   const recentTime = entry.recentUpload ? timeAgo(entry.recentUpload.createdAt) : null;
 
