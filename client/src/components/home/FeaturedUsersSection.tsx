@@ -29,7 +29,7 @@ const STYLES = `
     animation-play-state: paused;
   }
 
-  /* Animated section background – waving green gradient */
+  /* Animated section background – waving yellow/green gradient, right to left */
   @keyframes trending-bg-wave {
     0%   { background-position: 0% 50%; }
     50%  { background-position: 100% 50%; }
@@ -37,23 +37,22 @@ const STYLES = `
   }
   .trending-bg-animated {
     background: linear-gradient(
-      120deg,
-      #0B1A0D 0%,
-      #0D2210 18%,
-      #1A3D14 35%,
-      #0F2B10 52%,
-      #0A1A0C 68%,
-      #163319 82%,
-      #0B1A0D 100%
+      to left,
+      #B7FF1A 0%,
+      #7ACC00 20%,
+      #3D9900 42%,
+      #1A6600 60%,
+      #0D3D00 78%,
+      #B7FF1A 100%
     );
-    background-size: 400% 400%;
-    animation: trending-bg-wave 8s ease infinite;
+    background-size: 300% 300%;
+    animation: trending-bg-wave 6s ease infinite;
   }
 
   /* Respect reduced-motion */
   @media (prefers-reduced-motion: reduce) {
     .fire-carousel-track { animation: none; }
-    .trending-bg-animated { animation: none; background: #0B1A0D; }
+    .trending-bg-animated { animation: none; background: #3D9900; }
   }
 
   ${CREATOR_CARD_STYLES}
