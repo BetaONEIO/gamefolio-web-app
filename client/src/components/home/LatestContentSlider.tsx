@@ -226,14 +226,14 @@ export default function LatestContentSlider() {
             {!playing && (
               <img src={current.thumbnailUrl || `/api/clips/${current.id}/thumbnail`}
                 alt={current.title}
-                className="absolute inset-0 w-full h-full object-contain z-10" />
+                className={`absolute inset-0 w-full h-full z-10 ${mode === "clips" ? "object-cover" : "object-contain"}`} />
             )}
 
             {/* Video */}
             {playing && current.videoUrl && (
               <video ref={videoRef} src={current.videoUrl}
                 className="absolute inset-0 w-full h-full z-10"
-                style={{ objectFit: "contain", background: "#000" }}
+                style={{ objectFit: mode === "clips" ? "cover" : "contain", background: "#000" }}
                 autoPlay muted={muted} playsInline loop
                 onEnded={() => setPlaying(false)} />
             )}

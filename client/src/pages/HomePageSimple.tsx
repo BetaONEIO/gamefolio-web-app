@@ -439,8 +439,7 @@ const HomePage = () => {
       : [];
     const leaderboardSlide: AnySlide = { type: 'leaderboard', id: 'leaderboard' };
     const latestContentSlide: AnySlide = { type: 'latestContent', id: 'latestContent' };
-    const trendingSlide: AnySlide = { type: 'trending', id: 'trending' };
-    return [latestContentSlide, trendingSlide, ...base, leaderboardSlide];
+    return [latestContentSlide, ...base, leaderboardSlide];
   }, [dbHeroSlides]);
 
   const prevSlide = useCallback(() => {
