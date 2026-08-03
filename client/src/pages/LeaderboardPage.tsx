@@ -834,6 +834,7 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
   const [tab, setTab] = useState<TabType>("season");
 
   const tabs: { key: TabType; label: string }[] = [
+    { key: "weekly",  label: "This Week"   },
     { key: "season",  label: "This Season" },
     { key: "alltime", label: "All Time"    },
   ];
