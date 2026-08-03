@@ -315,6 +315,9 @@ const Header = () => {
                 src={logoGreen}
                 alt="Gamefolio"
                 className="h-[45px] sm:h-[60px] md:h-[72px] xl:h-24 w-auto object-contain flex-shrink-0"
+                draggable={false}
+                onContextMenu={(e) => e.preventDefault()}
+                style={{ WebkitTouchCallout: "none", WebkitUserDrag: "none" } as React.CSSProperties}
               />
             </div>
           </Link>
@@ -561,6 +564,11 @@ const Header = () => {
                   <DropdownMenuItem onClick={() => { window.dispatchEvent(new CustomEvent('upload-type-change', { detail: 'screenshots' })); setLocation('/upload?type=screenshots'); }} className="cursor-pointer">
                     <Camera className="h-4 w-4 mr-2" />
                     Upload Screenshot
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setLocation('/scheduled-posts')} className="cursor-pointer" data-testid="menu-scheduled-posts">
+                    <Clock className="h-4 w-4 mr-2" />
+                    Scheduled posts
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

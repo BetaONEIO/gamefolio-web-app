@@ -2,9 +2,11 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import * as Sentry from "@sentry/capacitor";
 import { useLocation } from "wouter";
-import { queryClient, authedFetch } from "@/lib/queryClient";
+import { ScheduleControl, type ScheduleLimits } from "@/components/upload/ScheduleControl";
+import { queryClient, authedFetch, getQueryFn } from "@/lib/queryClient";
 import { getAccessToken, getAccessTokenSync } from "@/lib/auth-token";
 import { isNative, resolveApiUrl, getUnpatchedXHR, getUnpatchedFetch } from "@/lib/platform";
+import { isAppActive } from "@/lib/mobile-init";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -42,7 +44,8 @@ import {
   StopCircle,
   Pause,
   RotateCcw,
-  X
+  X,
+  CalendarClock
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -285,6 +288,10 @@ const UploadPage = () => {
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [ageRestricted, setAgeRestricted] = useState(false);
+  // Scheduling: when enabled, the upload is queued for future publishing instead
+  // of going live. Shared across all three content tabs.
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -374,10 +381,52 @@ const UploadPage = () => {
     maxReelDurationSeconds: number;
   }>({
     queryKey: ['/api/upload/limits'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
     retry: 2,
   });
+
+  // Scheduling quota (unlimited for Pro/Partner, capped pending count for Free).
+  const { data: scheduleLimits } = useQuery<ScheduleLimits>({
+    queryKey: ['/api/scheduled-posts/limits'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!userId,
+  });
+
+  // ISO timestamp for the scheduled upload, or undefined for an immediate post.
+  const getScheduledIso = (): string | undefined => {
+    if (!scheduleEnabled || !scheduledAt) return undefined;
+    const d = new Date(scheduledAt);
+    return isNaN(d.getTime()) ? undefined : d.toISOString();
+  };
+
+  // Validate the schedule selection before kicking off an upload. Returns true
+  // when the upload may proceed.
+  const validateSchedule = (): boolean => {
+    if (!scheduleEnabled) return true;
+    const iso = getScheduledIso();
+    if (!iso) {
+      toast({ title: "Pick a time", description: "Choose a date and time to schedule this post.", variant: "gamefolioError" });
+      return false;
+    }
+    if (new Date(iso).getTime() <= Date.now()) {
+      toast({ title: "Time must be in the future", description: "Pick a date and time later than now.", variant: "gamefolioError" });
+      return false;
+    }
+    return true;
+  };
+
+  const renderScheduleControl = (contentNoun: string) => (
+    <ScheduleControl
+      enabled={scheduleEnabled}
+      onEnabledChange={setScheduleEnabled}
+      value={scheduledAt}
+      onValueChange={setScheduledAt}
+      limits={scheduleLimits}
+      contentNoun={contentNoun}
+    />
+  );
 
   useEffect(() => {
     const dismissed = localStorage.getItem(uploadSizeTipStorageKey) === "true";
@@ -404,6 +453,8 @@ const UploadPage = () => {
     descriptionRef.current = "";
     setShowShareDialog(false);
     setUploadedClip(null);
+    setScheduleEnabled(false);
+    setScheduledAt("");
     // Note: Navigation is now handled separately in success callbacks
   };
 
@@ -421,6 +472,8 @@ const UploadPage = () => {
     setScreenshotAgeRestricted(false);
     setShowScreenshotShareDialog(false);
     setUploadedScreenshot(null);
+    setScheduleEnabled(false);
+    setScheduledAt("");
     // Note: Navigation is now handled in XP dialog onContinue callback
   };
 
@@ -636,6 +689,8 @@ const UploadPage = () => {
         }
         formData.append("tags", JSON.stringify(screenshotTags));
         formData.append("ageRestricted", screenshotAgeRestricted.toString());
+        const scheduledIso = getScheduledIso();
+        if (scheduledIso) formData.append("scheduledAt", scheduledIso);
         formData.append("screenshot", file);
         
         const response = await authedFetch("/api/screenshots/upload", {
@@ -665,13 +720,27 @@ const UploadPage = () => {
     },
     onSuccess: async (data) => {
       console.log('Screenshot upload success data:', data);
-      
+
+      // Scheduled upload: nothing went live. Confirm and send the user to their queue.
+      if (data?.scheduled) {
+        resetScreenshotForm();
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduled-posts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduled-posts/limits'] });
+        const when = new Date(data.scheduled.scheduledAt).toLocaleString();
+        toast({
+          title: "Scheduled",
+          description: `Your screenshot${screenshotFiles.length > 1 ? 's' : ''} will publish on ${when}.`,
+        });
+        navigate('/scheduled-posts');
+        return;
+      }
+
       // Invalidate all relevant queries to ensure the new screenshot appears everywhere
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.id}/screenshots`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/screenshots`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/upload/limits'] });
-      
+
       // Reset form first
       resetScreenshotForm();
       
@@ -796,7 +865,11 @@ const UploadPage = () => {
               endpoint: resolveApiUrl('/api/upload/tus'),
               // On native, route chunk PATCHes around CapacitorHttp's
               // patched XHR — see NativeBypassHttpStack above for why.
-              httpStack: isNative ? new NativeBypassHttpStack() : undefined,
+              // Do NOT pass httpStack:undefined — tus-js-client calls
+              // options.httpStack.createRequest() without a null-check, so
+              // explicitly passing undefined crashes immediately on web.
+              // Omit the key entirely so tus uses its own DefaultHttpStack.
+              ...(isNative ? { httpStack: new NativeBypassHttpStack() } : {}),
               // Small, fixed chunk size means peak client memory stays flat
               // regardless of total file size — a single large PUT (the old
               // approach) needs the whole file buffered for the request body,
@@ -914,6 +987,7 @@ const UploadPage = () => {
             ageRestricted,
             trimStart: Math.round(trimStart),
             trimEnd: Math.round(trimEnd),
+            scheduledAt: getScheduledIso(),
           };
           
           console.log('🔞 Age Restriction Debug - Sending to backend:', {
@@ -953,6 +1027,35 @@ const UploadPage = () => {
           // original request may still be genuinely processing server-side,
           // and firing a second one could create a duplicate clip once both
           // complete. So a timeout ends the loop immediately, no retry.
+          //
+          // If the failure happened while backgrounded, the WebView's network
+          // is typically suspended, so retrying on the usual short delay just
+          // burns the attempt against a dead connection (this is what
+          // happened in Sentry issue 138111665: both retries fired — and
+          // failed — while still backgrounded). Wait for the app to return
+          // to the foreground instead, capped so we don't wait forever if
+          // the user never comes back.
+          const PROCESS_VIDEO_BACKGROUND_WAIT_CAP_MS = 4 * 60 * 1000;
+          const waitBeforeProcessVideoRetry = (delayMs: number): Promise<void> => {
+            if (!isNative || isAppActive()) {
+              return new Promise((resolve) => setTimeout(resolve, delayMs));
+            }
+            return new Promise((resolve) => {
+              let settled = false;
+              const finish = () => {
+                if (settled) return;
+                settled = true;
+                window.removeEventListener('app-active-changed', onActiveChange as EventListener);
+                clearTimeout(cap);
+                resolve();
+              };
+              const onActiveChange = (e: Event) => {
+                if ((e as CustomEvent<{ isActive: boolean }>).detail?.isActive) finish();
+              };
+              window.addEventListener('app-active-changed', onActiveChange as EventListener);
+              const cap = setTimeout(finish, PROCESS_VIDEO_BACKGROUND_WAIT_CAP_MS);
+            });
+          };
           const processVideoRetryDelaysMs = [1500, 4000];
           let processVideoRetries = 0;
           let processResponse: Response | undefined;
@@ -987,7 +1090,7 @@ const UploadPage = () => {
               const delay = processVideoRetryDelaysMs[attempt - 1];
               processVideoRetries++;
               console.warn(`[process-video] network error on attempt ${attempt}, retrying in ${delay}ms:`, fetchError);
-              await new Promise((r) => setTimeout(r, delay));
+              await waitBeforeProcessVideoRetry(delay);
             }
           }
           if (processVideoNetworkError || !processResponse) {
@@ -1052,6 +1155,23 @@ const UploadPage = () => {
       });
     },
     onSuccess: async (data: any) => {
+      setIsUploading(false);
+      setUploadProgress(0);
+
+      // Scheduled upload: nothing went live. Confirm and send the user to their queue.
+      if (data?.scheduled) {
+        resetFormAndNavigate();
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduled-posts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduled-posts/limits'] });
+        const when = new Date(data.scheduled.scheduledAt).toLocaleString();
+        toast({
+          title: "Scheduled",
+          description: `Your ${contentType === 'reels' ? 'reel' : 'clip'} will publish on ${when}.`,
+        });
+        navigate('/scheduled-posts');
+        return;
+      }
+
       // Invalidate all relevant queries to ensure the new clip appears everywhere
       queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
       queryClient.invalidateQueries({ queryKey: ["/api/clips/latest"] });
@@ -1059,10 +1179,7 @@ const UploadPage = () => {
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/clips`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/upload/limits'] });
-      
-      setIsUploading(false);
-      setUploadProgress(0);
-      
+
       // Reset form first
       resetFormAndNavigate();
       
@@ -1234,10 +1351,12 @@ const UploadPage = () => {
     
 
     
+    if (!validateSchedule()) return;
+
     // Show progress bar immediately when starting upload
     setIsUploading(true);
     setUploadProgress(0);
-    
+
     console.log('About to call uploadMutation.mutate()');
     console.log('Final validation before upload:', {
       fileExists: !!file,
@@ -1745,9 +1864,10 @@ const UploadPage = () => {
                   </div>
                 </div>
 
+                {renderScheduleControl('clip')}
               </form>
             </CardContent>
-            
+
             <CardFooter className="flex justify-between border-t pt-6">
               <div className="flex items-center space-x-2">
                 <Video className="text-muted-foreground h-5 w-5" />
@@ -1783,12 +1903,16 @@ const UploadPage = () => {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <polyline points="7,10 12,15 17,10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                      Upload
+                      {scheduleEnabled ? (
+                        <CalendarClock className="h-4 w-4" />
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <polyline points="7,10 12,15 17,10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                      )}
+                      {scheduleEnabled ? "Schedule" : "Upload"}
                     </div>
                   )}
                 </Button>
@@ -2337,6 +2461,8 @@ const UploadPage = () => {
                 </div>
 
                 
+                {renderScheduleControl('reel')}
+
                 <div className="flex justify-end space-x-2">
                   <Button
                     variant="outline"
@@ -2367,9 +2493,9 @@ const UploadPage = () => {
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <Camera className="h-4 w-4" />
-                        <span className="hidden sm:inline">Upload Reel</span>
-                        <span className="inline sm:hidden">Upload</span>
+                        {scheduleEnabled ? <CalendarClock className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
+                        <span className="hidden sm:inline">{scheduleEnabled ? "Schedule Reel" : "Upload Reel"}</span>
+                        <span className="inline sm:hidden">{scheduleEnabled ? "Schedule" : "Upload"}</span>
                       </div>
                     )}
                   </Button>
@@ -2417,8 +2543,9 @@ const UploadPage = () => {
                   });
                   return;
                 }
-                
-                
+
+                if (!validateSchedule()) return;
+
                 screenshotUploadMutation.mutate();
               }} className="space-y-6">
                 <div className="space-y-2">
@@ -2626,6 +2753,8 @@ const UploadPage = () => {
                   </div>
                 </div>
                 
+                {renderScheduleControl('screenshot')}
+
                 <div className="flex justify-end space-x-2">
                   <Button
                     variant="outline"
@@ -2650,8 +2779,8 @@ const UploadPage = () => {
                       </div>
                     ) : (
                       <>
-                        <span className="hidden sm:inline">Upload {screenshotFiles.length > 0 ? `${screenshotFiles.length} Screenshot${screenshotFiles.length > 1 ? 's' : ''}` : 'Screenshots'}</span>
-                        <span className="inline sm:hidden">Upload</span>
+                        <span className="hidden sm:inline">{scheduleEnabled ? "Schedule" : "Upload"} {screenshotFiles.length > 0 ? `${screenshotFiles.length} Screenshot${screenshotFiles.length > 1 ? 's' : ''}` : 'Screenshots'}</span>
+                        <span className="inline sm:hidden">{scheduleEnabled ? "Schedule" : "Upload"}</span>
                       </>
                     )}
                   </Button>

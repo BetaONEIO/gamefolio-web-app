@@ -1128,3 +1128,19 @@ h1, h2, h3 {
 @media (prefers-reduced-motion: reduce) {
   .dsv-slide-up, .dsv-slide-down { animation: none; }
 }
+
+/* ── datetime-local schedule pickers (upload Schedule tab, Scheduled Posts) ──
+   The calendar/clock glyph is a UA-drawn pseudo-element that doesn't inherit
+   page `color`, so it renders near-black by default — invisible against our
+   dark input fields on both desktop Chrome and mobile WebViews. Force a dark
+   color-scheme (so any native popup matches the app) and tint the glyph
+   Gamefolio green. */
+input[type="datetime-local"] {
+  color-scheme: dark;
+  accent-color: #B7FF1A;
+}
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(84%) sepia(46%) saturate(1000%) hue-rotate(35deg) brightness(103%) contrast(105%);
+  opacity: 1;
+  cursor: pointer;
+}

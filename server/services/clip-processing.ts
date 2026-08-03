@@ -37,6 +37,10 @@ export interface ProcessAndCreateClipParams {
   ageRestricted?: boolean | string;
   trimStart?: string | number;
   trimEnd?: string | number;
+  // When set, the fully-processed clip is stored as a scheduled post instead
+  // of being published immediately — see routes/upload.ts for the pre-check
+  // that rejects invalid/over-limit schedules before this expensive pipeline runs.
+  scheduledAt?: Date;
 }
 
 /**
@@ -47,7 +51,7 @@ export interface ProcessAndCreateClipParams {
  * pipeline instead of a second, divergent copy of this logic.
  */
 export async function processAndCreateClip(userId: number, params: ProcessAndCreateClipParams) {
-  const { uploadResult, title, description, gameId, tags, ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd } = params;
+  const { uploadResult, title, description, gameId, tags, ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd, scheduledAt } = params;
   const videoType = params.videoType || 'clip';
 
   if (!uploadResult || !title) {
@@ -353,6 +357,27 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   };
 
   const validatedClipData = insertClipSchema.parse(finalClipData);
+
+  // Scheduled path: store the fully-processed record for later publishing
+  // instead of going live now. The background worker (scheduled-posts-service.ts)
+  // inserts it and runs the upload XP side-effects when scheduledAt is reached.
+  if (scheduledAt) {
+    const scheduled = await storage.createScheduledPost({
+      userId,
+      contentType: 'clip',
+      scheduledAt,
+      payload: validatedClipData,
+      title: validatedClipData.title,
+      thumbnailUrl: validatedClipData.thumbnailUrl || null,
+      videoType,
+    });
+    return {
+      success: true,
+      scheduled,
+      message: `${videoType === 'reel' ? 'Reel' : 'Clip'} scheduled for ${scheduledAt.toISOString()}`,
+    };
+  }
+
   const clip = await storage.createClip(validatedClipData);
 
   await LeaderboardService.awardPoints(

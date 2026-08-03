@@ -58,7 +58,8 @@ import twitchGamesRouter from "./routes/twitch-games";
 import authRouter from "./routes/auth-routes";
 import tokenAuthRouter from "./routes/token-auth";
 import { JWTService } from "./services/jwt-service";
-import uploadRouter from "./routes/upload";
+import uploadRouter, { parseScheduledAt } from "./routes/upload";
+import scheduledPostsRouter from "./routes/scheduled-posts";
 import migrationRouter from "./routes/migration";
 import viewRouter from "./routes/view";
 import supportRouter from "./routes/support";
@@ -131,30 +132,20 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 async function comparePasswords(password: string, hashedPassword: string | null | undefined): Promise<boolean> {
-  console.log(`🔐 comparePasswords called with password length: ${password?.length}, hashedPassword length: ${hashedPassword?.length}`);
-  
   // Handle case where user doesn't have a password (e.g., OAuth users)
   if (!hashedPassword) {
-    console.log(`🔐 No hashed password provided`);
     return false;
   }
   
   const [hash, salt] = hashedPassword.split('.');
   if (!hash || !salt) {
-    console.log(`🔐 Invalid hash format - hash: ${!!hash}, salt: ${!!salt}`);
     return false;
   }
-  
-  console.log(`🔐 Hash parts - hash length: ${hash.length}, salt length: ${salt.length}`);
   
   try {
     const buf = (await scryptAsync(password, salt, 64)) as Buffer;
     const storedHash = Buffer.from(hash, 'hex');
-    const result = timingSafeEqual(storedHash, buf);
-    console.log(`🔐 Password comparison result: ${result}`);
-    console.log(`🔐 Generated hash: ${buf.toString('hex').substring(0, 20)}...`);
-    console.log(`🔐 Stored hash: ${hash.substring(0, 20)}...`);
-    return result;
+    return timingSafeEqual(storedHash, buf);
   } catch (error) {
     console.error(`🔐 Error in password comparison:`, error);
     return false;
@@ -393,7 +384,7 @@ function toPublicUser(user: any): Record<string, unknown> {
 // Use this on any endpoint that returns a full user row.
 function stripUserSecrets<T extends Record<string, any>>(user: T): Partial<T> {
   const {
-    password, twoFactorSecret, encryptedPrivateKey,
+    password, email, twoFactorSecret, encryptedPrivateKey,
     stripeCustomerId, stripeSubscriptionId, revenuecatUserId,
     twitchAccessToken, kickAccessToken,
     walletAddress, dateOfBirth, birthday, externalId,
@@ -661,16 +652,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Error blocking user" });
     }
   });
-
-  // Add debugging middleware for production
-  if (process.env.NODE_ENV === "production") {
-    app.use('/api/user', (req, res, next) => {
-      console.log('User endpoint - Session ID:', req.sessionID);
-      console.log('User endpoint - Is authenticated:', req.isAuthenticated());
-      console.log('User endpoint - Session user:', req.user);
-      next();
-    });
-  }
 
   // Configure passport
   passport.use(
@@ -2108,9 +2089,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const emailSent = await EmailService.sendVerificationEmail(user.email, verificationCode);
 
       if (emailSent) {
-        console.log(`Verification email sent to ${user.email}`);
+        console.log(`Verification email sent to user ${user.id}`);
       } else {
-        console.warn(`Failed to send verification email to ${user.email}`);
+        console.warn(`Failed to send verification email to user ${user.id}`);
       }
 
       // Send new user notification to admin
@@ -2634,6 +2615,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           twitterUsername: u.twitterUsername || null,
           youtubeUsername: u.youtubeUsername || null,
           rumbleUsername: u.rumbleUsername || null,
+          instagramUsername: u.instagramUsername || null,
+          facebookUsername: u.facebookUsername || null,
           nftProfileTokenId: u.nftProfileTokenId || null,
           nftProfileImageUrl: u.nftProfileImageUrl || null,
           activeProfilePicType: u.activeProfilePicType || 'upload',
@@ -2649,6 +2632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hideBanner: u.hideBanner || false,
           statsGlassEffect: u.statsGlassEffect || false,
           profileBackgroundGradient: u.profileBackgroundGradient !== false,
+          profileBackgroundGradientCss: u.profileBackgroundGradientCss || '',
           profileBackgroundType: u.profileBackgroundType || 'solid',
           profileBackgroundTheme: u.profileBackgroundTheme || 'default',
           profileBackgroundAnimation: u.profileBackgroundAnimation || 'none',
@@ -2679,6 +2663,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           liveEnabled: u.liveEnabled || false,
           twitchShowOnProfile: u.twitchShowOnProfile ?? true,
           kickShowOnProfile: u.kickShowOnProfile ?? true,
+          youtubeChannelName: u.youtubeChannelName || null,
+          youtubeVerified: u.youtubeVerified || false,
+          youtubeShowOnProfile: u.youtubeShowOnProfile ?? true,
+          vpzoneChannelName: u.vpzoneChannelName || null,
+          vpzoneVerified: u.vpzoneVerified || false,
+          vpzoneShowOnProfile: u.vpzoneShowOnProfile ?? true,
           referralCode: u.referralCode || null,
           referredBy: u.referredBy || null,
         });
@@ -2732,6 +2722,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       twitterUsername: u.twitterUsername || null,
       youtubeUsername: u.youtubeUsername || null,
       rumbleUsername: u.rumbleUsername || null,
+      instagramUsername: u.instagramUsername || null,
+      facebookUsername: u.facebookUsername || null,
       nftProfileTokenId: u.nftProfileTokenId || null,
       nftProfileImageUrl: u.nftProfileImageUrl || null,
       activeProfilePicType: u.activeProfilePicType || 'upload',
@@ -2751,6 +2743,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       liveEnabled: u.liveEnabled || false,
       twitchShowOnProfile: u.twitchShowOnProfile ?? true,
       kickShowOnProfile: u.kickShowOnProfile ?? true,
+      youtubeChannelName: u.youtubeChannelName || null,
+      youtubeVerified: u.youtubeVerified || false,
+      youtubeShowOnProfile: u.youtubeShowOnProfile ?? true,
+      vpzoneChannelName: u.vpzoneChannelName || null,
+      vpzoneVerified: u.vpzoneVerified || false,
+      vpzoneShowOnProfile: u.vpzoneShowOnProfile ?? true,
     });
   });
 
@@ -7164,25 +7162,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gamefolioProfileUrl = `${baseUrl}/profile/${user.username}`;
       const displayName = user.displayName || user.username;
 
-      // Generate social media sharing links with personalized messaging
+      // Generate social media sharing links with personalized messaging.
+      // Each caption mentions the clip but deliberately does NOT embed
+      // gamefolioProfileUrl inline — every platform here already gets the
+      // clip link via its own dedicated url param, and a second link
+      // stuffed into the caption text produces a double-link post (X shows
+      // both the caption's link and the url param's link) and can confuse
+      // which URL the platform unfurls a preview card for.
       const socialMediaLinks = {
         twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! Visit their profile for more amazing content: ${gamefolioProfileUrl}`
+          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio!`
         )}&url=${encodeURIComponent(clipUrl)}`,
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(clipUrl)}&quote=${encodeURIComponent(
-          `🎮 Amazing gaming clip from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
+          `🎮 Amazing gaming clip from ${displayName}'s Gamefolio!`
         )}`,
         reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(clipUrl)}&title=${encodeURIComponent(
           `🎮 Epic gaming clip from ${displayName}'s Gamefolio!`
         )}`,
         linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(clipUrl)}&summary=${encodeURIComponent(
-          `🎮 Check out this gaming clip from ${displayName}'s Gamefolio: ${gamefolioProfileUrl}`
+          `🎮 Check out this gaming clip from ${displayName}'s Gamefolio!`
         )}`,
         whatsapp: `https://wa.me/?text=${encodeURIComponent(
-          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! ${clipUrl} - See more on their profile: ${gamefolioProfileUrl}`
+          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! ${clipUrl}`
         )}`,
         telegram: `https://t.me/share/url?url=${encodeURIComponent(clipUrl)}&text=${encodeURIComponent(
-          `🎮 Epic gaming clip from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
+          `🎮 Epic gaming clip from ${displayName}'s Gamefolio!`
         )}`,
         discord: clipUrl,
         instagram: clipUrl,
@@ -8206,25 +8210,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gamefolioProfileUrl = `${baseUrl}/profile/${shareUsername}`;
       const displayName = shareUser?.displayName || shareUsername;
 
-      // Generate social media sharing links for screenshot with personalized messaging
+      // Generate social media sharing links for screenshot with personalized
+      // messaging. Same rule as the clip-share links above: no
+      // gamefolioProfileUrl embedded in the caption text — every platform
+      // here already gets the screenshot link via its own dedicated url
+      // param, and a second link in the caption produces a double-link post.
       const socialMediaLinks = {
         twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! Visit their profile for more amazing content: ${gamefolioProfileUrl}`
+          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio!`
         )}&url=${encodeURIComponent(screenshotUrl)}`,
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(screenshotUrl)}&quote=${encodeURIComponent(
-          `📸 Amazing gaming screenshot from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
+          `📸 Amazing gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
         reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(screenshotUrl)}&title=${encodeURIComponent(
           `📸 Epic gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
         linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(screenshotUrl)}&summary=${encodeURIComponent(
-          `📸 Check out this gaming screenshot from ${displayName}'s Gamefolio: ${gamefolioProfileUrl}`
+          `📸 Check out this gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
         whatsapp: `https://wa.me/?text=${encodeURIComponent(
-          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! ${screenshotUrl} - See more on their profile: ${gamefolioProfileUrl}`
+          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! ${screenshotUrl}`
         )}`,
         telegram: `https://t.me/share/url?url=${encodeURIComponent(screenshotUrl)}&text=${encodeURIComponent(
-          `📸 Epic gaming screenshot from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
+          `📸 Epic gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
         discord: screenshotUrl,
         instagram: screenshotUrl,
@@ -11002,6 +11010,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Title is required" });
       }
 
+      // Resolve scheduling intent up front so we reject before sharp/Supabase work.
+      const { date: scheduledAt, error: scheduleError } = parseScheduledAt(req.body.scheduledAt);
+      if (scheduleError) {
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+        return res.status(400).json({ message: scheduleError });
+      }
+      if (scheduledAt) {
+        const scheduleLimits = await storage.getScheduledPostLimits(req.user!.id);
+        if (!scheduleLimits.isUnlimited && scheduleLimits.remaining !== null && scheduleLimits.remaining <= 0) {
+          if (req.file?.path) fs.unlink(req.file.path, () => {});
+          return res.status(403).json({
+            error: 'Scheduled post limit reached',
+            message: `Your plan allows ${scheduleLimits.max} scheduled posts at a time. Publish or cancel one to schedule another.`,
+            scheduleLimits,
+          });
+        }
+      }
+
       // Validate text content for profanity and inappropriate language
       const validationErrors: string[] = [];
 
@@ -11107,6 +11133,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ageRestricted: req.body.ageRestricted === 'true' || req.body.ageRestricted === true,
         shareCode: generateShareCode()
       };
+
+      // Scheduled path: store the processed screenshot for later publishing.
+      if (scheduledAt) {
+        await fsPromises.unlink(originalPath).catch(() => {});
+        const scheduled = await storage.createScheduledPost({
+          userId,
+          contentType: 'screenshot',
+          scheduledAt,
+          payload: screenshotData,
+          title: screenshotData.title,
+          thumbnailUrl: screenshotData.thumbnailUrl || null,
+          videoType: null,
+        });
+        return res.json({
+          success: true,
+          scheduled,
+          message: `Screenshot scheduled for ${scheduledAt.toISOString()}`,
+        });
+      }
 
       const screenshot = await storage.createScreenshot(screenshotData);
 
@@ -11781,6 +11826,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount upload routes
   app.use('/api/upload', uploadRouter);
 
+  // Mount scheduled posts routes
+  app.use('/api/scheduled-posts', scheduledPostsRouter);
+
   // Mount mint NFT routes
   app.use(mintNftRouter);
   app.use(linkedWalletsRouter);
@@ -12192,7 +12240,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         LIMIT 20
       `);
 
-      res.json((rows.rows as any[]).map((r) => r.tag));
+      const tagRows = ((rows as any).rows ?? rows) as any[];
+      res.json(tagRows.map((r) => r.tag));
     } catch (err) {
       console.error("Error fetching user top tags:", err);
       captureRouteError(err, { route: "/api/user/top-tags" });
@@ -12225,7 +12274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         LIMIT 6
       `);
 
-      res.json(rows.rows);
+      res.json(Array.isArray(rows) ? rows : (rows as any)?.rows ?? []);
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching user top games:", err);

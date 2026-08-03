@@ -21,6 +21,8 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
         alt="Gamefolio"
         className="splash-logo"
         draggable={false}
+        onContextMenu={(e) => e.preventDefault()}
+        style={{ WebkitTouchCallout: "none", WebkitUserDrag: "none" } as React.CSSProperties}
       />
     </div>
   );

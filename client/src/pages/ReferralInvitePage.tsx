@@ -50,7 +50,14 @@ export default function ReferralInvitePage() {
 
       {/* Logo */}
       <div className="mb-10 flex items-center gap-2 z-10">
-        <img src={logoGreen} alt="Gamefolio" className="h-8 w-auto" />
+        <img
+          src={logoGreen}
+          alt="Gamefolio"
+          className="h-8 w-auto"
+          draggable={false}
+          onContextMenu={(e) => e.preventDefault()}
+          style={{ WebkitTouchCallout: "none", WebkitUserDrag: "none" } as React.CSSProperties}
+        />
         <span className="text-white font-bold text-xl tracking-tight">Gamefolio</span>
       </div>
 
