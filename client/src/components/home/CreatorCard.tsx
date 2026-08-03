@@ -160,35 +160,31 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
             {/* ── Most Played ── */}
             <div className="mx-3 mt-2.5 flex-shrink-0" style={{ height: 46 }}>
               <div
-                className="relative h-full rounded-xl"
+                className="flex items-center gap-2.5 px-2.5 h-full rounded-xl"
                 style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.055)' }}
               >
-                <Gamepad2
-                  className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
-                  style={{ color: 'rgba(255,255,255,0.38)' }}
-                />
-                <span
-                  className="absolute left-9 top-1 text-[9px] font-medium tracking-[0.08em] leading-none"
-                  style={{ color: 'rgba(255,255,255,0.62)' }}
-                >
+                <Gamepad2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.38)' }} />
+                <div className="flex flex-col justify-center gap-[3px] min-w-0 flex-1">
+                  <span className="text-[9px] font-medium tracking-[0.08em] leading-none uppercase" style={{ color: 'rgba(255,255,255,0.5)' }}>
                     Most Played
-                </span>
-                <div className="absolute left-9 right-2.5 bottom-2 flex items-center gap-1.5 min-w-0 h-[26px]">
-                  {entry.mostPlayedGame?.imageUrl && (
-                    <img
-                      src={entry.mostPlayedGame.imageUrl}
-                      alt=""
-                      className="rounded-md object-cover flex-shrink-0"
-                      style={{ width: 26, height: 26 }}
-                    />
-                  )}
-                  <span
-                    className="text-[13px] font-semibold truncate leading-none"
-                    style={{ color: entry.mostPlayedGame ? 'white' : 'rgba(255,255,255,0.28)' }}
-                    title={entry.mostPlayedGame?.name ?? undefined}
-                  >
-                    {entry.mostPlayedGame ? entry.mostPlayedGame.name : 'No game uploads yet'}
                   </span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {entry.mostPlayedGame?.imageUrl && (
+                      <img
+                        src={entry.mostPlayedGame.imageUrl}
+                        alt=""
+                        className="rounded object-cover flex-shrink-0"
+                        style={{ width: 20, height: 20 }}
+                      />
+                    )}
+                    <span
+                      className="text-[13px] font-semibold truncate leading-none"
+                      style={{ color: entry.mostPlayedGame ? 'white' : 'rgba(255,255,255,0.28)' }}
+                      title={entry.mostPlayedGame?.name ?? undefined}
+                    >
+                      {entry.mostPlayedGame ? entry.mostPlayedGame.name : 'No game uploads yet'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -196,7 +192,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
             {/* ── Recently Uploaded ── */}
             <div className="mx-3 mt-1.5 flex-shrink-0" style={{ height: 46 }}>
               <div
-                className="relative h-full rounded-xl transition-colors"
+                className="flex items-center gap-2.5 px-2.5 h-full rounded-xl transition-colors"
                 style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.055)', cursor: entry.recentUpload ? 'pointer' : 'default' }}
                 onClick={(e) => {
                   if (!entry.recentUpload) return;
@@ -210,22 +206,19 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
                   );
                 }}
               >
-                <Clock
-                  className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
-                  style={{ color: entry.recentUpload ? '#B7FF1A' : 'rgba(255,255,255,0.28)', opacity: entry.recentUpload ? 0.7 : 1 }}
-                />
-                <div className="absolute left-9 right-2.5 top-1 bottom-1 flex flex-col justify-center min-w-0">
-                  <span className="text-[9px] font-medium tracking-[0.08em] leading-[10px]" style={{ color: 'rgba(255,255,255,0.62)' }}>
+                <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: entry.recentUpload ? '#B7FF1A' : 'rgba(255,255,255,0.28)', opacity: entry.recentUpload ? 0.75 : 1 }} />
+                <div className="flex flex-col justify-center gap-[2px] min-w-0 flex-1">
+                  <span className="text-[9px] font-medium tracking-[0.08em] leading-none uppercase" style={{ color: 'rgba(255,255,255,0.5)' }}>
                     Recently Uploaded
                   </span>
                   <span
-                    className="text-[13px] font-semibold truncate block leading-[15px]"
+                    className="text-[13px] font-semibold truncate leading-none"
                     style={{ color: entry.recentUpload ? 'white' : 'rgba(255,255,255,0.28)' }}
                   >
                     {recentTitle ?? 'No uploads yet'}
                   </span>
                   {recentTime && (
-                    <span className="block text-[10px] font-medium leading-[11px]" style={{ color: 'rgba(255,255,255,0.62)' }}>
+                    <span className="text-[10px] font-medium leading-none" style={{ color: 'rgba(255,255,255,0.5)' }}>
                       {recentTime}
                     </span>
                   )}
