@@ -104,7 +104,6 @@ export function getCardTheme(user: TrendingEntry['user']): { style: React.CSSPro
 export const CREATOR_CARD_STYLES = `
   .fire-card {
     position: relative;
-    border: 2px solid rgba(183,255,26,0.55);
     border-radius: 16px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.5);
   }

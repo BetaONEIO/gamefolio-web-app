@@ -880,7 +880,7 @@ const HomePage = () => {
 
       {/* Trending Gamefolios - between Latest Reels and Latest Screenshots */}
       <LazySection minHeight="260px" rootMargin="200px">
-        <section className="px-4 sm:px-6 md:px-8 pt-6 sm:pt-8">
+        <section className="pt-6 sm:pt-8">
           <FeaturedUsersSection />
         </section>
       </LazySection>

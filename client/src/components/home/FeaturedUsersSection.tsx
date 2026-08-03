@@ -70,7 +70,7 @@ const FeaturedUsersSection = () => {
     <div>
       <style>{STYLES}</style>
 
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 px-4 sm:px-6 md:px-8">
         <div className="flex items-center gap-2">
           <GamefolioTrendingIcon className="w-5 h-5 text-primary" />
           <h2 className="text-xl sm:text-2xl font-bold">Trending Gamefolios</h2>
