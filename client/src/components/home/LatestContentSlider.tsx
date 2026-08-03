@@ -308,10 +308,10 @@ export default function LatestContentSlider() {
 
             {/* Game info overlay */}
             {showInfo && (gameImage || gameName) && (
-              <div className="absolute inset-0 z-50 flex items-end justify-end pointer-events-none">
+              <div className="absolute inset-0 z-50 flex items-end justify-end pointer-events-none" style={{ paddingBottom: '52px', paddingRight: '12px' }}>
                 <div className="absolute inset-0 pointer-events-auto" onClick={(e) => { e.stopPropagation(); setShowInfo(false); }} />
                 <div
-                  className="relative pointer-events-auto m-3 rounded-xl overflow-hidden flex flex-col"
+                  className="relative pointer-events-auto mb-0 mx-0 rounded-xl overflow-hidden flex flex-col"
                   style={{
                     width: "clamp(148px, 42%, 210px)",
                     background: "rgba(7,16,19,0.92)",

@@ -513,7 +513,7 @@ const HomePage = () => {
       {/* Hero Banner Carousel */}
       <section className="mb-0 -mx-0">
         <div className="relative overflow-hidden">
-          <div className="w-full bg-black relative min-h-[420px] sm:min-h-[560px] md:min-h-[640px] border-b-2 border-primary">
+          <div className="w-full bg-black relative min-h-[420px] sm:min-h-[560px] md:min-h-[640px]">
             {activeSlides && (
               <div className="relative w-full h-full min-h-[420px] sm:min-h-[560px] md:min-h-[640px]">
                 {activeSlides.map((slide, idx) => {
