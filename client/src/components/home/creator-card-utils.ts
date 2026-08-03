@@ -8,6 +8,14 @@ export interface TrendingEntry {
   screenshotsCount: number;
   followersCount: number;
   followingCount?: number;
+  mostPlayedGame?: { name: string; imageUrl: string | null } | null;
+  recentUpload?: {
+    id: number;
+    contentType: string;
+    createdAt: string;
+    gameTitle: string | null;
+    title: string | null;
+  } | null;
   user: {
     id: number;
     username: string;

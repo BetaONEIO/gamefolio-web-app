@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link } from "wouter";
-import { Zap, Upload, Users } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Zap, Upload, Users, Gamepad2, Clock } from "lucide-react";
 import Lottie from "lottie-react";
 import onFireData from "@/assets/on-fire.json";
 import { TrendingEntry, fmt, getCardTheme, CREATOR_CARD_STYLES } from "./creator-card-utils";
@@ -11,9 +11,26 @@ interface CreatorCardProps {
   className?: string;
 }
 
+function timeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  if (isNaN(then)) return '';
+  const diff = now - then;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
 export function CreatorCard({ entry, period = 'alltime', className = '' }: CreatorCardProps) {
   const { user } = entry;
   const [bannerError, setBannerError] = useState(false);
+  const [, setLocation] = useLocation();
   const borderColor = user.avatarBorderColor || user.accentColor || '#B7FF1A';
   const hasBanner = !!user.bannerUrl && !bannerError;
   const theme = getCardTheme(user);
@@ -21,11 +38,20 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
   const xpLabel = period === 'alltime' ? 'XP total' : period === 'month' ? 'XP this month' : 'XP this week';
   const ctaText = `${fmt(entry.totalPoints)} ${xpLabel}`;
 
+  // Build recently-uploaded label
+  let recentLabel = 'No uploads yet';
+  if (entry.recentUpload) {
+    const { gameTitle, title, contentType, createdAt } = entry.recentUpload;
+    const when = timeAgo(createdAt);
+    const what = gameTitle ?? title ?? contentType;
+    recentLabel = what ? `${what} · ${when}` : when;
+  }
+
   return (
     <Link href={`/profile/${user.username}`} className={className}>
       <div
         className="flex-shrink-0 cursor-pointer transition-transform duration-200 hover:scale-[1.03] hover:-translate-y-2 fire-card"
-        style={{ width: 228, height: 408, borderRadius: 16, position: 'relative' }}
+        style={{ width: 228, height: 480, borderRadius: 16, position: 'relative' }}
       >
         {/* ── Floating badge row (outside overflow-hidden background) ── */}
         <div
@@ -64,6 +90,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
           )}
 
           <div className="relative flex flex-col h-full pt-7" style={{ zIndex: 3 }}>
+            {/* Banner */}
             <div className="relative flex-shrink-0 mx-2 rounded-lg overflow-hidden" style={{ height: 66 }}>
               {hasBanner ? (
                 <>
@@ -75,6 +102,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
               )}
             </div>
 
+            {/* Avatar */}
             <div className="flex justify-center flex-shrink-0" style={{ marginTop: -20, position: 'relative', zIndex: 2 }}>
               <div style={{ position: 'relative' }}>
                 {entry.rank === 1 && (
@@ -109,6 +137,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
               </div>
             </div>
 
+            {/* Name / username */}
             <div className="text-center px-3 mt-2 flex-shrink-0">
               <p className="text-white text-sm font-bold truncate leading-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                 {user.displayName || user.username}
@@ -116,6 +145,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
               <p className="text-white/40 text-[11px] truncate mt-0.5">@{user.username}</p>
             </div>
 
+            {/* Stats box */}
             <div
               className="mx-3 mt-3 flex-shrink-0 grid grid-cols-3 gap-1 rounded-xl py-2"
               style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
@@ -133,8 +163,73 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
               ))}
             </div>
 
+            {/* ── Most Played ── */}
+            <div className="mx-3 mt-2.5 flex-shrink-0" style={{ height: 46 }}>
+              <div
+                className="flex items-center gap-2 px-2.5 h-full rounded-xl"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.055)' }}
+              >
+                <Gamepad2 className="w-3 h-3 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.28)' }} />
+                <div className="flex-1 min-w-0">
+                  <span className="block text-[8px] font-semibold tracking-widest uppercase leading-none mb-[3px]" style={{ color: 'rgba(255,255,255,0.28)' }}>
+                    Most Played
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {entry.mostPlayedGame?.imageUrl && (
+                      <img
+                        src={entry.mostPlayedGame.imageUrl}
+                        alt=""
+                        className="rounded object-cover flex-shrink-0"
+                        style={{ width: 18, height: 18 }}
+                      />
+                    )}
+                    <span
+                      className="text-[11px] font-medium truncate leading-tight"
+                      style={{ color: entry.mostPlayedGame ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.28)' }}
+                      title={entry.mostPlayedGame?.name ?? undefined}
+                    >
+                      {entry.mostPlayedGame ? entry.mostPlayedGame.name : 'No game uploads yet'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Recently Uploaded ── */}
+            <div className="mx-3 mt-1.5 flex-shrink-0" style={{ height: 46 }}>
+              <div
+                className="flex items-center gap-2 px-2.5 h-full rounded-xl transition-colors"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.055)', cursor: entry.recentUpload ? 'pointer' : 'default' }}
+                onClick={(e) => {
+                  if (!entry.recentUpload) return;
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const { id, contentType } = entry.recentUpload;
+                  setLocation(
+                    contentType === 'screenshot' ? `/view/screenshot/${id}`
+                    : contentType === 'reel'     ? `/reel/${id}`
+                    :                              `/clip/${id}`
+                  );
+                }}
+              >
+                <Clock className="w-3 h-3 flex-shrink-0" style={{ color: entry.recentUpload ? '#B7FF1A' : 'rgba(255,255,255,0.28)', opacity: entry.recentUpload ? 0.7 : 1 }} />
+                <div className="flex-1 min-w-0">
+                  <span className="block text-[8px] font-semibold tracking-widest uppercase leading-none mb-[3px]" style={{ color: 'rgba(255,255,255,0.28)' }}>
+                    Recently Uploaded
+                  </span>
+                  <span
+                    className="text-[11px] font-medium truncate block leading-tight"
+                    style={{ color: entry.recentUpload ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.28)' }}
+                  >
+                    {recentLabel}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <div className="flex-1" />
 
+            {/* XP button */}
             <div className="px-3 pb-3 flex-shrink-0">
               <div
                 className="w-full rounded-xl py-2.5 flex items-center justify-center gap-1.5 text-xs font-bold"

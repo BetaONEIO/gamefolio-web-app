@@ -4018,6 +4018,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const followerMap: Record<number, number> = Object.fromEntries(followerRows.map(r => [r.userId, r.count]));
       const followingMap: Record<number, number> = Object.fromEntries(followingRows.map(r => [r.userId, r.count]));
 
+      // Batch: most-played game per user (clips + screenshots, grouped by game)
+      const [clipGameRows, ssGameRows, recentClipRows, recentSsRows] = await Promise.all([
+        db.select({ userId: clips.userId, gameId: clips.gameId, cnt: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(clips)
+          .where(and(inArray(clips.userId, userIds), sql`${clips.gameId} IS NOT NULL`))
+          .groupBy(clips.userId, clips.gameId),
+        db.select({ userId: screenshots.userId, gameId: screenshots.gameId, cnt: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(screenshots)
+          .where(and(inArray(screenshots.userId, userIds), sql`${screenshots.gameId} IS NOT NULL`))
+          .groupBy(screenshots.userId, screenshots.gameId),
+        db.select({ userId: clips.userId, id: clips.id, createdAt: clips.createdAt, videoType: clips.videoType, gameId: clips.gameId, title: clips.title })
+          .from(clips)
+          .where(inArray(clips.userId, userIds))
+          .orderBy(desc(clips.createdAt))
+          .limit(userIds.length * 4),
+        db.select({ userId: screenshots.userId, id: screenshots.id, createdAt: screenshots.createdAt, gameId: screenshots.gameId })
+          .from(screenshots)
+          .where(inArray(screenshots.userId, userIds))
+          .orderBy(desc(screenshots.createdAt))
+          .limit(userIds.length * 4),
+      ]);
+
+      // Find top game per user
+      const gameCounts: Record<number, Record<number, number>> = {};
+      for (const r of [...clipGameRows, ...ssGameRows]) {
+        if (r.gameId == null) continue;
+        if (!gameCounts[r.userId]) gameCounts[r.userId] = {};
+        gameCounts[r.userId][r.gameId] = (gameCounts[r.userId][r.gameId] || 0) + r.cnt;
+      }
+      const topGameIdByUser: Record<number, number> = {};
+      for (const [uidStr, gMap] of Object.entries(gameCounts)) {
+        const top = Object.entries(gMap).sort((a, b) => b[1] - a[1])[0];
+        if (top) topGameIdByUser[parseInt(uidStr)] = parseInt(top[0]);
+      }
+
+      // Find most recent upload per user
+      type RecentRaw = { id: number; createdAt: string; contentType: string; gameId: number | null; title: string | null };
+      const recentByUser: Record<number, RecentRaw> = {};
+      for (const c of recentClipRows) {
+        if (!c.createdAt) continue;
+        const dt = new Date(c.createdAt as unknown as string);
+        const ex = recentByUser[c.userId];
+        if (!ex || dt > new Date(ex.createdAt)) {
+          recentByUser[c.userId] = { id: c.id, createdAt: c.createdAt as unknown as string, contentType: c.videoType === 'reel' ? 'reel' : 'clip', gameId: c.gameId, title: c.title };
+        }
+      }
+      for (const s of recentSsRows) {
+        if (!s.createdAt) continue;
+        const dt = new Date(s.createdAt as unknown as string);
+        const ex = recentByUser[s.userId];
+        if (!ex || dt > new Date(ex.createdAt)) {
+          recentByUser[s.userId] = { id: s.id, createdAt: s.createdAt as unknown as string, contentType: 'screenshot', gameId: s.gameId, title: null };
+        }
+      }
+
+      // Batch-fetch all needed game details
+      const neededGameIds = [...new Set([
+        ...Object.values(topGameIdByUser),
+        ...Object.values(recentByUser).map(r => r.gameId).filter((g): g is number => g != null),
+      ])];
+      const gameDetailRows = neededGameIds.length > 0
+        ? await db.select({ id: games.id, name: games.name, imageUrl: games.imageUrl })
+            .from(games).where(inArray(games.id, neededGameIds))
+        : [];
+      const gameDetailMap: Record<number, { name: string; imageUrl: string | null }> =
+        Object.fromEntries(gameDetailRows.map(g => [g.id, { name: g.name, imageUrl: g.imageUrl }]));
+
       const entries = await Promise.all(
         leaderboardData.map(async (entry, index) => {
           let userData = { ...entry.user };
@@ -4039,6 +4106,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const signed = await supabaseStorage.convertToSignedUrl(userData.profileBackgroundImageUrl, 3600);
             if (signed) userData.profileBackgroundImageUrl = signed;
           }
+
+          const topGid = topGameIdByUser[entry.userId];
+          const mostPlayedGame = topGid != null ? (gameDetailMap[topGid] ?? null) : null;
+          const recent = recentByUser[entry.userId];
+          const recentUpload = recent ? {
+            id: recent.id,
+            contentType: recent.contentType,
+            createdAt: recent.createdAt,
+            gameTitle: recent.gameId != null && gameDetailMap[recent.gameId] ? gameDetailMap[recent.gameId].name : null,
+            title: recent.title,
+          } : null;
+
           return {
             userId: entry.userId,
             rank: index + 1,  // Always use position in results array, not stale stored rank
@@ -4050,6 +4129,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             screenshotsCount: ssMap[entry.userId] || 0,
             followersCount: followerMap[entry.userId] || 0,
             followingCount: followingMap[entry.userId] || 0,
+            mostPlayedGame,
+            recentUpload,
           };
         })
       );
