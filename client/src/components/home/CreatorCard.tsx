@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { Zap, Upload, Users } from "lucide-react";
+import Lottie from "lottie-react";
+import onFireData from "@/assets/on-fire.json";
 import { TrendingEntry, fmt, getCardTheme, CREATOR_CARD_STYLES } from "./creator-card-utils";
 
 interface CreatorCardProps {
@@ -74,17 +76,36 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
             </div>
 
             <div className="flex justify-center flex-shrink-0" style={{ marginTop: -20, position: 'relative', zIndex: 2 }}>
-              <div
-                className="rounded-full overflow-hidden flex-shrink-0"
-                style={{ width: 56, height: 56, border: `2.5px solid ${borderColor}`, boxShadow: `0 0 14px ${borderColor}88` }}
-              >
-                {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.displayName || user.username} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-xl font-bold" style={{ background: `${borderColor}22`, color: borderColor }}>
-                    {(user.displayName || user.username).charAt(0).toUpperCase()}
-                  </div>
+              <div style={{ position: 'relative' }}>
+                {entry.rank === 1 && (
+                  <Lottie
+                    animationData={onFireData}
+                    loop
+                    autoplay
+                    style={{
+                      position: 'absolute',
+                      width: 112,
+                      height: 123,
+                      left: '50%',
+                      top: '50%',
+                      transform: 'translate(-50%, -48%)',
+                      zIndex: 0,
+                      pointerEvents: 'none',
+                    }}
+                  />
                 )}
+                <div
+                  className="rounded-full overflow-hidden flex-shrink-0"
+                  style={{ width: 56, height: 56, border: `2.5px solid ${borderColor}`, boxShadow: `0 0 14px ${borderColor}88`, position: 'relative', zIndex: 1 }}
+                >
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={user.displayName || user.username} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xl font-bold" style={{ background: `${borderColor}22`, color: borderColor }}>
+                      {(user.displayName || user.username).charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
