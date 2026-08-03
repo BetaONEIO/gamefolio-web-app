@@ -485,7 +485,7 @@ function SeasonInfoBar({ playerCount }: { playerCount: number }) {
         </div>
         <div className="flex items-center gap-2 text-slate-400">
           <Trophy className="w-4 h-4 text-[#FFD700]" />
-          <span><strong className="text-white">5,000</strong> GFT Prize Pool</span>
+          <span><strong className="text-white">20,000</strong> GFT Prize Pool</span>
         </div>
       </div>
     </div>
@@ -834,9 +834,7 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
   const [tab, setTab] = useState<TabType>("alltime");
 
   const tabs: { key: TabType; label: string }[] = [
-    { key: "weekly",  label: "This Week"  },
-    { key: "monthly", label: "This Month" },
-    { key: "alltime", label: "All Time"   },
+    { key: "alltime", label: "This Season" },
   ];
 
   const MIN_PERIOD_ENTRIES = 3; // below this, fall back to previous period
@@ -905,8 +903,8 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
                         (Array.isArray(alltimeData) ? alltimeData : []);
 
   const tabSubtitle: Record<TabType, string> = {
-    weekly:  usingPrevWeek  ? "Showing last week · this week just started" : "XP earned this week",
-    monthly: usingPrevMonth ? "Showing last month · this month just started" : "XP earned this month",
+    weekly:  "XP earned this week",
+    monthly: "XP earned this month",
     alltime: "Total season XP",
   };
 
@@ -1317,15 +1315,21 @@ export default function LeaderboardPage() {
     queryFn: () => fetch("/api/leaderboard/weekly/current?limit=200").then(r => r.json()),
   });
 
-  // All-time player count for the hero
+  // All-time leaderboard (used by CompetitiveOverview)
   const { data: alltimeData } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard"],
     queryFn: () => fetch("/api/leaderboard?limit=200").then(r => r.json()),
   });
 
+  // Accurate season player count for the hero stat
+  const { data: playerCountData } = useQuery<{ count: number }>({
+    queryKey: ["/api/leaderboard/season-player-count"],
+    queryFn: () => fetch("/api/leaderboard/season-player-count").then(r => r.json()),
+  });
+
   const top3 = top3Data ?? [];
   const leaderboard = weeklyData ?? [];
-  const playerCount = alltimeData?.length ?? weeklyData?.length ?? 0;
+  const playerCount = playerCountData?.count ?? alltimeData?.length ?? weeklyData?.length ?? 0;
 
   return (
     <div

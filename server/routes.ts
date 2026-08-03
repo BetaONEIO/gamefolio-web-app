@@ -4283,6 +4283,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Active season player count (distinct users who have scored in the current season)
+  app.get("/api/leaderboard/season-player-count", async (req, res) => {
+    try {
+      const currentSeasonMonths = SEASON_DEFS[0].months;
+      const rows = await db.execute(sql`
+        SELECT COUNT(DISTINCT ml.user_id)::int AS count
+        FROM monthly_leaderboard ml
+        JOIN users u ON u.id = ml.user_id
+        WHERE ml.month = ANY(ARRAY[${sql.join(currentSeasonMonths.map(m => sql`${m}`), sql`, `)}])
+          AND u.role NOT IN ('admin', 'moderator', 'system')
+          AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+          AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+      `);
+      const count = Number((rows as any[])[0]?.count ?? 0);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching season player count:", error);
+      res.status(500).json({ message: "Error fetching season player count" });
+    }
+  });
+
   // Top contributors routes
   app.get("/api/leaderboard/top-contributors/:periodType", async (req, res) => {
     try {
