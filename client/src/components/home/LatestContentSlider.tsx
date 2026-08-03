@@ -22,6 +22,7 @@ export default function LatestContentSlider() {
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
   const [showInfo, setShowInfo] = useState(false);
+  const [progress, setProgress] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
@@ -82,7 +83,9 @@ export default function LatestContentSlider() {
   const goPrev = useCallback(() => nav(-1), [nav]);
   const goNext = useCallback(() => nav(1), [nav]);
 
-  useEffect(() => { stopVideo(); setActiveIndex(0); }, [mode]);
+  useEffect(() => { stopVideo(); setActiveIndex(0); setProgress(0); }, [mode]);
+
+  useEffect(() => { setProgress(0); }, [current?.id]);
 
   const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
   const handleTouchEnd = (e: React.TouchEvent) => {
@@ -235,7 +238,11 @@ export default function LatestContentSlider() {
                 className="absolute inset-0 w-full h-full z-10"
                 style={{ objectFit: mode === "clips" ? "cover" : "contain", background: "#000" }}
                 autoPlay muted={muted} playsInline loop
-                onEnded={() => setPlaying(false)} />
+                onTimeUpdate={(e) => {
+                  const v = e.currentTarget;
+                  if (v.duration) setProgress((v.currentTime / v.duration) * 100);
+                }}
+                onEnded={() => { setPlaying(false); setProgress(0); }} />
             )}
 
             {/* Play overlay */}
@@ -372,6 +379,15 @@ export default function LatestContentSlider() {
                     </button>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* Progress bar */}
+            {playing && (
+              <div className="absolute bottom-0 inset-x-0 z-40 h-[3px] pointer-events-none"
+                style={{ background: "rgba(255,255,255,0.12)" }}>
+                <div className="h-full rounded-full"
+                  style={{ width: `${progress}%`, background: NEON, transition: "none" }} />
               </div>
             )}
 
