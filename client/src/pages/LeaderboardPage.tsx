@@ -1077,7 +1077,7 @@ function SeasonRewards() {
     <section className="px-4 mb-8">
       <div className="flex items-center gap-2 mb-4">
         <Medal className="w-5 h-5 text-[#B7FF1A]" />
-        <h2 className="text-xl font-black text-white">Season Rewards</h2>
+        <h2 className="text-xl font-black text-white">Season Rewards & Awards</h2>
       </div>
       <div className="relative rounded-2xl border border-white/10 bg-[#0d1520] overflow-hidden" style={{ minHeight: 180 }}>
         {/* Background image — blurred */}
@@ -1406,11 +1406,7 @@ export default function LeaderboardPage() {
         <SeasonRewards />
       </div>
 
-      {/* Season Categories (Awards) — full width */}
-      <div className="w-full pb-20">
-        <div className="rs-section-divider" />
-        <SeasonCategories />
-      </div>
+      <div className="w-full pb-20" />
     </div>
   );
 }

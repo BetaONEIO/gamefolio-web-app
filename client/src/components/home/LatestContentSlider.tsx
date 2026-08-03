@@ -421,12 +421,16 @@ export default function LatestContentSlider() {
           <div className="mt-2.5 flex items-start justify-between gap-2 flex-shrink-0">
             <div className="min-w-0">
               <h3 className="text-sm font-black text-white leading-tight truncate">{current.title}</h3>
-              <Link href={`/profile/${username}`}
-                className="text-xs font-bold transition-opacity hover:opacity-80"
-                style={{ color: NEON }}
-                onClick={e => e.stopPropagation()}>
-                @{username}
-              </Link>
+              {gameName ? (
+                <span className="text-xs font-bold" style={{ color: NEON }}>{gameName}</span>
+              ) : (
+                <Link href={`/profile/${username}`}
+                  className="text-xs font-bold transition-opacity hover:opacity-80"
+                  style={{ color: NEON }}
+                  onClick={e => e.stopPropagation()}>
+                  @{username}
+                </Link>
+              )}
             </div>
             <div className="flex items-center gap-1 flex-shrink-0 pt-1" />
           </div>
