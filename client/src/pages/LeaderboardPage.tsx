@@ -61,7 +61,7 @@ interface TopContributor {
   };
 }
 
-type TabType = "weekly" | "monthly" | "alltime";
+type TabType = "weekly" | "monthly" | "alltime" | "season";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -831,10 +831,11 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
 }
 
 function LiveLeaderboard({ userId }: { userId?: number }) {
-  const [tab, setTab] = useState<TabType>("alltime");
+  const [tab, setTab] = useState<TabType>("season");
 
   const tabs: { key: TabType; label: string }[] = [
-    { key: "alltime", label: "This Season" },
+    { key: "season",  label: "This Season" },
+    { key: "alltime", label: "All Time"    },
   ];
 
   const MIN_PERIOD_ENTRIES = 3; // below this, fall back to previous period
@@ -868,10 +869,16 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
     queryFn: () => fetch("/api/leaderboard?limit=100").then(r => r.json()),
     refetchInterval: POLL_MS,
   });
+  const { data: seasonData,    isLoading: sl,  dataUpdatedAt: sUpdated  } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard/current-season/top", "chart"],
+    queryFn: () => fetch("/api/leaderboard/current-season/top?limit=100").then(r => r.json()),
+    refetchInterval: POLL_MS,
+  });
 
   const lastUpdated =
     tab === "weekly"  ? wUpdated :
-    tab === "monthly" ? mUpdated : aUpdated;
+    tab === "monthly" ? mUpdated :
+    tab === "season"  ? sUpdated : aUpdated;
 
   const [lastUpdatedLabel, setLastUpdatedLabel] = useState("just now");
   useEffect(() => {
@@ -888,7 +895,7 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
   const isLoading =
     tab === "weekly"  ? (wl || (Array.isArray(weeklyData)  && weeklyData.length  < MIN_PERIOD_ENTRIES && pwl)) :
     tab === "monthly" ? (ml || (Array.isArray(monthlyData) && monthlyData.length < MIN_PERIOD_ENTRIES && pml)) :
-                        al;
+    tab === "season"  ? sl : al;
 
   const weeklySparse  = !wl  && Array.isArray(weeklyData)  && weeklyData.length  < MIN_PERIOD_ENTRIES;
   const monthlySparse = !ml  && Array.isArray(monthlyData) && monthlyData.length < MIN_PERIOD_ENTRIES;
@@ -900,12 +907,14 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
   const entries: LeaderboardEntry[] =
     tab === "weekly"  ? (weeklySparse  ? (Array.isArray(prevWeekData)  ? prevWeekData  : []) : (Array.isArray(weeklyData)  ? weeklyData  : [])) :
     tab === "monthly" ? (monthlySparse ? (Array.isArray(prevMonthData) ? prevMonthData : []) : (Array.isArray(monthlyData) ? monthlyData : [])) :
+    tab === "season"  ? (Array.isArray(seasonData)  ? seasonData  as LeaderboardEntry[] : []) :
                         (Array.isArray(alltimeData) ? alltimeData : []);
 
   const tabSubtitle: Record<TabType, string> = {
     weekly:  "XP earned this week",
     monthly: "XP earned this month",
-    alltime: "Total season XP",
+    season:  "Total season XP",
+    alltime: "All-time cumulative XP",
   };
 
   return (
