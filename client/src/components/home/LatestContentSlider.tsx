@@ -237,12 +237,12 @@ export default function LatestContentSlider() {
               <video ref={videoRef} src={current.videoUrl}
                 className="absolute inset-0 w-full h-full z-10"
                 style={{ objectFit: mode === "clips" ? "cover" : "contain", background: "#000" }}
-                autoPlay muted={muted} playsInline loop
+                autoPlay muted={muted} playsInline
                 onTimeUpdate={(e) => {
                   const v = e.currentTarget;
                   if (v.duration) setProgress((v.currentTime / v.duration) * 100);
                 }}
-                onEnded={() => { setPlaying(false); setProgress(0); }} />
+                onEnded={() => { setProgress(0); goNext(); }} />
             )}
 
             {/* Play overlay */}

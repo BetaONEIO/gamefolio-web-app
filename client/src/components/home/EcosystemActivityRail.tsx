@@ -124,6 +124,9 @@ function OtherRankIcon() {
 const seedRailItems: RailItem[] = SEED_ITEMS.map(u => ({ ...u, uid: u.id, status: 'visible' as ItemStatus }));
 const seedKeySet = new Set<string>(SEED_ITEMS.map(u => u.id));
 
+// How long to wait before auto-cycling to the next item when idle (ms)
+const AUTO_CYCLE_INTERVAL = 4500;
+
 export function EcosystemActivityRail() {
   const [items, setItems] = useState<RailItem[]>(seedRailItems);
   const knownKeys = useRef(seedKeySet);
@@ -131,7 +134,12 @@ export function EcosystemActivityRail() {
   const animating = useRef(false);
   const lastKind = useRef<EventKind | undefined>(undefined);
 
-  const { data: feedItems = [] } = useQuery<FeedItem[]>({
+  // Pool of all known items for continuous cycling
+  const allKnownItems = useRef<FeedItem[]>([]);
+  const cycleIndex = useRef(0);
+  const cycleTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const { data: feedItems } = useQuery<FeedItem[]>({
     queryKey: ["/api/activity-feed"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     staleTime: 1000 * 120,
@@ -142,8 +150,8 @@ export function EcosystemActivityRail() {
     if (animating.current || queue.current.length === 0) return;
     animating.current = true;
 
-    // Prefer a different activity type from the item currently at the end
-    // of the rail, so XP notifications do not stack together.
+    // Prefer a different activity type from the last shown item
+    // so XP notifications do not stack together.
     const nextIndex = queue.current.findIndex(item => item.kind !== lastKind.current);
     const [next] = queue.current.splice(nextIndex >= 0 ? nextIndex : 0, 1);
     const uid = `${next.id}-${Date.now()}`;
@@ -167,17 +175,42 @@ export function EcosystemActivityRail() {
     }, ANIM_DURATION + 50);
   }, []);
 
-  useEffect(() => {
-    if (!feedItems.length) return;
+  // Continuously cycle through known items so the rail always animates
+  const startCycle = useCallback(() => {
+    if (cycleTimer.current) return; // already running
+    cycleTimer.current = setInterval(() => {
+      if (allKnownItems.current.length === 0) return;
+      if (queue.current.length > 0) return; // let real queue drain first
+      const idx = cycleIndex.current % allKnownItems.current.length;
+      cycleIndex.current++;
+      queue.current.push(allKnownItems.current[idx]);
+      processQueue();
+    }, AUTO_CYCLE_INTERVAL);
+  }, [processQueue]);
 
-    const newItems = feedItems.filter(u => !knownKeys.current.has(u.id));
-    newItems.forEach(u => knownKeys.current.add(u.id));
+  // Clean up the cycle timer on unmount
+  useEffect(() => {
+    return () => { if (cycleTimer.current) clearInterval(cycleTimer.current); };
+  }, []);
+
+  useEffect(() => {
+    const safeItems = Array.isArray(feedItems) ? feedItems : [];
+    if (safeItems.length === 0) return;
+
+    const newItems = safeItems.filter(u => !knownKeys.current.has(u.id));
+    newItems.forEach(u => {
+      knownKeys.current.add(u.id);
+      allKnownItems.current.push(u);
+    });
 
     if (newItems.length > 0) {
       queue.current = [...queue.current, ...newItems];
       processQueue();
     }
-  }, [feedItems, processQueue]);
+
+    // Start continuous cycling once we have data
+    startCycle();
+  }, [feedItems, processQueue, startCycle]);
 
   return (
     <>

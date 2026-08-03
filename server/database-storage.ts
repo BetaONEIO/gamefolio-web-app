@@ -1172,11 +1172,11 @@ export class DatabaseStorage implements IStorage {
         dateFilter = null; // No date filter for most recent
     }
 
-    // Get clips based on engagement (likes + comments) with privacy filtering
+    // Get clips based on engagement (views + weighted likes + comments) with privacy filtering
     const clipEngagementQuery = db
       .select({
         clipId: clips.id,
-        engagement: sql<number>`cast(count(distinct ${likes.id}) + count(distinct ${comments.id}) as integer)`.as('engagement')
+        engagement: sql<number>`cast(coalesce(${clips.views}, 0) + count(distinct ${likes.id}) * 15 + count(distinct ${comments.id}) * 10 as bigint)`.as('engagement')
       })
       .from(clips)
       .leftJoin(users, eq(clips.userId, users.id))
@@ -1291,7 +1291,7 @@ export class DatabaseStorage implements IStorage {
           twitchId: games.twitchId,
           createdAt: games.createdAt,
         },
-        engagement: sql<number>`cast(count(distinct ${likes.id}) + count(distinct ${comments.id}) as integer)`.as('engagement'),
+        engagement: sql<number>`cast(coalesce(${clips.views}, 0) + count(distinct ${likes.id}) * 15 + count(distinct ${comments.id}) * 10 as bigint)`.as('engagement'),
         likesCount: sql<number>`count(distinct ${likes.id})`.as('likesCount'),
         commentsCount: sql<number>`count(distinct ${comments.id})`.as('commentsCount'),
         reactionsCount: sql<number>`count(distinct ${clipReactions.id})`.as('reactionsCount')
