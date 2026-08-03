@@ -18,12 +18,11 @@ function timeAgo(dateStr: string): string {
   const diff = now - then;
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return 'Just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return `${mins} ${mins === 1 ? 'minute' : 'minutes'} ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return `${hrs} ${hrs === 1 ? 'hour' : 'hours'} ago`;
   const days = Math.floor(hrs / 24);
-  if (days === 1) return 'Yesterday';
-  return `${days}d ago`;
+  return `${days} ${days === 1 ? 'day' : 'days'} ago`;
 }
 
 export function CreatorCard({ entry, period = 'alltime', className = '' }: CreatorCardProps) {
@@ -161,31 +160,35 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
             {/* ── Most Played ── */}
             <div className="mx-3 mt-2.5 flex-shrink-0" style={{ height: 46 }}>
               <div
-                className="flex items-center gap-2 px-2.5 h-full rounded-xl"
+                className="relative h-full rounded-xl"
                 style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.055)' }}
               >
-                <Gamepad2 className="w-3 h-3 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.28)' }} />
-                <div className="flex-1 min-w-0">
-                  <span className="block text-[11px] font-medium tracking-wide uppercase leading-none mb-1" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                <Gamepad2
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
+                  style={{ color: 'rgba(255,255,255,0.38)' }}
+                />
+                <span
+                  className="absolute left-9 top-1 text-[9px] font-medium tracking-[0.08em] leading-none"
+                  style={{ color: 'rgba(255,255,255,0.62)' }}
+                >
                     Most Played
+                </span>
+                <div className="absolute left-9 right-2.5 bottom-2 flex items-center gap-1.5 min-w-0 h-[26px]">
+                  {entry.mostPlayedGame?.imageUrl && (
+                    <img
+                      src={entry.mostPlayedGame.imageUrl}
+                      alt=""
+                      className="rounded-md object-cover flex-shrink-0"
+                      style={{ width: 26, height: 26 }}
+                    />
+                  )}
+                  <span
+                    className="text-[13px] font-semibold truncate leading-none"
+                    style={{ color: entry.mostPlayedGame ? 'white' : 'rgba(255,255,255,0.28)' }}
+                    title={entry.mostPlayedGame?.name ?? undefined}
+                  >
+                    {entry.mostPlayedGame ? entry.mostPlayedGame.name : 'No game uploads yet'}
                   </span>
-                  <div className="flex items-center gap-1.5">
-                    {entry.mostPlayedGame?.imageUrl && (
-                      <img
-                        src={entry.mostPlayedGame.imageUrl}
-                        alt=""
-                        className="rounded object-cover flex-shrink-0"
-                        style={{ width: 30, height: 30 }}
-                      />
-                    )}
-                    <span
-                      className="text-[16px] font-semibold truncate leading-tight"
-                      style={{ color: entry.mostPlayedGame ? 'white' : 'rgba(255,255,255,0.28)' }}
-                      title={entry.mostPlayedGame?.name ?? undefined}
-                    >
-                      {entry.mostPlayedGame ? entry.mostPlayedGame.name : 'No game uploads yet'}
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -193,7 +196,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
             {/* ── Recently Uploaded ── */}
             <div className="mx-3 mt-1.5 flex-shrink-0" style={{ height: 46 }}>
               <div
-                className="flex items-center gap-2 px-2.5 h-full rounded-xl transition-colors"
+                className="relative h-full rounded-xl transition-colors"
                 style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.055)', cursor: entry.recentUpload ? 'pointer' : 'default' }}
                 onClick={(e) => {
                   if (!entry.recentUpload) return;
@@ -207,19 +210,22 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
                   );
                 }}
               >
-                <Clock className="w-3 h-3 flex-shrink-0" style={{ color: entry.recentUpload ? '#B7FF1A' : 'rgba(255,255,255,0.28)', opacity: entry.recentUpload ? 0.7 : 1 }} />
-                <div className="flex-1 min-w-0">
-                  <span className="block text-[11px] font-medium tracking-wide uppercase leading-none mb-0.5" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                <Clock
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5"
+                  style={{ color: entry.recentUpload ? '#B7FF1A' : 'rgba(255,255,255,0.28)', opacity: entry.recentUpload ? 0.7 : 1 }}
+                />
+                <div className="absolute left-9 right-2.5 top-1 bottom-1 flex flex-col justify-center min-w-0">
+                  <span className="text-[9px] font-medium tracking-[0.08em] leading-[10px]" style={{ color: 'rgba(255,255,255,0.62)' }}>
                     Recently Uploaded
                   </span>
                   <span
-                    className="text-[16px] font-semibold truncate block leading-tight"
+                    className="text-[13px] font-semibold truncate block leading-[15px]"
                     style={{ color: entry.recentUpload ? 'white' : 'rgba(255,255,255,0.28)' }}
                   >
                     {recentTitle ?? 'No uploads yet'}
                   </span>
                   {recentTime && (
-                    <span className="block text-[11px] font-medium leading-tight mt-0.5" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                    <span className="block text-[10px] font-medium leading-[11px]" style={{ color: 'rgba(255,255,255,0.62)' }}>
                       {recentTime}
                     </span>
                   )}
