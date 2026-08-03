@@ -129,6 +129,7 @@ export function EcosystemActivityRail() {
   const knownKeys = useRef(seedKeySet);
   const queue = useRef<FeedItem[]>([]);
   const animating = useRef(false);
+  const lastKind = useRef<EventKind | undefined>(undefined);
 
   const { data: feedItems = [] } = useQuery<FeedItem[]>({
     queryKey: ["/api/activity-feed"],
@@ -141,8 +142,12 @@ export function EcosystemActivityRail() {
     if (animating.current || queue.current.length === 0) return;
     animating.current = true;
 
-    const next = queue.current.shift()!;
+    // Prefer a different activity type from the item currently at the end
+    // of the rail, so XP notifications do not stack together.
+    const nextIndex = queue.current.findIndex(item => item.kind !== lastKind.current);
+    const [next] = queue.current.splice(nextIndex >= 0 ? nextIndex : 0, 1);
     const uid = `${next.id}-${Date.now()}`;
+    lastKind.current = next.kind;
 
     setItems(prev => {
       const withLeaving = prev.length >= MAX_ITEMS
