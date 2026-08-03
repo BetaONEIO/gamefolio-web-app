@@ -23,8 +23,7 @@ function timeAgo(dateStr: string): string {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   if (days === 1) return 'Yesterday';
-  if (days < 7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return `${days}d ago`;
 }
 
 export function CreatorCard({ entry, period = 'alltime', className = '' }: CreatorCardProps) {
@@ -38,14 +37,10 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
   const xpLabel = period === 'alltime' ? 'XP total' : period === 'month' ? 'XP this month' : 'XP this week';
   const ctaText = `${fmt(entry.totalPoints)} ${xpLabel}`;
 
-  // Build recently-uploaded label
-  let recentLabel = 'No uploads yet';
-  if (entry.recentUpload) {
-    const { gameTitle, title, contentType, createdAt } = entry.recentUpload;
-    const when = timeAgo(createdAt);
-    const what = gameTitle ?? title ?? contentType;
-    recentLabel = what ? `${what} · ${when}` : when;
-  }
+  const recentTitle = entry.recentUpload
+    ? (entry.recentUpload.title ?? entry.recentUpload.gameTitle ?? entry.recentUpload.contentType)
+    : null;
+  const recentTime = entry.recentUpload ? timeAgo(entry.recentUpload.createdAt) : null;
 
   return (
     <Link href={`/profile/${user.username}`} className={className}>
@@ -171,7 +166,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
               >
                 <Gamepad2 className="w-3 h-3 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.28)' }} />
                 <div className="flex-1 min-w-0">
-                  <span className="block text-[8px] font-semibold tracking-widest uppercase leading-none mb-[3px]" style={{ color: 'rgba(255,255,255,0.28)' }}>
+                  <span className="block text-[11px] font-medium tracking-wide uppercase leading-none mb-1" style={{ color: 'rgba(255,255,255,0.7)' }}>
                     Most Played
                   </span>
                   <div className="flex items-center gap-1.5">
@@ -180,12 +175,12 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
                         src={entry.mostPlayedGame.imageUrl}
                         alt=""
                         className="rounded object-cover flex-shrink-0"
-                        style={{ width: 18, height: 18 }}
+                        style={{ width: 30, height: 30 }}
                       />
                     )}
                     <span
-                      className="text-[11px] font-medium truncate leading-tight"
-                      style={{ color: entry.mostPlayedGame ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.28)' }}
+                      className="text-[16px] font-semibold truncate leading-tight"
+                      style={{ color: entry.mostPlayedGame ? 'white' : 'rgba(255,255,255,0.28)' }}
                       title={entry.mostPlayedGame?.name ?? undefined}
                     >
                       {entry.mostPlayedGame ? entry.mostPlayedGame.name : 'No game uploads yet'}
@@ -214,15 +209,20 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
               >
                 <Clock className="w-3 h-3 flex-shrink-0" style={{ color: entry.recentUpload ? '#B7FF1A' : 'rgba(255,255,255,0.28)', opacity: entry.recentUpload ? 0.7 : 1 }} />
                 <div className="flex-1 min-w-0">
-                  <span className="block text-[8px] font-semibold tracking-widest uppercase leading-none mb-[3px]" style={{ color: 'rgba(255,255,255,0.28)' }}>
+                  <span className="block text-[11px] font-medium tracking-wide uppercase leading-none mb-0.5" style={{ color: 'rgba(255,255,255,0.7)' }}>
                     Recently Uploaded
                   </span>
                   <span
-                    className="text-[11px] font-medium truncate block leading-tight"
-                    style={{ color: entry.recentUpload ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.28)' }}
+                    className="text-[16px] font-semibold truncate block leading-tight"
+                    style={{ color: entry.recentUpload ? 'white' : 'rgba(255,255,255,0.28)' }}
                   >
-                    {recentLabel}
+                    {recentTitle ?? 'No uploads yet'}
                   </span>
+                  {recentTime && (
+                    <span className="block text-[11px] font-medium leading-tight mt-0.5" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                      {recentTime}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
