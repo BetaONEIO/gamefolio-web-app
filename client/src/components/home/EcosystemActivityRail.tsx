@@ -36,13 +36,8 @@ const KIND_EMOJI: Record<EventKind, string> = {
 const MAX_ITEMS = 8;
 const ANIM_DURATION = 450;
 
-const SEED_ITEMS: FeedItem[] = [
-  { id: 'seed-1', kind: 'xp',      username: 'gamer',   text: 'Someone earned +200 XP from uploading' },
-  { id: 'seed-2', kind: 'streak',  username: 'player',  text: 'A player is on a 7-day upload streak 🔥' },
-  { id: 'seed-3', kind: 'levelup', username: 'pro',     text: 'A pro is #1 this month · 4,200 XP' },
-  { id: 'seed-4', kind: 'xp',      username: 'clip',    text: 'Someone earned +25 XP daily login bonus' },
-  { id: 'seed-5', kind: 'trending',username: 'rising',  text: 'Gamefolio is growing — join today!' },
-];
+// The rail should only show activity from actual users returned by the API.
+const SEED_ITEMS: FeedItem[] = [];
 
 function XPIcon() {
   return (
@@ -73,14 +68,10 @@ function StreakIcon() {
       className="relative flex-shrink-0"
       style={{ width: 28, height: 28, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
     >
-      <span
-        className="streak-flare"
-        style={{ position: "absolute", inset: -2, borderRadius: "50%", zIndex: 0 }}
-      />
       <img
         src={streakIcon}
         alt="Streak"
-        style={{ position: "relative", zIndex: 1, width: 28, height: 28, objectFit: "contain", display: "block", filter: "drop-shadow(0 0 4px rgba(255,120,0,0.8))" }}
+        style={{ position: "relative", zIndex: 1, width: 28, height: 28, objectFit: "contain", display: "block" }}
       />
     </span>
   );
@@ -89,15 +80,16 @@ function StreakIcon() {
 function PlaceIcon({ place }: { place: 1 | 2 | 3 | 4 }) {
   const icon = place === 1 ? firstPlaceIcon : place === 2 ? secondPlaceIcon : thirdPlaceIcon;
   const glowColor = place === 1 ? "255,215,0" : place === 2 ? "192,192,192" : "205,127,50";
+  const iconSize = place === 1 ? 43.75 : 35;
   return (
     <span
       className="relative flex-shrink-0"
-      style={{ width: 35, height: 35, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+      style={{ width: iconSize, height: iconSize, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
     >
       <img
         src={icon}
         alt={`${place}${place === 1 ? "st" : place === 2 ? "nd" : "rd"}`}
-        style={{ position: "relative", zIndex: 1, width: 35, height: 35, objectFit: "contain", display: "block", filter: `drop-shadow(0 0 4px rgba(${glowColor},0.8))` }}
+        style={{ position: "relative", zIndex: 1, width: iconSize, height: iconSize, objectFit: "contain", display: "block", filter: `drop-shadow(0 0 4px rgba(${glowColor},0.8))` }}
       />
     </span>
   );
@@ -205,13 +197,6 @@ export function EcosystemActivityRail() {
         }
         .xp-pulse-bg {
           animation: xp-bg-pulse 2.4s ease-in-out infinite;
-        }
-        @keyframes streak-flare {
-          0%, 100% { opacity: 0.6; box-shadow: 0 0 4px 1px rgba(255,120,0,0.5); }
-          50%       { opacity: 1;   box-shadow: 0 0 10px 3px rgba(255,120,0,0.9); }
-        }
-        .streak-flare {
-          animation: streak-flare 1.8s ease-in-out infinite;
         }
         @keyframes place-glow {
           0%, 100% { opacity: 0.6; box-shadow: 0 0 4px 1px rgba(var(--glow-color),0.5); }
