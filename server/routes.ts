@@ -4028,16 +4028,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .from(screenshots)
           .where(and(inArray(screenshots.userId, userIds), sql`${screenshots.gameId} IS NOT NULL`))
           .groupBy(screenshots.userId, screenshots.gameId),
-        db.select({ userId: clips.userId, id: clips.id, createdAt: clips.createdAt, videoType: clips.videoType, gameId: clips.gameId, title: clips.title })
+        db.selectDistinctOn([clips.userId], { userId: clips.userId, id: clips.id, createdAt: clips.createdAt, videoType: clips.videoType, gameId: clips.gameId, title: clips.title })
           .from(clips)
           .where(inArray(clips.userId, userIds))
-          .orderBy(desc(clips.createdAt))
-          .limit(userIds.length * 4),
-        db.select({ userId: screenshots.userId, id: screenshots.id, createdAt: screenshots.createdAt, gameId: screenshots.gameId })
+          .orderBy(clips.userId, desc(clips.createdAt)),
+        db.selectDistinctOn([screenshots.userId], { userId: screenshots.userId, id: screenshots.id, createdAt: screenshots.createdAt, gameId: screenshots.gameId })
           .from(screenshots)
           .where(inArray(screenshots.userId, userIds))
-          .orderBy(desc(screenshots.createdAt))
-          .limit(userIds.length * 4),
+          .orderBy(screenshots.userId, desc(screenshots.createdAt)),
       ]);
 
       // Find top game per user
