@@ -126,7 +126,7 @@ const FeaturedUsersSection = () => {
       {/* Section body with animated background */}
       <div
         className="relative overflow-hidden rounded-2xl trending-bg-animated"
-        style={{ border: '1px solid rgba(183,255,26,0.08)', padding: '20px 0' }}
+        style={{ padding: '20px 0' }}
       >
         {/* Edge fade overlays */}
         <div className="absolute left-0 top-0 bottom-0 w-16 pointer-events-none" style={{ background: 'linear-gradient(to right, #0B1319, transparent)', zIndex: 10 }} />
