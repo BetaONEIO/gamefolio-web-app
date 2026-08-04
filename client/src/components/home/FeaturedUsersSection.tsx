@@ -17,13 +17,13 @@ const PERIOD_LABELS: Record<Period, string> = {
 const STYLES = `
   @keyframes fire-scroll {
     0%   { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
+    100% { transform: translateX(-33.3333%); }
   }
   .fire-carousel-track {
     display: flex;
-    gap: 16px;
-    animation: fire-scroll 60s linear infinite;
+    animation: fire-scroll 90s linear infinite;
     width: max-content;
+    will-change: transform;
   }
   .fire-carousel-track:hover {
     animation-play-state: paused;
@@ -79,7 +79,9 @@ const FeaturedUsersSection = () => {
   });
 
   const validEntries = entries.filter(e => e.user);
-  const displayEntries = validEntries.length > 0 ? [...validEntries, ...validEntries] : [];
+  const displayEntries = validEntries.length > 0
+    ? [...validEntries, ...validEntries, ...validEntries]
+    : [];
 
   return (
     <div>
@@ -128,9 +130,11 @@ const FeaturedUsersSection = () => {
             No data for this period yet.
           </div>
         ) : (
-          <div className="fire-carousel-track px-5" style={{ zIndex: 11, position: 'relative' }}>
+          <div className="fire-carousel-track" style={{ zIndex: 11, position: 'relative' }}>
             {displayEntries.map((entry, idx) => (
-              <CreatorCard key={`${entry.userId}-${idx}`} entry={entry} period={period} />
+              <div key={`${entry.userId}-${idx}`} style={{ paddingRight: 16, flexShrink: 0 }}>
+                <CreatorCard entry={entry} period={period} />
+              </div>
             ))}
           </div>
         )}

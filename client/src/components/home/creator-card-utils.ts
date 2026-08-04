@@ -96,7 +96,7 @@ export function getCardTheme(user: TrendingEntry['user']): { style: React.CSSPro
     return { style: { background: user.profileBackgroundGradientCss }, isLight: false, hasCustomBg: true };
   }
 
-  if (isDefault) return { style: { background: 'rgba(11,19,25,0.95)' }, isLight: false, hasCustomBg: false };
+  if (isDefault) return { style: { background: '#0B1319' }, isLight: false, hasCustomBg: false };
 
   if (user.profileBackgroundGradient !== false && !isLight) {
     return {

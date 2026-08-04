@@ -74,7 +74,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
 
         <div
           className="absolute inset-0 rounded-[inherit] overflow-hidden"
-          style={{ zIndex: 2, ...theme.style, backdropFilter: theme.hasCustomBg ? undefined : 'blur(8px)' }}
+          style={{ zIndex: 2, ...theme.style }}
         >
           {theme.hasCustomBg && (
             <div
