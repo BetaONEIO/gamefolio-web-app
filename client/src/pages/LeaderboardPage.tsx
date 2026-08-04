@@ -3,7 +3,7 @@ import {
   Trophy, Crown, Gem, Shield, Flame, TrendingUp, TrendingDown, Minus,
   Calendar, Clock, Users, Upload, Heart, MessageCircle, Star, Award,
   Play, Camera, Image as ImageIcon, Gamepad2, ChevronRight, ChevronLeft, Sparkles,
-  ArrowUp, ArrowDown, Medal, Zap, Target,
+  ChevronDown, ArrowUp, ArrowDown, Medal, Zap, Target,
 } from "lucide-react";
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -386,7 +386,7 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
   };
 
   return (
-    <div className="relative min-h-[520px] sm:min-h-[580px]">
+    <div className="relative rs-season-hero overflow-hidden">
       <div
         className="absolute inset-0"
         style={{ backgroundImage: "url('/electrical-bg.webp')", backgroundSize: "cover", backgroundPosition: "center" }}
@@ -399,14 +399,14 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
         style={{ background: "radial-gradient(ellipse,#FFD700,transparent 70%)" }} />
 
       {/* ── DESKTOP: page title — upper-left of hero ── */}
-      <div className="absolute top-8 left-8 z-10 hidden sm:block max-w-xs lg:max-w-sm">
+      <div className="absolute top-8 left-8 z-10 hidden sm:block max-w-[270px]">
         <p className="text-[#B7FF1A] text-[10px] tracking-[0.22em] uppercase font-bold mb-2">
           Season Rankings
         </p>
-        <h1 className="text-4xl lg:text-5xl font-black text-white tracking-tight uppercase leading-none mb-3">
+        <h1 className="text-3xl font-black text-white tracking-tight uppercase leading-none mb-3">
           Leaderboard
         </h1>
-        <p className="text-slate-400 text-sm leading-relaxed">
+        <p className="text-slate-400 text-xs leading-relaxed">
           Compete in ranked seasons, climb the rankings and become a Gamefolio Champion.
         </p>
       </div>
@@ -417,7 +417,7 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
       </div>
 
       {/* ── DESKTOP: three-column podium (unchanged) ── */}
-      <div className="hidden sm:flex relative items-end justify-center gap-10 lg:gap-16 px-4 pt-14 pb-0">
+      <div className="lb-desktop-podium hidden sm:flex relative items-end justify-center gap-10 lg:gap-16 px-4 pt-14 pb-0">
         {top3.length === 0 ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex flex-col items-center">
@@ -459,6 +459,20 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
           })
         )}
       </div>
+
+      {/* ── Current-season scroll cue ── */}
+      <button
+        type="button"
+        onClick={() => document.getElementById("current-season")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+        className="absolute bottom-4 left-1/2 z-[60] -translate-x-1/2 flex flex-col items-center gap-0.5 rounded-full px-4 py-1.5 text-white/80 hover:text-[#B7FF1A] transition-colors"
+        style={{ background: "rgba(5,9,13,0.68)", border: "1px solid rgba(183,255,26,0.28)", backdropFilter: "blur(6px)" }}
+        aria-label="View current season"
+      >
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em] whitespace-nowrap">
+          View current season
+        </span>
+        <ChevronDown className="w-5 h-5 rs-scroll-arrow" />
+      </button>
     </div>
   );
 }
@@ -1373,7 +1387,17 @@ function SeasonCategories() {
 const RS_STYLES = `
 @keyframes rs-float { 0%,100%{transform:translateY(0px);} 50%{transform:translateY(-6px);} }
 @keyframes rs-glow-pulse { 0%,100%{opacity:.6;} 50%{opacity:1;} }
+@keyframes rs-scroll-bounce { 0%,100%{transform:translateY(0);opacity:.65;} 50%{transform:translateY(6px);opacity:1;} }
 .rs-hero-trophy { animation: rs-float 3.5s ease-in-out infinite; }
+.rs-scroll-arrow { animation: rs-scroll-bounce 1.5s ease-in-out infinite; }
+.rs-season-hero { height: calc(100dvh - 72px); min-height: 520px; }
+.lb-desktop-podium { transform: translateX(52px) scale(.72); transform-origin: top center; }
+@media (min-width: 640px) {
+  .rs-season-hero { height: calc(100dvh - 144px); }
+}
+@media (max-width: 639px) {
+  .rs-season-hero { min-height: 560px; }
+}
 .rs-section-divider { background: linear-gradient(90deg, transparent, rgba(183,255,26,0.2), transparent); height:1px; margin:0 1rem 2rem; }
 /* Mobile podium horizontal scroll */
 .mobile-podium-row::-webkit-scrollbar { display: none; }
@@ -1424,7 +1448,7 @@ export default function LeaderboardPage() {
       <SeasonInfoBar playerCount={playerCount} />
 
       {/* ── Live Leaderboard — directly under Summer Showdown ── */}
-      <div className="w-full border-b border-white/5 pt-0 pb-6">
+      <div id="current-season" className="w-full border-b border-white/5 pt-0 pb-6 scroll-mt-4">
         <LiveLeaderboard userId={user?.id} />
       </div>
 
