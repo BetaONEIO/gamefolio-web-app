@@ -7,6 +7,7 @@ import { Redirect, useLocation } from 'wouter';
 import { Loader2, Upload, Image as ImageIcon, X, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -328,7 +329,18 @@ const ScreenshotUploadPage: React.FC = () => {
       
       <Card>
         <CardHeader>
-          <CardTitle>Share your gaming moments</CardTitle>
+          <div className="flex items-start justify-between gap-2">
+            <CardTitle>Share your gaming moments</CardTitle>
+            {uploadLimits && (
+              <Badge
+                variant={maxScreenshots > 0 ? "secondary" : "destructive"}
+                className="shrink-0 whitespace-nowrap"
+                data-testid="badge-screenshots-remaining"
+              >
+                {maxScreenshots}/{uploadLimits.maxScreenshotsPerWindow} left today
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Tier-aware upload-limit hint shown BEFORE the user opens

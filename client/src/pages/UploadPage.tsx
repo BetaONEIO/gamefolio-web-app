@@ -16,6 +16,7 @@ import { MentionInput } from "@/components/ui/mention-input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import * as tus from "tus-js-client";
 import {
   Card,
@@ -1551,10 +1552,23 @@ const UploadPage = () => {
         <TabsContent value="clips" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Share your gaming moment</CardTitle>
-              <CardDescription>
-                Upload a video clip to share with the Gamefolio community
-              </CardDescription>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle>Share your gaming moment</CardTitle>
+                  <CardDescription>
+                    Upload a video clip to share with the Gamefolio community
+                  </CardDescription>
+                </div>
+                {uploadLimits && (
+                  <Badge
+                    variant={remainingClips > 0 ? "secondary" : "destructive"}
+                    className="shrink-0 whitespace-nowrap"
+                    data-testid="badge-clips-remaining"
+                  >
+                    {remainingClips}/{uploadLimits.maxClipsPerWindow} left today
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {queueTotal > 1 && (
@@ -2059,10 +2073,23 @@ const UploadPage = () => {
         <TabsContent value="reels" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Share your gaming reel</CardTitle>
-              <CardDescription>
-                Upload any video to create a reel! Videos will be automatically converted to vertical 9:16 format for optimal viewing.
-              </CardDescription>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle>Share your gaming reel</CardTitle>
+                  <CardDescription>
+                    Upload any video to create a reel! Videos will be automatically converted to vertical 9:16 format for optimal viewing.
+                  </CardDescription>
+                </div>
+                {uploadLimits && (
+                  <Badge
+                    variant={remainingReels > 0 ? "secondary" : "destructive"}
+                    className="shrink-0 whitespace-nowrap"
+                    data-testid="badge-reels-remaining"
+                  >
+                    {remainingReels}/{uploadLimits.maxReelsPerWindow} left today
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {queueTotal > 1 && (
@@ -2661,10 +2688,23 @@ const UploadPage = () => {
         <TabsContent value="screenshots" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Share your gaming screenshot</CardTitle>
-              <CardDescription>
-                Upload a screenshot to share with the Gamefolio community
-              </CardDescription>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle>Share your gaming screenshot</CardTitle>
+                  <CardDescription>
+                    Upload a screenshot to share with the Gamefolio community
+                  </CardDescription>
+                </div>
+                {uploadLimits && (
+                  <Badge
+                    variant={remainingScreenshots > 0 ? "secondary" : "destructive"}
+                    className="shrink-0 whitespace-nowrap"
+                    data-testid="badge-screenshots-remaining"
+                  >
+                    {remainingScreenshots}/{uploadLimits.maxScreenshotsPerWindow} left today
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <form onSubmit={(e) => {
