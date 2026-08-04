@@ -72,6 +72,19 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   const maxSizeMB = isReel ? limits.maxReelSizeMB : limits.maxClipSizeMB;
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
+  // Rolling 24h upload-count cap - reject before any expensive
+  // download/transcode work below. Covers both the browser upload route and
+  // the OAuth public API, since both call through this shared function.
+  const usedInWindow = isReel ? limits.reelsUsedInWindow : limits.clipsUsedInWindow;
+  const maxPerWindow = isReel ? limits.maxReelsPerWindow : limits.maxClipsPerWindow;
+  if (usedInWindow >= maxPerWindow) {
+    throw new ClipProcessingError(403, {
+      error: 'Upload limit reached',
+      message: `You've reached your ${maxPerWindow} ${isReel ? 'reel' : 'clip'} upload limit for now.${limits.isPro ? '' : ' Upgrade to Pro for a higher limit.'}`,
+      limits,
+    });
+  }
+
   // Handle game ID - ensure game exists in database
   let finalGameId = null;
   if (gameId) {
@@ -371,6 +384,9 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
       thumbnailUrl: validatedClipData.thumbnailUrl || null,
       videoType,
     });
+    // The file was actually processed/uploaded now, not at the future
+    // publish time, so it consumes the window now.
+    await storage.incrementUploadUsage(userId, videoType);
     return {
       success: true,
       scheduled,
@@ -379,6 +395,7 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   }
 
   const clip = await storage.createClip(validatedClipData);
+  await storage.incrementUploadUsage(userId, videoType);
 
   await LeaderboardService.awardPoints(
     userId,
