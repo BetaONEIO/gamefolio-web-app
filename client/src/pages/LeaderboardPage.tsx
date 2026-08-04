@@ -65,12 +65,29 @@ type TabType = "weekly" | "monthly" | "alltime" | "season";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
+// XP thresholds mirror server's SEASON_LEAGUE_TIERS + buildSeasonLeague logic.
+const SEASON_XP_TIERS = [
+  { name: "Bronze",   icon: "🥉", color: "#CD7F32", min: 0,     gradient: "from-orange-700/30 to-orange-800/10", border: "border-orange-700/40", glow: "shadow-[0_0_14px_rgba(205,127,50,0.2)]" },
+  { name: "Silver",   icon: "🥈", color: "#C0C0C0", min: 1000,  gradient: "from-gray-400/30 to-gray-500/10",     border: "border-gray-400/40",   glow: "shadow-[0_0_14px_rgba(192,192,192,0.2)]" },
+  { name: "Gold",     icon: "🥇", color: "#FFD700", min: 3000,  gradient: "from-yellow-400/30 to-amber-500/10",  border: "border-yellow-400/40", glow: "shadow-[0_0_16px_rgba(255,215,0,0.25)]" },
+  { name: "Platinum", icon: "💎", color: "#4FC3F7", min: 6000,  gradient: "from-cyan-300/30 to-blue-400/10",     border: "border-cyan-300/40",   glow: "shadow-[0_0_16px_rgba(79,195,247,0.25)]" },
+  { name: "Onyx",     icon: "🖤", color: "#8B5CF6", min: 10000, gradient: "from-violet-500/30 to-purple-600/10", border: "border-violet-500/40", glow: "shadow-[0_0_16px_rgba(139,92,246,0.25)]" },
+];
+
+function getLeagueFromEntry(totalPoints: number, rank: number) {
+  const hasReachedOnyx = totalPoints >= 10000;
+  if (hasReachedOnyx && rank <= 10)  return { name: "Champion", icon: "🏆", color: "#B7FF1A", gradient: "from-lime-400/30 to-green-600/10",    border: "border-lime-400/40",   glow: "shadow-[0_0_20px_rgba(183,255,26,0.3)]"  };
+  if (hasReachedOnyx && rank <= 100) return { name: "Diamond",  icon: "💠", color: "#A8EDFF", gradient: "from-cyan-400/30 to-blue-500/10",     border: "border-cyan-400/40",   glow: "shadow-[0_0_20px_rgba(168,237,255,0.3)]" };
+  let current = SEASON_XP_TIERS[0];
+  for (const t of SEASON_XP_TIERS) if (totalPoints >= t.min) current = t;
+  return current;
+}
+
+// Kept for rank-cutoff display only (next-league banner)
 function getLeague(rank: number) {
-  if (rank <= 10)   return { name: "Diamond",  icon: "👑", color: "#A8EDFF", gradient: "from-cyan-400/30 to-blue-500/10",   border: "border-cyan-400/40",  glow: "shadow-[0_0_20px_rgba(168,237,255,0.3)]" };
-  if (rank <= 100)  return { name: "Platinum", icon: "💎", color: "#E5E4E2", gradient: "from-slate-300/30 to-slate-400/10",  border: "border-slate-300/40",  glow: "shadow-[0_0_16px_rgba(229,228,226,0.25)]" };
-  if (rank <= 500)  return { name: "Gold",     icon: "🥇", color: "#FFD700", gradient: "from-yellow-400/30 to-amber-500/10", border: "border-yellow-400/40", glow: "shadow-[0_0_16px_rgba(255,215,0,0.25)]" };
-  if (rank <= 2000) return { name: "Silver",   icon: "🥈", color: "#C0C0C0", gradient: "from-gray-400/30 to-gray-500/10",   border: "border-gray-400/40",   glow: "shadow-[0_0_14px_rgba(192,192,192,0.2)]" };
-  return                   { name: "Bronze",   icon: "🥉", color: "#CD7F32", gradient: "from-orange-700/30 to-orange-800/10",border: "border-orange-700/40", glow: "shadow-[0_0_14px_rgba(205,127,50,0.2)]" };
+  if (rank <= 10)   return { name: "Champion", icon: "🏆", color: "#B7FF1A" };
+  if (rank <= 100)  return { name: "Diamond",  icon: "💠", color: "#A8EDFF" };
+  return                   { name: "",          icon: "",    color: "#6b7280"  };
 }
 
 function getSeasonInfo() {
@@ -499,17 +516,19 @@ function CompetitiveOverview({ leaderboard, userId }: { leaderboard: Leaderboard
   if (!myEntry) {
     return null;
   }
-  const league = getLeague(myEntry.rank);
+  const league = getLeagueFromEntry(myEntry.totalPoints, myEntry.rank);
   const nextRankEntry = leaderboard.find(e => e.rank === myEntry.rank - 1);
   const xpToNextRank = nextRankEntry ? Math.ceil(nextRankEntry.totalPoints - myEntry.totalPoints) : null;
 
-  const nextLeagueCutoff =
-    myEntry.rank > 2000 ? 2000 :
-    myEntry.rank > 500  ? 500  :
-    myEntry.rank > 100  ? 100  :
-    myEntry.rank > 10   ? 10   : null;
-  const nextLeagueEntry = nextLeagueCutoff ? leaderboard.find(e => e.rank === nextLeagueCutoff) : null;
-  const xpToNextLeague = nextLeagueEntry ? Math.max(0, Math.ceil(nextLeagueEntry.totalPoints - myEntry.totalPoints + 1)) : null;
+  // XP-based next-league threshold (mirrors server logic)
+  const XP_THRESHOLDS: { name: string; icon: string; xp: number }[] = [
+    { name: "Silver",   icon: "🥈", xp: 1000  },
+    { name: "Gold",     icon: "🥇", xp: 3000  },
+    { name: "Platinum", icon: "💎", xp: 6000  },
+    { name: "Onyx",     icon: "🖤", xp: 10000 },
+  ];
+  const nextXpTier = XP_THRESHOLDS.find(t => myEntry.totalPoints < t.xp) ?? null;
+  const xpToNextLeague = nextXpTier ? Math.max(0, nextXpTier.xp - myEntry.totalPoints) : null;
 
   const stats = [
     { label: "Current Rank",  value: `#${myEntry.rank}`,               icon: <Trophy className="w-4 h-4 text-[#B7FF1A]" /> },
@@ -549,16 +568,22 @@ function CompetitiveOverview({ leaderboard, userId }: { leaderboard: Leaderboard
               <span>Only <strong className="text-[#B7FF1A]">{formatPoints(xpToNextRank)} XP</strong> until you move up to Rank #{myEntry.rank - 1}</span>
             </div>
           )}
-          {xpToNextLeague !== null && xpToNextLeague > 0 && nextLeagueCutoff && (
+          {xpToNextLeague !== null && xpToNextLeague > 0 && nextXpTier && (
             <div className="flex items-center gap-2 text-xs text-slate-300 bg-white/5 rounded-lg px-3 py-2">
               <TrendingUp className="w-3.5 h-3.5 text-[#FFD700] flex-shrink-0" />
-              <span><strong className="text-[#FFD700]">{formatPoints(xpToNextLeague)} XP</strong> until {getLeague(nextLeagueCutoff).icon} {getLeague(nextLeagueCutoff).name} League (Top {nextLeagueCutoff})</span>
+              <span><strong className="text-[#FFD700]">{formatPoints(xpToNextLeague)} XP</strong> until {nextXpTier.icon} {nextXpTier.name} League</span>
             </div>
           )}
-          {myEntry.rank <= 10 && (
+          {league.name === "Champion" && (
             <div className="flex items-center gap-2 text-xs text-slate-300 bg-[#B7FF1A]/10 rounded-lg px-3 py-2">
               <Crown className="w-3.5 h-3.5 text-[#B7FF1A] flex-shrink-0" />
-              <span className="text-[#B7FF1A] font-semibold">You are in Diamond League — an elite Top 10 player this season! 👑</span>
+              <span className="text-[#B7FF1A] font-semibold">You are a Champion — an elite Top 10 player this season! 🏆</span>
+            </div>
+          )}
+          {league.name === "Diamond" && (
+            <div className="flex items-center gap-2 text-xs text-slate-300 bg-white/5 rounded-lg px-3 py-2">
+              <Crown className="w-3.5 h-3.5 text-[#A8EDFF] flex-shrink-0" />
+              <span className="text-[#A8EDFF] font-semibold">You are in Diamond League — Top 100 with 10,000+ Season XP! 💠</span>
             </div>
           )}
         </div>
@@ -570,16 +595,18 @@ function CompetitiveOverview({ leaderboard, userId }: { leaderboard: Leaderboard
 // ─── Section: Ranked Leagues ───────────────────────────────────────────────
 
 const LEAGUES = [
-  { icon: "👑", name: "Diamond",  range: "Top 10",    color: "#A8EDFF", bg: "from-cyan-400/20 to-blue-500/5",   border: "border-cyan-400/30",  rewards: "Champion Trophy + 2,500 GFT" },
-  { icon: "💎", name: "Platinum", range: "Top 100",   color: "#E5E4E2", bg: "from-slate-300/20 to-slate-400/5", border: "border-slate-300/30", rewards: "Platinum Badge + 1,000 GFT" },
-  { icon: "🥇", name: "Gold",     range: "Top 500",   color: "#FFD700", bg: "from-yellow-400/20 to-amber-500/5",border: "border-yellow-400/30", rewards: "Gold Medal + 500 GFT" },
-  { icon: "🥈", name: "Silver",   range: "Top 2,000", color: "#C0C0C0", bg: "from-gray-400/20 to-gray-500/5",   border: "border-gray-400/30",  rewards: "Silver Badge + 200 GFT" },
-  { icon: "🥉", name: "Bronze",   range: "All Others",color: "#CD7F32", bg: "from-orange-700/20 to-orange-800/5",border: "border-orange-700/30",rewards: "Bronze Badge + 50 GFT" },
+  { icon: "🏆", name: "Champion", range: "Top 10 + 10K XP",  color: "#B7FF1A", bg: "from-lime-400/20 to-green-600/5",    border: "border-lime-400/30",   rewards: "Champion Trophy + 2,500 GFT" },
+  { icon: "💠", name: "Diamond",  range: "Top 100 + 10K XP", color: "#A8EDFF", bg: "from-cyan-400/20 to-blue-500/5",     border: "border-cyan-400/30",   rewards: "Diamond Badge + 1,500 GFT" },
+  { icon: "🖤", name: "Onyx",     range: "10,000+ Season XP",color: "#8B5CF6", bg: "from-violet-500/20 to-purple-600/5", border: "border-violet-500/30", rewards: "Onyx Badge + 750 GFT" },
+  { icon: "💎", name: "Platinum", range: "6,000–9,999 XP",   color: "#4FC3F7", bg: "from-cyan-300/20 to-blue-400/5",     border: "border-cyan-300/30",   rewards: "Platinum Badge + 400 GFT" },
+  { icon: "🥇", name: "Gold",     range: "3,000–5,999 XP",   color: "#FFD700", bg: "from-yellow-400/20 to-amber-500/5",  border: "border-yellow-400/30", rewards: "Gold Medal + 200 GFT" },
+  { icon: "🥈", name: "Silver",   range: "1,000–2,999 XP",   color: "#C0C0C0", bg: "from-gray-400/20 to-gray-500/5",     border: "border-gray-400/30",   rewards: "Silver Badge + 100 GFT" },
+  { icon: "🥉", name: "Bronze",   range: "0–999 Season XP",  color: "#CD7F32", bg: "from-orange-700/20 to-orange-800/5", border: "border-orange-700/30", rewards: "Bronze Badge + 50 GFT" },
 ];
 
 function RankedLeagues({ leaderboard, userId }: { leaderboard: LeaderboardEntry[]; userId?: number }) {
   const myEntry = userId ? leaderboard.find(e => e.userId === userId) : null;
-  const myLeague = myEntry ? getLeague(myEntry.rank).name : null;
+  const myLeague = myEntry ? getLeagueFromEntry(myEntry.totalPoints, myEntry.rank).name : null;
 
   return (
     <section className="px-4 mb-8">
@@ -612,7 +639,7 @@ function RankedLeagues({ leaderboard, userId }: { leaderboard: LeaderboardEntry[
 // ─── Section: Live Leaderboard ─────────────────────────────────────────────
 
 function LeaderboardRow({ entry, isCurrentUser }: { entry: LeaderboardEntry; isCurrentUser: boolean }) {
-  const league = getLeague(entry.rank);
+  const league = getLeagueFromEntry(entry.totalPoints, entry.rank);
   const isTop3 = entry.rank <= 3;
   const rankColors: Record<number, string> = { 1: "#FFD700", 2: "#C0C0C0", 3: "#CD7F32" };
   const rankColor = rankColors[entry.rank] ?? "#6b7280";

@@ -704,7 +704,7 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
                     color: leagueColor,
                   }}
                 >
-                  <img src={LEAGUE_MEDALS[tier.name]} alt="" className="w-4 h-4 object-contain" />
+                  <img src={LEAGUE_MEDALS[tier.name]} alt="" className="w-6 h-6 object-contain" />
                   <span>{tier.name}</span>
                 </div>
               );
