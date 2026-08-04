@@ -431,6 +431,16 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
       });
     }
 
+    // Rolling 24h upload-count cap
+    if (limits.screenshotsUsedInWindow >= limits.maxScreenshotsPerWindow) {
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
+      return res.status(403).json({
+        error: 'Upload limit reached',
+        message: `You've reached your ${limits.maxScreenshotsPerWindow} screenshot upload limit for now.${limits.isPro ? '' : ' Upgrade to Pro for a higher limit.'}`,
+        limits
+      });
+    }
+
     const { title, description, gameId, tags, ageRestricted, scheduledAt: rawScheduledAt } = req.body;
 
     if (!title) {
@@ -622,6 +632,9 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
         thumbnailUrl: validatedScheduled.thumbnailUrl || null,
         videoType: null,
       });
+      // The file was actually processed/uploaded now, not at the future
+      // publish time, so it consumes the window now.
+      await storage.incrementUploadUsage(req.user!.id, 'screenshot');
       return res.json({
         success: true,
         scheduled,
@@ -630,6 +643,7 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
     }
 
     const screenshot = await storage.createScreenshot(screenshotDataWithShareCode);
+    await storage.incrementUploadUsage(req.user!.id, 'screenshot');
 
     // Award upload points to the user (screenshots are worth 100 XP)
     await LeaderboardService.awardPoints(

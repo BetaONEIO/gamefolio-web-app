@@ -35,6 +35,7 @@ import {
   type AssetRewardWithClaims,
   type ProLootboxGrant, type InsertProLootboxGrant,
   type UploadLimits,
+  type UserUploadUsage,
   type ScheduledPost, type InsertScheduledPost, type ScheduledPostLimits,
   type UserDailyFires, type InsertUserDailyFires,
   type FireLimits,
@@ -500,6 +501,7 @@ export interface IStorage {
 
   // Daily upload quota operations
   getUploadLimits(userId: number): Promise<UploadLimits>;
+  incrementUploadUsage(userId: number, contentType: 'clip' | 'reel' | 'screenshot'): Promise<UserUploadUsage>;
 
   // Scheduled posts operations
   createScheduledPost(data: InsertScheduledPost): Promise<ScheduledPost>;

@@ -1426,6 +1426,28 @@ export const insertUserDailyFiresSchema = createInsertSchema(userDailyFires).omi
   updatedAt: true,
 });
 
+// Rolling 24h upload-count tracking - one row per (user, contentType) window,
+// mirroring userDailyFires above. contentType is 'clip' | 'reel' | 'screenshot'.
+// windowStartDate is a human-readable record of when the current window
+// started; the actual window-active check compares `createdAt` against now
+// (see isUploadWindowActive in database-storage.ts) - not a calendar-date key,
+// same rationale as the fire-reaction limit avoiding a UTC-midnight reset.
+export const userUploadUsage = pgTable("user_upload_usage", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  contentType: text("content_type").notNull(),
+  windowStartDate: text("window_start_date").notNull(),
+  uploadCount: integer("upload_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertUserUploadUsageSchema = createInsertSchema(userUploadUsage).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Schema for inserting pro lootbox grant
 export const insertProLootboxGrantSchema = createInsertSchema(proLootboxGrants).omit({
   id: true,
@@ -1666,6 +1688,10 @@ export type InsertProLootboxGrant = z.infer<typeof insertProLootboxGrantSchema>;
 export type UserDailyFires = typeof userDailyFires.$inferSelect;
 export type InsertUserDailyFires = z.infer<typeof insertUserDailyFiresSchema>;
 
+// Types for rolling-window upload-count tracking
+export type UserUploadUsage = typeof userUploadUsage.$inferSelect;
+export type InsertUserUploadUsage = z.infer<typeof insertUserUploadUsageSchema>;
+
 // Fire limits configuration type
 export interface FireLimits {
   isPro: boolean;
@@ -1675,8 +1701,9 @@ export interface FireLimits {
 }
 
 // Upload limits configuration type
-// Free vs Pro users are limited only by file size and (for video) duration.
-// There is no per-day or total upload count cap — those have been removed.
+// Free vs Pro users are limited by file size, (for video) duration, and a
+// rolling 24h upload-count cap per content type - see userUploadUsage /
+// getFireLimits precedent in database-storage.ts.
 export interface UploadLimits {
   isPro: boolean;
   maxClipSizeMB: number;
@@ -1684,6 +1711,12 @@ export interface UploadLimits {
   maxScreenshotSizeMB: number;
   maxClipDurationSeconds: number;
   maxReelDurationSeconds: number;
+  maxClipsPerWindow: number;
+  clipsUsedInWindow: number;
+  maxReelsPerWindow: number;
+  reelsUsedInWindow: number;
+  maxScreenshotsPerWindow: number;
+  screenshotsUsedInWindow: number;
 }
 
 // Linked external wallets - addresses the user has cryptographically proven control of.

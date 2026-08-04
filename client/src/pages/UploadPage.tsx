@@ -284,6 +284,12 @@ const UploadPage = () => {
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  // Bulk clip/reel upload: files queued behind the one currently in the
+  // editor. Each queued file gets its own full edit pass (trim/filter/
+  // thumbnail) - see resetVideoEditingState/handleFileChange above and the
+  // queue-advance logic in uploadMutation's onSuccess below.
+  const [videoQueue, setVideoQueue] = useState<File[]>([]);
+  const [queueTotal, setQueueTotal] = useState(0);
   const [videoPreviewError, setVideoPreviewError] = useState<string | null>(null);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [tags, setTags] = useState<string[]>([]);
@@ -372,20 +378,27 @@ const UploadPage = () => {
   // Pro accounts. Confirmed live for three separate Pro users all seeing the
   // free-tier 50MB reel cap in this UI despite the server returning the
   // correct 250MB for their account.
-  const { data: uploadLimits, isLoading: limitsLoading } = useQuery<{
-    isPro: boolean;
-    maxClipSizeMB: number;
-    maxReelSizeMB: number;
-    maxScreenshotSizeMB: number;
-    maxClipDurationSeconds: number;
-    maxReelDurationSeconds: number;
-  }>({
+  const { data: uploadLimits, isLoading: limitsLoading } = useQuery<UploadLimits>({
     queryKey: ['/api/upload/limits'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
     retry: 2,
   });
+
+  // Remaining allowance in the current rolling 24h window - shared by the
+  // screenshot multi-select cap and the clip/reel queue cap below. Falls
+  // back to the Free-tier numbers while limits are still loading so the UI
+  // doesn't briefly allow an over-cap selection.
+  const remainingScreenshots = uploadLimits
+    ? Math.max(0, uploadLimits.maxScreenshotsPerWindow - uploadLimits.screenshotsUsedInWindow)
+    : 5;
+  const remainingClips = uploadLimits
+    ? Math.max(0, uploadLimits.maxClipsPerWindow - uploadLimits.clipsUsedInWindow)
+    : 3;
+  const remainingReels = uploadLimits
+    ? Math.max(0, uploadLimits.maxReelsPerWindow - uploadLimits.reelsUsedInWindow)
+    : 3;
 
   // Scheduling quota (unlimited for Pro/Partner, capped pending count for Free).
   const { data: scheduleLimits } = useQuery<ScheduleLimits>({
@@ -441,6 +454,8 @@ const UploadPage = () => {
   // Reset form function
   const resetFormAndNavigate = () => {
     setFile(null);
+    setVideoQueue([]);
+    setQueueTotal(0);
     setTitle("");
     setDescription("");
     setSelectedGame(null);
@@ -546,54 +561,9 @@ const UploadPage = () => {
     return extMap[ext] ?? '';
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('=== FILE SELECTION EVENT ===');
-    const selectedFile = e.target.files?.[0];
-    console.log('Selected file details:', {
-      name: selectedFile?.name,
-      size: selectedFile?.size,
-      type: selectedFile?.type,
-      lastModified: selectedFile?.lastModified
-    });
-    
-    if (!selectedFile) {
-      console.log('No file selected');
-      return;
-    }
-
-    setFileError(null);
-    setVideoPreviewError(null);
-    
-    // Validate file type — use extension fallback for Android where file.type can be empty
-    const effectiveMime = getEffectiveMimeType(selectedFile);
-    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
-    if (!allowedTypes.includes(effectiveMime)) {
-      console.log('Invalid file type:', selectedFile.type, '(effective:', effectiveMime, ')');
-      setFileError("Please upload a valid video file (MP4, WebM, or MOV)");
-      return;
-    }
-
-    // Validate file size against the user's tier limit (clip vs reel). Skip
-    // this fast-fail check entirely while limits are still loading rather
-    // than guessing a free-tier default - the server re-validates the real
-    // size against the correct tier before processing regardless, so there's
-    // no enforcement gap, only a UX one (a Pro user could otherwise get a
-    // false "file too large" rejection during the brief loading window,
-    // e.g. right after a fresh login when the limits query hasn't resolved).
-    if (uploadLimits) {
-      const isReelUpload = contentType === 'reels';
-      const maxSizeMB = isReelUpload ? uploadLimits.maxReelSizeMB : uploadLimits.maxClipSizeMB;
-      const maxSize = maxSizeMB * 1024 * 1024;
-      if (selectedFile.size > maxSize) {
-        console.log('File too large:', selectedFile.size, 'bytes');
-        setFileError(`File size must be less than ${maxSizeMB}MB${!uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
-        return;
-      }
-    }
-    
-    console.log('File validation passed, setting file state');
-
-    // Reset all video-related state first
+  // Shared by the initial file pick and by advancing the queue to the next
+  // clip - clears every per-video editing state so the form starts fresh.
+  const resetVideoEditingState = () => {
     setShowEditingTools(false);
     setGeneratedThumbnails([]);
     setThumbnailUrl("");
@@ -606,10 +576,82 @@ const UploadPage = () => {
     setIsReelAspectMismatch(false);
     setVideoAspectRatio(0);
     setFormatSuggestion(null);
-    
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('=== FILE SELECTION EVENT ===');
+    const selectedFiles = Array.from(e.target.files || []);
+    console.log('Selected file details:', selectedFiles.map(f => ({
+      name: f.name,
+      size: f.size,
+      type: f.type,
+      lastModified: f.lastModified
+    })));
+
+    if (selectedFiles.length === 0) {
+      console.log('No file selected');
+      return;
+    }
+
+    setFileError(null);
+    setVideoPreviewError(null);
+
+    const isReelUpload = contentType === 'reels';
+    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+
+    // Validate every selected file up front — reject the whole batch on the
+    // first failure rather than partially accepting it.
+    for (const f of selectedFiles) {
+      const effectiveMime = getEffectiveMimeType(f);
+      if (!allowedTypes.includes(effectiveMime)) {
+        console.log('Invalid file type:', f.type, '(effective:', effectiveMime, ')');
+        setFileError("Please upload a valid video file (MP4, WebM, or MOV)");
+        return;
+      }
+
+      // Skip the size check entirely while limits are still loading rather
+      // than guessing a free-tier default - the server re-validates the
+      // real size against the correct tier before processing regardless, so
+      // there's no enforcement gap, only a UX one (a Pro user could
+      // otherwise get a false "file too large" rejection during the brief
+      // loading window, e.g. right after a fresh login when the limits
+      // query hasn't resolved).
+      if (uploadLimits) {
+        const maxSizeMB = isReelUpload ? uploadLimits.maxReelSizeMB : uploadLimits.maxClipSizeMB;
+        const maxSize = maxSizeMB * 1024 * 1024;
+        if (f.size > maxSize) {
+          console.log('File too large:', f.size, 'bytes');
+          setFileError(`File size must be less than ${maxSizeMB}MB${!uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
+          return;
+        }
+      }
+    }
+
+    // Enforce the rolling-window cap against the whole batch being selected.
+    const remaining = isReelUpload ? remainingReels : remainingClips;
+    if (selectedFiles.length > remaining) {
+      const maxPerWindow = isReelUpload ? uploadLimits?.maxReelsPerWindow : uploadLimits?.maxClipsPerWindow;
+      setFileError(
+        remaining <= 0
+          ? `You've reached your ${maxPerWindow ?? (isReelUpload ? 3 : 3)} ${isReelUpload ? 'reel' : 'clip'} upload limit for now.${uploadLimits && !uploadLimits.isPro ? ' Upgrade to Pro for a higher limit.' : ''}`
+          : `You can select up to ${remaining} more ${isReelUpload ? 'reel' : 'clip'}${remaining === 1 ? '' : 's'} right now.`
+      );
+      return;
+    }
+
+    console.log('File validation passed, setting file state');
+
+    resetVideoEditingState();
+
+    // First file loads into the editor now; any rest queue up behind it and
+    // are loaded one at a time as each prior clip finishes uploading.
+    const [firstFile, ...restFiles] = selectedFiles;
+    setVideoQueue(restFiles);
+    setQueueTotal(selectedFiles.length);
+
     // Then set the new file - this will trigger videoSrc recreation via useMemo
-    setFile(selectedFile);
-    
+    setFile(firstFile);
+
     console.log('File state updated successfully, video preview should be visible');
   };
 
@@ -650,7 +692,19 @@ const UploadPage = () => {
         }
       }
     }
-    
+
+    // Enforce the rolling-window screenshot cap against everything already
+    // queued/cropped plus this new batch.
+    const alreadyQueued = screenshotFiles.length + screenshotCropQueue.length;
+    if (alreadyQueued + files.length > remainingScreenshots) {
+      setScreenshotError(
+        remainingScreenshots <= 0
+          ? `You've reached your ${uploadLimits?.maxScreenshotsPerWindow ?? 5} screenshot upload limit for now.${uploadLimits && !uploadLimits.isPro ? ' Upgrade to Pro for a higher limit.' : ''}`
+          : `You can add ${remainingScreenshots} more screenshot${remainingScreenshots === 1 ? '' : 's'} right now.`
+      );
+      return;
+    }
+
     // Queue files for crop modal instead of adding directly
     setScreenshotCropQueue(prev => [...prev, ...files]);
 
@@ -1158,6 +1212,62 @@ const UploadPage = () => {
       setIsUploading(false);
       setUploadProgress(0);
 
+      // Bulk queue: this clip is done — before treating it as the final
+      // success (XP dialog / navigation), check whether there's another
+      // queued file and whether the user still has allowance for it. The
+      // server was already re-checked on this submit; refetch limits fresh
+      // here rather than trusting the possibly-stale cached value, since
+      // another tab or a scheduled post could have consumed the window in
+      // the meantime.
+      if (videoQueue.length > 0) {
+        let freshLimits: UploadLimits | undefined;
+        try {
+          const res = await authedFetch('/api/upload/limits', { method: 'GET' });
+          if (res.ok) {
+            freshLimits = await res.json();
+            queryClient.setQueryData(['/api/upload/limits'], freshLimits);
+          }
+        } catch (e) {
+          console.warn('Failed to refresh upload limits before advancing queue:', e);
+        }
+
+        const isReelQueue = contentType === 'reels';
+        const remaining = freshLimits
+          ? (isReelQueue
+              ? freshLimits.maxReelsPerWindow - freshLimits.reelsUsedInWindow
+              : freshLimits.maxClipsPerWindow - freshLimits.clipsUsedInWindow)
+          : 0;
+
+        if (remaining > 0) {
+          const [nextFile, ...rest] = videoQueue;
+          resetVideoEditingState();
+          setTitle("");
+          setDescription("");
+          setSelectedGame(null);
+          setTags([]);
+          setAgeRestricted(false);
+          titleRef.current = "";
+          descriptionRef.current = "";
+          setVideoQueue(rest);
+          setFile(nextFile);
+          toast({
+            title: data?.scheduled ? "Scheduled" : "Uploaded",
+            description: `${queueTotal - rest.length - 1} of ${queueTotal} done — ${rest.length + 1} remaining in queue.`,
+          });
+          return;
+        }
+
+        // Out of allowance mid-queue — stop here and fall through to the
+        // normal final-success handling below for this last completed clip.
+        setVideoQueue([]);
+        setQueueTotal(0);
+        toast({
+          title: "Queue stopped",
+          description: "You've used up your upload allowance for now — the rest of the queue was cleared.",
+          variant: "gamefolioError",
+        });
+      }
+
       // Scheduled upload: nothing went live. Confirm and send the user to their queue.
       if (data?.scheduled) {
         resetFormAndNavigate();
@@ -1182,7 +1292,7 @@ const UploadPage = () => {
 
       // Reset form first
       resetFormAndNavigate();
-      
+
       // Store upload success data for navigation after XP dialog
       const uploadedContentType = contentType === 'reels' ? 'reel' : 'clip';
       const contentId = data.clip?.id || data.id;
@@ -1447,6 +1557,24 @@ const UploadPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {queueTotal > 1 && (
+                <Alert className="mb-6" data-testid="alert-clip-queue-progress">
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Uploading clip {queueTotal - videoQueue.length} of {queueTotal}</AlertTitle>
+                  <AlertDescription className="flex items-center justify-between gap-4">
+                    <span>{videoQueue.length} more will upload automatically as each finishes.</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setVideoQueue([]); setQueueTotal(1); }}
+                      data-testid="button-cancel-clip-queue"
+                    >
+                      Cancel remaining
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -1489,9 +1617,8 @@ const UploadPage = () => {
                       e.stopPropagation();
                       setIsDraggingClip(false);
                       if (!file && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                        const droppedFile = e.dataTransfer.files[0];
                         const fakeEvent = {
-                          target: { files: [droppedFile] }
+                          target: { files: e.dataTransfer.files }
                         } as React.ChangeEvent<HTMLInputElement>;
                         handleFileChange(fakeEvent);
                       }
@@ -1504,6 +1631,7 @@ const UploadPage = () => {
                       accept="video/mp4,video/webm,video/quicktime"
                       onChange={handleFileChange}
                       className="hidden"
+                      multiple
                     />
                     
                     {file ? (
@@ -1522,6 +1650,8 @@ const UploadPage = () => {
                                 setGeneratedThumbnails([]);
                                 setThumbnailUrl("");
                                 setVideoPreviewError(null);
+                                setVideoQueue([]);
+                                setQueueTotal(0);
                                 if (fileInputRef.current) {
                                   fileInputRef.current.value = '';
                                 }
@@ -1559,6 +1689,11 @@ const UploadPage = () => {
                                         : `${maxDurLoad} seconds`;
                                       setFileError(`Video duration is ${Math.round(duration / 60 * 10) / 10} minutes. ${isReelLoad ? 'Reels' : 'Clips'} must be ${label} or less${!uploadLimits.isPro ? ' — upgrade to Pro for longer videos.' : '.'}`);
                                       setFile(null);
+                                      // Duration is only knowable after metadata loads, so a
+                                      // queued file can fail here too - clear the rest of the
+                                      // queue rather than leaving it silently orphaned.
+                                      setVideoQueue([]);
+                                      setQueueTotal(0);
                                       return;
                                     }
                                   }
@@ -1930,6 +2065,24 @@ const UploadPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {queueTotal > 1 && (
+                <Alert className="mb-6" data-testid="alert-reel-queue-progress">
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Uploading reel {queueTotal - videoQueue.length} of {queueTotal}</AlertTitle>
+                  <AlertDescription className="flex items-center justify-between gap-4">
+                    <span>{videoQueue.length} more will upload automatically as each finishes.</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setVideoQueue([]); setQueueTotal(1); }}
+                      data-testid="button-cancel-reel-queue"
+                    >
+                      Cancel remaining
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -1972,9 +2125,8 @@ const UploadPage = () => {
                       e.stopPropagation();
                       setIsDraggingReelDrop(false);
                       if (!file && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                        const droppedFile = e.dataTransfer.files[0];
                         const fakeEvent = {
-                          target: { files: [droppedFile] }
+                          target: { files: e.dataTransfer.files }
                         } as React.ChangeEvent<HTMLInputElement>;
                         handleFileChange(fakeEvent);
                       }
@@ -1987,6 +2139,7 @@ const UploadPage = () => {
                       accept="video/mp4,video/webm,video/quicktime"
                       onChange={handleFileChange}
                       className="hidden"
+                      multiple
                     />
                     
                     {file ? (
@@ -2550,7 +2703,7 @@ const UploadPage = () => {
               }} className="space-y-6">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="screenshot">Screenshot Files ({screenshotFiles.length}/3)</Label>
+                    <Label htmlFor="screenshot">Screenshot Files ({screenshotFiles.length}/{uploadLimits?.maxScreenshotsPerWindow ?? 5})</Label>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -2646,7 +2799,7 @@ const UploadPage = () => {
                       </div>
 
                       {/* Add Another Button */}
-                      {screenshotFiles.length < 3 && (
+                      {screenshotFiles.length < (uploadLimits?.maxScreenshotsPerWindow ?? 5) && (
                         <label htmlFor="screenshot" className="block">
                           <Button
                             type="button"
@@ -2661,7 +2814,7 @@ const UploadPage = () => {
                               <span>
                                 <span className="hidden sm:inline">Add Another Screenshot </span>
                                 <span className="sm:hidden">Add Screenshot </span>
-                                ({3 - screenshotFiles.length} remaining)
+                                ({(uploadLimits?.maxScreenshotsPerWindow ?? 5) - screenshotFiles.length} remaining)
                               </span>
                             </span>
                           </Button>

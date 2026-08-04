@@ -60,11 +60,11 @@ const ScreenshotUploadPage: React.FC = () => {
 
   const addFileToState = (file: File) => {
     setSelectedFiles(prev => {
-      if (prev.length >= 3) return prev;
+      if (prev.length >= maxScreenshots) return prev;
       return [...prev, file];
     });
     setPreviews(prev => {
-      if (prev.length >= 3) return prev;
+      if (prev.length >= maxScreenshots) return prev;
       const reader = new FileReader();
       reader.onload = (e) => {
         setPreviews(p => [...p, e.target?.result as string]);
@@ -91,6 +91,13 @@ const ScreenshotUploadPage: React.FC = () => {
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
   });
+
+  // Remaining allowance in the current rolling 24h window. Falls back to the
+  // Free-tier number while limits are still loading so the UI doesn't
+  // briefly allow an over-cap selection.
+  const maxScreenshots = uploadLimits
+    ? Math.max(0, uploadLimits.maxScreenshotsPerWindow - uploadLimits.screenshotsUsedInWindow)
+    : 3;
 
   const { data: scheduleLimits } = useQuery<ScheduleLimits>({
     queryKey: ['/api/scheduled-posts/limits'],
@@ -122,10 +129,12 @@ const ScreenshotUploadPage: React.FC = () => {
       return;
     }
 
-    if (selectedFiles.length + imageFiles.length > 3) {
+    if (selectedFiles.length + imageFiles.length > maxScreenshots) {
       toast({
         title: "Too many files",
-        description: "You can upload a maximum of 3 screenshots at once",
+        description: maxScreenshots <= 0
+          ? `You've reached your ${uploadLimits?.maxScreenshotsPerWindow ?? 3} screenshot upload limit for now.${uploadLimits && !uploadLimits.isPro ? ' Upgrade to Pro for a higher limit.' : ''}`
+          : `You can upload a maximum of ${maxScreenshots} more screenshot${maxScreenshots === 1 ? '' : 's'} right now`,
         variant: "destructive",
       });
       return;
@@ -166,7 +175,7 @@ const ScreenshotUploadPage: React.FC = () => {
     e.stopPropagation();
     dragCounterRef.current = 0;
     setIsDragging(false);
-    if (isUploading || selectedFiles.length >= 3) return;
+    if (isUploading || selectedFiles.length >= maxScreenshots) return;
     const files = Array.from(e.dataTransfer.files);
     processFiles(files);
   };
@@ -360,7 +369,7 @@ const ScreenshotUploadPage: React.FC = () => {
 
           {/* File Upload Area - Always Show */}
           <div className="space-y-4">
-            <Label>Screenshots ({selectedFiles.length}/3 selected)</Label>
+            <Label>Screenshots ({selectedFiles.length}/{maxScreenshots} selected)</Label>
             
             {/* Single hidden input for all file selections */}
             <input
@@ -388,17 +397,17 @@ const ScreenshotUploadPage: React.FC = () => {
                 <div className="space-y-2">
                   <p className="text-lg font-medium">{isDragging ? 'Drop files here' : 'Drag & drop or click to browse'}</p>
                   <p className="text-sm text-muted-foreground">
-                    Select up to 3 screenshots • PNG, JPG, JPEG • Hold Ctrl/Cmd to select multiple
+                    Select up to {maxScreenshots} screenshot{maxScreenshots === 1 ? '' : 's'} • PNG, JPG, JPEG • Hold Ctrl/Cmd to select multiple
                   </p>
                 </div>
               </div>
             ) : (
               <div
-                className={`space-y-4 rounded-lg transition-colors ${selectedFiles.length < 3 && isDragging ? 'border-2 border-dashed border-primary bg-primary/5 p-4' : ''}`}
-                onDragOver={selectedFiles.length < 3 ? handleDragOver : undefined}
-                onDragEnter={selectedFiles.length < 3 ? handleDragEnter : undefined}
-                onDragLeave={selectedFiles.length < 3 ? handleDragLeave : undefined}
-                onDrop={selectedFiles.length < 3 ? handleDrop : undefined}
+                className={`space-y-4 rounded-lg transition-colors ${selectedFiles.length < maxScreenshots && isDragging ? 'border-2 border-dashed border-primary bg-primary/5 p-4' : ''}`}
+                onDragOver={selectedFiles.length < maxScreenshots ? handleDragOver : undefined}
+                onDragEnter={selectedFiles.length < maxScreenshots ? handleDragEnter : undefined}
+                onDragLeave={selectedFiles.length < maxScreenshots ? handleDragLeave : undefined}
+                onDrop={selectedFiles.length < maxScreenshots ? handleDrop : undefined}
               >
                 {/* Preview Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -430,10 +439,10 @@ const ScreenshotUploadPage: React.FC = () => {
                 </div>
 
                 {/* Add Another Button or drop hint */}
-                {selectedFiles.length < 3 && (
+                {selectedFiles.length < maxScreenshots && (
                   isDragging ? (
                     <p className="text-center text-sm font-medium text-primary py-2">
-                      Drop to add screenshot ({3 - selectedFiles.length} remaining)
+                      Drop to add screenshot ({maxScreenshots - selectedFiles.length} remaining)
                     </p>
                   ) : (
                     <label htmlFor="screenshot-upload" className="block">
@@ -448,7 +457,7 @@ const ScreenshotUploadPage: React.FC = () => {
                       >
                         <span className="cursor-pointer flex items-center justify-center gap-2">
                           <Upload className="h-5 w-5" />
-                          Add Another Screenshot ({3 - selectedFiles.length} remaining)
+                          Add Another Screenshot ({maxScreenshots - selectedFiles.length} remaining)
                         </span>
                       </Button>
                     </label>
