@@ -7,13 +7,15 @@ import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { Link, useLocation } from "wouter";
 
 interface RecentUpload {
-  id: number;
-  contentType: 'clip' | 'reel' | 'screenshot';
+  id: number | string;
+  contentType: 'clip' | 'reel' | 'screenshot' | 'follower-milestone';
   username: string;
   displayName: string;
-  title: string;
+  title?: string;
   uploadedAt: string | null;
   thumbnailUrl?: string | null;
+  followerCount?: number;
+  followerMilestone?: number;
 }
 
 const CONTENT_LABELS: Record<string, string> = {
@@ -27,6 +29,8 @@ const CONTENT_ICONS: Record<string, ElementType> = {
   reel: Film,
   screenshot: Image,
 };
+
+const FOLLOW_ICON = "/attached_assets/Follow-icon_1785852557979.png";
 
 function makeKey(u: RecentUpload) {
   return `${u.id}-${u.contentType}`;
@@ -92,28 +96,49 @@ export function ActivityScrollBanner() {
                 className="inline-flex items-center gap-2 text-sm font-medium px-4"
                 style={{ color: '#071013' }}
               >
-                <Icon className="h-4 w-4 flex-shrink-0" />
-                <Link
-                  href={`/profile/${upload.username}`}
-                  className="font-semibold hover:underline"
-                  style={{ color: '#071013' }}
-                >
-                  {upload.displayName || upload.username}
-                </Link>
-                <span>{label}</span>
-                <button
-                  onClick={() => {
-                    if (upload.contentType === 'screenshot') {
-                      setLocation(`/view/screenshot/${upload.id}`);
-                    } else {
-                      openClipDialog(upload.id);
-                    }
-                  }}
-                  className="hover:underline cursor-pointer font-semibold bg-transparent border-none p-0"
-                  style={{ color: '#071013' }}
-                >
-                  "{upload.title}"
-                </button>
+                {upload.contentType === "follower-milestone" ? (
+                  <img
+                    src={FOLLOW_ICON}
+                    alt=""
+                    className="h-5 w-5 flex-shrink-0 object-contain"
+                  />
+                ) : (
+                  <Icon className="h-4 w-4 flex-shrink-0" />
+                )}
+                {upload.contentType === "follower-milestone" ? (
+                  <>
+                    <span className="font-semibold">
+                      {upload.displayName || upload.username}
+                    </span>
+                    <span>
+                      reached {upload.followerMilestone?.toLocaleString()} followers
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href={`/profile/${upload.username}`}
+                      className="font-semibold hover:underline"
+                      style={{ color: '#071013' }}
+                    >
+                      {upload.displayName || upload.username}
+                    </Link>
+                    <span>{label}</span>
+                    <button
+                      onClick={() => {
+                        if (upload.contentType === 'screenshot') {
+                          setLocation(`/view/screenshot/${upload.id}`);
+                        } else {
+                          openClipDialog(upload.id);
+                        }
+                      }}
+                      className="hover:underline cursor-pointer font-semibold bg-transparent border-none p-0"
+                      style={{ color: '#071013' }}
+                    >
+                      "{upload.title}"
+                    </button>
+                  </>
+                )}
               </div>
             );
           })}

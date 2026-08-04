@@ -7278,20 +7278,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/recent-uploads", async (req, res) => {
     try {
       const limit = 8;
-      const [clips, reels, screenshots] = await Promise.all([
+      const [clips, reels, screenshots, followerMilestoneRows] = await Promise.all([
         storage.getAllClips(limit, 0),
         storage.getLatestReels(limit),
         storage.getLatestScreenshots(limit),
+        db.execute(sql`
+          WITH numbered_follows AS (
+            SELECT
+              f.id,
+              f.following_id AS user_id,
+              f.created_at,
+              COUNT(*) OVER (
+                PARTITION BY f.following_id
+                ORDER BY f.created_at, f.id
+                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+              )::int AS follower_count
+            FROM follows f
+          ),
+          milestones(threshold) AS (
+            VALUES (10), (25), (50), (100), (250), (500), (1000)
+          )
+          SELECT
+            nf.id AS follow_id,
+            u.id AS user_id,
+            u.username,
+            u.display_name,
+            nf.follower_count,
+            m.threshold AS follower_milestone,
+            nf.created_at
+          FROM numbered_follows nf
+          JOIN users u ON u.id = nf.user_id
+          JOIN milestones m ON nf.follower_count = m.threshold
+          WHERE u.status = 'active'
+          ORDER BY nf.created_at DESC, nf.id DESC
+          LIMIT ${limit * 4}
+        `),
       ]);
 
       const items: Array<{
-        id: number;
-        contentType: 'clip' | 'reel' | 'screenshot';
+        id: number | string;
+        contentType: 'clip' | 'reel' | 'screenshot' | 'follower-milestone';
         username: string;
         displayName: string;
-        title: string;
+        title?: string;
         uploadedAt: Date | null;
         thumbnailUrl?: string | null;
+        followerCount?: number;
+        followerMilestone?: number;
       }> = [];
 
       clips
@@ -7329,6 +7362,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           uploadedAt: (s as any).createdAt || null,
           thumbnailUrl: s.imageUrl || (s as any).thumbnailUrl,
         }));
+
+      for (const row of (followerMilestoneRows as any).rows ?? followerMilestoneRows) {
+        items.push({
+          id: `follower-milestone-${row.follow_id}`,
+          contentType: 'follower-milestone',
+          username: row.username,
+          displayName: row.display_name || row.username,
+          uploadedAt: row.last_follow_at || null,
+          followerCount: Number(row.follower_count),
+          followerMilestone: Number(row.follower_milestone),
+        });
+      }
 
       items.sort((a, b) => {
         const ta = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
