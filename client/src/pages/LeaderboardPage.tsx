@@ -477,14 +477,14 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
       <button
         type="button"
         onClick={() => document.getElementById("current-season")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-        className="absolute bottom-4 left-1/2 z-[60] -translate-x-1/2 flex flex-col items-center gap-0.5 rounded-full px-4 py-1.5 text-[#07131A] hover:bg-[#D0FF55] transition-colors"
+        className="absolute bottom-4 left-1/2 z-[60] -translate-x-1/2 flex flex-row items-center gap-2 rounded-full px-4 py-2 text-[#07131A] hover:bg-[#D0FF55] transition-colors sm:bottom-auto sm:left-auto sm:right-8 sm:top-8 sm:translate-x-0"
         style={{ background: "#B7FF1A", border: "1px solid rgba(183,255,26,0.9)", boxShadow: "0 0 18px rgba(183,255,26,0.3)" }}
         aria-label="View current season"
       >
         <span className="text-[10px] font-bold uppercase tracking-[0.2em] whitespace-nowrap">
           View current season
         </span>
-        <ChevronDown className="w-5 h-5 rs-scroll-arrow" />
+        <ChevronRight className="w-4 h-4" />
       </button>
     </div>
   );
