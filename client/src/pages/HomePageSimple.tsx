@@ -752,19 +752,20 @@ const HomePage = () => {
                       /* ── Regular image slide ── */
                       <>
                         <img src={(slide as DbHeroSlide).imageUrl} alt={(slide as DbHeroSlide).title} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent">
-                          <div className="flex flex-col items-start justify-center h-full max-w-3xl p-6 sm:p-8 md:p-12">
-                            <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-3 md:mb-4 leading-tight drop-shadow-md">
+                        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.42) 50%, rgba(0,0,0,0.22) 100%)' }}>
+                          <div className="flex flex-col items-center justify-center h-full text-center px-6">
+                            <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-2 md:mb-3 leading-tight drop-shadow-md">
                               {(slide as DbHeroSlide).title}
                             </h1>
                             {(slide as DbHeroSlide).subtitle && (
-                              <h2 className="text-lg sm:text-2xl md:text-3xl font-semibold text-primary mb-4 md:mb-6 leading-tight drop-shadow-lg">
+                              <p className="text-sm sm:text-base md:text-lg text-white/80 mb-5 md:mb-7 leading-snug drop-shadow max-w-lg">
                                 {(slide as DbHeroSlide).subtitle}
-                              </h2>
+                              </p>
                             )}
                             {(slide as DbHeroSlide).buttonText && (
-                              <Button
-                                className="w-fit px-6 py-5 h-auto text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground mt-4"
+                              <button
+                                className="px-8 py-3 rounded-full text-sm sm:text-base font-bold transition-all hover:scale-105 active:scale-95"
+                                style={{ background: '#B7FF1A', color: '#0B1319', boxShadow: '0 4px 20px rgba(183,255,26,0.45)' }}
                                 onClick={() => {
                                   const link = ((slide as DbHeroSlide).buttonLink || "").toLowerCase();
                                   if (link === '#pro' || link === '/pro' || link.includes('pro')) {
@@ -775,7 +776,7 @@ const HomePage = () => {
                                 }}
                               >
                                 {(slide as DbHeroSlide).buttonText}
-                              </Button>
+                              </button>
                             )}
                           </div>
                         </div>
