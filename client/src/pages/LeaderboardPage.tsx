@@ -1416,7 +1416,7 @@ const RS_STYLES = `
   right: auto;
   width: 740px;
   gap: 4px;
-  transform: translateX(-50%) scale(1.35);
+  transform: translateX(-50%) scale(1.08);
   transform-origin: bottom center;
 }
 /* Per-rank scaling so #1 is visually larger than #2/#3 */
@@ -1428,7 +1428,7 @@ const RS_STYLES = `
 }
 /* Keep the enlarged podium usable on short laptop/preview viewports. */
 @media (min-width: 1024px) and (max-height: 799px) {
-  .lb-desktop-podium { transform: translateX(-50%) scale(1.08); }
+  .lb-desktop-podium { transform: translateX(-50%) scale(.864); }
 }
 @media (max-width: 639px) {
   .rs-season-hero { min-height: 560px; }
@@ -1438,7 +1438,7 @@ const RS_STYLES = `
   .lb-desktop-podium {
     left: 50%;
     width: 700px;
-    transform: translateX(-50%) scale(1.05);
+    transform: translateX(-50%) scale(.84);
   }
   .lb-card-1 { transform: scale(1.08) translateY(-44px); }
 }
