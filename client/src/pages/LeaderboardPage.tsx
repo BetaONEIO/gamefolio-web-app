@@ -1102,17 +1102,19 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
 // ─── Section: Rival Section ────────────────────────────────────────────────
 
 function RivalSection({ leaderboard, userId }: { leaderboard: LeaderboardEntry[]; userId: number }) {
-  const myIndex = leaderboard.findIndex(e => e.userId === userId);
+  const rankedLeaderboard = [...leaderboard].sort((a, b) => a.rank - b.rank);
+  const myIndex = rankedLeaderboard.findIndex(e => e.userId === userId);
   if (myIndex < 0) return null;
 
-  const me    = leaderboard[myIndex];
-  const above = myIndex > 0 ? leaderboard[myIndex - 1] : null;
+  const me    = rankedLeaderboard[myIndex];
+  const above = myIndex > 0 ? rankedLeaderboard[myIndex - 1] : null;
   const xpGap = above ? Math.max(0, Math.ceil(above.totalPoints - me.totalPoints)) : null;
 
-  // Show up to 2 above + me + 3 below = 6 rows max
+  // Show the signed-in player plus the closest ranked players around them.
+  // Keep the API-provided rank so gaps (for example #5 after #3) remain clear.
   const startIdx = Math.max(0, myIndex - 2);
-  const endIdx   = Math.min(leaderboard.length - 1, myIndex + 3);
-  const visible  = leaderboard.slice(startIdx, endIdx + 1);
+  const endIdx   = Math.min(rankedLeaderboard.length - 1, myIndex + 3);
+  const visible  = rankedLeaderboard.slice(startIdx, endIdx + 1);
 
   return (
     <section className="px-4 mb-8">

@@ -147,7 +147,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
             {/* Stats box */}
             <div
               className="mx-3 mt-3 flex-shrink-0 grid grid-cols-3 gap-1 rounded-xl py-2"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+              style={{ background: '#0B1319', border: '1px solid rgba(255,255,255,0.06)' }}
             >
               {[
                 { icon: Zap,   label: 'XP',        value: entry.totalPoints },
@@ -166,7 +166,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
             <div className="mx-3 mt-2.5 flex-shrink-0" style={{ height: 46 }}>
               <div
                 className="flex items-center gap-2.5 px-2.5 h-full rounded-xl"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.055)' }}
+                style={{ background: '#0B1319', border: '1px solid rgba(255,255,255,0.055)' }}
               >
                 <Gamepad2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.38)' }} />
                 <div className="flex flex-col justify-center gap-[3px] min-w-0 flex-1">
@@ -198,7 +198,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
             <div className="mx-3 mt-1.5 flex-shrink-0" style={{ height: 46 }}>
               <div
                 className="flex items-center gap-2.5 px-2.5 h-full rounded-xl transition-colors"
-                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.055)', cursor: entry.recentUpload ? 'pointer' : 'default' }}
+                style={{ background: '#0B1319', border: '1px solid rgba(255,255,255,0.055)', cursor: entry.recentUpload ? 'pointer' : 'default' }}
                 onClick={(e) => {
                   if (!entry.recentUpload) return;
                   e.preventDefault();

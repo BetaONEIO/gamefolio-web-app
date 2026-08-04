@@ -4732,10 +4732,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Lootbox
       const lootboxStatus = await storage.getDailyLootboxStatus(userId);
 
-      // Leaderboard position
-      const allTimeBoard = await LeaderboardService.getAllTimeLeaderboard(9999);
-      const rankIndex = allTimeBoard.findIndex((e: any) => e.userId === userId);
-      const rank = rankIndex >= 0 ? rankIndex + 1 : null;
+      // Weekly leaderboard position — the dashboard's XP and rivals are based
+      // on the same active competition shown in the leaderboard page.
+      let currentWeekBoard = await LeaderboardService.getCurrentWeekLeaderboard(9999);
+      if (!currentWeekBoard || currentWeekBoard.length === 0) {
+        currentWeekBoard = await LeaderboardService.getPreviousWeekLeaderboard(9999);
+      }
+      const rankIndex = currentWeekBoard.findIndex((e: any) => e.userId === userId);
+      const rank = rankIndex >= 0 ? Number(currentWeekBoard[rankIndex].rank ?? rankIndex + 1) : null;
 
       // Recent XP activity (last 20) — only entries that actually granted XP
       const recentActivity = xpHistory
@@ -4783,9 +4787,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Nearby leaderboard entries (rivals)
       const nearbyRivals = rankIndex >= 0
-        ? allTimeBoard.slice(Math.max(0, rankIndex - 2), rankIndex + 3)
+        ? currentWeekBoard
+            .slice(Math.max(0, rankIndex - 2), rankIndex + 3)
             .map((e: any, idx: number) => ({
-              rank: Math.max(0, rankIndex - 2) + idx + 1,
+              rank: Number(e.rank ?? Math.max(0, rankIndex - 2) + idx + 1),
               userId: e.userId,
               username: e.user?.username,
               displayName: e.user?.displayName,
