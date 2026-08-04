@@ -182,13 +182,13 @@ const PODIUM_IMG: Record<number, string> = {
 const PODIUM_IMG_W: Record<number, number> = {
   1: 393,
   2: 357,
-  3: 321,
+  3: 393,
 };
 
 const PODIUM_IMG_H: Record<number, number> = {
   1: 123,
   2: 105,
-  3: 90,
+  3: 123,
 };
 
 const RANK_ACCENT: Record<number, string> = {
@@ -434,7 +434,7 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
             return (
               <div
                 key={entry.userId}
-                className={`flex flex-col items-center flex-shrink-0 ${isCenter ? "" : "mt-14"} lb-card-${rank}`}
+                className={`relative flex w-[200px] flex-col items-center flex-shrink-0 ${isCenter ? "" : "mt-14"} lb-card-${rank}`}
               >
                 <div
                   className="w-[200px]"
