@@ -515,6 +515,7 @@ function CompetitiveOverview({ leaderboard, userId }: { leaderboard: Leaderboard
     { label: "Current Rank",  value: `#${myEntry.rank}`,               icon: <Trophy className="w-4 h-4 text-[#B7FF1A]" /> },
     { label: "Current League",value: `${league.icon} ${league.name}`,   icon: <Shield className="w-4 h-4" style={{ color: league.color }} /> },
     { label: "Season XP",     value: formatPoints(myEntry.totalPoints), icon: <Zap className="w-4 h-4 text-[#615fff]" /> },
+    { label: "Level",         value: myEntry.user.level != null ? `Lv.${myEntry.user.level}` : "—", icon: <Star className="w-4 h-4 text-[#FFD700]" /> },
     { label: "Uploads",       value: myEntry.uploadsCount.toString(),   icon: <Upload className="w-4 h-4 text-[#00bcff]" /> },
   ];
 
@@ -531,7 +532,7 @@ function CompetitiveOverview({ leaderboard, userId }: { leaderboard: Leaderboard
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-4">
           {stats.map(s => (
             <div key={s.label} className="rounded-xl border border-white/8 bg-black/20 px-3 py-2.5">
               <div className="flex items-center gap-1.5 mb-1">{s.icon}<span className="text-[10px] text-slate-500 uppercase tracking-wider">{s.label}</span></div>
@@ -650,6 +651,12 @@ function LeaderboardRow({ entry, isCurrentUser }: { entry: LeaderboardEntry; isC
             {isCurrentUser && <span className="text-[10px] font-bold text-black bg-[#B7FF1A] px-1.5 py-0.5 rounded-full flex-shrink-0">YOU</span>}
           </div>
           <div className="flex items-center gap-2.5 mt-0.5">
+            {entry.user.level != null && (
+              <div className="flex items-center gap-1">
+                <Star className="w-2.5 h-2.5 text-[#FFD700]" />
+                <span className="text-[10px] font-semibold text-[#FFD700]">Lv.{entry.user.level}</span>
+              </div>
+            )}
             <div className="flex items-center gap-1">
               <Upload className="w-2.5 h-2.5 text-[#00bcff]" />
               <span className="text-[10px] font-semibold text-[#00bcff]">{entry.uploadsCount}</span>
@@ -1019,29 +1026,12 @@ function RivalSection({ leaderboard, userId }: { leaderboard: LeaderboardEntry[]
 
   const me    = leaderboard[myIndex];
   const above = myIndex > 0 ? leaderboard[myIndex - 1] : null;
-  const below = myIndex < leaderboard.length - 1 ? leaderboard[myIndex + 1] : null;
   const xpGap = above ? Math.max(0, Math.ceil(above.totalPoints - me.totalPoints)) : null;
 
-  const RivalCard = ({
-    entry, label, highlight
-  }: { entry: LeaderboardEntry; label: string; highlight?: boolean }) => (
-    <Link href={`/profile/${entry.user.username}`}>
-      <div className={`flex items-center gap-3 rounded-xl border p-4 transition-all hover:scale-[1.02] cursor-pointer ${
-        highlight ? "border-[#B7FF1A]/40 bg-[#B7FF1A]/8" : "border-white/8 bg-white/3"
-      }`}>
-        <span className={`text-[10px] font-bold uppercase tracking-wider w-14 flex-shrink-0 ${highlight ? "text-[#B7FF1A]" : "text-slate-500"}`}>{label}</span>
-        <UserAvatar user={entry.user} size="sm" />
-        <div className="flex-1 min-w-0">
-          <div className={`font-bold text-sm truncate ${highlight ? "text-[#B7FF1A]" : "text-white"}`}>{entry.user.displayName}</div>
-          <div className="text-[10px] text-slate-500">Rank #{entry.rank}</div>
-        </div>
-        <div className="text-right flex-shrink-0">
-          <div className="text-sm font-black text-white">{formatPoints(entry.totalPoints)}</div>
-          <div className="text-[10px] text-slate-500">XP</div>
-        </div>
-      </div>
-    </Link>
-  );
+  // Show up to 2 above + me + 3 below = 6 rows max
+  const startIdx = Math.max(0, myIndex - 2);
+  const endIdx   = Math.min(leaderboard.length - 1, myIndex + 3);
+  const visible  = leaderboard.slice(startIdx, endIdx + 1);
 
   return (
     <section className="px-4 mb-8">
@@ -1049,18 +1039,57 @@ function RivalSection({ leaderboard, userId }: { leaderboard: LeaderboardEntry[]
         <Target className="w-5 h-5 text-[#B7FF1A]" />
         <h2 className="text-xl font-black text-white">Your Rivals</h2>
       </div>
-      <div className="rounded-2xl border border-white/8 bg-[#0a1520]/80 p-4 space-y-2">
-        {above && <RivalCard entry={above} label="Above You" />}
-        <RivalCard entry={me} label="You" highlight />
-        {below && <RivalCard entry={below} label="Below You" />}
-        {xpGap !== null && xpGap > 0 && (
-          <div className="pt-1 flex items-center gap-2 text-xs text-slate-400 bg-white/3 rounded-lg px-3 py-2.5">
+      <div className="rounded-2xl border border-white/8 bg-[#0a1520]/80 p-3 space-y-1.5">
+        {visible.map(entry => {
+          const isMe = entry.userId === userId;
+          return (
+            <Link href={`/profile/${entry.user.username}`} key={entry.userId}>
+              <div className={`flex items-center gap-3 rounded-xl border p-3.5 transition-all hover:scale-[1.01] cursor-pointer ${
+                isMe
+                  ? "border-[#B7FF1A]/60 bg-[#B7FF1A]/[0.18]"
+                  : "border-white/8 bg-white/3"
+              }`}>
+                {/* Rank / YOU badge */}
+                <div className="w-10 flex-shrink-0 flex items-center justify-center">
+                  {isMe ? (
+                    <span className="text-[9px] font-black bg-[#B7FF1A] text-black px-1.5 py-0.5 rounded-full leading-none">YOU</span>
+                  ) : (
+                    <span className="text-[11px] font-bold text-slate-500">#{entry.rank}</span>
+                  )}
+                </div>
+                <UserAvatar user={entry.user} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <div className={`font-bold text-sm truncate ${isMe ? "text-[#B7FF1A]" : "text-white"}`}>
+                    {entry.user.displayName}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px] mt-0.5">
+                    <span className={isMe ? "text-[#B7FF1A]/60" : "text-slate-500"}>Rank #{entry.rank}</span>
+                    {entry.user.level != null && (
+                      <>
+                        <span className="text-slate-700">·</span>
+                        <span className={isMe ? "text-[#B7FF1A]/60" : "text-slate-500"}>Lv.{entry.user.level}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className={`text-sm font-black ${isMe ? "text-[#B7FF1A]" : "text-white"}`}>
+                    {formatPoints(entry.totalPoints)}
+                  </div>
+                  <div className="text-[10px] text-slate-500">XP</div>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+        {xpGap !== null && xpGap > 0 && above && (
+          <div className="mt-1 flex items-center gap-2 text-xs text-slate-400 bg-white/3 rounded-lg px-3 py-2.5">
             <Flame className="w-3.5 h-3.5 text-[#ff6900] flex-shrink-0" />
-            <span>You need <strong className="text-white">{formatPoints(xpGap)} more XP</strong> to overtake <strong className="text-white">{above!.user.displayName}</strong> and move to Rank #{above!.rank}</span>
+            <span>You need <strong className="text-white">{formatPoints(xpGap)} more XP</strong> to overtake <strong className="text-white">{above.user.displayName}</strong> and move to Rank #{above.rank}</span>
           </div>
         )}
         {xpGap === 0 && (
-          <div className="pt-1 flex items-center gap-2 text-xs text-[#B7FF1A] bg-[#B7FF1A]/10 rounded-lg px-3 py-2.5">
+          <div className="mt-1 flex items-center gap-2 text-xs text-[#B7FF1A] bg-[#B7FF1A]/10 rounded-lg px-3 py-2.5">
             <Crown className="w-3.5 h-3.5 flex-shrink-0" />
             <span>You are <strong>tied for position</strong> with the player above you!</span>
           </div>
