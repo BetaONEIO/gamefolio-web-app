@@ -352,7 +352,8 @@ const GamePage = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const [activeTab, setActiveTab] = useState<TabId>("clips");
+  const [contentMode, setContentMode] = useState<"clips" | "reels" | "screenshots">("clips");
   const [timePeriod, setTimePeriod] = useState<"recent" | "1w" | "1m" | "ever">("recent");
   const [selectedUserId, setSelectedUserId] = useState("all");
   const [showUploadDialog, setShowUploadDialog] = useState(false);
@@ -403,7 +404,7 @@ const GamePage = () => {
       if (!response.ok) throw new Error('Failed to fetch trending clips');
       return response.json();
     },
-    enabled: activeTab === "clips" && !!game?.id,
+    enabled: activeTab === "clips" && contentMode === "clips" && !!game?.id,
   });
 
   const { data: trendingReels, isLoading: isLoadingReels } = useQuery<ClipWithUser[]>({
@@ -418,7 +419,7 @@ const GamePage = () => {
       if (!response.ok) throw new Error('Failed to fetch trending reels');
       return response.json();
     },
-    enabled: activeTab === "reels" && !!game?.id,
+    enabled: activeTab === "clips" && contentMode === "reels" && !!game?.id,
   });
 
   const { data: screenshots, isLoading: isLoadingScreenshots } = useQuery<any[]>({
@@ -433,7 +434,7 @@ const GamePage = () => {
       if (!response.ok) throw new Error('Failed to fetch screenshots');
       return response.json();
     },
-    enabled: false,
+    enabled: activeTab === "clips" && contentMode === "screenshots" && !!game?.id,
   });
 
   const { data: bounties = [], isLoading: bountiesLoading } = useQuery<(GameBounty & { participantCount?: number })[]>({
@@ -546,13 +547,13 @@ const GamePage = () => {
   }
 
   const periodButtons = (["recent", "1w", "1m", "ever"] as const).map(p => ({
-    id: p, label: p === "recent" ? (isMobile ? "New" : "Recent") : p === "ever" ? "All Time" : p.toUpperCase()
+    id: p, label: p === "recent" ? (isMobile ? "New" : "Most Recent") : p === "ever" ? "Ever" : p.toUpperCase()
   }));
 
   return (
     <>
       {isMobile && mobileViewerOpen && clipData.length > 0 && (
-        activeTab === "clips" ? (
+        contentMode === "clips" ? (
           <MobileClipsViewerOverlay
             clips={clipData as ClipWithUser[]}
             startClipId={mobileViewerClipId ?? (clipData as ClipWithUser[])[mobileViewerIndex]?.id ?? 0}
@@ -567,110 +568,85 @@ const GamePage = () => {
         )
       )}
 
-      {/* ── HEADER ── */}
-      <div className="relative overflow-hidden" style={{ background: "linear-gradient(180deg, rgba(193,255,0,0.05) 0%, transparent 100%)" }}>
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute w-64 h-64 rounded-full blur-[80px]" style={{ background: "rgba(193,255,0,0.06)", top: "-20%", right: "10%" }} />
-        </div>
-        <div className="relative px-4 sm:px-6 pt-4 pb-0">
-          <button onClick={() => navigate("/explore")} className="flex items-center gap-1 text-sm text-gray-400 hover:text-white mb-4 transition-colors">
-            <ArrowLeft className="w-4 h-4" />Back to Explore
+      {/* ── HISTORIC GAME HEADER ── */}
+      <div className="relative" style={{ background: "#071013" }}>
+        <div className="relative px-4 sm:px-6 pt-4 pb-3">
+          <button onClick={() => navigate("/explore")} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white mb-5 transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5" />Back to Explore
           </button>
-          <BookmarkButton
-            contentId={game.id}
-            contentType="game"
-            size={isMobile ? 20 : 24}
-            className="absolute top-4 right-4 sm:right-6"
-          />
 
-          <div className="flex items-start gap-4 sm:gap-5 mb-5">
-            {/* Square rounded game image */}
-            <div className="flex-shrink-0 relative group">
-              <div
-                className="overflow-hidden transition-all duration-300"
-                style={{
-                  width: isMobile ? "96px" : "112px",
-                  height: isMobile ? "96px" : "112px",
-                  borderRadius: "20px",
-                  border: `1.5px solid rgba(193,255,0,0.35)`,
-                  boxShadow: "0 0 32px rgba(193,255,0,0.22), 0 8px 32px rgba(0,0,0,0.5)",
-                }}
-              >
-                <img
-                  src={game.imageUrl || `https://placehold.co/320x320/111/333?text=${encodeURIComponent(game.name.charAt(0))}`}
-                  alt={game.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              </div>
+          <div className="flex items-start gap-4 sm:gap-5 mb-6">
+            <div className="flex-shrink-0 overflow-hidden rounded-[10px]"
+              style={{
+                width: isMobile ? "88px" : "110px",
+                height: isMobile ? "114px" : "142px",
+                border: "1px solid rgba(255,255,255,0.12)",
+              }}>
+              <img
+                src={game.imageUrl || `https://placehold.co/320x420/111/333?text=${encodeURIComponent(game.name.charAt(0))}`}
+                alt={game.name}
+                className="w-full h-full object-cover"
+              />
             </div>
 
-            {/* Game info */}
-            <div className="flex-1 min-w-0 pt-1">
-              <div className="flex items-start justify-between gap-2 flex-wrap">
-                <div className="min-w-0">
-                  {game.isUserAdded && (
-                    <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full mb-1.5"
-                      style={{ background: "rgba(193,255,0,0.12)", color: NEON, border: "1px solid rgba(193,255,0,0.25)" }}>
-                      <Sword className="w-2.5 h-2.5" />Indie Game
-                    </span>
-                  )}
-                  <h1 className={`font-black text-white leading-tight truncate ${isMobile ? "text-xl" : "text-2xl"}`}>{game.name}</h1>
-                </div>
+            <div className="min-w-0 pt-4">
+              <div className="flex items-center gap-2">
+                <h1 className={`font-black text-white leading-tight truncate ${isMobile ? "text-xl" : "text-2xl"}`}>{game.name}</h1>
+                <BookmarkButton contentId={game.id} contentType="game" size={18} />
               </div>
-
-              <div className="flex flex-wrap gap-3 mt-2 mb-3">
-                <span className="flex items-center gap-1 text-xs text-gray-400">
-                  <Play className="w-3 h-3" style={{ color: NEON }} />
-                  {allClips.filter((c: any) => !c.videoType || c.videoType === "clip").length} clips
-                </span>
-                <span className="flex items-center gap-1 text-xs text-gray-400">
-                  <Users className="w-3 h-3" style={{ color: NEON }} />
-                  {uniqueCreators.length} creators
-                </span>
-                <span className="flex items-center gap-1 text-xs text-gray-400">
-                  <Eye className="w-3 h-3" style={{ color: NEON }} />
-                  {totalViews.toLocaleString()} views
-                </span>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" onClick={() => setShowUploadDialog(true)}
-                  className="font-bold text-xs"
-                  style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff" }}>
-                  <Upload className="w-3.5 h-3.5 mr-1.5" />Upload
-                </Button>
-                {canCreateBounty && (
-                  <Button size="sm" onClick={() => setShowCreateBounty(true)}
-                    className="font-bold text-xs"
-                    style={{ background: NEON, color: "#0a0f1c", boxShadow: "0 4px 16px rgba(193,255,0,0.25)" }}>
-                    <Plus className="w-3.5 h-3.5 mr-1.5" />Create Bounty
-                  </Button>
-                )}
-              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Browse clips from the {game.name} community
+              </p>
+              <p className="text-[11px] text-gray-500 mt-3">
+                {allClips.filter((c: any) => !c.videoType || c.videoType === "clip").length} clips available
+              </p>
+              <Button size="sm" onClick={() => setShowUploadDialog(true)}
+                className="font-bold text-[11px] mt-2"
+                style={{ background: NEON, color: "#071013", boxShadow: "0 4px 14px rgba(193,255,0,0.18)" }}>
+                <Upload className="w-3.5 h-3.5 mr-1.5" />Upload content
+              </Button>
             </div>
           </div>
 
-          {/* ── TAB BAR ── */}
-          <div className="flex gap-0 overflow-x-auto scrollbar-none -mx-4 sm:-mx-6 px-4 sm:px-6"
-            style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-            {TABS.map(tab => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className="flex items-center gap-1.5 px-4 py-3 text-sm font-bold whitespace-nowrap flex-shrink-0 transition-all relative"
-                  style={{ color: isActive ? NEON : "rgba(255,255,255,0.4)" }}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  {tab.label}
-                  {isActive && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: NEON, boxShadow: "0 0 8px rgba(193,255,0,0.7)" }} />
-                  )}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-medium text-gray-400 mr-1">Time Period:</span>
+              {periodButtons.map(p => (
+                <button key={p.id} onClick={() => setTimePeriod(p.id)}
+                  className="px-2.5 py-1.5 rounded-md text-[10px] font-bold transition-all"
+                  style={timePeriod === p.id
+                    ? { background: NEON, color: "#071013" }
+                    : { color: "rgba(255,255,255,0.52)" }}>
+                  {p.label}
                 </button>
-              );
-            })}
+              ))}
+              <span className="text-[10px] font-medium text-gray-400 ml-2">Creator:</span>
+              <select
+                value={selectedUserId}
+                onChange={e => setSelectedUserId(e.target.value)}
+                className="text-[10px] rounded-md px-2 py-1.5 font-bold outline-none"
+                style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <option value="all">All Creators</option>
+                {uniqueCreators.map((c: any) => <option key={c.id} value={c.id}>{c.displayName || c.username}</option>)}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1 rounded-lg p-1"
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              {([
+                { id: "clips", label: "Clips", icon: Play },
+                { id: "reels", label: "Reels", icon: Video },
+                { id: "screenshots", label: "Screenshots", icon: Camera },
+              ] as const).map(({ id, label, icon: Icon }) => (
+                <button key={id} onClick={() => setContentMode(id)}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold transition-all"
+                  style={contentMode === id
+                    ? { background: "#071013", color: NEON }
+                    : { color: "rgba(255,255,255,0.42)" }}>
+                  <Icon className="w-3 h-3" />{label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -820,32 +796,8 @@ const GamePage = () => {
         )}
 
         {/* ──── CLIPS ──── */}
-        {activeTab === "clips" && (
+        {activeTab === "clips" && contentMode === "clips" && (
           <div className="py-5 space-y-4">
-            <div className="flex flex-wrap gap-2 items-center justify-between">
-              <div className="flex gap-1.5 flex-wrap">
-                {periodButtons.map(p => (
-                  <button key={p.id} onClick={() => setTimePeriod(p.id)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-                    style={timePeriod === p.id
-                      ? { background: NEON, color: "#0a0f1c" }
-                      : { background: CARD_BG, color: "rgba(255,255,255,0.5)", border: `1px solid ${CARD_BORDER}` }}>
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-              {uniqueCreators.length > 1 && (
-                <select
-                  value={selectedUserId}
-                  onChange={e => setSelectedUserId(e.target.value)}
-                  className="text-xs rounded-lg px-3 py-1.5 font-bold"
-                  style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}`, color: "rgba(255,255,255,0.7)" }}>
-                  <option value="all">All Creators</option>
-                  {uniqueCreators.map((c: any) => <option key={c.id} value={c.id}>{c.displayName || c.username}</option>)}
-                </select>
-              )}
-            </div>
-
             {isLoadingClips ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {Array(6).fill(0).map((_, i) => <Skeleton key={i} className="aspect-video rounded-xl" />)}
@@ -872,20 +824,8 @@ const GamePage = () => {
         )}
 
         {/* ──── REELS ──── */}
-        {activeTab === "reels" && (
+        {activeTab === "clips" && contentMode === "reels" && (
           <div className="py-5 space-y-4">
-            <div className="flex gap-1.5 flex-wrap">
-              {periodButtons.map(p => (
-                <button key={p.id} onClick={() => setTimePeriod(p.id)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-                  style={timePeriod === p.id
-                    ? { background: NEON, color: "#0a0f1c" }
-                    : { background: CARD_BG, color: "rgba(255,255,255,0.5)", border: `1px solid ${CARD_BORDER}` }}>
-                  {p.label}
-                </button>
-              ))}
-            </div>
-
             {isLoadingReels ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {Array(6).fill(0).map((_, i) => <Skeleton key={i} className="aspect-[9/16] rounded-xl" />)}
@@ -903,6 +843,38 @@ const GamePage = () => {
                 <p className="text-gray-400 text-sm mb-4">Upload vertical reels for {game.name}</p>
                 <Button onClick={() => setShowUploadDialog(true)} style={{ background: NEON, color: "#0a0f1c", fontWeight: 700 }}>
                   <Upload className="w-4 h-4 mr-2" />Upload Reel
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ──── SCREENSHOTS ──── */}
+        {activeTab === "clips" && contentMode === "screenshots" && (
+          <div className="py-5">
+            {isLoadingScreenshots ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array(6).fill(0).map((_, i) => <Skeleton key={i} className="aspect-video rounded-xl" />)}
+              </div>
+            ) : screenshots && screenshots.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {screenshots.map((screenshot: any) => (
+                  <ScreenshotCard
+                    key={screenshot.id}
+                    screenshot={screenshot}
+                    profile={user}
+                    showUserInfo
+                    onSelect={setSelectedScreenshot}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <Camera className="w-12 h-12 mx-auto mb-3 text-gray-600" />
+                <h3 className="text-lg font-semibold mb-1">No screenshots found</h3>
+                <p className="text-gray-400 text-sm mb-4">Upload screenshots for {game.name}</p>
+                <Button onClick={() => setShowUploadDialog(true)} style={{ background: NEON, color: "#0a0f1c", fontWeight: 700 }}>
+                  <Upload className="w-4 h-4 mr-2" />Upload Screenshot
                 </Button>
               </div>
             )}
