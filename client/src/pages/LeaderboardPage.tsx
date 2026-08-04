@@ -1423,7 +1423,7 @@ const RS_STYLES = `
 .lb-card-1 { transform: scale(1.03) translateY(28px); transform-origin: bottom center; }
 .lb-card-2,
 .lb-card-3 { transform: scale(0.93); transform-origin: bottom center; }
-.lb-card-2 { margin-right: -136px; }
+.lb-card-2 { margin-right: -120px; }
 .lb-card-3 { margin-left: -136px; }
 @media (min-width: 640px) {
   .rs-season-hero { height: calc(100dvh - 144px); }
