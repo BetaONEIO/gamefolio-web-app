@@ -610,6 +610,22 @@ const GamePage = () => {
 
           <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
             <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1 rounded-lg p-1"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                {([
+                  { id: "clips", label: "Clips", icon: Play },
+                  { id: "reels", label: "Reels", icon: Video },
+                  { id: "screenshots", label: "Screenshots", icon: Camera },
+                ] as const).map(({ id, label, icon: Icon }) => (
+                  <button key={id} onClick={() => setContentMode(id)}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold transition-all"
+                    style={contentMode === id
+                      ? { background: "#071013", color: NEON }
+                      : { color: "rgba(255,255,255,0.42)" }}>
+                    <Icon className="w-3 h-3" />{label}
+                  </button>
+                ))}
+              </div>
               <span className="text-[10px] font-medium text-gray-400 mr-1">Time Period:</span>
               {periodButtons.map(p => (
                 <button key={p.id} onClick={() => setTimePeriod(p.id)}
@@ -629,23 +645,6 @@ const GamePage = () => {
                 <option value="all">All Creators</option>
                 {uniqueCreators.map((c: any) => <option key={c.id} value={c.id}>{c.displayName || c.username}</option>)}
               </select>
-            </div>
-
-            <div className="flex items-center gap-1 rounded-lg p-1"
-              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              {([
-                { id: "clips", label: "Clips", icon: Play },
-                { id: "reels", label: "Reels", icon: Video },
-                { id: "screenshots", label: "Screenshots", icon: Camera },
-              ] as const).map(({ id, label, icon: Icon }) => (
-                <button key={id} onClick={() => setContentMode(id)}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-bold transition-all"
-                  style={contentMode === id
-                    ? { background: "#071013", color: NEON }
-                    : { color: "rgba(255,255,255,0.42)" }}>
-                  <Icon className="w-3 h-3" />{label}
-                </button>
-              ))}
             </div>
           </div>
         </div>
