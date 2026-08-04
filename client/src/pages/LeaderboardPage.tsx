@@ -167,9 +167,9 @@ function UserAvatar({ user, size = "md" }: { user: LeaderboardEntry["user"] | To
 // ─── Section: Season Hero (banner + top-3 podium) ─────────────────────────
 
 const PODIUM_GLOW: Record<number, string> = {
-  1: "drop-shadow(0 0 22px rgba(255,215,0,0.9)) drop-shadow(0 6px 14px rgba(255,190,0,0.55))",
-  2: "drop-shadow(0 0 16px rgba(210,210,210,0.85)) drop-shadow(0 5px 10px rgba(192,192,192,0.5))",
-  3: "drop-shadow(0 0 14px rgba(205,127,50,0.85)) drop-shadow(0 5px 10px rgba(180,100,30,0.5))",
+  1: "drop-shadow(0 0 28px rgba(255,215,0,1.0)) drop-shadow(0 0 10px rgba(255,190,0,0.7)) drop-shadow(0 8px 18px rgba(220,160,0,0.5))",
+  2: "drop-shadow(0 0 18px rgba(220,220,220,0.8)) drop-shadow(0 4px 10px rgba(180,180,180,0.4))",
+  3: "drop-shadow(0 0 18px rgba(205,127,50,0.8)) drop-shadow(0 4px 10px rgba(165,90,20,0.4))",
 };
 
 const PODIUM_IMG: Record<number, string> = {
@@ -387,16 +387,31 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
 
   return (
     <div className="relative rs-season-hero overflow-hidden">
+      {/* Background artwork — dimmed */}
       <div
         className="absolute inset-0"
-        style={{ backgroundImage: "url('/electrical-bg.webp')", backgroundSize: "cover", backgroundPosition: "center" }}
+        style={{
+          backgroundImage: "url('/electrical-bg.webp')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          filter: "brightness(0.55) saturate(0.75)",
+        }}
       />
-      {/* Gradient overlay */}
-      <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,rgba(5,9,13,0.50) 0%,rgba(8,14,24,0.55) 45%,rgba(5,9,13,0.88) 100%)" }} />
+      {/* Dark base overlay */}
+      <div className="absolute inset-0" style={{ background: "rgba(3,10,14,0.72)" }} />
+      {/* Subtle neon-green radial glow behind the #1 card (centre) */}
+      <div className="absolute inset-0 pointer-events-none hidden sm:block"
+        style={{ background: "radial-gradient(ellipse at 62% 58%, rgba(183,255,26,0.09) 0%, transparent 42%)" }} />
+      {/* Vignette — darken edges */}
+      <div className="absolute inset-0 pointer-events-none"
+        style={{ background: "radial-gradient(ellipse at center, transparent 30%, rgba(3,10,14,0.65) 100%)" }} />
+      {/* Bottom fade */}
+      <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none"
+        style={{ background: "linear-gradient(0deg, rgba(3,10,14,0.92) 0%, transparent 100%)" }} />
 
-      {/* Gold glow orb behind rank-1 */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-96 h-48 blur-3xl opacity-25 pointer-events-none hidden sm:block"
-        style={{ background: "radial-gradient(ellipse,#FFD700,transparent 70%)" }} />
+      {/* Gold glow orb behind rank-1 — boosted */}
+      <div className="absolute bottom-0 left-[62%] -translate-x-1/2 w-[480px] h-56 blur-3xl opacity-30 pointer-events-none hidden sm:block"
+        style={{ background: "radial-gradient(ellipse,rgba(255,215,0,0.9),transparent 65%)" }} />
 
       {/* ── DESKTOP: page title — upper-left of hero ── */}
       <div className="absolute top-8 left-8 z-10 hidden sm:block max-w-[270px]">
@@ -417,11 +432,11 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
       </div>
 
       {/* ── DESKTOP: three-column podium — absolutely fills hero, cards centred ── */}
-      <div className="lb-desktop-podium hidden sm:absolute sm:inset-0 sm:flex sm:items-end sm:justify-center gap-8 lg:gap-14 px-4 pb-16">
+      <div className="lb-desktop-podium hidden sm:absolute sm:inset-0 sm:flex sm:items-end sm:justify-center gap-4 lg:gap-6 px-4 pb-12">
         {top3.length === 0 ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex flex-col items-center">
-              <div className={`w-[228px] ${i !== 1 ? "mt-10" : ""}`}>
+              <div className="w-[228px]">
                 <Skeleton className="h-[480px] rounded-2xl bg-slate-800" />
               </div>
               <Skeleton className="mt-1 h-28 w-48 bg-slate-800/60 rounded" />
@@ -430,13 +445,12 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
         ) : (
           ordered.map((entry) => {
             const rank = podiumRank(entry);
-            const isCenter = rank === 1;
             return (
               <div
                 key={entry.userId}
-                className={`relative flex flex-col items-center flex-shrink-0 ${isCenter ? "-translate-y-14" : ""} lb-card-${rank}`}
+                className={`relative flex flex-col items-center flex-shrink-0 lb-card-${rank}`}
               >
-                <div
+                <div className={rank === 1 ? "lb-card-1-glow" : ""}
                   style={{ filter: PODIUM_GLOW[rank] }}
                 >
                   <CreatorCard entry={entry} period="week" />
@@ -1387,15 +1401,30 @@ const RS_STYLES = `
 @keyframes rs-float { 0%,100%{transform:translateY(0px);} 50%{transform:translateY(-6px);} }
 @keyframes rs-glow-pulse { 0%,100%{opacity:.6;} 50%{opacity:1;} }
 @keyframes rs-scroll-bounce { 0%,100%{transform:translateY(0);opacity:.65;} 50%{transform:translateY(6px);opacity:1;} }
+@keyframes lb-gold-breathe { 0%,100%{filter:drop-shadow(0 0 28px rgba(255,215,0,1.0)) drop-shadow(0 0 10px rgba(255,190,0,0.7)) drop-shadow(0 8px 18px rgba(220,160,0,0.5));} 50%{filter:drop-shadow(0 0 38px rgba(255,215,0,1.0)) drop-shadow(0 0 18px rgba(255,200,0,0.9)) drop-shadow(0 10px 24px rgba(220,160,0,0.65));} }
 .rs-hero-trophy { animation: rs-float 3.5s ease-in-out infinite; }
 .rs-scroll-arrow { animation: rs-scroll-bounce 1.5s ease-in-out infinite; }
+.lb-card-1-glow { animation: lb-gold-breathe 2.8s ease-in-out infinite; }
 .rs-season-hero { height: calc(100dvh - 72px); min-height: 520px; }
-.lb-desktop-podium { transform: translateX(30px) scale(.82); transform-origin: bottom center; }
+/* Whole podium group — scale up vs the old .72 baseline */
+.lb-desktop-podium { transform: scale(.90); transform-origin: bottom center; }
+/* Per-rank scaling so #1 is visually larger than #2/#3 */
+.lb-card-1 { transform: scale(1.10) translateY(-50px); transform-origin: bottom center; }
+.lb-card-2,
+.lb-card-3 { transform: scale(0.93); transform-origin: bottom center; }
 @media (min-width: 640px) {
   .rs-season-hero { height: calc(100dvh - 144px); }
 }
 @media (max-width: 639px) {
   .rs-season-hero { min-height: 560px; }
+}
+/* Tablet: slight scale down so all 3 fit */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .lb-desktop-podium { transform: scale(.78); }
+  .lb-card-1 { transform: scale(1.08) translateY(-44px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-card-1-glow, .rs-hero-trophy, .rs-scroll-arrow { animation: none !important; }
 }
 .rs-section-divider { background: linear-gradient(90deg, transparent, rgba(183,255,26,0.2), transparent); height:1px; margin:0 1rem 2rem; }
 /* Mobile podium horizontal scroll */
