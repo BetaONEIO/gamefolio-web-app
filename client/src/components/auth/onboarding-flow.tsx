@@ -14,6 +14,8 @@ import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboar
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import { Game } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
+import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
+import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import TwitchGameSearch, { TwitchGame } from "@/components/games/TwitchGameSearch";
@@ -284,6 +286,8 @@ export default function OnboardingFlow({
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(OnboardingStep.Welcome);
   const [stepDirection, setStepDirection] = useState<'forward' | 'back'>('forward');
   const [isLoading, setIsLoading] = useState(false);
+  const [showIndieDevUpgrade, setShowIndieDevUpgrade] = useState(false);
+  const [showProUpgrade, setShowProUpgrade] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
@@ -1774,22 +1778,22 @@ export default function OnboardingFlow({
             titleA: 'GAMEFOLIO',  titleB: 'PRO',
             sub: 'Unlock more ways to grow, customise and earn.',
             emoji: '⚡',
-            benefits: ['Access exclusive bounties', 'Earn GFT rewards', 'XP boosts', 'Premium profile customisation', 'Early feature access'],
+            benefits: ['Larger & unlimited uploads', 'Animated profile banners & GIF avatars', 'Exclusive avatar borders & Pro badge', 'Welcome + monthly bonus lootboxes', 'Up to 20% off in the Gamefolio store'],
             proLabel: 'View Gamefolio Pro',
           },
           streamer: {
-            titleA: 'STREAMER',  titleB: 'PRO',
+            titleA: 'GAMEFOLIO',  titleB: 'PRO',
             sub: 'Grow your audience and turn streams into content.',
             emoji: '🎙️',
-            benefits: ['Livestream featured on homepage', 'Access creator bounties', 'Stream challenges & rewards', 'Social media promotion', 'Kick/Twitch/YouTube integrations', 'Creator growth opportunities'],
-            proLabel: 'View Streamer Pro',
+            benefits: ['Larger & unlimited uploads', 'Animated profile banners & GIF avatars', 'Exclusive avatar borders & Pro badge', 'Welcome + monthly bonus lootboxes', 'Up to 20% off in the Gamefolio store'],
+            proLabel: 'View Gamefolio Pro',
           },
           indie: {
-            titleA: 'INDIE',  titleB: 'PRO',
-            sub: 'Reach players, creators and gaming communities.',
-            emoji: '🕹️',
-            benefits: ['Create an indie game profile', 'Add store links', 'Showcase clips, reels and screenshots', 'Launch creator bounties', 'Get featured on Gamefolio', 'Blog & content opportunities'],
-            proLabel: 'View Indie Pro',
+            titleA: 'INDIE',  titleB: 'DEVELOPER',
+            sub: 'Run up to 5 active bounties at once, plus get featured across Gamefolio.',
+            emoji: '🚀',
+            benefits: ['Run up to 5 active bounties at once (free: 1)', 'Featured promotion on gamefolio.com/games', 'Included in Gamefolio\'s social media promotion', '£4.99/mo or £49.99/yr'],
+            proLabel: 'Upgrade to Indie Developer',
           },
         };
         const upsell = upsellConfig[selectedPath || 'gamer'];
@@ -1820,7 +1824,10 @@ export default function OnboardingFlow({
               </Card>
             </div>
             <div className="space-y-3 mt-auto">
-              <Button className="w-full bg-primary hover:bg-primary/90 text-[#071013] font-bold py-5 rounded-xl">
+              <Button
+                onClick={() => selectedPath === 'indie' ? setShowIndieDevUpgrade(true) : setShowProUpgrade(true)}
+                className="w-full bg-primary hover:bg-primary/90 text-[#071013] font-bold py-5 rounded-xl"
+              >
                 {upsell.proLabel}
               </Button>
               <Button variant="ghost" onClick={goToNextStep} className="w-full text-gray-400 hover:text-white py-3">
@@ -1830,6 +1837,11 @@ export default function OnboardingFlow({
                 Back
               </Button>
             </div>
+            {selectedPath === 'indie' ? (
+              <IndieDevUpgradeDialog open={showIndieDevUpgrade} onOpenChange={setShowIndieDevUpgrade} />
+            ) : (
+              <ProUpgradeDialog open={showProUpgrade} onOpenChange={setShowProUpgrade} />
+            )}
           </div>
         );
       }
