@@ -432,7 +432,7 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
       </div>
 
       {/* ── DESKTOP: three-column podium — absolutely fills hero, cards centred ── */}
-      <div className="lb-desktop-podium hidden sm:flex sm:items-end sm:justify-center gap-1 lg:gap-2 px-4 pb-12">
+      <div className="lb-desktop-podium hidden sm:flex sm:items-end sm:justify-center gap-1 lg:gap-2 px-4 pb-16">
         {top3.length === 0 ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex flex-col items-center">
@@ -1416,7 +1416,7 @@ const RS_STYLES = `
   right: auto;
   width: 700px;
   gap: 2px;
-  transform: translateX(-50%) scale(.97);
+  transform: translateX(-50%) scale(1.067);
   transform-origin: bottom center;
 }
 /* Per-rank scaling so #1 is visually larger than #2/#3 */
@@ -1428,7 +1428,7 @@ const RS_STYLES = `
 }
 /* Keep the enlarged podium usable on short laptop/preview viewports. */
 @media (min-width: 1024px) and (max-height: 799px) {
-  .lb-desktop-podium { transform: translateX(-50%) scale(.778); }
+  .lb-desktop-podium { transform: translateX(-50%) scale(.856); }
 }
 @media (max-width: 639px) {
   .rs-season-hero { min-height: 560px; }
@@ -1438,7 +1438,7 @@ const RS_STYLES = `
   .lb-desktop-podium {
     left: 50%;
     width: 660px;
-    transform: translateX(-50%) scale(.756);
+    transform: translateX(-50%) scale(.832);
   }
   .lb-card-1 { transform: scale(1.08) translateY(-44px); }
 }
