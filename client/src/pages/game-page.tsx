@@ -11,7 +11,6 @@ import { useMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ClipWithUser, Game, GameBounty } from "@shared/schema";
-import { Upload, ArrowLeft, Play, TrendingUp, Camera, Users, Clock, Calendar, CalendarDays, X, Mail } from "lucide-react";
 import { BookmarkButton } from "@/components/engagement/BookmarkButton";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
@@ -21,7 +20,7 @@ import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreensh
 import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
 import {
   ArrowLeft, Play, Camera, Users, Clock, Calendar, CalendarDays,
-  Trophy, Zap, Key, Star, Gift, Sword, Plus, Upload, X,
+  Trophy, Zap, Key, Star, Gift, Sword, Plus, Upload, X, Mail,
   ChevronRight, Loader2, Radio, Target, Shield, Flame,
   BarChart3, Video, Eye, TrendingUp,
 } from "lucide-react";
