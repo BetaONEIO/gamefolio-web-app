@@ -144,6 +144,36 @@ const LEADERBOARD_STYLES = `
 .lb-spark:nth-child(4) { animation: lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#FFD700; top:50%; left:50%; margin:-3px; animation-delay:-2.25s,-0.9s; }
 .lb-spark:nth-child(5) { animation: lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#B7FF18; top:50%; left:50%; margin:-3px; animation-delay:-3s,-1.1s; }
 .lb-spark:nth-child(6) { animation: lb-orbit 6.5s linear infinite, lb-sparkle 1.8s ease-in-out infinite; background:#fff; top:50%; left:50%; margin:-3px; animation-delay:-3.75s,-1.4s; }
+/* ── Hero slide CTA button ── */
+@keyframes pro-btn-grad {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes pro-sparkle {
+  0%, 100% { opacity: 1;   transform: scale(1)   rotate(0deg); }
+  25%       { opacity: 0.6; transform: scale(1.5) rotate(15deg); }
+  75%       { opacity: 0.8; transform: scale(0.8) rotate(-10deg); }
+}
+.pro-cta-btn {
+  position: relative;
+  background: linear-gradient(120deg, #ffe135, #B7FF1A, #7fff00, #B7FF1A, #ffe135);
+  background-size: 300% 300%;
+  animation: pro-btn-grad 3s ease infinite;
+  border: none;
+  overflow: visible;
+}
+.pro-cta-btn:hover { filter: brightness(1.08); }
+.pro-cta-sparkle {
+  position: absolute;
+  top: -7px;
+  right: -5px;
+  font-size: 16px;
+  line-height: 1;
+  pointer-events: none;
+  animation: pro-sparkle 1.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px #ffe135);
+}
 /* Mobile: horizontal scroll podium */
 @media (max-width: 639px) {
   .lb-podium-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -764,8 +794,8 @@ const HomePage = () => {
                             )}
                             {(slide as DbHeroSlide).buttonText && (
                               <button
-                                className="px-8 py-3 rounded-full text-sm sm:text-base font-bold transition-all hover:scale-105 active:scale-95"
-                                style={{ background: '#B7FF1A', color: '#0B1319', boxShadow: '0 4px 20px rgba(183,255,26,0.45)' }}
+                                className="pro-cta-btn px-8 py-3 rounded-full text-sm sm:text-base font-bold transition-transform hover:scale-105 active:scale-95"
+                                style={{ color: '#0B1319', boxShadow: '0 4px 24px rgba(183,255,26,0.5)' }}
                                 onClick={() => {
                                   const link = ((slide as DbHeroSlide).buttonLink || "").toLowerCase();
                                   if (link === '#pro' || link === '/pro' || link.includes('pro')) {
@@ -775,6 +805,7 @@ const HomePage = () => {
                                   }
                                 }}
                               >
+                                <span className="pro-cta-sparkle">✦</span>
                                 {(slide as DbHeroSlide).buttonText}
                               </button>
                             )}
