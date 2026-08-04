@@ -414,13 +414,27 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
         style={{ background: "radial-gradient(ellipse,rgba(255,215,0,0.9),transparent 65%)" }} />
 
       {/* ── DESKTOP: page title — upper-left of hero ── */}
-      <div className="absolute top-8 left-8 z-10 hidden sm:block max-w-[270px]">
+      <div className="absolute top-8 left-8 z-10 hidden sm:block max-w-[560px]">
         <p className="text-[#B7FF1A] text-[10px] tracking-[0.22em] uppercase font-bold mb-2">
           Season Rankings
         </p>
-        <h1 className="text-3xl font-black text-white tracking-tight uppercase leading-none mb-3">
-          Leaderboard
-        </h1>
+        <div className="flex items-center gap-4 mb-3">
+          <h1 className="text-3xl font-black text-white tracking-tight uppercase leading-none">
+            Leaderboard
+          </h1>
+          <button
+            type="button"
+            onClick={() => document.getElementById("current-season")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="flex flex-row items-center gap-2 rounded-full px-4 py-2 text-[#07131A] hover:bg-[#D0FF55] transition-colors whitespace-nowrap"
+            style={{ background: "#B7FF1A", border: "1px solid rgba(183,255,26,0.9)", boxShadow: "0 0 18px rgba(183,255,26,0.3)" }}
+            aria-label="View current season"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
+              View current season
+            </span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
         <p className="text-slate-400 text-xs leading-relaxed">
           Compete in ranked seasons, climb the rankings and become a Gamefolio Champion.
         </p>
@@ -477,7 +491,7 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
       <button
         type="button"
         onClick={() => document.getElementById("current-season")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-        className="absolute bottom-4 left-1/2 z-[60] -translate-x-1/2 flex flex-row items-center gap-2 rounded-full px-4 py-2 text-[#07131A] hover:bg-[#D0FF55] transition-colors sm:bottom-auto sm:left-auto sm:right-8 sm:top-8 sm:translate-x-0"
+        className="absolute bottom-4 left-1/2 z-[60] -translate-x-1/2 flex flex-row items-center gap-2 rounded-full px-4 py-2 text-[#07131A] hover:bg-[#D0FF55] transition-colors sm:hidden"
         style={{ background: "#B7FF1A", border: "1px solid rgba(183,255,26,0.9)", boxShadow: "0 0 18px rgba(183,255,26,0.3)" }}
         aria-label="View current season"
       >
