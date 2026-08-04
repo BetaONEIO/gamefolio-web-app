@@ -265,6 +265,8 @@ function ChallengeCard({ challenge, isLoading }: { challenge: Challenge; isLoadi
 export function DailyXPChallenges() {
   const { user } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
@@ -303,6 +305,46 @@ export function DailyXPChallenges() {
     if (!el) return;
     setCanScrollLeft(el.scrollLeft > 10);
     setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
+  };
+
+  useEffect(() => {
+    updateScrollButtons();
+    window.addEventListener('resize', updateScrollButtons);
+    return () => window.removeEventListener('resize', updateScrollButtons);
+  }, [sortedChallenges.length]);
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    const el = scrollRef.current;
+    if (!el) return;
+
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startScrollLeft: el.scrollLeft,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsDragging(true);
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    const el = scrollRef.current;
+    if (!drag || drag.pointerId !== event.pointerId || !el) return;
+
+    event.preventDefault();
+    el.scrollLeft = drag.startScrollLeft - (event.clientX - drag.startX);
+    updateScrollButtons();
+  };
+
+  const stopDragging = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    dragRef.current = null;
+    setIsDragging(false);
   };
 
   const scroll = (dir: 'left' | 'right') => {
@@ -410,8 +452,19 @@ export function DailyXPChallenges() {
         <div
           ref={scrollRef}
           onScroll={updateScrollButtons}
-          className="flex gap-3 overflow-x-auto pb-3 px-4 sm:px-6 md:px-8"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={stopDragging}
+          onPointerCancel={stopDragging}
+          onLostPointerCapture={stopDragging}
+          className={`flex gap-3 overflow-x-auto pb-3 px-4 sm:px-6 md:px-8 select-none ${
+            isDragging ? 'cursor-grabbing' : 'cursor-grab'
+          }`}
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            touchAction: 'pan-y',
+          }}
         >
           {(activityLoading && user)
             ? Array.from({ length: 6 }).map((_, i) => (

@@ -26,7 +26,6 @@ export default function LatestContentSlider() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
-  const scrollCooldown = useRef(false);
   const [, navigate] = useLocation();
 
   const { data: clipsData, isLoading: clipsLoading } = useQuery<ClipWithUser[]>({
@@ -95,14 +94,6 @@ export default function LatestContentSlider() {
     touchStartX.current = null;
   };
 
-  const handleVideoWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    if (scrollCooldown.current) return;
-    if (e.deltaY <= 0) return;
-    scrollCooldown.current = true;
-    setTimeout(() => { scrollCooldown.current = false; }, 600);
-    goNext();
-  };
 
   useEffect(() => {
     if (!current?.videoUrl) return;
@@ -217,7 +208,6 @@ export default function LatestContentSlider() {
             className="relative rounded-2xl overflow-hidden flex-1 min-h-0 cursor-pointer group"
             style={{ background: "#000" }}
             onClick={handlePlayClick}
-            onWheel={handleVideoWheel}
           >
             {/* Blurred bg */}
             {current.thumbnailUrl && !playing && (
