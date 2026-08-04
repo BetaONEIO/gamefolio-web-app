@@ -29,30 +29,17 @@ const STYLES = `
     animation-play-state: paused;
   }
 
-  /* Animated section background – waving yellow/green gradient, right to left */
-  @keyframes trending-bg-wave {
-    0%   { background-position: 0% 50%; }
-    50%  { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
-  .trending-bg-animated {
-    background: linear-gradient(
-      to left,
-      #B7FF1A 0%,
-      #7ACC00 20%,
-      #3D9900 42%,
-      #1A6600 60%,
-      #0D3D00 78%,
-      #B7FF1A 100%
-    );
-    background-size: 300% 300%;
-    animation: trending-bg-wave 6s ease infinite;
+  .trending-bg-pattern {
+    background-image:
+      linear-gradient(rgba(4, 10, 2, 0.34), rgba(4, 10, 2, 0.34)),
+      url("/attached_assets/background-trending_1785854153143.png");
+    background-position: center;
+    background-size: cover;
+    background-repeat: repeat;
   }
 
-  /* Respect reduced-motion */
   @media (prefers-reduced-motion: reduce) {
     .fire-carousel-track { animation: none; }
-    .trending-bg-animated { animation: none; background: #3D9900; }
   }
 
   ${CREATOR_CARD_STYLES}
@@ -123,9 +110,9 @@ const FeaturedUsersSection = () => {
         </div>
       </div>
 
-      {/* Section body with animated background */}
+      {/* Section body with lightning pattern background */}
       <div
-        className="relative overflow-hidden rounded-2xl trending-bg-animated"
+        className="relative overflow-hidden rounded-2xl trending-bg-pattern"
         style={{ padding: '20px 0' }}
       >
         {/* Edge fade overlays */}
