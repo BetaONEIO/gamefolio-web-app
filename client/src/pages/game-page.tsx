@@ -578,8 +578,8 @@ const GamePage = () => {
           <div className="flex items-start gap-4 sm:gap-5 mb-6">
             <div className="flex-shrink-0 overflow-hidden rounded-[10px]"
               style={{
-                width: isMobile ? "88px" : "110px",
-                height: isMobile ? "114px" : "142px",
+                width: isMobile ? "100px" : "160px",
+                height: isMobile ? "130px" : "207px",
                 border: "1px solid rgba(255,255,255,0.12)",
               }}>
               <img
