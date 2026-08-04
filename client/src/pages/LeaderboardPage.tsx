@@ -432,7 +432,7 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
       </div>
 
       {/* ── DESKTOP: three-column podium — absolutely fills hero, cards centred ── */}
-      <div className="lb-desktop-podium hidden sm:absolute sm:inset-0 sm:flex sm:items-end sm:justify-center gap-4 lg:gap-6 px-4 pb-12">
+      <div className="lb-desktop-podium hidden sm:flex sm:items-end sm:justify-center gap-4 lg:gap-6 px-4 pb-12">
         {top3.length === 0 ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex flex-col items-center">
@@ -1407,7 +1407,18 @@ const RS_STYLES = `
 .lb-card-1-glow { animation: lb-gold-breathe 2.8s ease-in-out infinite; }
 .rs-season-hero { height: calc(100dvh - 72px); min-height: 520px; }
 /* Whole podium group — scale up vs the old .72 baseline */
-.lb-desktop-podium { transform: scale(.90); transform-origin: bottom center; }
+.lb-desktop-podium {
+  position: absolute;
+  top: 0;
+  right: auto;
+  bottom: 0;
+  left: 50%;
+  right: auto;
+  width: 740px;
+  gap: 4px;
+  transform: translateX(-50%) scale(1.35);
+  transform-origin: bottom center;
+}
 /* Per-rank scaling so #1 is visually larger than #2/#3 */
 .lb-card-1 { transform: scale(1.10) translateY(-50px); transform-origin: bottom center; }
 .lb-card-2,
@@ -1415,12 +1426,20 @@ const RS_STYLES = `
 @media (min-width: 640px) {
   .rs-season-hero { height: calc(100dvh - 144px); }
 }
+/* Keep the enlarged podium usable on short laptop/preview viewports. */
+@media (min-width: 1024px) and (max-height: 799px) {
+  .lb-desktop-podium { transform: translateX(-50%) scale(1.08); }
+}
 @media (max-width: 639px) {
   .rs-season-hero { min-height: 560px; }
 }
 /* Tablet: slight scale down so all 3 fit */
 @media (min-width: 640px) and (max-width: 1023px) {
-  .lb-desktop-podium { transform: scale(.78); }
+  .lb-desktop-podium {
+    left: 50%;
+    width: 700px;
+    transform: translateX(-50%) scale(1.05);
+  }
   .lb-card-1 { transform: scale(1.08) translateY(-44px); }
 }
 @media (prefers-reduced-motion: reduce) {
