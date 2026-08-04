@@ -432,7 +432,7 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
       </div>
 
       {/* ── DESKTOP: three-column podium — absolutely fills hero, cards centred ── */}
-      <div className="lb-desktop-podium hidden sm:flex sm:items-end sm:justify-center gap-1 lg:gap-2 px-4 pb-16">
+      <div className="lb-desktop-podium hidden sm:flex sm:items-end sm:justify-center gap-2 lg:gap-3 px-4 pb-16">
         {top3.length === 0 ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex flex-col items-center">
@@ -477,8 +477,8 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
       <button
         type="button"
         onClick={() => document.getElementById("current-season")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-        className="absolute bottom-4 left-1/2 z-[60] -translate-x-1/2 flex flex-col items-center gap-0.5 rounded-full px-4 py-1.5 text-white/80 hover:text-[#B7FF1A] transition-colors"
-        style={{ background: "rgba(5,9,13,0.68)", border: "1px solid rgba(183,255,26,0.28)", backdropFilter: "blur(6px)" }}
+        className="absolute bottom-4 left-1/2 z-[60] -translate-x-1/2 flex flex-col items-center gap-0.5 rounded-full px-4 py-1.5 text-[#07131A] hover:bg-[#D0FF55] transition-colors"
+        style={{ background: "#B7FF1A", border: "1px solid rgba(183,255,26,0.9)", boxShadow: "0 0 18px rgba(183,255,26,0.3)" }}
         aria-label="View current season"
       >
         <span className="text-[10px] font-bold uppercase tracking-[0.2em] whitespace-nowrap">
@@ -1420,9 +1420,11 @@ const RS_STYLES = `
   transform-origin: bottom center;
 }
 /* Per-rank scaling so #1 is visually larger than #2/#3 */
-.lb-card-1 { transform: scale(1.10) translateY(-50px); transform-origin: bottom center; }
+.lb-card-1 { transform: scale(1.03) translateY(28px); transform-origin: bottom center; }
 .lb-card-2,
 .lb-card-3 { transform: scale(0.93); transform-origin: bottom center; }
+.lb-card-2 { margin-right: -136px; }
+.lb-card-3 { margin-left: -136px; }
 @media (min-width: 640px) {
   .rs-season-hero { height: calc(100dvh - 144px); }
 }
@@ -1440,7 +1442,7 @@ const RS_STYLES = `
     width: 660px;
     transform: translateX(-50%) scale(.832);
   }
-  .lb-card-1 { transform: scale(1.08) translateY(-44px); }
+  .lb-card-1 { transform: scale(1.02) translateY(24px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .lb-card-1-glow, .rs-hero-trophy, .rs-scroll-arrow { animation: none !important; }
