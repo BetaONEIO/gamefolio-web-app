@@ -279,6 +279,10 @@ const UploadPage = () => {
   const titleRef = useRef<string>("");
   const descriptionRef = useRef<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Separate hidden input used by the "Add Another Clip/Reel" button so it
+  // can append to the queue via handleAddMoreFiles without going through
+  // handleFileChange's "this is a brand new batch" semantics.
+  const addMoreVideoInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   
   const [title, setTitle] = useState("");
@@ -291,6 +295,19 @@ const UploadPage = () => {
   // queue-advance logic in uploadMutation's onSuccess below.
   const [videoQueue, setVideoQueue] = useState<File[]>([]);
   const [queueTotal, setQueueTotal] = useState(0);
+  // Per-file metadata drafts (title/description/game/tags/ageRestricted),
+  // keyed by getFileKey(file) - lets a user click a queued clip to bring it
+  // into the editor, fill in its details, then switch away and back without
+  // losing what they typed. Trim/thumbnail state is intentionally NOT
+  // persisted here - each clip still gets a fresh edit pass on load, same
+  // as the auto-advance queue flow.
+  const [videoDrafts, setVideoDrafts] = useState<Record<string, {
+    title: string;
+    description: string;
+    game: Game | null;
+    tags: string[];
+    ageRestricted: boolean;
+  }>>({});
   const [videoPreviewError, setVideoPreviewError] = useState<string | null>(null);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [tags, setTags] = useState<string[]>([]);
@@ -457,6 +474,7 @@ const UploadPage = () => {
     setFile(null);
     setVideoQueue([]);
     setQueueTotal(0);
+    setVideoDrafts({});
     setTitle("");
     setDescription("");
     setSelectedGame(null);
@@ -577,6 +595,100 @@ const UploadPage = () => {
     setIsReelAspectMismatch(false);
     setVideoAspectRatio(0);
     setFormatSuggestion(null);
+  };
+
+  // File objects have no stable id of their own - name+size+lastModified is
+  // unique enough for the lifetime of a single upload session's queue.
+  const getFileKey = (f: File) => `${f.name}|${f.size}|${f.lastModified}`;
+
+  const saveCurrentVideoDraft = () => {
+    if (!file) return;
+    setVideoDrafts(prev => ({
+      ...prev,
+      [getFileKey(file)]: { title, description, game: selectedGame, tags, ageRestricted },
+    }));
+  };
+
+  // Bring a queued clip into the editor so its title/description/game/tags
+  // can be filled in ahead of time, without losing whatever was already
+  // typed for the clip currently active. The displaced active clip goes
+  // back into the queue in the target's old slot, so total queue
+  // length/order stays intact.
+  const switchActiveVideo = (target: File) => {
+    if (!file || target === file) return;
+    saveCurrentVideoDraft();
+
+    const previousFile = file;
+    setVideoQueue(prev => {
+      const idx = prev.indexOf(target);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      next[idx] = previousFile;
+      return next;
+    });
+
+    resetVideoEditingState();
+    setFileError(null);
+    setVideoPreviewError(null);
+
+    const draft = videoDrafts[getFileKey(target)];
+    setTitle(draft?.title ?? "");
+    setDescription(draft?.description ?? "");
+    setSelectedGame(draft?.game ?? null);
+    setTags(draft?.tags ?? []);
+    setAgeRestricted(draft?.ageRestricted ?? false);
+    titleRef.current = draft?.title ?? "";
+    descriptionRef.current = draft?.description ?? "";
+
+    setFile(target);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Appends more files to the queue behind whatever is already active/queued,
+  // used by the "Add Another Clip/Reel" button - distinct from
+  // handleFileChange, which treats a selection as a brand new batch.
+  const handleAddMoreFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newFiles = Array.from(e.target.files || []);
+    if (newFiles.length === 0) return;
+
+    setFileError(null);
+
+    const isReelUpload = contentType === 'reels';
+    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+
+    for (const f of newFiles) {
+      const effectiveMime = getEffectiveMimeType(f);
+      if (!allowedTypes.includes(effectiveMime)) {
+        setFileError("Please upload a valid video file (MP4, WebM, or MOV)");
+        return;
+      }
+      if (uploadLimits) {
+        const maxSizeMB = isReelUpload ? uploadLimits.maxReelSizeMB : uploadLimits.maxClipSizeMB;
+        const maxSize = maxSizeMB * 1024 * 1024;
+        if (f.size > maxSize) {
+          setFileError(`File size must be less than ${maxSizeMB}MB${!uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
+          return;
+        }
+      }
+    }
+
+    const remaining = isReelUpload ? remainingReels : remainingClips;
+    const alreadyCommitted = 1 + videoQueue.length; // the active clip + whatever's already queued
+    const spaceLeft = Math.max(0, remaining - alreadyCommitted);
+    if (newFiles.length > spaceLeft) {
+      const maxPerWindow = isReelUpload ? uploadLimits?.maxReelsPerWindow : uploadLimits?.maxClipsPerWindow;
+      setFileError(
+        spaceLeft <= 0
+          ? `You've reached your ${maxPerWindow ?? 3} ${isReelUpload ? 'reel' : 'clip'} upload limit for now.${uploadLimits && !uploadLimits.isPro ? ' Upgrade to Pro for a higher limit.' : ''}`
+          : `You can add ${spaceLeft} more ${isReelUpload ? 'reel' : 'clip'}${spaceLeft === 1 ? '' : 's'} to this batch.`
+      );
+      return;
+    }
+
+    setVideoQueue(prev => [...prev, ...newFiles]);
+    setQueueTotal(prev => prev + newFiles.length);
+
+    if (addMoreVideoInputRef.current) addMoreVideoInputRef.current.value = '';
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1242,13 +1354,16 @@ const UploadPage = () => {
         if (remaining > 0) {
           const [nextFile, ...rest] = videoQueue;
           resetVideoEditingState();
-          setTitle("");
-          setDescription("");
-          setSelectedGame(null);
-          setTags([]);
-          setAgeRestricted(false);
-          titleRef.current = "";
-          descriptionRef.current = "";
+          // If the user already clicked ahead to this clip and filled in its
+          // details, use that instead of blanking the form.
+          const draft = videoDrafts[getFileKey(nextFile)];
+          setTitle(draft?.title ?? "");
+          setDescription(draft?.description ?? "");
+          setSelectedGame(draft?.game ?? null);
+          setTags(draft?.tags ?? []);
+          setAgeRestricted(draft?.ageRestricted ?? false);
+          titleRef.current = draft?.title ?? "";
+          descriptionRef.current = draft?.description ?? "";
           setVideoQueue(rest);
           setFile(nextFile);
           toast({
@@ -1572,6 +1687,7 @@ const UploadPage = () => {
             </CardHeader>
             <CardContent>
               {queueTotal > 1 && (
+                <>
                 <Alert className="mb-6" data-testid="alert-clip-queue-progress">
                   <Info className="h-4 w-4" />
                   <AlertTitle>Uploading clip {queueTotal - videoQueue.length} of {queueTotal}</AlertTitle>
@@ -1588,6 +1704,39 @@ const UploadPage = () => {
                     </Button>
                   </AlertDescription>
                 </Alert>
+                <div className="flex gap-2 overflow-x-auto pb-1 mb-6" data-testid="list-clip-queue">
+                  {file && (
+                    <div
+                      className="flex items-center gap-2 rounded-md border border-primary bg-primary/10 px-3 py-1.5 text-xs shrink-0"
+                      data-testid="chip-active-clip"
+                    >
+                      <span className="font-medium text-primary">Editing now</span>
+                      <span className="max-w-[10rem] truncate">{file.name}</span>
+                    </div>
+                  )}
+                  {videoQueue.map((qf, idx) => (
+                    <button
+                      key={getFileKey(qf)}
+                      type="button"
+                      onClick={() => switchActiveVideo(qf)}
+                      className="flex items-center gap-2 rounded-md border border-muted bg-muted/40 hover:border-primary hover:bg-primary/5 px-3 py-1.5 text-xs shrink-0 transition-colors"
+                      title="Click to edit this clip's details now"
+                      data-testid={`chip-queued-clip-${idx}`}
+                    >
+                      <span className="max-w-[10rem] truncate">{qf.name}</span>
+                      <X
+                        className="h-3 w-3 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setVideoQueue(prev => prev.filter((_, i) => i !== idx));
+                          setQueueTotal(prev => Math.max(1, prev - 1));
+                        }}
+                        data-testid={`button-remove-queued-clip-${idx}`}
+                      />
+                    </button>
+                  ))}
+                </div>
+                </>
               )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
@@ -1801,12 +1950,35 @@ const UploadPage = () => {
                           <div>
                             <p className="font-medium text-foreground mb-1">{file.name}</p>
                             <p className="text-sm text-muted-foreground mt-1">
-                              {(file.size / (1024 * 1024)).toFixed(2)} MB • 
+                              {(file.size / (1024 * 1024)).toFixed(2)} MB •
                               {videoDuration > 0 && ` ${formatDuration(videoDuration)} •`}
                               {" " + file.type}
                             </p>
                           </div>
                         </div>
+
+                        {remainingClips - 1 - videoQueue.length > 0 && (
+                          <div>
+                            <input
+                              ref={addMoreVideoInputRef}
+                              type="file"
+                              accept="video/mp4,video/webm,video/quicktime"
+                              onChange={handleAddMoreFiles}
+                              className="hidden"
+                              multiple
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addMoreVideoInputRef.current?.click()}
+                              data-testid="button-add-another-clip"
+                            >
+                              <Plus className="h-4 w-4 mr-1" />
+                              Add Another Clip ({remainingClips - 1 - videoQueue.length} remaining)
+                            </Button>
+                          </div>
+                        )}
 
                         {/* Format mismatch suggestion — portrait video uploaded as a clip */}
                         {formatSuggestion === 'switch-to-reel' && (
@@ -2093,6 +2265,7 @@ const UploadPage = () => {
             </CardHeader>
             <CardContent>
               {queueTotal > 1 && (
+                <>
                 <Alert className="mb-6" data-testid="alert-reel-queue-progress">
                   <Info className="h-4 w-4" />
                   <AlertTitle>Uploading reel {queueTotal - videoQueue.length} of {queueTotal}</AlertTitle>
@@ -2109,6 +2282,39 @@ const UploadPage = () => {
                     </Button>
                   </AlertDescription>
                 </Alert>
+                <div className="flex gap-2 overflow-x-auto pb-1 mb-6" data-testid="list-reel-queue">
+                  {file && (
+                    <div
+                      className="flex items-center gap-2 rounded-md border border-primary bg-primary/10 px-3 py-1.5 text-xs shrink-0"
+                      data-testid="chip-active-reel"
+                    >
+                      <span className="font-medium text-primary">Editing now</span>
+                      <span className="max-w-[10rem] truncate">{file.name}</span>
+                    </div>
+                  )}
+                  {videoQueue.map((qf, idx) => (
+                    <button
+                      key={getFileKey(qf)}
+                      type="button"
+                      onClick={() => switchActiveVideo(qf)}
+                      className="flex items-center gap-2 rounded-md border border-muted bg-muted/40 hover:border-primary hover:bg-primary/5 px-3 py-1.5 text-xs shrink-0 transition-colors"
+                      title="Click to edit this reel's details now"
+                      data-testid={`chip-queued-reel-${idx}`}
+                    >
+                      <span className="max-w-[10rem] truncate">{qf.name}</span>
+                      <X
+                        className="h-3 w-3 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setVideoQueue(prev => prev.filter((_, i) => i !== idx));
+                          setQueueTotal(prev => Math.max(1, prev - 1));
+                        }}
+                        data-testid={`button-remove-queued-reel-${idx}`}
+                      />
+                    </button>
+                  ))}
+                </div>
+                </>
               )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
@@ -2464,13 +2670,36 @@ const UploadPage = () => {
                           <div>
                             <p className="font-medium text-foreground mb-1">{file.name}</p>
                             <p className="text-sm text-muted-foreground mt-1">
-                              {(file.size / (1024 * 1024)).toFixed(2)} MB • 
+                              {(file.size / (1024 * 1024)).toFixed(2)} MB •
                               {videoDuration > 0 && ` ${formatDuration(videoDuration)} •`}
                               {" " + file.type}
                             </p>
                           </div>
                         </div>
-                        
+
+                        {remainingReels - 1 - videoQueue.length > 0 && (
+                          <div>
+                            <input
+                              ref={addMoreVideoInputRef}
+                              type="file"
+                              accept="video/mp4,video/webm,video/quicktime"
+                              onChange={handleAddMoreFiles}
+                              className="hidden"
+                              multiple
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addMoreVideoInputRef.current?.click()}
+                              data-testid="button-add-another-reel"
+                            >
+                              <Plus className="h-4 w-4 mr-1" />
+                              Add Another Reel ({remainingReels - 1 - videoQueue.length} remaining)
+                            </Button>
+                          </div>
+                        )}
+
                         {/* Video Trimmer for Reels */}
                         {showEditingTools && videoDuration > 0 && (
                           <div className="space-y-3 mt-4">
