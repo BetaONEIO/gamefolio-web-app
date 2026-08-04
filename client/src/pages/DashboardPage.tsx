@@ -697,14 +697,13 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
                 <div
                   key={tier.name}
                   title={tier.range}
-                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-semibold"
+                  className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[12.5px] font-semibold"
                   style={{
                     background: active ? `${leagueColor}26` : `${leagueColor}14`,
-                    border: `1px solid ${active ? leagueColor : `${leagueColor}55`}`,
                     color: leagueColor,
                   }}
                 >
-                  <img src={LEAGUE_MEDALS[tier.name]} alt="" className="w-6 h-6 object-contain" />
+                  <img src={LEAGUE_MEDALS[tier.name]} alt="" className="w-[30px] h-[30px] object-contain" />
                   <span>{tier.name}</span>
                 </div>
               );
