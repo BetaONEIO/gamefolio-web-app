@@ -598,7 +598,7 @@ const GamePage = () => {
                 Browse clips from the {game.name} community
               </p>
               <p className="text-[11px] text-gray-500 mt-3">
-                {allClips.length} {allClips.length === 1 ? "upload" : "uploads"} available
+                {allClips.length} {allClips.length === 1 ? "upload" : "uploads"}
               </p>
               <Button size="sm" onClick={() => setShowUploadDialog(true)}
                 className="font-bold text-[11px] mt-2"
