@@ -173,15 +173,22 @@ const PODIUM_GLOW: Record<number, string> = {
 };
 
 const PODIUM_IMG: Record<number, string> = {
-  1: "/podium-1st.png",
-  2: "/podium-2nd.png",
-  3: "/podium-3rd.png",
+  1: "/podium-1st.webp",
+  2: "/podium-2nd.webp",
+  3: "/podium-3rd.webp",
 };
 
-const PODIUM_IMG_W: Record<number, string> = {
-  1: "w-48",
-  2: "w-36",
-  3: "w-32",
+// Match the homepage leaderboard podium artwork dimensions and overlap.
+const PODIUM_IMG_W: Record<number, number> = {
+  1: 393,
+  2: 357,
+  3: 321,
+};
+
+const PODIUM_IMG_H: Record<number, number> = {
+  1: 123,
+  2: 105,
+  3: 90,
 };
 
 const RANK_ACCENT: Record<number, string> = {
@@ -438,7 +445,13 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
                 <img
                   src={PODIUM_IMG[rank]}
                   alt={`#${rank}`}
-                  className={`${PODIUM_IMG_W[rank]} object-contain -mt-1`}
+                  className="object-contain pointer-events-none select-none relative z-10"
+                  style={{
+                    width: PODIUM_IMG_W[rank],
+                    height: PODIUM_IMG_H[rank],
+                    marginTop: -22,
+                    filter: PODIUM_GLOW[rank],
+                  }}
                   draggable={false}
                 />
               </div>
