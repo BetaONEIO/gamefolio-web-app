@@ -434,7 +434,7 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
             return (
               <div
                 key={entry.userId}
-                className={`relative flex w-[200px] flex-col items-center flex-shrink-0 ${isCenter ? "" : "mt-14"} lb-card-${rank}`}
+                className={`relative flex w-[200px] flex-col items-center flex-shrink-0 ${isCenter ? "-translate-y-7" : ""} lb-card-${rank}`}
               >
                 <div
                   className="w-[200px]"
