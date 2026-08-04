@@ -3419,7 +3419,7 @@ const AdminPage = () => {
                         <XAxis dataKey="name" />
                         <YAxis />
                         <Tooltip />
-                        <Bar dataKey="value" name="Users" fill="#4C8">
+                        <Bar dataKey="value" name="Users" fill="#B7FF1A">
                           {formatAgeRangeData().map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
