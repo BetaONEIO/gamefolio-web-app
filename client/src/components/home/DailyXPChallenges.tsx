@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { CheckCircle2, Circle, ChevronLeft, ChevronRight, Zap, Clock } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Zap, Clock } from "lucide-react";
 import { getQueryFn } from "@/lib/queryClient";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -161,8 +161,7 @@ function CountdownBadge() {
   );
 }
 
-function ChallengeCard({ challenge, isAuth, isLoading }: { challenge: Challenge; isAuth: boolean; isLoading: boolean }) {
-  const [hovered, setHovered] = useState(false);
+function ChallengeCard({ challenge, isLoading }: { challenge: Challenge; isLoading: boolean }) {
   const pct = challenge.total > 0 ? Math.min((challenge.progress / challenge.total) * 100, 100) : 0;
   const done = challenge.progress >= challenge.total;
 
@@ -177,54 +176,33 @@ function ChallengeCard({ challenge, isAuth, isLoading }: { challenge: Challenge;
     );
   }
 
-  const borderColor = hovered
-    ? done ? `${challenge.color}70` : `${challenge.color}35`
-    : done ? `${challenge.color}40` : 'rgba(255,255,255,0.08)';
+  const borderColor = done ? `${challenge.color}40` : 'rgba(255,255,255,0.08)';
 
   const bgColor = done
     ? `linear-gradient(135deg, ${challenge.color}18 0%, ${challenge.color}06 100%)`
-    : hovered
-      ? 'rgba(255,255,255,0.07)'
-      : 'rgba(255,255,255,0.04)';
+    : 'rgba(255,255,255,0.04)';
 
-  const iconGlow = hovered
-    ? `drop-shadow(0 0 10px ${challenge.color}90) drop-shadow(0 4px 12px ${challenge.color}50)`
-    : done
-      ? `drop-shadow(0 0 6px ${challenge.color}60)`
-      : `drop-shadow(0 0 4px ${challenge.color}30)`;
+  const iconGlow = done
+    ? `drop-shadow(0 0 6px ${challenge.color}60)`
+    : `drop-shadow(0 0 4px ${challenge.color}30)`;
 
   return (
-    <Link href={isAuth ? challenge.href : '/auth'}>
-      <div
-        className="flex-shrink-0 relative rounded-2xl p-4 cursor-pointer overflow-hidden"
-        style={{
-          width: 188,
-          background: bgColor,
-          border: `1px solid ${borderColor}`,
-          transition: 'transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease, background 200ms ease, opacity 400ms ease',
-          transform: hovered ? 'translateY(-3px) scale(1.015)' : 'translateY(0) scale(1)',
-          boxShadow: hovered
-            ? `0 8px 24px ${challenge.color}18, 0 0 0 1px ${challenge.color}20`
-            : done
-              ? `0 0 16px ${challenge.color}10`
-              : 'none',
-          opacity: done ? 0.38 : 1,
-        }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-      >
+    <div
+      className="flex-shrink-0 relative rounded-2xl p-4 overflow-hidden"
+      style={{
+        width: 188,
+        background: bgColor,
+        border: `1px solid ${borderColor}`,
+        boxShadow: done ? `0 0 16px ${challenge.color}10` : 'none',
+        opacity: done ? 0.38 : 1,
+      }}
+    >
         {/* Done checkmark */}
         {done && (
           <div className="absolute top-3 right-3">
             <CheckCircle2 className="w-4 h-4" style={{ color: challenge.color }} />
           </div>
         )}
-        {!done && !isAuth && (
-          <div className="absolute top-3 right-3">
-            <Circle className="w-3.5 h-3.5 text-white/15" />
-          </div>
-        )}
-
         {/* Subtle inner glow when done */}
         {done && (
           <div className="absolute inset-0 rounded-2xl pointer-events-none"
@@ -237,9 +215,7 @@ function ChallengeCard({ challenge, isAuth, isLoading }: { challenge: Challenge;
           style={{
             width: 62,
             height: 62,
-            transition: 'filter 200ms ease, transform 200ms ease',
             filter: iconGlow,
-            transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
             opacity: done ? 0.7 : 1,
           }}
         >
@@ -282,8 +258,7 @@ function ChallengeCard({ challenge, isAuth, isLoading }: { challenge: Challenge;
           </span>
           {done && <span className="text-[10px] text-white/30 ml-1">Earned!</span>}
         </div>
-      </div>
-    </Link>
+    </div>
   );
 }
 
@@ -443,13 +418,12 @@ export function DailyXPChallenges() {
                 <ChallengeCard
                   key={i}
                   challenge={challenges[i] ?? challenges[0]}
-                  isAuth={!!user}
                   isLoading={true}
                 />
               ))
             : (<>
                 {sortedChallenges.map(c => (
-                  <ChallengeCard key={c.id} challenge={c} isAuth={!!user} isLoading={false} />
+                  <ChallengeCard key={c.id} challenge={c} isLoading={false} />
                 ))}
               </>)}
         </div>
