@@ -416,15 +416,15 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
         <MobileCarousel entries={entries} />
       </div>
 
-      {/* ── DESKTOP: three-column podium (unchanged) ── */}
-      <div className="lb-desktop-podium hidden sm:flex relative items-end justify-center gap-10 lg:gap-16 px-4 pt-14 pb-0">
+      {/* ── DESKTOP: three-column podium — absolutely fills hero, cards centred ── */}
+      <div className="lb-desktop-podium hidden sm:absolute sm:inset-0 sm:flex sm:items-end sm:justify-center gap-8 lg:gap-14 px-4 pb-16">
         {top3.length === 0 ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex flex-col items-center">
-              <div className={`w-[175px] sm:w-[195px] ${i !== 1 ? "mt-10" : ""}`}>
-                <Skeleton className="h-64 rounded-2xl bg-slate-800" />
+              <div className={`w-[228px] ${i !== 1 ? "mt-10" : ""}`}>
+                <Skeleton className="h-[480px] rounded-2xl bg-slate-800" />
               </div>
-              <Skeleton className="mt-1 h-20 w-36 bg-slate-800/60 rounded" />
+              <Skeleton className="mt-1 h-28 w-48 bg-slate-800/60 rounded" />
             </div>
           ))
         ) : (
@@ -434,10 +434,9 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
             return (
               <div
                 key={entry.userId}
-                className={`relative flex w-[200px] flex-col items-center flex-shrink-0 ${isCenter ? "-translate-y-7" : ""} lb-card-${rank}`}
+                className={`relative flex flex-col items-center flex-shrink-0 ${isCenter ? "-translate-y-14" : ""} lb-card-${rank}`}
               >
                 <div
-                  className="w-[200px]"
                   style={{ filter: PODIUM_GLOW[rank] }}
                 >
                   <CreatorCard entry={entry} period="week" />
@@ -1391,7 +1390,7 @@ const RS_STYLES = `
 .rs-hero-trophy { animation: rs-float 3.5s ease-in-out infinite; }
 .rs-scroll-arrow { animation: rs-scroll-bounce 1.5s ease-in-out infinite; }
 .rs-season-hero { height: calc(100dvh - 72px); min-height: 520px; }
-.lb-desktop-podium { transform: translateX(52px) scale(.72); transform-origin: top center; }
+.lb-desktop-podium { transform: translateX(30px) scale(.82); transform-origin: bottom center; }
 @media (min-width: 640px) {
   .rs-season-hero { height: calc(100dvh - 144px); }
 }
