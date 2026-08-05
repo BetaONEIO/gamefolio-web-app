@@ -462,7 +462,13 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
                 key={entry.userId}
                 className={`relative flex flex-col items-center flex-shrink-0 lb-card-${rank}`}
               >
-                <div className={rank === 1 ? "lb-card-1-glow" : ""}
+                {(rank === 2 || rank === 3) && (
+                  <div
+                    aria-hidden="true"
+                    className={`lb-side-card-glow lb-side-card-glow-${rank}`}
+                  />
+                )}
+                <div className={rank === 1 ? "lb-card-1-glow relative z-10" : "relative z-10"}
                   style={{ filter: PODIUM_GLOW[rank] }}
                 >
                   {rank === 1 ? (
@@ -1452,10 +1458,33 @@ const RS_STYLES = `
 @keyframes rs-glow-pulse { 0%,100%{opacity:.6;} 50%{opacity:1;} }
 @keyframes rs-scroll-bounce { 0%,100%{transform:translateY(0);opacity:.65;} 50%{transform:translateY(6px);opacity:1;} }
 @keyframes lb-gold-breathe { 0%,100%{filter:drop-shadow(0 0 28px rgba(255,215,0,1.0)) drop-shadow(0 0 10px rgba(255,190,0,0.7)) drop-shadow(0 8px 18px rgba(220,160,0,0.5));} 50%{filter:drop-shadow(0 0 38px rgba(255,215,0,1.0)) drop-shadow(0 0 18px rgba(255,200,0,0.9)) drop-shadow(0 10px 24px rgba(220,160,0,0.65));} }
+@keyframes lb-silver-side-glow { 0%,100%{opacity:.62;transform:scale(.98);} 50%{opacity:.95;transform:scale(1.02);} }
+@keyframes lb-bronze-side-glow { 0%,100%{opacity:.58;transform:scale(.98);} 50%{opacity:.9;transform:scale(1.02);} }
 /* ── Chrome shimmer for top-10 bars ── */
 @keyframes lb-chrome-sweep { 0%{transform:translateX(-120%);} 100%{transform:translateX(320%);} }
 .lb-bar-chrome { animation: lb-chrome-sweep 2.8s ease-in-out infinite; }
 .lb-bar-chrome-2 { animation: lb-chrome-sweep 2.8s ease-in-out 1.4s infinite; }
+/* Side-card glow layers stay behind the cards, matching the silver/bronze podium depth. */
+.lb-side-card-glow {
+  position:absolute;
+  z-index:0;
+  top:-14px;
+  right:-18px;
+  bottom:42px;
+  left:-18px;
+  border-radius:24px;
+  pointer-events:none;
+}
+.lb-side-card-glow-2 {
+  background:radial-gradient(ellipse at center, rgba(220,220,220,.34) 0%, rgba(192,192,192,.16) 42%, transparent 74%);
+  box-shadow:0 0 30px 8px rgba(192,192,192,.22);
+  animation:lb-silver-side-glow 2.8s ease-in-out infinite;
+}
+.lb-side-card-glow-3 {
+  background:radial-gradient(ellipse at center, rgba(205,127,50,.38) 0%, rgba(165,90,20,.18) 42%, transparent 74%);
+  box-shadow:0 0 30px 8px rgba(205,127,50,.24);
+  animation:lb-bronze-side-glow 3.2s ease-in-out infinite;
+}
 /* ── Animated gold/white-gold spinning border for #1 card ── */
 @property --lb-border-angle {
   syntax: '<angle>';
@@ -1487,7 +1516,7 @@ const RS_STYLES = `
 .rs-scroll-arrow { animation: rs-scroll-bounce 1.5s ease-in-out infinite; }
 .lb-card-1-glow { animation: lb-gold-breathe 2.8s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .lb-card-1-border-wrap { animation: none !important; }
+  .lb-card-1-border-wrap, .lb-side-card-glow { animation: none !important; }
 }
 .rs-season-hero { height: calc(100dvh - 72px); min-height: 520px; }
 /* Whole podium group — scale up vs the old .72 baseline */

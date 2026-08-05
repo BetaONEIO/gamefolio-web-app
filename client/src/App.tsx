@@ -528,14 +528,14 @@ function Router() {
           <Route path="/games/:gameSlug" component={GamePage} />
           <Route path="/indie-games/:slug" component={IndieGamePage} />
           <Route path="/studio/:username" component={IndieGameProfilePage} />
-          <Route path="/studio-dashboard" component={IndieGameDashboard} />
+          <PartnerProtectedRoute path="/studio-dashboard" partnerType="indie" component={IndieGameDashboard} />
           <Route path="/games/:gameId/clips" component={GameClipsPage} />
           <ProtectedRoute path="/hashtag/:hashtag" component={HashtagPage} />
           <ProtectedRoute path="/upload" component={UploadPage} />
           <ProtectedRoute path="/scheduled-posts" component={ScheduledPostsPage} />
           <PartnerProtectedRoute path="/indie/dashboard" partnerType="indie" component={IndieDashboardPage} />
           <PartnerProtectedRoute path="/settings/game" partnerType="indie" component={SettingsPage} />
-          <Route path="/bounties" component={BountiesPage} />
+          <PartnerProtectedRoute path="/bounties" partnerType="indie" component={BountiesPage} />
           <Route path="/streamer/dashboard" component={StreamerDashboardPage} />
           <ProtectedRoute path="/upload/bulk" component={BulkUploadPage} />
           <ProtectedRoute path="/upload/screenshots" component={ScreenshotUploadPage} />

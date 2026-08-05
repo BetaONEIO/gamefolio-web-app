@@ -261,6 +261,11 @@ const Sidebar = () => {
 
   const isIndieDev = user?.userType?.split(",").includes("indie_developer");
   const isStreamerType = user?.userType?.split(",").includes("streamer");
+  const canAccessIndieGame = !!user && (
+    user.role === "admin" ||
+    isPartnerType(user, "indie") ||
+    isIndieDev
+  );
   const dashboardHref = isIndieDev ? "/studio-dashboard" : isStreamerType ? "/streamer/dashboard" : "/dashboard";
   const menuItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
@@ -269,7 +274,7 @@ const Sidebar = () => {
     { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
 
-    ...(user ? [{ icon: Target, label: "Bounty Hub", href: "/bounties" }] : []),
+    ...(canAccessIndieGame ? [{ icon: Target, label: "Bounty Hub", href: "/bounties" }] : []),
 
     // Store stays on native but renders a crypto-free cosmetics catalogue.
     { icon: GamefolioStoreIcon, label: "Store", href: "/store" },
@@ -288,7 +293,7 @@ const Sidebar = () => {
     { icon: GamefolioProfileIcon, label: "My Gamefolio", href: user ? `/profile/${user.username}` : "/auth", themed: true, gamefolioIcon: true },
 
     // Partner dashboards — visible only to the matching paid partner (admins see both).
-    ...(user ? [{ icon: Rocket, label: "Game Dashboard", href: "/indie/dashboard" }] : []),
+    ...(canAccessIndieGame ? [{ icon: Rocket, label: "Game Dashboard", href: "/indie/dashboard" }] : []),
     ...(isPartnerType(user, "streamer") || user?.role === "admin" ? [{ icon: Radio, label: "Streamer Dashboard", href: "/streamer/dashboard" }] : []),
 
     { icon: GamefolioHelpIcon, label: "Help & Support", href: "/help" },
