@@ -4249,8 +4249,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/leaderboard/current-season/top", async (req, res) => {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 10, 500);
-      // Always Season 8 (Summer Showdown): Jun–Aug 2026
-      const currentSeasonMonths = SEASON_DEFS[0].months;
+      // "This Season" = current calendar month so rankings reflect what users have
+      // earned since this month began (the user sees a fresh, accurate leaderboard).
+      const now = new Date();
+      const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
       // LEFT JOIN from users so every member appears, even those with 0 season XP
       const rows = await db.execute(sql`
@@ -4275,7 +4277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         FROM users u
         LEFT JOIN monthly_leaderboard ml
           ON ml.user_id = u.id
-          AND ml.month = ANY(ARRAY[${sql.join(currentSeasonMonths.map(m => sql`${m}`), sql`, `)}])
+          AND ml.month = ${currentMonthKey}
         WHERE u.role NOT IN ('admin', 'moderator', 'system')
           AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
           AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
