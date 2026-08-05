@@ -8479,6 +8479,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       void (async () => {
         try {
           await LeaderboardService.awardPoints(userId, 'upload', `Upload: ${clipData.videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`);
+          // Award real creator XP for uploading
+          const uploadXpAmount = 10;
+          const uploadLabel = clipData.videoType === 'reel' ? 'reel' : 'clip';
+          await storage.addUserXPHistory({
+            userId,
+            xpAmount: uploadXpAmount,
+            source: 'upload',
+            description: `Earned ${uploadXpAmount} XP for uploading a ${uploadLabel}`,
+          });
           await BonusEventsService.awardWeekendUploadBonus(userId, 200);
           await CreatorMilestoneService.checkFirstUploadOfDay(userId);
           await CreatorMilestoneService.checkWeeklyUploadMilestones(userId);
@@ -13125,6 +13134,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       void (async () => {
         try {
           await LeaderboardService.awardPoints(userId, 'screenshot_upload', `Upload: Screenshot - ${title}`);
+          // Award real creator XP for uploading a screenshot
+          await storage.addUserXPHistory({
+            userId,
+            xpAmount: 5,
+            source: 'upload',
+            description: `Earned 5 XP for uploading a screenshot`,
+          });
           await BonusEventsService.awardWeekendUploadBonus(userId, 100);
           await CreatorMilestoneService.checkFirstUploadOfDay(userId);
           await CreatorMilestoneService.checkWeeklyUploadMilestones(userId);
@@ -14075,6 +14091,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'upload',
         `Upload: ${videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`
       );
+      // Award real creator XP for desktop upload
+      await storage.addUserXPHistory({
+        userId: req.user!.id,
+        xpAmount: 10,
+        source: 'upload',
+        description: `Earned 10 XP for uploading a ${videoType === 'reel' ? 'reel' : 'clip'}`,
+      });
 
       // Get updated user data
       const user = await storage.getUser(req.user!.id);
