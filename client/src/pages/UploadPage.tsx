@@ -781,7 +781,7 @@ const UploadPage = () => {
         type: 'screenshot',
         id: data.screenshot?.id
       });
-      const gainedXP = data.xpGained || 5;
+      const gainedXP = data.xpGained || 250;
       const currentXP = (data.userXP || 0) + gainedXP;
       setXpGained(gainedXP);
       setUserXP(currentXP);
@@ -1056,7 +1056,7 @@ const UploadPage = () => {
         type: uploadedContentType,
         id: contentId
       });
-      const gainedXP = data.xpGained || 5;
+      const gainedXP = data.xpGained || 250;
       const currentXP = (data.clip?.userXP || data.userXP || 0) + gainedXP;
       setXpGained(gainedXP);
       setUserXP(currentXP);

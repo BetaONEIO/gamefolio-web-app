@@ -291,6 +291,7 @@ export interface IStorage {
 
   // XP operations (legacy - kept for backward compatibility, totalXP now stores points)
   addUserXPHistory(xpHistory: InsertUserXPHistory): Promise<UserXPHistory>;
+  addUserXPHistoryIfAbsent(xpHistory: InsertUserXPHistory): Promise<UserXPHistory | null>;
   incrementUserXP(userId: number, xpAmount: number): Promise<void>;
   getUserXPHistory(userId: number, limit?: number): Promise<(UserXPHistory & { clip?: Clip | null })[]>;
   getXPLeaderboard(limit?: number): Promise<Array<{ id: number; username: string; displayName: string; avatarUrl: string | null; totalXP: number }>>;
@@ -299,6 +300,8 @@ export interface IStorage {
   getUserPointsHistory(userId: number, limit?: number): Promise<UserPointsHistory[]>;
   incrementUserPoints(userId: number, points: number): Promise<void>;
   hasUserEarnedPointsForContent(userId: number, action: string, contentType: string, contentId: number): Promise<boolean>;
+  hasUserEarnedXPForContent(userId: number, source: string, contentType: string, contentId: number): Promise<boolean>;
+  hasUserEarnedXPForReaction(creatorId: number, source: string, contentType: string, contentId: number, reactorId: number): Promise<boolean>;
 
   // Notification operations
   createNotification(notification: InsertNotification): Promise<Notification>;

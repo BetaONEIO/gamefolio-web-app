@@ -5277,20 +5277,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         pointValues: {
-          upload: 20,
-          screenshot_upload: 2,
+          upload: 250,
+          screenshot_upload: 100,
           like: 1,
           comment: 1,
-          fire: 5,
-          view: 0.01
+          fire: 50,
+          view: 1
         },
         description: {
-          upload: "Points awarded for uploading clips or reels",
-          screenshot_upload: "Points awarded for uploading screenshots",
+          upload: "XP awarded for uploading clips or reels",
+          screenshot_upload: "XP awarded for uploading screenshots",
           like: "Points awarded for liking content",
           comment: "Points awarded for commenting on content",
-          fire: "Points awarded for fire reactions (permanent, 1/day for regular users, 3/day for Pro)",
-          view: "Points awarded when content receives views (0.01 points per view, 1 point per 100 views)"
+          fire: "50 XP awarded to the content creator for each unique fire reaction",
+          view: "1 XP awarded per valid content view"
         }
       });
     } catch (error) {
@@ -8475,23 +8475,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the clip
       const clip = await storage.createClip(clipData);
 
-      // Fire-and-forget: XP awards, bonuses, milestones, and mentions don't block the upload response
+      // Fire-and-forget: the upload XP award and mention processing don't block the response
       void (async () => {
         try {
-          await LeaderboardService.awardPoints(userId, 'upload', `Upload: ${clipData.videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`);
-          // Award real creator XP for uploading
-          const uploadXpAmount = 10;
+          // Upload XP is recorded in the real leaderboard XP ledger only.
+          const uploadXpAmount = 250;
           const uploadLabel = clipData.videoType === 'reel' ? 'reel' : 'clip';
-          await storage.addUserXPHistory({
-            userId,
-            xpAmount: uploadXpAmount,
-            source: 'upload',
-            description: `Earned ${uploadXpAmount} XP for uploading a ${uploadLabel}`,
-          });
-          await BonusEventsService.awardWeekendUploadBonus(userId, 200);
-          await CreatorMilestoneService.checkFirstUploadOfDay(userId);
-          await CreatorMilestoneService.checkWeeklyUploadMilestones(userId);
-          await BonusEventsService.checkConsecutiveUploadBonus(userId);
+          await XPService.awardXP(userId, uploadXpAmount, 'upload', `Earned ${uploadXpAmount} XP for uploading a ${uploadLabel}`, clip.id);
         } catch (e) { console.error('[clip upload] XP/bonus side-effects failed:', e); }
         try {
           const titleMentions = await mentionService.parseMentions(title);
@@ -8596,7 +8586,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               ...updatedClip,
               qrCode: qrCodeDataUrl,
               socialMediaLinks,
-              xpGained: 5, // Upload XP reward
+              xpGained: 250,
               userXP: updatedUser?.totalXP || 0,
               userLevel: updatedUser?.level || 1
             });
@@ -8605,7 +8595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Return without QR code if generation fails
             res.status(201).json({ 
               ...updatedClip, 
-              xpGained: 5,
+              xpGained: 250,
               userXP: updatedUser?.totalXP || 0,
               userLevel: updatedUser?.level || 1
             });
@@ -8645,7 +8635,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               qrCode: qrCodeDataUrl,
               socialMediaLinks,
               thumbnailOptions: thumbnailOptions || [],
-              xpGained: 5, // Upload XP reward
+              xpGained: 250,
               userXP: updatedUser?.totalXP || 0,
               userLevel: updatedUser?.level || 1
             });
@@ -8655,7 +8645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             res.status(201).json({
               ...updatedClip,
               thumbnailOptions: thumbnailOptions || [],
-              xpGained: 5, // Upload XP reward
+              xpGained: 250,
               userXP: updatedUser?.totalXP || 0,
               userLevel: updatedUser?.level || 1
             });
@@ -8667,7 +8657,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Return the clip with original video if processing fails
         res.status(201).json({ 
           ...clip, 
-          xpGained: 5,
+          xpGained: 250,
           userXP: updatedUser?.totalXP || 0,
           userLevel: updatedUser?.level || 1
         });
@@ -8754,13 +8744,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(500).json({ message: "Failed to delete clip" });
       }
-
-      // Deduct upload points (5 XP for clips/reels)
-      await LeaderboardService.deductPoints(
-        clip.userId,
-        'upload',
-        `Deleted: ${clip.videoType === 'reel' ? 'Reel' : 'Clip'} - ${clip.title}`
-      );
 
       res.status(200).json({ message: "Clip deleted successfully" });
     } catch (err) {
@@ -9514,14 +9497,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           maxFires: fireLimits.maxFiresPerDay
         });
 
-        // Background: XP, leaderboard points, and notification
+        // Background: creator XP and notification
         (async () => {
           try {
-            const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'clip', clipId);
-            if (!hasEarnedPoints) {
-              await LeaderboardService.awardPoints(userId, 'fire', `Fire reaction given to clip #${clipId}`);
+            const hasEarnedXP = await storage.hasUserEarnedXPForReaction(
+              clip.userId,
+              'fire_received',
+              'clip',
+              clipId,
+              userId
+            );
+            if (!hasEarnedXP) {
+              await XPService.awardXP(
+                clip.userId,
+                50,
+                'fire_received',
+                `Received 50 XP for a fire reaction from user #${userId} on clip #${clipId}`,
+                clipId,
+                {
+                  contentType: 'clip',
+                  contentId: clipId,
+                  reactorId: userId,
+                  dedupeKey: `fire_received:clip:${clipId}:${userId}`,
+                }
+              );
             }
-            await XPService.awardXP(userId, 50, 'other', `Earned 50 XP for giving a fire reaction on clip #${clipId}`, clipId);
             await NotificationService.createReactionNotification(clipId, userId, emoji);
           } catch (bgErr) {
             console.error('Error in fire reaction side-effects for clip', clipId, bgErr);
@@ -9574,37 +9574,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Respond immediately so the client isn't blocked.
       res.json({ success: true });
 
-      // Run all XP / milestone side-effects in the background (fire-and-forget).
-      if (clip) {
-        const viewerId: number | undefined = (req as any).user?.id;
-        (async () => {
-          try {
-            await LeaderboardService.awardPoints(
-              clip.userId,
-              'view',
-              `Clip #${clipId} received a view`
-            );
-
-            const updatedClip = await storage.getClip(clipId);
-            const newViewCount = updatedClip?.views || 0;
-
-            await PerformanceMilestoneService.checkAndAwardViewMilestones(clipId, clip.userId, newViewCount);
-
-            if (newViewCount >= 100) {
-              await CreatorMilestoneService.checkFirst100Views(clip.userId, clipId);
-            }
-            if (newViewCount >= 1000) {
-              await CreatorMilestoneService.checkFirst1000Views(clip.userId, clipId);
-            }
-
-            if (viewerId && viewerId !== clip.userId) {
-              await BonusEventsService.awardWatchClipXP(viewerId);
-            }
-          } catch (bgErr) {
-            console.error('Error in view side-effects for clip', clipId, bgErr);
-          }
-        })();
-      }
     } catch (error) {
       captureRouteError(error);
       console.error('Error incrementing clip views:', error);
@@ -9638,20 +9607,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Respond immediately so the client isn't blocked.
       res.json({ success: true });
 
-      // Run XP side-effects in the background (fire-and-forget).
-      if (screenshot) {
-        (async () => {
-          try {
-            await LeaderboardService.awardPoints(
-              screenshot.userId,
-              'view',
-              `Screenshot #${screenshotId} received a view`
-            );
-          } catch (bgErr) {
-            console.error('Error in view side-effects for screenshot', screenshotId, bgErr);
-          }
-        })();
-      }
     } catch (error) {
       captureRouteError(error);
       console.error('Error incrementing screenshot views:', error);
@@ -13133,18 +13088,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fire-and-forget: XP awards, bonuses, and milestones don't block the upload response
       void (async () => {
         try {
-          await LeaderboardService.awardPoints(userId, 'screenshot_upload', `Upload: Screenshot - ${title}`);
-          // Award real creator XP for uploading a screenshot
-          await storage.addUserXPHistory({
+          await XPService.awardXP(
             userId,
-            xpAmount: 5,
-            source: 'upload',
-            description: `Earned 5 XP for uploading a screenshot`,
-          });
-          await BonusEventsService.awardWeekendUploadBonus(userId, 100);
-          await CreatorMilestoneService.checkFirstUploadOfDay(userId);
-          await CreatorMilestoneService.checkWeeklyUploadMilestones(userId);
-          await BonusEventsService.checkConsecutiveUploadBonus(userId);
+            100,
+            'upload',
+            `Earned 100 XP for uploading a screenshot`
+          );
         } catch (e) { console.error('[screenshot upload] XP/bonus side-effects failed:', e); }
       })();
 
@@ -13182,7 +13131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         qrCode: qrCodeDataUrl,
         socialMediaLinks,
         screenshotUrl,
-        xpGained: 2, // Screenshot upload XP reward (changed from 5 to 2)
+        xpGained: 100,
         userXP: updatedUser?.totalXP || 0,
         userLevel: updatedUser?.level || 1
       });
@@ -13397,20 +13346,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to delete screenshot from database" });
       }
       console.log(`✅ Screenshot ${screenshotId} deleted from database`);
-
-      // Deduct upload points (2 XP for screenshots)
-      console.log(`📉 Deducting points for screenshot deletion`);
-      try {
-        await LeaderboardService.deductPoints(
-          screenshot.userId,
-          'screenshot_upload',
-          `Deleted: Screenshot - ${screenshot.title}`
-        );
-        console.log(`✅ Points deducted successfully`);
-      } catch (pointsErr) {
-        console.error("Error deducting points (continuing anyway):", pointsErr);
-        // Continue even if points deduction fails
-      }
 
       console.log(`✅ Screenshot ${screenshotId} deleted successfully`);
       res.status(200).json({ message: "Screenshot deleted successfully" });
@@ -14084,20 +14019,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedClipData = insertClipSchema.parse(clipData);
       const clip = await storage.createClip(validatedClipData);
 
-      // Award upload points
-      const leaderboardService = new LeaderboardService();
-      await LeaderboardService.awardPoints(
+      // Award real creator XP for desktop uploads only.
+      await XPService.awardXP(
         req.user!.id,
+        250,
         'upload',
-        `Upload: ${videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`
+        `Earned 250 XP for uploading a ${videoType === 'reel' ? 'reel' : 'clip'}`,
+        clip.id
       );
-      // Award real creator XP for desktop upload
-      await storage.addUserXPHistory({
-        userId: req.user!.id,
-        xpAmount: 10,
-        source: 'upload',
-        description: `Earned 10 XP for uploading a ${videoType === 'reel' ? 'reel' : 'clip'}`,
-      });
 
       // Get updated user data
       const user = await storage.getUser(req.user!.id);
@@ -14112,7 +14041,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: clip.id,
         shareCode: shareCode,
         shareUrl: shareUrl,
-        xpGained: 5,
+        xpGained: 250,
         userXP: user?.totalXP || 0,
         userLevel: user?.level || 1
       });
@@ -14765,24 +14694,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const reaction = await storage.createScreenshotReaction(reactionData);
         
-        // Award 5 points for fire reactions (only if they haven't earned points for this screenshot before)
+        // Award 50 XP to the screenshot creator for this unique reactor/content pair.
         if (emoji === '🔥') {
-          const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'screenshot', screenshotId);
-          if (!hasEarnedPoints) {
-            await LeaderboardService.awardPoints(
-              userId,
-              'fire',
-              `Fire reaction given to screenshot #${screenshotId}`
+          const hasEarnedXP = await storage.hasUserEarnedXPForReaction(
+            screenshot.userId,
+            'fire_received',
+            'screenshot',
+            screenshotId,
+            userId
+          );
+          if (!hasEarnedXP) {
+            await XPService.awardXP(
+              screenshot.userId,
+              50,
+              'fire_received',
+              `Received 50 XP for a fire reaction from user #${userId} on screenshot #${screenshotId}`,
+              undefined,
+              {
+                contentType: 'screenshot',
+                contentId: screenshotId,
+                reactorId: userId,
+                dedupeKey: `fire_received:screenshot:${screenshotId}:${userId}`,
+              }
             );
           }
-
-          // Award 50 XP to the reactor for giving a fire reaction
-          await XPService.awardXP(
-            userId,
-            50,
-            'other',
-            `Earned 50 XP for giving a fire reaction on screenshot #${screenshotId}`
-          );
           
           // Get updated fire limits to return
           const fireLimits = await storage.getFireLimits(userId);
@@ -16002,9 +15937,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!result) {
         return res.status(404).json({ message: "No rewards available in lootbox" });
       }
-
-      // Award the lootbox bonus XP (+100 XP for opening the lootbox)
-      await BonusEventsService.awardLootboxBonus(userId);
 
       // Determine the appropriate message based on reward type
       let message: string;

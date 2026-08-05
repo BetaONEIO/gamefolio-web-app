@@ -44,7 +44,13 @@ export class XPService {
     xpAmount: number,
     source: XPSource,
     description: string,
-    clipId?: number
+    clipId?: number,
+    options?: {
+      contentType?: string;
+      contentId?: number;
+      reactorId?: number;
+      dedupeKey?: string;
+    }
   ): Promise<void> {
     try {
       // Record the XP in history
@@ -54,9 +60,18 @@ export class XPService {
         source,
         description,
         ...(clipId && { clipId }),
+        ...(options?.contentType && { contentType: options.contentType }),
+        ...(options?.contentId && { contentId: options.contentId }),
+        ...(options?.reactorId && { reactorId: options.reactorId }),
+        ...(options?.dedupeKey && { dedupeKey: options.dedupeKey }),
       };
       
-      await storage.addUserXPHistory(xpHistory);
+      const inserted = options?.dedupeKey
+        ? await storage.addUserXPHistoryIfAbsent(xpHistory)
+        : await storage.addUserXPHistory(xpHistory);
+
+      // A deduplicated event that already exists must not increment totalXP.
+      if (!inserted) return;
       
       // Update user's total XP
       await storage.incrementUserXP(userId, xpAmount);

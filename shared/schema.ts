@@ -1146,6 +1146,10 @@ export const userXPHistory = pgTable("user_xp_history", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   clipId: integer("clip_id").references(() => clips.id), // Optional - only for clip-related XP
+  contentType: text("content_type"), // Optional content type for deduplicated creator rewards
+  contentId: integer("content_id"), // Optional content id for deduplicated creator rewards
+  reactorId: integer("reactor_id").references(() => users.id), // Optional reactor for received-reaction rewards
+  dedupeKey: text("dedupe_key"), // Optional idempotency key for one-time XP events
   xpAmount: integer("xp_amount").notNull(), // XP earned
   viewCount: integer("view_count"), // Optional - for view milestones
   source: text("source").notNull().default("view"), // "view", "lootbox", "like_received", "fire_received", "upload", "daily_login", "welcome_bonus", "other"

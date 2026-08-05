@@ -6,16 +6,14 @@ import fs from 'fs';
 import { supabaseTusStore } from '../tus-storage';
 import { supabaseStorage } from '../supabase-storage';
 import { storage } from '../storage';
-import { insertScreenshotSchema, type UploadLimits } from '@shared/schema';
+import { insertClipSchema, insertScreenshotSchema, type UploadLimits } from '@shared/schema';
 import { VideoProcessor } from '../video-processor';
 import sharp from 'sharp';
 import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
 import { fullAccessMiddleware } from '../middleware/full-access';
 import { hybridFullAccess } from '../middleware/hybrid-auth';
-import { LeaderboardService, POINT_VALUES } from '../leaderboard-service';
-import { BonusEventsService } from '../bonus-events-service';
-import { CreatorMilestoneService } from '../creator-milestone-service';
+import { XPService } from '../xp-service';
 import { captureRouteError } from "../sentry";
 
 const router = express.Router();
@@ -583,22 +581,12 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 
     const screenshot = await storage.createScreenshot(screenshotDataWithShareCode);
 
-    // Award upload points to the user (screenshots are worth 100 XP)
-    await LeaderboardService.awardPoints(
+    await XPService.awardXP(
       req.user!.id,
-      'screenshot_upload',
-      `Upload: Screenshot - ${screenshot.title}`
+      100,
+      'upload',
+      `Earned 100 XP for uploading a screenshot`
     );
-
-    // Weekend upload bonus (+50% XP on Sat/Sun)
-    await BonusEventsService.awardWeekendUploadBonus(req.user!.id, 100);
-
-    // Creator milestones: first upload of the day + weekly milestones
-    await CreatorMilestoneService.checkFirstUploadOfDay(req.user!.id);
-    await CreatorMilestoneService.checkWeeklyUploadMilestones(req.user!.id);
-
-    // Consecutive upload bonus
-    await BonusEventsService.checkConsecutiveUploadBonus(req.user!.id);
 
     // Generate QR code and sharing data for screenshot
     const baseUrl = 'https://app.gamefolio.com';
@@ -625,7 +613,7 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
         shareUrl: screenshotUrl,
         socialMediaLinks
       },
-      xpGained: POINT_VALUES['screenshot_upload'] ?? 100,
+      xpGained: 100,
       userXP: user?.totalXP || 0,
       userLevel: user?.level || 1,
       message: 'Screenshot uploaded successfully'
@@ -1118,11 +1106,12 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
       await storage.incrementDailyImportCount(req.user!.id);
     }
 
-    // Award upload points to the user
-    await LeaderboardService.awardPoints(
+    await XPService.awardXP(
       req.user!.id,
+      250,
       'upload',
-      `Upload: ${videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`
+      `Earned 250 XP for uploading a ${videoType === 'reel' ? 'reel' : 'clip'}`,
+      clip.id
     );
 
     // Generate QR code and sharing data
@@ -1151,7 +1140,7 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
         shareUrl: clipUrl,
         socialMediaLinks
       },
-      xpGained: POINT_VALUES['upload'] ?? 200,
+      xpGained: 250,
       userXP: user?.totalXP || 0,
       userLevel: user?.level || 1,
       message: 'Video processed successfully'

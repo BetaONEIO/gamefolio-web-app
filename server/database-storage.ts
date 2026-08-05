@@ -896,15 +896,10 @@ export class DatabaseStorage implements IStorage {
       .set({ views: sql`${clips.views} + 1` })
       .where(eq(clips.id, id));
 
-    // Award XP to the clip owner (1 XP per view) and Points for leaderboard
+    // Award exactly 1 real XP to the clip owner per valid, rate-limited view.
     const newViewCount = (clip.views || 0) + 1;
     const { XPService } = await import("./xp-service");
-    const { LeaderboardService } = await import("./leaderboard-service");
-    
-    await Promise.all([
-      XPService.awardXPForViews(id, clip.userId, newViewCount),
-      LeaderboardService.awardPoints(clip.userId, 'view', `View on clip: ${clip.title}`)
-    ]);
+    await XPService.awardXPForViews(id, clip.userId, newViewCount);
   }
 
   async incrementScreenshotViews(id: number): Promise<void> {
@@ -918,9 +913,14 @@ export class DatabaseStorage implements IStorage {
       .set({ views: sql`${screenshots.views} + 1` })
       .where(eq(screenshots.id, id));
 
-    // Award Points for leaderboard (screenshots don't have XP tracking yet)
-    const { LeaderboardService } = await import("./leaderboard-service");
-    await LeaderboardService.awardPoints(screenshot.userId, 'view', `View on screenshot: ${screenshot.title}`);
+    // Screenshots receive the same 1 XP reward for each valid view.
+    const { XPService } = await import("./xp-service");
+    await XPService.awardXP(
+      screenshot.userId,
+      1,
+      "view",
+      `Earned 1 XP from screenshot reaching ${(screenshot.views || 0) + 1} views`
+    );
   }
 
   async getClipsByUserId(userId: number): Promise<ClipWithUser[]> {
@@ -4101,6 +4101,15 @@ export class DatabaseStorage implements IStorage {
     return xp;
   }
 
+  async addUserXPHistoryIfAbsent(xpHistory: InsertUserXPHistory): Promise<UserXPHistory | null> {
+    const [xp] = await db
+      .insert(userXPHistory)
+      .values(xpHistory)
+      .onConflictDoNothing()
+      .returning();
+    return xp ?? null;
+  }
+
   async incrementUserXP(userId: number, xpAmount: number): Promise<void> {
     await db
       .update(users)
@@ -4146,6 +4155,47 @@ export class DatabaseStorage implements IStorage {
           eq(userPointsHistory.userId, userId),
           eq(userPointsHistory.action, action),
           sql`${userPointsHistory.description} LIKE ${descriptionPattern}`
+        )
+      )
+      .limit(1);
+
+    return !!result;
+  }
+
+  async hasUserEarnedXPForContent(userId: number, source: string, contentType: string, contentId: number): Promise<boolean> {
+    const descriptionPattern = `%${contentType} #${contentId}%`;
+    const [result] = await db
+      .select({ id: userXPHistory.id })
+      .from(userXPHistory)
+      .where(
+        and(
+          eq(userXPHistory.userId, userId),
+          eq(userXPHistory.source, source),
+          sql`${userXPHistory.description} LIKE ${descriptionPattern}`
+        )
+      )
+      .limit(1);
+
+    return !!result;
+  }
+
+  async hasUserEarnedXPForReaction(
+    creatorId: number,
+    source: string,
+    contentType: string,
+    contentId: number,
+    reactorId: number
+  ): Promise<boolean> {
+    const [result] = await db
+      .select({ id: userXPHistory.id })
+      .from(userXPHistory)
+      .where(
+        and(
+          eq(userXPHistory.userId, creatorId),
+          eq(userXPHistory.source, source),
+          eq(userXPHistory.contentType, contentType),
+          eq(userXPHistory.contentId, contentId),
+          eq(userXPHistory.reactorId, reactorId)
         )
       )
       .limit(1);
@@ -5472,20 +5522,13 @@ export class DatabaseStorage implements IStorage {
       const rewardValue = selectedReward.rewardValue || 0;
       
       if (selectedReward.assetType === 'xp_reward' && rewardValue > 0) {
-        const { LeaderboardService } = await import("./leaderboard-service");
-        await LeaderboardService.awardCustomPoints(
+        const { XPService } = await import("./xp-service");
+        await XPService.awardXP(
           userId,
-          'lootbox_xp_reward',
           rewardValue,
+          "lootbox",
           `Earned ${rewardValue} XP from Daily Lootbox (${selectedReward.rarity} reward)`
         );
-
-        await db.insert(userXPHistory).values({
-          userId,
-          xpAmount: rewardValue,
-          source: 'lootbox',
-          description: `Earned ${rewardValue} XP from Daily Lootbox (${selectedReward.rarity} reward)`,
-        });
         
         consumed = true;
       }

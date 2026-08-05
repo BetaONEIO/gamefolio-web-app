@@ -7,3 +7,4 @@
 - [Fullscreen mobile overlays need body portal](mobile-overlay-stacking-context.md) — page wrapper divs with position+zIndex trap high z-index overlays below the sticky Header; portal to document.body to escape.
 - [returnNull query data bypasses destructure defaults](react-query-null-vs-undefined-default.md) — `getQueryFn({on401:"returnNull"})` can set query `data` to `null`; a `const {data: x = []} = useQuery(...)` default only fires on `undefined`, not `null`, so `.length`/`.map` calls on `x` can throw.
 - [Leaderboard podium scaling](leaderboard-podium-scaling.md) — scaled card transforms amplify perceived vertical lift; tune #1 position from the rendered result.
+- [Authoritative creator XP](authoritative-creator-xp.md) — uploads, valid views, lootboxes, referrals, and unique fires use the real XP ledger; legacy points must not duplicate them.

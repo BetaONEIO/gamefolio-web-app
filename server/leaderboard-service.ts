@@ -6,17 +6,17 @@ import { InsertUserPointsHistory, InsertWeeklyLeaderboard, InsertTopContributor 
 // Every point earned contributes to user's level progression
 // NOTE: These are mutable — they are overwritten at startup from the xp_settings DB table
 export let POINT_VALUES: Record<string, number> = {
-  upload: 200,                    // 200 XP for uploading clips/reels
+  upload: 250,                    // Legacy compatibility value; real upload XP uses XPService
   screenshot_upload: 100,         // 100 XP for uploading screenshots
   like: 5,                        // 5 XP for liking content (like_given)
   like_received: 10,              // 10 XP when your content receives a like
   comment: 15,                    // 15 XP for commenting on a clip (comment_given)
   comment_received: 20,           // 20 XP when your content receives a comment
-  fire: 15,                       // 15 XP for fire reactions received
+  fire: 50,                       // Legacy compatibility value; real fire XP uses XPService
   share_received: 40,             // 40 XP when your clip is shared
   follow_received: 50,            // 50 XP when someone follows you
   share_given: 20,                // 20 XP for sharing a clip
-  view: 0.02,                     // 0.02 points per view (+2 XP per view)
+  view: 1,                        // Legacy compatibility value; real view XP uses XPService
   daily_login: 25,                // 25 XP for daily login
   streak_milestone: 0,            // Variable XP for streak milestones (set dynamically)
   watch_5_clips: 10,              // 10 XP for watching 5 clips in a day
