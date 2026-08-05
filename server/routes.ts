@@ -3913,12 +3913,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
 
-      // ISO week window: Monday 00:00 UTC → following Monday 00:00 UTC
+      // Rolling 7-day window ending now — gives meaningful XP totals even mid-week
       const now = new Date();
-      const dow = now.getUTCDay(); // 0=Sun…6=Sat
-      const daysFromMon = dow === 0 ? 6 : dow - 1;
-      const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysFromMon));
-      const weekEnd   = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const weekEnd   = now;
+      const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       // Query real creator XP (user_xp_history) for this week.
       // LEFT JOIN from users so every member appears even at 0 XP.

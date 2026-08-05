@@ -876,24 +876,25 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                     </div>
                   )}
 
-                  {/* Animated chrome shimmer sweeps for top-10 (ranks 4–10) */}
+                  {/* Animated chrome shimmer sweeps for top-10 (ranks 4–10) — same keyframe as top-3 */}
                   {isTop10Chrome && (
                     <div
                       className="absolute inset-0 overflow-hidden rounded-t-xl pointer-events-none"
-                      style={{ mixBlendMode: "screen" }}
+                      style={{ mixBlendMode: "overlay" }}
                     >
                       <div
-                        className="lb-bar-chrome absolute top-0 bottom-0"
+                        className="absolute inset-0 animate-bar-shimmer"
                         style={{
-                          width: "45%",
-                          background: "linear-gradient(90deg, transparent 0%, rgba(183,254,27,0.18) 30%, rgba(255,255,255,0.6) 50%, rgba(183,254,27,0.18) 70%, transparent 100%)",
+                          background: "linear-gradient(90deg, transparent 0%, rgba(183,254,27,0.2) 40%, rgba(255,255,255,0.55) 50%, rgba(183,254,27,0.2) 60%, transparent 100%)",
+                          width: "60%",
                         }}
                       />
                       <div
-                        className="lb-bar-chrome-2 absolute top-0 bottom-0"
+                        className="absolute inset-0 animate-bar-shimmer"
                         style={{
-                          width: "35%",
-                          background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 40%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 60%, transparent 100%)",
+                          background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0.25) 55%, transparent 100%)",
+                          width: "60%",
+                          animationDelay: "1.5s",
                         }}
                       />
                     </div>
