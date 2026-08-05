@@ -3911,12 +3911,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Weekly leaderboard routes
   app.get("/api/leaderboard/weekly/current", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 100;
-      let leaderboardData = await LeaderboardService.getCurrentWeekLeaderboard(limit);
-      if (!leaderboardData || leaderboardData.length === 0) {
-        leaderboardData = await LeaderboardService.getPreviousWeekLeaderboard(limit);
-      }
-      res.json(await signLeaderboardAvatars(leaderboardData));
+      const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
+
+      // ISO week window: Monday 00:00 UTC → following Monday 00:00 UTC
+      const now = new Date();
+      const dow = now.getUTCDay(); // 0=Sun…6=Sat
+      const daysFromMon = dow === 0 ? 6 : dow - 1;
+      const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysFromMon));
+      const weekEnd   = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+      // Query real creator XP (user_xp_history) for this week.
+      // LEFT JOIN from users so every member appears even at 0 XP.
+      const rows = await db.execute(sql`
+        SELECT
+          u.id                                    AS "userId",
+          COALESCE(SUM(xh.xp_amount), 0)         AS "weekXP",
+          u.username,
+          u.display_name                          AS "displayName",
+          u.avatar_url                            AS "avatarUrl",
+          u.banner_url                            AS "bannerUrl",
+          u.hide_banner                           AS "hideBanner",
+          u.accent_color                          AS "accentColor",
+          u.level,
+          u.background_color                      AS "backgroundColor",
+          u.primary_color                         AS "primaryColor",
+          u.profile_background_gradient           AS "profileBackgroundGradient",
+          u.profile_background_gradient_css       AS "profileBackgroundGradientCss",
+          u.profile_background_image_url          AS "profileBackgroundImageUrl",
+          u.nft_profile_token_id                  AS "nftProfileTokenId",
+          u.nft_profile_image_url                 AS "nftProfileImageUrl",
+          u.active_profile_pic_type               AS "activeProfilePicType"
+        FROM users u
+        LEFT JOIN user_xp_history xh
+          ON xh.user_id = u.id
+          AND xh.created_at >= ${weekStart.toISOString()}
+          AND xh.created_at < ${weekEnd.toISOString()}
+        WHERE u.role NOT IN ('admin', 'moderator', 'system')
+          AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+          AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+        GROUP BY u.id, u.username, u.display_name, u.avatar_url,
+                 u.banner_url, u.hide_banner, u.accent_color, u.level, u.background_color,
+                 u.primary_color, u.profile_background_gradient, u.profile_background_gradient_css,
+                 u.profile_background_image_url, u.nft_profile_token_id, u.nft_profile_image_url,
+                 u.active_profile_pic_type
+        ORDER BY "weekXP" DESC, u.id ASC
+        LIMIT ${limit}
+      `);
+
+      const topRows = rows as any[];
+      const userIds = topRows.map(r => Number(r.userId));
+
+      const [clipRows, reelRows, ssRows, followerRows, followingRows] = await Promise.all([
+        userIds.length ? db.execute(sql`SELECT user_id AS "userId", COUNT(*)::int AS count FROM clips WHERE user_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) AND (video_type='clip' OR video_type IS NULL) GROUP BY user_id`) : [],
+        userIds.length ? db.execute(sql`SELECT user_id AS "userId", COUNT(*)::int AS count FROM clips WHERE user_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) AND video_type='reel' GROUP BY user_id`) : [],
+        userIds.length ? db.execute(sql`SELECT user_id AS "userId", COUNT(*)::int AS count FROM screenshots WHERE user_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) GROUP BY user_id`) : [],
+        userIds.length ? db.execute(sql`SELECT following_id AS "userId", COUNT(*)::int AS count FROM follows WHERE following_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) GROUP BY following_id`) : [],
+        userIds.length ? db.execute(sql`SELECT follower_id AS "userId", COUNT(*)::int AS count FROM follows WHERE follower_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) GROUP BY follower_id`) : [],
+      ]);
+
+      const clipMap: Record<number,number> = Object.fromEntries((clipRows as any[]).map(r => [r.userId, r.count]));
+      const reelMap: Record<number,number> = Object.fromEntries((reelRows as any[]).map(r => [r.userId, r.count]));
+      const ssMap: Record<number,number>   = Object.fromEntries((ssRows   as any[]).map(r => [r.userId, r.count]));
+      const followerMap: Record<number,number>  = Object.fromEntries((followerRows  as any[]).map(r => [r.userId, r.count]));
+      const followingMap: Record<number,number> = Object.fromEntries((followingRows as any[]).map(r => [r.userId, r.count]));
+
+      const results = await Promise.all(topRows.map(async (r, idx) => {
+        let avatarUrl = r.avatarUrl || null;
+        let bannerUrl = r.hideBanner ? null : (r.bannerUrl || null);
+        let profileBackgroundImageUrl = r.profileBackgroundImageUrl || null;
+
+        if (avatarUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(avatarUrl, 3600);
+          if (signed) avatarUrl = signed;
+        }
+        if (bannerUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(bannerUrl, 3600);
+          if (signed) bannerUrl = signed;
+        }
+        if (profileBackgroundImageUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(profileBackgroundImageUrl, 3600);
+          if (signed) profileBackgroundImageUrl = signed;
+        }
+
+        const uid = Number(r.userId);
+        const clipsCount      = clipMap[uid]      || 0;
+        const reelsCount      = reelMap[uid]      || 0;
+        const screenshotsCount = ssMap[uid]       || 0;
+
+        return {
+          userId: uid,
+          rank: idx + 1,
+          totalPoints: Number(r.weekXP),
+          uploadsCount: clipsCount + reelsCount + screenshotsCount,
+          clipsCount,
+          reelsCount,
+          screenshotsCount,
+          followersCount:  followerMap[uid]  || 0,
+          followingCount:  followingMap[uid] || 0,
+          user: {
+            id: uid,
+            username: r.username,
+            displayName: r.displayName || null,
+            avatarUrl,
+            bannerUrl,
+            accentColor: r.accentColor || null,
+            avatarBorderColor: null,
+            level: r.level || null,
+            backgroundColor: r.backgroundColor || null,
+            primaryColor: r.primaryColor || null,
+            profileBackgroundGradient: r.profileBackgroundGradient ?? false,
+            profileBackgroundGradientCss: r.profileBackgroundGradientCss || null,
+            profileBackgroundImageUrl,
+          },
+        };
+      }));
+
+      res.json(results);
     } catch (error) {
       captureRouteError(error);
       console.error("Error fetching current week leaderboard:", error);
@@ -4249,15 +4359,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/leaderboard/current-season/top", async (req, res) => {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 10, 500);
-      // Season 8 (Summer Showdown): Jun–Aug 2026 — sum XP earned across all months
-      // in the season window so "This Season" reflects the full competition period.
-      const currentSeasonMonths = SEASON_DEFS[0].months;
+      // Derive season date window from the current season definition so XP is
+      // sourced directly from user_xp_history (the real creator-XP system).
+      const seasonDef = SEASON_DEFS[0];
+      const [sYear, sMonth] = seasonDef.months[0].split('-').map(Number);
+      const lastKey = seasonDef.months[seasonDef.months.length - 1];
+      const [eYear, eMonth] = lastKey.split('-').map(Number);
+      const seasonStart = new Date(Date.UTC(sYear, sMonth - 1, 1)).toISOString();
+      const seasonEnd   = new Date(Date.UTC(eYear, eMonth, 1)).toISOString(); // first day after season
 
       // LEFT JOIN from users so every member appears, even those with 0 season XP
       const rows = await db.execute(sql`
         SELECT
           u.id                                    AS "userId",
-          COALESCE(SUM(ml.total_points), 0)       AS "seasonPoints",
+          COALESCE(SUM(xh.xp_amount), 0)         AS "seasonPoints",
           u.username,
           u.display_name                          AS "displayName",
           u.avatar_url                            AS "avatarUrl",
@@ -4274,9 +4389,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           u.nft_profile_image_url                 AS "nftProfileImageUrl",
           u.active_profile_pic_type               AS "activeProfilePicType"
         FROM users u
-        LEFT JOIN monthly_leaderboard ml
-          ON ml.user_id = u.id
-          AND ml.month = ANY(ARRAY[${sql.join(currentSeasonMonths.map(m => sql`${m}`), sql`, `)}])
+        LEFT JOIN user_xp_history xh
+          ON xh.user_id = u.id
+          AND xh.created_at >= ${seasonStart}
+          AND xh.created_at < ${seasonEnd}
         WHERE u.role NOT IN ('admin', 'moderator', 'system')
           AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
           AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
