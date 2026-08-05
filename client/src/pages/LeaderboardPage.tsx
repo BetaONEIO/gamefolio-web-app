@@ -90,26 +90,24 @@ function getLeague(rank: number) {
   return                   { name: "",          icon: "",    color: "#6b7280"  };
 }
 
+// Mirrors server SEASON_DEFS — update when a new season begins
+const CURRENT_SEASON = {
+  num: 8,
+  name: "Summer Showdown",
+  startDate: new Date("2026-06-01T00:00:00"),
+  endDate:   new Date("2026-08-31T23:59:59"),
+};
+
 function getSeasonInfo() {
   const now = new Date();
-  const year = now.getFullYear();
-  const startOfYear = new Date(year, 0, 1);
-  const weekOfYear = Math.ceil(
-    ((now.getTime() - startOfYear.getTime()) / 86_400_000 + startOfYear.getDay() + 1) / 7
-  );
-  const seasonNumber = Math.ceil(weekOfYear / 4);
-  const weekInSeason = ((weekOfYear - 1) % 4) + 1;
-  const seasonNames = [
-    "Winter Rising", "Frostfire Clash", "Spring Surge", "Storm Season",
-    "Blaze", "Summer Sprint", "Summer Showdown", "Ember Season",
-    "Harvest", "Shadow Season", "Neon Siege", "Winter Finals",
-  ];
-  return { number: seasonNumber, name: seasonNames[now.getMonth()], weekInSeason };
+  const msPerDay = 86_400_000;
+  const daysSinceStart = Math.max(0, Math.floor((now.getTime() - CURRENT_SEASON.startDate.getTime()) / msPerDay));
+  const weekInSeason = Math.min(Math.floor(daysSinceStart / 7) + 1, 13);
+  return { number: CURRENT_SEASON.num, name: CURRENT_SEASON.name, weekInSeason };
 }
 
 function getSeasonEndDate() {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+  return CURRENT_SEASON.endDate;
 }
 
 function useCountdown(target: Date) {

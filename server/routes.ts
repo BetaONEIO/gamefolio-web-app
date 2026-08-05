@@ -4248,14 +4248,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Current season top players — used by the homepage leaderboard slide podium
   app.get("/api/leaderboard/current-season/top", async (req, res) => {
     try {
-      const limit = Math.min(parseInt(req.query.limit as string) || 10, 20);
+      const limit = Math.min(parseInt(req.query.limit as string) || 10, 500);
       // Always Season 8 (Summer Showdown): Jun–Aug 2026
       const currentSeasonMonths = SEASON_DEFS[0].months;
 
+      // LEFT JOIN from users so every member appears, even those with 0 season XP
       const rows = await db.execute(sql`
         SELECT
-          ml.user_id                              AS "userId",
-          SUM(ml.total_points)                    AS "seasonPoints",
+          u.id                                    AS "userId",
+          COALESCE(SUM(ml.total_points), 0)       AS "seasonPoints",
           u.username,
           u.display_name                          AS "displayName",
           u.avatar_url                            AS "avatarUrl",
@@ -4271,18 +4272,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           u.nft_profile_token_id                  AS "nftProfileTokenId",
           u.nft_profile_image_url                 AS "nftProfileImageUrl",
           u.active_profile_pic_type               AS "activeProfilePicType"
-        FROM monthly_leaderboard ml
-        JOIN users u ON u.id = ml.user_id
-        WHERE ml.month = ANY(ARRAY[${sql.join(currentSeasonMonths.map(m => sql`${m}`), sql`, `)}])
-          AND u.role NOT IN ('admin', 'moderator', 'system')
+        FROM users u
+        LEFT JOIN monthly_leaderboard ml
+          ON ml.user_id = u.id
+          AND ml.month = ANY(ARRAY[${sql.join(currentSeasonMonths.map(m => sql`${m}`), sql`, `)}])
+        WHERE u.role NOT IN ('admin', 'moderator', 'system')
           AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
           AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
-        GROUP BY ml.user_id, u.username, u.display_name, u.avatar_url,
+        GROUP BY u.id, u.username, u.display_name, u.avatar_url,
                  u.banner_url, u.hide_banner, u.accent_color, u.level, u.background_color,
                  u.primary_color, u.profile_background_gradient, u.profile_background_gradient_css,
                  u.profile_background_image_url, u.nft_profile_token_id, u.nft_profile_image_url,
                  u.active_profile_pic_type
-        ORDER BY "seasonPoints" DESC
+        ORDER BY "seasonPoints" DESC, u.id ASC
         LIMIT ${limit}
       `);
 
@@ -4362,18 +4364,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Active season player count (distinct users who have scored in the current season)
+  // Active season player count — all valid users on the platform
   app.get("/api/leaderboard/season-player-count", async (req, res) => {
     try {
-      const currentSeasonMonths = SEASON_DEFS[0].months;
       const rows = await db.execute(sql`
-        SELECT COUNT(DISTINCT ml.user_id)::int AS count
-        FROM monthly_leaderboard ml
-        JOIN users u ON u.id = ml.user_id
-        WHERE ml.month = ANY(ARRAY[${sql.join(currentSeasonMonths.map(m => sql`${m}`), sql`, `)}])
-          AND u.role NOT IN ('admin', 'moderator', 'system')
-          AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
-          AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+        SELECT COUNT(*)::int AS count
+        FROM users
+        WHERE role NOT IN ('admin', 'moderator', 'system')
+          AND (status IS NULL OR status NOT IN ('suspended', 'banned'))
+          AND (hide_from_leaderboard IS NULL OR hide_from_leaderboard = false)
       `);
       const count = Number((rows as any[])[0]?.count ?? 0);
       res.json({ count });
