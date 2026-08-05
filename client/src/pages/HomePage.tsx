@@ -309,14 +309,14 @@ const HomePage = () => {
     };
   }, []);
 
-  // Top 3 leaderboard entries for the hero slide
+  // Top 3 leaderboard entries for the hero slide — uses season endpoint for accurate season XP
   const { data: leaderboardTop3 } = useQuery<Array<{
     rank: number; totalPoints: number; userId: number;
     user: { username: string; displayName?: string | null; avatarUrl?: string | null; level?: number | null; };
   }>>({
-    queryKey: ['/api/leaderboard', 'top3'],
+    queryKey: ['/api/leaderboard/current-season', 'top3'],
     queryFn: async () => {
-      const res = await fetch('/api/leaderboard?limit=3', { credentials: 'include' });
+      const res = await fetch('/api/leaderboard/current-season/top?limit=3', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch leaderboard');
       return res.json();
     },
@@ -531,7 +531,7 @@ const HomePage = () => {
                           <p className="text-white/50 text-xs">@{entry.user.username}</p>
                         </div>
                         <span className="text-xs font-bold tabular-nums" style={{ color: '#B7FF18' }}>
-                          {formatNumber(entry.totalPoints)} pts
+                          {formatNumber(entry.totalPoints)} XP
                         </span>
                       </div>
                     );

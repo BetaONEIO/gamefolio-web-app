@@ -7,7 +7,7 @@ import { TrendingEntry, fmt, getCardTheme, CREATOR_CARD_STYLES } from "./creator
 
 interface CreatorCardProps {
   entry: TrendingEntry;
-  period?: 'week' | 'month' | 'alltime';
+  period?: 'week' | 'month' | 'alltime' | 'season';
   className?: string;
 }
 
@@ -33,7 +33,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
   const hasBanner = !!user.bannerUrl && !bannerError;
   const theme = getCardTheme(user);
 
-  const xpLabel = period === 'alltime' ? 'XP total' : period === 'month' ? 'XP this month' : 'XP this week';
+  const xpLabel = period === 'alltime' ? 'XP total' : period === 'season' ? 'XP this season' : period === 'month' ? 'XP this month' : 'XP this week';
   const ctaText = `${fmt(entry.totalPoints)} ${xpLabel}`;
 
   const recentTitle = entry.recentUpload

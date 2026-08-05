@@ -307,7 +307,7 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
                 transformOrigin: "top center",
                 transition:      "transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94), filter 0.35s ease",
               }}>
-                <CreatorCard entry={entry} period="week" />
+                <CreatorCard entry={entry} period="season" />
               </div>
             </div>
           );
@@ -467,10 +467,10 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
                 >
                   {rank === 1 ? (
                     <div className="lb-card-1-border-wrap">
-                      <CreatorCard entry={entry} period="week" />
+                      <CreatorCard entry={entry} period="season" />
                     </div>
                   ) : (
-                    <CreatorCard entry={entry} period="week" />
+                    <CreatorCard entry={entry} period="season" />
                   )}
                 </div>
                 <img
