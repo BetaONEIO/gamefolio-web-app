@@ -3816,14 +3816,15 @@ export class DatabaseStorage implements IStorage {
     const entryUserIds = withEntries.map(r => r.monthly_leaderboard.userId);
 
     // Users WITHOUT any entry this period — show at 0 XP
+    // Note: NULL NOT IN (...) evaluates to NULL in Postgres, so we must guard with IS NULL checks.
     const withoutEntries = await db
       .select()
       .from(users)
       .where(and(
         entryUserIds.length > 0 ? notInArray(users.id, entryUserIds) : sql`TRUE`,
-        notInArray(users.status, ['suspended', 'banned']),
+        or(isNull(users.status), notInArray(users.status, ['suspended', 'banned'])),
         notInArray(users.role, ['admin', 'moderator', 'system']),
-        eq(users.hideFromLeaderboard, false)
+        or(isNull(users.hideFromLeaderboard), eq(users.hideFromLeaderboard, false))
       ))
       .orderBy(asc(users.id));
 
@@ -3981,14 +3982,15 @@ export class DatabaseStorage implements IStorage {
     const entryUserIds = withEntries.map(r => r.weekly_leaderboard.userId);
 
     // Users WITHOUT any entry this period — show at 0 XP
+    // Note: NULL NOT IN (...) evaluates to NULL in Postgres, so we must guard with IS NULL checks.
     const withoutEntries = await db
       .select()
       .from(users)
       .where(and(
         entryUserIds.length > 0 ? notInArray(users.id, entryUserIds) : sql`TRUE`,
-        notInArray(users.status, ['suspended', 'banned']),
+        or(isNull(users.status), notInArray(users.status, ['suspended', 'banned'])),
         notInArray(users.role, ['admin', 'moderator', 'system']),
-        eq(users.hideFromLeaderboard, false)
+        or(isNull(users.hideFromLeaderboard), eq(users.hideFromLeaderboard, false))
       ))
       .orderBy(asc(users.id));
 
