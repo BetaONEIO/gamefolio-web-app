@@ -465,7 +465,13 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
                 <div className={rank === 1 ? "lb-card-1-glow" : ""}
                   style={{ filter: PODIUM_GLOW[rank] }}
                 >
-                  <CreatorCard entry={entry} period="week" />
+                  {rank === 1 ? (
+                    <div className="lb-card-1-border-wrap">
+                      <CreatorCard entry={entry} period="week" />
+                    </div>
+                  ) : (
+                    <CreatorCard entry={entry} period="week" />
+                  )}
                 </div>
                 <img
                   src={PODIUM_IMG[rank]}
@@ -1416,9 +1422,39 @@ const RS_STYLES = `
 @keyframes rs-glow-pulse { 0%,100%{opacity:.6;} 50%{opacity:1;} }
 @keyframes rs-scroll-bounce { 0%,100%{transform:translateY(0);opacity:.65;} 50%{transform:translateY(6px);opacity:1;} }
 @keyframes lb-gold-breathe { 0%,100%{filter:drop-shadow(0 0 28px rgba(255,215,0,1.0)) drop-shadow(0 0 10px rgba(255,190,0,0.7)) drop-shadow(0 8px 18px rgba(220,160,0,0.5));} 50%{filter:drop-shadow(0 0 38px rgba(255,215,0,1.0)) drop-shadow(0 0 18px rgba(255,200,0,0.9)) drop-shadow(0 10px 24px rgba(220,160,0,0.65));} }
+/* ── Animated gold/white-gold spinning border for #1 card ── */
+@property --lb-border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes lb-border-spin {
+  to { --lb-border-angle: 360deg; }
+}
+.lb-card-1-border-wrap {
+  --lb-border-angle: 0deg;
+  display: inline-block;
+  padding: 3px;
+  border-radius: 20px;
+  background: conic-gradient(from var(--lb-border-angle),
+    #FFD700 0%, #FFFDE7 12%, #FFFFFF 24%, #FFF9C4 36%,
+    #FFD700 48%, #FFC200 62%, #FFFDE7 74%, #FFFFFF 84%, #FFD700 100%
+  );
+  animation: lb-border-spin 2.4s linear infinite;
+  box-shadow: 0 0 32px rgba(255,215,0,0.6), 0 0 64px rgba(255,200,0,0.25);
+}
+.lb-card-1-border-wrap .fire-card {
+  border-radius: 14px !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
 .rs-hero-trophy { animation: rs-float 3.5s ease-in-out infinite; }
 .rs-scroll-arrow { animation: rs-scroll-bounce 1.5s ease-in-out infinite; }
 .lb-card-1-glow { animation: lb-gold-breathe 2.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .lb-card-1-border-wrap { animation: none !important; }
+}
 .rs-season-hero { height: calc(100dvh - 72px); min-height: 520px; }
 /* Whole podium group — scale up vs the old .72 baseline */
 .lb-desktop-podium {
