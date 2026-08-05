@@ -29,6 +29,7 @@ export let POINT_VALUES: Record<string, number> = {
   lootbox_bonus: 100,             // 100 XP for opening the daily lootbox
   consecutive_upload_bonus: 75,   // 75 XP for uploading within 24h of last upload
   weekend_upload_bonus: 0,        // Variable - 50% of upload XP on weekends
+  mobile_app_daily: 10,           // 10 XP per day for having the mobile app installed
 };
 
 // The canonical XP settings definition used to seed the database and label each setting
@@ -59,6 +60,7 @@ export const XP_SETTINGS_DEFINITION: Array<{
   { key: "first_1000_views", label: "First Clip to 1,000 Views", description: "XP awarded when your first clip reaches 1,000 views", category: "creator_milestones" },
   { key: "lootbox_bonus", label: "Daily Lootbox Opened", description: "XP awarded for opening the daily lootbox", category: "bonus_events" },
   { key: "consecutive_upload_bonus", label: "Upload Within 24h Bonus", description: "XP bonus for uploading within 24h of your last upload", category: "bonus_events" },
+  { key: "mobile_app_daily", label: "Mobile App Daily Bonus", description: "10 XP per day awarded to users who have the mobile app installed", category: "daily_activity" },
 ];
 
 // Load XP settings from the DB and update POINT_VALUES in memory

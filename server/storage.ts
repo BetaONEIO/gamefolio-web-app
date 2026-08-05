@@ -317,6 +317,7 @@ export interface IStorage {
   deletePushToken(token: string): Promise<boolean>;
   deletePushTokensByUser(userId: number): Promise<number>;
   getPushTokensByUserIds(userIds: number[]): Promise<PushToken[]>;
+  hasReceivedXPSourceToday(userId: number, source: string): Promise<boolean>;
   getAllPushTokens(): Promise<PushToken[]>;
   getPushTokensByRole(role: string): Promise<PushToken[]>;
   getPushTokensForProUsers(): Promise<PushToken[]>;

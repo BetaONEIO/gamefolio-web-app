@@ -158,6 +158,26 @@ export class StreakService {
         );
       }
 
+      // Mobile app daily bonus — 10 XP for users who have the app installed
+      try {
+        const mobileXP = POINT_VALUES.mobile_app_daily ?? 10;
+        const tokens = await storage.getPushTokensByUserIds([userId]);
+        const hasMobile = tokens.some(t => t.platform === 'ios' || t.platform === 'android');
+        if (hasMobile) {
+          const alreadyAwarded = await storage.hasReceivedXPSourceToday(userId, 'mobile_app_daily');
+          if (!alreadyAwarded) {
+            await LeaderboardService.awardCustomPoints(
+              userId,
+              'mobile_app_daily',
+              mobileXP,
+              'Daily mobile app bonus'
+            );
+          }
+        }
+      } catch (mobileErr) {
+        console.warn('[streak-service] mobile app daily XP failed:', mobileErr);
+      }
+
       if (!isFirstLogin) {
         try {
           const notif = await storage.createNotification({

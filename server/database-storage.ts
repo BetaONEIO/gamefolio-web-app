@@ -3801,27 +3801,43 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMonthlyLeaderboard(month: string, year: number, limit?: number): Promise<(MonthlyLeaderboard & { user: User })[]> {
-    const query = db
+    // Users WITH a leaderboard entry this period (any points including 0)
+    const withEntries = await db
       .select()
       .from(monthlyLeaderboard)
       .leftJoin(users, eq(monthlyLeaderboard.userId, users.id))
       .where(and(
         eq(monthlyLeaderboard.month, month),
         eq(monthlyLeaderboard.year, year),
-        gt(monthlyLeaderboard.totalPoints, 0),
         sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`
       ))
       .orderBy(desc(monthlyLeaderboard.totalPoints));
 
-    if (limit) {
-      query.limit(limit);
-    }
+    const entryUserIds = withEntries.map(r => r.monthly_leaderboard.userId);
 
-    const results = await query;
-    return results.map(row => ({
-      ...row.monthly_leaderboard,
-      user: row.users!
-    }));
+    // Users WITHOUT any entry this period — show at 0 XP
+    const withoutEntries = await db
+      .select()
+      .from(users)
+      .where(and(
+        entryUserIds.length > 0 ? notInArray(users.id, entryUserIds) : sql`TRUE`,
+        notInArray(users.status, ['suspended', 'banned']),
+        notInArray(users.role, ['admin', 'moderator', 'system']),
+        eq(users.hideFromLeaderboard, false)
+      ))
+      .orderBy(asc(users.id));
+
+    const now = new Date();
+    const combined: (MonthlyLeaderboard & { user: User })[] = [
+      ...withEntries.map(row => ({ ...row.monthly_leaderboard, user: row.users! })),
+      ...withoutEntries.map(u => ({
+        id: 0, userId: u.id, month, year,
+        uploadsCount: 0, likesGivenCount: 0, commentsCount: 0,
+        firesGivenCount: 0, viewsCount: 0, totalPoints: 0, rank: 0,
+        createdAt: now, updatedAt: now, user: u,
+      })),
+    ];
+    return limit ? combined.slice(0, limit) : combined;
   }
 
   async recalculateMonthlyRankings(month: string, year: number): Promise<void> {
@@ -3869,23 +3885,57 @@ export class DatabaseStorage implements IStorage {
       .from(monthlyLeaderboard)
       .where(sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`)
       .groupBy(monthlyLeaderboard.userId)
-      .having(sql`SUM(${monthlyLeaderboard.totalPoints}) > 0`)
-      .orderBy(desc(sql`SUM(${monthlyLeaderboard.totalPoints})`))
-      .limit(limit);
+      // No HAVING filter — include users with 0 aggregated points too
+      .orderBy(desc(sql`SUM(${monthlyLeaderboard.totalPoints})`));
 
-    // Get user details for each entry
-    const results = await Promise.all(
+    const entryUserIds = aggregated.map(e => e.userId);
+
+    // Users who have never appeared on any monthly leaderboard — show at 0 XP
+    const withoutAny = await db
+      .select()
+      .from(users)
+      .where(and(
+        entryUserIds.length > 0 ? notInArray(users.id, entryUserIds) : sql`TRUE`,
+        notInArray(users.status, ['suspended', 'banned']),
+        notInArray(users.role, ['admin', 'moderator', 'system']),
+        eq(users.hideFromLeaderboard, false)
+      ))
+      .orderBy(asc(users.id));
+
+    // Resolve user details for entries that have monthly points
+    const ranked = await Promise.all(
       aggregated.map(async (entry, index) => {
         const user = await this.getUser(entry.userId);
-        return {
-          ...entry,
-          rank: index + 1,
-          user: user!
-        };
+        return { ...entry, rank: index + 1, user: user! };
       })
     );
 
-    return results;
+    const zeroRankStart = ranked.length + 1;
+    const zeros = withoutAny.map((u, i) => ({
+      userId: u.id,
+      uploadsCount: 0, likesGivenCount: 0, commentsCount: 0,
+      firesGivenCount: 0, viewsCount: 0, totalPoints: 0,
+      rank: zeroRankStart + i,
+      user: u,
+    }));
+
+    const combined = [...ranked, ...zeros];
+    return limit ? combined.slice(0, limit) : combined;
+  }
+
+  async hasReceivedXPSourceToday(userId: number, source: string): Promise<boolean> {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const [row] = await db
+      .select({ id: userXPHistory.id })
+      .from(userXPHistory)
+      .where(and(
+        eq(userXPHistory.userId, userId),
+        eq(userXPHistory.source, source),
+        sql`${userXPHistory.createdAt} >= ${startOfDay}`
+      ))
+      .limit(1);
+    return !!row;
   }
 
   // Weekly leaderboard operations
@@ -3916,27 +3966,43 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWeeklyLeaderboard(week: string, year: number, limit?: number): Promise<(WeeklyLeaderboard & { user: User })[]> {
-    const query = db
+    // Users WITH a leaderboard entry this period (any points including 0)
+    const withEntries = await db
       .select()
       .from(weeklyLeaderboard)
       .leftJoin(users, eq(weeklyLeaderboard.userId, users.id))
       .where(and(
         eq(weeklyLeaderboard.week, week),
         eq(weeklyLeaderboard.year, year),
-        gt(weeklyLeaderboard.totalPoints, 0),
         sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${weeklyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`
       ))
       .orderBy(desc(weeklyLeaderboard.totalPoints));
 
-    if (limit) {
-      query.limit(limit);
-    }
+    const entryUserIds = withEntries.map(r => r.weekly_leaderboard.userId);
 
-    const results = await query;
-    return results.map(row => ({
-      ...row.weekly_leaderboard,
-      user: row.users!
-    }));
+    // Users WITHOUT any entry this period — show at 0 XP
+    const withoutEntries = await db
+      .select()
+      .from(users)
+      .where(and(
+        entryUserIds.length > 0 ? notInArray(users.id, entryUserIds) : sql`TRUE`,
+        notInArray(users.status, ['suspended', 'banned']),
+        notInArray(users.role, ['admin', 'moderator', 'system']),
+        eq(users.hideFromLeaderboard, false)
+      ))
+      .orderBy(asc(users.id));
+
+    const now = new Date();
+    const combined: (WeeklyLeaderboard & { user: User })[] = [
+      ...withEntries.map(row => ({ ...row.weekly_leaderboard, user: row.users! })),
+      ...withoutEntries.map(u => ({
+        id: 0, userId: u.id, week, year,
+        uploadsCount: 0, likesGivenCount: 0, commentsCount: 0,
+        firesGivenCount: 0, viewsCount: 0, totalPoints: 0, rank: 0,
+        createdAt: now, updatedAt: now, user: u,
+      })),
+    ];
+    return limit ? combined.slice(0, limit) : combined;
   }
 
   async recalculateWeeklyRankings(week: string, year: number): Promise<void> {
