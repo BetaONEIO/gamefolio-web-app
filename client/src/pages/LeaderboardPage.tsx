@@ -827,6 +827,7 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
           const isTop3 = rank <= 3;
           const pct    = entry.totalPoints / maxPts;
           const barH   = Math.max(Math.round(pct * MAX_BAR_H), 14);
+          const isTop10Chrome = rank >= 4 && rank <= 10;
           const colors = isTop3 ? BAR_RANK_COLORS[rank] : isMe ? BAR_ME_COLOR : BAR_DEF_COLOR;
           const rankBanners: Record<number, string> = { 1: goldBannerImg, 2: silverBannerImg, 3: bronzeBannerImg };
 
@@ -840,10 +841,15 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
 
                 {/* Bar */}
                 <div
-                  className={`w-14 rounded-t-xl bg-gradient-to-t ${colors.bar} group-hover:brightness-110 transition-all relative`}
+                  className={`w-14 rounded-t-xl group-hover:brightness-110 transition-all relative ${isTop10Chrome ? '' : `bg-gradient-to-t ${colors.bar}`}`}
                   style={{
                     height: barH,
-                    boxShadow: `0 0 16px ${colors.glow}`,
+                    boxShadow: isTop10Chrome
+                      ? '0 0 18px rgba(183,254,27,0.28), 0 0 6px rgba(255,255,255,0.4)'
+                      : `0 0 16px ${colors.glow}`,
+                    ...(isTop10Chrome ? {
+                      background: 'linear-gradient(180deg, #b8d4a8 0%, #e8f8e0 10%, #ffffff 22%, #d8f2c8 34%, #ffffff 46%, #e4f8d8 58%, #f8fff4 72%, #ffffff 84%, #cce8bc 100%)',
+                    } : {}),
                   }}
                 >
                   {/* Double diagonal shimmer sweeps for top-3 */}
@@ -865,6 +871,29 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                           background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0.25) 55%, transparent 100%)",
                           width: "60%",
                           animationDelay: "1.5s",
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Animated chrome shimmer sweeps for top-10 (ranks 4–10) */}
+                  {isTop10Chrome && (
+                    <div
+                      className="absolute inset-0 overflow-hidden rounded-t-xl pointer-events-none"
+                      style={{ mixBlendMode: "screen" }}
+                    >
+                      <div
+                        className="lb-bar-chrome absolute top-0 bottom-0"
+                        style={{
+                          width: "45%",
+                          background: "linear-gradient(90deg, transparent 0%, rgba(183,254,27,0.18) 30%, rgba(255,255,255,0.6) 50%, rgba(183,254,27,0.18) 70%, transparent 100%)",
+                        }}
+                      />
+                      <div
+                        className="lb-bar-chrome-2 absolute top-0 bottom-0"
+                        style={{
+                          width: "35%",
+                          background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.3) 40%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.3) 60%, transparent 100%)",
                         }}
                       />
                     </div>
@@ -1422,6 +1451,10 @@ const RS_STYLES = `
 @keyframes rs-glow-pulse { 0%,100%{opacity:.6;} 50%{opacity:1;} }
 @keyframes rs-scroll-bounce { 0%,100%{transform:translateY(0);opacity:.65;} 50%{transform:translateY(6px);opacity:1;} }
 @keyframes lb-gold-breathe { 0%,100%{filter:drop-shadow(0 0 28px rgba(255,215,0,1.0)) drop-shadow(0 0 10px rgba(255,190,0,0.7)) drop-shadow(0 8px 18px rgba(220,160,0,0.5));} 50%{filter:drop-shadow(0 0 38px rgba(255,215,0,1.0)) drop-shadow(0 0 18px rgba(255,200,0,0.9)) drop-shadow(0 10px 24px rgba(220,160,0,0.65));} }
+/* ── Chrome shimmer for top-10 bars ── */
+@keyframes lb-chrome-sweep { 0%{transform:translateX(-120%);} 100%{transform:translateX(320%);} }
+.lb-bar-chrome { animation: lb-chrome-sweep 2.8s ease-in-out infinite; }
+.lb-bar-chrome-2 { animation: lb-chrome-sweep 2.8s ease-in-out 1.4s infinite; }
 /* ── Animated gold/white-gold spinning border for #1 card ── */
 @property --lb-border-angle {
   syntax: '<angle>';
