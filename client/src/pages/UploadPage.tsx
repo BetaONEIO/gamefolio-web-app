@@ -7,6 +7,12 @@ import { queryClient, authedFetch, getQueryFn } from "@/lib/queryClient";
 import { getAccessToken, getAccessTokenSync } from "@/lib/auth-token";
 import { isNative, resolveApiUrl, getUnpatchedXHR, getUnpatchedFetch } from "@/lib/platform";
 import { isAppActive } from "@/lib/mobile-init";
+import {
+  parseFinishBody,
+  parseFinishHeader,
+  parseFinishError,
+  type TusFinishResult,
+} from "@/lib/tus-finish-payload";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -1016,6 +1022,14 @@ const UploadPage = () => {
           const chunkTimings: Array<{ ms: number; status: number }> = [];
           const requestStartTimes = new WeakMap<tus.HttpRequest, number>();
           let retryCount = 0;
+          // The finish payload rides on whichever response ran the server's
+          // `onUploadFinish` hook, which is not necessarily the `lastResponse`
+          // tus-js-client reports in onSuccess — see tus-finish-payload.ts.
+          // Hold on to it the moment it goes past.
+          let finishResult: TusFinishResult | null = null;
+          // Likewise the last thing the server said about a failure, so a
+          // dead-end upload reports that reason rather than a parser error.
+          let serverErrorMessage: string | null = null;
           const buildUploadDiagnostics = () => ({
             chunkCount: chunkTimings.length,
             retryCount,
@@ -1042,7 +1056,16 @@ const UploadPage = () => {
               // approach) needs the whole file buffered for the request body,
               // which is what exhausts the WebView's heap on big clips.
               chunkSize: 6 * 1024 * 1024,
-              retryDelays: [0, 1000, 3000, 5000],
+              // Long enough to ride out the app being backgrounded. Android
+              // suspends the WebView's network stack on background, so every
+              // in-flight chunk dies at once with a ProgressEvent; the old
+              // 4-step budget burned all its attempts inside ~11s against a
+              // dead radio and failed the upload (Sentry GAMEFOLIO-MOBILE-11
+              // and -1E, both preceded by an `app.lifecycle: background`
+              // breadcrumb). TUS resumes from the last acknowledged offset, so
+              // a longer budget re-sends nothing that already landed. Same
+              // reasoning as waitBeforeProcessVideoRetry below.
+              retryDelays: [0, 1000, 3000, 5000, 15000, 30000, 60000],
               headers: token ? { Authorization: `Bearer ${token}` } : {},
               metadata: {
                 filename: file.name,
@@ -1055,20 +1078,44 @@ const UploadPage = () => {
               onAfterResponse: (req, res) => {
                 const start = requestStartTimes.get(req);
                 const ms = start != null ? performance.now() - start : -1;
-                chunkTimings.push({ ms, status: res.getStatus() });
+                const status = res.getStatus();
+                chunkTimings.push({ ms, status });
                 if (ms > 2000) {
-                  console.warn(`[tus] slow chunk request: ${Math.round(ms)}ms (status ${res.getStatus()})`);
+                  console.warn(`[tus] slow chunk request: ${Math.round(ms)}ms (status ${status})`);
+                }
+                const body = res.getBody();
+                if (!finishResult) {
+                  finishResult = parseFinishBody(body) ?? parseFinishHeader(res.getHeader('Upload-Result'));
+                }
+                if (status >= 400) {
+                  serverErrorMessage = parseFinishError(body)?.message ?? serverErrorMessage;
                 }
               },
               onShouldRetry: (error, retryAttempt, opts) => {
                 retryCount++;
                 const status = error.originalResponse ? error.originalResponse.getStatus() : 0;
                 console.warn(`[tus] retry #${retryAttempt + 1} after error (status ${status}):`, error.message);
-                // Same policy as tus-js-client's default — this hook only adds
-                // visibility, it doesn't change what gets retried.
                 const isClientError = status >= 400 && status < 500;
-                const online = typeof navigator === 'undefined' || navigator.onLine !== false;
-                return (!isClientError || status === 409 || status === 423) && online;
+                // A backgrounded WebView can report itself offline even though
+                // the device has a perfectly good connection — treat that as
+                // "retry later", not "give up", and let retryDelays carry us
+                // to the foreground.
+                const backgrounded = isNative && !isAppActive();
+                const online = backgrounded || typeof navigator === 'undefined' || navigator.onLine !== false;
+                // 409/423 are TUS protocol states (offset conflict, locked) —
+                // always worth a retry, they resolve themselves.
+                if (status === 409 || status === 423) return online;
+                // A JSON `{error, message}` envelope means our own
+                // `onUploadFinish` rejected the upload deliberately (tier
+                // limit, duration probe, Supabase finish failure). Retrying
+                // that re-sends an upload the server considers complete, which
+                // answers with an empty body and buries the real reason — the
+                // path that produced GAMEFOLIO-MOBILE-1F. Fail fast instead so
+                // onError can surface the server's message.
+                if (parseFinishError(error.originalResponse?.getBody())) return false;
+                // Otherwise the same policy as tus-js-client's default — this
+                // hook only adds visibility.
+                return !isClientError && online;
               },
               onError: (error) => {
                 signal.removeEventListener('abort', onAbort);
@@ -1086,20 +1133,20 @@ const UploadPage = () => {
                 // onUploadFinish returns so the "Upgrade to Pro" CTA still
                 // renders, matching the /process-video error path below.
                 const detailed = error as tus.DetailedError;
-                const body = detailed.originalResponse?.getBody();
-                if (body) {
-                  try {
-                    const parsed = JSON.parse(body);
-                    if (parsed?.message) {
-                      rejectUpload(new UploadLimitError(parsed.message, parsed.limits));
-                      return;
-                    }
-                  } catch {
-                    // Not JSON — fall through to the generic error below.
-                  }
+                const serverError = parseFinishError(detailed.originalResponse?.getBody());
+                if (serverError?.limits) {
+                  rejectUpload(new UploadLimitError(serverError.message, serverError.limits as any));
+                  return;
                 }
                 console.error('TUS upload error:', error);
-                const finalError = error instanceof Error ? error : new Error(String(error));
+                // Any other message the server sent is more useful than
+                // tus-js-client's generic transport wording — but it stays a
+                // plain Error so it still reaches Sentry as a real failure.
+                const finalError = serverError
+                  ? new Error(serverError.message)
+                  : error instanceof Error
+                    ? error
+                    : new Error(String(error));
                 (finalError as Error & { uploadDiagnostics?: unknown }).uploadDiagnostics = buildUploadDiagnostics();
                 rejectUpload(finalError);
               },
@@ -1109,29 +1156,48 @@ const UploadPage = () => {
               },
               onSuccess: (payload) => {
                 signal.removeEventListener('abort', onAbort);
-                try {
-                  const parsed = JSON.parse(payload.lastResponse.getBody());
-                  if (!parsed?.success || !parsed?.result?.url || !parsed?.result?.path) {
-                    throw new Error('Malformed upload-finish response');
-                  }
-                  console.log('TUS upload complete');
-                  const diagnostics = buildUploadDiagnostics();
-                  if (retryCount > 0 || diagnostics.slowChunks.length > 0) {
-                    // Succeeded, but not cleanly — this is the "stuck for a
-                    // few minutes then completes" case, which throws no
-                    // error and would otherwise leave zero trace in Sentry.
-                    console.warn('[tus] upload succeeded after retries/slow chunks:', diagnostics);
-                    Sentry.captureMessage('tus upload succeeded after retries/slow chunks', {
-                      level: 'warning',
-                      tags: { module: 'upload-page', op: 'video-upload' },
-                      extra: diagnostics,
-                    });
-                  }
-                  setUploadProgress(85);
-                  resolveUpload({ url: parsed.result.url, path: parsed.result.path });
-                } catch (parseError) {
-                  rejectUpload(parseError instanceof Error ? parseError : new Error('Malformed upload-finish response'));
+                const diagnostics = buildUploadDiagnostics();
+                // Try the response tus hands us first, then the header it may
+                // carry instead, then anything we captured earlier in the
+                // upload. `lastResponse` is empty whenever tus completed the
+                // upload off a HEAD re-sync rather than the final PATCH.
+                const result =
+                  parseFinishBody(payload.lastResponse.getBody()) ??
+                  parseFinishHeader(payload.lastResponse.getHeader('Upload-Result')) ??
+                  finishResult;
+
+                if (!result) {
+                  // The bytes are up but the server never handed back a usable
+                  // result — the upload genuinely did not finish. Report what
+                  // the server said, not a JSON parse failure.
+                  console.error('[tus] upload completed without a finish payload:', diagnostics);
+                  const finalError = new Error(
+                    serverErrorMessage ??
+                      'Upload finished but the server did not confirm it. Please try uploading again.',
+                  );
+                  (finalError as Error & { uploadDiagnostics?: unknown }).uploadDiagnostics = {
+                    ...diagnostics,
+                    finishPayloadMissing: true,
+                    lastResponseStatus: payload.lastResponse.getStatus(),
+                  };
+                  rejectUpload(finalError);
+                  return;
                 }
+
+                console.log('TUS upload complete');
+                if (retryCount > 0 || diagnostics.slowChunks.length > 0) {
+                  // Succeeded, but not cleanly — this is the "stuck for a
+                  // few minutes then completes" case, which throws no
+                  // error and would otherwise leave zero trace in Sentry.
+                  console.warn('[tus] upload succeeded after retries/slow chunks:', diagnostics);
+                  Sentry.captureMessage('tus upload succeeded after retries/slow chunks', {
+                    level: 'warning',
+                    tags: { module: 'upload-page', op: 'video-upload' },
+                    extra: diagnostics,
+                  });
+                }
+                setUploadProgress(85);
+                resolveUpload(result);
               },
             });
 
