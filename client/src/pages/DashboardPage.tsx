@@ -306,11 +306,9 @@ function ActiveBounties({ bounties, isLoading }: { bounties: DashboardData["boun
         <div className="px-5 pb-5 text-center py-6">
           <Swords className="w-8 h-8 mx-auto mb-2 opacity-20" style={{ color: TEXT_MUTED }} />
           <p className="text-sm" style={{ color: TEXT_MUTED }}>No active bounties</p>
-          <Link href="/explore">
-            <span className="text-xs font-semibold mt-2 inline-block cursor-pointer hover:opacity-80" style={{ color: ACCENT }}>
-              Browse Bounties
-            </span>
-          </Link>
+          <span className="text-xs font-semibold mt-2 inline-block" style={{ color: ACCENT }}>
+            Coming Soon
+          </span>
         </div>
       </SectionCard>
     );
