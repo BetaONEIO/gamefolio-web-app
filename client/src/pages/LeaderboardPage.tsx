@@ -820,7 +820,7 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
       onMouseLeave={onMouseUp}
       onMouseMove={onMouseMove}
     >
-      <div className="flex items-end gap-3 min-w-max px-4 pb-1" style={{ paddingTop: 32 }}>
+      <div className="flex items-start gap-3 min-w-max px-4 pb-1" style={{ paddingTop: 32 }}>
         {entries.map((entry, i) => {
           const rank   = i + 1;
           const isMe   = entry.userId === userId;
@@ -839,19 +839,25 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                   {formatPoints(entry.totalPoints)}
                 </span>
 
-                {/* Bar */}
+                {/* Fixed-height bar area keeps every XP bar on the same baseline.
+                    The content below varies for podium banners, so aligning the
+                    whole columns would otherwise lift the top-three bars. */}
                 <div
-                  className={`w-14 rounded-t-xl group-hover:brightness-110 transition-all relative ${isTop10Chrome ? '' : `bg-gradient-to-t ${colors.bar}`}`}
-                  style={{
-                    height: barH,
-                    boxShadow: isTop10Chrome
-                      ? '0 0 18px rgba(183,254,27,0.28), 0 0 6px rgba(255,255,255,0.4)'
-                      : `0 0 16px ${colors.glow}`,
-                    ...(isTop10Chrome ? {
-                      background: 'linear-gradient(180deg, #b8d4a8 0%, #e8f8e0 10%, #ffffff 22%, #d8f2c8 34%, #ffffff 46%, #e4f8d8 58%, #f8fff4 72%, #ffffff 84%, #cce8bc 100%)',
-                    } : {}),
-                  }}
+                  className="flex w-14 items-end"
+                  style={{ height: MAX_BAR_H }}
                 >
+                  <div
+                    className={`w-14 rounded-t-xl group-hover:brightness-110 transition-all relative ${isTop10Chrome ? '' : `bg-gradient-to-t ${colors.bar}`}`}
+                    style={{
+                      height: barH,
+                      boxShadow: isTop10Chrome
+                        ? '0 0 18px rgba(183,254,27,0.28), 0 0 6px rgba(255,255,255,0.4)'
+                        : `0 0 16px ${colors.glow}`,
+                      ...(isTop10Chrome ? {
+                        background: 'linear-gradient(180deg, #b8d4a8 0%, #e8f8e0 10%, #ffffff 22%, #d8f2c8 34%, #ffffff 46%, #e4f8d8 58%, #f8fff4 72%, #ffffff 84%, #cce8bc 100%)',
+                      } : {}),
+                    }}
+                  >
                   {/* Double diagonal shimmer sweeps for top-3 */}
                   {isTop3 && (
                     <div
@@ -906,6 +912,7 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                       YOU
                     </div>
                   )}
+                  </div>
                 </div>
 
                 {/* Rank banner + avatar — banner forms a pedestal resting directly at the base of the bar, avatar sits on top of it */}
