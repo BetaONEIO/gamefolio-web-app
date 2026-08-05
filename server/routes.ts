@@ -102,6 +102,7 @@ import { createPublicClient, http, parseUnits, decodeEventLog, type Address as V
 import { privateKeyToAccount } from "viem/accounts";
 import { GF_TOKEN_ADDRESS as NFT_GF_TOKEN_ADDRESS, GF_TOKEN_ABI as NFT_GF_TOKEN_ABI, SKALE_NEBULA_TESTNET as NFT_SKALE_CHAIN } from "../shared/contracts";
 import { TwoFactorService } from "./services/two-factor-service";
+import { getRequestMeta } from "./lib/request-meta";
 
 // Import upload middlewares from upload router
 import multer from "multer";
@@ -980,7 +981,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           externalId: uid,
           // Set userType and ageRange to null to force onboarding
           userType: null,
-          ageRange: null
+          ageRange: null,
+          signupIp: getRequestMeta(req).ip,
+          signupDeviceId: getRequestMeta(req).deviceId,
         });
 
         // Send welcome email for new Google users
@@ -1300,7 +1303,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           externalId: id,
           // Set userType and ageRange to null to force onboarding
           userType: null,
-          ageRange: null
+          ageRange: null,
+          signupIp: getRequestMeta(req).ip,
+          signupDeviceId: getRequestMeta(req).deviceId,
         });
 
         // Send welcome email for new Discord users
@@ -1575,7 +1580,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           xboxUsername: gamertag,
           xboxXuid: xuid,
           userType: null,
-          ageRange: null
+          ageRange: null,
+          signupIp: getRequestMeta(req).ip,
+          signupDeviceId: getRequestMeta(req).deviceId,
         });
 
         // Send new user notification to admin
@@ -2074,12 +2081,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create user — referralCode is always server-generated; referredBy records which code was used at signup
       // storage.createUser() hashes the password itself (like every other
       // caller here - OAuth/admin paths), so pass it through in plain text.
+      // signupIp/signupDeviceId are server-derived (never from parsed client
+      // body) — spam/multi-account detection signal, see gamefolio-bot.
+      const { ip: signupIp, deviceId: signupDeviceId } = getRequestMeta(req);
       const user = await storage.createUser({
         ...userData,
         username: userData.username.toLowerCase(),
         email: userData.email.toLowerCase(),
         emailVerified: false,
         ...(usedReferralCode && { referredBy: usedReferralCode }),
+        signupIp,
+        signupDeviceId,
       });
 
       // Generate verification code and store it in the database
@@ -7510,6 +7522,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         videoType: req.body.videoType || "clip", // "clip" or "reel"
         ageRestricted: req.body.ageRestricted === 'true' || req.body.ageRestricted === true,
         shareCode: generateShareCode(), // This generates 8-character alphanumeric codes
+        uploadIp: getRequestMeta(req).ip,
+        uploadDeviceId: getRequestMeta(req).deviceId,
       };
 
       // Create the clip
@@ -11131,7 +11145,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: description || null,
         tags: tags ? JSON.parse(tags) : [],
         ageRestricted: req.body.ageRestricted === 'true' || req.body.ageRestricted === true,
-        shareCode: generateShareCode()
+        shareCode: generateShareCode(),
+        uploadIp: getRequestMeta(req).ip,
+        uploadDeviceId: getRequestMeta(req).deviceId,
       };
 
       // Scheduled path: store the processed screenshot for later publishing.
@@ -12091,6 +12107,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         duration: actualDuration || 30,
         shareCode: shareCode,
         ageRestricted: false,
+        // Desktop app doesn't send a device id — IP-only signal here.
+        uploadIp: getRequestMeta(req).ip,
       };
 
       const validatedClipData = insertClipSchema.parse(clipData);
