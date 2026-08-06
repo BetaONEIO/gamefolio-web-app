@@ -1528,8 +1528,8 @@ function DashboardActivityTabs({
 
   return (
     <div
-      className="flex items-center gap-1 p-1 rounded-xl w-full sm:w-fit"
-      style={{ background: "rgba(255,255,255,0.035)", border: `1px solid ${BORDER}` }}
+      className="flex items-stretch w-full border-b"
+      style={{ borderColor: BORDER }}
       role="tablist"
       aria-label="Dashboard activity"
     >
@@ -1541,17 +1541,21 @@ function DashboardActivityTabs({
             key={tab.id}
             type="button"
             role="tab"
+            id={`${tab.id}-tab`}
             aria-selected={isActive}
+            aria-controls={`${tab.id}-panel`}
             onClick={() => onChange(tab.id)}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-[11px] sm:text-xs font-bold transition-all"
+            className="relative flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-3 text-[11px] sm:text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B7FF1A]"
             style={{
-              color: isActive ? ACCENT_DARK : TEXT_MUTED,
-              background: isActive ? ACCENT : "transparent",
-              boxShadow: isActive ? `0 0 14px ${ACCENT}25` : undefined,
+              color: isActive ? TEXT_PRIMARY : TEXT_MUTED,
             }}
           >
             <Icon className="w-3.5 h-3.5" />
             {tab.label}
+            <span
+              className="absolute inset-x-0 bottom-[-1px] h-0.5 transition-opacity"
+              style={{ background: ACCENT, opacity: isActive ? 1 : 0 }}
+            />
           </button>
         );
       })}
@@ -1737,15 +1741,17 @@ export default function DashboardPage() {
           /* Mobile: stacked single column */
           <div className="space-y-5 pb-24">
             {activityTab === "daily" ? (
-              <div className="-mx-4 sm:-mx-6">
+              <div id="daily-panel" role="tabpanel" aria-labelledby="daily-tab" className="-mx-4 sm:-mx-6">
                 <DailyXPChallenges />
               </div>
             ) : (
-              <CreatorPerformancePanel
-                creator={data?.creator}
-                followersCount={data?.social?.followersCount ?? 0}
-                isLoading={isLoading}
-              />
+              <div id="creator-panel" role="tabpanel" aria-labelledby="creator-tab">
+                <CreatorPerformancePanel
+                  creator={data?.creator}
+                  followersCount={data?.social?.followersCount ?? 0}
+                  isLoading={isLoading}
+                />
+              </div>
             )}
             {/* 3. League Progress */}
             <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
@@ -1766,15 +1772,17 @@ export default function DashboardPage() {
           /* Desktop: structured layout matching spec order */
           <div className="space-y-5 pb-8">
             {activityTab === "daily" ? (
-              <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+              <div id="daily-panel" role="tabpanel" aria-labelledby="daily-tab" className="-mx-4 sm:-mx-6 lg:-mx-8">
                 <DailyXPChallenges />
               </div>
             ) : (
-              <CreatorPerformancePanel
-                creator={data?.creator}
-                followersCount={data?.social?.followersCount ?? 0}
-                isLoading={isLoading}
-              />
+              <div id="creator-panel" role="tabpanel" aria-labelledby="creator-tab">
+                <CreatorPerformancePanel
+                  creator={data?.creator}
+                  followersCount={data?.social?.followersCount ?? 0}
+                  isLoading={isLoading}
+                />
+              </div>
             )}
 
             {/* 3. League Progress */}
