@@ -6,3 +6,4 @@
 - [returnNull query data bypasses destructure defaults](react-query-null-vs-undefined-default.md) — `getQueryFn({on401:"returnNull"})` can set query `data` to `null`; a `const {data: x = []} = useQuery(...)` default only fires on `undefined`, not `null`, so `.length`/`.map` calls on `x` can throw.
 - [Leaderboard cache rebuild](leaderboard-cache-rebuild.md) — weekly/monthly leaderboards are incremental cache tables; bulk history imports need the admin rebuild endpoint.
 - [Legacy import advisory lock](legacy-import-advisory-lock.md) — session locks must acquire, run, and release through one reserved postgres-js connection.
+- [Publish schema diff safety](publish-schema-diff-safety.md) — missing dev-side tables can appear as destructive production drops; align dev compatibility tables before publishing.
