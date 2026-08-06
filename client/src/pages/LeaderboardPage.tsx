@@ -65,29 +65,48 @@ type TabType = "weekly" | "monthly" | "alltime" | "season";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-// XP thresholds mirror server's SEASON_LEAGUE_TIERS + buildSeasonLeague logic.
-const SEASON_XP_TIERS = [
-  { name: "Bronze",   icon: "🥉", color: "#CD7F32", min: 0,     gradient: "from-orange-700/30 to-orange-800/10", border: "border-orange-700/40", glow: "shadow-[0_0_14px_rgba(205,127,50,0.2)]" },
-  { name: "Silver",   icon: "🥈", color: "#C0C0C0", min: 1000,  gradient: "from-gray-400/30 to-gray-500/10",     border: "border-gray-400/40",   glow: "shadow-[0_0_14px_rgba(192,192,192,0.2)]" },
-  { name: "Gold",     icon: "🥇", color: "#FFD700", min: 3000,  gradient: "from-yellow-400/30 to-amber-500/10",  border: "border-yellow-400/40", glow: "shadow-[0_0_16px_rgba(255,215,0,0.25)]" },
-  { name: "Platinum", icon: "💎", color: "#4FC3F7", min: 6000,  gradient: "from-cyan-300/30 to-blue-400/10",     border: "border-cyan-300/40",   glow: "shadow-[0_0_16px_rgba(79,195,247,0.25)]" },
-  { name: "Onyx",     icon: "🖤", color: "#8B5CF6", min: 10000, gradient: "from-violet-500/30 to-purple-600/10", border: "border-violet-500/40", glow: "shadow-[0_0_16px_rgba(139,92,246,0.25)]" },
-];
-
-function getLeagueFromEntry(totalPoints: number, rank: number) {
-  const hasReachedOnyx = totalPoints >= 10000;
-  if (hasReachedOnyx && rank <= 10)  return { name: "Champion", icon: "🏆", color: "#B7FF1A", gradient: "from-lime-400/30 to-green-600/10",    border: "border-lime-400/40",   glow: "shadow-[0_0_20px_rgba(183,255,26,0.3)]"  };
-  if (hasReachedOnyx && rank <= 100) return { name: "Diamond",  icon: "💠", color: "#A8EDFF", gradient: "from-cyan-400/30 to-blue-500/10",     border: "border-cyan-400/40",   glow: "shadow-[0_0_20px_rgba(168,237,255,0.3)]" };
-  let current = SEASON_XP_TIERS[0];
-  for (const t of SEASON_XP_TIERS) if (totalPoints >= t.min) current = t;
-  return current;
+interface LeagueConfigTier {
+  name: string;
+  icon: string;
+  color: string;
+  min: number;
+  max: number;
+  philosophy: string;
+  reward: string;
+  rankGate?: number;
 }
 
-// Kept for rank-cutoff display only (next-league banner)
-function getLeague(rank: number) {
-  if (rank <= 10)   return { name: "Champion", icon: "🏆", color: "#B7FF1A" };
-  if (rank <= 100)  return { name: "Diamond",  icon: "💠", color: "#A8EDFF" };
-  return                   { name: "",          icon: "",    color: "#6b7280"  };
+function getLeagueStyle(name: string) {
+  const styles: Record<string, { gradient: string; border: string; glow: string }> = {
+    Bronze: { gradient: "from-orange-700/30 to-orange-800/10", border: "border-orange-700/40", glow: "shadow-[0_0_14px_rgba(205,127,50,0.2)]" },
+    Silver: { gradient: "from-gray-400/30 to-gray-500/10", border: "border-gray-400/40", glow: "shadow-[0_0_14px_rgba(192,192,192,0.2)]" },
+    Gold: { gradient: "from-yellow-400/30 to-amber-500/10", border: "border-yellow-400/40", glow: "shadow-[0_0_16px_rgba(255,215,0,0.25)]" },
+    Platinum: { gradient: "from-cyan-300/30 to-blue-400/10", border: "border-cyan-300/40", glow: "shadow-[0_0_16px_rgba(79,195,247,0.25)]" },
+    Onyx: { gradient: "from-violet-500/30 to-purple-600/10", border: "border-violet-500/40", glow: "shadow-[0_0_16px_rgba(139,92,246,0.25)]" },
+    Diamond: { gradient: "from-cyan-400/30 to-blue-500/10", border: "border-cyan-400/40", glow: "shadow-[0_0_20px_rgba(168,237,255,0.3)]" },
+    Champion: { gradient: "from-lime-400/30 to-green-600/10", border: "border-lime-400/40", glow: "shadow-[0_0_20px_rgba(183,255,26,0.3)]" },
+  };
+  return styles[name] ?? styles.Bronze;
+}
+
+function getLeagueFromEntry(tiers: LeagueConfigTier[], totalPoints: number, rank: number) {
+  const availableTiers = tiers.length ? tiers : [{
+    name: "Bronze",
+    icon: "🥉",
+    color: "#CD7F32",
+    min: 0,
+    max: Number.MAX_SAFE_INTEGER,
+    philosophy: "",
+    reward: "",
+  }];
+  let current = availableTiers[0];
+  for (const tier of availableTiers) if (totalPoints >= tier.min) current = tier;
+  if (current.name === "Champion" && rank > (current.rankGate ?? 10)) {
+    current = availableTiers.find((tier) => tier.name === "Diamond") ?? current;
+  } else if (current.name === "Diamond" && rank > (current.rankGate ?? 100)) {
+    current = availableTiers.find((tier) => tier.name === "Onyx") ?? current;
+  }
+  return { ...current, ...getLeagueStyle(current.name) };
 }
 
 // Mirrors server SEASON_DEFS — update when a new season begins
@@ -570,24 +589,17 @@ function SeasonInfoBar({ playerCount }: { playerCount: number }) {
 
 // ─── Section: Competitive Overview ────────────────────────────────────────
 
-function CompetitiveOverview({ leaderboard, userId }: { leaderboard: LeaderboardEntry[]; userId: number }) {
+function CompetitiveOverview({ leaderboard, userId, tiers }: { leaderboard: LeaderboardEntry[]; userId: number; tiers: LeagueConfigTier[] }) {
   const myEntry = leaderboard.find(e => e.userId === userId);
   if (!myEntry) {
     return null;
   }
-  const league = getLeagueFromEntry(myEntry.totalPoints, myEntry.rank);
+  const league = getLeagueFromEntry(tiers, myEntry.totalPoints, myEntry.rank);
   const nextRankEntry = leaderboard.find(e => e.rank === myEntry.rank - 1);
   const xpToNextRank = nextRankEntry ? Math.ceil(nextRankEntry.totalPoints - myEntry.totalPoints) : null;
 
-  // XP-based next-league threshold (mirrors server logic)
-  const XP_THRESHOLDS: { name: string; icon: string; xp: number }[] = [
-    { name: "Silver",   icon: "🥈", xp: 1000  },
-    { name: "Gold",     icon: "🥇", xp: 3000  },
-    { name: "Platinum", icon: "💎", xp: 6000  },
-    { name: "Onyx",     icon: "🖤", xp: 10000 },
-  ];
-  const nextXpTier = XP_THRESHOLDS.find(t => myEntry.totalPoints < t.xp) ?? null;
-  const xpToNextLeague = nextXpTier ? Math.max(0, nextXpTier.xp - myEntry.totalPoints) : null;
+  const nextXpTier = tiers.find(t => myEntry.totalPoints < t.min && t.name !== "Champion") ?? null;
+  const xpToNextLeague = nextXpTier ? Math.max(0, nextXpTier.min - myEntry.totalPoints) : null;
 
   const stats = [
     { label: "Current Rank",  value: `#${myEntry.rank}`,               icon: <Trophy className="w-4 h-4 text-[#B7FF1A]" /> },
@@ -642,7 +654,7 @@ function CompetitiveOverview({ leaderboard, userId }: { leaderboard: Leaderboard
           {league.name === "Diamond" && (
             <div className="flex items-center gap-2 text-xs text-slate-300 bg-white/5 rounded-lg px-3 py-2">
               <Crown className="w-3.5 h-3.5 text-[#A8EDFF] flex-shrink-0" />
-              <span className="text-[#A8EDFF] font-semibold">You are in Diamond League — Top 100 with 10,000+ Season XP! 💠</span>
+              <span className="text-[#A8EDFF] font-semibold">You are in Diamond League — Top 100 with 50,000+ Season XP! 💠</span>
             </div>
           )}
         </div>
@@ -653,19 +665,18 @@ function CompetitiveOverview({ leaderboard, userId }: { leaderboard: Leaderboard
 
 // ─── Section: Ranked Leagues ───────────────────────────────────────────────
 
-const LEAGUES = [
-  { icon: "🏆", name: "Champion", range: "Top 10 + 10K XP",  color: "#B7FF1A", bg: "from-lime-400/20 to-green-600/5",    border: "border-lime-400/30",   rewards: "Champion Trophy + 2,500 GFT" },
-  { icon: "💠", name: "Diamond",  range: "Top 100 + 10K XP", color: "#A8EDFF", bg: "from-cyan-400/20 to-blue-500/5",     border: "border-cyan-400/30",   rewards: "Diamond Badge + 1,500 GFT" },
-  { icon: "🖤", name: "Onyx",     range: "10,000+ Season XP",color: "#8B5CF6", bg: "from-violet-500/20 to-purple-600/5", border: "border-violet-500/30", rewards: "Onyx Badge + 750 GFT" },
-  { icon: "💎", name: "Platinum", range: "6,000–9,999 XP",   color: "#4FC3F7", bg: "from-cyan-300/20 to-blue-400/5",     border: "border-cyan-300/30",   rewards: "Platinum Badge + 400 GFT" },
-  { icon: "🥇", name: "Gold",     range: "3,000–5,999 XP",   color: "#FFD700", bg: "from-yellow-400/20 to-amber-500/5",  border: "border-yellow-400/30", rewards: "Gold Medal + 200 GFT" },
-  { icon: "🥈", name: "Silver",   range: "1,000–2,999 XP",   color: "#C0C0C0", bg: "from-gray-400/20 to-gray-500/5",     border: "border-gray-400/30",   rewards: "Silver Badge + 100 GFT" },
-  { icon: "🥉", name: "Bronze",   range: "0–999 Season XP",  color: "#CD7F32", bg: "from-orange-700/20 to-orange-800/5", border: "border-orange-700/30", rewards: "Bronze Badge + 50 GFT" },
-];
-
-function RankedLeagues({ leaderboard, userId }: { leaderboard: LeaderboardEntry[]; userId?: number }) {
+function RankedLeagues({ leaderboard, userId, tiers }: { leaderboard: LeaderboardEntry[]; userId?: number; tiers: LeagueConfigTier[] }) {
   const myEntry = userId ? leaderboard.find(e => e.userId === userId) : null;
-  const myLeague = myEntry ? getLeagueFromEntry(myEntry.totalPoints, myEntry.rank).name : null;
+  const myLeague = myEntry ? getLeagueFromEntry(tiers, myEntry.totalPoints, myEntry.rank).name : null;
+  const leagueTiers: LeagueConfigTier[] = tiers.length ? tiers : [{
+    name: "Bronze",
+    icon: "🥉",
+    color: "#CD7F32",
+    min: 0,
+    max: Number.MAX_SAFE_INTEGER,
+    philosophy: "",
+    reward: "",
+  }];
 
   return (
     <section className="px-4 mb-8">
@@ -674,10 +685,11 @@ function RankedLeagues({ leaderboard, userId }: { leaderboard: LeaderboardEntry[
         <h2 className="text-xl font-black text-white">Ranked Leagues</h2>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-        {LEAGUES.map(l => (
+        {leagueTiers.slice().reverse().map(l => (
           <div
             key={l.name}
-            className={`rounded-2xl border bg-gradient-to-br ${l.bg} ${l.border} p-4 flex flex-col items-center text-center gap-2 relative ${l.name === myLeague ? "ring-2 ring-[#B7FF1A]/60 ring-offset-1 ring-offset-[#0B1218]" : ""}`}
+            className={`rounded-2xl border p-4 flex flex-col items-center text-center gap-2 relative ${l.name === myLeague ? "ring-2 ring-[#B7FF1A]/60 ring-offset-1 ring-offset-[#0B1218]" : ""}`}
+            style={{ background: `${l.color}18`, borderColor: `${l.color}55` }}
           >
             {l.name === myLeague && (
               <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-[#B7FF1A] text-black text-[10px] font-black whitespace-nowrap">YOU</div>
@@ -685,9 +697,11 @@ function RankedLeagues({ leaderboard, userId }: { leaderboard: LeaderboardEntry[
             <span className="text-3xl">{l.icon}</span>
             <div>
               <div className="font-black text-sm" style={{ color: l.color }}>{l.name}</div>
-              <div className="text-[10px] text-slate-500 mt-0.5">{l.range}</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">
+                {l.min.toLocaleString()}+ XP{l.rankGate ? ` · Top ${l.rankGate}` : ""}
+              </div>
             </div>
-            <div className="text-[10px] text-slate-400 leading-tight">{l.rewards}</div>
+            <div className="text-[10px] text-slate-400 leading-tight">{l.reward}</div>
           </div>
         ))}
       </div>
@@ -697,8 +711,8 @@ function RankedLeagues({ leaderboard, userId }: { leaderboard: LeaderboardEntry[
 
 // ─── Section: Live Leaderboard ─────────────────────────────────────────────
 
-function LeaderboardRow({ entry, isCurrentUser }: { entry: LeaderboardEntry; isCurrentUser: boolean }) {
-  const league = getLeagueFromEntry(entry.totalPoints, entry.rank);
+function LeaderboardRow({ entry, isCurrentUser, tiers }: { entry: LeaderboardEntry; isCurrentUser: boolean; tiers: LeagueConfigTier[] }) {
+  const league = getLeagueFromEntry(tiers, entry.totalPoints, entry.rank);
   const isTop3 = entry.rank <= 3;
   const rankColors: Record<number, string> = { 1: "#FFD700", 2: "#C0C0C0", 3: "#CD7F32" };
   const rankColor = rankColors[entry.rank] ?? "#6b7280";
@@ -1267,6 +1281,7 @@ interface SeasonEntry {
     userId: number;
     seasonPoints: number;
     user: {
+      id: number;
       username: string;
       displayName: string;
       avatarUrl?: string | null;
@@ -1571,9 +1586,16 @@ export default function LeaderboardPage() {
     queryFn: () => fetch("/api/leaderboard/season-player-count").then(r => r.json()),
   });
 
+  const { data: leagueConfigData } = useQuery<{ tiers: LeagueConfigTier[] }>({
+    queryKey: ["/api/leaderboard/league-config"],
+    queryFn: () => fetch("/api/leaderboard/league-config").then(r => r.json()),
+    staleTime: 60_000,
+  });
+
   const top3 = top3Data ?? [];
   const leaderboard = weeklyData ?? [];
   const playerCount = playerCountData?.count ?? alltimeData?.length ?? weeklyData?.length ?? 0;
+  const leagueTiers = leagueConfigData?.tiers ?? [];
 
   return (
     <div
@@ -1599,7 +1621,7 @@ export default function LeaderboardPage() {
         {/* Competitive Overview — logged-in only */}
         {user && leaderboard.length > 0 && (
           <>
-            <CompetitiveOverview leaderboard={leaderboard} userId={user.id} />
+            <CompetitiveOverview leaderboard={leaderboard} userId={user.id} tiers={leagueTiers} />
             <div className="rs-section-divider" />
           </>
         )}

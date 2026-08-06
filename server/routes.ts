@@ -10,7 +10,7 @@ import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage } from "./storage";
-import { LeaderboardService } from "./leaderboard-service";
+import { LeaderboardService, getSeasonLeagueTiers, POINT_VALUES } from "./leaderboard-service";
 import { recordView } from "./view-rate-limiter";
 import { StreakService } from "./streak-service";
 import { PerformanceMilestoneService } from "./performance-milestone-service";
@@ -4497,6 +4497,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public ranked-league configuration — keeps leaderboard displays aligned
+  // with the admin-configurable thresholds used by the dashboard.
+  app.get("/api/leaderboard/league-config", (_req, res) => {
+    res.json({ tiers: getSeasonLeagueTiers() });
+  });
+
   // Top contributors routes
   app.get("/api/leaderboard/top-contributors/:periodType", async (req, res) => {
     try {
@@ -4708,28 +4714,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ─── Dashboard Aggregate Endpoint ─────────────────────────────────────────
-  // League order: Bronze -> Silver -> Gold -> Platinum -> Onyx (XP-based),
-  // then Diamond (top 100 rank) -> Champion (top 10 rank), both rank-gated.
-  const SEASON_LEAGUE_TIERS = [
-    { name: "Bronze", icon: "🥉", color: "#CD7F32", min: 0, max: 999 },
-    { name: "Silver", icon: "🥈", color: "#C0C0C0", min: 1000, max: 2999 },
-    { name: "Gold", icon: "🥇", color: "#FFD700", min: 3000, max: 5999 },
-    { name: "Platinum", icon: "💎", color: "#4FC3F7", min: 6000, max: 9999 },
-    { name: "Onyx", icon: "🖤", color: "#8B5CF6", min: 10000, max: Infinity },
-  ];
-
+  // League order: Bronze -> Silver -> Gold -> Platinum -> Onyx -> Diamond -> Champion.
+  // Thresholds and rank gates are configurable through the XP settings table.
   function buildSeasonLeague(
     seasonXP: number,
     seasonRank: number | null,
     championCutoffXP: number | null,
     totalSeasonPlayers: number
   ) {
+    const seasonTiers = getSeasonLeagueTiers();
     // Diamond/Champion are rank-gated, but only once a player has actually
-    // climbed to Onyx-level Season XP — otherwise a small season player
-    // pool would let low-XP players skip straight to Diamond/Champion.
-    const hasReachedOnyx = seasonXP >= 10000;
-    const isChampion = hasReachedOnyx && seasonRank !== null && seasonRank <= 10;
-    const isDiamond = hasReachedOnyx && !isChampion && seasonRank !== null && seasonRank <= 100;
+    // reached their XP threshold — rank gates prevent low-XP players from
+    // skipping straight to Diamond/Champion.
+    const championTier = seasonTiers.find((t) => t.name === "Champion")!;
+    const diamondTier = seasonTiers.find((t) => t.name === "Diamond")!;
+    const onyxTier = seasonTiers.find((t) => t.name === "Onyx")!;
+    const hasReachedOnyx = seasonXP >= onyxTier.min;
+    const isChampion = seasonXP >= championTier.min && seasonRank !== null && seasonRank <= championTier.rankGate!;
+    const isDiamond = seasonXP >= diamondTier.min && !isChampion && seasonRank !== null && seasonRank <= diamondTier.rankGate!;
 
     if (isChampion) {
       return {
@@ -4742,6 +4744,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalSeasonPlayers,
         championCutoffXP,
         isTopRank: seasonRank === 1,
+        currentThreshold: championTier.min,
+        nextThreshold: null,
+        xpToNext: 0,
+        progressPercent: 100,
       };
     }
 
@@ -4758,19 +4764,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         championCutoffXP,
         xpToChampion: needed,
         rankToChampion: seasonRank !== null ? Math.max(0, seasonRank - 10) : null,
+        currentThreshold: diamondTier.min,
+        nextLeague: "Champion",
+        nextLeagueIcon: championTier.icon,
+        nextThreshold: championTier.min,
+        xpToNext: Math.max(0, championTier.min - seasonXP),
+        progressPercent: Math.min(100, (seasonXP / championTier.min) * 100),
       };
     }
 
     // Bronze -> Onyx, determined by season XP thresholds
-    let current = SEASON_LEAGUE_TIERS[0];
-    for (const tier of SEASON_LEAGUE_TIERS) {
+    let current = seasonTiers[0];
+    for (const tier of seasonTiers.slice(0, 5)) {
       if (seasonXP >= tier.min) current = tier;
     }
-    const currentIndex = SEASON_LEAGUE_TIERS.findIndex((t) => t.name === current.name);
+    const currentIndex = seasonTiers.findIndex((t) => t.name === current.name);
     const isOnyx = current.name === "Onyx";
 
     if (isOnyx) {
-      const rankToDiamond = seasonRank !== null ? Math.max(0, seasonRank - 100) : null;
+      const rankToDiamond = seasonRank !== null ? Math.max(0, seasonRank - diamondTier.rankGate!) : null;
       return {
         tier: "Onyx",
         league: "Onyx",
@@ -4779,16 +4791,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         seasonXP,
         seasonRank,
         totalSeasonPlayers,
-        nextLeague: "Diamond",
-        nextLeagueIcon: "💠",
+        nextLeague: diamondTier.name,
+        nextLeagueIcon: diamondTier.icon,
+        nextThreshold: diamondTier.min,
+        currentThreshold: current.min,
+        xpToNext: Math.max(0, diamondTier.min - seasonXP),
+        progressPercent: Math.min(100, (seasonXP / diamondTier.min) * 100),
         rankToNext: rankToDiamond,
       };
     }
 
-    const nextTier = SEASON_LEAGUE_TIERS[currentIndex + 1];
+    const nextTier = seasonTiers[currentIndex + 1];
     const nextThreshold = nextTier ? nextTier.min : current.max + 1;
     const xpToNext = Math.max(0, nextThreshold - seasonXP);
-    const progressPercent = Math.min(100, (seasonXP / nextThreshold) * 100);
+    const progressPercent = Math.min(100, Math.max(0, ((seasonXP - current.min) / Math.max(1, nextThreshold - current.min)) * 100));
 
     return {
       tier: current.name,
@@ -4803,6 +4819,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       nextThreshold,
       xpToNext,
       progressPercent,
+      currentThreshold: current.min,
     };
   }
 
@@ -4956,6 +4973,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const championCutoffXP = seasonRankList[9] ? Math.round(Number(seasonRankList[9].seasonXP)) : null;
 
       const seasonLeague = buildSeasonLeague(seasonXP, seasonRank, championCutoffXP, totalSeasonPlayers);
+      const seasonTiers = getSeasonLeagueTiers();
+      const currentTier = seasonTiers.find((tier) => tier.name === seasonLeague.league) ?? seasonTiers[0];
+      const nextPlayer = seasonRank && seasonRank > 1
+        ? seasonRankList.find((row) => Number(row.seasonXP) > seasonXP)
+        : null;
+      const top100Entry = seasonRankList[99] ?? null;
+      const top50Entry = seasonRankList[49] ?? null;
+      const microGoals = [
+        ...(nextPlayer ? [{
+          type: "overtake",
+          label: `Overtake ${nextPlayer.displayName || nextPlayer.username}`,
+          detail: `${Math.max(1, Math.round(Number(nextPlayer.seasonXP) - seasonXP + 1)).toLocaleString()} XP to move to Rank #${Number(nextPlayer.seasonRank)}`,
+          current: seasonXP,
+          target: Math.round(Number(nextPlayer.seasonXP) + 1),
+          progressPercent: Math.min(100, Math.round((seasonXP / Math.max(1, Number(nextPlayer.seasonXP) + 1)) * 100)),
+          href: `/profile/${nextPlayer.username}`,
+        }] : []),
+        ...(seasonRank && seasonRank > 100 && top100Entry ? [{
+          type: "top_100",
+          label: "Reach Top 100",
+          detail: `${Math.max(1, Math.round(Number(top100Entry.seasonXP) - seasonXP + 1)).toLocaleString()} XP to reach Rank #100`,
+          current: seasonXP,
+          target: Math.round(Number(top100Entry.seasonXP) + 1),
+          progressPercent: Math.min(100, Math.round((seasonXP / Math.max(1, Number(top100Entry.seasonXP) + 1)) * 100)),
+          href: "/leaderboard",
+        }] : []),
+        ...(seasonRank && seasonRank > 50 && top50Entry ? [{
+          type: "top_50",
+          label: "Push toward Top 50",
+          detail: `${Math.max(1, Math.round(Number(top50Entry.seasonXP) - seasonXP + 1)).toLocaleString()} XP to reach Rank #50`,
+          current: seasonXP,
+          target: Math.round(Number(top50Entry.seasonXP) + 1),
+          progressPercent: Math.min(100, Math.round((seasonXP / Math.max(1, Number(top50Entry.seasonXP) + 1)) * 100)),
+          href: "/leaderboard",
+        }] : []),
+        ...(seasonLeague.nextLeague && (seasonLeague.xpToNext || seasonLeague.rankToNext) ? [{
+          type: "next_league",
+          label: `Reach ${seasonLeague.nextLeague}`,
+          detail: seasonLeague.rankToNext
+            ? `${seasonLeague.rankToNext.toLocaleString()} place${seasonLeague.rankToNext === 1 ? "" : "s"} until ${seasonLeague.nextLeague} eligibility`
+            : `${(seasonLeague.xpToNext ?? 0).toLocaleString()} XP until ${seasonLeague.nextLeague}${seasonLeague.nextLeague === "Diamond" || seasonLeague.nextLeague === "Champion" ? " eligibility" : ""}`,
+          current: seasonXP,
+          target: seasonLeague.nextThreshold ?? seasonXP,
+          progressPercent: Math.min(100, Math.round(seasonLeague.progressPercent ?? 0)),
+          href: "/leaderboard",
+        }] : []),
+      ];
       const seasonBreakdownRows = await db.execute(sql`
         SELECT
           source,
@@ -5172,7 +5236,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...seasonLeague,
           seasonName: currentSeasonDef.name,
           seasonDateRange: currentSeasonDef.dateRange,
+          seasonEnd,
           breakdown: seasonBreakdown,
+          tiers: seasonTiers,
+          currentTier,
+          microGoals,
         },
         today: {
           clipsWatchedToday,

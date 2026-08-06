@@ -30,7 +30,28 @@ export let POINT_VALUES: Record<string, number> = {
   consecutive_upload_bonus: 75,   // 75 XP for uploading within 24h of last upload
   weekend_upload_bonus: 0,        // Variable - 50% of upload XP on weekends
   mobile_app_daily: 10,           // 10 XP per day for having the mobile app installed
+  // Ranked season league thresholds — configurable through the admin XP settings
+  league_silver_threshold: 5000,
+  league_gold_threshold: 12500,
+  league_platinum_threshold: 22500,
+  league_onyx_threshold: 35000,
+  league_diamond_threshold: 50000,
+  league_champion_threshold: 70000,
 };
+
+export type SeasonLeagueName = "Bronze" | "Silver" | "Gold" | "Platinum" | "Onyx" | "Diamond" | "Champion";
+
+export function getSeasonLeagueTiers() {
+  return [
+    { name: "Bronze" as const, icon: "🥉", color: "#CD7F32", min: 0, max: POINT_VALUES.league_silver_threshold - 1, philosophy: "The starting point of every ranked season.", reward: "Basic profile border" },
+    { name: "Silver" as const, icon: "🥈", color: "#C0C0C0", min: POINT_VALUES.league_silver_threshold, max: POINT_VALUES.league_gold_threshold - 1, philosophy: "An active community member.", reward: "Exclusive profile theme" },
+    { name: "Gold" as const, icon: "🥇", color: "#FFD700", min: POINT_VALUES.league_gold_threshold, max: POINT_VALUES.league_platinum_threshold - 1, philosophy: "A dedicated creator.", reward: "Animated badge" },
+    { name: "Platinum" as const, icon: "💎", color: "#4FC3F7", min: POINT_VALUES.league_platinum_threshold, max: POINT_VALUES.league_onyx_threshold - 1, philosophy: "An elite contributor.", reward: "Exclusive avatar frame" },
+    { name: "Onyx" as const, icon: "🖤", color: "#8B5CF6", min: POINT_VALUES.league_onyx_threshold, max: POINT_VALUES.league_diamond_threshold - 1, philosophy: "Among the platform's best creators.", reward: "Animated profile effect" },
+    { name: "Diamond" as const, icon: "💠", color: "#E0E7FF", min: POINT_VALUES.league_diamond_threshold, max: POINT_VALUES.league_champion_threshold - 1, philosophy: "Reserved for the best creators.", reward: "Diamond badge + season cosmetic", rankGate: 100 },
+    { name: "Champion" as const, icon: "🏆", color: "#B7FF1A", min: POINT_VALUES.league_champion_threshold, max: Infinity, philosophy: "Reserved for the very best players.", reward: "Champion badge, profile border + title", rankGate: 10 },
+  ];
+}
 
 // The canonical XP settings definition used to seed the database and label each setting
 export const XP_SETTINGS_DEFINITION: Array<{
@@ -61,12 +82,31 @@ export const XP_SETTINGS_DEFINITION: Array<{
   { key: "lootbox_bonus", label: "Daily Lootbox Opened", description: "XP awarded for opening the daily lootbox", category: "bonus_events" },
   { key: "consecutive_upload_bonus", label: "Upload Within 24h Bonus", description: "XP bonus for uploading within 24h of your last upload", category: "bonus_events" },
   { key: "mobile_app_daily", label: "Mobile App Daily Bonus", description: "10 XP per day awarded to users who have the mobile app installed", category: "daily_activity" },
+  { key: "league_silver_threshold", label: "Silver League Threshold", description: "Season XP required to enter Silver League", category: "ranked_league" },
+  { key: "league_gold_threshold", label: "Gold League Threshold", description: "Season XP required to enter Gold League", category: "ranked_league" },
+  { key: "league_platinum_threshold", label: "Platinum League Threshold", description: "Season XP required to enter Platinum League", category: "ranked_league" },
+  { key: "league_onyx_threshold", label: "Onyx League Threshold", description: "Season XP required to enter Onyx League", category: "ranked_league" },
+  { key: "league_diamond_threshold", label: "Diamond League Threshold", description: "Season XP required for Diamond, alongside a top-100 rank", category: "ranked_league" },
+  { key: "league_champion_threshold", label: "Champion League Threshold", description: "Season XP required for Champion, alongside a top-10 rank", category: "ranked_league" },
 ];
 
 // Load XP settings from the DB and update POINT_VALUES in memory
 export async function loadXpSettingsFromDB(): Promise<void> {
   try {
     const settings = await storage.getXpSettings();
+    const existingKeys = new Set(settings.map((setting) => setting.key));
+    for (const definition of XP_SETTINGS_DEFINITION) {
+      if (!existingKeys.has(definition.key)) {
+        await storage.upsertXpSetting({
+          key: definition.key,
+          value: POINT_VALUES[definition.key] ?? 0,
+          label: definition.label,
+          description: definition.description,
+          category: definition.category,
+          updatedBy: null,
+        });
+      }
+    }
     for (const setting of settings) {
       POINT_VALUES[setting.key] = setting.value;
     }

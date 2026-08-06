@@ -55,6 +55,27 @@ interface SeasonXPBreakdownItem {
   totalXP: number;
 }
 
+interface SeasonLeagueTier {
+  name: string;
+  icon: string;
+  color: string;
+  min: number;
+  max: number;
+  philosophy: string;
+  reward: string;
+  rankGate?: number;
+}
+
+interface SeasonMicroGoal {
+  type: string;
+  label: string;
+  detail: string;
+  current: number;
+  target: number;
+  progressPercent: number;
+  href: string;
+}
+
 interface DashboardData {
   player: {
     username: string;
@@ -166,7 +187,11 @@ interface DashboardData {
     isTopRank?: boolean;
     seasonName?: string;
     seasonDateRange?: string;
+    seasonEnd?: string;
     breakdown?: SeasonXPBreakdownItem[];
+    tiers?: SeasonLeagueTier[];
+    currentTier?: SeasonLeagueTier;
+    microGoals?: SeasonMicroGoal[];
   };
 }
 
@@ -434,26 +459,6 @@ const LEAGUE_MEDALS: Record<string, string> = {
   Champion: championMedal,
 };
 
-const LEAGUE_STRUCTURE = [
-  { name: "Bronze", range: "0 – 999 Season XP" },
-  { name: "Silver", range: "1,000 – 2,999 Season XP" },
-  { name: "Gold", range: "3,000 – 5,999 Season XP" },
-  { name: "Platinum", range: "6,000 – 9,999 Season XP" },
-  { name: "Onyx", range: "10,000+ Season XP" },
-  { name: "Diamond", range: "Top 100 Players" },
-  { name: "Champion", range: "Top 10 Players" },
-];
-
-const LEAGUE_XP_REQUIREMENTS = [
-  { name: "Bronze", requirement: "0 XP", detail: "Starting league · 1,000 XP to Silver" },
-  { name: "Silver", requirement: "1,000 XP", detail: "2,000 more XP to Gold" },
-  { name: "Gold", requirement: "3,000 XP", detail: "3,000 more XP to Platinum" },
-  { name: "Platinum", requirement: "6,000 XP", detail: "4,000 more XP to Onyx" },
-  { name: "Onyx", requirement: "10,000 XP", detail: "Top 100 rank to reach Diamond" },
-  { name: "Diamond", requirement: "10,000+ XP", detail: "Top 100 rank · top 10 to Champion" },
-  { name: "Champion", requirement: "10,000+ XP", detail: "Top 10 rank · highest league" },
-];
-
 function getLeagueGradient(league: string) {
   switch (league) {
     case "Bronze":   return "linear-gradient(90deg, #8B4513, #CD7F32, #D2691E)";
@@ -490,8 +495,6 @@ function getLeagueMeshBackground(league: string): React.CSSProperties {
   };
 }
 
-const SUMMER_SHOWDOWN_END = new Date(2026, 7, 31, 23, 59, 59);
-
 function useCountdownTo(target: Date) {
   const [diff, setDiff] = useState(Math.max(0, target.getTime() - Date.now()));
   useEffect(() => {
@@ -505,8 +508,9 @@ function useCountdownTo(target: Date) {
   return { days, hours, minutes, seconds };
 }
 
-function ShowdownCountdown() {
-  const { days, hours, minutes, seconds } = useCountdownTo(SUMMER_SHOWDOWN_END);
+function ShowdownCountdown({ seasonName, seasonEnd }: { seasonName?: string; seasonEnd?: string }) {
+  const target = seasonEnd ? new Date(seasonEnd) : new Date();
+  const { days, hours, minutes, seconds } = useCountdownTo(target);
   const units = [
     { label: "Days", value: days },
     { label: "Hrs", value: hours },
@@ -521,7 +525,7 @@ function ShowdownCountdown() {
       <div className="flex items-center gap-1.5">
         <Clock className="w-3.5 h-3.5" style={{ color: ACCENT }} />
         <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: TEXT_MUTED }}>
-          Summer Showdown ends in
+           {seasonName ?? "Ranked Season"} ends in
         </span>
       </div>
       <div className="flex items-center gap-1.5">
@@ -643,20 +647,64 @@ function SeasonXPBreakdown({
   );
 }
 
-function LeagueXPGuide({ currentLeague }: { currentLeague: string }) {
+function LeagueJourney({
+  currentLeague,
+  nextLeague,
+  tiers,
+}: {
+  currentLeague: string;
+  nextLeague?: string;
+  tiers: SeasonLeagueTier[] | undefined;
+}) {
+  const journey = tiers ?? [];
   return (
     <details className="mt-4 rounded-xl" style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${BORDER}` }}>
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3.5">
         <span className="flex items-center gap-2">
-          <Trophy className="w-4 h-4" style={{ color: ACCENT }} />
-          <span className="text-xs font-bold" style={{ color: TEXT_PRIMARY }}>League XP requirements</span>
+          <TrendingUp className="w-4 h-4" style={{ color: ACCENT }} />
+          <span className="text-xs font-bold" style={{ color: TEXT_PRIMARY }}>League journey</span>
         </span>
-        <span className="text-[10px] font-semibold" style={{ color: TEXT_MUTED }}>How to progress <span className="ml-1 text-white/30">＋</span></span>
+        <span className="text-[10px] font-semibold" style={{ color: TEXT_MUTED }}>XP & rewards <span className="ml-1 text-white/30">＋</span></span>
       </summary>
       <div className="border-t px-3.5 pb-3.5 pt-2" style={{ borderColor: BORDER }}>
-        {LEAGUE_XP_REQUIREMENTS.map((tier, index) => {
-          const active = tier.name === currentLeague;
-          const [leagueColor] = LEAGUE_MESH_COLORS[tier.name] ?? [ACCENT];
+        <div className="mb-4 flex items-start">
+          {journey.map((tier, index) => {
+            const active = tier.name === currentLeague;
+            const next = tier.name === nextLeague;
+            const unlocked = (tiers?.findIndex((item) => item.name === currentLeague) ?? 0) >= index;
+            return (
+              <div key={tier.name} className="flex min-w-0 flex-1 items-start">
+                <div className="flex min-w-0 flex-1 flex-col items-center gap-1">
+                  <div
+                    className={`flex h-9 w-9 items-center justify-center rounded-full text-lg transition-all ${active ? "ring-2 ring-offset-2 ring-offset-[#0B1218]" : ""} ${tier.name === "Champion" ? "animate-pulse" : ""}`}
+                    style={{
+                      background: `${tier.color}${active || next ? "30" : "14"}`,
+                      border: `1px solid ${tier.color}${active || next ? "B0" : "40"}`,
+                      boxShadow: active ? `0 0 16px ${tier.color}70` : undefined,
+                      outlineColor: active ? tier.color : undefined,
+                      opacity: unlocked || next ? 1 : 0.5,
+                    }}
+                  >
+                    {tier.icon}
+                  </div>
+                  <span className="truncate text-[9px] font-bold" style={{ color: active ? tier.color : TEXT_MUTED }}>
+                    {tier.name}
+                  </span>
+                  <span className="text-[8px] tabular-nums" style={{ color: TEXT_MUTED }}>
+                    {tier.min.toLocaleString()} XP
+                  </span>
+                </div>
+                {index < journey.length - 1 && (
+                  <div className="mt-4 h-px min-w-1 flex-1" style={{ background: unlocked ? tier.color : BORDER }} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="space-y-0">
+          {journey.map((tier) => {
+            const active = tier.name === currentLeague;
+            const [leagueColor] = LEAGUE_MESH_COLORS[tier.name] ?? [tier.color];
           return (
             <div
               key={tier.name}
@@ -671,22 +719,51 @@ function LeagueXPGuide({ currentLeague }: { currentLeague: string }) {
                     {active && <span className="ml-1.5 text-[9px] uppercase tracking-wide" style={{ color: ACCENT }}>Current</span>}
                   </span>
                   <span className="shrink-0 text-xs font-black tabular-nums" style={{ color: leagueColor }}>
-                    {tier.requirement}
+                    {tier.min.toLocaleString()}+ XP
                   </span>
                 </div>
-                <p className="mt-0.5 text-[10px]" style={{ color: TEXT_MUTED }}>{tier.detail}</p>
+                <p className="mt-0.5 text-[10px]" style={{ color: TEXT_MUTED }}>
+                  {tier.philosophy} · Reward: {tier.reward}
+                  {tier.rankGate ? ` · Top ${tier.rankGate}` : ""}
+                </p>
               </div>
-              {index < LEAGUE_XP_REQUIREMENTS.length - 1 && (
-                <ArrowUpRight className="h-3.5 w-3.5 shrink-0" style={{ color: TEXT_MUTED }} />
-              )}
             </div>
           );
-        })}
+          })}
+        </div>
         <p className="pt-2 text-[10px]" style={{ color: TEXT_MUTED }}>
-          Season XP resets each season. Diamond and Champion require both 10,000+ XP and the listed leaderboard rank.
+          Season XP resets each season. Diamond and Champion require both their XP threshold and the listed leaderboard rank.
         </p>
       </div>
     </details>
+  );
+}
+
+function SeasonMicroGoals({ goals }: { goals: SeasonMicroGoal[] | undefined }) {
+  if (!goals?.length) return null;
+  return (
+    <div className="mt-4 rounded-xl p-3.5" style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${BORDER}` }}>
+      <div className="mb-3 flex items-center gap-2">
+        <Target className="h-4 w-4" style={{ color: ACCENT }} />
+        <span className="text-xs font-bold" style={{ color: TEXT_PRIMARY }}>Next goals</span>
+      </div>
+      <div className="space-y-2.5">
+        {goals.slice(0, 3).map((goal) => (
+          <Link key={goal.type} href={goal.href}>
+            <div className="rounded-lg p-2.5 transition-colors hover:bg-white/[0.04]" style={{ background: "rgba(255,255,255,0.025)" }}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold" style={{ color: TEXT_PRIMARY }}>{goal.label}</span>
+                <ChevronRight className="h-3.5 w-3.5 shrink-0" style={{ color: ACCENT }} />
+              </div>
+              <p className="mt-0.5 text-[10px]" style={{ color: TEXT_MUTED }}>{goal.detail}</p>
+              <div className="mt-2 h-1 overflow-hidden rounded-full" style={{ background: BORDER }}>
+                <div className="h-full rounded-full" style={{ width: `${Math.min(100, goal.progressPercent)}%`, background: ACCENT }} />
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -721,7 +798,7 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
         }
       />
       <div className="px-5 pb-5">
-        <ShowdownCountdown />
+        <ShowdownCountdown seasonName={data.seasonName} seasonEnd={data.seasonEnd} />
         {/* Current league badge */}
         <div className="flex items-center gap-4 mb-6">
           <LeagueMedal tier={data.league} size={80} />
@@ -879,18 +956,19 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
         )}
 
         <SeasonXPBreakdown seasonXP={data.seasonXP} breakdown={data.breakdown} />
-        <LeagueXPGuide currentLeague={data.league} />
+        <SeasonMicroGoals goals={data.microGoals} />
+        <LeagueJourney currentLeague={data.league} nextLeague={data.nextLeague} tiers={data.tiers} />
 
         {/* League structure legend */}
         <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
           <div className="flex flex-wrap gap-1.5">
-            {LEAGUE_STRUCTURE.map((tier) => {
+            {(data.tiers ?? []).map((tier) => {
               const active = tier.name === data.league;
-              const [leagueColor] = LEAGUE_MESH_COLORS[tier.name] ?? [ACCENT];
+              const leagueColor = tier.color;
               return (
                 <div
                   key={tier.name}
-                  title={tier.range}
+                  title={`${tier.min.toLocaleString()}+ Season XP${tier.rankGate ? ` · Top ${tier.rankGate}` : ""}`}
                   className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[12.5px] font-semibold"
                   style={{
                     background: active ? `${leagueColor}26` : `${leagueColor}14`,
