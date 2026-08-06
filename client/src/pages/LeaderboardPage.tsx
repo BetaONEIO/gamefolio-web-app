@@ -407,8 +407,8 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
       <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none"
         style={{ background: "linear-gradient(0deg, rgba(3,10,14,0.92) 0%, transparent 100%)" }} />
 
-      {/* Gold glow orb behind rank-1 — boosted */}
-      <div className="absolute bottom-0 left-[62%] -translate-x-1/2 w-[480px] h-56 blur-3xl opacity-30 pointer-events-none hidden sm:block"
+      {/* Gold glow orb behind rank-1 — above bronze card, below silver/gold */}
+      <div className="absolute bottom-0 left-[62%] -translate-x-1/2 w-[480px] h-56 blur-3xl opacity-30 pointer-events-none hidden sm:block z-[5]"
         style={{ background: "radial-gradient(ellipse,rgba(255,215,0,0.9),transparent 65%)" }} />
 
       {/* ── DESKTOP: page title — upper-left of hero ── */}
@@ -461,6 +461,7 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
               <div
                 key={entry.userId}
                 className={`relative flex flex-col items-center flex-shrink-0 lb-card-${rank}`}
+                style={{ zIndex: rank === 3 ? 2 : 20 }}
               >
                 <div className={rank === 1 ? "lb-card-1-glow relative z-10" : "relative z-10"}
                   style={{ filter: PODIUM_GLOW[rank] }}
