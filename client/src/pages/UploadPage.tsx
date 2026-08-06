@@ -331,6 +331,13 @@ const UploadPage = () => {
   const [scheduledAt, setScheduledAt] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  // Dismissing the blocking modal during the encode step (>=85%) doesn't
+  // cancel anything - the process-video request keeps running server-side
+  // regardless of what's mounted client-side (see StillProcessingError).
+  // isUploading stays true so the beforeunload warning and __gf_uploading__
+  // reload guard keep protecting the in-flight request; this only controls
+  // whether the modal itself is rendered.
+  const [uploadModalDismissed, setUploadModalDismissed] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const uploadAbortRef = useRef<AbortController | null>(null);
   
@@ -1617,6 +1624,7 @@ const UploadPage = () => {
     // Show progress bar immediately when starting upload
     setIsUploading(true);
     setUploadProgress(0);
+    setUploadModalDismissed(false);
 
     console.log('About to call uploadMutation.mutate()');
     console.log('Final validation before upload:', {
@@ -3249,7 +3257,7 @@ const UploadPage = () => {
       </Tabs>
       
       {/* Upload Progress Modal */}
-      {isUploading && (
+      {isUploading && !uploadModalDismissed && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-0">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative w-full sm:max-w-2xl bg-[#0B1218] rounded-2xl overflow-hidden shadow-2xl border border-[#1e3a4a]/50">
@@ -3312,33 +3320,55 @@ const UploadPage = () => {
               <div className="flex items-center gap-3 bg-[#B7FF1A]/5 border border-[#B7FF1A]/10 rounded-full px-6 py-2.5">
                 <div className="w-2 h-2 bg-[#B7FF1A] rounded-full" style={{ boxShadow: '0 0 10px #B7FF1A' }} />
                 <span className="text-[#B7FF1A] text-[10px] font-bold tracking-[2px] uppercase">
-                  Please keep this tab open while uploading
+                  {uploadProgress < 85
+                    ? "Please keep this tab open while uploading"
+                    : "You can safely leave this page now"}
                 </span>
                 <div className="w-2 h-2 bg-[#B7FF1A] rounded-full" style={{ boxShadow: '0 0 10px #B7FF1A' }} />
               </div>
             </div>
 
-            <div className="flex items-center justify-center gap-4 px-8 py-6 bg-[#0b1820]/80 backdrop-blur-xl border-t border-[#1e3a4a]/10">
-              <button
-                type="button"
-                onClick={() => {
-                  if (uploadAbortRef.current) {
-                    uploadAbortRef.current.abort();
-                  }
-                  setIsUploading(false);
-                  setUploadProgress(0);
-                }}
-                className="text-[#8fa8b8] text-sm font-bold tracking-[1.4px] uppercase hover:text-white transition-colors px-6 py-3"
-              >
-                Cancel
-              </button>
-              <div className="flex items-center gap-2.5 bg-[#B7FF1A]/10 border border-[#B7FF1A]/20 rounded-full px-8 py-4 shadow-lg">
-                <div className="w-5 h-5 border-2 border-[#B7FF1A]/30 border-t-[#B7FF1A] rounded-full animate-spin" />
-                <span className="text-[#B7FF1A] text-sm font-bold tracking-[1.4px] uppercase">
-                  Uploading {uploadProgress}%
-                </span>
+            {uploadProgress >= 85 && uploadProgress < 100 ? (
+              <div className="flex items-center justify-center px-8 py-6 bg-[#0b1820]/80 backdrop-blur-xl border-t border-[#1e3a4a]/10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadModalDismissed(true);
+                    toast({
+                      title: "Processing in the background",
+                      description: "Your clip will appear on your profile shortly.",
+                      variant: "gamefolioSuccess",
+                    });
+                    navigate('/');
+                  }}
+                  className="flex items-center gap-2.5 bg-[#B7FF1A] rounded-full px-8 py-4 shadow-lg text-[#0B1218] text-sm font-bold tracking-[1.4px] uppercase hover:brightness-110 transition-all"
+                >
+                  You can leave this page now
+                </button>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center justify-center gap-4 px-8 py-6 bg-[#0b1820]/80 backdrop-blur-xl border-t border-[#1e3a4a]/10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (uploadAbortRef.current) {
+                      uploadAbortRef.current.abort();
+                    }
+                    setIsUploading(false);
+                    setUploadProgress(0);
+                  }}
+                  className="text-[#8fa8b8] text-sm font-bold tracking-[1.4px] uppercase hover:text-white transition-colors px-6 py-3"
+                >
+                  Cancel
+                </button>
+                <div className="flex items-center gap-2.5 bg-[#B7FF1A]/10 border border-[#B7FF1A]/20 rounded-full px-8 py-4 shadow-lg">
+                  <div className="w-5 h-5 border-2 border-[#B7FF1A]/30 border-t-[#B7FF1A] rounded-full animate-spin" />
+                  <span className="text-[#B7FF1A] text-sm font-bold tracking-[1.4px] uppercase">
+                    Uploading {uploadProgress}%
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
