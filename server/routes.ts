@@ -7083,6 +7083,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Short-link resolver for the gft.gg domain: gft.gg/<code> is redirected
+  // (via a Cloudflare redirect rule) to app.gamefolio.com/go/<code>, which
+  // looks the code up across clips/reels and screenshots and 302s to the
+  // canonical pretty URL. Falls back to the homepage if the code is unknown
+  // so a bad/expired link never dead-ends.
+  app.get("/go/:code", async (req, res) => {
+    const baseUrl = "https://app.gamefolio.com";
+    try {
+      const { code } = req.params;
+
+      const clip = await storage.getClipByShareCode(code);
+      if (clip) {
+        const user = await storage.getUser(clip.userId);
+        const username = user?.username || "unknown";
+        const segment = clip.videoType === "reel" ? "reel" : "clip";
+        return res.redirect(302, `${baseUrl}/@${username}/${segment}/${code}`);
+      }
+
+      const screenshot = await storage.getScreenshotByShareCode(code);
+      if (screenshot) {
+        const user = await storage.getUser(screenshot.userId);
+        const username = user?.username || "unknown";
+        return res.redirect(302, `${baseUrl}/@${username}/screenshot/${code}`);
+      }
+
+      return res.redirect(302, baseUrl);
+    } catch (err) {
+      captureRouteError(err);
+      console.error(`Error resolving short link for code ${req.params.code}:`, err);
+      return res.redirect(302, baseUrl);
+    }
+  });
+
   // Get clip by shareCode - used for nice URLs like /@username/clip/shareCode
   app.get("/api/clips/share/:shareCode", async (req, res) => {
     try {
