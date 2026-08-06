@@ -290,7 +290,7 @@ function ChallengeCard({ challenge, isLoading }: { challenge: Challenge; isLoadi
       </div>
 
       {/* XP reward — primary visual element */}
-      <div className={`flex items-center gap-1 mb-2.5 ${xpPulse}`} style={{ filter: xpGlow }}>
+      <div className="flex items-center gap-1 mb-2.5" style={{ filter: xpGlow }}>
         {done ? (
           <span className="text-[13px] font-bold" style={{ color: 'rgba(183,255,26,0.6)' }}>
             ✔ XP Claimed
