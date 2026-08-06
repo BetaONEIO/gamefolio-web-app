@@ -1528,8 +1528,8 @@ function DashboardActivityTabs({
 
   return (
     <div
-      className="flex items-stretch w-full border-b"
-      style={{ borderColor: BORDER }}
+      className="relative flex items-end w-full border-b"
+      style={{ borderColor: BORDER, minHeight: 48 }}
       role="tablist"
       aria-label="Dashboard activity"
     >
@@ -1545,15 +1545,19 @@ function DashboardActivityTabs({
             aria-selected={isActive}
             aria-controls={`${tab.id}-panel`}
             onClick={() => onChange(tab.id)}
-            className="relative flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-3 text-[11px] sm:text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B7FF1A]"
+            className="relative flex-1 sm:flex-none min-w-0 sm:min-w-[190px] inline-flex items-center justify-center gap-1.5 px-3 sm:px-6 py-3 text-[11px] sm:text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B7FF1A]"
             style={{
               color: isActive ? TEXT_PRIMARY : TEXT_MUTED,
+              background: isActive ? "rgba(183,255,26,0.14)" : "rgba(255,255,255,0.025)",
+              clipPath: "polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%)",
+              marginLeft: tab.id === "creator" ? -8 : 0,
+              zIndex: isActive ? 2 : 1,
             }}
           >
             <Icon className="w-3.5 h-3.5" />
             {tab.label}
             <span
-              className="absolute inset-x-0 bottom-[-1px] h-0.5 transition-opacity"
+              className="absolute inset-x-3 sm:inset-x-4 bottom-0 h-0.5 transition-opacity"
               style={{ background: ACCENT, opacity: isActive ? 1 : 0 }}
             />
           </button>
