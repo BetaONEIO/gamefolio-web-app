@@ -94,6 +94,19 @@ class UploadCancelledError extends Error {
   }
 }
 
+// Thrown when the client gives up waiting on /api/upload/process-video
+// (see ProcessVideoTimeoutError below) but the server-side ffmpeg job may
+// well still be running. This isn't a failure — the clip typically finishes
+// and appears on the user's profile shortly after — so it's handled as a
+// distinct outcome from a real "Upload failed" in onError below, rather
+// than stranding the user on the upload form looking like something broke.
+class StillProcessingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "StillProcessingError";
+  }
+}
+
 // tus-js-client's default browser HttpStack constructs `new XMLHttpRequest()`
 // directly, which on native picks up CapacitorHttp's patched global — the
 // bridge that reliably breaks large chunked PATCH uploads (see
@@ -1265,7 +1278,7 @@ const UploadPage = () => {
               // The request may well still be processing server-side — this
               // isn't the same as a clean failure, so say so rather than a
               // generic "upload failed" that implies nothing happened.
-              ? new Error('Your video is still processing — this can take a few minutes for larger clips. Check your profile shortly before uploading again.')
+              ? new StillProcessingError('Your video is still processing — this can take a few minutes for larger clips. Check your profile shortly before uploading again.')
               : processVideoNetworkError instanceof Error
                 ? processVideoNetworkError
                 : new Error(String(processVideoNetworkError));
@@ -1437,6 +1450,28 @@ const UploadPage = () => {
       if (error instanceof UploadCancelledError) {
         setIsUploading(false);
         setUploadProgress(0);
+        return;
+      }
+      // The server may still finish the job after we've stopped waiting on
+      // it — don't show "Upload failed" or leave the user staring at the
+      // upload form. Send them to their profile, where the clip will show
+      // up once processing completes.
+      if (error instanceof StillProcessingError) {
+        setIsUploading(false);
+        setUploadProgress(0);
+        Sentry.captureMessage('process-video: client gave up waiting, still processing server-side', {
+          level: 'warning',
+          tags: { module: 'upload-page', op: 'video-upload', videoType: contentType === 'reels' ? 'reel' : 'clip' },
+          extra: (error as Error & { uploadDiagnostics?: Record<string, unknown> }).uploadDiagnostics,
+        });
+        toast({
+          title: "Still processing",
+          description: "Your clip is still processing — it'll appear on your profile shortly.",
+          variant: "gamefolioSuccess",
+        });
+        if (user?.username) {
+          navigate(`/profile/${user.username}`);
+        }
         return;
       }
       const limits = error instanceof UploadLimitError ? error.limits : undefined;
