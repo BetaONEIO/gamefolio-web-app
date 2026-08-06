@@ -102,6 +102,7 @@ import { createPublicClient, http, parseUnits, decodeEventLog, type Address as V
 import { privateKeyToAccount } from "viem/accounts";
 import { GF_TOKEN_ADDRESS as NFT_GF_TOKEN_ADDRESS, GF_TOKEN_ABI as NFT_GF_TOKEN_ABI, SKALE_NEBULA_TESTNET as NFT_SKALE_CHAIN } from "../shared/contracts";
 import { TwoFactorService } from "./services/two-factor-service";
+import { getRequestMeta } from "./lib/request-meta";
 
 // Import upload middlewares from upload router
 import multer from "multer";
@@ -980,7 +981,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           externalId: uid,
           // Set userType and ageRange to null to force onboarding
           userType: null,
-          ageRange: null
+          ageRange: null,
+          signupIp: getRequestMeta(req).ip,
+          signupDeviceId: getRequestMeta(req).deviceId,
         });
 
         // Send welcome email for new Google users
@@ -1300,7 +1303,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           externalId: id,
           // Set userType and ageRange to null to force onboarding
           userType: null,
-          ageRange: null
+          ageRange: null,
+          signupIp: getRequestMeta(req).ip,
+          signupDeviceId: getRequestMeta(req).deviceId,
         });
 
         // Send welcome email for new Discord users
@@ -1575,7 +1580,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           xboxUsername: gamertag,
           xboxXuid: xuid,
           userType: null,
-          ageRange: null
+          ageRange: null,
+          signupIp: getRequestMeta(req).ip,
+          signupDeviceId: getRequestMeta(req).deviceId,
         });
 
         // Send new user notification to admin
@@ -2074,12 +2081,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create user — referralCode is always server-generated; referredBy records which code was used at signup
       // storage.createUser() hashes the password itself (like every other
       // caller here - OAuth/admin paths), so pass it through in plain text.
+      // signupIp/signupDeviceId are server-derived (never from parsed client
+      // body) — spam/multi-account detection signal, see gamefolio-bot.
+      const { ip: signupIp, deviceId: signupDeviceId } = getRequestMeta(req);
       const user = await storage.createUser({
         ...userData,
         username: userData.username.toLowerCase(),
         email: userData.email.toLowerCase(),
         emailVerified: false,
         ...(usedReferralCode && { referredBy: usedReferralCode }),
+        signupIp,
+        signupDeviceId,
       });
 
       // Generate verification code and store it in the database
@@ -7071,6 +7083,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Short-link resolver for the gft.gg domain: gft.gg/<code> is redirected
+  // (via a Cloudflare redirect rule) to app.gamefolio.com/go/<code>, which
+  // looks the code up across clips/reels and screenshots and 302s to the
+  // canonical pretty URL. Falls back to the homepage if the code is unknown
+  // so a bad/expired link never dead-ends.
+  app.get("/go/:code", async (req, res) => {
+    const baseUrl = "https://app.gamefolio.com";
+    try {
+      const { code } = req.params;
+
+      const clip = await storage.getClipByShareCode(code);
+      if (clip) {
+        const user = await storage.getUser(clip.userId);
+        const username = user?.username || "unknown";
+        const segment = clip.videoType === "reel" ? "reel" : "clip";
+        return res.redirect(302, `${baseUrl}/@${username}/${segment}/${code}`);
+      }
+
+      const screenshot = await storage.getScreenshotByShareCode(code);
+      if (screenshot) {
+        const user = await storage.getUser(screenshot.userId);
+        const username = user?.username || "unknown";
+        return res.redirect(302, `${baseUrl}/@${username}/screenshot/${code}`);
+      }
+
+      return res.redirect(302, baseUrl);
+    } catch (err) {
+      captureRouteError(err);
+      console.error(`Error resolving short link for code ${req.params.code}:`, err);
+      return res.redirect(302, baseUrl);
+    }
+  });
+
   // Get clip by shareCode - used for nice URLs like /@username/clip/shareCode
   app.get("/api/clips/share/:shareCode", async (req, res) => {
     try {
@@ -7510,6 +7555,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         videoType: req.body.videoType || "clip", // "clip" or "reel"
         ageRestricted: req.body.ageRestricted === 'true' || req.body.ageRestricted === true,
         shareCode: generateShareCode(), // This generates 8-character alphanumeric codes
+        uploadIp: getRequestMeta(req).ip,
+        uploadDeviceId: getRequestMeta(req).deviceId,
       };
 
       // Create the clip
@@ -11131,7 +11178,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: description || null,
         tags: tags ? JSON.parse(tags) : [],
         ageRestricted: req.body.ageRestricted === 'true' || req.body.ageRestricted === true,
-        shareCode: generateShareCode()
+        shareCode: generateShareCode(),
+        uploadIp: getRequestMeta(req).ip,
+        uploadDeviceId: getRequestMeta(req).deviceId,
       };
 
       // Scheduled path: store the processed screenshot for later publishing.
@@ -12091,6 +12140,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         duration: actualDuration || 30,
         shareCode: shareCode,
         ageRestricted: false,
+        // Desktop app doesn't send a device id — IP-only signal here.
+        uploadIp: getRequestMeta(req).ip,
       };
 
       const validatedClipData = insertClipSchema.parse(clipData);

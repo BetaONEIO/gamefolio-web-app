@@ -32,6 +32,7 @@ import { initEmailJS } from "./services/email-service";
 import { installNativeFetchPatch } from "./lib/platform";
 import { initMobileShell } from "./lib/mobile-init";
 import { ensureHydrated as ensureAuthTokensHydrated } from "./lib/auth-token";
+import { ensureDeviceIdHydrated } from "./lib/device-id";
 import { initSentry } from "./lib/sentry";
 
 // First thing: start crash/error reporting so even startup failures are caught.
@@ -40,6 +41,7 @@ initSentry();
 installNativeFetchPatch();
 void initMobileShell();
 void ensureAuthTokensHydrated();
+void ensureDeviceIdHydrated();
 
 const adsenseClientId = import.meta.env.VITE_ADSENSE_CLIENT_ID?.trim();
 if (adsenseClientId) {

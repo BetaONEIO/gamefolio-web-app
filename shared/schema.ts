@@ -164,6 +164,10 @@ export const users = pgTable("users", {
   // Outro videos — auto-appended on download; separate files for landscape (16:9) and portrait (9:16)
   outroVideoPath: text("outro_video_path"),          // landscape 1920×1080 — "outros/42.mp4"
   outroVideoPathPortrait: text("outro_video_path_portrait"), // portrait 1080×1920 — "outros/42_portrait.mp4"
+  // Spam/multi-account detection signals — captured server-side at registration only,
+  // never client-settable. See gamefolio-bot for the detection jobs that read these.
+  signupIp: text("signup_ip"),
+  signupDeviceId: text("signup_device_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -201,6 +205,9 @@ export const clips = pgTable("clips", {
   ageRestricted: boolean("age_restricted").default(false).notNull(),
   shareCode: text("share_code").unique(),
   pinnedAt: timestamp("pinned_at"),
+  // Spam/multi-account detection signals — captured server-side at upload time.
+  uploadIp: text("upload_ip"),
+  uploadDeviceId: text("upload_device_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -244,6 +251,9 @@ export const screenshots = pgTable("screenshots", {
   ageRestricted: boolean("age_restricted").default(false).notNull(),
   shareCode: text("share_code").unique(),
   pinnedAt: timestamp("pinned_at"),
+  // Spam/multi-account detection signals — captured server-side at upload time.
+  uploadIp: text("upload_ip"),
+  uploadDeviceId: text("upload_device_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

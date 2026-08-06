@@ -18,6 +18,7 @@ import { BonusEventsService } from '../bonus-events-service';
 import { CreatorMilestoneService } from '../creator-milestone-service';
 import { processAndCreateClip, ClipProcessingError } from '../services/clip-processing';
 import { captureRouteError } from "../sentry";
+import { getRequestMeta } from "../lib/request-meta";
 
 const router = express.Router();
 
@@ -551,6 +552,8 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
       imageUrl: '', // Will be set after upload
       thumbnailUrl: '', // Will be set after processing
       ageRestricted: ageRestricted === true || ageRestricted === 'true',
+      uploadIp: getRequestMeta(req).ip,
+      uploadDeviceId: getRequestMeta(req).deviceId,
     };
 
     // Validate screenshot data with detailed error logging
@@ -742,7 +745,8 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
       }
     }
 
-    const responseData = await processAndCreateClip(req.user!.id, { ...req.body, scheduledAt });
+    const { ip: uploadIp, deviceId: uploadDeviceId } = getRequestMeta(req);
+    const responseData = await processAndCreateClip(req.user!.id, { ...req.body, scheduledAt, uploadIp, uploadDeviceId });
     console.log(`🎯 XP Debug - Response data: xpGained=${responseData.xpGained}, userXP=${responseData.userXP}, userLevel=${responseData.userLevel}`);
     res.json(responseData);
   } catch (error) {

@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { Share } from '@capacitor/share';
+import { getDeviceIdSync } from './device-id';
 
 export const isNative = Capacitor.isNativePlatform();
 export const platform = Capacitor.getPlatform();
@@ -35,6 +36,9 @@ function withNativeHeader(url: string, init?: RequestInit): RequestInit | undefi
   if (!targetsBackend(url)) return init;
   const headers = new Headers(init?.headers);
   headers.set('X-GF-Platform', platform);
+  // Best-effort — null until device-id's startup hydrate() resolves (see main.tsx).
+  const deviceId = getDeviceIdSync();
+  if (deviceId) headers.set('X-Device-Id', deviceId);
   return { ...init, headers };
 }
 
@@ -53,7 +57,11 @@ export function installNativeFetchPatch(): void {
     // Request object — rebuild with rewritten URL (if relative) and tag it.
     const rewritten = resolveApiUrl(input.url);
     const req = new Request(rewritten, input);
-    if (targetsBackend(rewritten)) req.headers.set('X-GF-Platform', platform);
+    if (targetsBackend(rewritten)) {
+      req.headers.set('X-GF-Platform', platform);
+      const deviceId = getDeviceIdSync();
+      if (deviceId) req.headers.set('X-Device-Id', deviceId);
+    }
     return originalFetch(req);
   }) as typeof fetch;
   fetchPatched = true;

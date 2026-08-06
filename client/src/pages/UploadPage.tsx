@@ -94,6 +94,19 @@ class UploadCancelledError extends Error {
   }
 }
 
+// Thrown when the client gives up waiting on /api/upload/process-video
+// (see ProcessVideoTimeoutError below) but the server-side ffmpeg job may
+// well still be running. This isn't a failure — the clip typically finishes
+// and appears on the user's profile shortly after — so it's handled as a
+// distinct outcome from a real "Upload failed" in onError below, rather
+// than stranding the user on the upload form looking like something broke.
+class StillProcessingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "StillProcessingError";
+  }
+}
+
 // tus-js-client's default browser HttpStack constructs `new XMLHttpRequest()`
 // directly, which on native picks up CapacitorHttp's patched global — the
 // bridge that reliably breaks large chunked PATCH uploads (see
@@ -318,6 +331,13 @@ const UploadPage = () => {
   const [scheduledAt, setScheduledAt] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  // Dismissing the blocking modal during the encode step (>=85%) doesn't
+  // cancel anything - the process-video request keeps running server-side
+  // regardless of what's mounted client-side (see StillProcessingError).
+  // isUploading stays true so the beforeunload warning and __gf_uploading__
+  // reload guard keep protecting the in-flight request; this only controls
+  // whether the modal itself is rendered.
+  const [uploadModalDismissed, setUploadModalDismissed] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const uploadAbortRef = useRef<AbortController | null>(null);
   
@@ -1265,7 +1285,7 @@ const UploadPage = () => {
               // The request may well still be processing server-side — this
               // isn't the same as a clean failure, so say so rather than a
               // generic "upload failed" that implies nothing happened.
-              ? new Error('Your video is still processing — this can take a few minutes for larger clips. Check your profile shortly before uploading again.')
+              ? new StillProcessingError('Your video is still processing — this can take a few minutes for larger clips. Check your profile shortly before uploading again.')
               : processVideoNetworkError instanceof Error
                 ? processVideoNetworkError
                 : new Error(String(processVideoNetworkError));
@@ -1439,6 +1459,28 @@ const UploadPage = () => {
         setUploadProgress(0);
         return;
       }
+      // The server may still finish the job after we've stopped waiting on
+      // it — don't show "Upload failed" or leave the user staring at the
+      // upload form. Send them to their profile, where the clip will show
+      // up once processing completes.
+      if (error instanceof StillProcessingError) {
+        setIsUploading(false);
+        setUploadProgress(0);
+        Sentry.captureMessage('process-video: client gave up waiting, still processing server-side', {
+          level: 'warning',
+          tags: { module: 'upload-page', op: 'video-upload', videoType: contentType === 'reels' ? 'reel' : 'clip' },
+          extra: (error as Error & { uploadDiagnostics?: Record<string, unknown> }).uploadDiagnostics,
+        });
+        toast({
+          title: "Still processing",
+          description: "Your clip is still processing — it'll appear on your profile shortly.",
+          variant: "gamefolioSuccess",
+        });
+        if (user?.username) {
+          navigate(`/profile/${user.username}`);
+        }
+        return;
+      }
       const limits = error instanceof UploadLimitError ? error.limits : undefined;
       const showUpgradeCta = limits ? limits.isPro === false : false;
       // Tier-limit rejections are expected, not bugs - only report genuine
@@ -1582,6 +1624,7 @@ const UploadPage = () => {
     // Show progress bar immediately when starting upload
     setIsUploading(true);
     setUploadProgress(0);
+    setUploadModalDismissed(false);
 
     console.log('About to call uploadMutation.mutate()');
     console.log('Final validation before upload:', {
@@ -3214,7 +3257,7 @@ const UploadPage = () => {
       </Tabs>
       
       {/* Upload Progress Modal */}
-      {isUploading && (
+      {isUploading && !uploadModalDismissed && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-0">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative w-full sm:max-w-2xl bg-[#0B1218] rounded-2xl overflow-hidden shadow-2xl border border-[#1e3a4a]/50">
@@ -3277,33 +3320,55 @@ const UploadPage = () => {
               <div className="flex items-center gap-3 bg-[#B7FF1A]/5 border border-[#B7FF1A]/10 rounded-full px-6 py-2.5">
                 <div className="w-2 h-2 bg-[#B7FF1A] rounded-full" style={{ boxShadow: '0 0 10px #B7FF1A' }} />
                 <span className="text-[#B7FF1A] text-[10px] font-bold tracking-[2px] uppercase">
-                  Please keep this tab open while uploading
+                  {uploadProgress < 85
+                    ? "Please keep this tab open while uploading"
+                    : "You can safely leave this page now"}
                 </span>
                 <div className="w-2 h-2 bg-[#B7FF1A] rounded-full" style={{ boxShadow: '0 0 10px #B7FF1A' }} />
               </div>
             </div>
 
-            <div className="flex items-center justify-center gap-4 px-8 py-6 bg-[#0b1820]/80 backdrop-blur-xl border-t border-[#1e3a4a]/10">
-              <button
-                type="button"
-                onClick={() => {
-                  if (uploadAbortRef.current) {
-                    uploadAbortRef.current.abort();
-                  }
-                  setIsUploading(false);
-                  setUploadProgress(0);
-                }}
-                className="text-[#8fa8b8] text-sm font-bold tracking-[1.4px] uppercase hover:text-white transition-colors px-6 py-3"
-              >
-                Cancel
-              </button>
-              <div className="flex items-center gap-2.5 bg-[#B7FF1A]/10 border border-[#B7FF1A]/20 rounded-full px-8 py-4 shadow-lg">
-                <div className="w-5 h-5 border-2 border-[#B7FF1A]/30 border-t-[#B7FF1A] rounded-full animate-spin" />
-                <span className="text-[#B7FF1A] text-sm font-bold tracking-[1.4px] uppercase">
-                  Uploading {uploadProgress}%
-                </span>
+            {uploadProgress >= 85 && uploadProgress < 100 ? (
+              <div className="flex items-center justify-center px-8 py-6 bg-[#0b1820]/80 backdrop-blur-xl border-t border-[#1e3a4a]/10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadModalDismissed(true);
+                    toast({
+                      title: "Processing in the background",
+                      description: "Your clip will appear on your profile shortly.",
+                      variant: "gamefolioSuccess",
+                    });
+                    navigate('/');
+                  }}
+                  className="flex items-center gap-2.5 bg-[#B7FF1A] rounded-full px-8 py-4 shadow-lg text-[#0B1218] text-sm font-bold tracking-[1.4px] uppercase hover:brightness-110 transition-all"
+                >
+                  You can leave this page now
+                </button>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center justify-center gap-4 px-8 py-6 bg-[#0b1820]/80 backdrop-blur-xl border-t border-[#1e3a4a]/10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (uploadAbortRef.current) {
+                      uploadAbortRef.current.abort();
+                    }
+                    setIsUploading(false);
+                    setUploadProgress(0);
+                  }}
+                  className="text-[#8fa8b8] text-sm font-bold tracking-[1.4px] uppercase hover:text-white transition-colors px-6 py-3"
+                >
+                  Cancel
+                </button>
+                <div className="flex items-center gap-2.5 bg-[#B7FF1A]/10 border border-[#B7FF1A]/20 rounded-full px-8 py-4 shadow-lg">
+                  <div className="w-5 h-5 border-2 border-[#B7FF1A]/30 border-t-[#B7FF1A] rounded-full animate-spin" />
+                  <span className="text-[#B7FF1A] text-sm font-bold tracking-[1.4px] uppercase">
+                    Uploading {uploadProgress}%
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

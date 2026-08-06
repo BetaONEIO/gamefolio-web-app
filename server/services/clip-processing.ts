@@ -41,6 +41,10 @@ export interface ProcessAndCreateClipParams {
   // of being published immediately — see routes/upload.ts for the pre-check
   // that rejects invalid/over-limit schedules before this expensive pipeline runs.
   scheduledAt?: Date;
+  // Spam/multi-account detection signals — caller derives these from the
+  // request (see server/lib/request-meta.ts) since this service has no req.
+  uploadIp?: string;
+  uploadDeviceId?: string | null;
 }
 
 /**
@@ -51,7 +55,7 @@ export interface ProcessAndCreateClipParams {
  * pipeline instead of a second, divergent copy of this logic.
  */
 export async function processAndCreateClip(userId: number, params: ProcessAndCreateClipParams) {
-  const { uploadResult, title, description, gameId, tags, ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd, scheduledAt } = params;
+  const { uploadResult, title, description, gameId, tags, ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd, scheduledAt, uploadIp, uploadDeviceId } = params;
   const videoType = params.videoType || 'clip';
 
   if (!uploadResult || !title) {
@@ -367,6 +371,8 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
     trimEnd: rawTrimEnd !== undefined && rawTrimEnd !== null ? parseInt(String(rawTrimEnd)) : actualDuration,
     ageRestricted: ageRestricted === true || ageRestricted === 'true',
     shareCode,
+    uploadIp: uploadIp ?? null,
+    uploadDeviceId: uploadDeviceId ?? null,
   };
 
   const validatedClipData = insertClipSchema.parse(finalClipData);
