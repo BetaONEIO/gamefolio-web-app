@@ -49,6 +49,12 @@ interface DashGoal {
   ready?: boolean;
 }
 
+interface SeasonXPBreakdownItem {
+  source: string;
+  eventCount: number;
+  totalXP: number;
+}
+
 interface DashboardData {
   player: {
     username: string;
@@ -158,6 +164,9 @@ interface DashboardData {
     xpToChampion?: number | null;
     rankToChampion?: number | null;
     isTopRank?: boolean;
+    seasonName?: string;
+    seasonDateRange?: string;
+    breakdown?: SeasonXPBreakdownItem[];
   };
 }
 
@@ -534,6 +543,96 @@ function LeagueMedal({ tier, size = 64 }: { tier: string; size?: number }) {
   );
 }
 
+const SEASON_XP_SOURCE_INFO: Record<string, { label: string; rule: string }> = {
+  view: { label: "Content views", rule: "1 XP per valid view" },
+  upload: { label: "Clip & reel uploads", rule: "250 XP per upload" },
+  screenshot_upload: { label: "Screenshot uploads", rule: "100 XP per upload" },
+  like_received: { label: "Likes received", rule: "XP from content engagement" },
+  fire_received: { label: "Fires received", rule: "50 XP per unique fire" },
+  lootbox: { label: "Lootboxes", rule: "XP based on the lootbox reward" },
+  referral: { label: "Referrals", rule: "500 XP per successful referral" },
+  referral_bonus: { label: "Referral signup bonus", rule: "100 XP for signing up with a referral" },
+  daily_login: { label: "Daily login", rule: "XP from daily login activity" },
+  welcome_bonus: { label: "Welcome bonus", rule: "One-time welcome XP" },
+  mac_bonus: { label: "Bonus XP", rule: "Promotional bonus XP" },
+  other: { label: "Other XP", rule: "Bounties and other approved rewards" },
+};
+
+function SeasonXPBreakdown({
+  seasonXP,
+  breakdown,
+}: {
+  seasonXP: number;
+  breakdown: SeasonXPBreakdownItem[] | undefined;
+}) {
+  const items = breakdown ?? [];
+  const breakdownTotal = items.reduce((sum, item) => sum + item.totalXP, 0);
+
+  return (
+    <details className="mt-4 rounded-xl" style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${BORDER}` }}>
+      <summary
+        className="flex cursor-pointer list-none items-center justify-between gap-3 p-3.5"
+        style={{ color: TEXT_PRIMARY }}
+      >
+        <span className="flex items-center gap-2">
+          <BarChart2 className="w-4 h-4" style={{ color: ACCENT }} />
+          <span className="text-xs font-bold">How your Season XP is earned</span>
+        </span>
+        <span className="text-[10px] font-semibold" style={{ color: TEXT_MUTED }}>
+          {items.length} source{items.length === 1 ? "" : "s"} <span className="ml-1 text-white/30">＋</span>
+        </span>
+      </summary>
+      <div className="space-y-2 border-t px-3.5 pb-3.5 pt-3" style={{ borderColor: BORDER }}>
+        {items.length === 0 ? (
+          <p className="py-2 text-xs" style={{ color: TEXT_MUTED }}>
+            No Season XP has been earned yet this season.
+          </p>
+        ) : (
+          items.map((item) => {
+            const info = SEASON_XP_SOURCE_INFO[item.source] ?? {
+              label: item.source.replace(/_/g, " "),
+              rule: "Approved XP reward",
+            };
+            const share = seasonXP > 0 ? Math.round((item.totalXP / seasonXP) * 100) : 0;
+            return (
+              <div key={item.source} className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-xs font-semibold" style={{ color: TEXT_PRIMARY }}>
+                      {info.label}
+                    </span>
+                    <span className="shrink-0 text-xs font-black tabular-nums" style={{ color: ACCENT }}>
+                      +{item.totalXP.toLocaleString()} XP
+                    </span>
+                  </div>
+                  <div className="mt-0.5 flex items-center justify-between gap-2">
+                    <span className="truncate text-[10px]" style={{ color: TEXT_MUTED }}>
+                      {item.eventCount.toLocaleString()} event{item.eventCount === 1 ? "" : "s"} · {info.rule}
+                    </span>
+                    <span className="shrink-0 text-[10px]" style={{ color: TEXT_MUTED }}>{share}%</span>
+                  </div>
+                  <div className="mt-1 h-1 overflow-hidden rounded-full" style={{ background: BORDER }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${Math.min(share, 100)}%`, background: ACCENT }}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div className="flex items-center justify-between border-t pt-2" style={{ borderColor: BORDER }}>
+          <span className="text-[10px] font-bold uppercase tracking-wide" style={{ color: TEXT_MUTED }}>Breakdown total</span>
+          <span className="text-xs font-black tabular-nums" style={{ color: TEXT_PRIMARY }}>
+            {breakdownTotal.toLocaleString()} / {seasonXP.toLocaleString()} XP
+          </span>
+        </div>
+      </div>
+    </details>
+  );
+}
+
 function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"] | undefined; isLoading: boolean }) {
   if (isLoading || !data) {
     return (
@@ -721,6 +820,8 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
             </div>
           </div>
         )}
+
+        <SeasonXPBreakdown seasonXP={data.seasonXP} breakdown={data.breakdown} />
 
         {/* League structure legend */}
         <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
@@ -1435,6 +1536,8 @@ export default function DashboardPage() {
             </div>
             {/* 3. League Progress */}
             <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
+            {/* Rivals directly below league progress */}
+            <FriendsRivals data={data?.social} isLoading={isLoading} />
             {/* 4. Creator Analytics */}
             <CreatorAnalytics creator={data?.creator} followersCount={data?.social?.followersCount ?? 0} isLoading={isLoading} />
             {/* 5. Upload Performance */}
@@ -1449,7 +1552,6 @@ export default function DashboardPage() {
             {(data?.bounties ?? []).length > 0 && (
               <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
             )}
-            <FriendsRivals data={data?.social} isLoading={isLoading} />
           </div>
         ) : (
           /* Desktop: structured layout matching spec order */
@@ -1461,6 +1563,8 @@ export default function DashboardPage() {
 
             {/* 3. League Progress */}
             <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
+            {/* Rivals directly below league progress */}
+            <FriendsRivals data={data?.social} isLoading={isLoading} />
 
             {/* 4. Creator Analytics — full width */}
             <CreatorAnalytics creator={data?.creator} followersCount={data?.social?.followersCount ?? 0} isLoading={isLoading} />
@@ -1476,17 +1580,12 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* 7. Recent Activity + Rivals / Bounties */}
-            <div className="grid grid-cols-12 gap-5">
-              <div className="col-span-8 space-y-5">
-                <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
-                {(data?.bounties ?? []).length > 0 && (
-                  <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
-                )}
-              </div>
-              <div className="col-span-4 space-y-5">
-                <FriendsRivals data={data?.social} isLoading={isLoading} />
-              </div>
+            {/* 7. Recent Activity + Bounties */}
+            <div className="space-y-5">
+              <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
+              {(data?.bounties ?? []).length > 0 && (
+                <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
+              )}
             </div>
           </div>
         )}

@@ -4925,16 +4925,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Season League progress (Bronze -> Silver -> Gold -> Platinum -> Diamond -> Master -> Champion)
       const nowKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
       const currentSeasonDef = SEASON_DEFS.find((s) => s.months.includes(nowKey)) || SEASON_DEFS[0];
+      const [seasonStartYear, seasonStartMonth] = currentSeasonDef.months[0].split("-").map(Number);
+      const seasonEndKey = currentSeasonDef.months[currentSeasonDef.months.length - 1];
+      const [seasonEndYear, seasonEndMonth] = seasonEndKey.split("-").map(Number);
+      const seasonStart = new Date(Date.UTC(seasonStartYear, seasonStartMonth - 1, 1)).toISOString();
+      const seasonEnd = new Date(Date.UTC(seasonEndYear, seasonEndMonth, 1)).toISOString();
       const seasonRankRows = await db.execute(sql`
         WITH season_totals AS (
-          SELECT ml.user_id AS "userId", SUM(ml.total_points) AS "seasonXP"
-          FROM monthly_leaderboard ml
-          JOIN users u ON u.id = ml.user_id
-          WHERE ml.month = ANY(ARRAY[${sql.join(currentSeasonDef.months.map((m) => sql`${m}`), sql`, `)}])
-            AND u.role NOT IN ('admin', 'moderator', 'system')
+          SELECT u.id AS "userId", COALESCE(SUM(xh.xp_amount), 0) AS "seasonXP"
+          FROM users u
+          LEFT JOIN user_xp_history xh
+            ON xh.user_id = u.id
+            AND xh.created_at >= ${seasonStart}
+            AND xh.created_at < ${seasonEnd}
+            AND xh.xp_amount > 0
+          WHERE u.role NOT IN ('admin', 'moderator', 'system')
             AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
             AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
-          GROUP BY ml.user_id
+          GROUP BY u.id
         )
         SELECT "userId", "seasonXP", RANK() OVER (ORDER BY "seasonXP" DESC) AS "seasonRank"
         FROM season_totals
@@ -4948,6 +4956,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const championCutoffXP = seasonRankList[9] ? Math.round(Number(seasonRankList[9].seasonXP)) : null;
 
       const seasonLeague = buildSeasonLeague(seasonXP, seasonRank, championCutoffXP, totalSeasonPlayers);
+      const seasonBreakdownRows = await db.execute(sql`
+        SELECT
+          source,
+          COUNT(*)::int AS "eventCount",
+          COALESCE(SUM(xp_amount), 0)::int AS "totalXP"
+        FROM user_xp_history
+        WHERE user_id = ${userId}
+          AND created_at >= ${seasonStart}
+          AND created_at < ${seasonEnd}
+          AND xp_amount > 0
+        GROUP BY source
+        ORDER BY "totalXP" DESC, source ASC
+      `);
+      const seasonBreakdown = (((seasonBreakdownRows as any).rows ?? seasonBreakdownRows) as any[]).map((row) => ({
+        source: row.source,
+        eventCount: Number(row.eventCount),
+        totalXP: Math.round(Number(row.totalXP)),
+      }));
 
       // ── Creator analytics ──────────────────────────────────────────────────
       const [
@@ -5142,7 +5168,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           longestStreak: streakInfo.longestStreak,
           lootboxReady: lootboxStatus.canOpen,
         },
-        seasonLeague,
+        seasonLeague: {
+          ...seasonLeague,
+          seasonName: currentSeasonDef.name,
+          seasonDateRange: currentSeasonDef.dateRange,
+          breakdown: seasonBreakdown,
+        },
         today: {
           clipsWatchedToday,
           watch5Done,
