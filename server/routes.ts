@@ -4949,6 +4949,181 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const seasonLeague = buildSeasonLeague(seasonXP, seasonRank, championCutoffXP, totalSeasonPlayers);
 
+      // ── Creator analytics ──────────────────────────────────────────────────
+      const [
+        clipStatsRows,
+        screenshotStatsRows,
+        clipLikesRows,
+        screenshotLikesRows,
+        clipCommentsRows,
+        screenshotCommentsRows,
+        newFollowersRows,
+        topClipRows,
+        topReelRows,
+        topScreenshotRows,
+        recentUploadsRows,
+      ] = await Promise.all([
+        db.execute(sql`
+          SELECT COALESCE(SUM(views),0)::int AS total_views, COUNT(*)::int AS total_clips
+          FROM clips WHERE user_id = ${userId}
+        `),
+        db.execute(sql`
+          SELECT COALESCE(SUM(views),0)::int AS total_views, COUNT(*)::int AS total_screenshots
+          FROM screenshots WHERE user_id = ${userId}
+        `),
+        db.execute(sql`
+          SELECT COUNT(*)::int AS total FROM likes l
+          JOIN clips c ON c.id = l.clip_id WHERE c.user_id = ${userId}
+        `),
+        db.execute(sql`
+          SELECT COUNT(*)::int AS total FROM screenshot_likes sl
+          JOIN screenshots s ON s.id = sl.screenshot_id WHERE s.user_id = ${userId}
+        `),
+        db.execute(sql`
+          SELECT COUNT(*)::int AS total FROM comments
+          WHERE clip_id IN (SELECT id FROM clips WHERE user_id = ${userId})
+        `),
+        db.execute(sql`
+          SELECT COUNT(*)::int AS total FROM screenshot_comments
+          WHERE screenshot_id IN (SELECT id FROM screenshots WHERE user_id = ${userId})
+        `),
+        db.execute(sql`
+          SELECT COUNT(*)::int AS total FROM follows
+          WHERE following_id = ${userId} AND created_at >= NOW() - INTERVAL '7 days'
+        `),
+        // Top clip (not reel)
+        db.execute(sql`
+          SELECT c.id, c.title, c.thumbnail_url AS "thumbnailUrl", COALESCE(c.views,0) AS views,
+                 c.created_at AS "createdAt", COUNT(l.id)::int AS "likeCount",
+                 (SELECT COUNT(*)::int FROM comments WHERE clip_id = c.id) AS "commentCount"
+          FROM clips c LEFT JOIN likes l ON l.clip_id = c.id
+          WHERE c.user_id = ${userId} AND (c.video_type IS NULL OR c.video_type = 'clip')
+          GROUP BY c.id ORDER BY c.views DESC NULLS LAST LIMIT 1
+        `),
+        // Top reel
+        db.execute(sql`
+          SELECT c.id, c.title, c.thumbnail_url AS "thumbnailUrl", COALESCE(c.views,0) AS views,
+                 c.created_at AS "createdAt", COUNT(l.id)::int AS "likeCount",
+                 (SELECT COUNT(*)::int FROM comments WHERE clip_id = c.id) AS "commentCount"
+          FROM clips c LEFT JOIN likes l ON l.clip_id = c.id
+          WHERE c.user_id = ${userId} AND c.video_type = 'reel'
+          GROUP BY c.id ORDER BY c.views DESC NULLS LAST LIMIT 1
+        `),
+        // Top screenshot
+        db.execute(sql`
+          SELECT s.id, s.title, COALESCE(s.thumbnail_url, s.image_url) AS "thumbnailUrl",
+                 COALESCE(s.views,0) AS views, s.created_at AS "createdAt",
+                 COUNT(sl.id)::int AS "likeCount",
+                 (SELECT COUNT(*)::int FROM screenshot_comments WHERE screenshot_id = s.id) AS "commentCount"
+          FROM screenshots s LEFT JOIN screenshot_likes sl ON sl.screenshot_id = s.id
+          WHERE s.user_id = ${userId}
+          GROUP BY s.id ORDER BY s.views DESC NULLS LAST, COUNT(sl.id) DESC LIMIT 1
+        `),
+        // Recent uploads (clips + screenshots, last 6)
+        db.execute(sql`
+          SELECT * FROM (
+            SELECT c.id, c.title, c.thumbnail_url AS "thumbnailUrl", COALESCE(c.views,0) AS views,
+                   c.created_at AS "createdAt", c.video_type AS "videoType",
+                   COUNT(l.id)::int AS "likeCount",
+                   (SELECT COUNT(*)::int FROM comments WHERE clip_id = c.id) AS "commentCount"
+            FROM clips c LEFT JOIN likes l ON l.clip_id = c.id
+            WHERE c.user_id = ${userId}
+            GROUP BY c.id
+            UNION ALL
+            SELECT s.id, s.title, COALESCE(s.thumbnail_url, s.image_url) AS "thumbnailUrl",
+                   COALESCE(s.views,0) AS views, s.created_at AS "createdAt", 'screenshot' AS "videoType",
+                   COUNT(sl.id)::int AS "likeCount",
+                   (SELECT COUNT(*)::int FROM screenshot_comments WHERE screenshot_id = s.id) AS "commentCount"
+            FROM screenshots s LEFT JOIN screenshot_likes sl ON sl.screenshot_id = s.id
+            WHERE s.user_id = ${userId}
+            GROUP BY s.id
+          ) combined ORDER BY "createdAt" DESC NULLS LAST LIMIT 6
+        `),
+      ]);
+
+      const gr = (r: any) => (r as any).rows ?? r;
+      const clipStats       = gr(clipStatsRows)[0]       ?? { total_views: 0, total_clips: 0 };
+      const screenshotStats = gr(screenshotStatsRows)[0] ?? { total_views: 0, total_screenshots: 0 };
+      const totalCreatorViews   = Number(clipStats.total_views) + Number(screenshotStats.total_views);
+      const totalCreatorUploads = Number(clipStats.total_clips) + Number(screenshotStats.total_screenshots);
+      const totalLikesReceived  = Number((gr(clipLikesRows)[0] ?? { total: 0 }).total) + Number((gr(screenshotLikesRows)[0] ?? { total: 0 }).total);
+      const totalComments  = Number((gr(clipCommentsRows)[0] ?? { total: 0 }).total) + Number((gr(screenshotCommentsRows)[0] ?? { total: 0 }).total);
+      const newFollowersThisWeek = Number((gr(newFollowersRows)[0] ?? { total: 0 }).total);
+      const topClip        = gr(topClipRows)[0]        ? { ...gr(topClipRows)[0],        contentType: "clip"        } : null;
+      const topReel        = gr(topReelRows)[0]        ? { ...gr(topReelRows)[0],        contentType: "reel"        } : null;
+      const topScreenshot  = gr(topScreenshotRows)[0]  ? { ...gr(topScreenshotRows)[0],  contentType: "screenshot"  } : null;
+      const recentUploads  = gr(recentUploadsRows).map((r: any) => ({
+        ...r,
+        contentType: r.videoType === "reel" ? "reel" : r.videoType === "screenshot" ? "screenshot" : "clip",
+      }));
+
+      // ── Goals ──────────────────────────────────────────────────────────────
+      const followerMilestones = [50, 100, 250, 500, 1000, 2500, 5000, 10000, 50000];
+      const nextFollowerTarget = followerMilestones.find((m) => m > followersCount) ?? null;
+      const viewMilestones = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000];
+      const nextViewTarget = viewMilestones.find((m) => m > totalCreatorViews) ?? null;
+
+      const dashGoals: any[] = [];
+      if (seasonLeague.xpToNext && seasonLeague.nextLeague && seasonLeague.nextThreshold) {
+        dashGoals.push({
+          type: "league",
+          label: `Reach ${seasonLeague.nextLeague} League`,
+          detail: `${seasonLeague.xpToNext.toLocaleString()} more Season XP`,
+          current: seasonXP,
+          target: seasonLeague.nextThreshold,
+          percent: Math.min(Math.round(seasonLeague.progressPercent ?? 0), 100),
+          unit: "XP",
+          href: "/leaderboard",
+        });
+      }
+      if (nextFollowerTarget) {
+        dashGoals.push({
+          type: "followers",
+          label: `${nextFollowerTarget >= 1000 ? `${nextFollowerTarget / 1000}K` : nextFollowerTarget} Followers`,
+          detail: `${nextFollowerTarget - followersCount} more followers needed`,
+          current: followersCount,
+          target: nextFollowerTarget,
+          percent: Math.min(Math.round((followersCount / nextFollowerTarget) * 100), 100),
+          unit: "Followers",
+          href: null,
+        });
+      }
+      if (nextViewTarget) {
+        dashGoals.push({
+          type: "views",
+          label: `${nextViewTarget >= 1000 ? `${Math.round(nextViewTarget / 1000)}K` : nextViewTarget} Total Views`,
+          detail: `${(nextViewTarget - totalCreatorViews).toLocaleString()} views to go`,
+          current: totalCreatorViews,
+          target: nextViewTarget,
+          percent: Math.min(Math.round((totalCreatorViews / nextViewTarget) * 100), 100),
+          unit: "Views",
+          href: null,
+        });
+      }
+      dashGoals.push({
+        type: "daily_upload",
+        label: "Upload Content Today",
+        detail: firstUploadOfDayDone ? "Done! +250 XP earned" : "Earn 250 XP with your first upload",
+        current: firstUploadOfDayDone ? 1 : 0,
+        target: 1,
+        percent: firstUploadOfDayDone ? 100 : 0,
+        unit: "Upload",
+        href: "/upload",
+        completed: firstUploadOfDayDone,
+      });
+      dashGoals.push({
+        type: "lootbox",
+        label: "Open Daily Lootbox",
+        detail: lootboxOpenedToday ? "Done! XP claimed" : lootboxStatus.canOpen ? "Ready to claim!" : "Opens tomorrow",
+        current: lootboxOpenedToday ? 1 : 0,
+        target: 1,
+        percent: lootboxOpenedToday ? 100 : lootboxStatus.canOpen ? 50 : 0,
+        unit: "Lootbox",
+        href: "/level-tracker",
+        completed: lootboxOpenedToday,
+        ready: lootboxStatus.canOpen,
+      });
+
       res.json({
         player: {
           username: user.username,
@@ -4989,6 +5164,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           nearbyRivals,
         },
         nextRewards,
+        creator: {
+          totalViews: totalCreatorViews,
+          totalLikes: totalLikesReceived,
+          totalComments,
+          totalUploads: totalCreatorUploads,
+          newFollowersThisWeek,
+          topClip,
+          topReel,
+          topScreenshot,
+          recentUploads,
+        },
+        goals: dashGoals,
       });
     } catch (error) {
       console.error("Error fetching dashboard:", error);

@@ -13,6 +13,7 @@ import {
   Zap, Trophy, Flame, Gift, Clock, ChevronRight, Upload,
   Eye, Heart, MessageCircle, LogIn, Award, Star, ArrowUpRight,
   TrendingUp, Users, Swords, Circle, CheckCircle2,
+  BarChart2, Target, Film, Image as ImageIcon, Share2, Play,
 } from "lucide-react";
 import bronzeMedal from "@assets/Bronze-league-medal_1783092079649.png";
 import silverMedal from "@assets/Silver-league-medal_1783092079651.png";
@@ -23,6 +24,30 @@ import diamondMedal from "@assets/Rainbow-league-medal_1783093739515.png";
 import championMedal from "@assets/Gg-league-medal_1783092079650.png";
 
 /* ─── Types ─── */
+
+interface TopUpload {
+  id: number;
+  title: string;
+  thumbnailUrl: string | null;
+  views: number;
+  likeCount: number;
+  commentCount: number;
+  createdAt: string;
+  contentType: "clip" | "reel" | "screenshot";
+}
+
+interface DashGoal {
+  type: string;
+  label: string;
+  detail: string;
+  current: number;
+  target: number;
+  percent: number;
+  unit: string;
+  href: string | null;
+  completed?: boolean;
+  ready?: boolean;
+}
 
 interface DashboardData {
   player: {
@@ -103,6 +128,18 @@ interface DashboardData {
     xpNeeded?: number;
     available?: boolean;
   }>;
+  creator: {
+    totalViews: number;
+    totalLikes: number;
+    totalComments: number;
+    totalUploads: number;
+    newFollowersThisWeek: number;
+    topClip: TopUpload | null;
+    topReel: TopUpload | null;
+    topScreenshot: TopUpload | null;
+    recentUploads: TopUpload[];
+  };
+  goals: DashGoal[];
   seasonLeague: {
     tier: "Bronze" | "Silver" | "Gold" | "Platinum" | "Onyx" | "Diamond" | "Champion";
     league: string;
@@ -929,6 +966,412 @@ function FriendsRivals({ data, isLoading }: { data: DashboardData["social"] | un
   );
 }
 
+/* ─── Section: Creator Analytics ─── */
+
+function formatStat(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return n.toLocaleString();
+}
+
+function CreatorAnalytics({
+  creator,
+  followersCount,
+  isLoading,
+}: {
+  creator: DashboardData["creator"] | undefined;
+  followersCount: number;
+  isLoading: boolean;
+}) {
+  const stats = [
+    {
+      label: "Total Views",
+      value: creator?.totalViews ?? 0,
+      icon: Eye,
+      sub: "lifetime",
+    },
+    {
+      label: "Likes Received",
+      value: creator?.totalLikes ?? 0,
+      icon: Heart,
+      sub: "lifetime",
+    },
+    {
+      label: "Comments",
+      value: creator?.totalComments ?? 0,
+      icon: MessageCircle,
+      sub: "lifetime",
+    },
+    {
+      label: "New Followers",
+      value: creator?.newFollowersThisWeek ?? 0,
+      icon: Users,
+      sub: "this week",
+      highlight: (creator?.newFollowersThisWeek ?? 0) > 0,
+    },
+    {
+      label: "Followers",
+      value: followersCount,
+      icon: Users,
+      sub: "total",
+    },
+    {
+      label: "Uploads",
+      value: creator?.totalUploads ?? 0,
+      icon: Upload,
+      sub: "lifetime",
+    },
+  ];
+
+  return (
+    <SectionCard>
+      <SectionHeader
+        icon={BarChart2}
+        title="Creator Analytics"
+        action={
+          <Link href="/profile">
+            <span className="text-xs font-semibold flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity" style={{ color: ACCENT }}>
+              My Profile <ChevronRight className="w-3 h-3" />
+            </span>
+          </Link>
+        }
+      />
+      <div className="px-5 pb-5">
+        {isLoading ? (
+          <div className="grid grid-cols-3 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 rounded-xl" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-3">
+            {stats.map((s) => {
+              const Icon = s.icon;
+              return (
+                <div
+                  key={s.label}
+                  className="rounded-xl p-3 flex flex-col gap-1"
+                  style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}
+                >
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: s.highlight ? ACCENT : TEXT_MUTED }} />
+                    <span className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: TEXT_MUTED }}>
+                      {s.label}
+                    </span>
+                  </div>
+                  <div
+                    className="text-xl font-black tabular-nums"
+                    style={{ color: s.highlight ? ACCENT : TEXT_PRIMARY }}
+                  >
+                    {formatStat(s.value)}
+                  </div>
+                  <div className="text-[10px]" style={{ color: TEXT_MUTED }}>{s.sub}</div>
+                  {s.highlight && s.value > 0 && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <TrendingUp className="w-3 h-3" style={{ color: "#4ADE80" }} />
+                      <span className="text-[10px] font-bold" style={{ color: "#4ADE80" }}>
+                        +{s.value} this week
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </SectionCard>
+  );
+}
+
+/* ─── Section: Upload Performance ─── */
+
+function ContentTypeIcon({ type }: { type: string }) {
+  if (type === "reel") return <Film className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />;
+  if (type === "screenshot") return <ImageIcon className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />;
+  return <Play className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />;
+}
+
+function TopUploadCard({
+  upload,
+  label,
+  isLoading,
+}: {
+  upload: TopUpload | null;
+  label: string;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return <Skeleton className="h-36 rounded-xl" />;
+  }
+
+  if (!upload) {
+    return (
+      <div
+        className="rounded-xl p-4 flex flex-col items-center justify-center text-center gap-2"
+        style={{ background: "rgba(255,255,255,0.02)", border: `1px dashed ${BORDER}`, minHeight: 144 }}
+      >
+        <Upload className="w-5 h-5 opacity-20" style={{ color: TEXT_MUTED }} />
+        <p className="text-xs" style={{ color: TEXT_MUTED }}>No {label.toLowerCase()} yet</p>
+        <Link href="/upload">
+          <span className="text-[10px] font-bold" style={{ color: ACCENT }}>Upload Now →</span>
+        </Link>
+      </div>
+    );
+  }
+
+  const href =
+    upload.contentType === "screenshot"
+      ? `/screenshots/${upload.id}`
+      : `/clips/${upload.id}`;
+
+  return (
+    <Link href={href}>
+      <div
+        className="rounded-xl overflow-hidden cursor-pointer transition-opacity hover:opacity-90"
+        style={{ border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.02)" }}
+      >
+        {/* Thumbnail */}
+        <div className="relative h-24 bg-[#0d1a24] overflow-hidden">
+          {upload.thumbnailUrl ? (
+            <img
+              src={upload.thumbnailUrl}
+              alt={upload.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <ContentTypeIcon type={upload.contentType} />
+            </div>
+          )}
+          {/* Views badge */}
+          <div
+            className="absolute bottom-1.5 right-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded"
+            style={{ background: "rgba(0,0,0,0.7)" }}
+          >
+            <Eye className="w-2.5 h-2.5" style={{ color: TEXT_MUTED }} />
+            <span className="text-[9px] font-bold" style={{ color: TEXT_PRIMARY }}>
+              {formatStat(upload.views)}
+            </span>
+          </div>
+        </div>
+        {/* Details */}
+        <div className="p-2.5">
+          <p className="text-[11px] font-bold truncate mb-1.5" style={{ color: TEXT_PRIMARY }}>
+            {upload.title}
+          </p>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <Heart className="w-2.5 h-2.5" style={{ color: TEXT_MUTED }} />
+              <span className="text-[10px]" style={{ color: TEXT_MUTED }}>{formatStat(upload.likeCount)}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <MessageCircle className="w-2.5 h-2.5" style={{ color: TEXT_MUTED }} />
+              <span className="text-[10px]" style={{ color: TEXT_MUTED }}>{formatStat(upload.commentCount)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function UploadPerformance({
+  creator,
+  isLoading,
+}: {
+  creator: DashboardData["creator"] | undefined;
+  isLoading: boolean;
+}) {
+  return (
+    <SectionCard>
+      <SectionHeader
+        icon={TrendingUp}
+        title="Upload Performance"
+        action={
+          <Link href="/upload">
+            <span className="text-xs font-semibold flex items-center gap-1 cursor-pointer hover:opacity-80 transition-opacity" style={{ color: ACCENT }}>
+              Upload <ChevronRight className="w-3 h-3" />
+            </span>
+          </Link>
+        }
+      />
+      <div className="px-5 pb-5">
+        {/* Top 3 uploads */}
+        <p className="text-[10px] uppercase tracking-wider font-semibold mb-3" style={{ color: TEXT_MUTED }}>
+          Best Performers
+        </p>
+        <div className="grid grid-cols-3 gap-3 mb-5">
+          <div>
+            <p className="text-[10px] font-semibold mb-2 flex items-center gap-1" style={{ color: TEXT_MUTED }}>
+              <Play className="w-3 h-3" /> Top Clip
+            </p>
+            <TopUploadCard upload={creator?.topClip ?? null} label="Clip" isLoading={isLoading} />
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold mb-2 flex items-center gap-1" style={{ color: TEXT_MUTED }}>
+              <Film className="w-3 h-3" /> Top Reel
+            </p>
+            <TopUploadCard upload={creator?.topReel ?? null} label="Reel" isLoading={isLoading} />
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold mb-2 flex items-center gap-1" style={{ color: TEXT_MUTED }}>
+              <ImageIcon className="w-3 h-3" /> Top Screenshot
+            </p>
+            <TopUploadCard upload={creator?.topScreenshot ?? null} label="Screenshot" isLoading={isLoading} />
+          </div>
+        </div>
+
+        {/* Recent uploads */}
+        {(creator?.recentUploads ?? []).length > 0 && (
+          <>
+            <div className="pt-4 mb-3" style={{ borderTop: `1px solid ${BORDER}` }}>
+              <p className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: TEXT_MUTED }}>
+                Recent Uploads
+              </p>
+            </div>
+            <div className="space-y-2">
+              {(creator?.recentUploads ?? []).slice(0, 4).map((u) => {
+                const href =
+                  u.contentType === "screenshot"
+                    ? `/screenshots/${u.id}`
+                    : `/clips/${u.id}`;
+                return (
+                  <Link key={`${u.contentType}-${u.id}`} href={href}>
+                    <div
+                      className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors hover:bg-white/[0.02]"
+                      style={{ border: `1px solid ${BORDER}`, background: "rgba(255,255,255,0.015)" }}
+                    >
+                      <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-[#0d1a24]">
+                        {u.thumbnailUrl ? (
+                          <img src={u.thumbnailUrl} alt={u.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ContentTypeIcon type={u.contentType} />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold truncate" style={{ color: TEXT_PRIMARY }}>{u.title}</p>
+                        <div className="flex items-center gap-3 mt-0.5">
+                          <span className="text-[10px] flex items-center gap-1" style={{ color: TEXT_MUTED }}>
+                            <Eye className="w-2.5 h-2.5" />{formatStat(u.views)}
+                          </span>
+                          <span className="text-[10px] flex items-center gap-1" style={{ color: TEXT_MUTED }}>
+                            <Heart className="w-2.5 h-2.5" />{formatStat(u.likeCount)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-[10px] capitalize px-1.5 py-0.5 rounded" style={{ background: `${ACCENT}12`, color: ACCENT }}>
+                        {u.contentType}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    </SectionCard>
+  );
+}
+
+/* ─── Section: Goals ─── */
+
+const GOAL_ICONS: Record<string, typeof Target> = {
+  league: Trophy,
+  followers: Users,
+  views: Eye,
+  daily_upload: Upload,
+  lootbox: Gift,
+};
+
+function Goals({ goals, isLoading }: { goals: DashGoal[] | undefined; isLoading: boolean }) {
+  if (isLoading) {
+    return (
+      <SectionCard>
+        <SectionHeader icon={Target} title="Goals & Milestones" />
+        <div className="px-5 pb-5 space-y-3">
+          <Skeleton className="h-16 rounded-xl" />
+          <Skeleton className="h-16 rounded-xl" />
+          <Skeleton className="h-16 rounded-xl" />
+        </div>
+      </SectionCard>
+    );
+  }
+
+  return (
+    <SectionCard>
+      <SectionHeader icon={Target} title="Goals & Milestones" />
+      <div className="px-5 pb-5 space-y-3">
+        {(goals ?? []).map((goal) => {
+          const Icon = GOAL_ICONS[goal.type] ?? Target;
+          const isDone = goal.completed || goal.percent >= 100;
+          const isReady = goal.ready && !goal.completed;
+
+          const inner = (
+            <div
+              key={goal.type}
+              className="rounded-xl p-3.5 transition-colors hover:bg-white/[0.02]"
+              style={{
+                background: isDone
+                  ? `${ACCENT}08`
+                  : isReady
+                  ? `${ACCENT}05`
+                  : "rgba(255,255,255,0.02)",
+                border: `1px solid ${isDone || isReady ? `${ACCENT}25` : BORDER}`,
+                cursor: goal.href ? "pointer" : "default",
+              }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: isDone ? `${ACCENT}18` : "rgba(255,255,255,0.05)" }}
+                  >
+                    <Icon className="w-3.5 h-3.5" style={{ color: isDone ? ACCENT : TEXT_MUTED }} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold" style={{ color: isDone ? ACCENT : TEXT_PRIMARY }}>
+                      {goal.label}
+                    </p>
+                    <p className="text-[10px]" style={{ color: TEXT_MUTED }}>{goal.detail}</p>
+                  </div>
+                </div>
+                <div className="flex-shrink-0 ml-3">
+                  {isDone ? (
+                    <CheckCircle2 className="w-4 h-4" style={{ color: ACCENT }} />
+                  ) : (
+                    <span className="text-[11px] font-black tabular-nums" style={{ color: ACCENT }}>
+                      {goal.percent}%
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="w-full rounded-full overflow-hidden" style={{ height: 5, background: BORDER }}>
+                <div
+                  className="h-full rounded-full transition-all duration-700 ease-out"
+                  style={{
+                    width: `${Math.min(goal.percent, 100)}%`,
+                    background: isDone ? ACCENT : `linear-gradient(90deg, ${ACCENT}88, ${ACCENT})`,
+                  }}
+                />
+              </div>
+            </div>
+          );
+
+          return goal.href ? (
+            <Link key={goal.type} href={goal.href}>{inner}</Link>
+          ) : (
+            <div key={goal.type}>{inner}</div>
+          );
+        })}
+      </div>
+    </SectionCard>
+  );
+}
+
 /* ─── Main Page ─── */
 
 export default function DashboardPage() {
@@ -986,36 +1429,61 @@ export default function DashboardPage() {
         {isMobile ? (
           /* Mobile: stacked single column */
           <div className="space-y-5 pb-24">
+            {/* 2. Daily XP Challenges */}
             <div className="-mx-4 sm:-mx-6">
               <DailyXPChallenges />
             </div>
-            <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
+            {/* 3. League Progress */}
             <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
+            {/* 4. Creator Analytics */}
+            <CreatorAnalytics creator={data?.creator} followersCount={data?.social?.followersCount ?? 0} isLoading={isLoading} />
+            {/* 5. Upload Performance */}
+            <UploadPerformance creator={data?.creator} isLoading={isLoading} />
+            {/* 6. Goals & Milestones */}
+            <Goals goals={data?.goals} isLoading={isLoading} />
+            {/* 7. Next Rewards */}
             <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
+            {/* 8. Recent Activity */}
             <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
+            {/* Active Bounties + Rivals (secondary) */}
+            {(data?.bounties ?? []).length > 0 && (
+              <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
+            )}
             <FriendsRivals data={data?.social} isLoading={isLoading} />
           </div>
         ) : (
-          /* Desktop: two-column layout */
+          /* Desktop: structured layout matching spec order */
           <div className="space-y-5 pb-8">
+            {/* 2. Daily XP Challenges */}
             <div className="-mx-4 sm:-mx-6 lg:-mx-8">
               <DailyXPChallenges />
             </div>
 
+            {/* 3. League Progress */}
             <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
 
+            {/* 4. Creator Analytics — full width */}
+            <CreatorAnalytics creator={data?.creator} followersCount={data?.social?.followersCount ?? 0} isLoading={isLoading} />
+
+            {/* 5 + 6. Upload Performance (wider) + Goals (narrower) */}
             <div className="grid grid-cols-12 gap-5">
-              {/* Left column (wider) */}
-              <div className="col-span-8 space-y-5">
-                <div className="grid grid-cols-2 gap-5">
-                  <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
-                  <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
-                </div>
-
-                <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
+              <div className="col-span-7 space-y-5">
+                <UploadPerformance creator={data?.creator} isLoading={isLoading} />
               </div>
+              <div className="col-span-5 space-y-5">
+                <Goals goals={data?.goals} isLoading={isLoading} />
+                <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
+              </div>
+            </div>
 
-              {/* Right column (narrower) */}
+            {/* 7. Recent Activity + Rivals / Bounties */}
+            <div className="grid grid-cols-12 gap-5">
+              <div className="col-span-8 space-y-5">
+                <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
+                {(data?.bounties ?? []).length > 0 && (
+                  <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
+                )}
+              </div>
               <div className="col-span-4 space-y-5">
                 <FriendsRivals data={data?.social} isLoading={isLoading} />
               </div>
