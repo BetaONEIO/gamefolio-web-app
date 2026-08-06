@@ -7,3 +7,4 @@
 - [Leaderboard cache rebuild](leaderboard-cache-rebuild.md) — weekly/monthly leaderboards are incremental cache tables; bulk history imports need the admin rebuild endpoint.
 - [Legacy import advisory lock](legacy-import-advisory-lock.md) — session locks must acquire, run, and release through one reserved postgres-js connection.
 - [Publish schema diff safety](publish-schema-diff-safety.md) — missing dev-side tables can appear as destructive production drops; align dev compatibility tables before publishing.
+- [Additive schema drift](additive-schema-drift.md) — deployed code can reference schema columns absent from both DBs; sync dev first so Publish emits safe additive changes.
