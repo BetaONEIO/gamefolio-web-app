@@ -444,6 +444,16 @@ const LEAGUE_STRUCTURE = [
   { name: "Champion", range: "Top 10 Players" },
 ];
 
+const LEAGUE_XP_REQUIREMENTS = [
+  { name: "Bronze", requirement: "0 XP", detail: "Starting league · 1,000 XP to Silver" },
+  { name: "Silver", requirement: "1,000 XP", detail: "2,000 more XP to Gold" },
+  { name: "Gold", requirement: "3,000 XP", detail: "3,000 more XP to Platinum" },
+  { name: "Platinum", requirement: "6,000 XP", detail: "4,000 more XP to Onyx" },
+  { name: "Onyx", requirement: "10,000 XP", detail: "Top 100 rank to reach Diamond" },
+  { name: "Diamond", requirement: "10,000+ XP", detail: "Top 100 rank · top 10 to Champion" },
+  { name: "Champion", requirement: "10,000+ XP", detail: "Top 10 rank · highest league" },
+];
+
 function getLeagueGradient(league: string) {
   switch (league) {
     case "Bronze":   return "linear-gradient(90deg, #8B4513, #CD7F32, #D2691E)";
@@ -628,6 +638,53 @@ function SeasonXPBreakdown({
             {breakdownTotal.toLocaleString()} / {seasonXP.toLocaleString()} XP
           </span>
         </div>
+      </div>
+    </details>
+  );
+}
+
+function LeagueXPGuide({ currentLeague }: { currentLeague: string }) {
+  return (
+    <details className="mt-4 rounded-xl" style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${BORDER}` }}>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3.5">
+        <span className="flex items-center gap-2">
+          <Trophy className="w-4 h-4" style={{ color: ACCENT }} />
+          <span className="text-xs font-bold" style={{ color: TEXT_PRIMARY }}>League XP requirements</span>
+        </span>
+        <span className="text-[10px] font-semibold" style={{ color: TEXT_MUTED }}>How to progress <span className="ml-1 text-white/30">＋</span></span>
+      </summary>
+      <div className="border-t px-3.5 pb-3.5 pt-2" style={{ borderColor: BORDER }}>
+        {LEAGUE_XP_REQUIREMENTS.map((tier, index) => {
+          const active = tier.name === currentLeague;
+          const [leagueColor] = LEAGUE_MESH_COLORS[tier.name] ?? [ACCENT];
+          return (
+            <div
+              key={tier.name}
+              className="flex items-center gap-2.5 border-b py-2.5 last:border-b-0"
+              style={{ borderColor: BORDER, opacity: active ? 1 : 0.82 }}
+            >
+              <img src={LEAGUE_MEDALS[tier.name]} alt="" className="h-8 w-8 object-contain" />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold" style={{ color: active ? leagueColor : TEXT_PRIMARY }}>
+                    {tier.name}
+                    {active && <span className="ml-1.5 text-[9px] uppercase tracking-wide" style={{ color: ACCENT }}>Current</span>}
+                  </span>
+                  <span className="shrink-0 text-xs font-black tabular-nums" style={{ color: leagueColor }}>
+                    {tier.requirement}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[10px]" style={{ color: TEXT_MUTED }}>{tier.detail}</p>
+              </div>
+              {index < LEAGUE_XP_REQUIREMENTS.length - 1 && (
+                <ArrowUpRight className="h-3.5 w-3.5 shrink-0" style={{ color: TEXT_MUTED }} />
+              )}
+            </div>
+          );
+        })}
+        <p className="pt-2 text-[10px]" style={{ color: TEXT_MUTED }}>
+          Season XP resets each season. Diamond and Champion require both 10,000+ XP and the listed leaderboard rank.
+        </p>
       </div>
     </details>
   );
@@ -822,6 +879,7 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
         )}
 
         <SeasonXPBreakdown seasonXP={data.seasonXP} breakdown={data.breakdown} />
+        <LeagueXPGuide currentLeague={data.league} />
 
         {/* League structure legend */}
         <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
