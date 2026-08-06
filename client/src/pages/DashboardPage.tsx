@@ -1514,6 +1514,72 @@ function UploadPerformance({
   );
 }
 
+function DashboardActivityTabs({
+  activeTab,
+  onChange,
+}: {
+  activeTab: "daily" | "creator";
+  onChange: (tab: "daily" | "creator") => void;
+}) {
+  const tabs = [
+    { id: "daily" as const, label: "Daily Challenges", icon: Zap },
+    { id: "creator" as const, label: "Creator Performance", icon: BarChart2 },
+  ];
+
+  return (
+    <div
+      className="flex items-center gap-1 p-1 rounded-xl w-full sm:w-fit"
+      style={{ background: "rgba(255,255,255,0.035)", border: `1px solid ${BORDER}` }}
+      role="tablist"
+      aria-label="Dashboard activity"
+    >
+      {tabs.map((tab) => {
+        const Icon = tab.icon;
+        const isActive = activeTab === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onChange(tab.id)}
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-[11px] sm:text-xs font-bold transition-all"
+            style={{
+              color: isActive ? ACCENT_DARK : TEXT_MUTED,
+              background: isActive ? ACCENT : "transparent",
+              boxShadow: isActive ? `0 0 14px ${ACCENT}25` : undefined,
+            }}
+          >
+            <Icon className="w-3.5 h-3.5" />
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function CreatorPerformancePanel({
+  creator,
+  followersCount,
+  isLoading,
+}: {
+  creator: DashboardData["creator"] | undefined;
+  followersCount: number;
+  isLoading: boolean;
+}) {
+  return (
+    <div className="space-y-5">
+      <CreatorAnalytics
+        creator={creator}
+        followersCount={followersCount}
+        isLoading={isLoading}
+      />
+      <UploadPerformance creator={creator} isLoading={isLoading} />
+    </div>
+  );
+}
+
 /* ─── Section: Goals ─── */
 
 const GOAL_ICONS: Record<string, typeof Target> = {
@@ -1615,6 +1681,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const isMobile = useMobile();
+  const [activityTab, setActivityTab] = useState<"daily" | "creator">("daily");
 
   const { data, isLoading } = useQuery<DashboardData>({
     queryKey: ["/api/dashboard"],
@@ -1663,21 +1730,27 @@ export default function DashboardPage() {
 
       {/* Content area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="mb-5">
+          <DashboardActivityTabs activeTab={activityTab} onChange={setActivityTab} />
+        </div>
         {isMobile ? (
           /* Mobile: stacked single column */
           <div className="space-y-5 pb-24">
-            {/* 2. Daily XP Challenges */}
-            <div className="-mx-4 sm:-mx-6">
-              <DailyXPChallenges />
-            </div>
+            {activityTab === "daily" ? (
+              <div className="-mx-4 sm:-mx-6">
+                <DailyXPChallenges />
+              </div>
+            ) : (
+              <CreatorPerformancePanel
+                creator={data?.creator}
+                followersCount={data?.social?.followersCount ?? 0}
+                isLoading={isLoading}
+              />
+            )}
             {/* 3. League Progress */}
             <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
             {/* Rivals directly below league progress */}
             <FriendsRivals data={data?.social} isLoading={isLoading} />
-            {/* 4. Creator Analytics */}
-            <CreatorAnalytics creator={data?.creator} followersCount={data?.social?.followersCount ?? 0} isLoading={isLoading} />
-            {/* 5. Upload Performance */}
-            <UploadPerformance creator={data?.creator} isLoading={isLoading} />
             {/* 6. Goals & Milestones */}
             <Goals goals={data?.goals} isLoading={isLoading} />
             {/* 7. Next Rewards */}
@@ -1692,26 +1765,29 @@ export default function DashboardPage() {
         ) : (
           /* Desktop: structured layout matching spec order */
           <div className="space-y-5 pb-8">
-            {/* 2. Daily XP Challenges */}
-            <div className="-mx-4 sm:-mx-6 lg:-mx-8">
-              <DailyXPChallenges />
-            </div>
+            {activityTab === "daily" ? (
+              <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+                <DailyXPChallenges />
+              </div>
+            ) : (
+              <CreatorPerformancePanel
+                creator={data?.creator}
+                followersCount={data?.social?.followersCount ?? 0}
+                isLoading={isLoading}
+              />
+            )}
 
             {/* 3. League Progress */}
             <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
             {/* Rivals directly below league progress */}
             <FriendsRivals data={data?.social} isLoading={isLoading} />
 
-            {/* 4. Creator Analytics — full width */}
-            <CreatorAnalytics creator={data?.creator} followersCount={data?.social?.followersCount ?? 0} isLoading={isLoading} />
-
-            {/* 5 + 6. Upload Performance (wider) + Goals (narrower) */}
+            {/* Goals & rewards */}
             <div className="grid grid-cols-12 gap-5">
-              <div className="col-span-7 space-y-5">
-                <UploadPerformance creator={data?.creator} isLoading={isLoading} />
-              </div>
-              <div className="col-span-5 space-y-5">
+              <div className="col-span-7">
                 <Goals goals={data?.goals} isLoading={isLoading} />
+              </div>
+              <div className="col-span-5">
                 <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
               </div>
             </div>

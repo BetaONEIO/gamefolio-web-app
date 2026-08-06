@@ -478,7 +478,7 @@ export function DailyXPChallenges() {
             />
             <div>
               <h2 className="text-lg sm:text-xl font-extrabold leading-none text-white tracking-tight">
-                Earn XP Today
+                Daily Challenges
               </h2>
               <p className="text-[11px] text-white/40 mt-0.5">
                 {user
