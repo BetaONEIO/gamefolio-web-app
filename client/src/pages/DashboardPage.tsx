@@ -1514,59 +1514,6 @@ function UploadPerformance({
   );
 }
 
-function DashboardActivityTabs({
-  activeTab,
-  onChange,
-}: {
-  activeTab: "daily" | "creator";
-  onChange: (tab: "daily" | "creator") => void;
-}) {
-  const tabs = [
-    { id: "daily" as const, label: "Daily Challenges", icon: Zap },
-    { id: "creator" as const, label: "Creator Performance", icon: BarChart2 },
-  ];
-
-  return (
-    <div
-      className="relative flex items-end w-full border-b"
-      style={{ borderColor: BORDER, minHeight: 48 }}
-      role="tablist"
-      aria-label="Dashboard activity"
-    >
-      {tabs.map((tab) => {
-        const Icon = tab.icon;
-        const isActive = activeTab === tab.id;
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            id={`${tab.id}-tab`}
-            aria-selected={isActive}
-            aria-controls={`${tab.id}-panel`}
-            onClick={() => onChange(tab.id)}
-            className="relative flex-1 sm:flex-none min-w-0 sm:min-w-[190px] inline-flex items-center justify-center gap-1.5 px-3 sm:px-6 py-3 text-[11px] sm:text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B7FF1A]"
-            style={{
-              color: isActive ? TEXT_PRIMARY : TEXT_MUTED,
-              background: isActive ? "rgba(183,255,26,0.14)" : "rgba(255,255,255,0.025)",
-              clipPath: "polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%)",
-              marginLeft: tab.id === "creator" ? -8 : 0,
-              zIndex: isActive ? 2 : 1,
-            }}
-          >
-            <Icon className="w-3.5 h-3.5" />
-            {tab.label}
-            <span
-              className="absolute inset-x-3 sm:inset-x-4 bottom-0 h-0.5 transition-opacity"
-              style={{ background: ACCENT, opacity: isActive ? 1 : 0 }}
-            />
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 function CreatorPerformancePanel({
   creator,
   followersCount,
@@ -1576,14 +1523,68 @@ function CreatorPerformancePanel({
   followersCount: number;
   isLoading: boolean;
 }) {
+  const [creatorTab, setCreatorTab] = useState<"analytics" | "uploads">("analytics");
+
+  const tabs = [
+    { id: "analytics" as const, label: "Creator Analytics", icon: BarChart2 },
+    { id: "uploads" as const, label: "Upload Performance", icon: TrendingUp },
+  ];
+
   return (
-    <div className="space-y-5">
-      <CreatorAnalytics
-        creator={creator}
-        followersCount={followersCount}
-        isLoading={isLoading}
-      />
-      <UploadPerformance creator={creator} isLoading={isLoading} />
+    <div>
+      <div
+        className="flex items-end w-full border-b"
+        style={{ borderColor: BORDER, minHeight: 48 }}
+        role="tablist"
+        aria-label="Creator performance"
+      >
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = creatorTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              id={`creator-${tab.id}-tab`}
+              aria-selected={isActive}
+              aria-controls={`creator-${tab.id}-panel`}
+              onClick={() => setCreatorTab(tab.id)}
+              className="relative flex-1 inline-flex items-center justify-center gap-1.5 px-3 sm:px-5 py-3 text-[10px] sm:text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B7FF1A]"
+              style={{
+                color: isActive ? TEXT_PRIMARY : TEXT_MUTED,
+                background: isActive ? "rgba(183,255,26,0.14)" : "rgba(255,255,255,0.025)",
+                clipPath: "polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%)",
+                marginLeft: tab.id === "uploads" ? -8 : 0,
+                zIndex: isActive ? 2 : 1,
+              }}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {tab.label}
+              <span
+                className="absolute inset-x-2 sm:inset-x-4 bottom-0 h-0.5 transition-opacity"
+                style={{ background: ACCENT, opacity: isActive ? 1 : 0 }}
+              />
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="pt-5">
+        {creatorTab === "analytics" ? (
+          <div id="creator-analytics-panel" role="tabpanel" aria-labelledby="creator-analytics-tab">
+            <CreatorAnalytics
+              creator={creator}
+              followersCount={followersCount}
+              isLoading={isLoading}
+            />
+          </div>
+        ) : (
+          <div id="creator-uploads-panel" role="tabpanel" aria-labelledby="creator-uploads-tab">
+            <UploadPerformance creator={creator} isLoading={isLoading} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -1689,7 +1690,6 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const isMobile = useMobile();
-  const [activityTab, setActivityTab] = useState<"daily" | "creator">("daily");
 
   const { data, isLoading } = useQuery<DashboardData>({
     queryKey: ["/api/dashboard"],
@@ -1738,25 +1738,17 @@ export default function DashboardPage() {
 
       {/* Content area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="mb-5">
-          <DashboardActivityTabs activeTab={activityTab} onChange={setActivityTab} />
-        </div>
         {isMobile ? (
           /* Mobile: stacked single column */
           <div className="space-y-5 pb-24">
-            {activityTab === "daily" ? (
-              <div id="daily-panel" role="tabpanel" aria-labelledby="daily-tab" className="-mx-4 sm:-mx-6">
-                <DailyXPChallenges />
-              </div>
-            ) : (
-              <div id="creator-panel" role="tabpanel" aria-labelledby="creator-tab">
-                <CreatorPerformancePanel
-                  creator={data?.creator}
-                  followersCount={data?.social?.followersCount ?? 0}
-                  isLoading={isLoading}
-                />
-              </div>
-            )}
+            <CreatorPerformancePanel
+              creator={data?.creator}
+              followersCount={data?.social?.followersCount ?? 0}
+              isLoading={isLoading}
+            />
+            <div className="-mx-4 sm:-mx-6">
+              <DailyXPChallenges />
+            </div>
             {/* 3. League Progress */}
             <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
             {/* Rivals directly below league progress */}
@@ -1775,19 +1767,14 @@ export default function DashboardPage() {
         ) : (
           /* Desktop: structured layout matching spec order */
           <div className="space-y-5 pb-8">
-            {activityTab === "daily" ? (
-              <div id="daily-panel" role="tabpanel" aria-labelledby="daily-tab" className="-mx-4 sm:-mx-6 lg:-mx-8">
-                <DailyXPChallenges />
-              </div>
-            ) : (
-              <div id="creator-panel" role="tabpanel" aria-labelledby="creator-tab">
-                <CreatorPerformancePanel
-                  creator={data?.creator}
-                  followersCount={data?.social?.followersCount ?? 0}
-                  isLoading={isLoading}
-                />
-              </div>
-            )}
+            <CreatorPerformancePanel
+              creator={data?.creator}
+              followersCount={data?.social?.followersCount ?? 0}
+              isLoading={isLoading}
+            />
+            <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+              <DailyXPChallenges />
+            </div>
 
             {/* 3. League Progress */}
             <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
