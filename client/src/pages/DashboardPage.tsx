@@ -1507,26 +1507,35 @@ function CreatorPerformancePanel({
   creator,
   followersCount,
   isLoading,
+  isOpen,
+  onToggle,
 }: {
   creator: DashboardData["creator"] | undefined;
   followersCount: number;
   isLoading: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
 }) {
   return (
     <div
       className="rounded-2xl overflow-hidden"
       style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${BORDER}` }}
     >
-      {/* Single tab header */}
+      {/* Creator Analytics tab */}
       <div
         className="flex items-end border-b"
         style={{ borderColor: BORDER, minHeight: 48 }}
       >
-        <div
+        <button
+          type="button"
+          role="tab"
+          aria-selected={isOpen}
+          aria-controls="creator-analytics-panel"
+          onClick={onToggle}
           className="inline-flex items-center gap-2 px-5 py-3 text-xs font-bold"
           style={{
-            color: TEXT_PRIMARY,
-            background: "rgba(183,255,26,0.14)",
+            color: isOpen ? TEXT_PRIMARY : TEXT_MUTED,
+            background: isOpen ? "rgba(183,255,26,0.14)" : "rgba(255,255,255,0.025)",
             clipPath: "polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%)",
             paddingRight: 28,
             position: "relative",
@@ -1536,16 +1545,17 @@ function CreatorPerformancePanel({
           Creator Analytics
           <span
             className="absolute inset-x-4 bottom-0 h-0.5"
-            style={{ background: ACCENT }}
+            style={{ background: ACCENT, opacity: isOpen ? 1 : 0 }}
           />
-        </div>
+        </button>
       </div>
 
-      {/* Tab content */}
-      <div className="p-5 space-y-5">
-        <CreatorAnalytics creator={creator} followersCount={followersCount} isLoading={isLoading} />
-        <UploadPerformance creator={creator} isLoading={isLoading} />
-      </div>
+      {isOpen && (
+        <div id="creator-analytics-panel" role="tabpanel" className="p-5 space-y-5">
+          <CreatorAnalytics creator={creator} followersCount={followersCount} isLoading={isLoading} />
+          <UploadPerformance creator={creator} isLoading={isLoading} />
+        </div>
+      )}
     </div>
   );
 }
@@ -1651,6 +1661,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const isMobile = useMobile();
+  const [showCreatorAnalytics, setShowCreatorAnalytics] = useState(false);
 
   const { data, isLoading } = useQuery<DashboardData>({
     queryKey: ["/api/dashboard"],
@@ -1706,6 +1717,8 @@ export default function DashboardPage() {
               creator={data?.creator}
               followersCount={data?.social?.followersCount ?? 0}
               isLoading={isLoading}
+              isOpen={showCreatorAnalytics}
+              onToggle={() => setShowCreatorAnalytics((open) => !open)}
             />
             <div className="-mx-4 sm:-mx-6">
               <DailyXPChallenges />
@@ -1726,6 +1739,8 @@ export default function DashboardPage() {
               creator={data?.creator}
               followersCount={data?.social?.followersCount ?? 0}
               isLoading={isLoading}
+              isOpen={showCreatorAnalytics}
+              onToggle={() => setShowCreatorAnalytics((open) => !open)}
             />
             <div className="-mx-4 sm:-mx-6 lg:-mx-8">
               <DailyXPChallenges />
