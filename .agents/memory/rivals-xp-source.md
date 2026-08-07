@@ -3,8 +3,8 @@ name: Rivals XP source
 description: The dashboard Rivals card must match the active weekly leaderboard's authoritative XP calculation.
 ---
 
-Rivals XP must come from positive `user_xp_history` events in the same rolling seven-day window as the weekly leaderboard, not from the legacy `weekly_leaderboard.total_points` cache.
+Rivals XP must mirror the active weekly leaderboard records used by the full-board UI, including the stored fractional totals when present.
 
-**Why:** The legacy table can contain stale fractional point values, which makes a player-facing XP leaderboard show values such as 0.24 XP and disagree with the authoritative creator XP ledger.
+**Why:** The Rivals card is a compact view of the weekly competition, and users expect it to match the full board exactly; the reference UI intentionally shows values such as 310, 0.24, and 0.2 XP.
 
-**How to apply:** Keep the dashboard Rivals query and `/api/leaderboard/weekly/current` on the same ledger/window, return non-negative whole XP values, and preserve the same rank ordering and tie-breaker.
+**How to apply:** Use the same `LeaderboardService` weekly source for dashboard Rivals and the full leaderboard, preserve stored decimal values, and keep the same rank ordering and tie-breaker.

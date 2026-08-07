@@ -4863,39 +4863,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Lootbox
       const lootboxStatus = await storage.getDailyLootboxStatus(userId);
 
-      // Weekly leaderboard position — use the same authoritative rolling
-      // 7-day XP ledger as /api/leaderboard/weekly/current. The legacy
-      // weekly_leaderboard table stores real-valued points and can contain
-      // stale fractional totals, so it must not power the player-facing
-      // Rivals XP display.
-      const rivalWeekEnd = new Date();
-      const rivalWeekStart = new Date(rivalWeekEnd.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const rivalRowsResult = await db.execute(sql`
-        SELECT
-          u.id AS "userId",
-          u.username,
-          u.display_name AS "displayName",
-          u.avatar_url AS "avatarUrl",
-          COALESCE(SUM(
-            CASE
-              WHEN xh.xp_amount > 0 THEN xh.xp_amount
-              ELSE 0
-            END
-          ), 0)::int AS "totalXP"
-        FROM users u
-        LEFT JOIN user_xp_history xh
-          ON xh.user_id = u.id
-          AND xh.created_at >= ${rivalWeekStart.toISOString()}
-          AND xh.created_at < ${rivalWeekEnd.toISOString()}
-        WHERE u.role NOT IN ('admin', 'moderator', 'system')
-          AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
-          AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
-        GROUP BY u.id, u.username, u.display_name, u.avatar_url
-        ORDER BY "totalXP" DESC, u.id ASC
-      `);
-      const currentWeekBoard = (rivalRowsResult as any).rows ?? rivalRowsResult;
+      // Rivals mirror the weekly leaderboard shown in the UI. Keep the
+      // leaderboard's stored totals, including fractional values, so this
+      // compact card reflects the same competition data as the full board.
+      let currentWeekBoard = await LeaderboardService.getCurrentWeekLeaderboard(9999);
+      if (!currentWeekBoard || currentWeekBoard.length === 0) {
+        currentWeekBoard = await LeaderboardService.getPreviousWeekLeaderboard(9999);
+      }
       const rankIndex = currentWeekBoard.findIndex((e: any) => Number(e.userId) === userId);
-      const rank = rankIndex >= 0 ? rankIndex + 1 : null;
+      const rank = rankIndex >= 0 ? Number(currentWeekBoard[rankIndex].rank ?? rankIndex + 1) : null;
 
       // Recent XP activity (last 20) — only entries that actually granted XP
       const recentActivity = xpHistory
@@ -4943,26 +4919,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Nearby leaderboard entries (rivals)
       const nearbyRivals = rankIndex >= 0
-        ? await Promise.all(
-            currentWeekBoard
-              .slice(Math.max(0, rankIndex - 2), rankIndex + 3)
-              .map(async (e: any, idx: number) => {
-                let avatarUrl = e.avatarUrl || null;
-                if (avatarUrl?.includes("supabase.co/storage")) {
-                  const signed = await supabaseStorage.convertToSignedUrl(avatarUrl, 3600);
-                  if (signed) avatarUrl = signed;
-                }
-                return {
-                  rank: Math.max(0, rankIndex - 2) + idx + 1,
-                  userId: Number(e.userId),
-                  username: e.username,
-                  displayName: e.displayName,
-                  avatarUrl,
-                  totalXP: Math.max(0, Math.round(Number(e.totalXP) || 0)),
-                  isMe: Number(e.userId) === userId,
-                };
-              }),
-          )
+        ? currentWeekBoard
+            .slice(Math.max(0, rankIndex - 2), rankIndex + 3)
+            .map((e: any, idx: number) => ({
+              rank: Number(e.rank ?? Math.max(0, rankIndex - 2) + idx + 1),
+              userId: Number(e.userId),
+              username: e.user?.username,
+              displayName: e.user?.displayName,
+              avatarUrl: e.user?.avatarUrl,
+              totalXP: Number(e.totalPoints ?? e.totalXP ?? 0),
+              isMe: Number(e.userId) === userId,
+            }))
         : [];
 
       // Next rewards preview
