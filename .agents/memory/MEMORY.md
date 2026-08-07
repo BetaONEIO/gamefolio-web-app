@@ -10,3 +10,4 @@
 - [Authoritative creator XP](authoritative-creator-xp.md) — uploads, valid views, lootboxes, referrals, and unique fires use the real XP ledger; legacy points must not duplicate them.
 - [Season XP transparency](season-xp-transparency.md) — dashboard Season XP and its source breakdown must come from the same user_xp_history window as the season leaderboard.
 - [Ranked league threshold seeding](ranked-league-threshold-seeding.md) — seed missing progression settings additively so startup never overwrites admin-configured values.
+- [Rivals XP source](rivals-xp-source.md) — dashboard Rivals must use positive user_xp_history events in the active weekly window, not stale legacy point totals.
