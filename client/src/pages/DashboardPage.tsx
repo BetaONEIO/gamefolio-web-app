@@ -1517,68 +1517,10 @@ function CreatorPerformancePanel({
   followersCount: number;
   isLoading: boolean;
 }) {
-  const [creatorTab, setCreatorTab] = useState<"analytics" | "uploads">("analytics");
-
-  const tabs = [
-    { id: "analytics" as const, label: "Creator Analytics", icon: BarChart2 },
-    { id: "uploads" as const, label: "Upload Performance", icon: TrendingUp },
-  ];
-
   return (
-    <div>
-      <div
-        className="flex items-end w-full border-b"
-        style={{ borderColor: BORDER, minHeight: 48 }}
-        role="tablist"
-        aria-label="Creator performance"
-      >
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = creatorTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              id={`creator-${tab.id}-tab`}
-              aria-selected={isActive}
-              aria-controls={`creator-${tab.id}-panel`}
-              onClick={() => setCreatorTab(tab.id)}
-              className="relative flex-1 inline-flex items-center justify-center gap-1.5 px-3 sm:px-5 py-3 text-[10px] sm:text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B7FF1A]"
-              style={{
-                color: isActive ? TEXT_PRIMARY : TEXT_MUTED,
-                background: isActive ? "rgba(183,255,26,0.14)" : "rgba(255,255,255,0.025)",
-                clipPath: "polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%)",
-                marginLeft: tab.id === "uploads" ? -8 : 0,
-                zIndex: isActive ? 2 : 1,
-              }}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {tab.label}
-              <span
-                className="absolute inset-x-2 sm:inset-x-4 bottom-0 h-0.5 transition-opacity"
-                style={{ background: ACCENT, opacity: isActive ? 1 : 0 }}
-              />
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="pt-5">
-        {creatorTab === "analytics" ? (
-          <div id="creator-analytics-panel" role="tabpanel" aria-labelledby="creator-analytics-tab">
-            <CreatorAnalytics
-              creator={creator}
-              followersCount={followersCount}
-              isLoading={isLoading}
-            />
-          </div>
-        ) : (
-          <div id="creator-uploads-panel" role="tabpanel" aria-labelledby="creator-uploads-tab">
-            <UploadPerformance creator={creator} isLoading={isLoading} />
-          </div>
-        )}
-      </div>
+    <div className="space-y-5">
+      <CreatorAnalytics creator={creator} followersCount={followersCount} isLoading={isLoading} />
+      <UploadPerformance creator={creator} isLoading={isLoading} />
     </div>
   );
 }
@@ -1732,68 +1674,13 @@ export default function DashboardPage() {
 
       {/* Content area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {isMobile ? (
-          /* Mobile: stacked single column */
-          <div className="space-y-5 pb-24">
-            <CreatorPerformancePanel
-              creator={data?.creator}
-              followersCount={data?.social?.followersCount ?? 0}
-              isLoading={isLoading}
-            />
-            <div className="-mx-4 sm:-mx-6">
-              <DailyXPChallenges />
-            </div>
-            {/* 3. League Progress */}
-            <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
-            {/* Rivals directly below league progress */}
-            <FriendsRivals data={data?.social} isLoading={isLoading} />
-            {/* 6. Goals & Milestones */}
-            <Goals goals={data?.goals} isLoading={isLoading} />
-            {/* 7. Next Rewards */}
-            <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
-            {/* 8. Recent Activity */}
-            <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
-            {/* Active Bounties + Rivals (secondary) */}
-            {(data?.bounties ?? []).length > 0 && (
-              <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
-            )}
-          </div>
-        ) : (
-          /* Desktop: structured layout matching spec order */
-          <div className="space-y-5 pb-8">
-            <CreatorPerformancePanel
-              creator={data?.creator}
-              followersCount={data?.social?.followersCount ?? 0}
-              isLoading={isLoading}
-            />
-            <div className="-mx-4 sm:-mx-6 lg:-mx-8">
-              <DailyXPChallenges />
-            </div>
-
-            {/* 3. League Progress */}
-            <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
-            {/* Rivals directly below league progress */}
-            <FriendsRivals data={data?.social} isLoading={isLoading} />
-
-            {/* Goals & rewards */}
-            <div className="grid grid-cols-12 gap-5">
-              <div className="col-span-7">
-                <Goals goals={data?.goals} isLoading={isLoading} />
-              </div>
-              <div className="col-span-5">
-                <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
-              </div>
-            </div>
-
-            {/* 7. Recent Activity + Bounties */}
-            <div className="space-y-5">
-              <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
-              {(data?.bounties ?? []).length > 0 && (
-                <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
-              )}
-            </div>
-          </div>
-        )}
+        <div className="space-y-5 pb-8">
+          <CreatorPerformancePanel
+            creator={data?.creator}
+            followersCount={data?.social?.followersCount ?? 0}
+            isLoading={isLoading}
+          />
+        </div>
       </div>
     </div>
   );
