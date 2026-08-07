@@ -7181,8 +7181,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clip.shareCode = shareCode;
       }
 
-      // Always use username-based URL format with alphanumeric share code
-      const clipUrl = `${baseUrl}/@${username}/clip/${clip.shareCode}`;
+      // Short gft.gg link resolved server-side by /go/:code to the full
+      // username-based URL — keeps share links short across all surfaces.
+      const clipUrl = `https://gft.gg/${clip.shareCode}`;
 
       const qrCodeDataUrl = await QRCode.toDataURL(clipUrl, {
         errorCorrectionLevel: 'M',
@@ -7665,10 +7666,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Generate QR code and social media links
           try {
-            const username = req.user?.username || 'unknown';
-            const contentType = clipData.videoType === 'reel' ? 'reel' : 'clip';
-            const qrCodeDataUrl = await generateContentQRCode(clipData.shareCode || clip.shareCode || '', username, contentType);
-            const socialMediaLinks = generateSocialMediaLinks(clipData.shareCode || clip.shareCode || '', username, clip.title, clip.description, contentType);
+            const contentUrl = `https://gft.gg/${clipData.shareCode || clip.shareCode || ''}`;
+            const qrCodeDataUrl = await generateContentQRCode(contentUrl);
+            const socialMediaLinks = generateSocialMediaLinks(contentUrl, clip.title);
 
             res.status(201).json({
               ...updatedClip,
@@ -7713,10 +7713,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Generate QR code and social media links
           try {
-            const username = req.user?.username || 'unknown';
-            const contentType = clipData.videoType === 'reel' ? 'reel' : 'clip';
-            const qrCodeDataUrl = await generateContentQRCode(clipData.shareCode || clip.shareCode || '', username, contentType);
-            const socialMediaLinks = generateSocialMediaLinks(clipData.shareCode || clip.shareCode || '', username, clip.title, clip.description, contentType);
+            const contentUrl = `https://gft.gg/${clipData.shareCode || clip.shareCode || ''}`;
+            const qrCodeDataUrl = await generateContentQRCode(contentUrl);
+            const socialMediaLinks = generateSocialMediaLinks(contentUrl, clip.title);
 
             res.status(201).json({
               ...updatedClip,
@@ -8240,8 +8239,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateScreenshot(screenshotId, { shareCode });
       }
 
-      // Always use username-based URL format with alphanumeric share code
-      const screenshotUrl = `${baseUrl}/@${username}/screenshot/${shareCode}`;
+      // Short gft.gg link resolved server-side by /go/:code to the full
+      // username-based URL — keeps share links short across all surfaces.
+      const screenshotUrl = `https://gft.gg/${shareCode}`;
 
       const qrCodeDataUrl = await QRCode.toDataURL(screenshotUrl);
 
@@ -12157,9 +12157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get updated user data
       const user = await storage.getUser(req.user!.id);
-      const username = user?.username || 'unknown';
-      const baseUrl = 'https://app.gamefolio.com';
-      const shareUrl = `${baseUrl}/@${username}/${videoType}/${shareCode}`;
+      const shareUrl = `https://gft.gg/${shareCode}`;
 
       console.log(`✅ Desktop video upload complete: ID=${clip.id}, shareCode=${shareCode}`);
 
