@@ -1674,13 +1674,55 @@ export default function DashboardPage() {
 
       {/* Content area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="space-y-5 pb-8">
-          <CreatorPerformancePanel
-            creator={data?.creator}
-            followersCount={data?.social?.followersCount ?? 0}
-            isLoading={isLoading}
-          />
-        </div>
+        {isMobile ? (
+          /* Mobile: stacked single column */
+          <div className="space-y-5 pb-24">
+            <CreatorPerformancePanel
+              creator={data?.creator}
+              followersCount={data?.social?.followersCount ?? 0}
+              isLoading={isLoading}
+            />
+            <div className="-mx-4 sm:-mx-6">
+              <DailyXPChallenges />
+            </div>
+            <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
+            <FriendsRivals data={data?.social} isLoading={isLoading} />
+            <Goals goals={data?.goals} isLoading={isLoading} />
+            <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
+            <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
+            {(data?.bounties ?? []).length > 0 && (
+              <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
+            )}
+          </div>
+        ) : (
+          /* Desktop: structured layout */
+          <div className="space-y-5 pb-8">
+            <CreatorPerformancePanel
+              creator={data?.creator}
+              followersCount={data?.social?.followersCount ?? 0}
+              isLoading={isLoading}
+            />
+            <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+              <DailyXPChallenges />
+            </div>
+            <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
+            <FriendsRivals data={data?.social} isLoading={isLoading} />
+            <div className="grid grid-cols-12 gap-5">
+              <div className="col-span-7">
+                <Goals goals={data?.goals} isLoading={isLoading} />
+              </div>
+              <div className="col-span-5">
+                <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
+              </div>
+            </div>
+            <div className="space-y-5">
+              <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
+              {(data?.bounties ?? []).length > 0 && (
+                <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
