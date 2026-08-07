@@ -1252,12 +1252,6 @@ function CreatorAnalytics({
       icon: Users,
       sub: "total",
     },
-    {
-      label: "Uploads",
-      value: creator?.totalUploads ?? 0,
-      icon: Upload,
-      sub: "lifetime",
-    },
   ];
 
   return (
