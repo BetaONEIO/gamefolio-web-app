@@ -538,7 +538,7 @@ const HomePage = () => {
 
 
   return (
-    <div className="pb-16 md:pb-8 hide-scrollbar">
+    <div className="pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-8 hide-scrollbar">
       
       {/* Hero Banner Carousel */}
       <section className="mb-0 -mx-0">

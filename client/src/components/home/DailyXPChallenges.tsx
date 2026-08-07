@@ -465,10 +465,10 @@ export function DailyXPChallenges() {
   };
 
   return (
-    <section className="pt-6 sm:pt-8">
+    <section className="pt-5 sm:pt-8">
       {/* ── Header ── */}
       <div className="px-4 sm:px-6 md:px-8 mb-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-start justify-between gap-3 mb-2.5">
           <div className="flex items-center gap-3">
             <img
               src="/attached_assets/XP-text_1779960376768.png"
@@ -487,16 +487,16 @@ export function DailyXPChallenges() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <CountdownBadge />
-            <Link
-              href="/level-tracker"
-              className="text-xs font-semibold hover:opacity-80 transition-opacity px-3 py-1.5 rounded-lg"
-              style={{ background: 'rgba(183,255,26,0.12)', color: '#B7FF1A', border: '1px solid rgba(183,255,26,0.2)' }}
-            >
-              View All →
-            </Link>
-          </div>
+          <Link
+            href="/level-tracker"
+            className="flex-shrink-0 text-xs font-bold hover:opacity-80 transition-opacity px-3 py-2 rounded-xl"
+            style={{ background: 'rgba(183,255,26,0.12)', color: '#B7FF1A', border: '1px solid rgba(183,255,26,0.2)' }}
+          >
+            View All <span aria-hidden="true">→</span>
+          </Link>
+        </div>
+        <div className="flex justify-end">
+          <CountdownBadge />
         </div>
 
         {/* Summary bar + streak (authenticated users) */}

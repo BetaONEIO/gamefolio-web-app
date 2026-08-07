@@ -536,7 +536,7 @@ function SeasonInfoBar({ playerCount }: { playerCount: number }) {
   const { days, hours, minutes, seconds } = useCountdown(seasonEnd);
 
   return (
-    <div className="bg-[#05090d] py-8 px-4 text-center">
+    <div className="bg-[#05090d] py-6 sm:py-8 px-4 text-center">
       {/* Season badge */}
       <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#B7FF1A]/30 bg-[#B7FF1A]/10 mb-4">
         <Trophy className="w-4 h-4 text-[#B7FF1A]" />
@@ -573,12 +573,12 @@ function SeasonInfoBar({ playerCount }: { playerCount: number }) {
       </div>
 
       {/* Stats */}
-      <div className="flex items-center justify-center gap-6 text-sm">
-        <div className="flex items-center gap-2 text-slate-400">
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-sm">
+        <div className="flex items-center gap-2 text-slate-400 text-center">
           <Users className="w-4 h-4 text-[#B7FF1A]" />
           <span><strong className="text-white">{playerCount.toLocaleString()}</strong> Players Competing</span>
         </div>
-        <div className="flex items-center gap-2 text-slate-400">
+        <div className="flex items-center gap-2 text-slate-400 text-center">
           <Trophy className="w-4 h-4 text-[#FFD700]" />
           <span><strong className="text-white">20,000</strong> GFT Prize Pool</span>
         </div>
@@ -611,20 +611,20 @@ function CompetitiveOverview({ leaderboard, userId, tiers }: { leaderboard: Lead
 
   return (
     <div className="px-4 mb-6">
-      <div className={`rounded-2xl border bg-gradient-to-br ${league.gradient} ${league.border} ${league.glow} p-5`}>
-        <div className="flex items-center gap-2 mb-4">
+      <div className={`rounded-2xl border bg-gradient-to-br ${league.gradient} ${league.border} ${league.glow} p-4 sm:p-5`}>
+        <div className="flex items-start gap-2 mb-4 flex-wrap">
           <div className="w-7 h-7 rounded-full flex items-center justify-center bg-white/10">
             <span className="text-sm">{league.icon}</span>
           </div>
-          <h2 className="font-bold text-white text-base">Your Competitive Overview</h2>
-          <span className="ml-auto text-xs font-semibold px-2.5 py-0.5 rounded-full border" style={{ color: league.color, borderColor: league.color + "50", background: league.color + "18" }}>
+          <h2 className="font-bold text-white text-base leading-7">Your Competitive Overview</h2>
+          <span className="sm:ml-auto text-xs font-semibold px-2.5 py-0.5 rounded-full border" style={{ color: league.color, borderColor: league.color + "50", background: league.color + "18" }}>
             {league.name} League
           </span>
         </div>
 
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 mb-4">
           {stats.map(s => (
-            <div key={s.label} className="rounded-xl border border-white/8 bg-black/20 px-3 py-2.5">
+            <div key={s.label} className="rounded-xl border border-white/8 bg-black/20 px-2.5 sm:px-3 py-2.5">
               <div className="flex items-center gap-1.5 mb-1">{s.icon}<span className="text-[10px] text-slate-500 uppercase tracking-wider">{s.label}</span></div>
               <span className="font-black text-white text-lg">{s.value}</span>
             </div>
@@ -802,6 +802,7 @@ const MAX_BAR_H = 320; // px — taller bars
 
 function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?: number }) {
   const maxPts = Math.max(...entries.map(e => e.totalPoints), 1);
+  const [isCompact, setIsCompact] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragging  = useRef(false);
   const startX    = useRef(0);
@@ -825,6 +826,17 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
     scrollRef.current.scrollLeft = scrollLeft.current - walk;
   };
 
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 639px)");
+    const update = () => setIsCompact(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  const chartHeight = isCompact ? 220 : MAX_BAR_H;
+  const columnWidth = isCompact ? 68 : 76;
+
   return (
     <div
       ref={scrollRef}
@@ -835,7 +847,7 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
       onMouseLeave={onMouseUp}
       onMouseMove={onMouseMove}
     >
-      <div className="flex items-start gap-3 min-w-max px-4 pb-1" style={{ paddingTop: 32 }}>
+      <div className="flex items-start gap-2 sm:gap-3 min-w-max px-4 pb-1" style={{ paddingTop: isCompact ? 20 : 32 }}>
         {entries.map((entry, i) => {
           const rank   = i + 1;
           const isMe   = entry.userId === userId;
@@ -848,7 +860,7 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
 
           return (
             <Link key={entry.userId} href={`/profile/${entry.user.username}`}>
-              <div className="flex flex-col items-center gap-1.5 group cursor-pointer select-none" style={{ width: 76 }}>
+              <div className="flex flex-col items-center gap-1.5 group cursor-pointer select-none" style={{ width: columnWidth }}>
                 {/* XP label */}
                 <span className="text-[10px] font-bold text-slate-400 group-hover:text-white transition-colors leading-none">
                   {formatPoints(entry.totalPoints)}
@@ -859,12 +871,12 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                     whole columns would otherwise lift the top-three bars. */}
                 <div
                   className="flex w-14 items-end"
-                  style={{ height: MAX_BAR_H }}
+                  style={{ height: chartHeight }}
                 >
                   <div
                     className={`w-14 rounded-t-xl group-hover:brightness-110 transition-all relative ${isTop10Chrome ? '' : `bg-gradient-to-t ${colors.bar}`}`}
                     style={{
-                      height: barH,
+                      height: Math.max(Math.round(pct * chartHeight), 12),
                       boxShadow: isTop10Chrome
                         ? '0 0 18px rgba(183,254,27,0.28), 0 0 6px rgba(255,255,255,0.4)'
                         : `0 0 16px ${colors.glow}`,
@@ -940,7 +952,7 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                       style={{ top: -36 }}
                     />
                   )}
-                  <div className="relative z-10 w-12 h-12 rounded-full overflow-hidden ring-2 ring-white/10 group-hover:ring-[#B7FF1A]/50 transition-all flex-shrink-0" style={{ marginTop: isTop3 ? 6 : 0 }}>
+                  <div className="relative z-10 w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden ring-2 ring-white/10 group-hover:ring-[#B7FF1A]/50 transition-all flex-shrink-0" style={{ marginTop: isTop3 ? 6 : 0 }}>
                     {entry.user.avatarUrl ? (
                       <img src={entry.user.avatarUrl} alt={entry.user.displayName} className="w-full h-full object-cover" />
                     ) : (
@@ -1084,10 +1096,10 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
         }}
       />
       {/* Header row — padded */}
-      <div className="flex items-center justify-between mb-5 flex-wrap gap-3 px-4 sm:px-6 lg:px-10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-5 gap-3 px-4 sm:px-6 lg:px-10">
         <div className="flex items-center gap-2 flex-wrap">
           <TrendingUp className="w-5 h-5 text-[#B7FF1A]" />
-          <h2 className="text-xl font-black text-white">Live Leaderboard</h2>
+          <h2 className="text-xl font-black text-white lb-mobile-heading">Live Leaderboard</h2>
           <div className="flex items-center gap-1.5">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#B7FF1A' }} />
@@ -1095,7 +1107,7 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
             </span>
             <span className="text-[10px] text-white/30 font-mono">updated {lastUpdatedLabel}</span>
           </div>
-          <span className="text-xs text-slate-500 mt-0.5">{tabSubtitle[tab]}</span>
+          <span className="text-xs text-slate-500 mt-0.5 lb-mobile-subtitle">{tabSubtitle[tab]}</span>
           {usingFallback && (
             <span className="text-[10px] bg-[#B7FF1A]/10 text-[#B7FF1A]/70 border border-[#B7FF1A]/20 px-2 py-0.5 rounded-full">
               {usingPrevWeek ? "showing last week" : "showing last month"}
@@ -1104,12 +1116,12 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/8">
+        <div className="w-full sm:w-auto grid grid-cols-3 sm:flex gap-1 p-1 rounded-xl bg-white/5 border border-white/8">
           {tabs.map(t => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`min-w-0 px-2 sm:px-3 py-2 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all whitespace-nowrap ${
                 tab === t.key ? "bg-[#B7FF1A] text-black" : "text-slate-400 hover:text-white"
               }`}
             >
@@ -1540,7 +1552,9 @@ const RS_STYLES = `
   .lb-desktop-podium { transform: translateX(-50%) scale(.856); }
 }
 @media (max-width: 639px) {
-  .rs-season-hero { min-height: 560px; }
+  .rs-season-hero { height: auto; min-height: 0; padding-bottom: 10px; }
+  .lb-mobile-heading { font-size: 1.05rem; line-height: 1.2; }
+  .lb-mobile-subtitle { display: block; width: 100%; margin-top: 0.1rem; }
 }
 /* Tablet: slight scale down so all 3 fit */
 @media (min-width: 640px) and (max-width: 1023px) {
@@ -1654,7 +1668,7 @@ export default function LeaderboardPage() {
       </div>
 
       {/* Remaining narrow sections */}
-      <div className="max-w-3xl mx-auto pb-20">
+      <div className="max-w-3xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom,0px))] sm:pb-20">
         <div className="rs-section-divider" />
       </div>
 
