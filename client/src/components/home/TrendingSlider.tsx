@@ -5,6 +5,7 @@ import {
   Flame, ChevronLeft, ChevronRight, Play, Pause,
   Volume2, VolumeX, Upload, Clapperboard, Video, Camera, Info, X,
 } from "lucide-react";
+import { useMobile } from "@/hooks/use-mobile";
 
 const NEON = "#B7FF18";
 const AUTO_ADVANCE_MS = 7000;
@@ -57,16 +58,11 @@ function GameInfoOverlay({ clip, onClose }: { clip: Clip; onClose: () => void })
   ];
 
   return (
-    <div
-      className="absolute inset-0 z-30 flex items-end justify-end pointer-events-none"
-    >
-      {/* Backdrop tap-to-close */}
+    <div className="absolute inset-0 z-30 flex items-end justify-end pointer-events-none">
       <div
         className="absolute inset-0 pointer-events-auto"
         onClick={(e) => { e.stopPropagation(); onClose(); }}
       />
-
-      {/* Info panel */}
       <div
         className="relative pointer-events-auto m-3 rounded-xl overflow-hidden flex flex-col"
         style={{
@@ -78,14 +74,9 @@ function GameInfoOverlay({ clip, onClose }: { clip: Clip; onClose: () => void })
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Game artwork header */}
         <div className="relative flex-shrink-0 overflow-hidden" style={{ height: 90 }}>
           {clip.game?.imageUrl ? (
-            <img
-              src={clip.game.imageUrl}
-              alt={clip.game?.name ?? "Game"}
-              className="absolute inset-0 w-full h-full object-cover"
-            />
+            <img src={clip.game.imageUrl} alt={clip.game?.name ?? "Game"} className="absolute inset-0 w-full h-full object-cover" />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#0A1117" }}>
               <Clapperboard className="w-7 h-7 text-white/15" />
@@ -96,12 +87,9 @@ function GameInfoOverlay({ clip, onClose }: { clip: Clip; onClose: () => void })
             style={{ background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 100%)" }}
           >
             {clip.game?.name && (
-              <p className="text-[10px] font-black uppercase tracking-wide text-white line-clamp-1">
-                {clip.game.name}
-              </p>
+              <p className="text-[10px] font-black uppercase tracking-wide text-white line-clamp-1">{clip.game.name}</p>
             )}
           </div>
-          {/* Close button */}
           <button
             onClick={(e) => { e.stopPropagation(); onClose(); }}
             className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/60 hover:bg-black/85 flex items-center justify-center transition-colors"
@@ -109,8 +97,6 @@ function GameInfoOverlay({ clip, onClose }: { clip: Clip; onClose: () => void })
             <X className="w-3 h-3 text-white" />
           </button>
         </div>
-
-        {/* Stats */}
         <div className="px-3 pt-2.5 pb-2 flex flex-col gap-1.5">
           {stats.map(({ icon: Icon, label, value }, i) => (
             <div key={i} className="flex items-center justify-between">
@@ -124,8 +110,6 @@ function GameInfoOverlay({ clip, onClose }: { clip: Clip; onClose: () => void })
             </div>
           ))}
         </div>
-
-        {/* Upload CTA */}
         <div className="px-3 pb-3">
           <Link href="/upload">
             <button
@@ -139,7 +123,6 @@ function GameInfoOverlay({ clip, onClose }: { clip: Clip; onClose: () => void })
           </Link>
         </div>
       </div>
-
       <style>{`
         @keyframes fadeSlideUp {
           from { opacity: 0; transform: translateY(8px) scale(0.97); }
@@ -150,12 +133,320 @@ function GameInfoOverlay({ clip, onClose }: { clip: Clip; onClose: () => void })
   );
 }
 
-/* ── TrendingHeroSlide — renders as a hero carousel slide ── */
+/* ─────────────────────────────────────────────────────────
+   MOBILE CAROUSEL
+   Scroll-snap horizontal carousel with peek, pagination,
+   and title/game info below the media area.
+   ───────────────────────────────────────────────────────── */
+function MobileTrendingCarousel({
+  clips,
+  contentType,
+  onContentTypeChange,
+}: {
+  clips: Clip[];
+  contentType: "clips" | "reels";
+  onContentTypeChange: (t: "clips" | "reels") => void;
+}) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isMuted, setIsMuted] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [, setLocation] = useLocation();
+
+  const total = clips.length;
+  const clip = clips[currentIndex] ?? null;
+
+  /* Reset carousel when content type switches */
+  useEffect(() => {
+    setCurrentIndex(0);
+    setIsMuted(true);
+    if (scrollRef.current) scrollRef.current.scrollLeft = 0;
+  }, [contentType]);
+
+  /* Track which card is in view via IntersectionObserver */
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container || !clips.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            const idx = Number((entry.target as HTMLElement).dataset.idx ?? 0);
+            setCurrentIndex(idx);
+          }
+        }
+      },
+      { root: container, threshold: 0.5 },
+    );
+
+    cardRefs.current.forEach((card) => { if (card) observer.observe(card); });
+    return () => observer.disconnect();
+  }, [clips]);
+
+  /* Scroll programmatically to a card index */
+  const scrollToCard = useCallback((idx: number) => {
+    const card = cardRefs.current[idx];
+    const container = scrollRef.current;
+    if (!card || !container) return;
+    container.scrollTo({ left: card.offsetLeft, behavior: "smooth" });
+  }, []);
+
+  const goPrev = () => { if (currentIndex > 0) scrollToCard(currentIndex - 1); };
+  const goNext = () => { if (currentIndex < total - 1) scrollToCard(currentIndex + 1); };
+
+  const handleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    setIsMuted(v.muted);
+  };
+
+  return (
+    <div className="h-full w-full flex flex-col" style={{ background: "#03080A" }}>
+
+      {/* ── Header: Trending label + Clips / Reels tabs ── */}
+      <div className="flex-shrink-0 flex items-center gap-3 px-4 pt-3 pb-2">
+        <div className="flex items-center gap-1.5">
+          <Flame className="w-4 h-4" style={{ color: NEON }} />
+          <span className="text-sm font-black text-white tracking-tight">Trending</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {(["clips", "reels"] as const).map((type) => (
+            <button
+              key={type}
+              onClick={() => onContentTypeChange(type)}
+              className="px-3 py-1.5 rounded-full text-xs font-bold transition-all"
+              style={
+                contentType === type
+                  ? { background: NEON, color: "#03080A" }
+                  : { background: "rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)" }
+              }
+            >
+              {type === "clips" ? "Clips" : "Reels"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Scroll-snap carousel ── */}
+      <div className="flex-1 relative min-h-0">
+
+        {/* Scrollable track */}
+        <div
+          ref={scrollRef}
+          className="h-full flex"
+          style={{
+            overflowX: "scroll",
+            scrollSnapType: "x mandatory",
+            /* @ts-ignore */
+            WebkitOverflowScrolling: "touch",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            gap: 8,
+            paddingRight: "8%",      /* lets next card peek */
+          }}
+        >
+          <style>{`.mob-trend-track::-webkit-scrollbar { display: none; }`}</style>
+
+          {clips.map((c, i) => (
+            <div
+              key={c.id}
+              ref={(el) => { cardRefs.current[i] = el; }}
+              data-idx={i}
+              className="relative flex-shrink-0 rounded-xl overflow-hidden bg-black"
+              style={{
+                width: "92%",
+                scrollSnapAlign: "start",
+                opacity: i === currentIndex ? 1 : 0.5,
+                transition: "opacity 0.25s ease",
+              }}
+            >
+              {/* Thumbnail base layer */}
+              {c.thumbnailUrl && (
+                <img
+                  src={c.thumbnailUrl}
+                  alt={c.title}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  draggable={false}
+                />
+              )}
+
+              {/* Video — only mount for active card so only one plays */}
+              {i === currentIndex && c.videoUrl && (
+                <video
+                  key={`vid-${c.id}`}
+                  ref={videoRef}
+                  src={c.videoUrl}
+                  autoPlay
+                  muted
+                  playsInline
+                  loop
+                  preload="auto"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onLoadedData={(e) => {
+                    e.currentTarget.muted = true;
+                    e.currentTarget.play().catch(() => {});
+                  }}
+                />
+              )}
+
+              {/* Bottom scrim */}
+              <div
+                className="absolute inset-x-0 bottom-0 pointer-events-none"
+                style={{ height: "30%", background: "linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 100%)" }}
+              />
+
+              {/* Mute button — active card only */}
+              {i === currentIndex && (
+                <button
+                  onClick={handleMute}
+                  aria-label={isMuted ? "Unmute" : "Mute"}
+                  style={{
+                    position: "absolute", bottom: 12, right: 12, zIndex: 10,
+                    width: 44, height: 44,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    background: "transparent", border: "none", padding: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 30, height: 30, borderRadius: "50%",
+                      background: "rgba(0,0,0,0.78)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}
+                  >
+                    {isMuted
+                      ? <VolumeX className="w-3.5 h-3.5 text-white" />
+                      : <Volume2 className="w-3.5 h-3.5 text-white" />}
+                  </span>
+                </button>
+              )}
+
+              {/* Tap-to-open transparent overlay */}
+              <button
+                className="absolute inset-0 w-full h-full"
+                style={{ background: "transparent", zIndex: 5 }}
+                onClick={(e) => { e.stopPropagation(); setLocation(`/clips/${c.id}`); }}
+                aria-label={`Open ${c.title}`}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Left arrow — hidden at first card */}
+        {currentIndex > 0 && (
+          <button
+            onClick={goPrev}
+            aria-label="Previous"
+            style={{
+              position: "absolute", left: 4, top: "50%", transform: "translateY(-50%)",
+              zIndex: 20, width: 44, height: 44,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "transparent", border: "none", padding: 0,
+            }}
+          >
+            <span
+              style={{
+                width: 32, height: 32, borderRadius: "50%",
+                background: "rgba(0,0,0,0.82)",
+                border: "1px solid rgba(255,255,255,0.15)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+              }}
+            >
+              <ChevronLeft className="w-4 h-4 text-white" />
+            </span>
+          </button>
+        )}
+
+        {/* Right arrow — hidden at last card, inset from the right edge so it clears the peeking card */}
+        {currentIndex < total - 1 && (
+          <button
+            onClick={goNext}
+            aria-label="Next"
+            style={{
+              position: "absolute", right: "calc(8% + 4px)", top: "50%", transform: "translateY(-50%)",
+              zIndex: 20, width: 44, height: 44,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "transparent", border: "none", padding: 0,
+            }}
+          >
+            <span
+              style={{
+                width: 32, height: 32, borderRadius: "50%",
+                background: "rgba(0,0,0,0.82)",
+                border: "1px solid rgba(255,255,255,0.15)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+              }}
+            >
+              <ChevronRight className="w-4 h-4 text-white" />
+            </span>
+          </button>
+        )}
+      </div>
+
+      {/* ── Info bar: pagination + title + game name ── */}
+      <div
+        className="flex-shrink-0 px-4 pt-2.5 pb-3"
+        style={{ background: "#03080A", borderTop: "1px solid rgba(255,255,255,0.05)" }}
+      >
+        {/* Pagination */}
+        <p
+          className="text-[11px] font-bold mb-1"
+          style={{ color: "rgba(255,255,255,0.32)", letterSpacing: "0.06em" }}
+        >
+          {total > 0 ? `${currentIndex + 1} / ${total}` : ""}
+        </p>
+
+        {/* Title */}
+        {clip ? (
+          <>
+            <button
+              className="block text-left w-full"
+              onClick={() => setLocation(`/clips/${clip.id}`)}
+            >
+              <p className="text-white font-bold text-sm leading-snug line-clamp-1">
+                {clip.title}
+              </p>
+            </button>
+            {clip.game?.name ? (
+              <p className="text-xs font-semibold mt-0.5 line-clamp-1" style={{ color: NEON }}>
+                {clip.game.name}
+              </p>
+            ) : (
+              <Link href={`/profile/${clip.user.username}`} onClick={(e) => e.stopPropagation()}>
+                <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.40)" }}>
+                  @{clip.user.username}
+                </p>
+              </Link>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="h-3.5 w-48 rounded mb-1" style={{ background: "rgba(255,255,255,0.07)" }} />
+            <div className="h-3 w-24 rounded" style={{ background: "rgba(255,255,255,0.05)" }} />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+   MAIN COMPONENT — renders mobile or desktop branch
+   ───────────────────────────────────────────────────────── */
 export default function TrendingHeroSlide({
   onPlayingChange,
 }: {
   onPlayingChange?: (isPlaying: boolean) => void;
 }) {
+  /* ── All hooks declared unconditionally (Rules of Hooks) ── */
+  const isMobile = useMobile();
   const [contentType, setContentType] = useState<"clips" | "reels">("clips");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -197,10 +488,10 @@ export default function TrendingHeroSlide({
     setShowInfo(false);
   }, [contentType]);
 
-  // Close info panel when slide changes
   useEffect(() => { setShowInfo(false); }, [currentIndex]);
 
   const startTimer = useCallback(() => {
+    if (isMobile) return; // No auto-advance on mobile
     if (timerRef.current) clearInterval(timerRef.current);
     if (total <= 1) return;
     timerRef.current = setInterval(() => {
@@ -208,7 +499,7 @@ export default function TrendingHeroSlide({
       setCurrentIndex((prev) => (prev + 1) % total);
       setProgress(0);
     }, AUTO_ADVANCE_MS);
-  }, [total]);
+  }, [total, isMobile]);
 
   useEffect(() => {
     startTimer();
@@ -315,9 +606,20 @@ export default function TrendingHeroSlide({
     setProgress((vid.currentTime / vid.duration) * 100);
   };
 
+  /* ── Mobile branch — early return after all hooks ── */
+  if (isMobile) {
+    return (
+      <MobileTrendingCarousel
+        clips={clips}
+        contentType={contentType}
+        onContentTypeChange={setContentType}
+      />
+    );
+  }
+
+  /* ── Desktop layout (unchanged) ── */
   return (
     <div className="absolute inset-0 bg-[#03080A]" onWheel={handleWheel}>
-      {/* ── Full-width video ── */}
       <div className="relative w-full h-full overflow-hidden bg-black">
         {/* Header */}
         <div
@@ -385,7 +687,7 @@ export default function TrendingHeroSlide({
                 onTimeUpdate={handleTimeUpdate}
                 onError={(e) => {
                   const el = e.currentTarget as HTMLVideoElement;
-                  console.error('[TrendingSlider] video error', el.error, 'src:', el.src?.slice(0, 120));
+                  console.error("[TrendingSlider] video error", el.error, "src:", el.src?.slice(0, 120));
                   setVideoReady(false);
                   setIsPlaying(false);
                   onPlayingChange?.(false);
@@ -414,7 +716,7 @@ export default function TrendingHeroSlide({
           style={{ height: "45%", background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, transparent 100%)" }}
         />
 
-        {/* Play/Pause overlay (behind info panel) */}
+        {/* Play/Pause overlay */}
         <button
           onClick={handlePlayPause}
           className="absolute inset-0 w-full h-full z-10 flex items-center justify-center group"
@@ -473,7 +775,6 @@ export default function TrendingHeroSlide({
 
             {/* Right-side controls: info button + mute */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
-              {/* ⓘ Info button */}
               {clip && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowInfo((v) => !v); }}
@@ -487,7 +788,6 @@ export default function TrendingHeroSlide({
                   <Info className="w-3.5 h-3.5" style={{ color: showInfo ? "#03080A" : "white" }} />
                 </button>
               )}
-              {/* Mute */}
               <button
                 onClick={handleMute}
                 className="w-7 h-7 rounded-full bg-black/60 hover:bg-black/85 flex items-center justify-center text-white transition-colors"
@@ -511,7 +811,7 @@ export default function TrendingHeroSlide({
           </div>
         </div>
 
-        {/* ── Info overlay (shown when showInfo is true) ── */}
+        {/* Info overlay */}
         {showInfo && clip && (
           <GameInfoOverlay clip={clip} onClose={() => setShowInfo(false)} />
         )}
