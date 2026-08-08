@@ -124,20 +124,13 @@ function OtherRankIcon() {
 const seedRailItems: RailItem[] = SEED_ITEMS.map(u => ({ ...u, uid: u.id, status: 'visible' as ItemStatus }));
 const seedKeySet = new Set<string>(SEED_ITEMS.map(u => u.id));
 
-// How long to wait before auto-cycling to the next item when idle (ms)
-const AUTO_CYCLE_INTERVAL = 4500;
-
 export function EcosystemActivityRail() {
   const [items, setItems] = useState<RailItem[]>(seedRailItems);
   const knownKeys = useRef(seedKeySet);
   const queue = useRef<FeedItem[]>([]);
   const animating = useRef(false);
   const lastKind = useRef<EventKind | undefined>(undefined);
-
-  // Pool of all known items for continuous cycling
-  const allKnownItems = useRef<FeedItem[]>([]);
-  const cycleIndex = useRef(0);
-  const cycleTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasInitialFeed = useRef(false);
 
   const { data: feedItems } = useQuery<FeedItem[]>({
     queryKey: ["/api/activity-feed"],
@@ -175,42 +168,34 @@ export function EcosystemActivityRail() {
     }, ANIM_DURATION + 50);
   }, []);
 
-  // Continuously cycle through known items so the rail always animates
-  const startCycle = useCallback(() => {
-    if (cycleTimer.current) return; // already running
-    cycleTimer.current = setInterval(() => {
-      if (allKnownItems.current.length === 0) return;
-      if (queue.current.length > 0) return; // let real queue drain first
-      const idx = cycleIndex.current % allKnownItems.current.length;
-      cycleIndex.current++;
-      queue.current.push(allKnownItems.current[idx]);
-      processQueue();
-    }, AUTO_CYCLE_INTERVAL);
-  }, [processQueue]);
-
-  // Clean up the cycle timer on unmount
-  useEffect(() => {
-    return () => { if (cycleTimer.current) clearInterval(cycleTimer.current); };
-  }, []);
-
   useEffect(() => {
     const safeItems = Array.isArray(feedItems) ? feedItems : [];
     if (safeItems.length === 0) return;
 
+    // The first response is the current snapshot, not a stream of new events.
+    // Render it without animation so historical activity cannot play through
+    // rapidly on every page load.
+    if (!hasInitialFeed.current) {
+      hasInitialFeed.current = true;
+      safeItems.forEach(u => knownKeys.current.add(u.id));
+      setItems(
+        safeItems.slice(0, MAX_ITEMS).map(u => ({
+          ...u,
+          uid: u.id,
+          status: 'visible' as ItemStatus,
+        })),
+      );
+      return;
+    }
+
     const newItems = safeItems.filter(u => !knownKeys.current.has(u.id));
-    newItems.forEach(u => {
-      knownKeys.current.add(u.id);
-      allKnownItems.current.push(u);
-    });
+    newItems.forEach(u => knownKeys.current.add(u.id));
 
     if (newItems.length > 0) {
       queue.current = [...queue.current, ...newItems];
       processQueue();
     }
-
-    // Start continuous cycling once we have data
-    startCycle();
-  }, [feedItems, processQueue, startCycle]);
+  }, [feedItems, processQueue]);
 
   return (
     <>

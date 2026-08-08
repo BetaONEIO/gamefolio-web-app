@@ -1172,7 +1172,7 @@ function FriendsRivals({ data, isLoading }: { data: DashboardData["social"] | un
                     </p>
                   </div>
                   <span className="text-xs font-bold" style={{ color: TEXT_MUTED }}>
-                    {r.totalXP.toLocaleString()} XP
+                    {Math.round(r.totalXP).toLocaleString()} XP
                   </span>
                 </div>
               </Link>

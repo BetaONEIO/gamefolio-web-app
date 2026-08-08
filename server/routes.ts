@@ -4927,7 +4927,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               username: e.user?.username,
               displayName: e.user?.displayName,
               avatarUrl: e.user?.avatarUrl,
-              totalXP: Number(e.totalPoints ?? e.totalXP ?? 0),
+              totalXP: Math.round(Number(e.totalPoints ?? e.totalXP ?? 0)),
               isMe: Number(e.userId) === userId,
             }))
         : [];
