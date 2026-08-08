@@ -117,7 +117,7 @@ const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
       </div>
       
       {/* Edit controls with tabs - responsive editing controls */}
-      <Card className="bg-card/90 backdrop-blur-sm w-full max-w-full mx-auto">
+      <Card className="bg-card w-full max-w-full mx-auto">
         <CardHeader className="pb-2">
           <CardTitle className="text-xl">Edit Your Clip</CardTitle>
         </CardHeader>

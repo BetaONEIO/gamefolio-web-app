@@ -12,6 +12,19 @@
 :root {
   --keyboard-height: 0px;
   --visual-viewport-height: 100dvh;
+
+  /* Shared solid Gamefolio surface system */
+  --gf-bg: #071119;
+  --gf-surface-1: #0B1722;
+  --gf-surface-2: #101E2A;
+  --gf-surface-3: #132433;
+  --gf-surface-hover: #192E3E;
+  --gf-border: #213140;
+  --gf-border-subtle: #182733;
+  --gf-text: #FFFFFF;
+  --gf-text-secondary: #A9B4BE;
+  --gf-text-muted: #73808B;
+  --gf-accent: #B7FF18;
 }
 
 /* Give all inputs scroll-margin so they appear above the keyboard when scrolled into view */
@@ -316,22 +329,22 @@ video:focus {
 
 /* Force ShareDialog custom styling to match Gamefolio theme */
 .gamefolio-share-dialog {
-  background-color: #0B1218 !important;
-  border: 2px solid #1B2A33 !important;
-  border-color: #1B2A33 !important;
-  color: #F5F7F2 !important;
+  background-color: var(--gf-surface-1) !important;
+  border: 2px solid var(--gf-border) !important;
+  border-color: var(--gf-border) !important;
+  color: var(--gf-text) !important;
 }
 
 .gamefolio-share-input {
-  background-color: #071013 !important;
-  border: 1px solid #1B2A33 !important;
-  color: #F5F7F2 !important;
+  background-color: var(--gf-bg) !important;
+  border: 1px solid var(--gf-border) !important;
+  color: var(--gf-text) !important;
 }
 
 /* Ensure all share dialogs use Gamefolio theme */
 .share-dialog-content {
-  background-color: #0B1218 !important;
-  border-color: #1B2A33 !important;
+  background-color: var(--gf-surface-1) !important;
+  border-color: var(--gf-border) !important;
 }
 
 /* Profile-scoped theme variables - STRICTLY isolated to profile pages only */
@@ -359,13 +372,13 @@ video:focus {
 .clip-dialog-content {
   /* Apply global Gamefolio theme variables */
   --profile-accent-color: #6B7280 !important;
-  --profile-primary-color: #0B1218 !important;
+   --profile-primary-color: var(--gf-surface-1) !important;
   --profile-avatar-border-color: #6B7280 !important;
   --profile-accent-color-alpha: rgba(107, 114, 128, 0.2) !important;
 
-  background-color: #0B1218 !important;
-  border-color: #1B2A33 !important;
-  color: #F5F7F2 !important;
+   background-color: var(--gf-surface-1) !important;
+   border-color: var(--gf-border) !important;
+   color: var(--gf-text) !important;
 }
 
 /* Comment backgrounds - transparent to show theme-aware background */
@@ -405,42 +418,42 @@ video:focus {
 }
 
 :root {
-  /* Global Gamefolio theme - Dark gaming SaaS style with neon green accents */
-  --background: 208 48% 6%;      /* #081017 */
-  --foreground: 84 24% 96%;      /* #F5F7F2 */
+  /* Global Gamefolio theme - solid competitive gaming surfaces */
+  --background: 207 56% 6%;      /* #071119 */
+  --foreground: 0 0% 100%;        /* #FFFFFF */
 
   /* Card */
-  --card: 210 37% 7%;            /* #0B1218 */
-  --card-foreground: 84 24% 96%; /* #F5F7F2 */
+  --card: 207 51% 9%;             /* #0B1722 */
+  --card-foreground: 0 0% 100%;
 
   /* Popover */
-  --popover: 210 37% 7%;         /* #0B1218 */
-  --popover-foreground: 84 24% 96%;
+  --popover: 207 45% 11%;         /* #101E2A */
+  --popover-foreground: 0 0% 100%;
 
   /* Primary - Neon green accent */
-  --primary: 79 100% 55%;        /* #B7FF1A */
-  --primary-foreground: 192 47% 5%; /* #071013 */
+  --primary: 78 100% 54%;         /* #B7FF18 */
+  --primary-foreground: 207 56% 6%;
 
   /* Secondary */
-  --secondary: 210 37% 10%;      /* #101923 */
-  --secondary-foreground: 84 24% 96%;
+  --secondary: 207 45% 11%;       /* #101E2A */
+  --secondary-foreground: 0 0% 100%;
 
   /* Muted */
-  --muted: 201 31% 15%;          /* #1B2A33 */
-  --muted-foreground: 90 5% 51%; /* #7E887A */
+  --muted: 207 42% 15%;           /* #132433 */
+  --muted-foreground: 207 9% 50%; /* #73808B */
 
   /* Accent - Neon green */
-  --accent: 79 100% 55%;         /* #B7FF1A */
-  --accent-foreground: 192 47% 5%;
+  --accent: 78 100% 54%;          /* #B7FF18 */
+  --accent-foreground: 207 56% 6%;
 
   /* Destructive */
   --destructive: 0 84% 60%;
-  --destructive-foreground: 84 24% 96%;
+  --destructive-foreground: 0 0% 100%;
 
   /* Border */
-  --border: 201 31% 15%;         /* #1B2A33 */
-  --input: 210 37% 7%;           /* #0B1218 */
-  --ring: 79 100% 55%;           /* #B7FF1A */
+  --border: 207 32% 20%;          /* #213140 */
+  --input: 207 51% 9%;             /* #0B1722 */
+  --ring: 78 100% 54%;             /* #B7FF18 */
 
   /* Radius - premium rounded feel */
   --radius: 0.875rem;
@@ -456,26 +469,26 @@ video:focus {
   --sidebar-ring: var(--ring);
 
   /* Charts */
-  --chart-1: 79 100% 55%;   /* Neon green */
+  --chart-1: 78 100% 54%;   /* Neon green */
   --chart-2: 196 100% 42%;  /* Blue */
   --chart-3: 32 94% 50%;    /* Yellow */
   --chart-4: 330 81% 55%;   /* Pink */
   --chart-5: 214 100% 55%;  /* Blue */
 
   /* Design system hex tokens */
-  --ds-bg:           #081017;
-  --ds-bg-soft:      #091219;
-  --ds-surface:      #0B1218;
-  --ds-surface-el:   #101923;
-  --ds-border:       #1B2A33;
-  --ds-border-muted: #22313A;
-  --ds-primary:      #B7FF1A;
-  --ds-primary-hov:  #B7FF1A;
-  --ds-primary-dark: #6FA800;
-  --ds-text:         #F5F7F2;
-  --ds-text-sec:     #B8C0AE;
-  --ds-text-muted:   #7E887A;
-  --ds-btn-text:     #071013;
+  --ds-bg:           var(--gf-bg);
+  --ds-bg-soft:      var(--gf-surface-1);
+  --ds-surface:      var(--gf-surface-1);
+  --ds-surface-el:   var(--gf-surface-2);
+  --ds-border:       var(--gf-border);
+  --ds-border-muted: var(--gf-border-subtle);
+  --ds-primary:      var(--gf-accent);
+  --ds-primary-hov:  #C8FF4D;
+  --ds-primary-dark: #7EA900;
+  --ds-text:         var(--gf-text);
+  --ds-text-sec:     var(--gf-text-secondary);
+  --ds-text-muted:   var(--gf-text-muted);
+  --ds-btn-text:     var(--gf-bg);
   --ds-shadow-soft:  0 20px 60px rgba(0,0,0,0.35);
   --ds-shadow-glow:  0 0 30px rgba(183,255,26,0.22);
 }
@@ -492,13 +505,13 @@ video:focus {
   html,
   body {
     overscroll-behavior-y: none;
-    background-color: #0B1218;
+    background-color: var(--gf-bg);
   }
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
     font-family: 'Space Grotesk', sans-serif;
-    background-color: #0B1218 !important;
+    background-color: var(--gf-bg) !important;
   }
 
   /* Prevent iOS auto-zoom on input focus (triggers when font-size < 16px) */
@@ -513,8 +526,8 @@ video:focus {
   textarea:focus-visible,
   select:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(183,255,26,0.35);
-    border-color: rgba(183,255,26,0.5) !important;
+    box-shadow: 0 0 0 2px rgba(183,255,24,0.32);
+    border-color: var(--gf-accent) !important;
   }
 
   /* Smooth transitions across interactive elements */
@@ -526,9 +539,9 @@ video:focus {
   [data-radix-popper-content-wrapper],
   [role="dialog"],
   .dialog-content {
-    background-color: #0B1218 !important;
-    border-color: #1B2A33 !important;
-    color: #F5F7F2 !important;
+    background-color: var(--gf-surface-1) !important;
+    border-color: var(--gf-border) !important;
+    color: var(--gf-text) !important;
   }
 }
 
@@ -754,11 +767,12 @@ video:focus {
 
 /* Profile card professional style */
 .profile-card {
-  backdrop-filter: blur(10px);
+  background: var(--gf-surface-1);
+  border: 1px solid var(--gf-border);
   box-shadow: 
     0 10px 15px -3px rgba(0, 0, 0, 0.4),
     0 4px 6px -4px rgba(0, 0, 0, 0.2),
-    0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    0 0 0 1px var(--gf-border-subtle) inset;
   transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 

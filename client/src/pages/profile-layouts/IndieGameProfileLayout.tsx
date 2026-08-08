@@ -508,7 +508,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
         </div>
       </section>
 
-      <nav className="sticky top-0 z-40 border-b border-white/10 backdrop-blur-xl bg-[#0B1319]/80 px-6">
+      <nav className="sticky top-0 z-40 border-b border-[var(--gf-border)] bg-[var(--gf-surface-1)] px-6">
         <div className="max-w-6xl mx-auto flex overflow-x-auto">
           {TABS.map((tab) => (
             <button

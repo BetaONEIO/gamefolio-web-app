@@ -1636,8 +1636,7 @@ const IndieGamePage = () => {
       </section>
 
       {/* ── STICKY TAB NAV ── */}
-      <nav className="sticky top-0 z-40 border-b border-white/10 backdrop-blur-xl"
-        style={{ background: "rgba(11,19,25,0.85)" }}>
+      <nav className="sticky top-0 z-40 border-b border-[var(--gf-border)] bg-[var(--gf-surface-1)]">
         <div className="flex overflow-x-auto scrollbar-none px-2">
           {TABS.map(tab => {
             const Icon = tab.icon;

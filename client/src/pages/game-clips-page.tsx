@@ -76,7 +76,7 @@ function ClipGridItem({ clip, onClipClick }: ClipItemProps) {
   const [isPortrait, setIsPortrait] = useState(false);
   return (
     <Card
-      className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/30"
+      className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl bg-card border-border hover:border-primary/30"
       onClick={() => onClipClick(clip.id)}
       data-testid={`clip-card-${clip.id}`}
     >
