@@ -1693,7 +1693,10 @@ export default function DashboardPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {isMobile ? (
           /* Mobile: stacked single column */
-          <div className="space-y-5 pb-24">
+          <div
+            className="space-y-5"
+            style={{ paddingBottom: "calc(var(--mobile-nav-height, 3.5rem) + 1rem)" }}
+          >
             <CreatorPerformancePanel
               creator={data?.creator}
               followersCount={data?.social?.followersCount ?? 0}
