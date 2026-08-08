@@ -203,11 +203,18 @@ function CountdownBadge() {
     return () => clearInterval(id);
   }, []);
   return (
-    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
-      style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-      <Clock className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.45)' }} />
-      <span className="text-[10px] text-white/50 font-medium">Resets in</span>
-      <span className="text-[10px] text-white/75 font-bold font-mono">{timeLeft}</span>
+    <div
+      className="flex flex-row flex-nowrap items-center justify-center gap-1 px-1.5 py-1 sm:gap-1.5 sm:px-2.5 rounded-full shrink-0 whitespace-nowrap"
+      style={{
+        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(255,255,255,0.1)',
+        whiteSpace: 'nowrap',
+        flexWrap: 'nowrap',
+      }}
+    >
+      <Clock className="w-3 h-3 shrink-0" style={{ color: 'rgba(255,255,255,0.45)' }} />
+      <span className="hidden min-[360px]:inline text-[10px] text-white/50 font-medium whitespace-nowrap">Resets in</span>
+      <span className="text-[10px] text-white/75 font-bold font-mono whitespace-nowrap">{timeLeft}</span>
     </div>
   );
 }
