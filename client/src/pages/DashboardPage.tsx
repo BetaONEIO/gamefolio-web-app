@@ -1648,6 +1648,7 @@ export default function DashboardPage() {
   const [, setLocation] = useLocation();
   const isMobile = useMobile();
   const [showCreatorAnalytics, setShowCreatorAnalytics] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview">("overview");
 
   const { data, isLoading } = useQuery<DashboardData>({
     queryKey: ["/api/dashboard"],
@@ -1691,6 +1692,39 @@ export default function DashboardPage() {
 
         <div className="relative w-full flex-1 flex flex-col justify-center">
           <PlayerOverview data={data?.player} isLoading={isLoading} />
+        </div>
+      </div>
+
+      {/* ── Tab bar ── */}
+      <div
+        className="sticky top-0 z-30"
+        style={{ background: ACCENT_DARK, borderBottom: `1px solid ${BORDER}` }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-1" role="tablist" aria-label="Dashboard sections">
+            {(["overview"] as const).map((tab) => {
+              const label = tab.charAt(0).toUpperCase() + tab.slice(1);
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveTab(tab)}
+                  className="relative px-4 py-3 text-sm font-bold transition-colors"
+                  style={{ color: isActive ? ACCENT : TEXT_MUTED }}
+                >
+                  {label}
+                  {isActive && (
+                    <span
+                      className="absolute bottom-0 inset-x-4 h-[2px] rounded-t-full"
+                      style={{ background: ACCENT }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
