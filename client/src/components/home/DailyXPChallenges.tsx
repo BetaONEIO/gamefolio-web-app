@@ -495,10 +495,6 @@ export function DailyXPChallenges() {
             View All <span aria-hidden="true">→</span>
           </Link>
         </div>
-        <div className="flex justify-end">
-          <CountdownBadge />
-        </div>
-
         {/* Summary bar + streak (authenticated users) */}
         {user && (
           <div
@@ -512,6 +508,9 @@ export function DailyXPChallenges() {
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <Zap className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#B7FF18' }} />
                   <span className="text-[11px] font-semibold text-white/55">Today's XP</span>
+                  <div className="ml-auto">
+                    <CountdownBadge />
+                  </div>
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-xl font-extrabold leading-none" style={{ color: '#B7FF18' }}>
