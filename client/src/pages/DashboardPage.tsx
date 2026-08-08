@@ -790,7 +790,14 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
   const isBelowOnyx = !isChampion && !isDiamond && !isOnyx;
 
   return (
-    <SectionCard style={getLeagueMeshBackground(data.league)}>
+    <SectionCard
+      style={{
+        ...getLeagueMeshBackground(data.league),
+        overflow: "visible",
+        position: "relative",
+        zIndex: 10,
+      }}
+    >
       <SectionHeader
         icon={Trophy}
         title="League Progress"
