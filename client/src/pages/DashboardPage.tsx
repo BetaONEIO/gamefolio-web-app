@@ -1647,8 +1647,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const isMobile = useMobile();
-  const [showCreatorAnalytics, setShowCreatorAnalytics] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "creator-analytics">("overview");
 
   const { data, isLoading } = useQuery<DashboardData>({
     queryKey: ["/api/dashboard"],
@@ -1702,16 +1701,18 @@ export default function DashboardPage() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-1" role="tablist" aria-label="Dashboard sections">
-            {(["overview"] as const).map((tab) => {
-              const label = tab.charAt(0).toUpperCase() + tab.slice(1);
-              const isActive = activeTab === tab;
+            {([
+              { id: "overview",           label: "Overview" },
+              { id: "creator-analytics",  label: "Creator Analytics" },
+            ] as const).map(({ id, label }) => {
+              const isActive = activeTab === id;
               return (
                 <button
-                  key={tab}
+                  key={id}
                   role="tab"
                   aria-selected={isActive}
-                  onClick={() => setActiveTab(tab)}
-                  className="relative px-4 py-3 text-sm font-bold transition-colors"
+                  onClick={() => setActiveTab(id)}
+                  className="relative px-4 py-3 text-sm font-bold transition-colors whitespace-nowrap"
                   style={{ color: isActive ? ACCENT : TEXT_MUTED }}
                 >
                   {label}
@@ -1730,62 +1731,66 @@ export default function DashboardPage() {
 
       {/* Content area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {isMobile ? (
-          /* Mobile: stacked single column */
-          <div
-            className="space-y-5"
-            style={{ paddingBottom: "calc(var(--mobile-nav-height, 3.5rem) + 1rem)" }}
-          >
-            <CreatorPerformancePanel
-              creator={data?.creator}
-              followersCount={data?.social?.followersCount ?? 0}
-              isLoading={isLoading}
-              isOpen={showCreatorAnalytics}
-              onToggle={() => setShowCreatorAnalytics((open) => !open)}
-            />
-            <div className="-mx-4 sm:-mx-6">
-              <DailyXPChallenges />
-            </div>
-            <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
-            <FriendsRivals data={data?.social} isLoading={isLoading} />
-            <Goals goals={data?.goals} isLoading={isLoading} />
-            <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
-            <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
-            {(data?.bounties ?? []).length > 0 && (
-              <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
-            )}
-          </div>
-        ) : (
-          /* Desktop: structured layout */
-          <div className="space-y-5 pb-8">
-            <CreatorPerformancePanel
-              creator={data?.creator}
-              followersCount={data?.social?.followersCount ?? 0}
-              isLoading={isLoading}
-              isOpen={showCreatorAnalytics}
-              onToggle={() => setShowCreatorAnalytics((open) => !open)}
-            />
-            <div className="-mx-4 sm:-mx-6 lg:-mx-8">
-              <DailyXPChallenges />
-            </div>
-            <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
-            <FriendsRivals data={data?.social} isLoading={isLoading} />
-            <div className="grid grid-cols-12 gap-5">
-              <div className="col-span-7">
-                <Goals goals={data?.goals} isLoading={isLoading} />
+
+        {/* ── Overview tab ── */}
+        {activeTab === "overview" && (
+          isMobile ? (
+            <div
+              className="space-y-5"
+              style={{ paddingBottom: "calc(var(--mobile-nav-height, 3.5rem) + 1rem)" }}
+            >
+              <div className="-mx-4 sm:-mx-6">
+                <DailyXPChallenges />
               </div>
-              <div className="col-span-5">
-                <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
-              </div>
-            </div>
-            <div className="space-y-5">
+              <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
+              <FriendsRivals data={data?.social} isLoading={isLoading} />
+              <Goals goals={data?.goals} isLoading={isLoading} />
+              <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
               <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
               {(data?.bounties ?? []).length > 0 && (
                 <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
               )}
             </div>
+          ) : (
+            <div className="space-y-5 pb-8">
+              <div className="-mx-4 sm:-mx-6 lg:-mx-8">
+                <DailyXPChallenges />
+              </div>
+              <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
+              <FriendsRivals data={data?.social} isLoading={isLoading} />
+              <div className="grid grid-cols-12 gap-5">
+                <div className="col-span-7">
+                  <Goals goals={data?.goals} isLoading={isLoading} />
+                </div>
+                <div className="col-span-5">
+                  <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
+                </div>
+              </div>
+              <div className="space-y-5">
+                <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
+                {(data?.bounties ?? []).length > 0 && (
+                  <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
+                )}
+              </div>
+            </div>
+          )
+        )}
+
+        {/* ── Creator Analytics tab ── */}
+        {activeTab === "creator-analytics" && (
+          <div
+            className="space-y-5"
+            style={isMobile ? { paddingBottom: "calc(var(--mobile-nav-height, 3.5rem) + 1rem)" } : { paddingBottom: "2rem" }}
+          >
+            <CreatorAnalytics
+              creator={data?.creator}
+              followersCount={data?.social?.followersCount ?? 0}
+              isLoading={isLoading}
+            />
+            <UploadPerformance creator={data?.creator} isLoading={isLoading} />
           </div>
         )}
+
       </div>
     </div>
   );
