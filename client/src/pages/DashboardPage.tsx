@@ -244,7 +244,7 @@ function XPBar({ percent, height = 8, animated = true }: { percent: number; heig
 
 function StatPill({ label, value, color = ACCENT, icon: Icon }: { label: string; value: string | number; color?: string; icon?: typeof Zap }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
+    <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: "#0d1a24", border: `1px solid ${BORDER}` }}>
       {Icon && <Icon className="w-4 h-4" style={{ color }} />}
       <div>
         <div className="text-xs font-bold" style={{ color }}>{value}</div>
@@ -1511,7 +1511,7 @@ function CreatorPerformancePanel({
     >
       {/* Creator Analytics tab */}
       <div
-        className="flex items-end border-b"
+        className="flex items-end justify-end border-b"
         style={{ borderColor: BORDER, minHeight: 48 }}
       >
         <button
@@ -1523,9 +1523,7 @@ function CreatorPerformancePanel({
           className="inline-flex items-center gap-2 px-5 py-3 text-xs font-bold"
           style={{
             color: isOpen ? TEXT_PRIMARY : TEXT_MUTED,
-            background: isOpen ? "rgba(183,255,26,0.14)" : "rgba(255,255,255,0.025)",
-            clipPath: "polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%)",
-            paddingRight: 28,
+             background: isOpen ? "rgba(183,255,26,0.14)" : "rgba(255,255,255,0.025)",
             position: "relative",
           }}
         >
