@@ -255,6 +255,7 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
                   muted
                   playsInline
                   onEnded={handleVideoEnded}
+                  onError={handleVideoEnded}
                   className="w-full scale-125 sm:scale-100"
                   src="https://rupzmxqyhqktpifgfmzc.supabase.co/storage/v1/object/sign/gamefolio-assets/lootbox%20animation%20full.webm?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9hMzEyZGM4MC1lOGJlLTRjMDAtODFhNy1kOTI5MTgyYTJlYWEiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJnYW1lZm9saW8tYXNzZXRzL2xvb3Rib3ggYW5pbWF0aW9uIGZ1bGwud2VibSIsImlhdCI6MTc2ODk0NTAwNCwiZXhwIjo0ODkxMDA5MDA0fQ.p8zCEdY5Zl7RclWOieN4nfuORrxS58FXOmvoRtcMEAQ"
                 />

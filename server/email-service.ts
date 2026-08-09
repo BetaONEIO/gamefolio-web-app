@@ -533,7 +533,7 @@ export class EmailService {
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { text-align: center; margin-bottom: 30px; background-color: #4C8; color: white; padding: 20px; border-radius: 8px; }
+            .header { text-align: center; margin-bottom: 30px; background-color: #B7FF1A; color: #071013; padding: 20px; border-radius: 8px; }
             .logo { color: #ffffff; font-size: 24px; font-weight: bold; }
             .content { background-color: #ffffff; padding: 30px; border-radius: 8px; border: 1px solid #ddd; }
             .user-details { background-color: #f8f9fa; padding: 20px; border-radius: 6px; margin: 20px 0; }
@@ -552,7 +552,7 @@ export class EmailService {
               <p style="margin: 10px 0 0 0;">Gamefolio Platform</p>
             </div>
             <div class="content">
-              <h1 style="color: #4C8;">New User Joined!</h1>
+              <h1 style="color: #B7FF1A;">New User Joined!</h1>
               <p>A new user has successfully registered on the Gamefolio platform.</p>
               
               <div class="user-details">

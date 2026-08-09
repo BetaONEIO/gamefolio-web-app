@@ -145,7 +145,7 @@ const HashtagPage = () => {
 
       {/* Hashtag Stats */}
       {sortedClips.length > 0 && (
-        <div className="mt-12 p-6 bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg">
+        <div className="mt-12 p-6 bg-card border border-border rounded-lg">
           <h3 className="text-lg font-semibold mb-4">#{hashtag} Stats</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
             <div>

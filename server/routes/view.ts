@@ -125,13 +125,6 @@ router.get('/screenshot/:id', async (req, res) => {
       if (recordView('screenshot', screenshotId, ip)) {
         await storage.incrementScreenshotViews(screenshotId);
 
-        // Award 1 point to the content owner for receiving a view
-        const { LeaderboardService } = await import("../leaderboard-service");
-        await LeaderboardService.awardPoints(
-          screenshot.userId,
-          'view',
-          `Screenshot #${screenshotId} received a view`
-        );
       }
     } catch (viewError) {
       console.log(`⚠️ Warning: Could not increment view count for screenshot ${screenshotId}:`, viewError);

@@ -73,7 +73,7 @@ const TrendingGamesHomeSection = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {isLoadingGames ? (
             Array(10).fill(0).map((_, i) => (
-              <div key={i} className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/30 rounded-lg overflow-hidden">
+              <div key={i} className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl bg-card border border-border hover:border-primary/30 rounded-lg overflow-hidden">
                 <div className="p-0">
                   <div className="aspect-[3/4] relative overflow-hidden rounded-t-lg">
                     <Skeleton className="w-full h-full" />
@@ -89,7 +89,7 @@ const TrendingGamesHomeSection = () => {
             twitchTrendingGames?.slice(0, 10).map((game) => (
               <div 
                 key={game.id} 
-                className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/30 rounded-lg overflow-hidden"
+                className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl bg-card border border-border hover:border-primary/30 rounded-lg overflow-hidden"
                 onClick={() => {
                   // Convert game name to slug format (same as game-page.tsx)
                   const gameSlug = game.name.toLowerCase().replace(/[^a-z0-9]/g, '');

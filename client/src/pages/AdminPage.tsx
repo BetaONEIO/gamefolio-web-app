@@ -3,6 +3,7 @@ import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { AlertSettings } from "@/components/admin/AlertSettings";
 import { PushBroadcastPanel } from "@/components/admin/PushBroadcastPanel";
+import { AdminBountiesPanel } from "@/components/admin/AdminBountiesPanel";
 import { AmbassadorManagementPanel } from "@/components/admin/AmbassadorManagementPanel";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
@@ -3257,6 +3258,7 @@ const AdminPage = () => {
           <TabsTrigger value="games" className="text-xs px-3 py-1.5">Games</TabsTrigger>
           <TabsTrigger value="alerts" className="text-xs px-3 py-1.5">Alerts</TabsTrigger>
           <TabsTrigger value="push" className="text-xs px-3 py-1.5">Push</TabsTrigger>
+          <TabsTrigger value="bounties" className="text-xs px-3 py-1.5">Bounties</TabsTrigger>
           <TabsTrigger value="oauth-apps" className="text-xs px-3 py-1.5">Developer</TabsTrigger>
         </TabsList>
 
@@ -3267,6 +3269,10 @@ const AdminPage = () => {
 
         <TabsContent value="push" className="space-y-4">
           <PushBroadcastPanel />
+        </TabsContent>
+
+        <TabsContent value="bounties" className="space-y-4">
+          <AdminBountiesPanel />
         </TabsContent>
 
         <TabsContent value="ambassadors" className="space-y-4">
@@ -3413,7 +3419,7 @@ const AdminPage = () => {
                         <XAxis dataKey="name" />
                         <YAxis />
                         <Tooltip />
-                        <Bar dataKey="value" name="Users" fill="#4C8">
+                        <Bar dataKey="value" name="Users" fill="#B7FF1A">
                           {formatAgeRangeData().map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}

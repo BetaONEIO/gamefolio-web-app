@@ -45,6 +45,7 @@ import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWra
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
+import ManageGameSettings from "@/components/indie/ManageGameSettings";
 
 const EMOJI_CATEGORIES = [
   {
@@ -555,7 +556,46 @@ export default function SettingsPage() {
   const { customerInfo, refreshCustomerInfo } = useRevenueCat();
   
   const updateProfile = useUpdateProfile();
-  
+
+  const { data: steamVerification } = useQuery<{
+    verified: boolean;
+    steamVerifiedAppId: string | null;
+    steamVerifiedAt: string | null;
+    pending: { steamAppId: string; code: string; expiresAt: string } | null;
+  }>({
+    queryKey: ['/api/indie/steam/status'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!user,
+  });
+
+  const startSteamVerificationMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/indie/steam/start-verification');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/indie/steam/status'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Could not start verification', description: error.message, variant: 'gamefolioError' });
+    },
+  });
+
+  const verifySteamMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/indie/steam/verify');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/indie/steam/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      toast({ title: 'Steam ownership verified!', description: 'Your game details have been updated from Steam.', variant: 'gamefolioSuccess' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Verification failed', description: error.message, variant: 'gamefolioError' });
+    },
+  });
+
   const [showAddPlatform, setShowAddPlatform] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformKey | null>(null);
   const [platformHandle, setPlatformHandle] = useState('');
@@ -918,8 +958,19 @@ export default function SettingsPage() {
     profileFont: (user as any)?.profileFont || "default",
     profileFontEffect: (user as any)?.profileFontEffect || "none",
     profileFontAnimation: (user as any)?.profileFontAnimation || "none",
-    profileFontColor: (user as any)?.profileFontColor || "#FFFFFF"
+    profileFontColor: (user as any)?.profileFontColor || "#FFFFFF",
+    gameDescription: (user as any)?.gameDescription || "",
+    gameKeyFeatures: ((user as any)?.gameKeyFeatures || []) as string[],
+    studioFoundedYear: (user as any)?.studioFoundedYear || "",
+    studioTeamSize: (user as any)?.studioTeamSize || "",
+    gameReleaseDate: (user as any)?.gameReleaseDate || "",
+    gameSteamUrl: (user as any)?.gameSteamUrl || "",
+    gameEpicUrl: (user as any)?.gameEpicUrl || "",
+    gameTrailerUrl: (user as any)?.gameTrailerUrl || "",
+    gameScreenshotUrls: ((user as any)?.gameScreenshotUrls || []) as string[],
   });
+  const [newKeyFeature, setNewKeyFeature] = useState("");
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
   
   const [avatarBorderColor, setAvatarBorderColor] = useState<string>(user?.avatarBorderColor || '#B7FF1A');
   const [selectedBorderId, setSelectedBorderId] = useState<number | null>(user?.selectedAvatarBorderId ?? -1);
@@ -1151,6 +1202,7 @@ export default function SettingsPage() {
         };
 
         return {
+          ...prev,
           displayName: user.displayName || "",
           bio: user.bio || "",
           avatarUrl: user.avatarUrl || "",
@@ -1253,7 +1305,16 @@ export default function SettingsPage() {
     primaryUserType !== savedPrimary ||
     isStreamingEnabled !== savedIsStreamer ||
     streamPlatform !== ((user as any)?.streamPlatform || 'twitch') ||
-    showLiveOverlay !== ((user as any)?.showLiveOverlay || false);
+    showLiveOverlay !== ((user as any)?.showLiveOverlay || false) ||
+    normalizeValue(profileData.gameDescription) !== normalizeValue((user as any)?.gameDescription) ||
+    normalizeValue(profileData.studioFoundedYear) !== normalizeValue((user as any)?.studioFoundedYear) ||
+    normalizeValue(profileData.studioTeamSize) !== normalizeValue((user as any)?.studioTeamSize) ||
+    normalizeValue(profileData.gameReleaseDate) !== normalizeValue((user as any)?.gameReleaseDate) ||
+    normalizeValue(profileData.gameSteamUrl) !== normalizeValue((user as any)?.gameSteamUrl) ||
+    normalizeValue(profileData.gameEpicUrl) !== normalizeValue((user as any)?.gameEpicUrl) ||
+    normalizeValue(profileData.gameTrailerUrl) !== normalizeValue((user as any)?.gameTrailerUrl) ||
+    JSON.stringify(profileData.gameKeyFeatures) !== JSON.stringify((user as any)?.gameKeyFeatures || []) ||
+    JSON.stringify(profileData.gameScreenshotUrls) !== JSON.stringify((user as any)?.gameScreenshotUrls || []);
   
 
   // Handle crop complete callback
@@ -1439,8 +1500,13 @@ export default function SettingsPage() {
         auth_failed: 'Kick authentication failed. Please try again.',
         no_channel: 'No Kick channel found on your account.',
       };
-      toast({ title: "Kick connection failed", description: errMap[params.get('kick_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
-      window.history.replaceState({}, '', window.location.pathname);
+      if (isOAuthPopup) {
+        try { window.opener.postMessage({ type: 'kick_error', error: params.get('kick_error')! }, window.location.origin); } catch {}
+        setTimeout(() => window.close(), 1500);
+      } else {
+        toast({ title: "Kick connection failed", description: errMap[params.get('kick_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     } else if (params.get('twitch_connected') === 'true') {
       refreshUser();
       toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked." + (isOAuthPopup ? ' This tab will close shortly.' : ''), duration: 4000 });
@@ -1454,8 +1520,13 @@ export default function SettingsPage() {
         auth_failed: 'Twitch authentication failed. Please try again.',
         no_user: 'No Twitch user found on your account.',
       };
-      toast({ title: "Twitch connection failed", description: errMap[params.get('twitch_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
-      window.history.replaceState({}, '', window.location.pathname);
+      if (isOAuthPopup) {
+        try { window.opener.postMessage({ type: 'twitch_error', error: params.get('twitch_error')! }, window.location.origin); } catch {}
+        setTimeout(() => window.close(), 1500);
+      } else {
+        toast({ title: "Twitch connection failed", description: errMap[params.get('twitch_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     } else if (params.get('rumble_connected') === 'true') {
       refreshUser();
       toast({ title: "Rumble connected!", description: "Your Rumble channel has been verified and linked.", duration: 4000 });
@@ -1656,6 +1727,44 @@ export default function SettingsPage() {
   }, [(user as any)?.selectedVerificationBadgeId, pendingVerificationBadgeId]);
   
 
+
+  // Listen for OAuth results posted back from a popup tab
+  useEffect(() => {
+    const twitchErrMap: Record<string, string> = {
+      access_denied: 'You cancelled the Twitch authorisation.',
+      invalid_state: 'Invalid OAuth state. Please try again.',
+      not_configured: 'Twitch OAuth is not configured on this server.',
+      auth_failed: 'Twitch authentication failed. Please try again.',
+      no_user: 'No Twitch user found on your account.',
+    };
+    const kickErrMap: Record<string, string> = {
+      access_denied: 'You cancelled the Kick authorisation.',
+      redirect_uri_mismatch: 'Redirect URI mismatch — check the Kick developer dashboard.',
+      invalid_state: 'Invalid OAuth state. Please try again.',
+      not_configured: 'Kick OAuth is not configured on this server.',
+      auth_failed: 'Kick authentication failed. Please try again.',
+      no_channel: 'No Kick channel found on your account.',
+    };
+    const handler = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      const { type, error } = e.data ?? {};
+      if (type === 'twitch_connected') {
+        refreshUser();
+        setConnectingTwitch(false);
+        toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
+      } else if (type === 'twitch_error') {
+        setConnectingTwitch(false);
+        toast({ title: "Twitch connection failed", description: twitchErrMap[error] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+      } else if (type === 'kick_connected') {
+        refreshUser();
+        toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
+      } else if (type === 'kick_error') {
+        toast({ title: "Kick connection failed", description: kickErrMap[error] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -1908,6 +2017,12 @@ export default function SettingsPage() {
     return <div>Please log in to access settings.</div>;
   }
 
+  // Indie Game accounts get a completely separate management experience
+  const isIndieGame = user.isPartner && user.partnerType === "indie";
+  if (isIndieGame) {
+    return <ManageGameSettings />;
+  }
+
   // Convert hex colors to RGB for opacity support
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -1948,32 +2063,36 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 gap-1">
+          <TabsList className={`grid w-full gap-1 ${user.isPartner ? "grid-cols-2" : "grid-cols-3 sm:grid-cols-5"}`}>
             <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Profile</span>
-              <span className="sm:hidden">Profile</span>
+              <span>Profile</span>
             </TabsTrigger>
-            <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Appearance</span>
-              <span className="sm:hidden">Look</span>
-            </TabsTrigger>
-            <TabsTrigger value="banners" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Banner Images</span>
-              <span className="sm:hidden">Banner</span>
-            </TabsTrigger>
+            {!user.isPartner && (
+              <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Appearance</span>
+                <span className="sm:hidden">Look</span>
+              </TabsTrigger>
+            )}
+            {!user.isPartner && (
+              <TabsTrigger value="banners" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Banner Images</span>
+                <span className="sm:hidden">Banner</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="platforms" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Gamepad2 className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Platforms</span>
-              <span className="sm:hidden">Platforms</span>
+              <span>Platforms</span>
             </TabsTrigger>
-            <TabsTrigger value="streamer" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Video className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Streamer</span>
-              <span className="sm:hidden">Stream</span>
-            </TabsTrigger>
+            {!user.isPartner && (
+              <TabsTrigger value="streamer" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Video className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Streamer</span>
+                <span className="sm:hidden">Stream</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Profile Tab */}
@@ -2779,6 +2898,256 @@ export default function SettingsPage() {
                     rows={3}
                   />
                 </div>
+
+                {primaryUserType.split(',').map(t => t.trim()).includes('indie_developer') && (
+                  <div className="space-y-4 border border-border rounded-lg p-4">
+                    <div>
+                      <h3 className="text-sm font-semibold">Indie Game Details</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Shown on your public Gamefolio profile in the Overview tab.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="gameDescription">Game Description</Label>
+                      <Textarea
+                        id="gameDescription"
+                        value={profileData.gameDescription}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, gameDescription: e.target.value }))}
+                        placeholder="Tell players about your game..."
+                        rows={4}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Key Features</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={newKeyFeature}
+                          onChange={(e) => setNewKeyFeature(e.target.value)}
+                          placeholder="Add a feature..."
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const val = newKeyFeature.trim();
+                              if (val) {
+                                setProfileData(prev => ({ ...prev, gameKeyFeatures: [...prev.gameKeyFeatures, val] }));
+                                setNewKeyFeature("");
+                              }
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => {
+                            const val = newKeyFeature.trim();
+                            if (val) {
+                              setProfileData(prev => ({ ...prev, gameKeyFeatures: [...prev.gameKeyFeatures, val] }));
+                              setNewKeyFeature("");
+                            }
+                          }}
+                        >
+                          Add
+                        </Button>
+                      </div>
+                      {profileData.gameKeyFeatures.length > 0 && (
+                        <ul className="space-y-1 mt-2">
+                          {profileData.gameKeyFeatures.map((feature, idx) => (
+                            <li key={idx} className="flex items-center justify-between text-sm bg-muted/50 rounded px-2 py-1">
+                              <span>{feature}</span>
+                              <button
+                                type="button"
+                                className="text-muted-foreground hover:text-destructive"
+                                onClick={() => setProfileData(prev => ({
+                                  ...prev,
+                                  gameKeyFeatures: prev.gameKeyFeatures.filter((_, i) => i !== idx),
+                                }))}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="studioFoundedYear">Studio Founded Year</Label>
+                        <Input
+                          id="studioFoundedYear"
+                          value={profileData.studioFoundedYear}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, studioFoundedYear: e.target.value }))}
+                          placeholder="e.g. 2021"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="studioTeamSize">Team Size</Label>
+                        <Input
+                          id="studioTeamSize"
+                          value={profileData.studioTeamSize}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, studioTeamSize: e.target.value }))}
+                          placeholder="e.g. 5 people"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="gameReleaseDate">Release Date</Label>
+                      <Input
+                        id="gameReleaseDate"
+                        value={profileData.gameReleaseDate}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, gameReleaseDate: e.target.value }))}
+                        placeholder="e.g. Q4 2026 or Available Now"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="gameSteamUrl">Steam Store URL</Label>
+                        <Input
+                          id="gameSteamUrl"
+                          value={profileData.gameSteamUrl}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, gameSteamUrl: e.target.value }))}
+                          placeholder="https://store.steampowered.com/app/..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="gameEpicUrl">Epic Games Store URL</Label>
+                        <Input
+                          id="gameEpicUrl"
+                          value={profileData.gameEpicUrl}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, gameEpicUrl: e.target.value }))}
+                          placeholder="https://store.epicgames.com/..."
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 border rounded-lg p-3">
+                      {steamVerification?.verified ? (
+                        <div className="flex items-center gap-2 text-sm text-primary">
+                          <Check className="h-4 w-4" />
+                          <span>Verified owner of this Steam store page</span>
+                        </div>
+                      ) : steamVerification?.pending ? (
+                        <div className="space-y-2">
+                          <p className="text-sm">
+                            Add this code to your game's Steam store page description (Steamworks &gt; Store Page), save it, then verify:
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <code className="text-foreground bg-muted rounded px-2 py-1 text-sm font-mono">{steamVerification.pending.code}</code>
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={verifySteamMutation.isPending}
+                              onClick={() => verifySteamMutation.mutate()}
+                            >
+                              {verifySteamMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "I've added it — Verify"}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Code expires 15 minutes after starting.</p>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm text-muted-foreground">Prove you own this Steam store page to get a verified badge and auto-fill your game details.</p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={startSteamVerificationMutation.isPending || !profileData.gameSteamUrl}
+                            onClick={() => startSteamVerificationMutation.mutate()}
+                          >
+                            {startSteamVerificationMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><FaSteam className="h-4 w-4 mr-2" />Verify ownership</>}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="gameTrailerUrl">Video Trailer</Label>
+                      <Input
+                        id="gameTrailerUrl"
+                        value={profileData.gameTrailerUrl}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, gameTrailerUrl: e.target.value }))}
+                        placeholder="YouTube link or direct video URL"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Shown as the default video at the top of your Overview tab.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Screenshots</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Add screenshots of your game, shown in a gallery on your Overview tab.
+                      </p>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
+                        {profileData.gameScreenshotUrls.map((url, idx) => (
+                          <div key={idx} className="relative aspect-video rounded-md overflow-hidden group border border-border">
+                            <img src={url} alt={`Screenshot ${idx + 1}`} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              className="absolute top-1 right-1 bg-black/60 rounded-full p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => setProfileData(prev => ({
+                                ...prev,
+                                gameScreenshotUrls: prev.gameScreenshotUrls.filter((_, i) => i !== idx),
+                              }))}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                        <label
+                          htmlFor="gameScreenshotUpload"
+                          className="aspect-video rounded-md border border-dashed border-border flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-muted/50 transition-colors"
+                        >
+                          {uploadingScreenshot ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          ) : (
+                            <>
+                              <Plus className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-[10px] text-muted-foreground">Add</span>
+                            </>
+                          )}
+                        </label>
+                        <input
+                          id="gameScreenshotUpload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={uploadingScreenshot}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = '';
+                            if (!file) return;
+                            setUploadingScreenshot(true);
+                            try {
+                              const formData = new FormData();
+                              formData.append('screenshot', file);
+                              const response = await fetch('/api/upload/game-screenshot', {
+                                method: 'POST',
+                                body: formData,
+                              });
+                              if (!response.ok) throw new Error('Failed to upload screenshot');
+                              const data = await response.json();
+                              setProfileData(prev => ({ ...prev, gameScreenshotUrls: data.gameScreenshotUrls }));
+                              queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+                            } catch (err) {
+                              toast({
+                                title: "Upload failed",
+                                description: err instanceof Error ? err.message : "Failed to upload screenshot",
+                                variant: "destructive",
+                              });
+                            } finally {
+                              setUploadingScreenshot(false);
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">

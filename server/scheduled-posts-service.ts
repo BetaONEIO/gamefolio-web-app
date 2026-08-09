@@ -1,7 +1,5 @@
 import { storage } from './storage';
-import { LeaderboardService } from './leaderboard-service';
-import { BonusEventsService } from './bonus-events-service';
-import { CreatorMilestoneService } from './creator-milestone-service';
+import { XPService } from './xp-service';
 import type { ScheduledPost, InsertClip, InsertScreenshot } from '@shared/schema';
 
 // After this many failed publish attempts we stop retrying and mark the row
@@ -19,13 +17,19 @@ async function awardUploadRewards(
 ): Promise<void> {
   try {
     if (kind === 'screenshot') {
-      await LeaderboardService.awardPoints(userId, 'screenshot_upload', `Upload: Screenshot - ${title}`);
-      await BonusEventsService.awardWeekendUploadBonus(userId, 100);
-      await CreatorMilestoneService.checkFirstUploadOfDay(userId);
-      await CreatorMilestoneService.checkWeeklyUploadMilestones(userId);
-      await BonusEventsService.checkConsecutiveUploadBonus(userId);
+      await XPService.awardXP(
+        userId,
+        100,
+        'upload',
+        `Earned 100 XP for uploading a screenshot`
+      );
     } else {
-      await LeaderboardService.awardPoints(userId, 'upload', `Upload: ${kind === 'reel' ? 'Reel' : 'Clip'} - ${title}`);
+      await XPService.awardXP(
+        userId,
+        250,
+        'upload',
+        `Earned 250 XP for uploading a ${kind}`,
+      );
     }
   } catch (err) {
     console.error(`⚠️ Scheduled post published but reward side-effects failed for user ${userId}:`, err);

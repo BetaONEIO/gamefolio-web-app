@@ -39,6 +39,8 @@ import {
   type ScheduledPost, type InsertScheduledPost, type ScheduledPostLimits,
   type UserDailyFires, type InsertUserDailyFires,
   type FireLimits,
+  type UserDailyImports,
+  type ImportLimits,
   type NameTag, type InsertNameTag,
   type UserUnlockedNameTag, type InsertUserUnlockedNameTag,
   type ProfileBorder, type InsertProfileBorder,
@@ -59,7 +61,9 @@ import {
   adminAlertSettings,
   type AdminAlertSettings, type InsertAdminAlertSettings,
   type PushToken, type InsertPushToken,
-  type PushBroadcast, type PushAudience
+  type PushBroadcast, type PushAudience,
+  type IndieGameProfile, type InsertIndieGameProfile,
+  type IndieGameFieldOverride
 } from "@shared/schema";
 
 export interface IStorage {
@@ -288,6 +292,7 @@ export interface IStorage {
 
   // XP operations (legacy - kept for backward compatibility, totalXP now stores points)
   addUserXPHistory(xpHistory: InsertUserXPHistory): Promise<UserXPHistory>;
+  addUserXPHistoryIfAbsent(xpHistory: InsertUserXPHistory): Promise<UserXPHistory | null>;
   incrementUserXP(userId: number, xpAmount: number): Promise<void>;
   getUserXPHistory(userId: number, limit?: number): Promise<(UserXPHistory & { clip?: Clip | null })[]>;
   getXPLeaderboard(limit?: number): Promise<Array<{ id: number; username: string; displayName: string; avatarUrl: string | null; totalXP: number }>>;
@@ -296,6 +301,8 @@ export interface IStorage {
   getUserPointsHistory(userId: number, limit?: number): Promise<UserPointsHistory[]>;
   incrementUserPoints(userId: number, points: number): Promise<void>;
   hasUserEarnedPointsForContent(userId: number, action: string, contentType: string, contentId: number): Promise<boolean>;
+  hasUserEarnedXPForContent(userId: number, source: string, contentType: string, contentId: number): Promise<boolean>;
+  hasUserEarnedXPForReaction(creatorId: number, source: string, contentType: string, contentId: number, reactorId: number): Promise<boolean>;
 
   // Notification operations
   createNotification(notification: InsertNotification): Promise<Notification>;
@@ -314,6 +321,7 @@ export interface IStorage {
   deletePushToken(token: string): Promise<boolean>;
   deletePushTokensByUser(userId: number): Promise<number>;
   getPushTokensByUserIds(userIds: number[]): Promise<PushToken[]>;
+  hasReceivedXPSourceToday(userId: number, source: string): Promise<boolean>;
   getAllPushTokens(): Promise<PushToken[]>;
   getPushTokensByRole(role: string): Promise<PushToken[]>;
   getPushTokensForProUsers(): Promise<PushToken[]>;
@@ -555,11 +563,21 @@ export interface IStorage {
   getUserDailyFires(userId: number): Promise<UserDailyFires | null>;
   incrementDailyFireCount(userId: number): Promise<UserDailyFires>;
   getFireLimits(userId: number): Promise<FireLimits>;
+  getUserDailyImports(userId: number, date: string): Promise<UserDailyImports | null>;
+  incrementDailyImportCount(userId: number): Promise<UserDailyImports>;
+  getImportLimits(userId: number): Promise<ImportLimits>;
 
   // XP settings operations
   getXpSettings(): Promise<XpSetting[]>;
   updateXpSetting(key: string, value: number, updatedBy?: number): Promise<XpSetting>;
   upsertXpSetting(setting: InsertXpSetting): Promise<XpSetting>;
+
+  // Indie game profile operations
+  getIndieGameProfile(userId: number): Promise<IndieGameProfile | null>;
+  upsertIndieGameProfile(userId: number, patch: Partial<InsertIndieGameProfile>): Promise<IndieGameProfile>;
+  getIndieFieldMeta(userId: number): Promise<Record<string, IndieGameFieldOverride>>;
+  upsertIndieFieldMeta(userId: number, fieldName: string, patch: Partial<Omit<IndieGameFieldOverride, "id" | "userId" | "fieldName" | "createdAt">>): Promise<void>;
+  getIndieGameProfileByUsername(username: string): Promise<{ profile: IndieGameProfile | null; user: User } | null>;
 }
 
 // Use DatabaseStorage with Supabase - no fallback to in-memory storage

@@ -6,19 +6,17 @@ import fs from 'fs';
 import { supabaseTusStore } from '../tus-storage';
 import { supabaseStorage } from '../supabase-storage';
 import { storage } from '../storage';
-import { insertScreenshotSchema, type UploadLimits } from '@shared/schema';
+import { insertClipSchema, insertScreenshotSchema, type UploadLimits } from '@shared/schema';
 import { VideoProcessor } from '../video-processor';
 import sharp from 'sharp';
 import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
 import { fullAccessMiddleware } from '../middleware/full-access';
 import { hybridFullAccess } from '../middleware/hybrid-auth';
-import { LeaderboardService, POINT_VALUES } from '../leaderboard-service';
-import { BonusEventsService } from '../bonus-events-service';
-import { CreatorMilestoneService } from '../creator-milestone-service';
-import { processAndCreateClip, ClipProcessingError } from '../services/clip-processing';
+import { XPService } from '../xp-service';
 import { captureRouteError } from "../sentry";
 import { getRequestMeta } from "../lib/request-meta";
+import { processAndCreateClip, ClipProcessingError } from '../services/clip-processing';
 
 const router = express.Router();
 
@@ -648,22 +646,12 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
     const screenshot = await storage.createScreenshot(screenshotDataWithShareCode);
     await storage.incrementUploadUsage(req.user!.id, 'screenshot');
 
-    // Award upload points to the user (screenshots are worth 100 XP)
-    await LeaderboardService.awardPoints(
+    await XPService.awardXP(
       req.user!.id,
-      'screenshot_upload',
-      `Upload: Screenshot - ${screenshot.title}`
+      100,
+      'upload',
+      `Earned 100 XP for uploading a screenshot`
     );
-
-    // Weekend upload bonus (+50% XP on Sat/Sun)
-    await BonusEventsService.awardWeekendUploadBonus(req.user!.id, 100);
-
-    // Creator milestones: first upload of the day + weekly milestones
-    await CreatorMilestoneService.checkFirstUploadOfDay(req.user!.id);
-    await CreatorMilestoneService.checkWeeklyUploadMilestones(req.user!.id);
-
-    // Consecutive upload bonus
-    await BonusEventsService.checkConsecutiveUploadBonus(req.user!.id);
 
     // Generate QR code and sharing data for screenshot
     const baseUrl = 'https://app.gamefolio.com';
@@ -690,7 +678,7 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
         shareUrl: screenshotUrl,
         socialMediaLinks
       },
-      xpGained: POINT_VALUES['screenshot_upload'] ?? 100,
+      xpGained: 100,
       userXP: user?.totalXP || 0,
       userLevel: user?.level || 1,
       message: 'Screenshot uploaded successfully'
@@ -745,8 +733,33 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
       }
     }
 
+    // Clips fetched from Twitch count against a daily import allowance
+    // (free: 2/day, Pro: 10/day). Gate before any expensive processing; the
+    // counter is incremented only after the clip is successfully created.
+    const isTwitchImport = req.body.source === 'twitch';
+    if (isTwitchImport) {
+      const importLimits = await storage.getImportLimits(req.user!.id);
+      if (!importLimits.canImport) {
+        return res.status(429).json({
+          error: 'Daily Twitch import limit reached',
+          message: importLimits.isPro
+            ? `You've imported all ${importLimits.maxImportsPerDay} Twitch clips for today. Your limit refreshes tomorrow.`
+            : `You've imported your ${importLimits.maxImportsPerDay} Twitch clips for today. Pro members can import up to 10 a day — and your limit refreshes tomorrow.`,
+          limits: importLimits,
+        });
+      }
+    }
+
     const { ip: uploadIp, deviceId: uploadDeviceId } = getRequestMeta(req);
     const responseData = await processAndCreateClip(req.user!.id, { ...req.body, scheduledAt, uploadIp, uploadDeviceId });
+
+    // Count this against the user's daily Twitch import allowance (post-time,
+    // so fetching/previewing a clip without posting it never burns quota;
+    // scheduled imports aren't counted until they'd actually publish).
+    if (isTwitchImport && 'clip' in responseData) {
+      await storage.incrementDailyImportCount(req.user!.id);
+    }
+
     console.log(`🎯 XP Debug - Response data: xpGained=${responseData.xpGained}, userXP=${responseData.userXP}, userLevel=${responseData.userLevel}`);
     res.json(responseData);
   } catch (error) {

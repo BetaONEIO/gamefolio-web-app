@@ -23,6 +23,7 @@ import AuthModal from "@/components/auth/auth-modal";
 import DailyXpBonus from "@/components/gamification/DailyXpBonus";
 import DailyStreakOverlay from "@/components/gamification/DailyStreak";
 import { ProtectedRoute } from "@/components/auth/protected-route";
+import { PartnerProtectedRoute } from "@/components/auth/partner-protected-route";
 import { AdminProtectedRoute } from "@/components/auth/admin-protected-route";
 import { AmbassadorProtectedRoute } from "@/components/auth/ambassador-protected-route";
 import { OnboardingGuard } from "@/components/auth/onboarding-guard";
@@ -101,6 +102,7 @@ function lazyWithRecovery<T extends React.ComponentType<object>>(
 }
 
 const HomePage = lazyWithRecovery(() => import("./pages/HomePageSimple"));
+const DashboardPage = lazyWithRecovery(() => import("./pages/DashboardPage"));
 const ProfilePage = lazyWithRecovery(() => import("./pages/ProfilePage"));
 const ExplorePage = lazyWithRecovery(() => import("./pages/explore-page"));
 const TrendingPage = lazyWithRecovery(() => import("./pages/TrendingPage"));
@@ -111,6 +113,9 @@ const ClipPage = lazyWithRecovery(() => import("./pages/ClipPage"));
 const ClipRedirectPage = lazyWithRecovery(() => import("./pages/ClipRedirectPage"));
 const UploadPage = lazyWithRecovery(() => import("./pages/UploadPage"));
 const ScheduledPostsPage = lazyWithRecovery(() => import("./pages/ScheduledPostsPage"));
+const IndieDashboardPage = lazyWithRecovery(() => import("./pages/IndieDashboardPage"));
+const StreamerDashboardPage = lazyWithRecovery(() => import("./pages/StreamerDashboardPage"));
+const BulkUploadPage = lazyWithRecovery(() => import("./pages/BulkUploadPage"));
 const ScreenshotUploadPage = lazyWithRecovery(() => import("./pages/ScreenshotUploadPage"));
 const AccountSettingsPage = lazyWithRecovery(() => import("./pages/AccountSettingsPage"));
 const GameCategoriesPage = lazyWithRecovery(() => import("./pages/GameCategoriesPage"));
@@ -121,6 +126,7 @@ const AuthPage = lazyWithRecovery(() => import("./pages/auth-page"));
 const OnboardingPage = lazyWithRecovery(() => import("./pages/onboarding-page"));
 const MessagesPage = lazyWithRecovery(() => import("./pages/MessagesPage"));
 const LatestReelsPage = lazyWithRecovery(() => import("./pages/LatestReelsPage"));
+const LatestContentPage = lazyWithRecovery(() => import("./pages/LatestContentPage"));
 const LatestClipsPage = lazyWithRecovery(() => import("./pages/LatestClipsPage"));
 const LatestScreenshotsPage = lazyWithRecovery(() => import("@/pages/LatestScreenshotsPage"));
 const InvitePage = lazyWithRecovery(() => import("./pages/InvitePage"));
@@ -162,6 +168,10 @@ const DebugWalletPage = lazyWithRecovery(() => import("./pages/DebugWalletPage")
 const TwoFactorVerifyPage = lazyWithRecovery(() => import("./pages/TwoFactorVerifyPage"));
 const MintNFTPage = lazyWithRecovery(() => import("./pages/MintNFTPage"));
 const NFTDetailsPage = lazyWithRecovery(() => import("./pages/NFTDetailsPage"));
+const IndieGamePage = lazyWithRecovery(() => import("./pages/indie-game-page"));
+const IndieGameProfilePage = lazyWithRecovery(() => import("./pages/IndieGameProfilePage"));
+const IndieGameDashboard = lazyWithRecovery(() => import("./pages/IndieGameDashboard"));
+const BountiesPage = lazyWithRecovery(() => import("./pages/BountiesPage"));
 
 // Loading component for lazy-loaded routes
 function RouteLoader() {
@@ -398,7 +408,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
       {/* Dynamic Banner */}
       {!isDeveloperSubdomain && !isLoadingBanner && bannerSettings && bannerSettings.isEnabled && !isBannerDismissed && (
-        <Alert className={`mx-4 mt-2 border-primary/30 bg-primary/10 backdrop-blur-sm relative z-20 ${!isMobile ? 'ml-64' : ''}`}>
+        <Alert className={`mx-4 mt-2 border-primary bg-secondary relative z-20 ${!isMobile ? 'ml-64' : ''}`}>
           {bannerSettings.showIcon && <AlertTriangle className="h-4 w-4 text-primary" />}
           <AlertDescription className="text-foreground flex items-center justify-between">
             <span>
@@ -494,6 +504,7 @@ function Router() {
           <Switch>
           {/* Public routes accessible to guests */}
           <Route path="/" component={RootRoute} />
+          <Route path="/dashboard" component={DashboardPage} />
           <Route path="/trending" component={TrendingPage} />
           <Route path="/clip/:id" component={ClipRedirectPage} />
           <Route path="/clips/:id" component={ClipRedirectPage} />
@@ -516,10 +527,18 @@ function Router() {
           {/* Protected routes requiring authentication */}
           <Route path="/explore" component={ExplorePage} />
           <Route path="/games/:gameSlug" component={GamePage} />
+          <Route path="/indie-games/:slug" component={IndieGamePage} />
+          <Route path="/studio/:username" component={IndieGameProfilePage} />
+          <PartnerProtectedRoute path="/studio-dashboard" partnerType="indie" component={IndieGameDashboard} />
           <Route path="/games/:gameId/clips" component={GameClipsPage} />
           <ProtectedRoute path="/hashtag/:hashtag" component={HashtagPage} />
           <ProtectedRoute path="/upload" component={UploadPage} />
           <ProtectedRoute path="/scheduled-posts" component={ScheduledPostsPage} />
+          <PartnerProtectedRoute path="/indie/dashboard" partnerType="indie" component={IndieDashboardPage} />
+          <PartnerProtectedRoute path="/settings/game" partnerType="indie" component={SettingsPage} />
+          <PartnerProtectedRoute path="/bounties" partnerType="indie" component={BountiesPage} />
+          <Route path="/streamer/dashboard" component={StreamerDashboardPage} />
+          <ProtectedRoute path="/upload/bulk" component={BulkUploadPage} />
           <ProtectedRoute path="/upload/screenshots" component={ScreenshotUploadPage} />
           <ProtectedRoute path="/upload-success" component={PostUploadSuccessPage} />
           <ProtectedRoute path="/upload-success/:contentType/:contentId" component={PostUploadSuccessPage} />
@@ -533,6 +552,7 @@ function Router() {
           <ProtectedRoute path="/notifications" component={NotificationsPage} />
           <Route path="/latest-reels" component={LatestReelsPage} />
           <Route path="/latest-clips" component={LatestClipsPage} />
+          <Route path="/latest-content" component={LatestContentPage} />
           <Route path="/latest-screenshots" component={LatestScreenshotsPage} />
 
           <AmbassadorProtectedRoute path="/ambassador-dashboard" component={AmbassadorDashboardPage} />
