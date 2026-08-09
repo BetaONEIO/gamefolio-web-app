@@ -415,7 +415,7 @@ export default function MintNFTPage() {
     
     return (
       <div className="min-h-screen bg-[#0B1218] flex flex-col">
-        <header className="sticky top-0 z-40 backdrop-blur-md bg-[#0B1218]/80 border-b border-[#1B2A33]/50">
+        <header className="sticky top-0 z-40 bg-[var(--gf-surface-1)] border-b border-[var(--gf-border)]">
           <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-5xl mx-auto px-6 pt-12 md:pt-6 pb-4">
             <div className="w-10 h-10" />
             <span className="text-lg font-bold text-[#F5F7F2]">Mint Complete</span>
@@ -590,7 +590,7 @@ export default function MintNFTPage() {
 
   return (
     <div className="min-h-screen bg-[#0B1218] flex flex-col">
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-[#0B1218]/80">
+      <header className="sticky top-0 z-40 bg-[var(--gf-surface-1)]">
         <div className="flex items-center justify-between w-full max-w-7xl mx-auto px-4 pt-12 pb-4">
           <Button
             variant="ghost"

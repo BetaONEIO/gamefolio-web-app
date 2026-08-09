@@ -3,9 +3,16 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import * as Sentry from "@sentry/capacitor";
 import { useLocation } from "wouter";
 import { ScheduleControl, type ScheduleLimits } from "@/components/upload/ScheduleControl";
-import { queryClient, authedFetch } from "@/lib/queryClient";
+import { queryClient, authedFetch, getQueryFn } from "@/lib/queryClient";
 import { getAccessToken, getAccessTokenSync } from "@/lib/auth-token";
 import { isNative, resolveApiUrl, getUnpatchedXHR, getUnpatchedFetch } from "@/lib/platform";
+import { isAppActive } from "@/lib/mobile-init";
+import {
+  parseFinishBody,
+  parseFinishHeader,
+  parseFinishError,
+  type TusFinishResult,
+} from "@/lib/tus-finish-payload";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -15,6 +22,7 @@ import { MentionInput } from "@/components/ui/mention-input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import * as tus from "tus-js-client";
 import {
   Card,
@@ -43,8 +51,19 @@ import {
   StopCircle,
   Pause,
   RotateCcw,
-  X
+  X,
+  CalendarClock,
+  Twitch,
+  Eye,
+  Clock
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
@@ -55,7 +74,7 @@ import { ShareDialog } from "@/components/shared/ShareDialog";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { XPGainedDialog } from "@/components/gamification/XPGainedDialog";
 import { ToastAction } from "@/components/ui/toast";
-import type { UploadLimits } from "@shared/schema";
+import type { UploadLimits, ImportLimits } from "@shared/schema";
 
 // Shape of the structured payload the server returns from /api/upload/* and
 // /api/screenshots/upload when an upload is rejected for a tier limit.
@@ -88,6 +107,19 @@ class UploadCancelledError extends Error {
   constructor() {
     super("Upload cancelled");
     this.name = "UploadCancelledError";
+  }
+}
+
+// Thrown when the client gives up waiting on /api/upload/process-video
+// (see ProcessVideoTimeoutError below) but the server-side ffmpeg job may
+// well still be running. This isn't a failure — the clip typically finishes
+// and appears on the user's profile shortly after — so it's handled as a
+// distinct outcome from a real "Upload failed" in onError below, rather
+// than stranding the user on the upload form looking like something broke.
+class StillProcessingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "StillProcessingError";
   }
 }
 
@@ -180,6 +212,20 @@ class NativeBypassHttpStack implements tus.HttpStack {
   getName() {
     return "NativeBypassHttpStack";
   }
+}
+
+// A recent Twitch clip returned by GET /api/twitch/clips, already enriched
+// with our internal game id so it can prefill the upload form directly.
+interface TwitchClipItem {
+  id: string;
+  title: string;
+  thumbnailUrl: string;
+  duration: number;
+  viewCount: number;
+  createdAt: string;
+  gameId: number | null;
+  gameName: string | null;
+  gameImage: string | null;
 }
 
 // Define filter options
@@ -276,12 +322,35 @@ const UploadPage = () => {
   const titleRef = useRef<string>("");
   const descriptionRef = useRef<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Separate hidden input used by the "Add Another Clip/Reel" button so it
+  // can append to the queue via handleAddMoreFiles without going through
+  // handleFileChange's "this is a brand new batch" semantics.
+  const addMoreVideoInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  // Bulk clip/reel upload: files queued behind the one currently in the
+  // editor. Each queued file gets its own full edit pass (trim/filter/
+  // thumbnail) - see resetVideoEditingState/handleFileChange above and the
+  // queue-advance logic in uploadMutation's onSuccess below.
+  const [videoQueue, setVideoQueue] = useState<File[]>([]);
+  const [queueTotal, setQueueTotal] = useState(0);
+  // Per-file metadata drafts (title/description/game/tags/ageRestricted),
+  // keyed by getFileKey(file) - lets a user click a queued clip to bring it
+  // into the editor, fill in its details, then switch away and back without
+  // losing what they typed. Trim/thumbnail state is intentionally NOT
+  // persisted here - each clip still gets a fresh edit pass on load, same
+  // as the auto-advance queue flow.
+  const [videoDrafts, setVideoDrafts] = useState<Record<string, {
+    title: string;
+    description: string;
+    game: Game | null;
+    tags: string[];
+    ageRestricted: boolean;
+  }>>({});
   const [videoPreviewError, setVideoPreviewError] = useState<string | null>(null);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [tags, setTags] = useState<string[]>([]);
@@ -292,6 +361,13 @@ const UploadPage = () => {
   const [scheduledAt, setScheduledAt] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  // Dismissing the blocking modal during the encode step (>=85%) doesn't
+  // cancel anything - the process-video request keeps running server-side
+  // regardless of what's mounted client-side (see StillProcessingError).
+  // isUploading stays true so the beforeunload warning and __gf_uploading__
+  // reload guard keep protecting the in-flight request; this only controls
+  // whether the modal itself is rendered.
+  const [uploadModalDismissed, setUploadModalDismissed] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const uploadAbortRef = useRef<AbortController | null>(null);
   
@@ -358,6 +434,122 @@ const UploadPage = () => {
   const userId = user?.id;
   const uploadSizeTipStorageKey = "gamefolio_upload_size_tip_dismissed";
 
+  // ── Twitch clip import ─────────────────────────────────────────────────
+  const twitchConnected = !!(user as any)?.twitchVerified;
+  const [showTwitchPicker, setShowTwitchPicker] = useState(false);
+  const [importingClipId, setImportingClipId] = useState<string | null>(null);
+  // Tracks whether the currently-staged file came from Twitch (and which clip),
+  // so the post is tagged source:"twitch" and counts against the daily allowance.
+  // Cleared whenever the user picks/clears a file manually.
+  const [twitchSourceClipId, setTwitchSourceClipId] = useState<string | null>(null);
+  // Dismissable "did you know" promo, only shown to users without Twitch linked.
+  const [twitchPromoDismissed, setTwitchPromoDismissed] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem("gf-twitch-import-promo-dismissed") === "1"
+  );
+  const dismissTwitchPromo = () => {
+    localStorage.setItem("gf-twitch-import-promo-dismissed", "1");
+    setTwitchPromoDismissed(true);
+  };
+  // Daily Twitch import allowance (free: 2/day, Pro: 10/day) for the picker UI.
+  const { data: importLimits } = useQuery<ImportLimits>({
+    queryKey: ["/api/twitch/import-limits"],
+    queryFn: async () => {
+      const res = await fetch("/api/twitch/import-limits", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load import limits");
+      return res.json();
+    },
+    enabled: twitchConnected,
+    staleTime: 30_000,
+  });
+  const { data: twitchClips, isLoading: twitchClipsLoading, error: twitchClipsError } = useQuery<TwitchClipItem[]>({
+    queryKey: ["/api/twitch/clips"],
+    queryFn: async () => {
+      const res = await fetch("/api/twitch/clips", { credentials: "include" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || "Failed to load your Twitch clips");
+      }
+      const body = await res.json();
+      return body.clips as TwitchClipItem[];
+    },
+    enabled: showTwitchPicker && twitchConnected,
+    staleTime: 60_000,
+  });
+
+  // Pull the selected Twitch clip's MP4 down through our proxy and feed it into
+  // the normal upload flow as if the user had picked the file themselves.
+  const importTwitchClip = async (clip: TwitchClipItem) => {
+    if (importingClipId) return;
+    setImportingClipId(clip.id);
+    try {
+      const res = await fetch(`/api/twitch/clips/file?clipId=${encodeURIComponent(clip.id)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Could not download this clip from Twitch");
+      const blob = await res.blob();
+      const importedFile = new File([blob], `twitch-clip-${clip.id}.mp4`, { type: "video/mp4" });
+
+      // Honour the user's tier size cap (same check as a manual file pick).
+      const maxSizeMB = uploadLimits?.maxClipSizeMB ?? 100;
+      if (importedFile.size > maxSizeMB * 1024 * 1024) {
+        toast({
+          title: "Clip too large",
+          description: `This clip is larger than your ${maxSizeMB}MB limit.${uploadLimits && !uploadLimits.isPro ? " Upgrade to Pro for larger uploads." : ""}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Reset video-editing state, mirroring handleFileChange.
+      setContentType("clips");
+      setFileError(null);
+      setVideoPreviewError(null);
+      setShowEditingTools(false);
+      setGeneratedThumbnails([]);
+      setThumbnailUrl("");
+      setVideoDuration(0);
+      setTrimStart(0);
+      setTrimEnd(0);
+      setReelZoom(1);
+      setReelPanX(0);
+      setReelPanY(0);
+      setIsReelAspectMismatch(false);
+      setVideoAspectRatio(0);
+      setFormatSuggestion(null);
+
+      setFile(importedFile);
+      setTwitchSourceClipId(clip.id);
+
+      // Prefill title + game from the clip's Twitch metadata.
+      const prefillTitle = (clip.title || "").slice(0, 100);
+      setTitle(prefillTitle);
+      titleRef.current = prefillTitle;
+      if (clip.gameId && clip.gameName) {
+        setSelectedGame({
+          id: clip.gameId,
+          name: clip.gameName,
+          imageUrl: clip.gameImage ?? null,
+          twitchId: null,
+          createdAt: new Date(),
+        });
+      }
+
+      setShowTwitchPicker(false);
+      toast({
+        title: "Clip imported from Twitch",
+        description: "Review the details below, then post it to your gamefolio.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Import failed",
+        description: err?.message || "Could not import this clip. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setImportingClipId(null);
+    }
+  };
+
   // Fetch upload limits (size + duration only — no count caps)
   //
   // Overrides the app-wide defaults (staleTime: Infinity, retry: false) that
@@ -370,23 +562,32 @@ const UploadPage = () => {
   // Pro accounts. Confirmed live for three separate Pro users all seeing the
   // free-tier 50MB reel cap in this UI despite the server returning the
   // correct 250MB for their account.
-  const { data: uploadLimits, isLoading: limitsLoading } = useQuery<{
-    isPro: boolean;
-    maxClipSizeMB: number;
-    maxReelSizeMB: number;
-    maxScreenshotSizeMB: number;
-    maxClipDurationSeconds: number;
-    maxReelDurationSeconds: number;
-  }>({
+  const { data: uploadLimits, isLoading: limitsLoading } = useQuery<UploadLimits>({
     queryKey: ['/api/upload/limits'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
     retry: 2,
   });
 
+  // Remaining allowance in the current rolling 24h window - shared by the
+  // screenshot multi-select cap and the clip/reel queue cap below. Falls
+  // back to the Free-tier numbers while limits are still loading so the UI
+  // doesn't briefly allow an over-cap selection.
+  const remainingScreenshots = uploadLimits
+    ? Math.max(0, uploadLimits.maxScreenshotsPerWindow - uploadLimits.screenshotsUsedInWindow)
+    : 5;
+  const remainingClips = uploadLimits
+    ? Math.max(0, uploadLimits.maxClipsPerWindow - uploadLimits.clipsUsedInWindow)
+    : 3;
+  const remainingReels = uploadLimits
+    ? Math.max(0, uploadLimits.maxReelsPerWindow - uploadLimits.reelsUsedInWindow)
+    : 3;
+
   // Scheduling quota (unlimited for Pro/Partner, capped pending count for Free).
   const { data: scheduleLimits } = useQuery<ScheduleLimits>({
     queryKey: ['/api/scheduled-posts/limits'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!userId,
   });
 
@@ -437,6 +638,9 @@ const UploadPage = () => {
   // Reset form function
   const resetFormAndNavigate = () => {
     setFile(null);
+    setVideoQueue([]);
+    setQueueTotal(0);
+    setVideoDrafts({});
     setTitle("");
     setDescription("");
     setSelectedGame(null);
@@ -542,54 +746,9 @@ const UploadPage = () => {
     return extMap[ext] ?? '';
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('=== FILE SELECTION EVENT ===');
-    const selectedFile = e.target.files?.[0];
-    console.log('Selected file details:', {
-      name: selectedFile?.name,
-      size: selectedFile?.size,
-      type: selectedFile?.type,
-      lastModified: selectedFile?.lastModified
-    });
-    
-    if (!selectedFile) {
-      console.log('No file selected');
-      return;
-    }
-
-    setFileError(null);
-    setVideoPreviewError(null);
-    
-    // Validate file type — use extension fallback for Android where file.type can be empty
-    const effectiveMime = getEffectiveMimeType(selectedFile);
-    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
-    if (!allowedTypes.includes(effectiveMime)) {
-      console.log('Invalid file type:', selectedFile.type, '(effective:', effectiveMime, ')');
-      setFileError("Please upload a valid video file (MP4, WebM, or MOV)");
-      return;
-    }
-
-    // Validate file size against the user's tier limit (clip vs reel). Skip
-    // this fast-fail check entirely while limits are still loading rather
-    // than guessing a free-tier default - the server re-validates the real
-    // size against the correct tier before processing regardless, so there's
-    // no enforcement gap, only a UX one (a Pro user could otherwise get a
-    // false "file too large" rejection during the brief loading window,
-    // e.g. right after a fresh login when the limits query hasn't resolved).
-    if (uploadLimits) {
-      const isReelUpload = contentType === 'reels';
-      const maxSizeMB = isReelUpload ? uploadLimits.maxReelSizeMB : uploadLimits.maxClipSizeMB;
-      const maxSize = maxSizeMB * 1024 * 1024;
-      if (selectedFile.size > maxSize) {
-        console.log('File too large:', selectedFile.size, 'bytes');
-        setFileError(`File size must be less than ${maxSizeMB}MB${!uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
-        return;
-      }
-    }
-    
-    console.log('File validation passed, setting file state');
-
-    // Reset all video-related state first
+  // Shared by the initial file pick and by advancing the queue to the next
+  // clip - clears every per-video editing state so the form starts fresh.
+  const resetVideoEditingState = () => {
     setShowEditingTools(false);
     setGeneratedThumbnails([]);
     setThumbnailUrl("");
@@ -602,10 +761,178 @@ const UploadPage = () => {
     setIsReelAspectMismatch(false);
     setVideoAspectRatio(0);
     setFormatSuggestion(null);
-    
+  };
+
+  // File objects have no stable id of their own - name+size+lastModified is
+  // unique enough for the lifetime of a single upload session's queue.
+  const getFileKey = (f: File) => `${f.name}|${f.size}|${f.lastModified}`;
+
+  const saveCurrentVideoDraft = () => {
+    if (!file) return;
+    setVideoDrafts(prev => ({
+      ...prev,
+      [getFileKey(file)]: { title, description, game: selectedGame, tags, ageRestricted },
+    }));
+  };
+
+  // Bring a queued clip into the editor so its title/description/game/tags
+  // can be filled in ahead of time, without losing whatever was already
+  // typed for the clip currently active. The displaced active clip goes
+  // back into the queue in the target's old slot, so total queue
+  // length/order stays intact.
+  const switchActiveVideo = (target: File) => {
+    if (!file || target === file) return;
+    saveCurrentVideoDraft();
+
+    const previousFile = file;
+    setVideoQueue(prev => {
+      const idx = prev.indexOf(target);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      next[idx] = previousFile;
+      return next;
+    });
+
+    resetVideoEditingState();
+    setFileError(null);
+    setVideoPreviewError(null);
+
+    const draft = videoDrafts[getFileKey(target)];
+    setTitle(draft?.title ?? "");
+    setDescription(draft?.description ?? "");
+    setSelectedGame(draft?.game ?? null);
+    setTags(draft?.tags ?? []);
+    setAgeRestricted(draft?.ageRestricted ?? false);
+    titleRef.current = draft?.title ?? "";
+    descriptionRef.current = draft?.description ?? "";
+
+    setFile(target);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Appends more files to the queue behind whatever is already active/queued,
+  // used by the "Add Another Clip/Reel" button - distinct from
+  // handleFileChange, which treats a selection as a brand new batch.
+  const handleAddMoreFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newFiles = Array.from(e.target.files || []);
+    if (newFiles.length === 0) return;
+
+    setFileError(null);
+
+    const isReelUpload = contentType === 'reels';
+    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+
+    for (const f of newFiles) {
+      const effectiveMime = getEffectiveMimeType(f);
+      if (!allowedTypes.includes(effectiveMime)) {
+        setFileError("Please upload a valid video file (MP4, WebM, or MOV)");
+        return;
+      }
+      if (uploadLimits) {
+        const maxSizeMB = isReelUpload ? uploadLimits.maxReelSizeMB : uploadLimits.maxClipSizeMB;
+        const maxSize = maxSizeMB * 1024 * 1024;
+        if (f.size > maxSize) {
+          setFileError(`File size must be less than ${maxSizeMB}MB${!uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
+          return;
+        }
+      }
+    }
+
+    const remaining = isReelUpload ? remainingReels : remainingClips;
+    const alreadyCommitted = 1 + videoQueue.length; // the active clip + whatever's already queued
+    const spaceLeft = Math.max(0, remaining - alreadyCommitted);
+    if (newFiles.length > spaceLeft) {
+      const maxPerWindow = isReelUpload ? uploadLimits?.maxReelsPerWindow : uploadLimits?.maxClipsPerWindow;
+      setFileError(
+        spaceLeft <= 0
+          ? `You've reached your ${maxPerWindow ?? 3} ${isReelUpload ? 'reel' : 'clip'} upload limit for now.${uploadLimits && !uploadLimits.isPro ? ' Upgrade to Pro for a higher limit.' : ''}`
+          : `You can add ${spaceLeft} more ${isReelUpload ? 'reel' : 'clip'}${spaceLeft === 1 ? '' : 's'} to this batch.`
+      );
+      return;
+    }
+
+    setVideoQueue(prev => [...prev, ...newFiles]);
+    setQueueTotal(prev => prev + newFiles.length);
+
+    if (addMoreVideoInputRef.current) addMoreVideoInputRef.current.value = '';
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('=== FILE SELECTION EVENT ===');
+    const selectedFiles = Array.from(e.target.files || []);
+    console.log('Selected file details:', selectedFiles.map(f => ({
+      name: f.name,
+      size: f.size,
+      type: f.type,
+      lastModified: f.lastModified
+    })));
+
+    if (selectedFiles.length === 0) {
+      console.log('No file selected');
+      return;
+    }
+
+    setFileError(null);
+    setVideoPreviewError(null);
+
+    const isReelUpload = contentType === 'reels';
+    const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+
+    // Validate every selected file up front — reject the whole batch on the
+    // first failure rather than partially accepting it.
+    for (const f of selectedFiles) {
+      const effectiveMime = getEffectiveMimeType(f);
+      if (!allowedTypes.includes(effectiveMime)) {
+        console.log('Invalid file type:', f.type, '(effective:', effectiveMime, ')');
+        setFileError("Please upload a valid video file (MP4, WebM, or MOV)");
+        return;
+      }
+
+      // Skip the size check entirely while limits are still loading rather
+      // than guessing a free-tier default - the server re-validates the
+      // real size against the correct tier before processing regardless, so
+      // there's no enforcement gap, only a UX one (a Pro user could
+      // otherwise get a false "file too large" rejection during the brief
+      // loading window, e.g. right after a fresh login when the limits
+      // query hasn't resolved).
+      if (uploadLimits) {
+        const maxSizeMB = isReelUpload ? uploadLimits.maxReelSizeMB : uploadLimits.maxClipSizeMB;
+        const maxSize = maxSizeMB * 1024 * 1024;
+        if (f.size > maxSize) {
+          console.log('File too large:', f.size, 'bytes');
+          setFileError(`File size must be less than ${maxSizeMB}MB${!uploadLimits.isPro ? ' — upgrade to Pro for larger uploads.' : '.'}`);
+          return;
+        }
+      }
+    }
+
+    // Enforce the rolling-window cap against the whole batch being selected.
+    const remaining = isReelUpload ? remainingReels : remainingClips;
+    if (selectedFiles.length > remaining) {
+      const maxPerWindow = isReelUpload ? uploadLimits?.maxReelsPerWindow : uploadLimits?.maxClipsPerWindow;
+      setFileError(
+        remaining <= 0
+          ? `You've reached your ${maxPerWindow ?? (isReelUpload ? 3 : 3)} ${isReelUpload ? 'reel' : 'clip'} upload limit for now.${uploadLimits && !uploadLimits.isPro ? ' Upgrade to Pro for a higher limit.' : ''}`
+          : `You can select up to ${remaining} more ${isReelUpload ? 'reel' : 'clip'}${remaining === 1 ? '' : 's'} right now.`
+      );
+      return;
+    }
+
+    console.log('File validation passed, setting file state');
+
+    resetVideoEditingState();
+
+    // First file loads into the editor now; any rest queue up behind it and
+    // are loaded one at a time as each prior clip finishes uploading.
+    const [firstFile, ...restFiles] = selectedFiles;
+    setVideoQueue(restFiles);
+    setQueueTotal(selectedFiles.length);
+
     // Then set the new file - this will trigger videoSrc recreation via useMemo
-    setFile(selectedFile);
-    
+    setFile(firstFile);
+    // Manually-picked file is not a Twitch import — don't count it against quota.
+    setTwitchSourceClipId(null);
+
     console.log('File state updated successfully, video preview should be visible');
   };
 
@@ -646,7 +973,19 @@ const UploadPage = () => {
         }
       }
     }
-    
+
+    // Enforce the rolling-window screenshot cap against everything already
+    // queued/cropped plus this new batch.
+    const alreadyQueued = screenshotFiles.length + screenshotCropQueue.length;
+    if (alreadyQueued + files.length > remainingScreenshots) {
+      setScreenshotError(
+        remainingScreenshots <= 0
+          ? `You've reached your ${uploadLimits?.maxScreenshotsPerWindow ?? 5} screenshot upload limit for now.${uploadLimits && !uploadLimits.isPro ? ' Upgrade to Pro for a higher limit.' : ''}`
+          : `You can add ${remainingScreenshots} more screenshot${remainingScreenshots === 1 ? '' : 's'} right now.`
+      );
+      return;
+    }
+
     // Queue files for crop modal instead of adding directly
     setScreenshotCropQueue(prev => [...prev, ...files]);
 
@@ -745,7 +1084,7 @@ const UploadPage = () => {
         type: 'screenshot',
         id: data.screenshot?.id
       });
-      const gainedXP = data.xpGained || 5;
+      const gainedXP = data.xpGained || 250;
       const currentXP = (data.userXP || 0) + gainedXP;
       setXpGained(gainedXP);
       setUserXP(currentXP);
@@ -845,6 +1184,14 @@ const UploadPage = () => {
           const chunkTimings: Array<{ ms: number; status: number }> = [];
           const requestStartTimes = new WeakMap<tus.HttpRequest, number>();
           let retryCount = 0;
+          // The finish payload rides on whichever response ran the server's
+          // `onUploadFinish` hook, which is not necessarily the `lastResponse`
+          // tus-js-client reports in onSuccess — see tus-finish-payload.ts.
+          // Hold on to it the moment it goes past.
+          let finishResult: TusFinishResult | null = null;
+          // Likewise the last thing the server said about a failure, so a
+          // dead-end upload reports that reason rather than a parser error.
+          let serverErrorMessage: string | null = null;
           const buildUploadDiagnostics = () => ({
             chunkCount: chunkTimings.length,
             retryCount,
@@ -861,13 +1208,26 @@ const UploadPage = () => {
               endpoint: resolveApiUrl('/api/upload/tus'),
               // On native, route chunk PATCHes around CapacitorHttp's
               // patched XHR — see NativeBypassHttpStack above for why.
-              httpStack: isNative ? new NativeBypassHttpStack() : undefined,
+              // Do NOT pass httpStack:undefined — tus-js-client calls
+              // options.httpStack.createRequest() without a null-check, so
+              // explicitly passing undefined crashes immediately on web.
+              // Omit the key entirely so tus uses its own DefaultHttpStack.
+              ...(isNative ? { httpStack: new NativeBypassHttpStack() } : {}),
               // Small, fixed chunk size means peak client memory stays flat
               // regardless of total file size — a single large PUT (the old
               // approach) needs the whole file buffered for the request body,
               // which is what exhausts the WebView's heap on big clips.
               chunkSize: 6 * 1024 * 1024,
-              retryDelays: [0, 1000, 3000, 5000],
+              // Long enough to ride out the app being backgrounded. Android
+              // suspends the WebView's network stack on background, so every
+              // in-flight chunk dies at once with a ProgressEvent; the old
+              // 4-step budget burned all its attempts inside ~11s against a
+              // dead radio and failed the upload (Sentry GAMEFOLIO-MOBILE-11
+              // and -1E, both preceded by an `app.lifecycle: background`
+              // breadcrumb). TUS resumes from the last acknowledged offset, so
+              // a longer budget re-sends nothing that already landed. Same
+              // reasoning as waitBeforeProcessVideoRetry below.
+              retryDelays: [0, 1000, 3000, 5000, 15000, 30000, 60000],
               headers: token ? { Authorization: `Bearer ${token}` } : {},
               metadata: {
                 filename: file.name,
@@ -880,20 +1240,44 @@ const UploadPage = () => {
               onAfterResponse: (req, res) => {
                 const start = requestStartTimes.get(req);
                 const ms = start != null ? performance.now() - start : -1;
-                chunkTimings.push({ ms, status: res.getStatus() });
+                const status = res.getStatus();
+                chunkTimings.push({ ms, status });
                 if (ms > 2000) {
-                  console.warn(`[tus] slow chunk request: ${Math.round(ms)}ms (status ${res.getStatus()})`);
+                  console.warn(`[tus] slow chunk request: ${Math.round(ms)}ms (status ${status})`);
+                }
+                const body = res.getBody();
+                if (!finishResult) {
+                  finishResult = parseFinishBody(body) ?? parseFinishHeader(res.getHeader('Upload-Result'));
+                }
+                if (status >= 400) {
+                  serverErrorMessage = parseFinishError(body)?.message ?? serverErrorMessage;
                 }
               },
               onShouldRetry: (error, retryAttempt, opts) => {
                 retryCount++;
                 const status = error.originalResponse ? error.originalResponse.getStatus() : 0;
                 console.warn(`[tus] retry #${retryAttempt + 1} after error (status ${status}):`, error.message);
-                // Same policy as tus-js-client's default — this hook only adds
-                // visibility, it doesn't change what gets retried.
                 const isClientError = status >= 400 && status < 500;
-                const online = typeof navigator === 'undefined' || navigator.onLine !== false;
-                return (!isClientError || status === 409 || status === 423) && online;
+                // A backgrounded WebView can report itself offline even though
+                // the device has a perfectly good connection — treat that as
+                // "retry later", not "give up", and let retryDelays carry us
+                // to the foreground.
+                const backgrounded = isNative && !isAppActive();
+                const online = backgrounded || typeof navigator === 'undefined' || navigator.onLine !== false;
+                // 409/423 are TUS protocol states (offset conflict, locked) —
+                // always worth a retry, they resolve themselves.
+                if (status === 409 || status === 423) return online;
+                // A JSON `{error, message}` envelope means our own
+                // `onUploadFinish` rejected the upload deliberately (tier
+                // limit, duration probe, Supabase finish failure). Retrying
+                // that re-sends an upload the server considers complete, which
+                // answers with an empty body and buries the real reason — the
+                // path that produced GAMEFOLIO-MOBILE-1F. Fail fast instead so
+                // onError can surface the server's message.
+                if (parseFinishError(error.originalResponse?.getBody())) return false;
+                // Otherwise the same policy as tus-js-client's default — this
+                // hook only adds visibility.
+                return !isClientError && online;
               },
               onError: (error) => {
                 signal.removeEventListener('abort', onAbort);
@@ -911,20 +1295,20 @@ const UploadPage = () => {
                 // onUploadFinish returns so the "Upgrade to Pro" CTA still
                 // renders, matching the /process-video error path below.
                 const detailed = error as tus.DetailedError;
-                const body = detailed.originalResponse?.getBody();
-                if (body) {
-                  try {
-                    const parsed = JSON.parse(body);
-                    if (parsed?.message) {
-                      rejectUpload(new UploadLimitError(parsed.message, parsed.limits));
-                      return;
-                    }
-                  } catch {
-                    // Not JSON — fall through to the generic error below.
-                  }
+                const serverError = parseFinishError(detailed.originalResponse?.getBody());
+                if (serverError?.limits) {
+                  rejectUpload(new UploadLimitError(serverError.message, serverError.limits as any));
+                  return;
                 }
                 console.error('TUS upload error:', error);
-                const finalError = error instanceof Error ? error : new Error(String(error));
+                // Any other message the server sent is more useful than
+                // tus-js-client's generic transport wording — but it stays a
+                // plain Error so it still reaches Sentry as a real failure.
+                const finalError = serverError
+                  ? new Error(serverError.message)
+                  : error instanceof Error
+                    ? error
+                    : new Error(String(error));
                 (finalError as Error & { uploadDiagnostics?: unknown }).uploadDiagnostics = buildUploadDiagnostics();
                 rejectUpload(finalError);
               },
@@ -934,29 +1318,48 @@ const UploadPage = () => {
               },
               onSuccess: (payload) => {
                 signal.removeEventListener('abort', onAbort);
-                try {
-                  const parsed = JSON.parse(payload.lastResponse.getBody());
-                  if (!parsed?.success || !parsed?.result?.url || !parsed?.result?.path) {
-                    throw new Error('Malformed upload-finish response');
-                  }
-                  console.log('TUS upload complete');
-                  const diagnostics = buildUploadDiagnostics();
-                  if (retryCount > 0 || diagnostics.slowChunks.length > 0) {
-                    // Succeeded, but not cleanly — this is the "stuck for a
-                    // few minutes then completes" case, which throws no
-                    // error and would otherwise leave zero trace in Sentry.
-                    console.warn('[tus] upload succeeded after retries/slow chunks:', diagnostics);
-                    Sentry.captureMessage('tus upload succeeded after retries/slow chunks', {
-                      level: 'warning',
-                      tags: { module: 'upload-page', op: 'video-upload' },
-                      extra: diagnostics,
-                    });
-                  }
-                  setUploadProgress(85);
-                  resolveUpload({ url: parsed.result.url, path: parsed.result.path });
-                } catch (parseError) {
-                  rejectUpload(parseError instanceof Error ? parseError : new Error('Malformed upload-finish response'));
+                const diagnostics = buildUploadDiagnostics();
+                // Try the response tus hands us first, then the header it may
+                // carry instead, then anything we captured earlier in the
+                // upload. `lastResponse` is empty whenever tus completed the
+                // upload off a HEAD re-sync rather than the final PATCH.
+                const result =
+                  parseFinishBody(payload.lastResponse.getBody()) ??
+                  parseFinishHeader(payload.lastResponse.getHeader('Upload-Result')) ??
+                  finishResult;
+
+                if (!result) {
+                  // The bytes are up but the server never handed back a usable
+                  // result — the upload genuinely did not finish. Report what
+                  // the server said, not a JSON parse failure.
+                  console.error('[tus] upload completed without a finish payload:', diagnostics);
+                  const finalError = new Error(
+                    serverErrorMessage ??
+                      'Upload finished but the server did not confirm it. Please try uploading again.',
+                  );
+                  (finalError as Error & { uploadDiagnostics?: unknown }).uploadDiagnostics = {
+                    ...diagnostics,
+                    finishPayloadMissing: true,
+                    lastResponseStatus: payload.lastResponse.getStatus(),
+                  };
+                  rejectUpload(finalError);
+                  return;
                 }
+
+                console.log('TUS upload complete');
+                if (retryCount > 0 || diagnostics.slowChunks.length > 0) {
+                  // Succeeded, but not cleanly — this is the "stuck for a
+                  // few minutes then completes" case, which throws no
+                  // error and would otherwise leave zero trace in Sentry.
+                  console.warn('[tus] upload succeeded after retries/slow chunks:', diagnostics);
+                  Sentry.captureMessage('tus upload succeeded after retries/slow chunks', {
+                    level: 'warning',
+                    tags: { module: 'upload-page', op: 'video-upload' },
+                    extra: diagnostics,
+                  });
+                }
+                setUploadProgress(85);
+                resolveUpload(result);
               },
             });
 
@@ -980,6 +1383,9 @@ const UploadPage = () => {
             trimStart: Math.round(trimStart),
             trimEnd: Math.round(trimEnd),
             scheduledAt: getScheduledIso(),
+            // Tag Twitch-imported clips so the server counts them against the
+            // daily import allowance (free: 2/day, Pro: 10/day).
+            ...(twitchSourceClipId ? { source: 'twitch', twitchClipId: twitchSourceClipId } : {}),
           };
           
           console.log('🔞 Age Restriction Debug - Sending to backend:', {
@@ -1019,6 +1425,35 @@ const UploadPage = () => {
           // original request may still be genuinely processing server-side,
           // and firing a second one could create a duplicate clip once both
           // complete. So a timeout ends the loop immediately, no retry.
+          //
+          // If the failure happened while backgrounded, the WebView's network
+          // is typically suspended, so retrying on the usual short delay just
+          // burns the attempt against a dead connection (this is what
+          // happened in Sentry issue 138111665: both retries fired — and
+          // failed — while still backgrounded). Wait for the app to return
+          // to the foreground instead, capped so we don't wait forever if
+          // the user never comes back.
+          const PROCESS_VIDEO_BACKGROUND_WAIT_CAP_MS = 4 * 60 * 1000;
+          const waitBeforeProcessVideoRetry = (delayMs: number): Promise<void> => {
+            if (!isNative || isAppActive()) {
+              return new Promise((resolve) => setTimeout(resolve, delayMs));
+            }
+            return new Promise((resolve) => {
+              let settled = false;
+              const finish = () => {
+                if (settled) return;
+                settled = true;
+                window.removeEventListener('app-active-changed', onActiveChange as EventListener);
+                clearTimeout(cap);
+                resolve();
+              };
+              const onActiveChange = (e: Event) => {
+                if ((e as CustomEvent<{ isActive: boolean }>).detail?.isActive) finish();
+              };
+              window.addEventListener('app-active-changed', onActiveChange as EventListener);
+              const cap = setTimeout(finish, PROCESS_VIDEO_BACKGROUND_WAIT_CAP_MS);
+            });
+          };
           const processVideoRetryDelaysMs = [1500, 4000];
           let processVideoRetries = 0;
           let processResponse: Response | undefined;
@@ -1053,7 +1488,7 @@ const UploadPage = () => {
               const delay = processVideoRetryDelaysMs[attempt - 1];
               processVideoRetries++;
               console.warn(`[process-video] network error on attempt ${attempt}, retrying in ${delay}ms:`, fetchError);
-              await new Promise((r) => setTimeout(r, delay));
+              await waitBeforeProcessVideoRetry(delay);
             }
           }
           if (processVideoNetworkError || !processResponse) {
@@ -1061,7 +1496,7 @@ const UploadPage = () => {
               // The request may well still be processing server-side — this
               // isn't the same as a clean failure, so say so rather than a
               // generic "upload failed" that implies nothing happened.
-              ? new Error('Your video is still processing — this can take a few minutes for larger clips. Check your profile shortly before uploading again.')
+              ? new StillProcessingError('Your video is still processing — this can take a few minutes for larger clips. Check your profile shortly before uploading again.')
               : processVideoNetworkError instanceof Error
                 ? processVideoNetworkError
                 : new Error(String(processVideoNetworkError));
@@ -1121,6 +1556,65 @@ const UploadPage = () => {
       setIsUploading(false);
       setUploadProgress(0);
 
+      // Bulk queue: this clip is done — before treating it as the final
+      // success (XP dialog / navigation), check whether there's another
+      // queued file and whether the user still has allowance for it. The
+      // server was already re-checked on this submit; refetch limits fresh
+      // here rather than trusting the possibly-stale cached value, since
+      // another tab or a scheduled post could have consumed the window in
+      // the meantime.
+      if (videoQueue.length > 0) {
+        let freshLimits: UploadLimits | undefined;
+        try {
+          const res = await authedFetch('/api/upload/limits', { method: 'GET' });
+          if (res.ok) {
+            freshLimits = await res.json();
+            queryClient.setQueryData(['/api/upload/limits'], freshLimits);
+          }
+        } catch (e) {
+          console.warn('Failed to refresh upload limits before advancing queue:', e);
+        }
+
+        const isReelQueue = contentType === 'reels';
+        const remaining = freshLimits
+          ? (isReelQueue
+              ? freshLimits.maxReelsPerWindow - freshLimits.reelsUsedInWindow
+              : freshLimits.maxClipsPerWindow - freshLimits.clipsUsedInWindow)
+          : 0;
+
+        if (remaining > 0) {
+          const [nextFile, ...rest] = videoQueue;
+          resetVideoEditingState();
+          // If the user already clicked ahead to this clip and filled in its
+          // details, use that instead of blanking the form.
+          const draft = videoDrafts[getFileKey(nextFile)];
+          setTitle(draft?.title ?? "");
+          setDescription(draft?.description ?? "");
+          setSelectedGame(draft?.game ?? null);
+          setTags(draft?.tags ?? []);
+          setAgeRestricted(draft?.ageRestricted ?? false);
+          titleRef.current = draft?.title ?? "";
+          descriptionRef.current = draft?.description ?? "";
+          setVideoQueue(rest);
+          setFile(nextFile);
+          toast({
+            title: data?.scheduled ? "Scheduled" : "Uploaded",
+            description: `${queueTotal - rest.length - 1} of ${queueTotal} done — ${rest.length + 1} remaining in queue.`,
+          });
+          return;
+        }
+
+        // Out of allowance mid-queue — stop here and fall through to the
+        // normal final-success handling below for this last completed clip.
+        setVideoQueue([]);
+        setQueueTotal(0);
+        toast({
+          title: "Queue stopped",
+          description: "You've used up your upload allowance for now — the rest of the queue was cleared.",
+          variant: "gamefolioError",
+        });
+      }
+
       // Scheduled upload: nothing went live. Confirm and send the user to their queue.
       if (data?.scheduled) {
         resetFormAndNavigate();
@@ -1139,13 +1633,18 @@ const UploadPage = () => {
       queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
       queryClient.invalidateQueries({ queryKey: ["/api/clips/latest"] });
       queryClient.invalidateQueries({ queryKey: ["/api/reels/latest"] });
+      // Refresh the Twitch import counter if this post used the daily allowance.
+      if (twitchSourceClipId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/twitch/import-limits"] });
+        setTwitchSourceClipId(null);
+      }
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/clips`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/upload/limits'] });
 
       // Reset form first
       resetFormAndNavigate();
-      
+
       // Store upload success data for navigation after XP dialog
       const uploadedContentType = contentType === 'reels' ? 'reel' : 'clip';
       const contentId = data.clip?.id || data.id;
@@ -1154,7 +1653,7 @@ const UploadPage = () => {
         type: uploadedContentType,
         id: contentId
       });
-      const gainedXP = data.xpGained || 5;
+      const gainedXP = data.xpGained || 250;
       const currentXP = (data.clip?.userXP || data.userXP || 0) + gainedXP;
       setXpGained(gainedXP);
       setUserXP(currentXP);
@@ -1174,6 +1673,28 @@ const UploadPage = () => {
       if (error instanceof UploadCancelledError) {
         setIsUploading(false);
         setUploadProgress(0);
+        return;
+      }
+      // The server may still finish the job after we've stopped waiting on
+      // it — don't show "Upload failed" or leave the user staring at the
+      // upload form. Send them to their profile, where the clip will show
+      // up once processing completes.
+      if (error instanceof StillProcessingError) {
+        setIsUploading(false);
+        setUploadProgress(0);
+        Sentry.captureMessage('process-video: client gave up waiting, still processing server-side', {
+          level: 'warning',
+          tags: { module: 'upload-page', op: 'video-upload', videoType: contentType === 'reels' ? 'reel' : 'clip' },
+          extra: (error as Error & { uploadDiagnostics?: Record<string, unknown> }).uploadDiagnostics,
+        });
+        toast({
+          title: "Still processing",
+          description: "Your clip is still processing — it'll appear on your profile shortly.",
+          variant: "gamefolioSuccess",
+        });
+        if (user?.username) {
+          navigate(`/profile/${user.username}`);
+        }
         return;
       }
       const limits = error instanceof UploadLimitError ? error.limits : undefined;
@@ -1319,6 +1840,7 @@ const UploadPage = () => {
     // Show progress bar immediately when starting upload
     setIsUploading(true);
     setUploadProgress(0);
+    setUploadModalDismissed(false);
 
     console.log('About to call uploadMutation.mutate()');
     console.log('Final validation before upload:', {
@@ -1404,12 +1926,102 @@ const UploadPage = () => {
         <TabsContent value="clips" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Share your gaming moment</CardTitle>
-              <CardDescription>
-                Upload a video clip to share with the Gamefolio community
-              </CardDescription>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle>Share your gaming moment</CardTitle>
+                  <CardDescription>
+                    Upload a video clip to share with the Gamefolio community
+                  </CardDescription>
+                </div>
+                {uploadLimits && (
+                  <Badge
+                    variant={remainingClips > 0 ? "secondary" : "destructive"}
+                    className="shrink-0 whitespace-nowrap"
+                    data-testid="badge-clips-remaining"
+                  >
+                    {remainingClips}/{uploadLimits.maxClipsPerWindow} left today
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
+              {queueTotal > 1 && (
+                <>
+                <Alert className="mb-6" data-testid="alert-clip-queue-progress">
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Uploading clip {queueTotal - videoQueue.length} of {queueTotal}</AlertTitle>
+                  <AlertDescription className="flex items-center justify-between gap-4">
+                    <span>{videoQueue.length} more will upload automatically as each finishes.</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setVideoQueue([]); setQueueTotal(1); }}
+                      data-testid="button-cancel-clip-queue"
+                    >
+                      Cancel remaining
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+                <div className="flex gap-2 overflow-x-auto pb-1 mb-6" data-testid="list-clip-queue">
+                  {file && (
+                    <div
+                      className="flex items-center gap-2 rounded-md border border-primary bg-primary/10 px-3 py-1.5 text-xs shrink-0"
+                      data-testid="chip-active-clip"
+                    >
+                      <span className="font-medium text-primary">Editing now</span>
+                      <span className="max-w-[10rem] truncate">{file.name}</span>
+                    </div>
+                  )}
+                  {videoQueue.map((qf, idx) => (
+                    <button
+                      key={getFileKey(qf)}
+                      type="button"
+                      onClick={() => switchActiveVideo(qf)}
+                      className="flex items-center gap-2 rounded-md border border-muted bg-muted/40 hover:border-primary hover:bg-primary/5 px-3 py-1.5 text-xs shrink-0 transition-colors"
+                      title="Click to edit this clip's details now"
+                      data-testid={`chip-queued-clip-${idx}`}
+                    >
+                      <span className="max-w-[10rem] truncate">{qf.name}</span>
+                      <X
+                        className="h-3 w-3 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setVideoQueue(prev => prev.filter((_, i) => i !== idx));
+                          setQueueTotal(prev => Math.max(1, prev - 1));
+                        }}
+                        data-testid={`button-remove-queued-clip-${idx}`}
+                      />
+                    </button>
+                  ))}
+                </div>
+                </>
+              )}
+              {!twitchConnected && !twitchPromoDismissed && (
+                <div className="relative mb-6 rounded-lg border border-[#9146FF]/40 bg-[#9146FF]/10 p-4 pr-10">
+                  <button
+                    type="button"
+                    onClick={dismissTwitchPromo}
+                    aria-label="Dismiss"
+                    className="absolute right-2 top-2 rounded-md p-1 text-muted-foreground hover:bg-[#9146FF]/20 hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                  <div className="flex items-start gap-3">
+                    <Twitch className="h-5 w-5 shrink-0 text-[#9146FF] mt-0.5" />
+                    <div className="space-y-1 text-sm">
+                      <p className="font-semibold text-foreground">Did you know you can upload straight from Twitch?</p>
+                      <p className="text-muted-foreground">
+                        Connect your Twitch account to fetch your recent clips and post them here in a couple of taps —
+                        no downloading and re-uploading. Free members can import 2 clips a day, Pro members up to 10.
+                      </p>
+                      <p className="text-muted-foreground">
+                        Set it up in <span className="font-medium text-foreground">Profile &amp; Appearance → Platforms → Twitch</span>.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -1452,9 +2064,8 @@ const UploadPage = () => {
                       e.stopPropagation();
                       setIsDraggingClip(false);
                       if (!file && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                        const droppedFile = e.dataTransfer.files[0];
                         const fakeEvent = {
-                          target: { files: [droppedFile] }
+                          target: { files: e.dataTransfer.files }
                         } as React.ChangeEvent<HTMLInputElement>;
                         handleFileChange(fakeEvent);
                       }
@@ -1467,6 +2078,7 @@ const UploadPage = () => {
                       accept="video/mp4,video/webm,video/quicktime"
                       onChange={handleFileChange}
                       className="hidden"
+                      multiple
                     />
                     
                     {file ? (
@@ -1485,6 +2097,8 @@ const UploadPage = () => {
                                 setGeneratedThumbnails([]);
                                 setThumbnailUrl("");
                                 setVideoPreviewError(null);
+                                setVideoQueue([]);
+                                setQueueTotal(0);
                                 if (fileInputRef.current) {
                                   fileInputRef.current.value = '';
                                 }
@@ -1522,6 +2136,11 @@ const UploadPage = () => {
                                         : `${maxDurLoad} seconds`;
                                       setFileError(`Video duration is ${Math.round(duration / 60 * 10) / 10} minutes. ${isReelLoad ? 'Reels' : 'Clips'} must be ${label} or less${!uploadLimits.isPro ? ' — upgrade to Pro for longer videos.' : '.'}`);
                                       setFile(null);
+                                      // Duration is only knowable after metadata loads, so a
+                                      // queued file can fail here too - clear the rest of the
+                                      // queue rather than leaving it silently orphaned.
+                                      setVideoQueue([]);
+                                      setQueueTotal(0);
                                       return;
                                     }
                                   }
@@ -1615,12 +2234,35 @@ const UploadPage = () => {
                           <div>
                             <p className="font-medium text-foreground mb-1">{file.name}</p>
                             <p className="text-sm text-muted-foreground mt-1">
-                              {(file.size / (1024 * 1024)).toFixed(2)} MB • 
+                              {(file.size / (1024 * 1024)).toFixed(2)} MB •
                               {videoDuration > 0 && ` ${formatDuration(videoDuration)} •`}
                               {" " + file.type}
                             </p>
                           </div>
                         </div>
+
+                        {remainingClips - 1 - videoQueue.length > 0 && (
+                          <div>
+                            <input
+                              ref={addMoreVideoInputRef}
+                              type="file"
+                              accept="video/mp4,video/webm,video/quicktime"
+                              onChange={handleAddMoreFiles}
+                              className="hidden"
+                              multiple
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addMoreVideoInputRef.current?.click()}
+                              data-testid="button-add-another-clip"
+                            >
+                              <Plus className="h-4 w-4 mr-1" />
+                              Add Another Clip ({remainingClips - 1 - videoQueue.length} remaining)
+                            </Button>
+                          </div>
+                        )}
 
                         {/* Format mismatch suggestion — portrait video uploaded as a clip */}
                         {formatSuggestion === 'switch-to-reel' && (
@@ -1733,7 +2375,24 @@ const UploadPage = () => {
                       </div>
                     )}
                   </div>
-                  
+
+                  {!file && twitchConnected && (
+                    <div className="mt-3 flex items-center gap-3">
+                      <div className="flex-1 h-px bg-border" />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowTwitchPicker(true)}
+                        className="text-[#9146FF] border-[#9146FF]/40 hover:bg-[#9146FF]/10"
+                      >
+                        <Twitch className="h-4 w-4 mr-2" />
+                        Import from Twitch
+                      </Button>
+                      <div className="flex-1 h-px bg-border" />
+                    </div>
+                  )}
+
                   {fileError && (
                     <Alert variant="gamefolioError" className="mt-2">
                       <AlertCircle className="h-4 w-4" />
@@ -1866,12 +2525,16 @@ const UploadPage = () => {
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <polyline points="7,10 12,15 17,10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                      Upload
+                      {scheduleEnabled ? (
+                        <CalendarClock className="h-4 w-4" />
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <polyline points="7,10 12,15 17,10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                          <line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                      )}
+                      {scheduleEnabled ? "Schedule" : "Upload"}
                     </div>
                   )}
                 </Button>
@@ -1883,12 +2546,77 @@ const UploadPage = () => {
         <TabsContent value="reels" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Share your gaming reel</CardTitle>
-              <CardDescription>
-                Upload any video to create a reel! Videos will be automatically converted to vertical 9:16 format for optimal viewing.
-              </CardDescription>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle>Share your gaming reel</CardTitle>
+                  <CardDescription>
+                    Upload any video to create a reel! Videos will be automatically converted to vertical 9:16 format for optimal viewing.
+                  </CardDescription>
+                </div>
+                {uploadLimits && (
+                  <Badge
+                    variant={remainingReels > 0 ? "secondary" : "destructive"}
+                    className="shrink-0 whitespace-nowrap"
+                    data-testid="badge-reels-remaining"
+                  >
+                    {remainingReels}/{uploadLimits.maxReelsPerWindow} left today
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
+              {queueTotal > 1 && (
+                <>
+                <Alert className="mb-6" data-testid="alert-reel-queue-progress">
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Uploading reel {queueTotal - videoQueue.length} of {queueTotal}</AlertTitle>
+                  <AlertDescription className="flex items-center justify-between gap-4">
+                    <span>{videoQueue.length} more will upload automatically as each finishes.</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setVideoQueue([]); setQueueTotal(1); }}
+                      data-testid="button-cancel-reel-queue"
+                    >
+                      Cancel remaining
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+                <div className="flex gap-2 overflow-x-auto pb-1 mb-6" data-testid="list-reel-queue">
+                  {file && (
+                    <div
+                      className="flex items-center gap-2 rounded-md border border-primary bg-primary/10 px-3 py-1.5 text-xs shrink-0"
+                      data-testid="chip-active-reel"
+                    >
+                      <span className="font-medium text-primary">Editing now</span>
+                      <span className="max-w-[10rem] truncate">{file.name}</span>
+                    </div>
+                  )}
+                  {videoQueue.map((qf, idx) => (
+                    <button
+                      key={getFileKey(qf)}
+                      type="button"
+                      onClick={() => switchActiveVideo(qf)}
+                      className="flex items-center gap-2 rounded-md border border-muted bg-muted/40 hover:border-primary hover:bg-primary/5 px-3 py-1.5 text-xs shrink-0 transition-colors"
+                      title="Click to edit this reel's details now"
+                      data-testid={`chip-queued-reel-${idx}`}
+                    >
+                      <span className="max-w-[10rem] truncate">{qf.name}</span>
+                      <X
+                        className="h-3 w-3 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setVideoQueue(prev => prev.filter((_, i) => i !== idx));
+                          setQueueTotal(prev => Math.max(1, prev - 1));
+                        }}
+                        data-testid={`button-remove-queued-reel-${idx}`}
+                      />
+                    </button>
+                  ))}
+                </div>
+                </>
+              )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -1931,9 +2659,8 @@ const UploadPage = () => {
                       e.stopPropagation();
                       setIsDraggingReelDrop(false);
                       if (!file && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                        const droppedFile = e.dataTransfer.files[0];
                         const fakeEvent = {
-                          target: { files: [droppedFile] }
+                          target: { files: e.dataTransfer.files }
                         } as React.ChangeEvent<HTMLInputElement>;
                         handleFileChange(fakeEvent);
                       }
@@ -1946,6 +2673,7 @@ const UploadPage = () => {
                       accept="video/mp4,video/webm,video/quicktime"
                       onChange={handleFileChange}
                       className="hidden"
+                      multiple
                     />
                     
                     {file ? (
@@ -2243,13 +2971,36 @@ const UploadPage = () => {
                           <div>
                             <p className="font-medium text-foreground mb-1">{file.name}</p>
                             <p className="text-sm text-muted-foreground mt-1">
-                              {(file.size / (1024 * 1024)).toFixed(2)} MB • 
+                              {(file.size / (1024 * 1024)).toFixed(2)} MB •
                               {videoDuration > 0 && ` ${formatDuration(videoDuration)} •`}
                               {" " + file.type}
                             </p>
                           </div>
                         </div>
-                        
+
+                        {remainingReels - 1 - videoQueue.length > 0 && (
+                          <div>
+                            <input
+                              ref={addMoreVideoInputRef}
+                              type="file"
+                              accept="video/mp4,video/webm,video/quicktime"
+                              onChange={handleAddMoreFiles}
+                              className="hidden"
+                              multiple
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addMoreVideoInputRef.current?.click()}
+                              data-testid="button-add-another-reel"
+                            >
+                              <Plus className="h-4 w-4 mr-1" />
+                              Add Another Reel ({remainingReels - 1 - videoQueue.length} remaining)
+                            </Button>
+                          </div>
+                        )}
+
                         {/* Video Trimmer for Reels */}
                         {showEditingTools && videoDuration > 0 && (
                           <div className="space-y-3 mt-4">
@@ -2452,9 +3203,9 @@ const UploadPage = () => {
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <Camera className="h-4 w-4" />
-                        <span className="hidden sm:inline">Upload Reel</span>
-                        <span className="inline sm:hidden">Upload</span>
+                        {scheduleEnabled ? <CalendarClock className="h-4 w-4" /> : <Camera className="h-4 w-4" />}
+                        <span className="hidden sm:inline">{scheduleEnabled ? "Schedule Reel" : "Upload Reel"}</span>
+                        <span className="inline sm:hidden">{scheduleEnabled ? "Schedule" : "Upload"}</span>
                       </div>
                     )}
                   </Button>
@@ -2467,10 +3218,23 @@ const UploadPage = () => {
         <TabsContent value="screenshots" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Share your gaming screenshot</CardTitle>
-              <CardDescription>
-                Upload a screenshot to share with the Gamefolio community
-              </CardDescription>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <CardTitle>Share your gaming screenshot</CardTitle>
+                  <CardDescription>
+                    Upload a screenshot to share with the Gamefolio community
+                  </CardDescription>
+                </div>
+                {uploadLimits && (
+                  <Badge
+                    variant={remainingScreenshots > 0 ? "secondary" : "destructive"}
+                    className="shrink-0 whitespace-nowrap"
+                    data-testid="badge-screenshots-remaining"
+                  >
+                    {remainingScreenshots}/{uploadLimits.maxScreenshotsPerWindow} left today
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <form onSubmit={(e) => {
@@ -2509,7 +3273,7 @@ const UploadPage = () => {
               }} className="space-y-6">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="screenshot">Screenshot Files ({screenshotFiles.length}/3)</Label>
+                    <Label htmlFor="screenshot">Screenshot Files ({screenshotFiles.length}/{uploadLimits?.maxScreenshotsPerWindow ?? 5})</Label>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -2605,7 +3369,7 @@ const UploadPage = () => {
                       </div>
 
                       {/* Add Another Button */}
-                      {screenshotFiles.length < 3 && (
+                      {screenshotFiles.length < (uploadLimits?.maxScreenshotsPerWindow ?? 5) && (
                         <label htmlFor="screenshot" className="block">
                           <Button
                             type="button"
@@ -2620,7 +3384,7 @@ const UploadPage = () => {
                               <span>
                                 <span className="hidden sm:inline">Add Another Screenshot </span>
                                 <span className="sm:hidden">Add Screenshot </span>
-                                ({3 - screenshotFiles.length} remaining)
+                                ({(uploadLimits?.maxScreenshotsPerWindow ?? 5) - screenshotFiles.length} remaining)
                               </span>
                             </span>
                           </Button>
@@ -2738,8 +3502,8 @@ const UploadPage = () => {
                       </div>
                     ) : (
                       <>
-                        <span className="hidden sm:inline">Upload {screenshotFiles.length > 0 ? `${screenshotFiles.length} Screenshot${screenshotFiles.length > 1 ? 's' : ''}` : 'Screenshots'}</span>
-                        <span className="inline sm:hidden">Upload</span>
+                        <span className="hidden sm:inline">{scheduleEnabled ? "Schedule" : "Upload"} {screenshotFiles.length > 0 ? `${screenshotFiles.length} Screenshot${screenshotFiles.length > 1 ? 's' : ''}` : 'Screenshots'}</span>
+                        <span className="inline sm:hidden">{scheduleEnabled ? "Schedule" : "Upload"}</span>
                       </>
                     )}
                   </Button>
@@ -2751,7 +3515,7 @@ const UploadPage = () => {
       </Tabs>
       
       {/* Upload Progress Modal */}
-      {isUploading && (
+      {isUploading && !uploadModalDismissed && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-0">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
           <div className="relative w-full sm:max-w-2xl bg-[#0B1218] rounded-2xl overflow-hidden shadow-2xl border border-[#1e3a4a]/50">
@@ -2768,7 +3532,7 @@ const UploadPage = () => {
               </span>
 
               <div className="w-full space-y-3 px-2 sm:px-4">
-                <div className="w-full h-1.5 bg-[#1e3a4a]/50 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-[#1e3a4a]/50 rounded-full overflow-hidden relative">
                   <div
                     className="h-full bg-[#B7FF1A] rounded-full transition-all duration-500 ease-out"
                     style={{
@@ -2776,6 +3540,19 @@ const UploadPage = () => {
                       boxShadow: '0 0 20px rgba(183, 255, 26, 0.6)',
                     }}
                   />
+                  {/* The 85→100 stretch is a single long-running server request (ffmpeg
+                      re-encode + thumbnail + re-upload) with no intermediate progress to
+                      report, so the bar itself sits frozen at 85% for a while. Without some
+                      motion there it reads as hung rather than working — this shimmer sweeps
+                      across just that segment so it still looks alive. */}
+                  {uploadProgress >= 85 && uploadProgress < 100 && (
+                    <div
+                      className="absolute inset-y-0 left-0 w-1/3 animate-[upload-processing-shimmer_1.4s_ease-in-out_infinite]"
+                      style={{
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
+                      }}
+                    />
+                  )}
                 </div>
                 <div className="flex justify-between text-[10px] font-bold tracking-[1px] uppercase text-[#4a6a7a]">
                   <span className={uploadProgress >= 25 ? "text-[#B7FF1A]/60" : ""}>25%</span>
@@ -2790,40 +3567,66 @@ const UploadPage = () => {
                   {uploadProgress < 85 ? "Uploading your content..." : uploadProgress < 100 ? "Processing..." : "Complete!"}
                 </h3>
                 <p className="text-[#8fa8b8] text-sm">
-                  Uploading {file?.name || 'video'} ({(file?.size ? file.size / (1024 * 1024) : 0).toFixed(1)} MB)
+                  {uploadProgress < 85
+                    ? `Uploading ${file?.name || 'video'} (${(file?.size ? file.size / (1024 * 1024) : 0).toFixed(1)} MB)`
+                    : uploadProgress < 100
+                      ? "Encoding and generating a thumbnail — large clips can take a couple of minutes here."
+                      : "All done!"}
                 </p>
               </div>
 
               <div className="flex items-center gap-3 bg-[#B7FF1A]/5 border border-[#B7FF1A]/10 rounded-full px-6 py-2.5">
                 <div className="w-2 h-2 bg-[#B7FF1A] rounded-full" style={{ boxShadow: '0 0 10px #B7FF1A' }} />
                 <span className="text-[#B7FF1A] text-[10px] font-bold tracking-[2px] uppercase">
-                  Please keep this tab open while uploading
+                  {uploadProgress < 85
+                    ? "Please keep this tab open while uploading"
+                    : "You can safely leave this page now"}
                 </span>
                 <div className="w-2 h-2 bg-[#B7FF1A] rounded-full" style={{ boxShadow: '0 0 10px #B7FF1A' }} />
               </div>
             </div>
 
-            <div className="flex items-center justify-center gap-4 px-8 py-6 bg-[#0b1820]/80 backdrop-blur-xl border-t border-[#1e3a4a]/10">
-              <button
-                type="button"
-                onClick={() => {
-                  if (uploadAbortRef.current) {
-                    uploadAbortRef.current.abort();
-                  }
-                  setIsUploading(false);
-                  setUploadProgress(0);
-                }}
-                className="text-[#8fa8b8] text-sm font-bold tracking-[1.4px] uppercase hover:text-white transition-colors px-6 py-3"
-              >
-                Cancel
-              </button>
-              <div className="flex items-center gap-2.5 bg-[#B7FF1A]/10 border border-[#B7FF1A]/20 rounded-full px-8 py-4 shadow-lg">
-                <div className="w-5 h-5 border-2 border-[#B7FF1A]/30 border-t-[#B7FF1A] rounded-full animate-spin" />
-                <span className="text-[#B7FF1A] text-sm font-bold tracking-[1.4px] uppercase">
-                  Uploading {uploadProgress}%
-                </span>
+            {uploadProgress >= 85 && uploadProgress < 100 ? (
+              <div className="flex items-center justify-center px-8 py-6 bg-[#0b1820]/80 backdrop-blur-xl border-t border-[#1e3a4a]/10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUploadModalDismissed(true);
+                    toast({
+                      title: "Processing in the background",
+                      description: "Your clip will appear on your profile shortly.",
+                      variant: "gamefolioSuccess",
+                    });
+                    navigate('/');
+                  }}
+                  className="flex items-center gap-2.5 bg-[#B7FF1A] rounded-full px-8 py-4 shadow-lg text-[#0B1218] text-sm font-bold tracking-[1.4px] uppercase hover:brightness-110 transition-all"
+                >
+                  You can leave this page now
+                </button>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center justify-center gap-4 px-8 py-6 bg-[#0b1820]/80 backdrop-blur-xl border-t border-[#1e3a4a]/10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (uploadAbortRef.current) {
+                      uploadAbortRef.current.abort();
+                    }
+                    setIsUploading(false);
+                    setUploadProgress(0);
+                  }}
+                  className="text-[#8fa8b8] text-sm font-bold tracking-[1.4px] uppercase hover:text-white transition-colors px-6 py-3"
+                >
+                  Cancel
+                </button>
+                <div className="flex items-center gap-2.5 bg-[#B7FF1A]/10 border border-[#B7FF1A]/20 rounded-full px-8 py-4 shadow-lg">
+                  <div className="w-5 h-5 border-2 border-[#B7FF1A]/30 border-t-[#B7FF1A] rounded-full animate-spin" />
+                  <span className="text-[#B7FF1A] text-sm font-bold tracking-[1.4px] uppercase">
+                    Uploading {uploadProgress}%
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -2833,6 +3636,98 @@ const UploadPage = () => {
         onOpenChange={setShowProUpgrade}
         subtitle="Get unlimited uploads"
       />
+
+      {/* Twitch clip picker */}
+      <Dialog open={showTwitchPicker} onOpenChange={(o) => !importingClipId && setShowTwitchPicker(o)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Twitch className="h-5 w-5 text-[#9146FF]" />
+              Import a Twitch clip
+            </DialogTitle>
+            <DialogDescription>
+              Pick one of your recent Twitch clips. We'll load it into the upload form so you can review and post it.
+            </DialogDescription>
+          </DialogHeader>
+
+          {importLimits && (
+            <div
+              className={`rounded-md border px-3 py-2 text-xs ${
+                importLimits.canImport
+                  ? "border-border bg-muted/50 text-muted-foreground"
+                  : "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+              }`}
+            >
+              You've imported{" "}
+              <span className="font-semibold">{importLimits.importsUsedToday}</span> of{" "}
+              <span className="font-semibold">{importLimits.maxImportsPerDay}</span> Twitch clips today —{" "}
+              {importLimits.canImport ? "this refreshes tomorrow." : "your limit refreshes tomorrow."}
+              {!importLimits.isPro && (
+                <> Pro members can import up to 10 a day.</>
+              )}
+            </div>
+          )}
+
+          <div className="overflow-y-auto -mx-1 px-1">
+            {twitchClipsLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <div className="w-6 h-6 rounded-full border-2 border-t-transparent border-[#9146FF] animate-spin mb-3" />
+                Loading your clips…
+              </div>
+            ) : twitchClipsError ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">
+                {(twitchClipsError as Error).message || "Couldn't load your Twitch clips."}
+              </div>
+            ) : !twitchClips || twitchClips.length === 0 ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">
+                No clips found on your Twitch channel yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {twitchClips.map((clip) => (
+                  <button
+                    key={clip.id}
+                    type="button"
+                    disabled={!!importingClipId}
+                    onClick={() => importTwitchClip(clip)}
+                    className="group text-left rounded-lg border border-border overflow-hidden hover:border-[#9146FF] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <div className="relative aspect-video bg-muted">
+                      {clip.thumbnailUrl && (
+                        <img
+                          src={clip.thumbnailUrl}
+                          alt={clip.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      )}
+                      <span className="absolute bottom-1 right-1 flex items-center gap-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] text-white">
+                        <Clock className="h-3 w-3" />
+                        {formatDuration(clip.duration)}
+                      </span>
+                      {importingClipId === clip.id && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                          <div className="w-6 h-6 rounded-full border-2 border-t-transparent border-white animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-2">
+                      <p className="text-sm font-medium line-clamp-2">{clip.title}</p>
+                      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                        {clip.gameName && <span className="truncate">{clip.gameName}</span>}
+                        <span className="flex items-center gap-1 shrink-0">
+                          <Eye className="h-3 w-3" />
+                          {clip.viewCount.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Share Dialog for uploaded content */}
       <ShareDialog

@@ -7,7 +7,7 @@ import { supabaseStorage } from '../supabase-storage';
 import { storage } from '../storage';
 import { insertClipSchema } from '@shared/schema';
 import { VideoProcessor } from '../video-processor';
-import { LeaderboardService, POINT_VALUES } from '../leaderboard-service';
+import { XPService } from '../xp-service';
 
 const tempDir = path.join(process.cwd(), "temp");
 if (!fs.existsSync(tempDir)) {
@@ -41,6 +41,10 @@ export interface ProcessAndCreateClipParams {
   // of being published immediately — see routes/upload.ts for the pre-check
   // that rejects invalid/over-limit schedules before this expensive pipeline runs.
   scheduledAt?: Date;
+  // Spam/multi-account detection signals — caller derives these from the
+  // request (see server/lib/request-meta.ts) since this service has no req.
+  uploadIp?: string;
+  uploadDeviceId?: string | null;
 }
 
 /**
@@ -51,7 +55,7 @@ export interface ProcessAndCreateClipParams {
  * pipeline instead of a second, divergent copy of this logic.
  */
 export async function processAndCreateClip(userId: number, params: ProcessAndCreateClipParams) {
-  const { uploadResult, title, description, gameId, tags, ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd, scheduledAt } = params;
+  const { uploadResult, title, description, gameId, tags, ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd, scheduledAt, uploadIp, uploadDeviceId } = params;
   const videoType = params.videoType || 'clip';
 
   if (!uploadResult || !title) {
@@ -71,6 +75,19 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   const maxDurationSeconds = isReel ? limits.maxReelDurationSeconds : limits.maxClipDurationSeconds;
   const maxSizeMB = isReel ? limits.maxReelSizeMB : limits.maxClipSizeMB;
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
+
+  // Rolling 24h upload-count cap - reject before any expensive
+  // download/transcode work below. Covers both the browser upload route and
+  // the OAuth public API, since both call through this shared function.
+  const usedInWindow = isReel ? limits.reelsUsedInWindow : limits.clipsUsedInWindow;
+  const maxPerWindow = isReel ? limits.maxReelsPerWindow : limits.maxClipsPerWindow;
+  if (usedInWindow >= maxPerWindow) {
+    throw new ClipProcessingError(403, {
+      error: 'Upload limit reached',
+      message: `You've reached your ${maxPerWindow} ${isReel ? 'reel' : 'clip'} upload limit for now.${limits.isPro ? '' : ' Upgrade to Pro for a higher limit.'}`,
+      limits,
+    });
+  }
 
   // Handle game ID - ensure game exists in database
   let finalGameId = null;
@@ -354,6 +371,8 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
     trimEnd: rawTrimEnd !== undefined && rawTrimEnd !== null ? parseInt(String(rawTrimEnd)) : actualDuration,
     ageRestricted: ageRestricted === true || ageRestricted === 'true',
     shareCode,
+    uploadIp: uploadIp ?? null,
+    uploadDeviceId: uploadDeviceId ?? null,
   };
 
   const validatedClipData = insertClipSchema.parse(finalClipData);
@@ -371,6 +390,9 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
       thumbnailUrl: validatedClipData.thumbnailUrl || null,
       videoType,
     });
+    // The file was actually processed/uploaded now, not at the future
+    // publish time, so it consumes the window now.
+    await storage.incrementUploadUsage(userId, videoType);
     return {
       success: true,
       scheduled,
@@ -379,11 +401,14 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   }
 
   const clip = await storage.createClip(validatedClipData);
+  await storage.incrementUploadUsage(userId, videoType);
 
-  await LeaderboardService.awardPoints(
+  await XPService.awardXP(
     userId,
+    250,
     'upload',
-    `Upload: ${videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`
+    `Earned 250 XP for uploading a ${videoType === 'reel' ? 'reel' : 'clip'}`,
+    clip.id
   );
 
   const baseUrl = 'https://app.gamefolio.com';
@@ -404,7 +429,7 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   return {
     success: true,
     clip: { ...clip, qrCode: qrCodeDataUrl, shareUrl: clipUrl, socialMediaLinks },
-    xpGained: POINT_VALUES['upload'] ?? 200,
+    xpGained: 250,
     userXP: user?.totalXP || 0,
     userLevel: user?.level || 1,
     message: 'Video processed successfully'

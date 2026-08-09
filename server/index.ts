@@ -85,6 +85,7 @@ import uploadRoutes from './routes/upload';
 import twitchGamesRoutes from './routes/twitch-games';
 import gfCheckoutRoutes from './routes/gf-checkout';
 import proSubscriptionRoutes from './routes/pro-subscription';
+import indieDevSubscriptionRoutes from './routes/indie-dev-subscription';
 import gfWebhookRoutes from './routes/gf-webhook';
 import gfStakingRoutes from './routes/gf-staking';
 import { blockCryptoOnNative } from './middleware/block-crypto-on-native';
@@ -188,6 +189,18 @@ app.use((req, res, next) => {
   next();
 });
 
+// Prevent browsers from caching HTML responses in development so Vite HMR
+// changes are always visible without manual cache clearing.
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/@') && !req.path.includes('.')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+    }
+    next();
+  });
+}
+
 // IMPORTANT: Register webhook routes BEFORE express.json() middleware
 // Webhooks need raw body for signature verification
 app.use(gfWebhookRoutes);
@@ -259,6 +272,7 @@ app.use((req, res, next) => {
     app.use('/api/twitch', twitchGamesRoutes);
     app.use(gfCheckoutRoutes);
     app.use(proSubscriptionRoutes);
+    app.use(indieDevSubscriptionRoutes);
     app.use(gfStakingRoutes);
     app.use(storeRoutes);
     app.use(gamefolioPurchaseRoutes);
@@ -413,9 +427,15 @@ app.use((req, res, next) => {
     const port = process.env.NODE_ENV === "development" && process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
     // reusePort uses SO_REUSEPORT, which macOS sockets reject with ENOTSUP —
     // only enable it off-darwin (Linux/Replit), where it's supported.
+    // Overridable via HOST for local dev — on at least one dev machine, some
+    // local network/security software silently intercepted connections to a
+    // *specific* port (5050) with no error and no visible LISTEN socket;
+    // switching PORT resolved it, HOST=127.0.0.1 didn't independently confirm
+    // as necessary. Left here as a defensive knob for the same symptom
+    // elsewhere. Production/Replit still needs 0.0.0.0, so default unchanged.
     const listenOptions: { port: number; host: string; reusePort?: boolean } = {
       port,
-      host: "0.0.0.0",
+      host: process.env.HOST || "0.0.0.0",
     };
     if (process.platform !== "darwin") {
       listenOptions.reusePort = true;
@@ -494,7 +514,14 @@ app.use((req, res, next) => {
         const SCHEDULE_INTERVAL_MS = 60 * 1000;
         const tick = () => {
           publishDueScheduledPosts()
-            .catch((err) => console.error('scheduled-posts publish failed:', err));
+            .catch((err: any) => {
+              // Suppress noisy "relation does not exist" error when the
+              // scheduled_posts table hasn't been migrated yet.
+              const msg: string = err?.cause?.message ?? err?.message ?? '';
+              if (!msg.includes('relation "scheduled_posts" does not exist')) {
+                console.error('scheduled-posts publish failed:', err);
+              }
+            });
         };
         setTimeout(tick, 30 * 1000);
         setInterval(tick, SCHEDULE_INTERVAL_MS);

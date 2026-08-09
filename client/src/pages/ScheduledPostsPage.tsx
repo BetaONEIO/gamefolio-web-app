@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -69,9 +69,11 @@ export default function ScheduledPostsPage() {
 
   const { data, isLoading } = useQuery<{ posts: ScheduledPost[] }>({
     queryKey: ['/api/scheduled-posts'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
   });
   const { data: limits } = useQuery<ScheduleLimits>({
     queryKey: ['/api/scheduled-posts/limits'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
   });
 
   const invalidate = () => {

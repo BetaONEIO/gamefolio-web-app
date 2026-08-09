@@ -104,18 +104,25 @@ import {
   assetRewardClaims,
   userDailyLootbox,
   userDailyFires,
+  userDailyImports,
   proLootboxGrants,
   userUnlockedBanners,
   commentLikes,
   screenshotCommentLikes,
   UserDailyFires, InsertUserDailyFires,
   FireLimits,
+  userUploadUsage,
+  UserUploadUsage, InsertUserUploadUsage,
+  UserDailyImports,
+  ImportLimits,
   xpSettings,
   XpSetting, InsertXpSetting,
   PushToken, InsertPushToken,
   PushBroadcast, PushAudience,
   pushTokens,
   pushBroadcasts,
+  indieGameProfiles, IndieGameProfile, InsertIndieGameProfile,
+  indieGameFieldOverrides, IndieGameFieldOverride,
   ambassadorConversions
 } from "@shared/schema";
 import { db } from "./db";
@@ -123,7 +130,6 @@ import { eq, and, desc, like, ilike, asc, or, lt, lte, gt, sql, arrayContains, n
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { IStorage } from "./storage";
-import { calculateLevel } from "./level-system";
 import { notifyNewSignup } from "./telegram-notify";
 import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
@@ -900,15 +906,10 @@ export class DatabaseStorage implements IStorage {
       .set({ views: sql`${clips.views} + 1` })
       .where(eq(clips.id, id));
 
-    // Award XP to the clip owner (1 XP per view) and Points for leaderboard
+    // Award exactly 1 real XP to the clip owner per valid, rate-limited view.
     const newViewCount = (clip.views || 0) + 1;
     const { XPService } = await import("./xp-service");
-    const { LeaderboardService } = await import("./leaderboard-service");
-    
-    await Promise.all([
-      XPService.awardXPForViews(id, clip.userId, newViewCount),
-      LeaderboardService.awardPoints(clip.userId, 'view', `View on clip: ${clip.title}`)
-    ]);
+    await XPService.awardXPForViews(id, clip.userId, newViewCount);
   }
 
   async incrementScreenshotViews(id: number): Promise<void> {
@@ -922,9 +923,14 @@ export class DatabaseStorage implements IStorage {
       .set({ views: sql`${screenshots.views} + 1` })
       .where(eq(screenshots.id, id));
 
-    // Award Points for leaderboard (screenshots don't have XP tracking yet)
-    const { LeaderboardService } = await import("./leaderboard-service");
-    await LeaderboardService.awardPoints(screenshot.userId, 'view', `View on screenshot: ${screenshot.title}`);
+    // Screenshots receive the same 1 XP reward for each valid view.
+    const { XPService } = await import("./xp-service");
+    await XPService.awardXP(
+      screenshot.userId,
+      1,
+      "view",
+      `Earned 1 XP from screenshot reaching ${(screenshot.views || 0) + 1} views`
+    );
   }
 
   async getClipsByUserId(userId: number): Promise<ClipWithUser[]> {
@@ -1176,11 +1182,11 @@ export class DatabaseStorage implements IStorage {
         dateFilter = null; // No date filter for most recent
     }
 
-    // Get clips based on engagement (likes + comments) with privacy filtering
+    // Get clips based on engagement (views + weighted likes + comments) with privacy filtering
     const clipEngagementQuery = db
       .select({
         clipId: clips.id,
-        engagement: sql<number>`cast(count(distinct ${likes.id}) + count(distinct ${comments.id}) as integer)`.as('engagement')
+        engagement: sql<number>`cast(coalesce(${clips.views}, 0) + count(distinct ${likes.id}) * 15 + count(distinct ${comments.id}) * 10 as bigint)`.as('engagement')
       })
       .from(clips)
       .leftJoin(users, eq(clips.userId, users.id))
@@ -1222,6 +1228,30 @@ export class DatabaseStorage implements IStorage {
       engagementResults.map(r => this.getClipWithUser(r.clipId))
     );
     const clipsWithDetails: ClipWithUser[] = fetched.filter((c): c is ClipWithUser => !!c);
+
+    // Fallback: if engagement query returned nothing (e.g. transient DB startup
+    // issue or no engagement data yet), serve the most-recent clips instead so
+    // the home page hero always has content.
+    if (clipsWithDetails.length === 0) {
+      const fallbackRows = await db
+        .select({ clipId: clips.id })
+        .from(clips)
+        .leftJoin(users, eq(clips.userId, users.id))
+        .where(
+          and(
+            eq(clips.videoType, 'clip'),
+            eq(users.isPrivate, false),
+            sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
+          )
+        )
+        .orderBy(desc(clips.createdAt))
+        .limit(limit);
+
+      const fallbackFetched = await Promise.all(
+        fallbackRows.map(r => this.getClipWithUser(r.clipId))
+      );
+      return fallbackFetched.filter((c): c is ClipWithUser => !!c);
+    }
 
     return clipsWithDetails;
   }
@@ -1271,7 +1301,7 @@ export class DatabaseStorage implements IStorage {
           twitchId: games.twitchId,
           createdAt: games.createdAt,
         },
-        engagement: sql<number>`cast(count(distinct ${likes.id}) + count(distinct ${comments.id}) as integer)`.as('engagement'),
+        engagement: sql<number>`cast(coalesce(${clips.views}, 0) + count(distinct ${likes.id}) * 15 + count(distinct ${comments.id}) * 10 as bigint)`.as('engagement'),
         likesCount: sql<number>`count(distinct ${likes.id})`.as('likesCount'),
         commentsCount: sql<number>`count(distinct ${comments.id})`.as('commentsCount'),
         reactionsCount: sql<number>`count(distinct ${clipReactions.id})`.as('reactionsCount')
@@ -3781,27 +3811,44 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMonthlyLeaderboard(month: string, year: number, limit?: number): Promise<(MonthlyLeaderboard & { user: User })[]> {
-    const query = db
+    // Users WITH a leaderboard entry this period (any points including 0)
+    const withEntries = await db
       .select()
       .from(monthlyLeaderboard)
       .leftJoin(users, eq(monthlyLeaderboard.userId, users.id))
       .where(and(
         eq(monthlyLeaderboard.month, month),
         eq(monthlyLeaderboard.year, year),
-        gt(monthlyLeaderboard.totalPoints, 0),
         sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`
       ))
       .orderBy(desc(monthlyLeaderboard.totalPoints));
 
-    if (limit) {
-      query.limit(limit);
-    }
+    const entryUserIds = withEntries.map(r => r.monthly_leaderboard.userId);
 
-    const results = await query;
-    return results.map(row => ({
-      ...row.monthly_leaderboard,
-      user: row.users!
-    }));
+    // Users WITHOUT any entry this period — show at 0 XP
+    // Note: NULL NOT IN (...) evaluates to NULL in Postgres, so we must guard with IS NULL checks.
+    const withoutEntries = await db
+      .select()
+      .from(users)
+      .where(and(
+        entryUserIds.length > 0 ? notInArray(users.id, entryUserIds) : sql`TRUE`,
+        or(isNull(users.status), notInArray(users.status, ['suspended', 'banned'])),
+        notInArray(users.role, ['admin', 'moderator', 'system']),
+        or(isNull(users.hideFromLeaderboard), eq(users.hideFromLeaderboard, false))
+      ))
+      .orderBy(asc(users.id));
+
+    const now = new Date();
+    const combined: (MonthlyLeaderboard & { user: User })[] = [
+      ...withEntries.map(row => ({ ...row.monthly_leaderboard, user: row.users! })),
+      ...withoutEntries.map(u => ({
+        id: 0, userId: u.id, month, year,
+        uploadsCount: 0, likesGivenCount: 0, commentsCount: 0,
+        firesGivenCount: 0, viewsCount: 0, totalPoints: 0, rank: 0,
+        createdAt: now, updatedAt: now, user: u,
+      })),
+    ];
+    return limit ? combined.slice(0, limit) : combined;
   }
 
   async recalculateMonthlyRankings(month: string, year: number): Promise<void> {
@@ -3849,23 +3896,57 @@ export class DatabaseStorage implements IStorage {
       .from(monthlyLeaderboard)
       .where(sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`)
       .groupBy(monthlyLeaderboard.userId)
-      .having(sql`SUM(${monthlyLeaderboard.totalPoints}) > 0`)
-      .orderBy(desc(sql`SUM(${monthlyLeaderboard.totalPoints})`))
-      .limit(limit);
+      // No HAVING filter — include users with 0 aggregated points too
+      .orderBy(desc(sql`SUM(${monthlyLeaderboard.totalPoints})`));
 
-    // Get user details for each entry
-    const results = await Promise.all(
+    const entryUserIds = aggregated.map(e => e.userId);
+
+    // Users who have never appeared on any monthly leaderboard — show at 0 XP
+    const withoutAny = await db
+      .select()
+      .from(users)
+      .where(and(
+        entryUserIds.length > 0 ? notInArray(users.id, entryUserIds) : sql`TRUE`,
+        notInArray(users.status, ['suspended', 'banned']),
+        notInArray(users.role, ['admin', 'moderator', 'system']),
+        eq(users.hideFromLeaderboard, false)
+      ))
+      .orderBy(asc(users.id));
+
+    // Resolve user details for entries that have monthly points
+    const ranked = await Promise.all(
       aggregated.map(async (entry, index) => {
         const user = await this.getUser(entry.userId);
-        return {
-          ...entry,
-          rank: index + 1,
-          user: user!
-        };
+        return { ...entry, rank: index + 1, user: user! };
       })
     );
 
-    return results;
+    const zeroRankStart = ranked.length + 1;
+    const zeros = withoutAny.map((u, i) => ({
+      userId: u.id,
+      uploadsCount: 0, likesGivenCount: 0, commentsCount: 0,
+      firesGivenCount: 0, viewsCount: 0, totalPoints: 0,
+      rank: zeroRankStart + i,
+      user: u,
+    }));
+
+    const combined = [...ranked, ...zeros];
+    return limit ? combined.slice(0, limit) : combined;
+  }
+
+  async hasReceivedXPSourceToday(userId: number, source: string): Promise<boolean> {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const [row] = await db
+      .select({ id: userXPHistory.id })
+      .from(userXPHistory)
+      .where(and(
+        eq(userXPHistory.userId, userId),
+        eq(userXPHistory.source, source),
+        sql`${userXPHistory.createdAt} >= ${startOfDay}`
+      ))
+      .limit(1);
+    return !!row;
   }
 
   // Weekly leaderboard operations
@@ -3896,27 +3977,44 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWeeklyLeaderboard(week: string, year: number, limit?: number): Promise<(WeeklyLeaderboard & { user: User })[]> {
-    const query = db
+    // Users WITH a leaderboard entry this period (any points including 0)
+    const withEntries = await db
       .select()
       .from(weeklyLeaderboard)
       .leftJoin(users, eq(weeklyLeaderboard.userId, users.id))
       .where(and(
         eq(weeklyLeaderboard.week, week),
         eq(weeklyLeaderboard.year, year),
-        gt(weeklyLeaderboard.totalPoints, 0),
         sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${weeklyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`
       ))
       .orderBy(desc(weeklyLeaderboard.totalPoints));
 
-    if (limit) {
-      query.limit(limit);
-    }
+    const entryUserIds = withEntries.map(r => r.weekly_leaderboard.userId);
 
-    const results = await query;
-    return results.map(row => ({
-      ...row.weekly_leaderboard,
-      user: row.users!
-    }));
+    // Users WITHOUT any entry this period — show at 0 XP
+    // Note: NULL NOT IN (...) evaluates to NULL in Postgres, so we must guard with IS NULL checks.
+    const withoutEntries = await db
+      .select()
+      .from(users)
+      .where(and(
+        entryUserIds.length > 0 ? notInArray(users.id, entryUserIds) : sql`TRUE`,
+        or(isNull(users.status), notInArray(users.status, ['suspended', 'banned'])),
+        notInArray(users.role, ['admin', 'moderator', 'system']),
+        or(isNull(users.hideFromLeaderboard), eq(users.hideFromLeaderboard, false))
+      ))
+      .orderBy(asc(users.id));
+
+    const now = new Date();
+    const combined: (WeeklyLeaderboard & { user: User })[] = [
+      ...withEntries.map(row => ({ ...row.weekly_leaderboard, user: row.users! })),
+      ...withoutEntries.map(u => ({
+        id: 0, userId: u.id, week, year,
+        uploadsCount: 0, likesGivenCount: 0, commentsCount: 0,
+        firesGivenCount: 0, viewsCount: 0, totalPoints: 0, rank: 0,
+        createdAt: now, updatedAt: now, user: u,
+      })),
+    ];
+    return limit ? combined.slice(0, limit) : combined;
   }
 
   async recalculateWeeklyRankings(week: string, year: number): Promise<void> {
@@ -4013,6 +4111,15 @@ export class DatabaseStorage implements IStorage {
     return xp;
   }
 
+  async addUserXPHistoryIfAbsent(xpHistory: InsertUserXPHistory): Promise<UserXPHistory | null> {
+    const [xp] = await db
+      .insert(userXPHistory)
+      .values(xpHistory)
+      .onConflictDoNothing()
+      .returning();
+    return xp ?? null;
+  }
+
   async incrementUserXP(userId: number, xpAmount: number): Promise<void> {
     await db
       .update(users)
@@ -4058,6 +4165,47 @@ export class DatabaseStorage implements IStorage {
           eq(userPointsHistory.userId, userId),
           eq(userPointsHistory.action, action),
           sql`${userPointsHistory.description} LIKE ${descriptionPattern}`
+        )
+      )
+      .limit(1);
+
+    return !!result;
+  }
+
+  async hasUserEarnedXPForContent(userId: number, source: string, contentType: string, contentId: number): Promise<boolean> {
+    const descriptionPattern = `%${contentType} #${contentId}%`;
+    const [result] = await db
+      .select({ id: userXPHistory.id })
+      .from(userXPHistory)
+      .where(
+        and(
+          eq(userXPHistory.userId, userId),
+          eq(userXPHistory.source, source),
+          sql`${userXPHistory.description} LIKE ${descriptionPattern}`
+        )
+      )
+      .limit(1);
+
+    return !!result;
+  }
+
+  async hasUserEarnedXPForReaction(
+    creatorId: number,
+    source: string,
+    contentType: string,
+    contentId: number,
+    reactorId: number
+  ): Promise<boolean> {
+    const [result] = await db
+      .select({ id: userXPHistory.id })
+      .from(userXPHistory)
+      .where(
+        and(
+          eq(userXPHistory.userId, creatorId),
+          eq(userXPHistory.source, source),
+          eq(userXPHistory.contentType, contentType),
+          eq(userXPHistory.contentId, contentId),
+          eq(userXPHistory.reactorId, reactorId)
         )
       )
       .limit(1);
@@ -5384,19 +5532,13 @@ export class DatabaseStorage implements IStorage {
       const rewardValue = selectedReward.rewardValue || 0;
       
       if (selectedReward.assetType === 'xp_reward' && rewardValue > 0) {
-        const currentUser = await this.getUser(userId);
-        const newXP = (currentUser?.totalXP || 0) + rewardValue;
-        const newLevel = calculateLevel(newXP);
-        await db.update(users)
-          .set({ totalXP: newXP, level: newLevel })
-          .where(eq(users.id, userId));
-        
-        await db.insert(userXPHistory).values({
+        const { XPService } = await import("./xp-service");
+        await XPService.awardXP(
           userId,
-          xpAmount: rewardValue,
-          source: 'lootbox',
-          description: `Earned ${rewardValue} XP from Daily Lootbox (${selectedReward.rarity} reward)`,
-        });
+          rewardValue,
+          "lootbox",
+          `Earned ${rewardValue} XP from Daily Lootbox (${selectedReward.rarity} reward)`
+        );
         
         consumed = true;
       }
@@ -5615,6 +5757,9 @@ export class DatabaseStorage implements IStorage {
   private readonly PRO_MAX_SCREENSHOT_SIZE_MB = 50;
   private readonly PRO_MAX_CLIP_DURATION_SECONDS = 600; // 10 minutes
   private readonly PRO_MAX_REEL_DURATION_SECONDS = 180; // 3 minutes
+  // Per-batch bulk-upload caps (number of files queued at once).
+  private readonly FREE_MAX_BULK_UPLOADS = 3;
+  private readonly PRO_MAX_BULK_UPLOADS = 10;
 
   private getCurrentMonthString(): string {
     const now = new Date();
@@ -5653,6 +5798,17 @@ export class DatabaseStorage implements IStorage {
       ? new Date(user.proSubscriptionEndDate) > new Date()
       : false;
     const isPro = user?.isPro || hasActivePaidPeriod || user?.role === 'admin' || false;
+    // The higher bulk-upload batch cap is granted to Pro, Partner and admin
+    // users. Partners aren't flagged isPro, so they're checked explicitly here.
+    const maxBulkUploads = (isPro || user?.isPartner)
+      ? this.PRO_MAX_BULK_UPLOADS
+      : this.FREE_MAX_BULK_UPLOADS;
+
+    const [clipsUsedInWindow, reelsUsedInWindow, screenshotsUsedInWindow] = await Promise.all([
+      this.getUploadUsageInWindow(userId, 'clip'),
+      this.getUploadUsageInWindow(userId, 'reel'),
+      this.getUploadUsageInWindow(userId, 'screenshot'),
+    ]);
 
     if (isPro) {
       return {
@@ -5662,6 +5818,13 @@ export class DatabaseStorage implements IStorage {
         maxScreenshotSizeMB: this.PRO_MAX_SCREENSHOT_SIZE_MB,
         maxClipDurationSeconds: this.PRO_MAX_CLIP_DURATION_SECONDS,
         maxReelDurationSeconds: this.PRO_MAX_REEL_DURATION_SECONDS,
+        maxClipsPerWindow: this.PRO_MAX_CLIPS_PER_WINDOW,
+        clipsUsedInWindow,
+        maxReelsPerWindow: this.PRO_MAX_REELS_PER_WINDOW,
+        reelsUsedInWindow,
+        maxScreenshotsPerWindow: this.PRO_MAX_SCREENSHOTS_PER_WINDOW,
+        screenshotsUsedInWindow,
+        maxBulkUploads,
       };
     }
 
@@ -5672,7 +5835,71 @@ export class DatabaseStorage implements IStorage {
       maxScreenshotSizeMB: this.FREE_MAX_SCREENSHOT_SIZE_MB,
       maxClipDurationSeconds: this.FREE_MAX_CLIP_DURATION_SECONDS,
       maxReelDurationSeconds: this.FREE_MAX_REEL_DURATION_SECONDS,
+      maxClipsPerWindow: this.FREE_MAX_CLIPS_PER_WINDOW,
+      clipsUsedInWindow,
+      maxReelsPerWindow: this.FREE_MAX_REELS_PER_WINDOW,
+      reelsUsedInWindow,
+      maxScreenshotsPerWindow: this.FREE_MAX_SCREENSHOTS_PER_WINDOW,
+      screenshotsUsedInWindow,
+      maxBulkUploads,
     };
+  }
+
+  // Rolling 24h upload-count tracking - one row per (user, contentType)
+  // window, mirroring the fire-reaction limit pattern below
+  // (userDailyFires/getFireLimits) so the reset avoids a fixed UTC-midnight
+  // boundary that would let users near it double their allowance in one
+  // real day.
+  private readonly FREE_MAX_CLIPS_PER_WINDOW = 3;
+  private readonly PRO_MAX_CLIPS_PER_WINDOW = 10;
+  private readonly FREE_MAX_REELS_PER_WINDOW = 3;
+  private readonly PRO_MAX_REELS_PER_WINDOW = 10;
+  private readonly FREE_MAX_SCREENSHOTS_PER_WINDOW = 5;
+  private readonly PRO_MAX_SCREENSHOTS_PER_WINDOW = 15;
+
+  private async getUserUploadUsageRecord(userId: number, contentType: string): Promise<UserUploadUsage | null> {
+    const [record] = await db
+      .select()
+      .from(userUploadUsage)
+      .where(and(eq(userUploadUsage.userId, userId), eq(userUploadUsage.contentType, contentType)))
+      .orderBy(desc(userUploadUsage.createdAt))
+      .limit(1);
+    return record || null;
+  }
+
+  private isUploadWindowActive(record: UserUploadUsage, now: Date): boolean {
+    return now.getTime() - new Date(record.createdAt).getTime() < TWENTY_FOUR_HOURS_MS;
+  }
+
+  private async getUploadUsageInWindow(userId: number, contentType: string): Promise<number> {
+    const now = new Date();
+    const existing = await this.getUserUploadUsageRecord(userId, contentType);
+    return existing && this.isUploadWindowActive(existing, now) ? existing.uploadCount : 0;
+  }
+
+  async incrementUploadUsage(userId: number, contentType: 'clip' | 'reel' | 'screenshot'): Promise<UserUploadUsage> {
+    const now = new Date();
+    const existing = await this.getUserUploadUsageRecord(userId, contentType);
+
+    if (existing && this.isUploadWindowActive(existing, now)) {
+      const [updated] = await db
+        .update(userUploadUsage)
+        .set({ uploadCount: existing.uploadCount + 1, updatedAt: now })
+        .where(eq(userUploadUsage.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(userUploadUsage)
+        .values({
+          userId,
+          contentType,
+          windowStartDate: now.toISOString().split('T')[0],
+          uploadCount: 1,
+        })
+        .returning();
+      return created;
+    }
   }
 
   // ==================== SCHEDULED POSTS OPERATIONS ====================
@@ -6243,6 +6470,67 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  // Daily Twitch-clip import limit operations
+  async getUserDailyImports(userId: number, date: string): Promise<UserDailyImports | null> {
+    const [record] = await db
+      .select()
+      .from(userDailyImports)
+      .where(
+        and(
+          eq(userDailyImports.userId, userId),
+          eq(userDailyImports.importDate, date)
+        )
+      );
+    return record || null;
+  }
+
+  async incrementDailyImportCount(userId: number): Promise<UserDailyImports> {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format (UTC)
+
+    const existing = await this.getUserDailyImports(userId, today);
+
+    if (existing) {
+      const [updated] = await db
+        .update(userDailyImports)
+        .set({
+          importsCount: existing.importsCount + 1,
+          updatedAt: new Date()
+        })
+        .where(eq(userDailyImports.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(userDailyImports)
+        .values({
+          userId,
+          importDate: today,
+          importsCount: 1
+        })
+        .returning();
+      return created;
+    }
+  }
+
+  async getImportLimits(userId: number): Promise<ImportLimits> {
+    const user = await this.getUser(userId);
+    const isPro = user?.isPro ?? false;
+
+    // Pro users get 10 Twitch imports per day, free users get 2
+    const maxImportsPerDay = isPro ? 10 : 2;
+
+    const today = new Date().toISOString().split('T')[0];
+    const dailyImports = await this.getUserDailyImports(userId, today);
+    const importsUsedToday = dailyImports?.importsCount ?? 0;
+
+    return {
+      isPro,
+      maxImportsPerDay,
+      importsUsedToday,
+      canImport: importsUsedToday < maxImportsPerDay
+    };
+  }
+
   async getXpSettings(): Promise<XpSetting[]> {
     return await db.select().from(xpSettings).orderBy(xpSettings.category, xpSettings.key);
   }
@@ -6403,5 +6691,50 @@ export class DatabaseStorage implements IStorage {
       .from(pushBroadcasts)
       .orderBy(desc(pushBroadcasts.createdAt))
       .limit(limit);
+  }
+
+  // ─── Indie Game Profile Operations ────────────────────────────────────────────
+
+  async getIndieGameProfile(userId: number): Promise<IndieGameProfile | null> {
+    const rows = await db.select().from(indieGameProfiles).where(eq(indieGameProfiles.userId, userId));
+    return rows[0] ?? null;
+  }
+
+  async upsertIndieGameProfile(userId: number, patch: Partial<InsertIndieGameProfile>): Promise<IndieGameProfile> {
+    const existing = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, userId));
+    if (existing.length > 0) {
+      const [updated] = await db.update(indieGameProfiles).set({ ...patch, updatedAt: new Date() }).where(eq(indieGameProfiles.userId, userId)).returning();
+      return updated;
+    }
+    const [inserted] = await db.insert(indieGameProfiles).values({ userId, ...patch }).returning();
+    return inserted;
+  }
+
+  async getIndieFieldMeta(userId: number): Promise<Record<string, IndieGameFieldOverride>> {
+    const rows = await db.select().from(indieGameFieldOverrides).where(eq(indieGameFieldOverrides.userId, userId));
+    const map: Record<string, IndieGameFieldOverride> = {};
+    for (const row of rows) map[row.fieldName] = row;
+    return map;
+  }
+
+  async upsertIndieFieldMeta(
+    userId: number,
+    fieldName: string,
+    patch: Partial<Omit<IndieGameFieldOverride, "id" | "userId" | "fieldName" | "createdAt">>
+  ): Promise<void> {
+    const existing = await db.select({ id: indieGameFieldOverrides.id }).from(indieGameFieldOverrides)
+      .where(and(eq(indieGameFieldOverrides.userId, userId), eq(indieGameFieldOverrides.fieldName, fieldName)));
+    if (existing.length > 0) {
+      await db.update(indieGameFieldOverrides).set(patch as any).where(eq(indieGameFieldOverrides.id, existing[0].id));
+    } else {
+      await db.insert(indieGameFieldOverrides).values({ userId, fieldName, ...patch } as any);
+    }
+  }
+
+  async getIndieGameProfileByUsername(username: string): Promise<{ profile: IndieGameProfile | null; user: User } | null> {
+    const user = await this.getUserByUsername(username);
+    if (!user || user.partnerType !== "indie") return null;
+    const profile = await this.getIndieGameProfile(user.id);
+    return { user, profile };
   }
 }

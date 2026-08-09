@@ -8,7 +8,7 @@ interface AudioPreferences {
 const STORAGE_KEY = 'gamefolio-video-audio-preferences';
 
 const DEFAULT_PREFERENCES: AudioPreferences = {
-  muted: true, // Start muted for autoplay compliance
+  muted: false,
   volume: 1.0
 };
 

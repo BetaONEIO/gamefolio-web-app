@@ -590,7 +590,7 @@ const AccountSettingsPage: React.FC = () => {
   const appearanceForm = useForm<AppearanceFormValues>({
     resolver: zodResolver(appearanceFormSchema),
     defaultValues: {
-      accentColor: user?.accentColor || '#4C8',
+      accentColor: user?.accentColor || '#B7FF1A',
       primaryColor: user?.primaryColor || '#071013',
       backgroundColor: user?.backgroundColor || '#071013',
       profileFont: user?.profileFont || 'default',

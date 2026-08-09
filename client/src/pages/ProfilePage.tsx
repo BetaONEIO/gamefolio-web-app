@@ -75,6 +75,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import IndieGameProfileLayout from "@/pages/profile-layouts/IndieGameProfileLayout";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
 import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreenshotsViewer";
@@ -2033,6 +2034,11 @@ const ProfilePage = () => {
       </div>
     );
   })() : null;
+
+  const isIndieDeveloperProfile = !!(profile.userType?.split(',').map((t: string) => t.trim()).includes('indie_developer'));
+  if (profile.layoutStyle === 'indie-game' || isIndieDeveloperProfile) {
+    return <IndieGameProfileLayout profile={profile} isOwnProfile={isOwnProfile} />;
+  }
 
   return (
     <>

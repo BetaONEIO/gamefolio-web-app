@@ -8,6 +8,7 @@ import { oauthRateLimiter } from '../oauth-rate-limiter';
 import { upload } from './upload';
 import { processAndCreateClip, ClipProcessingError } from '../services/clip-processing';
 import { captureRouteError } from "../sentry";
+import { getRequestMeta } from "../lib/request-meta";
 
 const router = Router();
 
@@ -167,6 +168,7 @@ router.post('/clips', requireOAuthScope('clips:write'), oauthRateLimiter, upload
       throw new Error('Supabase upload failed - no URL returned');
     }
 
+    const { ip: uploadIp, deviceId: uploadDeviceId } = getRequestMeta(req);
     const responseData = await processAndCreateClip(userId, {
       uploadResult: { url: uploadResult.url, path: `users/${userId}/${fileName}` },
       title,
@@ -177,6 +179,8 @@ router.post('/clips', requireOAuthScope('clips:write'), oauthRateLimiter, upload
       ageRestricted,
       trimStart,
       trimEnd,
+      uploadIp,
+      uploadDeviceId,
     });
 
     return res.status(201).json({

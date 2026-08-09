@@ -1,8 +1,18 @@
 - [FFmpeg remote URL scale2ref](ffmpeg-remote-url-filtergraph.md) — scale2ref gives 0kB when inputs are remote URLs; probe dims with ffprobe and use explicit scale filter instead.
 - [Trending cache startup race](trending-cache-startup-race.md) — first DB query after server start returns [] due to pool warming; fix is to not cache empty arrays and add a fallback query.
 - [@assets alias requires public copy](assets-alias-public-copy.md) — `@assets` resolves to `client/public/attached_assets`; files attached to chat may land only in root `attached_assets/` and need manual copy before imports work.
+- [Gamefolio dev DB schema drift](gamefolio-dev-db-schema-drift.md) — dev Supabase DB can silently lag `shared/schema.ts` (missing columns); diagnose with an information_schema diff before assuming a feature bug.
+- [Profile layoutStyle branch pattern](gamefolio-profile-layout-style.md) — alternate profile designs are graduated as early-return components keyed on `users.layoutStyle`, inserted in ProfilePage.tsx right before the main return (after all hooks).
+- [HomeCarousel.tsx is dead code](homecarousel-dead-file.md) — HomeCarousel.tsx exports a component that is never imported anywhere; the actual home hero slider is LatestContentSlider.tsx rendered inside HomePageSimple.tsx.
 - [Fullscreen mobile overlays need body portal](mobile-overlay-stacking-context.md) — page wrapper divs with position+zIndex trap high z-index overlays below the sticky Header; portal to document.body to escape.
 - [Points/XP drift & stale banners](points-xp-drift.md) — total_xp must equal points-history sum; banner_url must match active uploaded banner; admin repair endpoint fixes both + the id sequence.
 - [returnNull query data bypasses destructure defaults](react-query-null-vs-undefined-default.md) — `getQueryFn({on401:"returnNull"})` can set query `data` to `null`; a `const {data: x = []} = useQuery(...)` default only fires on `undefined`, not `null`, so `.length`/`.map` calls on `x` can throw.
 - [Leaderboard cache rebuild](leaderboard-cache-rebuild.md) — weekly/monthly leaderboards are incremental cache tables; bulk history imports need the admin rebuild endpoint.
 - [Legacy import advisory lock](legacy-import-advisory-lock.md) — session locks must acquire, run, and release through one reserved postgres-js connection.
+- [Publish schema diff safety](publish-schema-diff-safety.md) — missing dev-side tables can appear as destructive production drops; align dev compatibility tables before publishing.
+- [Additive schema drift](additive-schema-drift.md) — deployed code can reference schema columns absent from both DBs; sync dev first so Publish emits safe additive changes.
+- [Leaderboard podium scaling](leaderboard-podium-scaling.md) — scaled card transforms amplify perceived vertical lift; tune #1 position from the rendered result.
+- [Authoritative creator XP](authoritative-creator-xp.md) — uploads, valid views, lootboxes, referrals, and unique fires use the real XP ledger; legacy points must not duplicate them.
+- [Season XP transparency](season-xp-transparency.md) — dashboard Season XP and its source breakdown must come from the same user_xp_history window as the season leaderboard.
+- [Ranked league threshold seeding](ranked-league-threshold-seeding.md) — seed missing progression settings additively so startup never overwrites admin-configured values.
+- [Rivals XP source](rivals-xp-source.md) — dashboard Rivals must use positive user_xp_history events in the active weekly window, not stale legacy point totals.

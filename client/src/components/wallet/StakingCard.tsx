@@ -33,7 +33,7 @@ export default function StakingCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
       whileHover={{ scale: 1.02 }}
-      className="bg-white/5 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10 dark:border-white/10"
+      className="bg-card rounded-2xl p-4 border border-border"
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
