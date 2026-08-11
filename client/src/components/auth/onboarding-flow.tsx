@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop } from "lucide-react";
+import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
@@ -444,6 +444,9 @@ export default function OnboardingFlow({
       name: game.name,
       imageUrl: game.box_art_url ? game.box_art_url.replace('{width}', '285').replace('{height}', '380') : null,
       twitchId: game.id,
+      isUserAdded: false,
+      isApproved: true,
+      showContactBanner: true,
       createdAt: new Date()
     };
     
@@ -1011,13 +1014,20 @@ export default function OnboardingFlow({
                 <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
                   Back
                 </Button>
-                <Button
+                <Button 
                   onClick={goToNextStep}
+                  disabled={selectedGames.length === 0}
                   className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold"
                 >
                   Next <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
+              <button
+                onClick={goToNextStep}
+                className="text-sm text-gray-500 hover:text-gray-300 transition-colors text-center py-1"
+              >
+                Skip for now
+              </button>
             </div>
           </div>
         );
@@ -1243,6 +1253,7 @@ export default function OnboardingFlow({
                 { id: "gamer", label: "Gamer", icon: Gamepad2 },
                 { id: "professional_gamer", label: "Pro Gamer", icon: Trophy },
                 { id: "content_creator", label: "Content Creator", icon: Upload },
+                { id: "indie_developer", label: "Indie Developer", icon: Code },
                 { id: "viewer", label: "Viewer", icon: Eye },
                 { id: "filthy_casual", label: "Filthy Casual", icon: Coffee },
                 { id: "doom_scroller", label: "Doom Scroller", icon: Scroll },

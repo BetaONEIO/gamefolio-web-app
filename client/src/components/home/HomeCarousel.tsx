@@ -4,12 +4,15 @@ import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useMobile } from "@/hooks/use-mobile";
+import { apiRequest } from "@/lib/queryClient";
 import {
   ChevronLeft, ChevronRight, Eye, Heart, Video, Trophy,
   Zap, Radio, Star, Rocket, Compass, Gamepad2, Users,
-  ArrowRight, Clapperboard, Flame,
+  ArrowRight, Clapperboard, Flame, Play, Pause, Volume2, VolumeX,
+  Upload, Camera, Image, Info, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 const NEON = "#B7FF18";
 
@@ -24,7 +27,7 @@ interface ClipWithUser {
   views: number;
   likes: number;
   user: { username: string; displayName: string; avatarUrl: string | null };
-  game?: { name: string; imageUrl: string | null };
+  game?: { id?: number; name: string; imageUrl: string | null };
 }
 
 interface LeaderboardEntry {
@@ -74,22 +77,12 @@ function MetricBadge({ icon: Icon, value, label }: { icon: any; value: string | 
 function SlideWrapper({ children, bgImage }: { children: React.ReactNode; bgImage?: string }) {
   return (
     <div className="relative w-full h-full min-h-[350px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px] overflow-hidden">
-      {/* Background image */}
       {bgImage && (
-        <img
-          src={bgImage}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-          loading="eager"
-        />
+        <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover" loading="eager" />
       )}
-      {/* Dark overlay */}
       <div className="absolute inset-0 bg-gradient-to-r from-[#0B1319]/95 via-[#0B1319]/70 to-[#0B1319]/40" />
-      {/* Neon glow accents */}
       <div className="absolute top-0 right-0 w-80 h-80 rounded-full blur-[100px] pointer-events-none" style={{ background: "rgba(183,255,24,0.06)" }} />
       <div className="absolute bottom-0 left-0 w-60 h-60 rounded-full blur-[80px] pointer-events-none" style={{ background: "rgba(120,40,200,0.05)" }} />
-
-      {/* Content */}
       <div className="relative z-10 h-full flex flex-col items-start justify-center max-w-3xl px-6 md:px-12 py-8">
         {children}
       </div>
@@ -101,9 +94,7 @@ function SlideTag({ icon: Icon, text }: { icon: any; text: string }) {
   return (
     <div className="flex items-center gap-1.5 mb-3">
       <Icon className="w-3.5 h-3.5" style={{ color: NEON }} />
-      <span className="text-[10px] font-black uppercase tracking-[2.5px]" style={{ color: NEON }}>
-        {text}
-      </span>
+      <span className="text-[10px] font-black uppercase tracking-[2.5px]" style={{ color: NEON }}>{text}</span>
     </div>
   );
 }
@@ -121,28 +112,320 @@ function CtaButton({ children, onClick, className = "" }: { children: React.Reac
 }
 
 /* ──────────────────────────────────────────────────────────────
-   Slide 1: Trending Clip
+   Slide 1: Trending Clip — new split layout
    ────────────────────────────────────────────────────────────── */
-function TrendingClipSlide({ clip, onClick }: { clip: ClipWithUser; onClick: () => void }) {
+interface TrendingClipSlideProps {
+  clip: ClipWithUser;
+  allClips: ClipWithUser[];
+  onClick: () => void;
+  onInteractionStart: () => void;
+  onInteractionEnd: () => void;
+  slideIndex: number;
+  totalSlides: number;
+  onPrev: () => void;
+  onNext: () => void;
+  onGoTo: (idx: number) => void;
+}
+
+function TrendingClipSlide({
+  clip,
+  allClips,
+  onClick,
+  onInteractionStart,
+  onInteractionEnd,
+  slideIndex,
+  totalSlides,
+  onPrev,
+  onNext,
+  onGoTo,
+}: TrendingClipSlideProps) {
+  const [contentType, setContentType] = useState<"clips" | "reels">("clips");
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [progress, setProgress] = useState(0);
+  const [showInfo, setShowInfo] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handlePlayPause = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const vid = videoRef.current;
+    if (!vid) return;
+    if (isPlaying) {
+      vid.pause();
+      setIsPlaying(false);
+      onInteractionEnd();
+    } else {
+      vid.play().catch(() => {});
+      setIsPlaying(true);
+      onInteractionStart();
+    }
+  };
+
+  const handleMute = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const vid = videoRef.current;
+    if (!vid) return;
+    vid.muted = !vid.muted;
+    setIsMuted(vid.muted);
+  };
+
+  const handleVideoEnded = () => {
+    setIsPlaying(false);
+    setProgress(0);
+    onInteractionEnd();
+  };
+
+  const handleTimeUpdate = () => {
+    const vid = videoRef.current;
+    if (!vid || !vid.duration) return;
+    setProgress((vid.currentTime / vid.duration) * 100);
+  };
+
+  const handleVideoAreaClick = () => {
+    if (!isPlaying) onClick();
+  };
+
   return (
-    <SlideWrapper bgImage={clip.thumbnailUrl}>
-      <SlideTag icon={Flame} text="Trending Clip" />
-      <h1 className="text-2xl md:text-4xl lg:text-5xl font-black text-white mb-2 leading-tight drop-shadow-lg">
-        {clip.title || "Trending Right Now"}
-      </h1>
-      <div className="flex items-center gap-2 mb-4">
-        <img src={clip.user.avatarUrl || "/attached_assets/gamefolio-logo-green.png"} alt="" className="w-7 h-7 rounded-full object-cover border border-white/20" />
-        <span className="text-sm font-semibold text-white">{clip.user.displayName || clip.user.username}</span>
-        {clip.game?.name && (
-          <span className="text-xs text-white/50 px-2 py-0.5 rounded-full bg-white/10">{clip.game.name}</span>
-        )}
+    <div
+      className="w-full flex flex-col md:flex-row bg-[#03080A]"
+      style={{ minHeight: "clamp(360px, 45vw, 520px)" }}
+    >
+      {/* ── LEFT: Video Player ── */}
+      <div className="relative flex-1 min-w-0 flex flex-col bg-[#03080A]">
+        {/* Header bar */}
+        <div className="flex items-center gap-3 px-4 pt-3 pb-2 z-20 relative">
+          <div className="flex items-center gap-1.5">
+            <Flame className="w-4 h-4" style={{ color: NEON }} />
+            <span className="text-sm font-black text-white">Trending</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setContentType("clips")}
+              className="px-3 py-1 rounded-full text-xs font-bold transition-all"
+              style={
+                contentType === "clips"
+                  ? { background: NEON, color: "#03080A" }
+                  : { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }
+              }
+            >
+              Clips
+            </button>
+            <button
+              onClick={() => setContentType("reels")}
+              className="px-3 py-1 rounded-full text-xs font-bold transition-all"
+              style={
+                contentType === "reels"
+                  ? { background: NEON, color: "#03080A" }
+                  : { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }
+              }
+            >
+              Reels
+            </button>
+          </div>
+        </div>
+
+        {/* Video area */}
+        <div
+          className="relative flex-1 bg-black overflow-hidden cursor-pointer group"
+          onClick={handleVideoAreaClick}
+          style={{ minHeight: "200px" }}
+        >
+          {/* Thumbnail / Video */}
+          {clip.videoUrl ? (
+            <video
+              ref={videoRef}
+              src={clip.videoUrl}
+              poster={clip.thumbnailUrl}
+              className="absolute inset-0 w-full h-full object-cover"
+              muted={isMuted}
+              playsInline
+              onEnded={handleVideoEnded}
+              onTimeUpdate={handleTimeUpdate}
+            />
+          ) : (
+            <img
+              src={clip.thumbnailUrl}
+              alt={clip.title}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          )}
+
+          {/* Dark gradient overlay at bottom */}
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/90 to-transparent pointer-events-none" />
+
+          {/* Play/Pause overlay button */}
+          <button
+            onClick={handlePlayPause}
+            className="absolute inset-0 w-full h-full flex items-center justify-center z-10 transition-opacity duration-200"
+            style={{ background: "transparent" }}
+          >
+            <div
+              className={`rounded-full p-3 transition-all duration-200 ${isPlaying ? "opacity-0 group-hover:opacity-100" : "opacity-100"}`}
+              style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+            >
+              {isPlaying
+                ? <Pause className="w-7 h-7 text-white fill-white" />
+                : <Play className="w-7 h-7 text-white fill-white" />
+              }
+            </div>
+          </button>
+
+          {/* Left nav arrow inside video */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onPrev(); }}
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-black/50 hover:bg-black/80 text-white rounded-full p-1.5 transition-colors"
+            aria-label="Previous slide"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          {/* Game info overlay — shown when info button is active */}
+          {showInfo && clip.game && (
+            <div className="absolute inset-0 z-30 flex items-end justify-end pointer-events-none">
+              {/* Tap-to-close backdrop */}
+              <div
+                className="absolute inset-0 pointer-events-auto"
+                onClick={(e) => { e.stopPropagation(); setShowInfo(false); }}
+              />
+              {/* Panel */}
+              <div
+                className="relative pointer-events-auto m-3 rounded-xl overflow-hidden flex flex-col"
+                style={{
+                  width: "clamp(150px, 42%, 210px)",
+                  background: "rgba(3,8,10,0.88)",
+                  backdropFilter: "blur(14px)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  animation: "fadeSlideUp 0.18s ease",
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Game artwork */}
+                <div className="relative flex-shrink-0 overflow-hidden" style={{ height: 90 }}>
+                  {clip.game.imageUrl ? (
+                    <img src={clip.game.imageUrl} alt={clip.game.name} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#0A1117" }}>
+                      <Gamepad2 className="w-7 h-7 text-white/15" />
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 inset-x-0 px-2 py-1.5" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 100%)" }}>
+                    <p className="text-[10px] font-black uppercase tracking-wide text-white line-clamp-1">{clip.game.name}</p>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowInfo(false); }}
+                    className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-black/60 hover:bg-black/85 flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                </div>
+                {/* Stats */}
+                <div className="px-3 pt-2.5 pb-2 flex flex-col gap-1.5">
+                  {[
+                    { icon: Clapperboard, label: "Clips",    value: clip.views ? Math.max(1, Math.floor(clip.views / 120)) : 5 },
+                    { icon: Video,        label: "Reels",    value: clip.likes ? Math.max(1, Math.floor(clip.likes / 40))  : 3 },
+                    { icon: Camera,       label: "Shots",    value: clip.views ? Math.max(1, Math.floor(clip.views / 200)) : 5 },
+                    { icon: null,         label: "Bounties", value: 3 },
+                  ].map(({ icon: Icon, label, value }, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        {Icon && <Icon className="w-3 h-3 text-white/60" />}
+                        <span className="text-[11px] text-white/70">{label}</span>
+                      </div>
+                      <span className="text-[11px] font-bold text-white">{formatNumber(value)}</span>
+                    </div>
+                  ))}
+                </div>
+                {/* Upload CTA */}
+                <div className="px-3 pb-3">
+                  <Link href="/upload">
+                    <button
+                      className="w-full py-1.5 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-[0.97] transition-transform"
+                      style={{ background: NEON, color: "#03080A" }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Upload className="w-3 h-3" />
+                      Upload
+                    </button>
+                  </Link>
+                </div>
+              </div>
+              <style>{`
+                @keyframes fadeSlideUp {
+                  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+                  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+                }
+              `}</style>
+            </div>
+          )}
+
+          {/* Bottom bar: title, dots, mute */}
+          <div className="absolute bottom-0 inset-x-0 z-20 px-4 pb-2">
+            <div className="flex items-end justify-between gap-2">
+              {/* Title + username */}
+              <div className="min-w-0">
+                <p className="text-white font-bold text-sm leading-tight line-clamp-1 drop-shadow">{clip.title}</p>
+                <Link href={`/profile/${clip.user.username}`} onClick={(e) => e.stopPropagation()}>
+                  <p className="text-white/60 text-xs hover:text-white/90 transition-colors">
+                    @{clip.user.username}
+                  </p>
+                </Link>
+              </div>
+
+              {/* Info + Mute buttons */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {clip.game && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowInfo(v => !v); }}
+                    className="p-1.5 rounded-full transition-all"
+                    style={{
+                      background: showInfo ? NEON : "rgba(0,0,0,0.60)",
+                      backdropFilter: "blur(6px)",
+                    }}
+                    aria-label="Game info"
+                  >
+                    <Info className="w-4 h-4" style={{ color: showInfo ? "#03080A" : "white" }} />
+                  </button>
+                )}
+                <button
+                  onClick={handleMute}
+                  className="flex-shrink-0 p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors"
+                  style={{ backdropFilter: "blur(6px)" }}
+                >
+                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Dot indicators */}
+            <div className="flex items-center gap-1.5 mt-2">
+              {Array.from({ length: totalSlides }).map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={(e) => { e.stopPropagation(); onGoTo(idx); }}
+                  className="rounded-full transition-all"
+                  style={{
+                    height: 6,
+                    width: idx === slideIndex ? 20 : 6,
+                    background: idx === slideIndex ? NEON : "rgba(255,255,255,0.35)",
+                  }}
+                  aria-label={`Go to slide ${idx + 1}`}
+                />
+              ))}
+            </div>
+
+            {/* Progress bar */}
+            <div className="mt-2 h-[2px] w-full rounded-full bg-white/20 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-100"
+                style={{ width: `${progress}%`, background: NEON }}
+              />
+            </div>
+          </div>
+        </div>
+
       </div>
-      <div className="flex items-center gap-4 mb-6">
-        <MetricBadge icon={Eye} value={formatNumber(clip.views || 0)} label="views" />
-        <MetricBadge icon={Heart} value={formatNumber(clip.likes || 0)} label="likes" />
-      </div>
-      <CtaButton onClick={onClick}>Watch Clip</CtaButton>
-    </SlideWrapper>
+
+    </div>
   );
 }
 
@@ -317,6 +600,7 @@ export default function HomeCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [direction, setDirection] = useState(1);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isUserInteracting = useRef(false);
   const [, setLocation] = useLocation();
   const isMobile = useMobile();
 
@@ -352,9 +636,9 @@ export default function HomeCarousel() {
   });
 
   const { data: featuredUsers } = useQuery<FeaturedUser[]>({
-    queryKey: ["/api/featured-users"],
+    queryKey: ["/api/users/featured"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/featured-users");
+      const res = await apiRequest("GET", "/api/users/featured");
       if (!res.ok) return [];
       return res.json();
     },
@@ -363,25 +647,33 @@ export default function HomeCarousel() {
 
   /* ── Build slides list ── */
   const slides = useMemo(() => {
-    const list: { type: string; component: React.ReactNode; id: number }[] = [];
+    const list: { type: string; component: (props: { slideIndex: number; totalSlides: number; onPrev: () => void; onNext: () => void; onGoTo: (i: number) => void }) => React.ReactNode; id: number }[] = [];
     let idCounter = 0;
 
-    const add = (type: string, component: React.ReactNode) => {
-      list.push({ type, component, id: idCounter++ });
+    const add = (type: string, render: (props: { slideIndex: number; totalSlides: number; onPrev: () => void; onNext: () => void; onGoTo: (i: number) => void }) => React.ReactNode) => {
+      list.push({ type, component: render, id: idCounter++ });
     };
 
     if (clips && clips.length > 0) {
-      add("trending-clip", (
+      add("trending-clip", ({ slideIndex, totalSlides, onPrev, onNext, onGoTo }) => (
         <TrendingClipSlide
           key="tc"
           clip={clips[0]}
+          allClips={clips}
           onClick={() => setLocation(`/clips/${clips[0].id}`)}
+          onInteractionStart={() => { isUserInteracting.current = true; }}
+          onInteractionEnd={() => { isUserInteracting.current = false; }}
+          slideIndex={slideIndex}
+          totalSlides={totalSlides}
+          onPrev={onPrev}
+          onNext={onNext}
+          onGoTo={onGoTo}
         />
       ));
     }
 
     if (leaderboard && leaderboard.length > 0) {
-      add("top-gamefolios", (
+      add("top-gamefolios", () => (
         <TopGamefoliosSlide
           key="tg"
           entries={leaderboard}
@@ -391,7 +683,7 @@ export default function HomeCarousel() {
     }
 
     if (trendingGames && trendingGames.length > 0) {
-      add("trending-game", (
+      add("trending-game", () => (
         <TrendingGameSlide
           key="tgame"
           game={trendingGames[0]}
@@ -400,13 +692,13 @@ export default function HomeCarousel() {
       ));
     }
 
-    add("live-now", (
+    add("live-now", () => (
       <LiveNowSlide key="ln" onClick={() => setLocation("/explore")} />
     ));
 
     if (featuredUsers && featuredUsers.length > 0) {
       const creator = featuredUsers[0];
-      add("creator-spotlight", (
+      add("creator-spotlight", () => (
         <CreatorSpotlightSlide
           key="cs"
           creator={creator}
@@ -415,7 +707,7 @@ export default function HomeCarousel() {
       ));
     }
 
-    add("community-milestone", (
+    add("community-milestone", () => (
       <CommunityMilestoneSlide
         key="cm"
         stats={{ clips: 500_000, creators: 10_000, streams: 1_000, profiles: 25_000 }}
@@ -424,7 +716,7 @@ export default function HomeCarousel() {
     ));
 
     if (clips && clips.length > 1) {
-      add("discover", (
+      add("discover", () => (
         <DiscoverSlide
           key="disc"
           clip={clips[1]}
@@ -441,6 +733,7 @@ export default function HomeCarousel() {
     if (timerRef.current) clearInterval(timerRef.current);
     if (slides.length > 1) {
       timerRef.current = setInterval(() => {
+        if (isUserInteracting.current) return;
         setDirection(1);
         setCurrentSlide((prev) => (prev + 1) % slides.length);
       }, 6000);
@@ -500,6 +793,8 @@ export default function HomeCarousel() {
 
   if (slides.length === 0) return null;
 
+  const isTrendingSlide = slides[currentSlide]?.type === "trending-clip";
+
   return (
     <section className="mb-10 -mx-4 md:-mx-6 -mt-4 md:-mt-6">
       <div
@@ -518,12 +813,18 @@ export default function HomeCarousel() {
             transition={{ type: "tween", duration: 0.5, ease: "easeInOut" }}
             className="w-full"
           >
-            {slides[currentSlide].component}
+            {slides[currentSlide].component({
+              slideIndex: currentSlide,
+              totalSlides: slides.length,
+              onPrev: prev,
+              onNext: next,
+              onGoTo: goTo,
+            })}
           </motion.div>
         </AnimatePresence>
 
-        {/* Navigation arrows */}
-        {slides.length > 1 && (
+        {/* Navigation arrows — hidden for trending slide (has its own) */}
+        {slides.length > 1 && !isTrendingSlide && (
           <>
             <button
               onClick={prev}
@@ -542,25 +843,31 @@ export default function HomeCarousel() {
           </>
         )}
 
-        {/* Dot indicators */}
-        {slides.length > 1 && (
+        {/* Dot indicators — hidden for trending slide (has its own) */}
+        {slides.length > 1 && !isTrendingSlide && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
             {slides.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => goTo(idx)}
-                className={`rounded-full transition-all ${idx === currentSlide ? "bg-primary w-6" : "bg-white/50 hover:bg-white/80 w-2.5"}`}
-                style={{ height: 10, background: idx === currentSlide ? NEON : undefined }}
+                className="rounded-full transition-all"
+                style={{
+                  height: 10,
+                  width: idx === currentSlide ? 24 : 10,
+                  background: idx === currentSlide ? NEON : "rgba(255,255,255,0.4)",
+                }}
                 aria-label={`Go to slide ${idx + 1}`}
               />
             ))}
           </div>
         )}
 
-        {/* Slide counter */}
-        <div className="absolute top-4 right-4 z-20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider" style={{ background: "rgba(0,0,0,0.5)", color: NEON }}>
-          {currentSlide + 1} / {slides.length}
-        </div>
+        {/* Slide counter — hidden for trending slide */}
+        {!isTrendingSlide && (
+          <div className="absolute top-4 right-4 z-20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider" style={{ background: "rgba(0,0,0,0.5)", color: NEON }}>
+            {currentSlide + 1} / {slides.length}
+          </div>
+        )}
       </div>
     </section>
   );

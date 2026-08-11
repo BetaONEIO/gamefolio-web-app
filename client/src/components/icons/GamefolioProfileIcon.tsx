@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import logoSrc from "@assets/gamefolio-logo-white.png";
+import logoSrc from "@assets/gamefolio-logo-green.png";
 
 interface GamefolioProfileIconProps {
   className?: string;

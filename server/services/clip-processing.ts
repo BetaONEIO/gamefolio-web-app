@@ -7,7 +7,7 @@ import { supabaseStorage } from '../supabase-storage';
 import { storage } from '../storage';
 import { insertClipSchema } from '@shared/schema';
 import { VideoProcessor } from '../video-processor';
-import { LeaderboardService, POINT_VALUES } from '../leaderboard-service';
+import { XPService } from '../xp-service';
 
 const tempDir = path.join(process.cwd(), "temp");
 if (!fs.existsSync(tempDir)) {
@@ -403,10 +403,12 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   const clip = await storage.createClip(validatedClipData);
   await storage.incrementUploadUsage(userId, videoType);
 
-  await LeaderboardService.awardPoints(
+  await XPService.awardXP(
     userId,
+    250,
     'upload',
-    `Upload: ${videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`
+    `Earned 250 XP for uploading a ${videoType === 'reel' ? 'reel' : 'clip'}`,
+    clip.id
   );
 
   const baseUrl = 'https://app.gamefolio.com';
@@ -427,7 +429,7 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   return {
     success: true,
     clip: { ...clip, qrCode: qrCodeDataUrl, shareUrl: clipUrl, socialMediaLinks },
-    xpGained: POINT_VALUES['upload'] ?? 200,
+    xpGained: 250,
     userXP: user?.totalXP || 0,
     userLevel: user?.level || 1,
     message: 'Video processed successfully'

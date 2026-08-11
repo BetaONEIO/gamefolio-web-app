@@ -83,7 +83,7 @@ const MobileNav = () => {
     <>
       {uploadMenuOpen && (
         <div
-          className="fixed inset-0 z-40 backdrop-blur-md bg-black/50 transition-opacity duration-300"
+          className="fixed inset-0 z-40 bg-black/60 transition-opacity duration-300"
           onClick={() => setUploadMenuOpen(false)}
         />
       )}
@@ -131,7 +131,7 @@ const MobileNav = () => {
         </div>
       </div>
 
-      <nav ref={navRef} className="fixed bottom-0 left-0 right-0 bg-[#0B1218] border-t border-border z-[70] safe-area-bottom">
+      <nav ref={navRef} className="fixed bottom-0 left-0 right-0 bg-[var(--gf-surface-1)] border-t border-[var(--gf-border)] z-[70] safe-area-bottom">
         <div className="flex justify-around py-3">
           {navItems.map((item) => {
             if ('isUpload' in item && item.isUpload) {

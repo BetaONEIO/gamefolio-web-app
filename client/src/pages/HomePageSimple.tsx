@@ -1,4 +1,5 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+
 import { useQuery } from "@tanstack/react-query";
 import VideoClipCard from "@/components/clips/VideoClipCard";
 
@@ -7,9 +8,6 @@ import { ClipWithUser, Game } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { ChevronRight, Video, Plus, ChevronLeft } from "lucide-react";
-import BannerImage from "@assets/Untitled (1920 x 1080 px).png";
-import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
-import LootboxBanner from "@assets/lootbox-banner-1_1770362095039.png";
 import { useLocation, Link } from "wouter";
 import { LatestReelsCarousel } from "@/components/clips/LatestReelsCarousel";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
@@ -20,14 +18,172 @@ import { Camera } from "lucide-react";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { LazySection } from "@/components/ui/lazy-section";
-import { openExternal } from "@/lib/platform";
-import { useAuthModal } from "@/hooks/use-auth-modal";
 import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
 import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
 import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
-import HomeCarousel from "@/components/home/HomeCarousel";
+import { CreatorCard } from "@/components/home/CreatorCard";
+import { CREATOR_CARD_STYLES, TrendingEntry } from "@/components/home/creator-card-utils";
+
 import { Trophy } from "lucide-react";
+import LatestContentSlider from "@/components/home/LatestContentSlider";
+import TrendingHeroSlide from "@/components/home/TrendingSlider";
+
+interface DbHeroSlide {
+  id: number;
+  title: string;
+  subtitle: string | null;
+  buttonText: string | null;
+  buttonLink: string | null;
+  imageUrl: string;
+  displayOrder: number;
+  isActive: boolean;
+}
+
+interface FeaturedGamefolioData {
+  user: {
+    id: number;
+    username: string;
+    displayName: string | null;
+    bio: string | null;
+    avatarUrl: string | null;
+    bannerUrl: string | null;
+    accentColor: string | null;
+    primaryColor: string | null;
+    backgroundColor: string | null;
+    avatarBorderColor: string | null;
+    level: number | null;
+    userType: string | null;
+    profileBackgroundGradient?: boolean | null;
+    profileBackgroundImageUrl?: string | null;
+    isVerified?: boolean | null;
+  };
+  gamesPlayed: { id: number; name: string }[];
+  latestClip: {
+    id: number;
+    title: string;
+    thumbnailUrl: string | null;
+    videoUrl: string;
+    views: number;
+    createdAt: string | null;
+    gameName: string | null;
+    duration: number;
+    videoType: string;
+    likesCount: number;
+  } | null;
+  clipCount: number;
+  clipsCount: number;
+  reelsCount: number;
+  screenshotsCount: number;
+  followersCount: number;
+  followingCount: number;
+  totalPoints: number;
+  weeklyUploadsCount: number;
+  topGame: { id: number; name: string; imageUrl: string | null; uploadCount: number } | null;
+}
+
+type AnySlide = DbHeroSlide | { type: 'leaderboard'; id: 'leaderboard' } | { type: 'latestContent'; id: 'latestContent' } | { type: 'trending'; id: 'trending' };
+
+interface LeaderboardWinner {
+  userId: number;
+  rank: number;
+  uploadsCount: number;
+  totalPoints: number;
+  followersCount?: number;
+  followingCount?: number;
+  clipsCount?: number;
+  reelsCount?: number;
+  screenshotsCount?: number;
+  user: {
+    id: number;
+    username: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+    bannerUrl: string | null;
+    accentColor: string | null;
+    avatarBorderColor: string | null;
+    level: number | null;
+    emailVerified?: boolean | null;
+    backgroundColor: string | null;
+    primaryColor: string | null;
+    profileBackgroundGradient: boolean | null;
+    profileBackgroundGradientCss: string | null;
+    profileBackgroundImageUrl: string | null;
+  };
+}
+
+const LEADERBOARD_STYLES = `
+@keyframes lb-sparkle {
+  0%, 100% { transform: scale(1) translateY(0); opacity: 0.9; }
+  50% { transform: scale(1.4) translateY(-5px); opacity: 0.4; }
+}
+@keyframes lb-orbit {
+  from { transform: rotate(0deg) translateX(105px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(105px) rotate(-360deg); }
+}
+@keyframes lb-pulse-gold {
+  0%, 100% { box-shadow: 0 0 24px 6px rgba(255,200,50,0.4); }
+  50%       { box-shadow: 0 0 40px 12px rgba(255,200,50,0.65); }
+}
+@keyframes lb-glow-silver {
+  0%, 100% { box-shadow: 0 0 18px 4px rgba(192,192,192,0.3); }
+  50%       { box-shadow: 0 0 30px 8px rgba(192,192,192,0.5); }
+}
+@keyframes lb-glow-bronze {
+  0%, 100% { box-shadow: 0 0 18px 4px rgba(205,127,50,0.3); }
+  50%       { box-shadow: 0 0 30px 8px rgba(205,127,50,0.5); }
+}
+/* Medal-coloured fire-card borders */
+.lb-card-1 .fire-card { border-color: rgba(255,215,0,0.75) !important; animation: lb-pulse-gold 2.4s ease-in-out infinite; }
+.lb-card-2 .fire-card { border-color: rgba(192,192,192,0.65) !important; animation: lb-glow-silver 2.8s ease-in-out infinite; }
+.lb-card-3 .fire-card { border-color: rgba(205,127,50,0.65) !important; animation: lb-glow-bronze 3.2s ease-in-out infinite; }
+.lb-spark  { position:absolute; width:6px; height:6px; border-radius:50%; pointer-events:none; }
+.lb-spark:nth-child(1) { animation: lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#FFD700; top:50%; left:50%; margin:-3px; animation-delay:0s,0s; }
+.lb-spark:nth-child(2) { animation: lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#B7FF18; top:50%; left:50%; margin:-3px; animation-delay:-0.75s,-0.3s; }
+.lb-spark:nth-child(3) { animation: lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#fff; top:50%; left:50%; margin:-3px; animation-delay:-1.5s,-0.6s; }
+.lb-spark:nth-child(4) { animation: lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#FFD700; top:50%; left:50%; margin:-3px; animation-delay:-2.25s,-0.9s; }
+.lb-spark:nth-child(5) { animation: lb-orbit 4.5s linear infinite, lb-sparkle 1.2s ease-in-out infinite; background:#B7FF18; top:50%; left:50%; margin:-3px; animation-delay:-3s,-1.1s; }
+.lb-spark:nth-child(6) { animation: lb-orbit 6.5s linear infinite, lb-sparkle 1.8s ease-in-out infinite; background:#fff; top:50%; left:50%; margin:-3px; animation-delay:-3.75s,-1.4s; }
+/* ── Hero slide CTA button ── */
+@keyframes pro-btn-grad {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes pro-sparkle {
+  0%, 100% { opacity: 1;   transform: scale(1)   rotate(0deg); }
+  25%       { opacity: 0.6; transform: scale(1.5) rotate(15deg); }
+  75%       { opacity: 0.8; transform: scale(0.8) rotate(-10deg); }
+}
+.pro-cta-btn {
+  position: relative;
+  background: linear-gradient(120deg, #ffe135, #B7FF1A, #7fff00, #B7FF1A, #ffe135);
+  background-size: 300% 300%;
+  animation: pro-btn-grad 3s ease infinite;
+  border: none;
+  overflow: visible;
+}
+.pro-cta-btn:hover { filter: brightness(1.08); }
+.pro-cta-sparkle {
+  position: absolute;
+  top: -7px;
+  right: -5px;
+  font-size: 16px;
+  line-height: 1;
+  pointer-events: none;
+  animation: pro-sparkle 1.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px #ffe135);
+}
+/* Mobile: horizontal scroll podium */
+@media (max-width: 639px) {
+  .lb-podium-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .lb-podium-scroll::-webkit-scrollbar { display: none; }
+  .lb-divider { display: none !important; }
+}
+@media (min-width: 640px) {
+  .lb-podium-scale { transform: scale(0.96); transform-origin: center center; }
+}
+`
 
 interface TrendingContentCarouselProps {
   clips: ClipWithUser[] | undefined;
@@ -175,311 +331,6 @@ const POPULAR_GAMES = [
   { id: 'minecraft', name: 'Minecraft' },
 ];
 
-const HERO_SLIDES = [
-  {
-    type: 'overlay' as const,
-    backgroundImage: ForzaGif,
-    overlay: 'linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8))',
-    showContent: true,
-  },
-  {
-    type: 'lootbox' as const,
-    backgroundImage: LootboxBanner,
-    overlay: 'linear-gradient(to right, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 50%, transparent 100%)',
-    showContent: true,
-  },
-  {
-    type: 'overlay' as const,
-    backgroundImage: BannerImage,
-    overlay: 'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7))',
-    showContent: true,
-  },
-];
-
-const SLIDE_INTERVAL = 5000;
-
-interface DbHeroSlide {
-  id: number;
-  title: string;
-  subtitle: string | null;
-  buttonText: string | null;
-  buttonLink: string | null;
-  imageUrl: string;
-  displayOrder: number;
-  isActive: boolean;
-  visibility: string;
-  textAlign: string;
-}
-
-interface HeroBannerSlideshowProps {
-  heroText: { title: string; subtitle: string; buttonText?: string; buttonUrl?: string } | null;
-  user: any;
-  userHasContent: boolean | undefined;
-  setLocation: (path: string) => void;
-  dbSlides?: DbHeroSlide[];
-  slideIntervalMs?: number;
-}
-
-const HeroBannerSlideshow = ({ heroText, user, userHasContent, setLocation, dbSlides, slideIntervalMs }: HeroBannerSlideshowProps) => {
-  const { openModal } = useAuthModal();
-  // Filter out Pro slides for users who are already Pro
-  const visibleDbSlides = dbSlides?.filter(slide =>
-    !(slide.buttonLink === '/pro' && (user as any)?.isPro)
-  );
-  const useDbSlides = visibleDbSlides && visibleDbSlides.length > 0;
-  const slidesCount = useDbSlides ? visibleDbSlides.length : HERO_SLIDES.length;
-  const interval = slideIntervalMs || SLIDE_INTERVAL;
-
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const touchStartX = useRef<number | null>(null);
-  const touchEndX = useRef<number | null>(null);
-  const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const sectionRef = useRef<HTMLElement>(null);
-
-  const goToSlide = useCallback((index: number) => {
-    setCurrentSlide(index);
-    if (autoTimerRef.current) clearInterval(autoTimerRef.current);
-    autoTimerRef.current = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slidesCount);
-    }, interval);
-  }, [slidesCount, interval]);
-
-  const goNext = useCallback(() => {
-    goToSlide((currentSlide + 1) % slidesCount);
-  }, [currentSlide, goToSlide, slidesCount]);
-
-  const goPrev = useCallback(() => {
-    goToSlide((currentSlide - 1 + slidesCount) % slidesCount);
-  }, [currentSlide, goToSlide, slidesCount]);
-
-  useEffect(() => {
-    setCurrentSlide(0);
-    if (autoTimerRef.current) clearInterval(autoTimerRef.current);
-    autoTimerRef.current = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slidesCount);
-    }, interval);
-    return () => { if (autoTimerRef.current) clearInterval(autoTimerRef.current); };
-  }, [slidesCount, interval]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') goPrev();
-      else if (e.key === 'ArrowRight') goNext();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goNext, goPrev]);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchEndX.current = null;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    touchEndX.current = e.touches[0].clientX;
-  };
-
-  const handleTouchEnd = () => {
-    if (touchStartX.current === null || touchEndX.current === null) return;
-    const diff = touchStartX.current - touchEndX.current;
-    const minSwipeDistance = 50;
-    if (Math.abs(diff) >= minSwipeDistance) {
-      if (diff > 0) goNext();
-      else goPrev();
-    }
-    touchStartX.current = null;
-    touchEndX.current = null;
-  };
-
-  return (
-    <section
-      ref={sectionRef}
-      className="relative overflow-hidden -mx-2 md:-mx-6 -mt-2 md:-mt-4"
-      tabIndex={0}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      <div className="relative h-[300px] sm:h-[350px] md:h-[500px]">
-        {useDbSlides ? (
-          visibleDbSlides.map((slide, index) => {
-            const isLootboxSlide = slide.buttonLink === '/lootbox';
-            const isProSlide = slide.buttonLink === '/pro';
-            const effectiveAlign = isLootboxSlide ? 'center' : slide.textAlign;
-            return (
-            <div
-              key={slide.id}
-              className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
-              style={{
-                backgroundImage: `url(${slide.imageUrl})`,
-                opacity: currentSlide === index ? 1 : 0,
-                zIndex: currentSlide === index ? 1 : 0,
-              }}
-            >
-              <div className={`absolute inset-0 ${effectiveAlign === 'left' ? 'bg-gradient-to-r from-black/80 via-black/40 to-transparent' : effectiveAlign === 'right' ? 'bg-gradient-to-l from-black/80 via-black/40 to-transparent' : 'bg-gradient-to-t from-black/70 via-black/50 to-black/30'}`} />
-              <div className={`relative flex ${effectiveAlign === 'right' ? 'items-center justify-end' : effectiveAlign === 'left' ? 'items-center justify-start' : 'items-center justify-center'} h-full`}>
-                <div className={`${effectiveAlign === 'center' ? 'text-center' : effectiveAlign === 'right' ? 'text-right' : 'text-left'} text-white px-8 sm:px-14 md:px-24 ${effectiveAlign === 'center' ? 'max-w-4xl' : 'max-w-lg'}`}>
-                  <h1 className="text-2xl sm:text-3xl md:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
-                    {slide.title.split('\n').map((line, idx) => (
-                      <span key={idx}>
-                        {idx > 0 && <span className="block text-primary">{line}</span>}
-                        {idx === 0 && line}
-                      </span>
-                    ))}
-                  </h1>
-                  {slide.subtitle && (
-                    <p className={`text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl ${effectiveAlign === 'center' ? 'mx-auto' : ''} leading-relaxed`}>
-                      {slide.subtitle}
-                    </p>
-                  )}
-                  {slide.buttonText && slide.buttonLink && (
-                    <Button 
-                      className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground border-0"
-                      style={isProSlide ? {
-                        background: 'linear-gradient(90deg, #B7FF1A, #FFE500, #AAFF00, #FFE500, #B7FF1A)',
-                        backgroundSize: '300% 100%',
-                        animation: 'gradient-shift 3s ease infinite',
-                        color: '#071013',
-                      } : undefined}
-                      onClick={() => {
-                        if (slide.buttonLink === '/lootbox') {
-                          window.dispatchEvent(new CustomEvent('open-lootbox'));
-                        } else if (slide.buttonLink === '/pro') {
-                          window.dispatchEvent(new CustomEvent('open-pro-upgrade'));
-                        } else if (slide.buttonLink?.startsWith('http')) {
-                          void openExternal(slide.buttonLink);
-                        } else {
-                          if (!user) {
-                            openModal('login');
-                          } else {
-                            setLocation(slide.buttonLink || '/');
-                          }
-                        }
-                      }}
-                    >
-                      {slide.buttonText}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-            );
-          })
-        ) : (
-          HERO_SLIDES.map((slide, index) => (
-            <div
-              key={index}
-              className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out"
-              style={{
-                backgroundImage: slide.overlay
-                  ? `${slide.overlay}, url(${slide.backgroundImage})`
-                  : `url(${slide.backgroundImage})`,
-                opacity: currentSlide === index ? 1 : 0,
-                zIndex: currentSlide === index ? 1 : 0,
-              }}
-            >
-              {slide.type === 'lootbox' && (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center text-white px-6 sm:px-10 md:px-16 flex flex-col items-center justify-center h-full max-w-lg">
-                    <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mb-4 sm:mb-6 leading-tight drop-shadow-lg">
-                      Claim your<br />Daily Lootbox
-                    </h2>
-                    <Button 
-                      className="w-full sm:w-fit px-8 py-3 sm:py-4 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
-                      onClick={() => {
-                        if (user) {
-                          window.dispatchEvent(new CustomEvent('open-lootbox'));
-                        } else {
-                          setLocation('/auth');
-                        }
-                      }}
-                    >
-                      Claim
-                    </Button>
-                  </div>
-                </div>
-              )}
-              {slide.showContent && slide.type !== 'lootbox' && (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center text-white px-4 sm:px-6 max-w-4xl">
-                    {heroText ? (
-                      <>
-                        <h1 className="text-2xl sm:text-3xl md:text-6xl font-bold mb-3 sm:mb-4 leading-tight">
-                          {heroText.title.split('\n').map((line, idx) => (
-                            <span key={idx}>
-                              {idx > 0 && <span className="block text-primary">{line}</span>}
-                              {idx === 0 && line}
-                            </span>
-                          ))}
-                        </h1>
-                        <p className="text-sm sm:text-base md:text-xl text-gray-200 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-2">
-                          {heroText.subtitle}
-                        </p>
-                        {heroText.buttonText && heroText.buttonUrl ? (
-                          <Button 
-                            className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                            onClick={() => {
-                              if (heroText.buttonUrl?.startsWith('http')) {
-                                void openExternal(heroText.buttonUrl);
-                              } else {
-                                setLocation(heroText.buttonUrl || '/');
-                              }
-                            }}
-                            data-testid="button-custom-hero"
-                          >
-                            {heroText.buttonText}
-                          </Button>
-                        ) : !user ? (
-                          <Button 
-                            className="w-fit px-8 py-3 sm:py-4 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
-                            onClick={() => setLocation('/auth')}
-                            data-testid="button-join-community"
-                          >
-                            Join Community
-                          </Button>
-                        ) : !userHasContent && (
-                          <Button 
-                            className="w-full sm:w-fit px-6 py-3 sm:py-5 h-auto text-sm sm:text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                            onClick={() => setLocation('/upload')}
-                            data-testid="button-start-building"
-                          >
-                            Start Building Now
-                          </Button>
-                        )}
-                      </>
-                    ) : (
-                      <div className="space-y-4">
-                        <Skeleton className="h-12 sm:h-16 md:h-24 w-full max-w-2xl mx-auto bg-white/10" />
-                        <Skeleton className="h-6 sm:h-8 w-3/4 max-w-xl mx-auto bg-white/10" />
-                        <Skeleton className="h-12 w-40 mx-auto bg-white/10" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))
-        )}
-
-        {/* Slide Indicators */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-          {Array.from({ length: slidesCount }).map((_, index) => (
-            <button
-              key={index}
-              onClick={() => goToSlide(index)}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                currentSlide === index
-                  ? 'w-6 bg-primary'
-                  : 'w-2 bg-white/40 hover:bg-white/60'
-              }`}
-            />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
-
 const HomePage = () => {
   const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
@@ -494,6 +345,9 @@ const HomePage = () => {
   // Get current user from auth context
   const { user } = useAuth();
   const userId = user?.id;
+
+  // Hero carousel state
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   // Query latest clips for the homepage section — newest uploaded first
   const { data: trendingClipsData, isLoading: isLoadingTrendingClips } = useQuery<ClipWithUser[]>({
@@ -563,19 +417,74 @@ const HomePage = () => {
     refetchOnWindowFocus: true,
   });
 
-  const { data: heroSlideSettings } = useQuery<{ intervalSeconds: number }>({
-    queryKey: ["/api/hero-slides/settings"],
+  const { data: featuredGamefolio } = useQuery<FeaturedGamefolioData>({
+    queryKey: ["/api/featured/gamefolio"],
     queryFn: async () => {
-      const response = await fetch('/api/hero-slides/settings');
-      if (!response.ok) {
-        throw new Error('Failed to fetch hero slide settings');
-      }
-      return response.json();
+      const r = await fetch("/api/featured/gamefolio");
+      if (!r.ok) throw new Error("Failed to fetch");
+      return r.json();
     },
-    staleTime: 30000,
+    staleTime: 60_000,
   });
 
-  const slideIntervalMs = (heroSlideSettings?.intervalSeconds || 6) * 1000;
+  const { data: weeklyTop10 } = useQuery<LeaderboardWinner[]>({
+    queryKey: ["/api/leaderboard/current-season/top"],
+    queryFn: async () => {
+      const r = await fetch("/api/leaderboard/current-season/top?limit=10");
+      if (!r.ok) throw new Error("Failed to fetch");
+      const data = await r.json();
+      // Don't accept empty arrays — retry on next render instead of caching blank state
+      if (!Array.isArray(data) || data.length === 0) throw new Error("No leaderboard data yet");
+      return data;
+    },
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10_000),
+  });
+  const weeklyTop3 = weeklyTop10?.slice(0, 3);
+
+  // Countdown to next Monday midnight (weekly leaderboard reset)
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const resetCountdown = useMemo(() => {
+    const d = new Date(nowMs);
+    const daysUntilMonday = (8 - d.getDay()) % 7 || 7;
+    const next = new Date(d);
+    next.setDate(d.getDate() + daysUntilMonday);
+    next.setHours(0, 0, 0, 0);
+    const diff = next.getTime() - nowMs;
+    return { days: Math.floor(diff / 86400000), hours: Math.floor((diff % 86400000) / 3600000) };
+  }, [nowMs]);
+
+  const activeSlides = useMemo<AnySlide[] | null>(() => {
+    const base: AnySlide[] = dbHeroSlides && dbHeroSlides.length > 0
+      ? dbHeroSlides.filter((s) => {
+          const t = (s.title || "").toLowerCase();
+          return !t.includes("build your gamefolio") && !t.includes("featured creator");
+        })
+      : [];
+    const leaderboardSlide: AnySlide = { type: 'leaderboard', id: 'leaderboard' };
+    const latestContentSlide: AnySlide = { type: 'latestContent', id: 'latestContent' };
+    return [latestContentSlide, ...base, leaderboardSlide];
+  }, [dbHeroSlides]);
+
+  const prevSlide = useCallback(() => {
+    if (!activeSlides) return;
+    setCurrentSlide((prev) => (prev - 1 + activeSlides.length) % activeSlides.length);
+  }, [activeSlides]);
+
+  const nextSlide = useCallback(() => {
+    if (!activeSlides) return;
+    setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
+  }, [activeSlides]);
+
+  const goToSlide = useCallback((idx: number) => {
+    setCurrentSlide(idx);
+  }, []);
 
   // Query to get custom hero text
   const { data: experiencedHeroText, isLoading: isLoadingExperiencedText } = useQuery<{ 
@@ -629,24 +538,311 @@ const HomePage = () => {
 
 
   return (
-    <div className="pb-16 md:pb-8 hide-scrollbar">
+    <div className="pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-8 hide-scrollbar">
       
-      {/* Hero Banner — original HeroBannerSlideshow */}
-      {/* Community Carousel commented out */}
-      {/* <HomeCarousel /> */}
-      {!isLoadingDbSlides && dbHeroSlides && dbHeroSlides.length > 0 && (
-        <HeroBannerSlideshow
-          heroText={heroText}
-          user={user}
-          userHasContent={userHasContent}
-          setLocation={setLocation}
-          dbSlides={dbHeroSlides}
-          slideIntervalMs={slideIntervalMs}
-        />
-      )}
+      {/* Hero Banner Carousel */}
+      <section className="mb-0 -mx-0">
+        <div className="relative overflow-hidden">
+          <div className="w-full bg-black relative min-h-[420px] sm:min-h-[560px] md:min-h-[640px]">
+            {activeSlides && (
+              <div className="relative w-full h-full min-h-[420px] sm:min-h-[560px] md:min-h-[640px]">
+                {activeSlides.map((slide, idx) => {
+                  const isLeaderboardSlide = 'type' in slide && slide.type === 'leaderboard';
+                  const isLatestContentSlide = 'type' in slide && slide.type === 'latestContent';
+                  const isTrendingSlide = 'type' in slide && slide.type === 'trending';
+
+                  return (
+                  <div
+                    key={slide.id}
+                    className="absolute inset-0 transition-opacity duration-700 ease-in-out"
+                    style={{ opacity: idx === currentSlide ? 1 : 0, zIndex: idx === currentSlide ? 1 : 0 }}
+                  >
+                    {isLeaderboardSlide ? (
+                      /* ── Leaderboard slide: podium left + top-10 list right ── */
+                      <div className="absolute inset-0 overflow-hidden">
+                        {/* Electrical background */}
+                        <div className="absolute inset-0" style={{ backgroundImage:"url('/electrical-bg.webp')", backgroundSize:"cover", backgroundPosition:"center" }} />
+                        {/* Dark overlay for readability */}
+                        <div className="absolute inset-0" style={{ background:"linear-gradient(160deg,rgba(5,9,13,0.82) 0%,rgba(8,14,24,0.72) 55%,rgba(5,9,13,0.82) 100%)" }} />
+                        <style>{LEADERBOARD_STYLES}{CREATOR_CARD_STYLES}</style>
+
+                        <div className="relative h-full flex flex-col">
+
+                          {/* ── HEADER — centred above both columns ── */}
+                          <div className="flex-shrink-0 pt-2 pb-1 sm:pt-4 sm:pb-2 px-3 sm:px-4 flex items-center justify-between">
+                            <h2 className="text-lg sm:text-2xl font-bold">Leaderboard</h2>
+                            <div className="flex items-center gap-1.5 sm:gap-3">
+                              <span className="text-[9px] sm:text-[10px] text-white/40">🏆 <span className="hidden sm:inline">Season: </span><span className="font-bold text-white/70">Summer Showdown</span></span>
+                              <button
+                                onClick={() => setLocation('/leaderboard')}
+                                className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-black px-2 sm:px-3 py-1 rounded-lg transition-all hover:opacity-90 active:scale-95"
+                                style={{ background:'#B7FF18', color:'#0B1319' }}>
+                                View All →
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* ── COLUMNS row ── */}
+                          <div className="flex flex-col sm:flex-row flex-1 min-h-0">
+
+                          {/* ── LEFT: podium ── */}
+                          <div className="flex flex-col items-center py-2 px-3 sm:px-5 w-full sm:w-[63%]" style={{ flexShrink: 0 }}>
+                            {/* Podium — 2nd · 1st · 3rd, vertically centred in column */}
+                            <div className="lb-podium-scroll relative w-full flex items-center justify-start sm:justify-center" style={{ flex:'1 1 0', minHeight:0 }}>
+                              <div className="lb-podium-scale flex items-end flex-shrink-0"
+                                style={{ gap: '16px' }}>
+                                {(() => {
+                                  const top3 = weeklyTop3 ?? [];
+
+                                  const PODIUM_IMG: Record<1|2|3, string> = {
+                                    1: '/podium-1st.webp',
+                                    2: '/podium-2nd.webp',
+                                    3: '/podium-3rd.webp',
+                                  };
+                                  const PODIUM_W: Record<1|2|3, number> = { 1: 393, 2: 357, 3: 321 };
+                                  const PODIUM_H: Record<1|2|3, number> = { 1: 123, 2: 105, 3: 90  };
+                                  const PODIUM_GLOW: Record<1|2|3, string> = {
+                                    1: 'drop-shadow(0 0 20px rgba(255,215,0,0.9)) drop-shadow(0 6px 14px rgba(255,190,0,0.55))',
+                                    2: 'drop-shadow(0 0 16px rgba(210,210,210,0.85)) drop-shadow(0 5px 10px rgba(192,192,192,0.5))',
+                                    3: 'drop-shadow(0 0 14px rgba(205,127,50,0.85)) drop-shadow(0 5px 10px rgba(180,100,30,0.5))',
+                                  };
+
+                                  const renderCard = (winner: LeaderboardWinner | undefined, rank: 1 | 2 | 3) => {
+                                    const isFirst = rank === 1;
+                                    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
+                                    const accentClr = rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : '#CD7F32';
+                                    const cardClass = `lb-card-${rank}`;
+                                    const elevate = isFirst ? -28 : 0;
+                                    const podW = PODIUM_W[rank];
+                                    const podH = PODIUM_H[rank];
+
+                                    if (!winner) {
+                                      return (
+                                        <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', transform:`translateY(${elevate}px)` }}>
+                                          <div className={cardClass}>
+                                            <div className="fire-card flex flex-col items-center justify-center"
+                                              style={{ width:228, height:408, borderRadius:16 }}>
+                                              <div className="absolute inset-0 rounded-[inherit] flex flex-col items-center justify-center gap-2"
+                                                style={{ background:'rgba(11,19,25,0.95)' }}>
+                                                <div className="text-4xl">{medal}</div>
+                                                <div className="text-white/30 text-xs font-bold">Could be you!</div>
+                                                <div className="text-white/20 text-[10px] text-center px-4">Earn points this season to compete</div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                          <img src={PODIUM_IMG[rank]} alt={`#${rank} podium`}
+                                            style={{ width: podW, height: podH, objectFit:'contain', marginTop: -22, filter:`brightness(0.7) ${PODIUM_GLOW[rank]}`, position:'relative', zIndex:10 }} />
+                                        </div>
+                                      );
+                                    }
+
+                                    const entry: TrendingEntry = {
+                                      userId: winner.userId, rank: winner.rank,
+                                      uploadsCount: winner.uploadsCount, totalPoints: winner.totalPoints,
+                                      clipsCount: winner.clipsCount ?? winner.uploadsCount, reelsCount: winner.reelsCount ?? 0, screenshotsCount: winner.screenshotsCount ?? 0,
+                                      followersCount: winner.followersCount ?? 0, followingCount: winner.followingCount ?? 0,
+                                      user: {
+                                        id: winner.user.id, username: winner.user.username,
+                                        displayName: winner.user.displayName, avatarUrl: winner.user.avatarUrl,
+                                        bannerUrl: winner.user.bannerUrl,
+                                        avatarBorderColor: accentClr,
+                                        accentColor: winner.user.accentColor,
+                                        level: winner.user.level,
+                                        backgroundColor: winner.user.backgroundColor,
+                                        primaryColor: winner.user.primaryColor,
+                                        profileBackgroundGradient: winner.user.profileBackgroundGradient ?? false,
+                                        profileBackgroundGradientCss: winner.user.profileBackgroundGradientCss,
+                                        profileBackgroundImageUrl: winner.user.profileBackgroundImageUrl,
+                                      },
+                                    };
+
+                                    return (
+                                      <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', transform:`translateY(${elevate}px)` }}>
+                                        <div className={`relative ${cardClass}`}>
+                                          {isFirst && (
+                                            <div className="absolute pointer-events-none" style={{ inset:'-10px', zIndex:10 }}>
+                                              {[1,2,3,4,5,6].map(i => <span key={i} className="lb-spark" />)}
+                                            </div>
+                                          )}
+                                          <CreatorCard entry={entry} period="week" />
+                                        </div>
+                                        <img src={PODIUM_IMG[rank]} alt={`#${rank} podium`}
+                                          style={{ width: podW, height: podH, objectFit:'contain', marginTop: -22, filter: PODIUM_GLOW[rank], position:'relative', zIndex:10 }} />
+                                      </div>
+                                    );
+                                  };
+
+                                  return (
+                                    <>
+                                      {renderCard(top3[1], 2)}
+                                      {renderCard(top3[0], 1)}
+                                      {renderCard(top3[2], 3)}
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            </div>
+
+                          </div>
+
+                          {/* ── Divider ── */}
+                          <div className="lb-divider self-stretch w-px my-6 flex-shrink-0" style={{ background:'rgba(183,255,26,0.08)' }} />
+
+                          {/* ── RIGHT: Top 10 list ── */}
+                          <div className="flex-1 flex flex-col py-4 px-4 sm:px-5 overflow-hidden rounded-xl mx-2 my-2" style={{ background:'rgb(11,19,25)', border:'1px solid rgba(183,255,26,0.10)' }}>
+                            <div className="text-[9px] font-black uppercase tracking-[0.2em] mb-3" style={{ color:'#B7FF18' }}>
+                              Top 10 This Season
+                            </div>
+                            <div className="flex flex-col gap-0 overflow-y-auto flex-1">
+                              {(weeklyTop10 && weeklyTop10.length > 0 ? weeklyTop10 : Array.from({length:10}).map((_,i) => null)).map((winner, idx) => {
+                                const rank = idx + 1;
+                                const medalEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
+                                const accentClr = rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : rank === 3 ? '#CD7F32' : null;
+                                const isTop3 = rank <= 3;
+                                return (
+                                  <div key={winner?.userId ?? idx}
+                                    className="flex items-center gap-2.5 py-[6px] cursor-pointer rounded-lg px-2 transition-colors hover:bg-white/5"
+                                    style={{ borderBottom:'1px solid rgba(255,255,255,0.05)', marginBottom:'1px' }}
+                                    onClick={() => winner && setLocation(`/profile/${winner.user.username}`)}>
+                                    {/* Rank */}
+                                    <div className="flex-shrink-0 w-6 text-center">
+                                      {medalEmoji ? (
+                                        <span className="text-sm leading-none">{medalEmoji}</span>
+                                      ) : (
+                                        <span className="text-[11px] font-black" style={{ color:'rgba(255,255,255,0.25)' }}>#{rank}</span>
+                                      )}
+                                    </div>
+                                    {/* Avatar */}
+                                    {winner ? (
+                                      <div className="flex-shrink-0 w-7 h-7 rounded-full overflow-hidden"
+                                        style={{ border: isTop3 ? `1.5px solid ${accentClr}60` : '1.5px solid rgba(255,255,255,0.1)' }}>
+                                        {winner.user.avatarUrl ? (
+                                          <img src={winner.user.avatarUrl} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                          <div className="w-full h-full flex items-center justify-center text-[10px] font-bold"
+                                            style={{ background:'rgba(183,255,26,0.1)', color:'#B7FF18' }}>
+                                            {(winner.user.displayName || winner.user.username || '?')[0].toUpperCase()}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="flex-shrink-0 w-7 h-7 rounded-full" style={{ background:'rgba(255,255,255,0.05)' }} />
+                                    )}
+                                    {/* Name */}
+                                    <div className="flex-1 min-w-0">
+                                      {winner ? (
+                                        <>
+                                          <div className="text-[11px] font-semibold text-white/90 truncate leading-tight">
+                                            {winner.user.displayName || winner.user.username}
+                                          </div>
+                                          <div className="text-[9px] text-white/35 truncate">@{winner.user.username}</div>
+                                        </>
+                                      ) : (
+                                        <div className="h-3 w-20 rounded" style={{ background:'rgba(255,255,255,0.06)' }} />
+                                      )}
+                                    </div>
+                                    {/* Points */}
+                                    {winner ? (
+                                      <div className="flex-shrink-0 flex items-center gap-1">
+                                        <span className="text-[10px] font-black" style={{ color: isTop3 ? accentClr! : 'rgba(183,255,26,0.7)' }}>
+                                          ⚡ {winner.totalPoints >= 1000 ? `${(winner.totalPoints/1000).toFixed(1)}K` : winner.totalPoints}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div className="h-3 w-10 rounded" style={{ background:'rgba(255,255,255,0.06)' }} />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <button
+                              onClick={() => setLocation('/leaderboard')}
+                              className="mt-3 w-full py-2 rounded-lg text-[11px] font-black tracking-wide transition-all hover:opacity-90 active:scale-95 flex-shrink-0"
+                              style={{ background:'#B7FF18', color:'#0B1319' }}>
+                              View Leaderboard →
+                            </button>
+                          </div>
+
+                          </div>{/* end columns row */}
+                        </div>{/* end flex-col outer */}
+                      </div>
+                    ) : isLatestContentSlide ? (
+                      /* ── Latest Clips & Reels slider slide ── */
+                      <div className="absolute inset-0 overflow-hidden bg-black flex flex-col">
+                        <div className="flex-1 min-h-0 overflow-hidden px-2 sm:px-8 py-3 sm:py-4">
+                          <LatestContentSlider />
+                        </div>
+                      </div>
+                    ) : isTrendingSlide ? (
+                      /* ── Trending clips/reels slide ── */
+                      <div className="absolute inset-0 overflow-hidden bg-black">
+                        <TrendingHeroSlide />
+                      </div>
+                    ) : (
+                      /* ── Regular image slide ── */
+                      <>
+                        <img src={(slide as DbHeroSlide).imageUrl} alt={(slide as DbHeroSlide).title} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.42) 50%, rgba(0,0,0,0.22) 100%)' }}>
+                          <div className="flex flex-col items-center justify-center h-full text-center px-6">
+                            <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold text-white mb-2 md:mb-3 leading-tight drop-shadow-md">
+                              {(slide as DbHeroSlide).title}
+                            </h1>
+                            {(slide as DbHeroSlide).subtitle && (
+                              <p className="text-sm sm:text-base md:text-lg text-white/80 mb-5 md:mb-7 leading-snug drop-shadow max-w-lg">
+                                {(slide as DbHeroSlide).subtitle}
+                              </p>
+                            )}
+                            {(slide as DbHeroSlide).buttonText && (
+                              <button
+                                className="pro-cta-btn px-8 py-3 rounded-full text-sm sm:text-base font-bold transition-transform hover:scale-105 active:scale-95"
+                                style={{ color: '#0B1319', boxShadow: '0 4px 24px rgba(183,255,26,0.5)' }}
+                                onClick={() => {
+                                  const link = ((slide as DbHeroSlide).buttonLink || "").toLowerCase();
+                                  if (link === '#pro' || link === '/pro' || link.includes('pro')) {
+                                    window.dispatchEvent(new CustomEvent('open-pro-upgrade'));
+                                  } else {
+                                    setLocation((slide as DbHeroSlide).buttonLink!);
+                                  }
+                                }}
+                              >
+                                <span className="pro-cta-sparkle">✦</span>
+                                {(slide as DbHeroSlide).buttonText}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  );
+                })}
+                {activeSlides.length > 1 && (
+                  <>
+                    <button
+                      onClick={prevSlide}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-black/60 hover:bg-black/85 backdrop-blur-sm text-white rounded-full p-2.5 transition-colors shadow-lg"
+                      aria-label="Previous slide"
+                    >
+                      <ChevronLeft className="h-6 w-6" />
+                    </button>
+                    <button
+                      onClick={nextSlide}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-black/60 hover:bg-black/85 backdrop-blur-sm text-white rounded-full p-2.5 transition-colors shadow-lg"
+                      aria-label="Next slide"
+                    >
+                      <ChevronRight className="h-6 w-6" />
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
 
       {/* Ecosystem Activity Rail */}
-      {/* <EcosystemActivityRail /> */}
+      <EcosystemActivityRail />
+
       
       <div className="space-y-4 sm:space-y-6 md:space-y-8 mt-4 sm:mt-6 md:mt-8">
       {/* Recommended for You Section - only for logged-in users */}
@@ -655,7 +851,12 @@ const HomePage = () => {
           <RecommendedForYou userId={userId} />
         </LazySection>
       )}
-      
+
+      {/* Daily XP Challenges Carousel */}
+      <LazySection minHeight="260px" rootMargin="300px">
+        <DailyXPChallenges />
+      </LazySection>
+
       {/* Latest Clips Section */}
       <LazySection minHeight="400px" rootMargin="200px">
         <section className="px-4 sm:px-6 md:px-8">
@@ -706,6 +907,13 @@ const HomePage = () => {
             isLoading={isLoadingReels}
             userId={userId}
           />
+        </section>
+      </LazySection>
+
+      {/* Trending Gamefolios - between Latest Reels and Latest Screenshots */}
+      <LazySection minHeight="260px" rootMargin="200px">
+        <section className="pt-6 sm:pt-8">
+          <FeaturedUsersSection />
         </section>
       </LazySection>
 
@@ -787,12 +995,6 @@ const HomePage = () => {
         </section>
       </LazySection>
 
-      {/* Daily XP Challenges */}
-      {/* <LazySection minHeight="280px" rootMargin="200px">
-        <div className="px-4 sm:px-6 md:px-8">
-          <DailyXPChallenges />
-        </div>
-      </LazySection> */}
 
       {/* Live Streams Now */}
       {/* <LazySection minHeight="280px" rootMargin="200px">
