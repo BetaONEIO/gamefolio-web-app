@@ -441,7 +441,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
               </span>
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
+          <PopoverContent className="w-auto p-0 z-[200002]" align="start">
             <Calendar
               mode="single"
               weekStartsOn={1}
