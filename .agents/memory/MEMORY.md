@@ -16,3 +16,4 @@
 - [Season XP transparency](season-xp-transparency.md) — dashboard Season XP and its source breakdown must come from the same user_xp_history window as the season leaderboard.
 - [Ranked league threshold seeding](ranked-league-threshold-seeding.md) — seed missing progression settings additively so startup never overwrites admin-configured values.
 - [Rivals XP source](rivals-xp-source.md) — dashboard Rivals must use positive user_xp_history events in the active weekly window, not stale legacy point totals.
+- [Auth modal portal z-index](auth-modal-portal-zindex.md) — portals (Popover, Select, etc.) inside the auth modal need z-[200002] to appear above the modal's z-[200000].

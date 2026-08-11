@@ -3,6 +3,7 @@ export interface TrendingEntry {
   rank: number;
   uploadsCount: number;
   totalPoints: number;
+  effectivePeriod?: string; // actual window used (may differ from requested period after fallback)
   clipsCount: number;
   reelsCount: number;
   screenshotsCount: number;
@@ -114,5 +115,28 @@ export const CREATOR_CARD_STYLES = `
     position: relative;
     border-radius: 16px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  }
+
+  /* Mobile-responsive card wrapper — scales the fixed-size card down on small screens */
+  .creator-card-wrap {
+    width: 228px;
+    height: 480px;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .creator-card-inner {
+    width: 228px;
+    height: 480px;
+    transform-origin: top left;
+  }
+  @media (max-width: 640px) {
+    .creator-card-wrap {
+      width: 164px;
+      height: 346px;
+      border-radius: 12px;
+    }
+    .creator-card-inner {
+      transform: scale(0.719);
+    }
   }
 `;

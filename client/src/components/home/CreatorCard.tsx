@@ -33,7 +33,8 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
   const hasBanner = !!user.bannerUrl && !bannerError;
   const theme = getCardTheme(user);
 
-  const xpLabel = period === 'alltime' ? 'XP total' : period === 'season' ? 'XP this season' : period === 'month' ? 'XP this month' : 'XP this week';
+  const displayPeriod = entry.effectivePeriod ?? period;
+  const xpLabel = displayPeriod === 'alltime' ? 'XP total' : displayPeriod === 'season' ? 'XP this season' : displayPeriod === 'month' ? 'XP this month' : 'XP this week';
   const ctaText = `${fmt(entry.totalPoints)} ${xpLabel}`;
 
   const recentTitle = entry.recentUpload
@@ -48,8 +49,9 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
 
   return (
     <Link href={`/profile/${user.username}`} className={className}>
+      <div className="creator-card-wrap">
       <div
-        className="flex-shrink-0 cursor-pointer transition-transform duration-200 hover:scale-[1.03] hover:-translate-y-2 fire-card"
+        className="creator-card-inner flex-shrink-0 cursor-pointer fire-card"
         style={{ width: 228, height: 480, borderRadius: 16, position: 'relative' }}
       >
         {/* ── Floating badge row (outside overflow-hidden background) ── */}
@@ -246,6 +248,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
           </div>
         </div>
       </div>
+      </div>{/* creator-card-wrap */}
     </Link>
   );
 }

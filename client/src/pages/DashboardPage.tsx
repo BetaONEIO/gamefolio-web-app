@@ -204,6 +204,12 @@ const TEXT_MUTED = "#B8C0AE";
 const ACCENT = "#B7FF1A";
 const ACCENT_DARK = "#071013";
 
+function formatRank(rank: number | null | undefined): string {
+  return typeof rank === "number" && Number.isFinite(rank) && rank > 0
+    ? `#${Math.round(rank).toLocaleString()}`
+    : "Unranked";
+}
+
 /* ─── Reusable Components ─── */
 
 function SectionCard({ children, className = "", style }: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
@@ -308,9 +314,9 @@ function PlayerOverview({ data, isLoading }: { data: DashboardData["player"] | u
             </h2>
             <div className="flex items-center gap-2 mt-1.5">
               <span className="text-xs font-bold" style={{ color: ACCENT }}>Level {data.level}</span>
-              {data.rank && (
+              {data.rank !== null && data.rank > 0 && (
                 <span className="text-xs font-medium text-white/50">
-                  #{data.rank} Ranked
+                  {formatRank(data.rank)} Ranked
                 </span>
               )}
             </div>
@@ -333,7 +339,7 @@ function PlayerOverview({ data, isLoading }: { data: DashboardData["player"] | u
         {/* Stats grid */}
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-w-xl">
           <StatPill label="Streak" value={`${data.currentStreak} Day${data.currentStreak !== 1 ? "s" : ""}`} color="#FF6B35" icon={Flame} />
-          {data.rank && <StatPill label="Rank" value={`#${data.rank}`} color={ACCENT} icon={TrendingUp} />}
+          {data.rank !== null && data.rank > 0 && <StatPill label="Rank" value={formatRank(data.rank)} color={ACCENT} icon={TrendingUp} />}
           <StatPill
             label="Lootbox"
             value={data.lootboxReady ? "Ready!" : "Locked"}
@@ -750,10 +756,10 @@ function SeasonMicroGoals({ goals }: { goals: SeasonMicroGoal[] | undefined }) {
     <div className="mt-4 rounded-xl p-3.5" style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${BORDER}` }}>
       <div className="mb-3 flex items-center gap-2">
         <Target className="h-4 w-4" style={{ color: ACCENT }} />
-        <span className="text-xs font-bold" style={{ color: TEXT_PRIMARY }}>Next goals</span>
+        <span className="text-xs font-bold" style={{ color: TEXT_PRIMARY }}>Rank Targets</span>
       </div>
       <div className="space-y-2.5">
-        {goals.slice(0, 3).map((goal) => (
+        {goals.filter((goal) => goal.type !== "overtake" || !!goal.href).slice(0, 3).map((goal) => (
           <Link key={goal.type} href={goal.href}>
             <div className="rounded-lg p-2.5 transition-colors hover:bg-white/[0.04]" style={{ background: "rgba(255,255,255,0.025)" }}>
               <div className="flex items-center justify-between gap-2">
@@ -819,9 +825,7 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
             <h4 className="text-xl font-black" style={{ color: data.leagueColor }}>
               {data.league} League
             </h4>
-            {data.seasonRank && (
-              <p className="text-xs" style={{ color: TEXT_MUTED }}>Rank #{data.seasonRank.toLocaleString()}</p>
-            )}
+            <p className="text-xs" style={{ color: TEXT_MUTED }}>Rank {formatRank(data.seasonRank)}</p>
           </div>
         </div>
 
@@ -883,7 +887,7 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
             </div>
             <div className="p-4 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
               <p className="text-[10px] font-medium mb-1 uppercase tracking-wide" style={{ color: TEXT_MUTED }}>Current Rank</p>
-              <p className="text-3xl font-black" style={{ color: ACCENT }}>#{data.seasonRank?.toLocaleString()}</p>
+              <p className="text-3xl font-black" style={{ color: ACCENT }}>{formatRank(data.seasonRank)}</p>
             </div>
             <div className="flex items-center justify-center rounded-xl p-3" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
               <span className="text-xs font-semibold" style={{ color: ACCENT }}>
@@ -916,7 +920,7 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
             </div>
             <div className="p-4 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
               <p className="text-[10px] font-medium mb-1 uppercase tracking-wide" style={{ color: TEXT_MUTED }}>Current Rank</p>
-              <p className="text-3xl font-black" style={{ color: ACCENT }}>#{data.seasonRank?.toLocaleString()}</p>
+              <p className="text-3xl font-black" style={{ color: ACCENT }}>{formatRank(data.seasonRank)}</p>
               <p className="text-[11px] mt-1" style={{ color: TEXT_MUTED }}>Champion requires Top 10</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -955,7 +959,7 @@ function RankedSeason({ data, isLoading }: { data: DashboardData["seasonLeague"]
               style={{ background: `${ACCENT}14`, border: `1px solid ${ACCENT}50` }}
             >
               <p className="text-[10px] font-medium mb-1 uppercase tracking-wide" style={{ color: TEXT_MUTED }}>Current Rank</p>
-              <p className="text-3xl font-black" style={{ color: ACCENT }}>#{data.seasonRank?.toLocaleString()}</p>
+              <p className="text-3xl font-black" style={{ color: ACCENT }}>{formatRank(data.seasonRank)}</p>
               <p className="text-[11px] mt-1" style={{ color: TEXT_MUTED }}>
                 {data.isTopRank ? "You're #1 this season!" : "You're in the Top 10 — pushing for #1"}
               </p>
@@ -1110,12 +1114,123 @@ function RecentActivity({ activity, isLoading }: { activity: DashboardData["rece
 
 /* ─── Section 7: Friends & Rivals ─── */
 
+function XPGapRow({
+  xpGap,
+  direction,
+}: {
+  xpGap: number;
+  direction: "overtake" | "lead";
+}) {
+  const isOvertake = direction === "overtake";
+  return (
+    <div className="flex items-center gap-2 px-1 py-0.5">
+      <div className="flex-1 h-px" style={{ background: `${BORDER}` }} />
+      <div
+        className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap"
+        style={{
+          background: isOvertake ? `${ACCENT}12` : "rgba(255,255,255,0.04)",
+          border: `1px solid ${isOvertake ? `${ACCENT}30` : BORDER}`,
+          color: isOvertake ? ACCENT : TEXT_MUTED,
+        }}
+      >
+        {isOvertake ? (
+          <>
+            <Zap className="w-2.5 h-2.5" />
+            {xpGap.toLocaleString()} XP to overtake
+          </>
+        ) : (
+          <>
+            <Swords className="w-2.5 h-2.5" />
+            {xpGap.toLocaleString()} XP ahead
+          </>
+        )}
+      </div>
+      <div className="flex-1 h-px" style={{ background: `${BORDER}` }} />
+    </div>
+  );
+}
+
+function RivalRow({
+  rival,
+  xpGapAbove,
+  xpGapBelow,
+}: {
+  rival: { rank: number; userId: number; username: string; displayName: string | null; avatarUrl: string | null; totalXP: number; isMe: boolean };
+  xpGapAbove?: number;
+  xpGapBelow?: number;
+}) {
+  const displayName = rival.displayName || rival.username;
+
+  return (
+    <div className="space-y-1">
+      {xpGapAbove !== undefined && (
+        <XPGapRow xpGap={xpGapAbove} direction="overtake" />
+      )}
+
+      <Link href={`/profile/${rival.username}`}>
+        <div
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+            rival.isMe ? "" : "hover:bg-white/[0.02]"
+          }`}
+          style={{
+            background: rival.isMe ? `${ACCENT}08` : "transparent",
+            border: `1px solid ${rival.isMe ? `${ACCENT}30` : BORDER}`,
+          }}
+        >
+          {/* Rank badge */}
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-black tabular-nums"
+            style={{
+              background: rival.isMe ? `${ACCENT}18` : "rgba(255,255,255,0.04)",
+              color: rival.isMe ? ACCENT : TEXT_MUTED,
+            }}
+          >
+            {rival.rank > 0 ? `#${rival.rank}` : "—"}
+          </div>
+
+          {/* Avatar */}
+          <SimpleAvatar url={rival.avatarUrl} name={displayName} size="sm" />
+
+          {/* Name */}
+          <div className="flex-1 min-w-0">
+            <p
+              className="text-sm font-semibold truncate leading-tight"
+              style={{ color: rival.isMe ? ACCENT : TEXT_PRIMARY }}
+            >
+              {displayName}
+              {rival.isMe && (
+                <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: `${ACCENT}20`, color: ACCENT }}>
+                  You
+                </span>
+              )}
+            </p>
+          </div>
+
+          {/* XP */}
+          <span
+            className="text-xs font-bold tabular-nums flex-shrink-0"
+            style={{ color: rival.isMe ? ACCENT : TEXT_MUTED }}
+          >
+            {rival.totalXP.toLocaleString()} XP
+          </span>
+        </div>
+      </Link>
+
+      {xpGapBelow !== undefined && (
+        <XPGapRow xpGap={xpGapBelow} direction="lead" />
+      )}
+    </div>
+  );
+}
+
 function FriendsRivals({ data, isLoading }: { data: DashboardData["social"] | undefined; isLoading: boolean }) {
   if (isLoading) {
     return (
       <SectionCard>
         <SectionHeader icon={Users} title="Rivals" />
         <div className="px-5 pb-5 space-y-3">
+          <Skeleton className="h-10 rounded-xl w-full" />
+          <Skeleton className="h-14 rounded-xl w-full" />
           <Skeleton className="h-14 rounded-xl w-full" />
           <Skeleton className="h-14 rounded-xl w-full" />
         </div>
@@ -1123,7 +1238,9 @@ function FriendsRivals({ data, isLoading }: { data: DashboardData["social"] | un
     );
   }
 
-  const rivals = data?.nearbyRivals || [];
+  // Sort rivals by rank ascending so the ladder reads top → bottom
+  const rivals = [...(data?.nearbyRivals || [])].sort((a, b) => a.rank - b.rank);
+  const meIndex = rivals.findIndex((r) => r.isMe);
 
   return (
     <SectionCard>
@@ -1138,49 +1255,71 @@ function FriendsRivals({ data, isLoading }: { data: DashboardData["social"] | un
           </Link>
         }
       />
-      <div className="px-5 pb-5">
-        {/* Social counts */}
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex-1 p-3 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
-            <div className="text-lg font-bold" style={{ color: TEXT_PRIMARY }}>{data?.followersCount ?? 0}</div>
-            <div className="text-[10px]" style={{ color: TEXT_MUTED }}>Followers</div>
+      <div className="px-5 pb-5 space-y-4">
+        {/* Social counts row */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
+            <span className="text-sm font-black" style={{ color: TEXT_PRIMARY }}>{data?.followersCount ?? 0}</span>
+            <span className="text-[10px]" style={{ color: TEXT_MUTED }}>Followers</span>
           </div>
-          <div className="flex-1 p-3 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
-            <div className="text-lg font-bold" style={{ color: TEXT_PRIMARY }}>{data?.followingCount ?? 0}</div>
-            <div className="text-[10px]" style={{ color: TEXT_MUTED }}>Following</div>
+          <div className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
+            <span className="text-sm font-black" style={{ color: TEXT_PRIMARY }}>{data?.followingCount ?? 0}</span>
+            <span className="text-[10px]" style={{ color: TEXT_MUTED }}>Following</span>
           </div>
         </div>
 
-        {/* Nearby rivals */}
+        {/* Leaderboard ladder */}
         {rivals.length > 0 ? (
-          <div className="space-y-2">
-            {rivals.map((r) => (
-              <Link key={r.userId} href={`/profile/${r.username}`}>
-                <div
-                  className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${
-                    r.isMe ? "bg-white/[0.04]" : "hover:bg-white/[0.02]"
-                  }`}
-                  style={{ border: `1px solid ${r.isMe ? `${ACCENT}20` : BORDER}` }}
-                >
-                  <div className="w-6 text-center text-xs font-black" style={{ color: r.isMe ? ACCENT : TEXT_MUTED }}>
-                    #{r.rank}
-                  </div>
-                  <SimpleAvatar url={r.avatarUrl} name={r.displayName || r.username} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium truncate ${r.isMe ? "font-bold" : ""}`} style={{ color: r.isMe ? ACCENT : TEXT_PRIMARY }}>
-                      {r.displayName || r.username}{r.isMe ? " (You)" : ""}
-                    </p>
-                  </div>
-                  <span className="text-xs font-bold" style={{ color: TEXT_MUTED }}>
-                    {Math.round(r.totalXP).toLocaleString()} XP
-                  </span>
-                </div>
-              </Link>
-            ))}
+          <div className="space-y-1">
+            {rivals.map((rival, idx) => {
+              const rivalAbove = rivals[idx - 1];
+              const rivalBelow = rivals[idx + 1];
+
+              // XP gap from this rival to the one above (relevant when this rival IS the user)
+              const xpGapAbove =
+                rival.isMe && rivalAbove
+                  ? Math.max(1, rivalAbove.totalXP - rival.totalXP + 1)
+                  : undefined;
+
+              // XP gap from this rival to the one below (relevant when this rival IS the user,
+              // shown on the last row the user "owns" — i.e. the row below the user row)
+              // We render the "lead" gap on the rival-below row so it sits between user and next row.
+              // So: xpGapBelow on the user row = gap between user and next lower rank.
+              const xpGapBelow =
+                rival.isMe && rivalBelow
+                  ? Math.max(1, rival.totalXP - rivalBelow.totalXP + 1)
+                  : undefined;
+
+              // For non-me rows: if the row directly above is "me", skip xpGapAbove
+              // (it's already rendered as xpGapBelow on the me row).
+              // Show the "overtake" gap only on non-me rows whose immediate upper neighbour is me.
+              const showOvertakeGapAboveNonMe =
+                !rival.isMe && rivalAbove?.isMe === false && idx === meIndex + 1
+                  ? undefined // gap already rendered by "me" row as xpGapBelow
+                  : undefined;
+
+              return (
+                <RivalRow
+                  key={rival.userId}
+                  rival={rival}
+                  xpGapAbove={rival.isMe ? xpGapAbove : undefined}
+                  xpGapBelow={rival.isMe ? xpGapBelow : undefined}
+                />
+              );
+            })}
           </div>
         ) : (
-          <div className="text-center py-4">
-            <p className="text-sm" style={{ color: TEXT_MUTED }}>Climb the leaderboard to find rivals!</p>
+          <div className="text-center py-6 space-y-1">
+            <Swords className="w-8 h-8 mx-auto opacity-20" style={{ color: ACCENT }} />
+            <p className="text-sm font-medium" style={{ color: TEXT_MUTED }}>No rivals yet</p>
+            <p className="text-xs" style={{ color: `${TEXT_MUTED}80` }}>
+              Earn XP this week to appear on the leaderboard
+            </p>
+            <Link href="/leaderboard">
+              <span className="inline-block mt-2 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors hover:opacity-80" style={{ background: `${ACCENT}12`, color: ACCENT, border: `1px solid ${ACCENT}25` }}>
+                View Leaderboard
+              </span>
+            </Link>
           </div>
         )}
       </div>
@@ -1641,13 +1780,165 @@ function Goals({ goals, isLoading }: { goals: DashGoal[] | undefined; isLoading:
   );
 }
 
+/* ─── Section: Overview Snapshot ─── */
+
+function OverviewSnapshot({
+  player,
+  season,
+  rewards,
+  goals,
+  isLoading,
+  onViewLeague,
+  onViewGoals,
+}: {
+  player: DashboardData["player"] | undefined;
+  season: DashboardData["seasonLeague"] | undefined;
+  rewards: DashboardData["nextRewards"] | undefined;
+  goals: DashGoal[] | undefined;
+  isLoading: boolean;
+  onViewLeague: () => void;
+  onViewGoals: () => void;
+}) {
+  if (isLoading || !player || !season) {
+    return (
+      <div className="grid gap-5 lg:grid-cols-2">
+        <SectionCard><Skeleton className="h-56 rounded-2xl" /></SectionCard>
+        <SectionCard><Skeleton className="h-56 rounded-2xl" /></SectionCard>
+      </div>
+    );
+  }
+
+  const nextThreshold = season.nextThreshold ?? season.seasonXP;
+  const progress = Math.min(100, Math.max(0, season.progressPercent ?? 0));
+  const nextLeagueLabel = season.nextLeague ? `${season.nextLeague} League` : "the top league";
+
+  return (
+    <div className="space-y-5">
+      <div className="grid gap-5 lg:grid-cols-2">
+        <SectionCard>
+          <SectionHeader
+            icon={Trophy}
+            title="Current League"
+            action={
+              <button
+                type="button"
+                onClick={onViewLeague}
+                className="text-xs font-semibold flex items-center gap-1 hover:opacity-80 transition-opacity"
+                style={{ color: ACCENT }}
+              >
+                View League <ChevronRight className="w-3 h-3" />
+              </button>
+            }
+          />
+          <div className="px-5 pb-5">
+            <div className="flex items-center gap-4">
+              <LeagueMedal tier={season.league} size={76} />
+              <div className="min-w-0 flex-1">
+                <p className="text-xl font-black" style={{ color: season.leagueColor }}>
+                  {season.league} League
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: TEXT_MUTED }}>
+                  Rank {formatRank(season.seasonRank)}
+                </p>
+                <div className="mt-3">
+                  <div className="flex items-center justify-between gap-2 text-[10px] font-semibold mb-1">
+                    <span style={{ color: TEXT_PRIMARY }}>{season.seasonXP.toLocaleString()} / {nextThreshold.toLocaleString()} Season XP</span>
+                    <span style={{ color: ACCENT }}>{Math.round(progress)}%</span>
+                  </div>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ background: BORDER }}>
+                    <div className="h-full rounded-full" style={{ width: `${progress}%`, background: season.leagueColor }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs font-semibold mt-4" style={{ color: ACCENT }}>
+              {season.nextLeague
+                ? `${(season.xpToNext ?? 0).toLocaleString()} XP until ${nextLeagueLabel}`
+                : "You have reached the top league."}
+            </p>
+          </div>
+        </SectionCard>
+
+        <SectionCard>
+          <SectionHeader icon={Gift} title="Next Rewards" />
+          <div className="px-5 pb-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {(rewards ?? []).slice(0, 2).map((reward, index) => {
+              const isAvailable = reward.available ?? (reward.xpNeeded !== undefined && reward.xpNeeded <= 0);
+              return (
+                <div
+                  key={`${reward.type}-${index}`}
+                  className="rounded-xl p-3.5"
+                  style={{
+                    background: isAvailable ? `${ACCENT}08` : "rgba(255,255,255,0.02)",
+                    border: `1px solid ${isAvailable ? `${ACCENT}25` : BORDER}`,
+                  }}
+                >
+                  <p className="text-sm font-bold" style={{ color: TEXT_PRIMARY }}>{reward.name}</p>
+                  <p className="text-[11px] mt-1" style={{ color: TEXT_MUTED }}>{reward.description}</p>
+                  {isAvailable ? (
+                    <span className="inline-block mt-2 text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: ACCENT, color: ACCENT_DARK }}>
+                      Ready!
+                    </span>
+                  ) : reward.xpNeeded !== undefined ? (
+                    <p className="text-[10px] font-bold mt-2" style={{ color: ACCENT }}>
+                      {Math.max(0, reward.xpNeeded).toLocaleString()} XP to go
+                    </p>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </SectionCard>
+      </div>
+
+      <SectionCard>
+        <SectionHeader
+          icon={Target}
+          title="Next Goals"
+          action={
+            <button
+              type="button"
+              onClick={onViewGoals}
+              className="text-xs font-semibold flex items-center gap-1 hover:opacity-80 transition-opacity"
+              style={{ color: ACCENT }}
+            >
+              View All Goals <ChevronRight className="w-3 h-3" />
+            </button>
+          }
+        />
+        <div className="px-5 pb-5 grid gap-3 md:grid-cols-3">
+          {(goals ?? []).filter((goal) => !goal.completed).slice(0, 3).map((goal) => (
+            <Link key={goal.type} href={goal.href ?? "/dashboard"}>
+              <div className="rounded-xl p-3.5 h-full transition-colors hover:bg-white/[0.04]" style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${BORDER}` }}>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-xs font-bold" style={{ color: TEXT_PRIMARY }}>{goal.label}</p>
+                  <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: ACCENT }} />
+                </div>
+                <p className="text-[11px] mt-1" style={{ color: TEXT_MUTED }}>{goal.detail}</p>
+                <div className="h-1 rounded-full overflow-hidden mt-3" style={{ background: BORDER }}>
+                  <div className="h-full rounded-full" style={{ width: `${Math.min(100, goal.percent)}%`, background: ACCENT }} />
+                </div>
+              </div>
+            </Link>
+          ))}
+          {(!goals || goals.filter((goal) => !goal.completed).length === 0) && (
+            <p className="text-sm py-2" style={{ color: TEXT_MUTED }}>You have completed your current goals.</p>
+          )}
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
 /* ─── Main Page ─── */
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const isMobile = useMobile();
-  const [activeTab, setActiveTab] = useState<"overview" | "creator-analytics">("overview");
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "league" | "goals" | "xp-history" | "creator-analytics"
+  >("overview");
 
   const { data, isLoading } = useQuery<DashboardData>({
     queryKey: ["/api/dashboard"],
@@ -1694,16 +1985,24 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Daily Challenges stay above navigation as the user's daily action area. */}
+      <div className="w-full">
+        <DailyXPChallenges />
+      </div>
+
       {/* ── Tab bar ── */}
       <div
         className="sticky top-0 z-30"
         style={{ background: ACCENT_DARK, borderBottom: `1px solid ${BORDER}` }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-1" role="tablist" aria-label="Dashboard sections">
+          <div className="flex items-center gap-1 overflow-x-auto" role="tablist" aria-label="Dashboard sections" style={{ scrollbarWidth: "none" }}>
             {([
-              { id: "overview",           label: "Overview" },
-              { id: "creator-analytics",  label: "Creator Analytics" },
+              { id: "overview",          label: "Overview" },
+              { id: "league",            label: "League" },
+              { id: "goals",             label: "Goals" },
+              { id: "xp-history",        label: "XP History" },
+              { id: "creator-analytics", label: "Creator Analytics" },
             ] as const).map(({ id, label }) => {
               const isActive = activeTab === id;
               return (
@@ -1731,49 +2030,42 @@ export default function DashboardPage() {
 
       {/* Content area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-
         {/* ── Overview tab ── */}
         {activeTab === "overview" && (
-          isMobile ? (
-            <div
-              className="space-y-5"
-              style={{ paddingBottom: "calc(var(--mobile-nav-height, 3.5rem) + 1rem)" }}
-            >
-              <div className="-mx-4 sm:-mx-6">
-                <DailyXPChallenges />
-              </div>
-              <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
-              <FriendsRivals data={data?.social} isLoading={isLoading} />
-              <Goals goals={data?.goals} isLoading={isLoading} />
-              <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
-              <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
-              {(data?.bounties ?? []).length > 0 && (
-                <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
-              )}
-            </div>
-          ) : (
-            <div className="space-y-5 pb-8">
-              <div className="-mx-4 sm:-mx-6 lg:-mx-8">
-                <DailyXPChallenges />
-              </div>
-              <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
-              <FriendsRivals data={data?.social} isLoading={isLoading} />
-              <div className="grid grid-cols-12 gap-5">
-                <div className="col-span-7">
-                  <Goals goals={data?.goals} isLoading={isLoading} />
-                </div>
-                <div className="col-span-5">
-                  <NextRewards rewards={data?.nextRewards} isLoading={isLoading} />
-                </div>
-              </div>
-              <div className="space-y-5">
-                <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
-                {(data?.bounties ?? []).length > 0 && (
-                  <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
-                )}
-              </div>
-            </div>
-          )
+          <OverviewSnapshot
+            player={data?.player}
+            season={data?.seasonLeague}
+            rewards={data?.nextRewards}
+            goals={data?.goals}
+            isLoading={isLoading}
+            onViewLeague={() => setActiveTab("league")}
+            onViewGoals={() => setActiveTab("goals")}
+          />
+        )}
+
+        {/* ── League tab: complete competitive and seasonal progression ── */}
+        {activeTab === "league" && (
+          <div className="space-y-5 pb-8">
+            <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
+            <FriendsRivals data={data?.social} isLoading={isLoading} />
+          </div>
+        )}
+
+        {/* ── Goals tab: complete personal progression and action items ── */}
+        {activeTab === "goals" && (
+          <div className="space-y-5 pb-8">
+            <Goals goals={data?.goals} isLoading={isLoading} />
+            {(data?.bounties ?? []).length > 0 && (
+              <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
+            )}
+          </div>
+        )}
+
+        {/* ── XP History tab ── */}
+        {activeTab === "xp-history" && (
+          <div className="pb-8">
+            <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
+          </div>
         )}
 
         {/* ── Creator Analytics tab ── */}

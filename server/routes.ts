@@ -4063,29 +4063,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enriched = await getCachedTrending(cacheKey, async () => {
       // Minimum entries needed for a meaningful podium display
       const MIN_PODIUM = 3;
+
+      // ── Qualified by real XP earned in the chosen window ────────────────────
+      // Helper: query user_xp_history for the given time window and return the
+      // top users by XP, together with their full user record.
+      const fetchXpWindow = async (windowStart: string | null, fetchLimit: number) => {
+        const timeFilter = windowStart
+          ? sql`AND xh.created_at >= ${windowStart}`
+          : sql``;
+        const rows = await db.execute(sql`
+          SELECT
+            u.id          AS "userId",
+            COALESCE(SUM(xh.xp_amount), 0)::int AS "totalPoints"
+          FROM user_xp_history xh
+          JOIN users u ON u.id = xh.user_id
+          WHERE xh.xp_amount > 0
+            ${timeFilter}
+            AND u.role NOT IN ('admin', 'moderator', 'system')
+            AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+            AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+          GROUP BY u.id
+          ORDER BY "totalPoints" DESC
+          LIMIT ${fetchLimit}
+        `);
+        const result = ((rows as any).rows ?? rows) as Array<{ userId: string | number; totalPoints: number }>;
+        if (result.length === 0) return [];
+        const ids = result.map(r => Number(r.userId));
+        const userRows = await db.select().from(users).where(inArray(users.id, ids));
+        const userMap: Record<number, any> = Object.fromEntries(userRows.map(u => [u.id, u]));
+        return result
+          .map(row => ({
+            userId: Number(row.userId),
+            uploadsCount: 0,
+            totalPoints: Number(row.totalPoints),
+            user: userMap[Number(row.userId)],
+          }))
+          .filter(e => !!e.user);
+      };
+
+      const now = new Date();
       let leaderboardData: Array<{ userId: number; uploadsCount: number; totalPoints: number; rank?: number; user: any }>;
+      // Track which window was actually used so the frontend can label XP correctly
+      let effectivePeriod: string = period;
+
       if (period === 'month') {
-        leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
-        if (!leaderboardData || leaderboardData.length === 0) {
-          leaderboardData = await LeaderboardService.getPreviousMonthLeaderboard(limit);
-        }
-        // Fall back to all-time if monthly is still sparse
-        if (!leaderboardData || leaderboardData.length < MIN_PODIUM) {
-          leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
+        // Last 30 days of XP
+        const monthStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        leaderboardData = await fetchXpWindow(monthStart, limit);
+        // Fall back to all-time if too sparse
+        if (leaderboardData.length < MIN_PODIUM) {
+          leaderboardData = await fetchXpWindow(null, limit);
+          effectivePeriod = 'alltime';
         }
       } else if (period === 'week') {
-        leaderboardData = await LeaderboardService.getCurrentWeekLeaderboard(limit);
-        // Fall back to previous week if current week has no data
-        if (!leaderboardData || leaderboardData.length === 0) {
-          leaderboardData = await LeaderboardService.getPreviousWeekLeaderboard(limit);
+        // Last 7 days of XP
+        const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        leaderboardData = await fetchXpWindow(weekStart, limit);
+        // Fall back to last 30 days, then all-time if too sparse
+        if (leaderboardData.length < MIN_PODIUM) {
+          const monthStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          leaderboardData = await fetchXpWindow(monthStart, limit);
+          effectivePeriod = 'month';
         }
-        // If still sparse (< 3 participants), fall back entirely to all-time so a
-        // single user with 0.04 XP is never shown as #1 over proper all-time leaders
-        if (!leaderboardData || leaderboardData.length < MIN_PODIUM) {
-          leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
+        if (leaderboardData.length < MIN_PODIUM) {
+          leaderboardData = await fetchXpWindow(null, limit);
+          effectivePeriod = 'alltime';
         }
       } else {
-        leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
+        // All-time XP
+        leaderboardData = await fetchXpWindow(null, limit);
       }
 
       if (!leaderboardData || leaderboardData.length === 0) {
@@ -4176,7 +4222,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const dt = new Date(c.createdAt as unknown as string);
         const ex = recentByUser[c.userId];
         if (!ex || dt > new Date(ex.createdAt)) {
-          recentByUser[c.userId] = { id: c.id, createdAt: c.createdAt as unknown as string, contentType: c.videoType === 'reel' ? 'reel' : 'clip', gameId: c.gameId, title: c.title };
+          const ca = c.createdAt as unknown as (Date | string);
+          recentByUser[c.userId] = { id: c.id, createdAt: ca instanceof Date ? ca.toISOString() : ca, contentType: c.videoType === 'reel' ? 'reel' : 'clip', gameId: c.gameId, title: c.title };
         }
       }
       for (const s of recentSsRows) {
@@ -4184,7 +4231,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const dt = new Date(s.createdAt as unknown as string);
         const ex = recentByUser[s.userId];
         if (!ex || dt > new Date(ex.createdAt)) {
-          recentByUser[s.userId] = { id: s.id, createdAt: s.createdAt as unknown as string, contentType: 'screenshot', gameId: s.gameId, title: null };
+          const sca = s.createdAt as unknown as (Date | string);
+          recentByUser[s.userId] = { id: s.id, createdAt: sca instanceof Date ? sca.toISOString() : sca, contentType: 'screenshot', gameId: s.gameId, title: null };
         }
       }
 
@@ -4238,6 +4286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             rank: index + 1,  // Always use position in results array, not stale stored rank
             uploadsCount: entry.uploadsCount,
             totalPoints: entry.totalPoints,
+            effectivePeriod,   // actual window used (may differ from requested period on fallback)
             user: { id: entry.userId, ...userData },
             clipsCount: clipsMap[entry.userId] || 0,
             reelsCount: reelsMap[entry.userId] || 0,
@@ -4933,12 +4982,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .map((e: any, idx: number) => ({
               rank: Number(e.rank ?? Math.max(0, rankIndex - 2) + idx + 1),
               userId: Number(e.userId),
-              username: e.user?.username,
+              username: typeof e.user?.username === "string" ? e.user.username.trim() : "",
               displayName: e.user?.displayName,
               avatarUrl: e.user?.avatarUrl,
               totalXP: Math.round(Number(e.totalPoints ?? e.totalXP ?? 0)),
               isMe: Number(e.userId) === userId,
             }))
+            .filter((r: any) => r.userId > 0 && r.rank > 0 && r.username.length > 0)
         : [];
 
       // Next rewards preview
@@ -4971,8 +5021,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
           GROUP BY u.id
         )
-        SELECT "userId", "seasonXP", RANK() OVER (ORDER BY "seasonXP" DESC) AS "seasonRank"
+        SELECT
+          "userId",
+          u.username,
+          u.display_name AS "displayName",
+          "seasonXP",
+          RANK() OVER (ORDER BY "seasonXP" DESC) AS "seasonRank"
         FROM season_totals
+        JOIN users u ON u.id = season_totals."userId"
         ORDER BY "seasonRank" ASC
       `);
       const seasonRankList = ((seasonRankRows as any).rows ?? seasonRankRows) as any[];
@@ -4986,7 +5042,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const seasonTiers = getSeasonLeagueTiers();
       const currentTier = seasonTiers.find((tier) => tier.name === seasonLeague.league) ?? seasonTiers[0];
       const nextPlayer = seasonRank && seasonRank > 1
-        ? seasonRankList.find((row) => Number(row.seasonXP) > seasonXP)
+        ? seasonRankList.find((row) => (
+            Number(row.seasonRank) === seasonRank - 1
+            && Number.isFinite(Number(row.userId))
+            && Number(row.userId) > 0
+            && typeof row.username === "string"
+            && row.username.trim().length > 0
+            && Number.isFinite(Number(row.seasonRank))
+            && Number.isFinite(Number(row.seasonXP))
+          ))
         : null;
       const top100Entry = seasonRankList[99] ?? null;
       const top50Entry = seasonRankList[49] ?? null;
