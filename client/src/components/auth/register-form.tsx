@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,7 @@ import { PasswordRequirementsDisplay } from "@/components/ui/password-requiremen
 import { FieldError, FieldStatus } from "@/components/ui/field-error";
 import { Calendar as CalendarIcon, X } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { createPortal } from "react-dom";
 
 interface RegisterFormProps {
   onSuccess: () => void;
@@ -51,6 +51,23 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [dobOpen, setDobOpen] = useState(false);
+  const [dobPos, setDobPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const dobTriggerRef = useRef<HTMLButtonElement>(null);
+  const dobCalendarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!dobOpen) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (
+        dobTriggerRef.current && !dobTriggerRef.current.contains(e.target as Node) &&
+        dobCalendarRef.current && !dobCalendarRef.current.contains(e.target as Node)
+      ) {
+        setDobOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [dobOpen]);
   const [fieldErrors, setFieldErrors] = useState<{
     username?: string;
     email?: string;
@@ -420,28 +437,38 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="dateOfBirth" className="text-foreground">Date of Birth</Label>
-        <Popover open={dobOpen} onOpenChange={setDobOpen}>
-          <PopoverTrigger asChild>
-            <button
-              id="dateOfBirth"
-              type="button"
-              disabled={isLoading}
-              aria-label="Select your date of birth"
-              className="flex h-10 w-full items-center gap-3 rounded-md border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <CalendarIcon className="h-4 w-4 shrink-0 text-primary" />
-              <span className={formData.dateOfBirth ? "text-foreground" : "text-muted-foreground"}>
-                {formData.dateOfBirth
-                  ? new Date(`${formData.dateOfBirth}T00:00:00`).toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })
-                  : "Select your date of birth"}
-              </span>
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 z-[200002]" align="start">
+        <button
+          ref={dobTriggerRef}
+          id="dateOfBirth"
+          type="button"
+          disabled={isLoading}
+          aria-label="Select your date of birth"
+          className="flex h-10 w-full items-center gap-3 rounded-md border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={() => {
+            if (dobOpen) { setDobOpen(false); return; }
+            const rect = dobTriggerRef.current?.getBoundingClientRect();
+            if (rect) setDobPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, width: rect.width });
+            setDobOpen(true);
+          }}
+        >
+          <CalendarIcon className="h-4 w-4 shrink-0 text-primary" />
+          <span className={formData.dateOfBirth ? "text-foreground" : "text-muted-foreground"}>
+            {formData.dateOfBirth
+              ? new Date(`${formData.dateOfBirth}T00:00:00`).toLocaleDateString(undefined, {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })
+              : "Select your date of birth"}
+          </span>
+        </button>
+
+        {dobOpen && dobPos && createPortal(
+          <div
+            ref={dobCalendarRef}
+            style={{ position: "fixed", top: dobPos.top, left: dobPos.left, zIndex: 999999 }}
+            className="rounded-md border border-border bg-popover shadow-lg"
+          >
             <Calendar
               mode="single"
               weekStartsOn={1}
@@ -462,38 +489,41 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                 }
               }}
               disabled={{ after: (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 15); return d; })() }}
-              fromYear={1900}
-              toYear={new Date().getFullYear() - 15}
+              fromDate={new Date("1900-01-01")}
+              toDate={(() => { const d = new Date(); d.setFullYear(d.getFullYear() - 15); return d; })()}
               captionLayout="dropdown-buttons"
-              footer={
-                <div className="flex items-center justify-between border-t border-border px-3 py-2">
-                  <button
-                    type="button"
-                    className="text-sm text-primary hover:underline"
-                    onClick={() => {
-                      setFormData((prev) => ({ ...prev, dateOfBirth: "" }));
-                      setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
-                      setDobOpen(false);
-                    }}
-                  >
-                    Clear
-                  </button>
-                  <button
-                    type="button"
-                    className="text-sm text-muted-foreground hover:text-foreground"
-                    onClick={() => {
-                      const today = new Date();
-                      today.setFullYear(today.getFullYear() - 18);
-                      setDobOpen(false);
-                    }}
-                  >
-                    Today
-                  </button>
-                </div>
-              }
+              classNames={{
+                caption_dropdowns: "flex items-center gap-2",
+                dropdown: "bg-card border border-input rounded-md text-sm px-2 py-1 text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring",
+                dropdown_month: "flex-1",
+                dropdown_year: "flex-1",
+                dropdown_icon: "hidden",
+              }}
             />
-          </PopoverContent>
-        </Popover>
+            <div className="flex items-center justify-between border-t border-border px-3 py-2">
+              <button
+                type="button"
+                className="text-sm text-primary hover:underline"
+                onClick={() => {
+                  setFormData((prev) => ({ ...prev, dateOfBirth: "" }));
+                  setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
+                  setDobOpen(false);
+                }}
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                className="text-sm text-muted-foreground hover:text-foreground"
+                onClick={() => setDobOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
+
         <p className="text-xs text-muted-foreground">You must be at least 15 years old to sign up</p>
         <FieldError error={fieldErrors.dateOfBirth} />
       </div>
