@@ -4094,6 +4094,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const now = new Date();
       let leaderboardData: Array<{ userId: number; uploadsCount: number; totalPoints: number; rank?: number; user: any }>;
+      // Track which window was actually used so the frontend can label XP correctly
+      let effectivePeriod: string = period;
 
       if (period === 'month') {
         // Last 30 days of XP
@@ -4102,6 +4104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Fall back to all-time if too sparse
         if (leaderboardData.length < MIN_PODIUM) {
           leaderboardData = await fetchXpWindow(null, limit);
+          effectivePeriod = 'alltime';
         }
       } else if (period === 'week') {
         // Last 7 days of XP
@@ -4111,9 +4114,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (leaderboardData.length < MIN_PODIUM) {
           const monthStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
           leaderboardData = await fetchXpWindow(monthStart, limit);
+          effectivePeriod = 'month';
         }
         if (leaderboardData.length < MIN_PODIUM) {
           leaderboardData = await fetchXpWindow(null, limit);
+          effectivePeriod = 'alltime';
         }
       } else {
         // All-time XP
@@ -4208,7 +4213,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const dt = new Date(c.createdAt as unknown as string);
         const ex = recentByUser[c.userId];
         if (!ex || dt > new Date(ex.createdAt)) {
-          recentByUser[c.userId] = { id: c.id, createdAt: c.createdAt as unknown as string, contentType: c.videoType === 'reel' ? 'reel' : 'clip', gameId: c.gameId, title: c.title };
+          const ca = c.createdAt as unknown as (Date | string);
+          recentByUser[c.userId] = { id: c.id, createdAt: ca instanceof Date ? ca.toISOString() : ca, contentType: c.videoType === 'reel' ? 'reel' : 'clip', gameId: c.gameId, title: c.title };
         }
       }
       for (const s of recentSsRows) {
@@ -4216,7 +4222,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const dt = new Date(s.createdAt as unknown as string);
         const ex = recentByUser[s.userId];
         if (!ex || dt > new Date(ex.createdAt)) {
-          recentByUser[s.userId] = { id: s.id, createdAt: s.createdAt as unknown as string, contentType: 'screenshot', gameId: s.gameId, title: null };
+          const sca = s.createdAt as unknown as (Date | string);
+          recentByUser[s.userId] = { id: s.id, createdAt: sca instanceof Date ? sca.toISOString() : sca, contentType: 'screenshot', gameId: s.gameId, title: null };
         }
       }
 
@@ -4270,6 +4277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             rank: index + 1,  // Always use position in results array, not stale stored rank
             uploadsCount: entry.uploadsCount,
             totalPoints: entry.totalPoints,
+            effectivePeriod,   // actual window used (may differ from requested period on fallback)
             user: { id: entry.userId, ...userData },
             clipsCount: clipsMap[entry.userId] || 0,
             reelsCount: reelsMap[entry.userId] || 0,

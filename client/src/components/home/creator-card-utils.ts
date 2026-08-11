@@ -3,6 +3,7 @@ export interface TrendingEntry {
   rank: number;
   uploadsCount: number;
   totalPoints: number;
+  effectivePeriod?: string; // actual window used (may differ from requested period after fallback)
   clipsCount: number;
   reelsCount: number;
   screenshotsCount: number;

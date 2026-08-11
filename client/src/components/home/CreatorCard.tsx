@@ -33,7 +33,8 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
   const hasBanner = !!user.bannerUrl && !bannerError;
   const theme = getCardTheme(user);
 
-  const xpLabel = period === 'alltime' ? 'XP total' : period === 'season' ? 'XP this season' : period === 'month' ? 'XP this month' : 'XP this week';
+  const displayPeriod = entry.effectivePeriod ?? period;
+  const xpLabel = displayPeriod === 'alltime' ? 'XP total' : displayPeriod === 'season' ? 'XP this season' : displayPeriod === 'month' ? 'XP this month' : 'XP this week';
   const ctaText = `${fmt(entry.totalPoints)} ${xpLabel}`;
 
   const recentTitle = entry.recentUpload
