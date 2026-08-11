@@ -2199,7 +2199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Validate date of birth - must be at least 15 years old
+      // Validate date of birth - must be at least 13 years old
       if (userData.dateOfBirth) {
         const dob = new Date(userData.dateOfBirth);
         const today = new Date();
@@ -2208,8 +2208,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
           age--;
         }
-        if (age < 15) {
-          return res.status(400).json({ message: "You must be at least 15 years old to create an account" });
+        if (age < 13) {
+          return res.status(400).json({ message: "You must be at least 13 years old to create an account" });
         }
       }
 
