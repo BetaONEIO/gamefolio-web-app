@@ -77,6 +77,7 @@ const FeaturedUsersSection = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const rafRef    = useRef<number>(0);
   const dragging  = useRef(false);
+  const scrollPosition = useRef(0);
   const dragData  = useRef({ startX: 0, startScrollLeft: 0 });
 
   /* ── Auto-scroll + init ───────────────────────────────────── */
@@ -88,21 +89,26 @@ const FeaturedUsersSection = () => {
     const setup = setTimeout(() => {
       const oneCopyWidth = el.scrollWidth / 3;
       // Start in the middle copy so we can scroll both directions seamlessly
-      el.scrollLeft = oneCopyWidth;
+      scrollPosition.current = oneCopyWidth;
+      el.scrollLeft = scrollPosition.current;
 
       const tick = () => {
         if (!dragging.current) {
           const scrollSpeed = window.matchMedia("(max-width: 640px)").matches
             ? SCROLL_SPEED / 2
             : SCROLL_SPEED;
-          el.scrollLeft += scrollSpeed;
+          // Keep sub-pixel progress in a ref; some browsers round scrollLeft.
+          scrollPosition.current += scrollSpeed;
+          el.scrollLeft = scrollPosition.current;
 
           // Seamless loop: when we scroll past the 2nd copy, jump back by one copy width
           const w = el.scrollWidth / 3;
-          if (el.scrollLeft >= w * 2) {
-            el.scrollLeft -= w;
-          } else if (el.scrollLeft <= 0) {
-            el.scrollLeft += w;
+          if (scrollPosition.current >= w * 2) {
+            scrollPosition.current -= w;
+            el.scrollLeft = scrollPosition.current;
+          } else if (scrollPosition.current <= 0) {
+            scrollPosition.current += w;
+            el.scrollLeft = scrollPosition.current;
           }
         }
         rafRef.current = requestAnimationFrame(tick);
@@ -122,6 +128,7 @@ const FeaturedUsersSection = () => {
     const el = scrollRef.current;
     if (!el) return;
     dragging.current = true;
+    scrollPosition.current = el.scrollLeft;
     dragData.current = { startX: e.clientX, startScrollLeft: el.scrollLeft };
     el.setPointerCapture(e.pointerId);
     el.classList.add('dragging');
@@ -133,22 +140,27 @@ const FeaturedUsersSection = () => {
     if (!el) return;
 
     const dx = e.clientX - dragData.current.startX;
-    el.scrollLeft = dragData.current.startScrollLeft - dx;
+    scrollPosition.current = dragData.current.startScrollLeft - dx;
 
     // Keep seamless loop working during drag
     const w = el.scrollWidth / 3;
-    if (el.scrollLeft >= w * 2) {
-      el.scrollLeft -= w;
+    if (scrollPosition.current >= w * 2) {
+      scrollPosition.current -= w;
       dragData.current.startScrollLeft -= w;
-    } else if (el.scrollLeft < 0) {
-      el.scrollLeft += w;
+    } else if (scrollPosition.current < 0) {
+      scrollPosition.current += w;
       dragData.current.startScrollLeft += w;
     }
+    el.scrollLeft = scrollPosition.current;
   };
 
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     dragging.current = false;
-    scrollRef.current?.classList.remove('dragging');
+    const el = scrollRef.current;
+    el?.classList.remove('dragging');
+    if (el?.hasPointerCapture(e.pointerId)) {
+      el.releasePointerCapture(e.pointerId);
+    }
   };
 
   return (
