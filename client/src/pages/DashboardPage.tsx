@@ -1851,10 +1851,8 @@ export default function DashboardPage() {
       </div>
 
       {/* Daily Challenges stay above navigation as the user's daily action area. */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="-mx-4 sm:-mx-6 lg:-mx-8">
-          <DailyXPChallenges />
-        </div>
+      <div className="w-full">
+        <DailyXPChallenges />
       </div>
 
       {/* ── Tab bar ── */}
