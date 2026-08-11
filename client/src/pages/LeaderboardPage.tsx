@@ -13,7 +13,7 @@ import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { CreatorCard } from "@/components/home/CreatorCard";
-import { TrendingEntry, CREATOR_CARD_STYLES } from "@/components/home/CreatorCard";
+import { TrendingEntry, CREATOR_CARD_STYLES } from "@/components/home/creator-card-utils";
 import goldBannerImg from "@assets/goldr-flat-banner-_1783016208886.png";
 import silverBannerImg from "@assets/silver-flat-banne-_1783016206432.png";
 import bronzeBannerImg from "@assets/bronze-flat-banner_(1)_1783016211069.png";
