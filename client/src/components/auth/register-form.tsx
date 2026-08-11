@@ -9,7 +9,9 @@ import { GoogleAuthButton } from "./GoogleAuthButton";
 import { DiscordAuthButton } from "./DiscordAuthButton";
 import { PasswordRequirementsDisplay } from "@/components/ui/password-requirements";
 import { FieldError, FieldStatus } from "@/components/ui/field-error";
-import { Calendar, X } from "lucide-react";
+import { Calendar as CalendarIcon, X } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface RegisterFormProps {
   onSuccess: () => void;
@@ -48,6 +50,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [dobOpen, setDobOpen] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{
     username?: string;
     email?: string;
@@ -417,41 +420,80 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="dateOfBirth" className="text-foreground">Date of Birth</Label>
-        <div className="relative">
-          <Calendar
-            aria-hidden="true"
-            className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-primary"
-          />
-          <Input
-            id="dateOfBirth"
-            name="dateOfBirth"
-            type="date"
-            value={formData.dateOfBirth}
-            max={new Date(new Date().setFullYear(new Date().getFullYear() - 15)).toISOString().split("T")[0]}
-            min="1900-01-01"
-            onChange={(e) => {
-              setFormData((prev) => ({ ...prev, dateOfBirth: e.target.value }));
-              setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
-            }}
-            disabled={isLoading}
-            aria-label="Select your date of birth"
-            className="date-picker-field auth-input h-10 pl-11 pr-3"
-          />
-          <span
-            aria-hidden="true"
-            className={`pointer-events-none absolute inset-y-0 left-11 flex items-center text-sm ${
-              formData.dateOfBirth ? "text-foreground" : "text-muted-foreground"
-            }`}
-          >
-            {formData.dateOfBirth
-              ? new Date(`${formData.dateOfBirth}T00:00:00`).toLocaleDateString(undefined, {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })
-              : "Select your date of birth"}
-          </span>
-        </div>
+        <Popover open={dobOpen} onOpenChange={setDobOpen}>
+          <PopoverTrigger asChild>
+            <button
+              id="dateOfBirth"
+              type="button"
+              disabled={isLoading}
+              aria-label="Select your date of birth"
+              className="flex h-10 w-full items-center gap-3 rounded-md border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <CalendarIcon className="h-4 w-4 shrink-0 text-primary" />
+              <span className={formData.dateOfBirth ? "text-foreground" : "text-muted-foreground"}>
+                {formData.dateOfBirth
+                  ? new Date(`${formData.dateOfBirth}T00:00:00`).toLocaleDateString(undefined, {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })
+                  : "Select your date of birth"}
+              </span>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              weekStartsOn={1}
+              selected={formData.dateOfBirth ? new Date(`${formData.dateOfBirth}T00:00:00`) : undefined}
+              defaultMonth={
+                formData.dateOfBirth
+                  ? new Date(`${formData.dateOfBirth}T00:00:00`)
+                  : (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 18); return d; })()
+              }
+              onSelect={(date) => {
+                if (date) {
+                  const yyyy = date.getFullYear();
+                  const mm = String(date.getMonth() + 1).padStart(2, "0");
+                  const dd = String(date.getDate()).padStart(2, "0");
+                  setFormData((prev) => ({ ...prev, dateOfBirth: `${yyyy}-${mm}-${dd}` }));
+                  setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
+                  setDobOpen(false);
+                }
+              }}
+              disabled={{ after: (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 15); return d; })() }}
+              fromYear={1900}
+              toYear={new Date().getFullYear() - 15}
+              captionLayout="dropdown-buttons"
+              footer={
+                <div className="flex items-center justify-between border-t border-border px-3 py-2">
+                  <button
+                    type="button"
+                    className="text-sm text-primary hover:underline"
+                    onClick={() => {
+                      setFormData((prev) => ({ ...prev, dateOfBirth: "" }));
+                      setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
+                      setDobOpen(false);
+                    }}
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      const today = new Date();
+                      today.setFullYear(today.getFullYear() - 18);
+                      setDobOpen(false);
+                    }}
+                  >
+                    Today
+                  </button>
+                </div>
+              }
+            />
+          </PopoverContent>
+        </Popover>
         <p className="text-xs text-muted-foreground">You must be at least 15 years old to sign up</p>
         <FieldError error={fieldErrors.dateOfBirth} />
       </div>
