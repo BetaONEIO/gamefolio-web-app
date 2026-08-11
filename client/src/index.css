@@ -236,19 +236,16 @@
   color: #B7FF1A;
 }
 
-/* Date picker field — keeps color transparent at all times so the
-   custom overlay label is always visible instead of the native date text */
-.date-picker-field,
-.date-picker-field:focus,
-.date-picker-field:focus-visible,
-.date-picker-field:active {
+/* Date picker field — strips browser-native date chrome so it renders
+   identically to a text input; overlay label provides the visible text */
+.date-picker-field {
+  -webkit-appearance: none;
+  appearance: none;
   color: transparent !important;
   caret-color: transparent !important;
   -webkit-text-fill-color: transparent !important;
-  animation: none !important;
-  outline: none !important;
-  box-shadow: none !important;
   -webkit-tap-highlight-color: transparent !important;
+  animation: none !important;
 }
 
 /* Expand the native calendar icon to cover the entire input area on desktop */
