@@ -14,13 +14,14 @@
   --visual-viewport-height: 100dvh;
 
   /* Shared solid Gamefolio surface system */
-  --gf-bg: #071119;
-  --gf-surface-1: #0B1722;
-  --gf-surface-2: #101E2A;
-  --gf-surface-3: #132433;
-  --gf-surface-hover: #192E3E;
-  --gf-border: #213140;
-  --gf-border-subtle: #182733;
+  /* Shared mobile/web palette: neutral midnight navy with subtle layered surfaces */
+  --gf-bg: #0F1119;
+  --gf-surface-1: #141925;
+  --gf-surface-2: #1A1F2D;
+  --gf-surface-3: #202638;
+  --gf-surface-hover: #2A3040;
+  --gf-border: #2D3547;
+  --gf-border-subtle: #202638;
   --gf-text: #FFFFFF;
   --gf-text-secondary: #A9B4BE;
   --gf-text-muted: #73808B;
@@ -235,36 +236,6 @@
   color: #B7FF1A;
 }
 
-/* Date picker field — keeps color transparent at all times so the
-   custom overlay label is always visible instead of the native date text */
-.date-picker-field,
-.date-picker-field:focus,
-.date-picker-field:focus-visible,
-.date-picker-field:active {
-  color: transparent !important;
-  caret-color: transparent !important;
-  -webkit-text-fill-color: transparent !important;
-  animation: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  -webkit-tap-highlight-color: transparent !important;
-}
-
-/* Expand the native calendar icon to cover the entire input area on desktop */
-.date-picker-field::-webkit-calendar-picker-indicator {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-}
-
-/* Suppress iOS inner shadow on inputs */
-.date-picker-field::-webkit-inner-spin-button,
-.date-picker-field::-webkit-clear-button {
-  display: none;
-}
 
 .auth-scrollbar {
   scrollbar-width: thin;
@@ -419,15 +390,15 @@ video:focus {
 
 :root {
   /* Global Gamefolio theme - solid competitive gaming surfaces */
-  --background: 207 56% 6%;      /* #071119 */
+  --background: 228 25% 8%;       /* #0F1119 */
   --foreground: 0 0% 100%;        /* #FFFFFF */
 
   /* Card */
-  --card: 207 51% 9%;             /* #0B1722 */
+  --card: 222 30% 11%;             /* #141925 */
   --card-foreground: 0 0% 100%;
 
   /* Popover */
-  --popover: 207 45% 11%;         /* #101E2A */
+  --popover: 224 27% 14%;          /* #1A1F2D */
   --popover-foreground: 0 0% 100%;
 
   /* Primary - Neon green accent */
@@ -435,12 +406,12 @@ video:focus {
   --primary-foreground: 207 56% 6%;
 
   /* Secondary */
-  --secondary: 207 45% 11%;       /* #101E2A */
+  --secondary: 224 27% 14%;        /* #1A1F2D */
   --secondary-foreground: 0 0% 100%;
 
   /* Muted */
-  --muted: 207 42% 15%;           /* #132433 */
-  --muted-foreground: 207 9% 50%; /* #73808B */
+  --muted: 225 27% 17%;            /* #202638 */
+  --muted-foreground: 220 10% 58%; /* #8B93A3 */
 
   /* Accent - Neon green */
   --accent: 78 100% 54%;          /* #B7FF18 */
@@ -451,8 +422,8 @@ video:focus {
   --destructive-foreground: 0 0% 100%;
 
   /* Border */
-  --border: 207 32% 20%;          /* #213140 */
-  --input: 207 51% 9%;             /* #0B1722 */
+  --border: 222 22% 23%;           /* #2D3547 */
+  --input: 222 30% 11%;            /* #141925 */
   --ring: 78 100% 54%;             /* #B7FF18 */
 
   /* Radius - premium rounded feel */

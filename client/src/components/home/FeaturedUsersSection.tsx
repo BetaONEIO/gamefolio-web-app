@@ -1,32 +1,26 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { useEffect, useRef } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GamefolioTrendingIcon } from "@/components/icons/GamefolioTrendingIcon";
 import { CreatorCard } from "@/components/home/CreatorCard";
 import { TrendingEntry, CREATOR_CARD_STYLES } from "@/components/home/creator-card-utils";
 
-type Period = 'week' | 'month' | 'alltime';
-
-const PERIOD_LABELS: Record<Period, string> = {
-  week: 'This Week',
-  month: 'This Month',
-  alltime: 'All Time',
-};
+const SCROLL_SPEED = 0.55; // px per rAF frame (~33px/s at 60fps)
+const CARD_GAP = 16;
 
 const STYLES = `
-  @keyframes fire-scroll {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-33.3333%); }
+  .fire-carousel-scroll {
+    overflow-x: scroll;
+    scrollbar-width: none;
+    cursor: grab;
+    user-select: none;
   }
+  .fire-carousel-scroll::-webkit-scrollbar { display: none; }
+  .fire-carousel-scroll.dragging { cursor: grabbing; }
+
   .fire-carousel-track {
     display: flex;
-    animation: fire-scroll 90s linear infinite;
     width: max-content;
-    will-change: transform;
-  }
-  .fire-carousel-track:hover {
-    animation-play-state: paused;
   }
 
   .trending-bg-pattern {
@@ -36,10 +30,6 @@ const STYLES = `
     background-position: center;
     background-size: cover;
     background-repeat: repeat;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .fire-carousel-track { animation: none; }
   }
 
   ${CREATOR_CARD_STYLES}
@@ -66,7 +56,7 @@ function CardSkeleton() {
 }
 
 const FeaturedUsersSection = () => {
-  const [period, setPeriod] = useState<Period>('week');
+  const period = 'week' as const;
 
   const { data: entries = [], isLoading } = useQuery<TrendingEntry[]>({
     queryKey: ["/api/trending-gamefolios", period],
@@ -83,6 +73,96 @@ const FeaturedUsersSection = () => {
     ? [...validEntries, ...validEntries, ...validEntries]
     : [];
 
+  /* ── Scroll refs ──────────────────────────────────────────── */
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const rafRef    = useRef<number>(0);
+  const dragging  = useRef(false);
+  const scrollPosition = useRef(0);
+  const dragData  = useRef({ startX: 0, startScrollLeft: 0 });
+
+  /* ── Auto-scroll + init ───────────────────────────────────── */
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || validEntries.length === 0) return;
+
+    // Give layout one tick to paint cards before reading scrollWidth
+    const setup = setTimeout(() => {
+      const oneCopyWidth = el.scrollWidth / 3;
+      // Start in the middle copy so we can scroll both directions seamlessly
+      scrollPosition.current = oneCopyWidth;
+      el.scrollLeft = scrollPosition.current;
+
+      const tick = () => {
+        if (!dragging.current) {
+          const scrollSpeed = window.matchMedia("(max-width: 640px)").matches
+            ? SCROLL_SPEED / 2
+            : SCROLL_SPEED;
+          // Keep sub-pixel progress in a ref; some browsers round scrollLeft.
+          scrollPosition.current += scrollSpeed;
+          el.scrollLeft = scrollPosition.current;
+
+          // Seamless loop: when we scroll past the 2nd copy, jump back by one copy width
+          const w = el.scrollWidth / 3;
+          if (scrollPosition.current >= w * 2) {
+            scrollPosition.current -= w;
+            el.scrollLeft = scrollPosition.current;
+          } else if (scrollPosition.current <= 0) {
+            scrollPosition.current += w;
+            el.scrollLeft = scrollPosition.current;
+          }
+        }
+        rafRef.current = requestAnimationFrame(tick);
+      };
+
+      rafRef.current = requestAnimationFrame(tick);
+    }, 60);
+
+    return () => {
+      clearTimeout(setup);
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, [validEntries.length]);
+
+  /* ── Drag handlers ────────────────────────────────────────── */
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    dragging.current = true;
+    scrollPosition.current = el.scrollLeft;
+    dragData.current = { startX: e.clientX, startScrollLeft: el.scrollLeft };
+    el.setPointerCapture(e.pointerId);
+    el.classList.add('dragging');
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging.current) return;
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const dx = e.clientX - dragData.current.startX;
+    scrollPosition.current = dragData.current.startScrollLeft - dx;
+
+    // Keep seamless loop working during drag
+    const w = el.scrollWidth / 3;
+    if (scrollPosition.current >= w * 2) {
+      scrollPosition.current -= w;
+      dragData.current.startScrollLeft -= w;
+    } else if (scrollPosition.current < 0) {
+      scrollPosition.current += w;
+      dragData.current.startScrollLeft += w;
+    }
+    el.scrollLeft = scrollPosition.current;
+  };
+
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragging.current = false;
+    const el = scrollRef.current;
+    el?.classList.remove('dragging');
+    if (el?.hasPointerCapture(e.pointerId)) {
+      el.releasePointerCapture(e.pointerId);
+    }
+  };
+
   return (
     <div>
       <style>{STYLES}</style>
@@ -93,23 +173,6 @@ const FeaturedUsersSection = () => {
           <GamefolioTrendingIcon className="w-5 h-5 text-primary" />
           <h2 className="text-xl sm:text-2xl font-bold">Trending Gamefolios</h2>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 rounded-lg p-1" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            {(Object.keys(PERIOD_LABELS) as Period[]).map(p => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className="px-3 py-1 rounded-md text-xs font-semibold transition-all duration-150"
-                style={period === p ? { background: '#B7FF1A', color: '#0B1319' } : { color: 'rgba(255,255,255,0.45)' }}
-              >
-                {PERIOD_LABELS[p]}
-              </button>
-            ))}
-          </div>
-          <Link href="/explore" className="text-sm font-medium hover:underline flex items-center gap-1" style={{ color: '#B7FF1A' }}>
-            View all <span>›</span>
-          </Link>
-        </div>
       </div>
 
       {/* Section body with lightning pattern background */}
@@ -117,9 +180,11 @@ const FeaturedUsersSection = () => {
         className="relative overflow-hidden rounded-2xl trending-bg-pattern"
         style={{ padding: '20px 0' }}
       >
-        {/* Edge fade overlays */}
-        <div className="absolute left-0 top-0 bottom-0 w-16 pointer-events-none" style={{ background: 'linear-gradient(to right, #0B1319, transparent)', zIndex: 10 }} />
-        <div className="absolute right-0 top-0 bottom-0 w-16 pointer-events-none" style={{ background: 'linear-gradient(to left, #0B1319, transparent)', zIndex: 10 }} />
+        {/* Edge fade overlays (pointer-events: none so drag works underneath) */}
+        <div className="absolute left-0 top-0 bottom-0 w-16 pointer-events-none"
+          style={{ background: 'linear-gradient(to right, #0B1319, transparent)', zIndex: 10 }} />
+        <div className="absolute right-0 top-0 bottom-0 w-16 pointer-events-none"
+          style={{ background: 'linear-gradient(to left, #0B1319, transparent)', zIndex: 10 }} />
 
         {isLoading ? (
           <div className="flex gap-4 px-5" style={{ zIndex: 11, position: 'relative' }}>
@@ -127,15 +192,25 @@ const FeaturedUsersSection = () => {
           </div>
         ) : validEntries.length === 0 ? (
           <div className="flex items-center justify-center py-12 text-white/30 text-sm" style={{ zIndex: 11, position: 'relative' }}>
-            No data for this period yet.
+            No trending data yet.
           </div>
         ) : (
-          <div className="fire-carousel-track" style={{ zIndex: 11, position: 'relative' }}>
-            {displayEntries.map((entry, idx) => (
-              <div key={`${entry.userId}-${idx}`} style={{ paddingRight: 16, flexShrink: 0 }}>
-                <CreatorCard entry={entry} period={period} />
-              </div>
-            ))}
+          <div
+            ref={scrollRef}
+            className="fire-carousel-scroll"
+            style={{ zIndex: 11, position: 'relative' }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+          >
+            <div className="fire-carousel-track" style={{ paddingLeft: CARD_GAP }}>
+              {displayEntries.map((entry, idx) => (
+                <div key={`${entry.userId}-${idx}`} style={{ paddingRight: CARD_GAP, flexShrink: 0 }}>
+                  <CreatorCard entry={entry} period={period} />
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
