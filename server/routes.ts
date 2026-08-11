@@ -4924,12 +4924,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .map((e: any, idx: number) => ({
               rank: Number(e.rank ?? Math.max(0, rankIndex - 2) + idx + 1),
               userId: Number(e.userId),
-              username: e.user?.username,
+              username: typeof e.user?.username === "string" ? e.user.username.trim() : "",
               displayName: e.user?.displayName,
               avatarUrl: e.user?.avatarUrl,
               totalXP: Math.round(Number(e.totalPoints ?? e.totalXP ?? 0)),
               isMe: Number(e.userId) === userId,
             }))
+            .filter((r: any) => r.userId > 0 && r.rank > 0 && r.username.length > 0)
         : [];
 
       // Next rewards preview
@@ -4962,8 +4963,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
           GROUP BY u.id
         )
-        SELECT "userId", "seasonXP", RANK() OVER (ORDER BY "seasonXP" DESC) AS "seasonRank"
+        SELECT
+          "userId",
+          u.username,
+          u.display_name AS "displayName",
+          "seasonXP",
+          RANK() OVER (ORDER BY "seasonXP" DESC) AS "seasonRank"
         FROM season_totals
+        JOIN users u ON u.id = season_totals."userId"
         ORDER BY "seasonRank" ASC
       `);
       const seasonRankList = ((seasonRankRows as any).rows ?? seasonRankRows) as any[];
@@ -4977,7 +4984,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const seasonTiers = getSeasonLeagueTiers();
       const currentTier = seasonTiers.find((tier) => tier.name === seasonLeague.league) ?? seasonTiers[0];
       const nextPlayer = seasonRank && seasonRank > 1
-        ? seasonRankList.find((row) => Number(row.seasonXP) > seasonXP)
+        ? seasonRankList.find((row) => (
+            Number(row.seasonRank) === seasonRank - 1
+            && Number.isFinite(Number(row.userId))
+            && Number(row.userId) > 0
+            && typeof row.username === "string"
+            && row.username.trim().length > 0
+            && Number.isFinite(Number(row.seasonRank))
+            && Number.isFinite(Number(row.seasonXP))
+          ))
         : null;
       const top100Entry = seasonRankList[99] ?? null;
       const top50Entry = seasonRankList[49] ?? null;
