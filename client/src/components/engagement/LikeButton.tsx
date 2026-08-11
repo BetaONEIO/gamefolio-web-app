@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { requireEmailVerified, isEmailVerificationError } from "@/lib/email-verification";
 
@@ -191,11 +191,6 @@ export function LikeButton({
           )}
         </div>
         
-        <JoinGamefolioDialog 
-          open={isOpen} 
-          onOpenChange={closeDialog} 
-          actionType={actionType} 
-        />
       </>
     );
   }
@@ -224,12 +219,6 @@ export function LikeButton({
           </span>
         )}
       </div>
-      
-      <JoinGamefolioDialog 
-        open={isOpen} 
-        onOpenChange={closeDialog} 
-        actionType={actionType} 
-      />
     </>
   );
 }

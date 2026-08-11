@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { X, Plus, Search } from "lucide-react";
+import { X, Plus, Gift, Users } from "lucide-react";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
@@ -23,6 +23,7 @@ import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Game } from "@shared/schema";
+import { GiftProSearchDialog } from "@/components/profile/GiftProSearchDialog";
 
 const LEVEL_THRESHOLDS = [
   { level: 1,  xpRequired: 0 },
@@ -113,7 +114,30 @@ function LevelProgressBar({ level, totalXP }: { level: number; totalXP: number }
 const MobileMenu = () => {
   const { isOpen, close } = useMobileMenu();
   const { user, logoutMutation } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleClose = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setIsClosing(false);
+      close();
+    }, 280);
+  }, [close]);
+
+  const [showGiftProDialog, setShowGiftProDialog] = useState(false);
+
+  const { data: ownProfileData } = useQuery({
+    queryKey: [`/api/users/${user?.username}`],
+    queryFn: async () => {
+      if (!user?.username) return null;
+      const res = await apiRequest('GET', `/api/users/${user.username}`);
+      return res.json();
+    },
+    enabled: !!user?.username,
+  });
+  const followerCount = (ownProfileData as any)?._count?.followers ?? 0;
+  const followingCount = (ownProfileData as any)?._count?.following ?? 0;
 
   const { data: favoriteGames } = useQuery<Game[]>({
     queryKey: [`/api/users/${user?.id}/favorites`],
@@ -126,33 +150,22 @@ const MobileMenu = () => {
     enabled: !!user?.id,
   });
 
-  const { data: trendingGames } = useQuery<Game[]>({
-    queryKey: ["/api/twitch/games/top"],
-    queryFn: async () => {
-      const response = await fetch("/api/twitch/games/top");
-      if (!response.ok) throw new Error("Failed to fetch trending games");
-      return response.json();
-    },
-    enabled: !user,
-    staleTime: 1000 * 60 * 30,
-  });
+  const displayGames = favoriteGames;
 
-  const displayGames = user ? favoriteGames : trendingGames;
-
-  // Close menu when clicking outside
+  // Close menu when clicking outside (but not when a sub-dialog is open)
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      if (isOpen && e.target instanceof HTMLElement) {
+      if (isOpen && !isClosing && !showGiftProDialog && e.target instanceof HTMLElement) {
         const menuContainer = document.getElementById('mobile-menu-container');
         if (menuContainer && !menuContainer.contains(e.target)) {
-          close();
+          handleClose();
         }
       }
     };
 
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isOpen, close]);
+  }, [isOpen, isClosing, showGiftProDialog, handleClose]);
 
   // Disable body scroll when menu is open
   useEffect(() => {
@@ -168,22 +181,29 @@ const MobileMenu = () => {
 
   const handleLogout = () => {
     logoutMutation.mutate();
-    close();
+    handleClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex" style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}>
+    <div
+      className="fixed inset-0 z-50 flex"
+      style={{
+        paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+        backgroundColor: isClosing ? 'transparent' : 'rgba(0,0,0,0.5)',
+        transition: 'background-color 0.28s ease',
+      }}
+    >
       <div 
         id="mobile-menu-container"
-        className="w-4/5 max-w-xs bg-card shadow-xl h-full transition-transform duration-300 transform"
-        style={{ animation: 'slideIn 0.3s forwards' }}
+        className="w-4/5 max-w-xs bg-card shadow-xl h-full transform"
+        style={{ animation: isClosing ? 'slideOut 0.28s forwards' : 'slideIn 0.3s forwards' }}
       >
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="p-4 border-b border-border flex justify-end items-center">
-            <Button variant="ghost" size="icon" onClick={close}>
+            <Button variant="ghost" size="icon" onClick={handleClose}>
               <X className="h-5 w-5" />
             </Button>
           </div>
@@ -197,7 +217,7 @@ const MobileMenu = () => {
                   className="cursor-pointer"
                   onClick={() => {
                     setLocation(`/profile/${user.username}`);
-                    close();
+                    handleClose();
                   }}
                 >
                   <CustomAvatar 
@@ -214,6 +234,33 @@ const MobileMenu = () => {
               </div>
               {/* Level Progress Bar */}
               <LevelProgressBar level={user.level || 1} totalXP={user.totalXP || 0} />
+              {/* Followers / Following / Gift Pro */}
+              <div className="flex items-center gap-3 mt-3 flex-wrap">
+                <button
+                  onClick={() => { setLocation(`/profile/${user.username}/followers`); handleClose(); }}
+                  className="flex items-center gap-1 hover:opacity-75 transition-opacity"
+                >
+                  <span className="font-black text-sm">{followerCount.toLocaleString()}</span>
+                  <span className="text-xs text-muted-foreground">Followers</span>
+                </button>
+                <span className="text-muted-foreground text-xs">·</span>
+                <button
+                  onClick={() => { setLocation(`/profile/${user.username}/followers?tab=following`); handleClose(); }}
+                  className="flex items-center gap-1 hover:opacity-75 transition-opacity"
+                >
+                  <span className="font-black text-sm">{followingCount.toLocaleString()}</span>
+                  <span className="text-xs text-muted-foreground">Following</span>
+                </button>
+                {/* Gift Pro — temporarily disabled
+                <button
+                  onClick={() => setShowGiftProDialog(true)}
+                  className="ml-auto flex items-center gap-1 text-xs text-primary font-medium hover:opacity-75 transition-opacity"
+                >
+                  <Gift className="h-3.5 w-3.5" />
+                  Gift Pro
+                </button>
+                */}
+              </div>
             </div>
           )}
 
@@ -223,28 +270,28 @@ const MobileMenu = () => {
               <li>
                 <Link 
                   href="/"
-                  onClick={close}
-                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                  onClick={handleClose}
+                  className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                 >
-                  <GamefolioHomeIcon className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioHomeIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
                   <span className="font-medium">Home</span>
                 </Link>
               </li>
               <li>
                 <Link 
                   href="/explore"
-                  onClick={close}
-                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                  onClick={handleClose}
+                  className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                 >
-                  <GamefolioExploreIcon className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioExploreIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
                   <span className="font-medium">Explore</span>
                 </Link>
               </li>
               <li>
                 <Link 
                   href="/trending"
-                  onClick={close}
-                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                  onClick={handleClose}
+                  className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                 >
                   <ZapIconSvg className="mr-3 h-5 w-5" active={true} />
                   <span className="font-medium">Trending</span>
@@ -253,40 +300,46 @@ const MobileMenu = () => {
               <li>
                 <Link 
                   href="/leaderboard"
-                  onClick={close}
-                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                  onClick={handleClose}
+                  className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                 >
-                  <GamefolioLeaderboardIcon className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioLeaderboardIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
                   <span className="font-medium">Leaderboard</span>
                 </Link>
               </li>
+              {/* Store stays on native (crypto-free cosmetics catalogue). */}
               <li>
-                <Link 
+                <Link
                   href="/store"
-                  onClick={close}
-                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                  onClick={handleClose}
+                  className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                 >
-                  <GamefolioStoreIcon className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioStoreIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
                   <span className="font-medium">Store</span>
                 </Link>
               </li>
+              {/* Wallet stays on native too — the /wallet route renders a
+                  redirect-to-web card (App Store / Play financial compliance),
+                  same pattern as Store. */}
               <li>
-                <Link 
+                <Link
                   href="/wallet"
-                  onClick={close}
-                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                  onClick={handleClose}
+                  className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                 >
-                  <GamefolioWalletIcon className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioWalletIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
                   <span className="font-medium">Wallet</span>
                 </Link>
               </li>
+              {/* Collection renders read-only on native (browse only;
+                  transactions are web-only). See MintedNftDetailScreen. */}
               <li>
-                <Link 
+                <Link
                   href="/collection"
-                  onClick={close}
-                  className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                  onClick={handleClose}
+                  className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                 >
-                  <GamefolioCollectionIcon className="mr-3 h-5 w-5 text-primary" />
+                  <GamefolioCollectionIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
                   <span className="font-medium">Collection</span>
                 </Link>
               </li>
@@ -294,10 +347,10 @@ const MobileMenu = () => {
                 <li>
                   <Link 
                     href="/messages"
-                    onClick={close}
-                    className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                    onClick={handleClose}
+                    className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                   >
-                    <GamefolioMessagesIcon className="mr-3 h-5 w-5 text-primary" />
+                    <GamefolioMessagesIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
                     <span className="font-medium">Messages</span>
                   </Link>
                 </li>
@@ -306,10 +359,10 @@ const MobileMenu = () => {
                 <li>
                   <Link 
                     href={`/profile/${user.username}`}
-                    onClick={close}
-                    className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline group"
+                    onClick={handleClose}
+                    className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                   >
-                    <GamefolioIcon className="mr-3 h-5 w-5 flex-shrink-0" />
+                    <GamefolioIcon glow={location === `/${user?.username}` || location === `/@${user?.username}`} className="mr-3 h-5 w-5 scale-[1.8] flex-shrink-0" />
                     <span className="font-medium">My Gamefolio</span>
                   </Link>
                 </li>
@@ -326,20 +379,20 @@ const MobileMenu = () => {
                   <li>
                     <Link
                       href="/account/settings"
-                      onClick={close}
-                      className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                      onClick={handleClose}
+                      className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                     >
-                      <GamefolioSettingsIcon className="mr-3 h-5 w-5 text-muted-foreground" />
+                      <GamefolioSettingsIcon className="mr-3 h-5 w-5 text-muted-foreground group-hover:text-[#071013]" />
                       <span>Account Settings</span>
                     </Link>
                   </li>
                   <li>
                     <Link
                       href="/settings/profile"
-                      onClick={close}
-                      className="flex items-center p-2 rounded-md hover:bg-accent/10 transition-colors w-full text-left no-underline"
+                      onClick={handleClose}
+                      className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                     >
-                      <GamefolioProfileSettingsIcon className="mr-3 h-5 w-5 opacity-70" />
+                      <GamefolioProfileSettingsIcon className="mr-3 h-5 w-5 opacity-70 group-hover:opacity-100 group-hover:text-[#071013]" />
                       <span>Profile Settings</span>
                     </Link>
                   </li>
@@ -348,21 +401,19 @@ const MobileMenu = () => {
             )}
 
             {/* Games Section */}
-            {displayGames && displayGames.length > 0 && (
+            {user && displayGames && displayGames.length > 0 && (
               <div className="mt-6 border-t border-border pt-4">
                 <div className="flex items-center justify-between px-2 mb-3">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    {user ? "Your Games" : "Top Games"}
+                    Your Games
                   </h3>
-                  {user && (
-                    <button
-                      onClick={() => { close(); }}
-                      className="text-muted-foreground hover:text-primary transition-colors"
-                      title="Manage games in your profile"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  )}
+                  <button
+                    onClick={() => { handleClose(); }}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                    title="Manage games in your profile"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
                 </div>
                 <div className="grid grid-cols-3 gap-2 px-1">
                   {displayGames.slice(0, 9).map((game) => (
@@ -370,9 +421,8 @@ const MobileMenu = () => {
                       key={`menu-game-${game.id}`}
                       className="flex flex-col items-center gap-1 group"
                       onClick={() => {
-                        const slug = game.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-                        setLocation(`/games/${slug}`);
-                        close();
+                        setLocation(`/profile/${user.username}`);
+                        handleClose();
                       }}
                     >
                       <div className="w-full aspect-[3/4] rounded-lg overflow-hidden bg-muted">
@@ -423,7 +473,7 @@ const MobileMenu = () => {
                 className="w-full"
                 onClick={() => {
                   setLocation("/auth");
-                  close();
+                  handleClose();
                 }}
               >
                 Sign In
@@ -432,6 +482,10 @@ const MobileMenu = () => {
           </div>
         </div>
       </div>
+
+
+
+      <GiftProSearchDialog open={showGiftProDialog} onOpenChange={setShowGiftProDialog} />
     </div>
   );
 };

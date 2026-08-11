@@ -74,11 +74,11 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
               onClick={() => onSelectGame(game)}
               className={`group flex flex-col items-center p-1.5 rounded-lg transition-all focus:outline-none focus:ring-2 ${
                 isSelected 
-                  ? 'bg-primary/15 border-2 border-primary/70 ring-2 ring-primary/30' 
-                  : 'bg-[#0d1f12] border-2 border-[#1e3a24] hover:border-primary/40 hover:bg-primary/5 focus:ring-primary/30'
+                  ? 'bg-[#071013] border-2 border-primary/70 ring-2 ring-primary/30' 
+                  : 'bg-[#071013] border-2 border-[#1B2A33] hover:border-primary/40 hover:bg-primary/5 focus:ring-primary/30'
               }`}
             >
-              <div className="relative w-full aspect-[3/4] mb-1.5 overflow-hidden rounded-md bg-[#1e3a24]">
+              <div className="relative w-full aspect-[3/4] mb-1.5 overflow-hidden rounded-md bg-[#071013]">
                 <img
                   src={game.box_art_url ? game.box_art_url.replace('{width}', '300').replace('{height}', '400') : "https://placehold.co/120x160?text=Game"}
                   alt={game.name}
@@ -188,7 +188,7 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser }: OnboardingStepIn
                   ? "bg-primary/20 border-primary text-primary"
                   : currentStep === step.id
                   ? "bg-primary border-primary text-white"
-                  : "bg-[#162a1b] border-primary/20 text-gray-400"
+                  : "bg-[#0B1218] border-primary/20 text-gray-400"
               }`}
             >
               {currentStep > step.id ? <Check className="h-4 w-4" /> : index + 1}
@@ -447,8 +447,18 @@ export default function OnboardingFlow({
       createdAt: new Date()
     };
     
+    const alreadySelected = selectedGames.some((g) => g.id === convertedGame.id);
+    const willReachMax = !alreadySelected && selectedGames.length + 1 >= 5;
+
     // Toggle selection
     toggleGameSelection(convertedGame);
+
+    // Auto-scroll to action buttons when 5 games are reached
+    if (willReachMax) {
+      setTimeout(() => {
+        document.getElementById('games-step-bottom')?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 150);
+    }
   };
 
   // Toggle game selection
@@ -470,8 +480,8 @@ export default function OnboardingFlow({
 
   // Check username availability
   const checkUsernameAvailability = async (username: string) => {
-    if (!username || username.length < 3) {
-      setUsernameError("Username must be at least 3 characters long");
+    if (!username || username.length < 4) {
+      setUsernameError("Username must be at least 4 characters long");
       return false;
     }
 
@@ -747,9 +757,9 @@ export default function OnboardingFlow({
               <div className="flex flex-col md:grid md:grid-cols-2 md:gap-8">
                 {/* Left side - Full-height image card with overlay text */}
                 <div className="hidden md:block">
-                  <div className="rounded-2xl overflow-hidden border border-primary/30 relative h-full min-h-[420px] bg-gradient-to-b from-primary/10 to-[#0d1f12]">
+                  <div className="rounded-2xl overflow-hidden border border-primary/30 relative h-full min-h-[420px] bg-gradient-to-b from-primary/10 to-[#071013]">
                     <img 
-                      src="/attached_assets/Gamefolio logo.png" 
+                      src="/attached_assets/gamefolio-logo-green.png" 
                       alt="Gamefolio" 
                       className="w-full h-full object-cover absolute inset-0"
                     />
@@ -891,7 +901,7 @@ export default function OnboardingFlow({
               </Button>
               <Button
                 onClick={goToNextStep}
-                disabled={!formUsername || formUsername.length < 3 || isCheckingUsername || !!usernameError}
+                disabled={!formUsername || formUsername.length < 4 || isCheckingUsername || !!usernameError}
                 className="flex-1 bg-primary hover:bg-primary/90 text-white"
               >
                 {isCheckingUsername ? (
@@ -996,17 +1006,25 @@ export default function OnboardingFlow({
               </div>
             </div>
             
-            <div className="flex gap-3 mt-auto pt-8">
-              <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
-                Back
-              </Button>
-              <Button 
+            <div id="games-step-bottom" className="flex flex-col gap-3 mt-auto pt-8">
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">
+                  Back
+                </Button>
+                <Button 
+                  onClick={goToNextStep}
+                  disabled={selectedGames.length === 0}
+                  className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold"
+                >
+                  Next <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+              <button
                 onClick={goToNextStep}
-                disabled={selectedGames.length === 0}
-                className="flex-1 bg-primary hover:bg-primary/90 text-white"
+                className="text-sm text-gray-500 hover:text-gray-300 transition-colors text-center py-1"
               >
-                Next <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
+                Skip for now
+              </button>
             </div>
           </div>
         );
@@ -1109,12 +1127,12 @@ export default function OnboardingFlow({
               <Button
                 onClick={goToNextStep}
                 disabled={isUploadingAvatar}
-                className="flex-1 bg-primary hover:bg-primary/90 text-white"
+                className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold"
               >
                 {avatarUrl ? (
                   <>Next <ArrowRight className="h-4 w-4 ml-2" /></>
                 ) : (
-                  <span className="text-white">Skip for now</span>
+                  <span>Skip for now</span>
                 )}
               </Button>
             </div>
@@ -1197,12 +1215,12 @@ export default function OnboardingFlow({
         const toggleUserType = (typeId: string) => {
           if (userTypes.includes(typeId)) {
             setUserTypes(userTypes.filter(t => t !== typeId));
-          } else if (userTypes.length < 2) {
+          } else if (userTypes.length < 3) {
             setUserTypes([...userTypes, typeId]);
           } else {
             toast({
               title: "Maximum reached",
-              description: "You can only select up to 2 options. Deselect one first.",
+              description: "You can only select up to 3 options. Deselect one first.",
               variant: "default",
               duration: 2500,
             });
@@ -1223,7 +1241,7 @@ export default function OnboardingFlow({
               </Tooltip>
             </div>
             <p className="text-gray-300 mb-6">
-              Select up to 2 that best describe you - this helps us customize your experience on Gamefolio
+              Select up to 3 that best describe you - this helps us customize your experience on Gamefolio
             </p>
             
             <div className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1239,7 +1257,7 @@ export default function OnboardingFlow({
               ].map((type) => {
                 const IconComponent = type.icon;
                 const isSelected = userTypes.includes(type.id);
-                const isLocked = !isSelected && userTypes.length >= 2;
+                const isLocked = !isSelected && userTypes.length >= 3;
                 
                 return (
                   <button
@@ -1248,27 +1266,27 @@ export default function OnboardingFlow({
                     onClick={() => toggleUserType(type.id)}
                     className={`relative p-3 sm:p-4 rounded-lg border-2 transition-all text-left select-none ${
                       isSelected
-                        ? "border-primary/70 bg-primary/10 shadow-md shadow-primary/10 cursor-pointer active:scale-[0.97]"
+                        ? "border-primary bg-primary shadow-lg shadow-primary/30 cursor-pointer active:scale-[0.97]"
                         : isLocked
-                          ? "border-[#2a3a2a] bg-[#0d1f12]/60 cursor-not-allowed opacity-40"
-                          : "border-[#2a3a2a] bg-[#0d1f12] hover:border-primary/40 hover:bg-primary/5 cursor-pointer active:scale-[0.97]"
+                          ? "border-[#1B2A33] bg-[#0B1218]/60 cursor-not-allowed opacity-40"
+                          : "border-[#1B2A33] bg-[#0B1218] hover:border-primary/40 hover:bg-primary/5 cursor-pointer active:scale-[0.97]"
                     }`}
                   >
                     <div className="flex flex-col items-center text-center space-y-2">
                       <div className={`p-2.5 rounded-full ${
                         isSelected
-                          ? "bg-primary/20 text-primary"
-                          : "bg-[#1e3a24] text-gray-400"
+                          ? "bg-black/20 text-[#051a08]"
+                          : "bg-[#1B2A33] text-gray-500"
                       }`}>
                         <IconComponent className="h-5 w-5" />
                       </div>
-                      <h3 className={`font-medium text-sm ${isSelected ? "text-white" : "text-gray-400"}`}>
+                      <h3 className={`font-medium text-sm ${isSelected ? "text-[#051a08] font-semibold" : "text-gray-500"}`}>
                         {type.label}
                       </h3>
                     </div>
                     {isSelected && (
-                      <div className="absolute top-2 right-2 rounded-full bg-primary/20 border border-primary/50 p-0.5">
-                        <Check className="h-3 w-3 text-primary" />
+                      <div className="absolute top-2 right-2 rounded-full bg-black/20 border border-black/30 p-0.5">
+                        <Check className="h-3 w-3 text-[#051a08]" />
                       </div>
                     )}
                   </button>
@@ -1280,17 +1298,25 @@ export default function OnboardingFlow({
               {userTypes.length}/2 selected
             </p>
             
-            <div className="flex gap-3 mt-auto">
-              <Button variant="outline" onClick={goToPrevStep}>
-                Back
-              </Button>
-              <Button
+            <div className="flex flex-col gap-3 mt-auto">
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={goToPrevStep}>
+                  Back
+                </Button>
+                <Button
+                  onClick={goToNextStep}
+                  disabled={userTypes.length === 0}
+                  className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold"
+                >
+                  Next
+                </Button>
+              </div>
+              <button
                 onClick={goToNextStep}
-                disabled={userTypes.length === 0}
-                className="flex-1"
+                className="text-sm text-gray-500 hover:text-gray-300 transition-colors text-center py-1"
               >
-                Next
-              </Button>
+                Skip for now
+              </button>
             </div>
           </div>
         );
@@ -1403,14 +1429,14 @@ export default function OnboardingFlow({
               </>
             ) : (
               <>
-                <p className="text-gray-300 mb-6">
+                <p className="text-gray-300 mb-4">
                   Get a blockchain wallet to store GF Tokens, collect NFTs, and unlock exclusive features.
                 </p>
-                
+
                 <button
                   onClick={handleCreateWalletClick}
                   disabled={isCreatingAnyWallet}
-                  className="w-full py-4 px-5 bg-[#162a1b] border border-primary/30 hover:bg-[#1e3a24] hover:border-primary/50 active:scale-[0.99] rounded-xl transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-4 px-5 bg-[#0B1218] border border-primary/30 hover:bg-[#1B2A33] hover:border-primary/50 active:scale-[0.99] rounded-xl transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="button-create-wallet"
                 >
                   <div className="flex items-start gap-3">
@@ -1472,7 +1498,7 @@ export default function OnboardingFlow({
 
   return (
     <div
-      className="w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 min-h-screen sm:min-h-0 bg-[#0d1f12] sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col"
+      className="w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 min-h-screen sm:min-h-0 bg-[#071013] sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col"
       style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)' }}
     >
       <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} />

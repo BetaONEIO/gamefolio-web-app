@@ -1,15 +1,12 @@
 import { createContext, useContext, useEffect, ReactNode, useCallback, useRef, useState } from 'react';
-import { useAccount, useDisconnect, useWalletClient, useChainId } from 'wagmi';
+import { useConfig } from 'wagmi';
+import { watchAccount, watchChainId, getAccount, getChainId, disconnect as wagmiDisconnectCore } from '@wagmi/core';
 import { useOpenConnectModal } from '@0xsequence/connect';
 import { createPublicClient, http, type PublicClient, type Address } from 'viem';
-import { useAuth } from './use-auth';
 import { useToast } from './use-toast';
-import { SKALE_CHAIN_ID, SKALE_RPC_URL, SKALE_EXPLORER_BASE_URL } from '../../../config/web3';
-import { skaleNebulaTestnet, sequenceConfig } from '../lib/sequence-config';
-
-const useConnectModal: () => { setOpenConnectModal: (open: boolean) => void } = sequenceConfig
-  ? useOpenConnectModal
-  : () => ({ setOpenConnectModal: () => {} });
+import { queryClient } from '../lib/queryClient';
+import { SKALE_CHAIN_ID, SKALE_RPC_URL } from '../../../config/web3';
+import { skaleNebulaTestnet } from '../lib/sequence-config';
 
 export const skaleTestnet = skaleNebulaTestnet;
 
@@ -18,11 +15,6 @@ export type WalletMode = 'auto' | 'gamefolio' | 'external';
 const WALLET_MODE_STORAGE_KEY = 'gf:wallet-mode';
 
 function readStoredWalletMode(): WalletMode {
-  // Default to the built-in Gamefolio (custodial) wallet so users can mint
-  // without being pushed into the Sequence "log in" flow. Anyone who wants to
-  // use an external wallet can flip the toggle and we'll persist it.
-  // NOTE: existing browsers may have 'auto' stored from before — treat that as
-  // gamefolio so they get the new default too.
   if (typeof window === 'undefined') return 'gamefolio';
   try {
     const v = window.localStorage.getItem(WALLET_MODE_STORAGE_KEY);
@@ -55,6 +47,19 @@ const publicClient = createPublicClient({
   transport: http(SKALE_RPC_URL),
 });
 
+const defaultContextValue: WalletContextType = {
+  walletAddress: null,
+  isReady: false,
+  chainId: SKALE_CHAIN_ID,
+  publicClient,
+  isConnecting: false,
+  isEmbeddedWallet: false,
+  connect: () => {},
+  disconnect: () => {},
+  walletMode: 'gamefolio',
+  setWalletMode: () => {},
+};
+
 async function updateWalletAddressOnServer(
   walletAddress: string,
 ): Promise<{ ok: boolean; data: any }> {
@@ -76,42 +81,132 @@ async function updateWalletAddressOnServer(
   }
 }
 
+// ─── WalletProvider (outer shell) ────────────────────────────────────────────
+//
+// Wagmi's Hydrate component (inside SequenceConnect) calls onMount() DURING its
+// own render phase, which synchronously updates the wagmi Zustand store and
+// notifies any useSyncExternalStore subscribers.  In React 18 this manifests as
+// "Cannot update a component while rendering a different component" → "Rendered
+// fewer hooks than expected" crash.
+//
+// Fix: keep WalletProvider's initial render completely free of hooks that use
+// useSyncExternalStore (useAccount, useChainId, useDisconnect/useConnections,
+// useQuery via useAuth, etc.).  Those are all delegated to WalletProviderInner,
+// which only mounts AFTER the first useEffect fires — i.e. after Hydrate's
+// render has committed and onMount() has already run.
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const { user, refreshUser } = useAuth();
-  const { toast } = useToast();
-  const lastSavedAddress = useRef<string | null>(null);
-  const [userInitiatedConnect, setUserInitiatedConnect] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [walletMode, setWalletModeState] = useState<WalletMode>(() => readStoredWalletMode());
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const setWalletMode = useCallback((mode: WalletMode) => {
     setWalletModeState(mode);
-    try {
-      window.localStorage.setItem(WALLET_MODE_STORAGE_KEY, mode);
-    } catch {}
+    try { window.localStorage.setItem(WALLET_MODE_STORAGE_KEY, mode); } catch {}
   }, []);
 
-  const { address, isConnected, isConnecting: wagmiIsConnecting } = useAccount();
-  const { disconnect: wagmiDisconnect } = useDisconnect();
-  const { data: walletClient } = useWalletClient();
-  const chainId = useChainId();
-  const { setOpenConnectModal } = useConnectModal();
+  if (mounted) {
+    return (
+      <WalletProviderInner walletMode={walletMode} setWalletMode={setWalletMode}>
+        {children}
+      </WalletProviderInner>
+    );
+  }
 
-  const walletAddress = (address as Address) || null;
-  const isReady = isConnected && !!address;
-  const isEmbeddedWallet = isConnected && !!walletClient;
-  
+  // Before mount: serve safe defaults so children can render without crashing.
+  const shellValue: WalletContextType = {
+    ...defaultContextValue,
+    walletMode,
+    setWalletMode,
+  };
+
+  return (
+    <WalletContext.Provider value={shellValue}>
+      {children}
+    </WalletContext.Provider>
+  );
+}
+
+// ─── WalletProviderInner ──────────────────────────────────────────────────────
+//
+// This component renders ONLY after WalletProvider's useEffect fires, meaning
+// Hydrate's onMount() has already committed.  It is safe to use any wagmi hooks,
+// useAuth (useQuery), useToast etc. here without collision.
+function WalletProviderInner({
+  walletMode,
+  setWalletMode,
+  children,
+}: {
+  walletMode: WalletMode;
+  setWalletMode: (m: WalletMode) => void;
+  children: ReactNode;
+}) {
+  const { toast } = useToast();
+  const wagmiConfig = useConfig();
+  const { setOpenConnectModal } = useOpenConnectModal();
+
+  const lastSavedAddress = useRef<string | null>(null);
+  const isUpdatingWallet = useRef(false);
+  const [userInitiatedConnect, setUserInitiatedConnect] = useState(false);
+
+  // Read initial wagmi state imperatively (safe — no subscription during render).
+  const [wagmiAddress, setWagmiAddress] = useState<Address | undefined>(() => {
+    try { return getAccount(wagmiConfig).address as Address; } catch { return undefined; }
+  });
+  const [wagmiIsConnected, setWagmiIsConnected] = useState<boolean>(() => {
+    try { return getAccount(wagmiConfig).isConnected; } catch { return false; }
+  });
+  const [wagmiIsConnecting, setWagmiIsConnecting] = useState<boolean>(() => {
+    try { return getAccount(wagmiConfig).isConnecting; } catch { return false; }
+  });
+  const [chainId, setChainId] = useState<number>(() => {
+    try { return getChainId(wagmiConfig); } catch { return SKALE_CHAIN_ID; }
+  });
+
+  // Subscribe to wagmi store changes via imperative watchers.
+  //
+  // IMPORTANT: the onChange callbacks MUST defer all setState calls via
+  // setTimeout.  wagmi's Hydrate component calls onMount() synchronously on
+  // EVERY render (not just the first), so whenever any ancestor re-renders
+  // (e.g. AuthProvider loading the user), Hydrate re-renders → onMount() →
+  // wagmi store update → watchAccount fires → if we call setState here
+  // synchronously React throws "Cannot update while rendering".
+  // setTimeout(fn, 0) pushes the update to the next macro-task, safely outside
+  // any React render phase.
+  useEffect(() => {
+    const unwatchAccount = watchAccount(wagmiConfig, {
+      onChange(account) {
+        setTimeout(() => {
+          setWagmiAddress(account.address as Address | undefined);
+          setWagmiIsConnected(account.isConnected);
+          setWagmiIsConnecting(account.isConnecting);
+        }, 0);
+      },
+    });
+    const unwatchChain = watchChainId(wagmiConfig, {
+      onChange(newChainId) {
+        setTimeout(() => setChainId(newChainId), 0);
+      },
+    });
+    return () => { unwatchAccount(); unwatchChain(); };
+  }, [wagmiConfig]);
+
+  const walletAddress = wagmiAddress ?? null;
+  const isReady = wagmiIsConnected && !!wagmiAddress;
   const isConnecting = userInitiatedConnect && wagmiIsConnecting;
 
   useEffect(() => {
-    if (isReady && userInitiatedConnect) {
-      setUserInitiatedConnect(false);
-    }
+    if (isReady && userInitiatedConnect) setUserInitiatedConnect(false);
   }, [isReady, userInitiatedConnect]);
 
-  const isUpdatingWallet = useRef(false);
-
   useEffect(() => {
-    if (isReady && walletAddress && user && walletAddress !== lastSavedAddress.current && !isUpdatingWallet.current) {
+    if (
+      isReady && walletAddress &&
+      walletAddress !== lastSavedAddress.current &&
+      !isUpdatingWallet.current
+    ) {
       isUpdatingWallet.current = true;
       lastSavedAddress.current = walletAddress;
       updateWalletAddressOnServer(walletAddress)
@@ -127,7 +222,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 variant: 'gamefolioSuccess',
               });
             }
-            return refreshUser();
+            queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+            return;
           }
           if (data?.needsManualMove && data?.oldWalletBalance) {
             toast({
@@ -135,7 +231,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
               description: `Your previous wallet still holds ${data.oldWalletBalance} GFT. Send those tokens to ${walletAddress} from that wallet, then reconnect.`,
               variant: 'destructive',
             });
-            // Allow another attempt after the user moves funds.
             lastSavedAddress.current = null;
           } else if (data?.message) {
             toast({
@@ -148,29 +243,42 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         })
         .finally(() => { isUpdatingWallet.current = false; });
     }
-  }, [isReady, walletAddress, user?.id, refreshUser]);
+  }, [isReady, walletAddress]);
 
   const connect = useCallback(() => {
-    if (!user) {
-      toast({
-        title: 'Please log in first',
-        description: 'You need to be logged in to connect a wallet',
-        variant: 'destructive',
+    // Check auth imperatively so we never read from useQuery / useSyncExternalStore
+    // during the wallet-provider render phase.
+    fetch('/api/user', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((u) => {
+        if (!u?.id) {
+          toast({
+            title: 'Please log in first',
+            description: 'You need to be logged in to connect a wallet',
+            variant: 'destructive',
+          });
+          return;
+        }
+        setUserInitiatedConnect(true);
+        setOpenConnectModal(true);
+      })
+      .catch(() => {
+        toast({
+          title: 'Please log in first',
+          description: 'You need to be logged in to connect a wallet',
+          variant: 'destructive',
+        });
       });
-      return;
-    }
-    setUserInitiatedConnect(true);
-    setOpenConnectModal(true);
-  }, [user, setOpenConnectModal, toast]);
+  }, [setOpenConnectModal, toast]);
 
   const disconnect = useCallback(() => {
-    wagmiDisconnect();
+    wagmiDisconnectCore(wagmiConfig).catch(() => {});
     setUserInitiatedConnect(false);
     toast({
       title: 'Wallet disconnected',
       description: 'Your wallet has been disconnected',
     });
-  }, [wagmiDisconnect, toast]);
+  }, [wagmiConfig, toast]);
 
   const value: WalletContextType = {
     walletAddress,
@@ -178,9 +286,34 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     chainId: chainId || SKALE_CHAIN_ID,
     publicClient,
     isConnecting,
-    isEmbeddedWallet,
+    isEmbeddedWallet: false,
     connect,
     disconnect,
+    walletMode,
+    setWalletMode,
+  };
+
+  return (
+    <WalletContext.Provider value={value}>
+      {children}
+    </WalletContext.Provider>
+  );
+}
+
+// ─── NoWalletProvider ─────────────────────────────────────────────────────────
+//
+// Used when Sequence keys are absent (no SequenceConnect / WagmiProvider in the
+// tree).  No wagmi hooks of any kind.
+export function NoWalletProvider({ children }: { children: ReactNode }) {
+  const [walletMode, setWalletModeState] = useState<WalletMode>(() => readStoredWalletMode());
+
+  const setWalletMode = useCallback((mode: WalletMode) => {
+    setWalletModeState(mode);
+    try { window.localStorage.setItem(WALLET_MODE_STORAGE_KEY, mode); } catch {}
+  }, []);
+
+  const value: WalletContextType = {
+    ...defaultContextValue,
     walletMode,
     setWalletMode,
   };

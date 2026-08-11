@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
+import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreenshotsViewer";
 import { ArrowLeft, Camera } from "lucide-react";
 import { Gamepad2 } from "lucide-react";
 import { useLocation } from "wouter";
@@ -179,13 +180,21 @@ const LatestScreenshotsPage = () => {
         )}
       </div>
 
-      <ScreenshotLightbox
-        screenshot={selectedScreenshot}
-        onClose={() => setSelectedScreenshot(null)}
-        currentUserId={user?.id}
-        screenshots={filteredScreenshots}
-        onNavigate={(s: any) => setSelectedScreenshot(s)}
-      />
+      {selectedScreenshot && isMobile ? (
+        <MobileScreenshotsViewer
+          screenshots={filteredScreenshots}
+          startId={selectedScreenshot.id}
+          onBack={() => setSelectedScreenshot(null)}
+        />
+      ) : (
+        <ScreenshotLightbox
+          screenshot={selectedScreenshot}
+          onClose={() => setSelectedScreenshot(null)}
+          currentUserId={user?.id}
+          screenshots={filteredScreenshots}
+          onNavigate={(s: any) => setSelectedScreenshot(s)}
+        />
+      )}
     </div>
   );
 };

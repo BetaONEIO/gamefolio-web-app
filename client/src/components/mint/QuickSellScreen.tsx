@@ -122,17 +122,17 @@ export default function QuickSellScreen({
   };
 
   return (
-    <div className="fixed inset-0 z-[120] bg-[#101D27] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
-      <header className="backdrop-blur-md bg-[#101D27cc] flex-shrink-0 z-40">
+    <div className="fixed inset-0 z-[120] bg-[#0B1218] flex flex-col overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+      <header className="backdrop-blur-md bg-[#0B1218cc] flex-shrink-0 z-40">
         <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-3xl mx-auto px-4 pt-12 md:pt-6 pb-4">
           <div className="flex items-center gap-4">
             <button
               onClick={onClose}
-              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-[#1e293b] transition-colors"
+              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-[#1B2A33] transition-colors"
             >
-              <ArrowLeft className="w-6 h-6 text-[#f8fafc]" />
+              <ArrowLeft className="w-6 h-6 text-[#F5F7F2]" />
             </button>
-            <span className="text-xl font-bold text-[#f8fafc] uppercase tracking-[-0.5px] leading-7">Quick Sell</span>
+            <span className="text-xl font-bold text-[#F5F7F2] uppercase tracking-[-0.5px] leading-7">Quick Sell</span>
           </div>
           <div className="w-10 h-10" />
         </div>
@@ -157,15 +157,15 @@ export default function QuickSellScreen({
               <span className="text-sm font-normal text-[#B7FF1A] leading-5 text-center md:text-left">
                 {collectionName}
               </span>
-              <span className="text-2xl md:text-3xl font-bold text-[#f8fafc] leading-8 md:leading-9 text-center md:text-left truncate">
+              <span className="text-2xl md:text-3xl font-bold text-[#F5F7F2] leading-8 md:leading-9 text-center md:text-left truncate">
                 {displayName}
               </span>
             </div>
           </div>
 
-          <div className="w-full rounded-3xl bg-[#0f172a] border border-[#1e293b80] p-6 md:p-8 flex flex-col gap-6">
+          <div className="w-full rounded-3xl bg-[#0B1218] border border-[#1B2A3380] p-6 md:p-8 flex flex-col gap-6">
             <div className="flex flex-col items-center gap-2">
-              <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-[1.2px] leading-4">
+              <span className="text-xs font-bold text-[#B8C0AE] uppercase tracking-[1.2px] leading-4">
                 Fixed Quick Sell Price
               </span>
               <div className="flex items-center gap-3">
@@ -173,17 +173,17 @@ export default function QuickSellScreen({
                   <circle cx="16" cy="16" r="16" fill="#B7FF1A" fillOpacity="0.15" />
                   <text x="16" y="22" textAnchor="middle" fill="#B7FF1A" fontSize="16" fontWeight="700" fontFamily="Plus Jakarta Sans">G</text>
                 </svg>
-                <span className="text-4xl md:text-5xl font-bold text-[#f8fafc] leading-10 md:leading-[56px]">
+                <span className="text-4xl md:text-5xl font-bold text-[#F5F7F2] leading-10 md:leading-[56px]">
                   {QUICK_SELL_PRICE} GFT
                 </span>
               </div>
             </div>
 
-            <div className="w-full h-px bg-[#1e293b4d]" />
+            <div className="w-full h-px bg-[#1B2A334d]" />
 
             <div className="flex flex-col gap-4">
               <div className="flex items-center justify-between pt-2">
-                <span className="text-base font-bold text-[#f8fafc] leading-6">You Will Receive</span>
+                <span className="text-base font-bold text-[#F5F7F2] leading-6">You Will Receive</span>
                 <span className="text-xl font-bold text-[#B7FF1A] leading-7">{QUICK_SELL_PRICE} GFT</span>
               </div>
             </div>
@@ -199,21 +199,21 @@ export default function QuickSellScreen({
               <span className="text-sm font-bold text-[#B7FF1A] uppercase tracking-[0.35px] leading-5">
                 On-Chain Transfer
               </span>
-              <span className="text-sm font-normal text-[#94a3b8] leading-[22.75px]">
+              <span className="text-sm font-normal text-[#B8C0AE] leading-[22.75px]">
                 Your NFT will be transferred on-chain to the marketplace treasury. This transaction will be visible on the block explorer. Once sold, GFT is transferred to your wallet.
               </span>
             </div>
           </div>
 
           <div className="py-4">
-            <span className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-[0.55px] leading-[16.5px] text-center block">
+            <span className="text-[11px] font-bold text-[#B8C0AE] uppercase tracking-[0.55px] leading-[16.5px] text-center block">
               {useServerSigning ? "Transaction will be signed securely on your behalf" : "Your wallet will prompt you to sign the NFT transfer"}
             </span>
           </div>
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md bg-[#101D27cc] border-t border-[#1e293b4d]">
+      <div className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md bg-[#0B1218cc] border-t border-[#1B2A334d]">
         <div className="w-full max-w-[430px] md:max-w-3xl mx-auto flex flex-col md:flex-row-reverse gap-3 px-6 py-6 pb-8 md:pb-6">
           <button
             onClick={handleConfirmSell}
@@ -229,9 +229,9 @@ export default function QuickSellScreen({
           <button
             onClick={onClose}
             disabled={isProcessing}
-            className="w-full md:flex-1 h-[60px] rounded-2xl flex items-center justify-center hover:bg-[#1e293b] transition-colors disabled:opacity-50"
+            className="w-full md:flex-1 h-[60px] rounded-2xl flex items-center justify-center hover:bg-[#1B2A33] transition-colors disabled:opacity-50"
           >
-            <span className="text-lg font-bold text-[#94a3b8] leading-7">Go Back</span>
+            <span className="text-lg font-bold text-[#B8C0AE] leading-7">Go Back</span>
           </button>
         </div>
       </div>

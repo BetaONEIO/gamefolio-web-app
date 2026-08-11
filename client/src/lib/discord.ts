@@ -50,25 +50,27 @@ if (!isDiscordConfigValid) {
 }
 
 /**
- * Generate a secure random state for OAuth flow
+ * Fetch a CSRF state token from the server, which stores it in the session.
+ * The server's /api/auth/discord/token verifies the value we round-trip here
+ * against the session-stored copy. Server-side session storage is used because
+ * client-side approaches (sessionStorage / localStorage / cookies) all proved
+ * unreliable across Discord's COOP-induced browsing-context-group change and
+ * Chrome's storage partitioning.
  */
-function generateOAuthState(): string {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-}
-
-/**
- * Store and retrieve OAuth state from sessionStorage for security
- */
-function storeOAuthState(state: string): void {
-  sessionStorage.setItem('discord_oauth_state', state);
-}
-
-function getStoredOAuthState(): string | null {
-  return sessionStorage.getItem('discord_oauth_state');
-}
-
-function clearOAuthState(): void {
-  sessionStorage.removeItem('discord_oauth_state');
+async function fetchOAuthState(): Promise<string> {
+  const res = await fetch('/api/auth/discord/init', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    throw new Error('Failed to start Discord sign-in');
+  }
+  const data = await res.json();
+  if (!data?.state) {
+    throw new Error('Server did not return an OAuth state');
+  }
+  return data.state as string;
 }
 
 /**
@@ -109,9 +111,10 @@ export const signInWithDiscord = async (): Promise<DiscordNativeResult | void> =
     throw new Error('Discord OAuth not properly configured');
   }
 
-  // Web fallback: full-page redirect to Discord with state.
-  const state = generateOAuthState();
-  storeOAuthState(state);
+  // Web: fetch a CSRF state from the server (stored in the express-session),
+  // then full-page redirect to Discord with that state. Same-tab navigation
+  // is still required so the session cookie travels with the return request.
+  const state = await fetchOAuthState();
 
   const authUrl = new URL('https://discord.com/oauth2/authorize');
   authUrl.searchParams.set('client_id', discordConfig.clientId);
@@ -121,7 +124,7 @@ export const signInWithDiscord = async (): Promise<DiscordNativeResult | void> =
   authUrl.searchParams.set('state', state);
   authUrl.searchParams.set('prompt', 'consent');
 
-  await openExternal(authUrl.toString());
+  window.location.href = authUrl.toString();
 };
 
 /**
@@ -133,24 +136,20 @@ export const handleDiscordCallback = async (code: string, state: string): Promis
     throw new Error('Discord OAuth not properly configured');
   }
 
-  // Verify state parameter for security
-  const storedState = getStoredOAuthState();
-  if (!storedState || storedState !== state) {
-    clearOAuthState();
-    throw new Error('Invalid OAuth state parameter');
-  }
-
-  clearOAuthState();
-
+  // State verification now happens server-side: /api/auth/discord/token
+  // compares the `state` posted here against the value previously stored
+  // on the session by /api/auth/discord/init.
   try {
     const response = await fetch('/api/auth/discord/token', {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         code,
-        redirectUri: discordConfig.redirectUri
+        state,
+        redirectUri: discordConfig.redirectUri,
       }),
     });
 

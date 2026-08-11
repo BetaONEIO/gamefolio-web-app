@@ -2,7 +2,7 @@ import { useAuthModal } from "@/hooks/use-auth-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { useCrossmint } from "@/hooks/use-crossmint";
 import { Link } from "wouter";
-import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, Filter, Heart, Loader2, CheckCircle, Trash2, Tag, Crown, Lock, Circle } from "lucide-react";
+import { ShoppingCart, DollarSign, Sparkles, Wallet, Menu, Filter, Heart, Loader2, CheckCircle, Trash2, Tag, Crown, Lock, Circle, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -65,7 +65,7 @@ const rarityGradients: Record<string, string> = {
 
 const rarityBorderColors: Record<string, string> = {
   legendary: "border-amber-400",
-  epic: "border-orange-400",
+  epic: "border-[#B7FF1A]",
   rare: "border-primary",
   common: "border-gray-400",
 };
@@ -125,12 +125,21 @@ function resolveStoreImage(imagePath: string | null): string {
 function MarketplaceNftImage({ tokenId }: { tokenId: number }) {
   // Coalesces parallel fetches across all listing tiles into one
   // POST /api/nft/metadata/batch instead of N separate GET requests.
-  const { data } = useNftMetadata(tokenId);
+  const { data, isLoading } = useNftMetadata(tokenId);
 
-  if (!data?.image) {
+  if (isLoading) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-800">
         <Loader2 className="h-8 w-8 text-gray-600 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!data?.image) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-gray-800 gap-2">
+        <ImageIcon className="h-10 w-10 text-gray-600" />
+        <span className="text-xs text-gray-500">Genesis #{tokenId}</span>
       </div>
     );
   }
@@ -170,7 +179,7 @@ const STATUS_STYLES: Record<string, string> = {
   tx_sent: "bg-blue-500/20 text-blue-300 border-blue-500/40",
   completed: "bg-primary/20 text-primary border-primary/40",
   failed: "bg-red-500/20 text-red-300 border-red-500/40",
-  refunded: "bg-orange-500/20 text-orange-300 border-orange-500/40",
+  refunded: "bg-[#B7FF1A]/20 text-[#B7FF1A] border-[#B7FF1A]/40",
   refund_failed: "bg-red-700/30 text-red-200 border-red-700/50",
 };
 
@@ -565,7 +574,7 @@ export default function StorePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ nameTagId, txHash, gfCost }),
+        body: JSON.stringify({ nameTagId, txHash }),
       });
       if (!verifyRes.ok) throw new Error("Failed to verify purchase");
       const result = await verifyRes.json();
@@ -642,7 +651,7 @@ export default function StorePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ borderId, txHash, gfCost }),
+        body: JSON.stringify({ borderId, txHash }),
       });
       if (!verifyRes.ok) throw new Error("Failed to verify purchase");
       const result = await verifyRes.json();
@@ -856,10 +865,10 @@ export default function StorePage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white">
+    <div className="min-h-screen bg-background text-white">
       <div className="flex flex-col md:flex-row">
       {/* Desktop Sidebar */}
-        <aside className="hidden md:block w-64 min-h-screen bg-gray-900/50 backdrop-blur-sm border-r border-gray-800 p-4">
+        <aside className="hidden md:block w-64 min-h-screen bg-background backdrop-blur-sm border-r border-gray-800 p-4">
           <div className="space-y-2">
             <h2 className="text-2xl font-bold mb-6 text-white" data-testid="text-store-title">
               Store
@@ -1248,6 +1257,7 @@ export default function StorePage() {
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-700">
                           <SelectItem value="all">All Types</SelectItem>
+                          <SelectItem value="name_tag">Name Tags</SelectItem>
                           <SelectItem value="badge">Badge</SelectItem>
                           <SelectItem value="collectible">Collectible</SelectItem>
                           <SelectItem value="skin">Skin</SelectItem>
@@ -1318,7 +1328,7 @@ export default function StorePage() {
                       className={`rounded-2xl overflow-hidden bg-slate-900 transition-all duration-200 hover:scale-[1.03] cursor-pointer ${
                         isOfficial
                           ? 'hover:shadow-[0_0_20px_rgba(183, 255, 26,0.3)]'
-                          : 'hover:shadow-[0_0_20px_rgba(249,115,22,0.3)]'
+                          : 'hover:shadow-[0_0_20px_rgba(183,255,26,0.3)]'
                       }`}
                     >
                       <div className="relative aspect-square overflow-hidden">
@@ -1328,7 +1338,7 @@ export default function StorePage() {
                             Official
                           </div>
                         ) : (
-                          <div className="absolute top-2 left-2 bg-orange-500/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                          <div className="absolute top-2 left-2 bg-[#B7FF1A]/90 text-black text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
                             Resale
                           </div>
                         )}
@@ -1344,26 +1354,24 @@ export default function StorePage() {
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-800">
                           <div className="flex items-center gap-1">
                             <img src={gfTokenLogo} alt="GF" className="w-3.5 h-3.5" />
-                            <span className={`text-sm font-bold ${isOfficial ? 'text-primary' : 'text-orange-400'}`}>
+                            <span className={`text-sm font-bold ${isOfficial ? 'text-primary' : 'text-[#B7FF1A]'}`}>
                               {listing.listed_price}
                             </span>
                           </div>
                           <Button
                             size="sm"
-                            disabled={buyingTokenId === listing.token_id || (!isOfficial && listing.user_id === user?.id)}
+                            disabled={!isOfficial && listing.user_id === user?.id}
                             className={`text-white text-[10px] h-7 px-3 rounded-xl disabled:opacity-50 ${
                               isOfficial
                                 ? 'bg-gradient-to-r from-[#B7FF1A] to-[#6FA800] hover:from-[#B7FF1A] hover:to-[#6FA800]'
-                                : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600'
+                                : 'bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] text-black'
                             }`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleBuyMarketplaceNft({ tokenId: listing.token_id, sellerId: listing.user_id });
+                              navigate(`/nft/${listing.token_id}?from=store`);
                             }}
                           >
-                            {buyingTokenId === listing.token_id ? (
-                              <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                            ) : !isOfficial && listing.user_id === user?.id ? (
+                            {!isOfficial && listing.user_id === user?.id ? (
                               "Your listing"
                             ) : (
                               <>
@@ -1439,7 +1447,7 @@ export default function StorePage() {
                         {item.rarity && (
                           <Badge className={`mt-1 text-[10px] px-1.5 py-0.5 text-white capitalize ${
                             item.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
-                            item.rarity === "epic" ? "bg-gradient-to-r from-orange-500 to-amber-600" :
+                            item.rarity === "epic" ? "bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] text-black" :
                             item.rarity === "rare" ? "bg-gradient-to-r from-[#B7FF1A] to-[#6FA800]" : "bg-gray-600"
                           }`}>
                             {item.rarity}
@@ -1454,14 +1462,14 @@ export default function StorePage() {
                             <img src={gfTokenLogo} alt="GF Token" className="w-3 h-3" />
                             {(item as any).proDiscount && (item as any).originalPrice !== item.gfCost ? (
                               <div className="flex items-center gap-1">
-                                <span className="text-[10px] text-gray-500 line-through">{(item as any).originalPrice} GF</span>
+                                <span className="text-[10px] text-gray-500 line-through">{(item as any).originalPrice} GFT</span>
                                 <p className="text-xs font-bold text-primary" data-testid={`text-item-price-${item.id}`}>
-                                  {item.gfCost} GF
+                                  {item.gfCost} GFT
                                 </p>
                               </div>
                             ) : (
                               <p className="text-xs font-bold text-primary" data-testid={`text-item-price-${item.id}`}>
-                                {item.gfCost} GF
+                                {item.gfCost} GFT
                               </p>
                             )}
                           </div>
@@ -1501,7 +1509,7 @@ export default function StorePage() {
               </>
               )}
 
-              <>
+              {(typeFilter === "all" || typeFilter === "name_tag") && <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 mt-8 flex items-center gap-2">
                 <Tag className="h-4 w-4 text-primary" />
                 Name Tags
@@ -1535,7 +1543,7 @@ export default function StorePage() {
                       tag.owned 
                         ? "border-primary/50 hover:border-primary hover:shadow-primary/20" 
                         : tag.rarity === 'legendary' ? "hover:border-amber-500 hover:shadow-amber-500/20"
-                        : tag.rarity === 'epic' ? "hover:border-orange-500 hover:shadow-orange-500/20"
+                        : tag.rarity === 'epic' ? "hover:border-[#B7FF1A] hover:shadow-[#B7FF1A]/20"
                         : tag.rarity === 'rare' ? "hover:border-primary hover:shadow-primary/20"
                         : "hover:border-gray-500 hover:shadow-gray-500/20"
                     }`}
@@ -1568,7 +1576,7 @@ export default function StorePage() {
                         <h3 className="font-semibold text-xs line-clamp-1">{tag.name}</h3>
                         <Badge className={`mt-1 text-[10px] px-1.5 py-0.5 text-white capitalize ${
                           tag.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
-                          tag.rarity === "epic" ? "bg-gradient-to-r from-orange-500 to-amber-600" :
+                          tag.rarity === "epic" ? "bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] text-black" :
                           tag.rarity === "rare" ? "bg-gradient-to-r from-[#B7FF1A] to-[#6FA800]" : "bg-gray-600"
                         }`}>
                           {tag.rarity}
@@ -1582,11 +1590,11 @@ export default function StorePage() {
                             <img src={gfTokenLogo} alt="GF" className="w-3 h-3" />
                             {(tag as any).proDiscount && (tag as any).originalPrice !== cost ? (
                               <div className="flex items-center gap-1">
-                                <span className="text-[10px] text-gray-500 line-through">{(tag as any).originalPrice} GF</span>
-                                <span className="text-xs font-bold text-primary">{cost} GF</span>
+                                <span className="text-[10px] text-gray-500 line-through">{(tag as any).originalPrice} GFT</span>
+                                <span className="text-xs font-bold text-primary">{cost} GFT</span>
                               </div>
                             ) : (
-                              <span className="text-xs font-bold text-orange-400">{cost} GF</span>
+                              <span className="text-xs font-bold text-[#B7FF1A]">{cost} GFT</span>
                             )}
                           </div>
                           {(tag as any).proDiscount && (
@@ -1608,7 +1616,7 @@ export default function StorePage() {
                         ) : (
                           <Button
                             size="sm"
-                            className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white text-[10px] h-6 px-2"
+                            className="bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] text-black text-[10px] h-6 px-2"
                             onClick={(e) => {
                               e.stopPropagation();
                               handlePurchaseNameTagOnChain(tag.id);
@@ -1634,7 +1642,7 @@ export default function StorePage() {
                 );})}
               </div>
               )}
-              </>
+              </>}
 
               <>
               <h3 className="text-base font-semibold text-gray-300 mb-3 mt-8 flex items-center gap-2">
@@ -1675,7 +1683,7 @@ export default function StorePage() {
                       border.owned 
                         ? "border-primary/50 hover:border-primary hover:shadow-primary/20 hover:shadow-lg" 
                         : border.rarity === 'legendary' ? "hover:border-amber-500 hover:shadow-amber-500/20 hover:shadow-lg"
-                        : border.rarity === 'epic' ? "hover:border-orange-500 hover:shadow-orange-500/20 hover:shadow-lg"
+                        : border.rarity === 'epic' ? "hover:border-[#B7FF1A] hover:shadow-[#B7FF1A]/20 hover:shadow-lg"
                         : border.rarity === 'rare' ? "hover:border-primary hover:shadow-primary/20 hover:shadow-lg"
                         : "hover:border-gray-500 hover:shadow-gray-500/20 hover:shadow-lg"
                     }`}
@@ -1721,7 +1729,7 @@ export default function StorePage() {
                         <div className="flex items-center gap-1 mt-1">
                           <Badge className={`text-[10px] px-1.5 py-0.5 text-white capitalize ${
                             border.rarity === "legendary" ? "bg-gradient-to-r from-yellow-500 to-amber-600" :
-                            border.rarity === "epic" ? "bg-gradient-to-r from-orange-500 to-amber-600" :
+                            border.rarity === "epic" ? "bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] text-black" :
                             border.rarity === "rare" ? "bg-gradient-to-r from-[#B7FF1A] to-[#6FA800]" : "bg-gray-600"
                           }`}>
                             {border.rarity}
@@ -1734,7 +1742,7 @@ export default function StorePage() {
                           <p className="text-[9px] text-gray-500">Price</p>
                           <div className="flex items-center gap-0.5">
                             <img src={gfTokenLogo} alt="GF" className="w-3 h-3" />
-                            <span className="text-xs font-bold text-orange-400">{cost} GF</span>
+                            <span className="text-xs font-bold text-[#B7FF1A]">{cost} GFT</span>
                           </div>
                         </div>
                         
@@ -1759,7 +1767,7 @@ export default function StorePage() {
                         ) : (
                           <Button
                             size="sm"
-                            className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white text-[10px] h-6 px-2"
+                            className="bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] hover:from-[#A2F000] hover:to-[#6FA800] text-black text-[10px] h-6 px-2"
                             onClick={(e) => {
                             e.stopPropagation();
                             setSelectedBorder(border);
@@ -1836,7 +1844,7 @@ export default function StorePage() {
                           {!badge.isDefault && (
                             <span className={`text-[10px] font-semibold capitalize ${
                               badge.rarity === 'legendary' ? 'text-amber-400' :
-                              badge.rarity === 'epic' ? 'text-orange-400' :
+                              badge.rarity === 'epic' ? 'text-[#B7FF1A]' :
                               badge.rarity === 'rare' ? 'text-blue-400' : 'text-gray-400'
                             }`}>
                               {badge.rarity}
@@ -1874,7 +1882,7 @@ export default function StorePage() {
           {activeTab === "mint" && (
             <div className="flex flex-col items-center justify-center min-h-[50vh] md:min-h-[60vh] px-4">
               <Sparkles className="h-16 w-16 md:h-20 md:w-20 mb-4 text-[#B7FF1A]" />
-              <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center text-[#94a3b8]" data-testid="heading-mint-coming-soon">
+              <h3 className="text-xl md:text-2xl font-semibold mb-2 text-center text-[#B8C0AE]" data-testid="heading-mint-coming-soon">
                 Mint Your Own NFT
               </h3>
               <p className="text-sm md:text-base text-[#B7FF1A] text-center max-w-md" data-testid="text-mint-description">
@@ -1974,7 +1982,7 @@ export default function StorePage() {
                             <div className="flex items-center gap-0.5">
                               <img src={gfTokenLogo} alt="GF Token" className="w-3 h-3" />
                               <p className="text-xs font-bold text-primary" data-testid={`text-price-${item.nftId}`}>
-                                {item.nftPrice} GF
+                                {item.nftPrice} GFT
                               </p>
                             </div>
                           </div>
@@ -2013,7 +2021,7 @@ export default function StorePage() {
 
       {/* Wallet Redirect Dialog */}
       <WalletDialog open={walletRedirectOpen} onOpenChange={setWalletRedirectOpen}>
-        <WalletDialogContent className="bg-[#0f172a] border-gray-700 text-white max-w-sm">
+        <WalletDialogContent className="bg-[#0B1218] border-gray-700 text-white max-w-sm">
           <WalletDialogHeader>
             <WalletDialogTitle className="text-white text-lg">Wallet Required</WalletDialogTitle>
             <WalletDialogDescription className="text-gray-400">

@@ -364,7 +364,7 @@ export function ZapFlyOverlay({
   const portal = (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
+        position: 'fixed', inset: 0, zIndex: 10001,
         pointerEvents: 'none', overflow: 'visible',
       }}
     >

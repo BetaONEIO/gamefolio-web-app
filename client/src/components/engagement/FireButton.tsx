@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { ZapIconSvg, useZapFly, ZapFlyOverlay } from "@/components/ui/ZapReactionIcon";
 import { cn } from "@/lib/utils";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+
 import { useJoinDialog } from "@/hooks/use-join-dialog";
 import { requireEmailVerified, isEmailVerificationError } from "@/lib/email-verification";
 
@@ -62,7 +62,7 @@ export function FireButton({
     queryKey: [`/api/${contentType}s/${contentId}/reactions/status`],
     queryFn: async () => {
       const res = await fetch(`/api/${contentType}s/${contentId}/reactions/status`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch fire status");
+      if (!res.ok) throw new Error("Failed to fetch zap status");
       return res.json();
     },
     enabled: !!user,
@@ -92,7 +92,7 @@ export function FireButton({
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to add fire reaction');
+        throw new Error(error.message || 'Failed to add zap');
       }
 
       return response.json();
@@ -250,11 +250,6 @@ export function FireButton({
             showXpPopup={shouldShowXpPopup()}
           />
         )}
-        <JoinGamefolioDialog 
-          open={isOpen} 
-          onOpenChange={closeDialog} 
-          actionType={actionType} 
-        />
       </>
     );
   }
@@ -296,11 +291,6 @@ export function FireButton({
           showXpPopup={shouldShowXpPopup()}
         />
       )}
-      <JoinGamefolioDialog 
-        open={isOpen} 
-        onOpenChange={closeDialog} 
-        actionType={actionType} 
-      />
     </>
   );
 }

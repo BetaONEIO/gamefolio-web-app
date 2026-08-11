@@ -294,7 +294,7 @@ export class DatabaseStorage implements IStorage {
 
       const userWithDefaults = {
         ...safeUserData,
-        avatarUrl: safeUserData.avatarUrl || "/attached_assets/gamefolio social logo 3d circle web.png",
+        avatarUrl: safeUserData.avatarUrl || "/attached_assets/gamefolio-logo-green.png",
         bannerUrl: safeUserData.bannerUrl || "/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg",
         selectedAvatarBorderId: safeUserData.selectedAvatarBorderId ?? (await db.select({ id: assetRewards.id }).from(assetRewards).where(eq(assetRewards.category, "avatar_border")).limit(1))[0]?.id,
         referralCode: await generateReferralCode(),
@@ -2257,6 +2257,7 @@ export class DatabaseStorage implements IStorage {
           role: users.role,
           nftProfileTokenId: users.nftProfileTokenId,
           nftProfileImageUrl: users.nftProfileImageUrl,
+          activeProfilePicType: users.activeProfilePicType,
           selectedVerificationBadgeId: users.selectedVerificationBadgeId
         }
       })
@@ -2625,6 +2626,14 @@ export class DatabaseStorage implements IStorage {
       console.error("Error deleting all notifications:", error);
       return false;
     }
+  }
+
+  async hasContentByUserId(userId: number): Promise<{ hasClips: boolean; hasScreenshots: boolean }> {
+    const [clipResult, screenshotResult] = await Promise.all([
+      db.select({ id: clips.id }).from(clips).where(eq(clips.userId, userId)).limit(1),
+      db.select({ id: screenshots.id }).from(screenshots).where(eq(screenshots.userId, userId)).limit(1),
+    ]);
+    return { hasClips: clipResult.length > 0, hasScreenshots: screenshotResult.length > 0 };
   }
 
   async getNotification(id: number): Promise<any> {
@@ -3589,7 +3598,7 @@ export class DatabaseStorage implements IStorage {
         eq(monthlyLeaderboard.month, month),
         eq(monthlyLeaderboard.year, year),
         gt(monthlyLeaderboard.totalPoints, 0),
-        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND u.status IN ('suspended', 'banned'))`
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`
       ))
       .orderBy(desc(monthlyLeaderboard.totalPoints));
 
@@ -3647,7 +3656,7 @@ export class DatabaseStorage implements IStorage {
         totalPoints: sql<number>`CAST(SUM(${monthlyLeaderboard.totalPoints}) AS INTEGER)`,
       })
       .from(monthlyLeaderboard)
-      .where(sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND u.status IN ('suspended', 'banned'))`)
+      .where(sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`)
       .groupBy(monthlyLeaderboard.userId)
       .having(sql`SUM(${monthlyLeaderboard.totalPoints}) > 0`)
       .orderBy(desc(sql`SUM(${monthlyLeaderboard.totalPoints})`))
@@ -3704,7 +3713,7 @@ export class DatabaseStorage implements IStorage {
         eq(weeklyLeaderboard.week, week),
         eq(weeklyLeaderboard.year, year),
         gt(weeklyLeaderboard.totalPoints, 0),
-        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${weeklyLeaderboard.userId} AND u.status IN ('suspended', 'banned'))`
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${weeklyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`
       ))
       .orderBy(desc(weeklyLeaderboard.totalPoints));
 
@@ -3753,7 +3762,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(topContributors.userId, users.id))
       .where(and(
         eq(topContributors.periodType, periodType),
-        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${topContributors.userId} AND u.status IN ('suspended', 'banned'))`
+        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${topContributors.userId} AND (u.status IN ('suspended', 'banned') OR u.hide_from_leaderboard = TRUE))`
       ))
       .orderBy(desc(topContributors.achievedAt), desc(topContributors.totalPoints));
 
@@ -4227,78 +4236,71 @@ export class DatabaseStorage implements IStorage {
       
       const gameIds = allGameIds;
       
-      // Find clips from those games, excluding the user's own clips
-      const recommendedClips = await db
+      // Build a candidate pool scored by time-decayed engagement, then
+      // weighted-random sample down to `limit`. The old query ordered purely
+      // by lifetime views, so a user with stable favourite games always saw
+      // the same most-viewed clips and the section never appeared to update.
+      // Over-fetching a pool (~5x) and sampling makes the carousel rotate
+      // between visits while still favouring fresh, well-engaged clips.
+      const poolSize = Math.min(limit * 5, 100);
+
+      const candidates = await db
         .select({
-          id: clips.id,
-          title: clips.title,
-          description: clips.description,
-          videoUrl: clips.videoUrl,
-          thumbnailUrl: clips.thumbnailUrl,
-          userId: clips.userId,
-          gameId: clips.gameId,
-          views: clips.views,
-          duration: clips.duration,
-          videoType: clips.videoType,
-          createdAt: clips.createdAt,
-          updatedAt: clips.updatedAt,
-          // User fields with aliases
-          userUsername: users.username,
-          userDisplayName: users.displayName,
-          userAvatarUrl: users.avatarUrl,
-          userAvatarBorderColor: users.avatarBorderColor,
-          userAccentColor: users.accentColor,
-          userPrimaryColor: users.primaryColor,
-          userBackgroundColor: users.backgroundColor,
-          userCardColor: users.cardColor,
-          // Game fields with aliases
-          gameName: games.name,
-          gameImageUrl: games.imageUrl,
+          clipId: clips.id,
+          // Hacker-News style gravity: recent + engaged clips score highest;
+          // old clips decay no matter how many lifetime views they hold, so
+          // fresh uploads in the user's games can break through.
+          score: sql<number>`
+            (cast(${clips.views} as double precision)
+              + count(distinct ${likes.id}) * 3
+              + count(distinct ${comments.id}) * 5
+              + 1)
+            / power(extract(epoch from (now() - ${clips.createdAt})) / 3600.0 + 2.0, 1.5)
+          `.as('score'),
         })
         .from(clips)
-        .innerJoin(users, eq(clips.userId, users.id))
-        .leftJoin(games, eq(clips.gameId, games.id))
+        .leftJoin(users, eq(clips.userId, users.id))
+        .leftJoin(likes, eq(clips.id, likes.clipId))
+        .leftJoin(comments, eq(clips.id, comments.clipId))
         .where(
           and(
             inArray(clips.gameId, gameIds),
-            ne(clips.userId, userId) // Exclude user's own clips
+            ne(clips.userId, userId), // Exclude user's own clips
+            // Respect privacy: public accounts, or private accounts the user follows
+            or(
+              eq(users.isPrivate, false),
+              sql`exists (select 1 from follows f where f.following_id = ${users.id} and f.follower_id = ${userId})`
+            ),
+            // Only content for approved games (or no game)
+            or(
+              sql`${clips.gameId} IS NULL`,
+              sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
+            ),
+            // Exclude content from suspended/banned users
+            sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
           )
         )
-        .orderBy(desc(clips.views), desc(clips.createdAt), desc(clips.id))
-        .limit(limit);
-      
-      // Transform the flat result into the expected nested structure
-      const transformedClips = recommendedClips.map(clip => ({
-        id: clip.id,
-        title: clip.title,
-        description: clip.description,
-        videoUrl: clip.videoUrl,
-        thumbnailUrl: clip.thumbnailUrl,
-        userId: clip.userId,
-        gameId: clip.gameId,
-        views: clip.views,
-        duration: clip.duration,
-        videoType: clip.videoType,
-        createdAt: clip.createdAt,
-        updatedAt: clip.updatedAt,
-        user: {
-          id: clip.userId,
-          username: clip.userUsername,
-          displayName: clip.userDisplayName,
-          avatarUrl: clip.userAvatarUrl,
-          avatarBorderColor: clip.userAvatarBorderColor,
-          accentColor: clip.userAccentColor,
-          primaryColor: clip.userPrimaryColor,
-          backgroundColor: clip.userBackgroundColor,
-          cardColor: clip.userCardColor,
-        },
-        game: clip.gameId ? {
-          id: clip.gameId,
-          name: clip.gameName,
-          imageUrl: clip.gameImageUrl,
-        } : null
-      }));
-      
+        .groupBy(clips.id)
+        .orderBy(sql`score desc`)
+        .limit(poolSize);
+
+      // Weighted random sampling without replacement (Efraimidis–Spirakis):
+      // each clip's draw key is rand^(1/score); take the top `limit` keys.
+      // Higher-scoring clips are more likely to surface, but the mix changes
+      // every request so the carousel actually updates between visits.
+      const sampledIds = candidates
+        .map(c => ({
+          clipId: c.clipId,
+          key: Math.pow(Math.random(), 1 / Math.max(Number(c.score) || 0, 0.0001)),
+        }))
+        .sort((a, b) => b.key - a.key)
+        .slice(0, limit)
+        .map(c => c.clipId);
+
+      // Hydrate full clip details in parallel (same pattern as getTrendingClips).
+      const hydrated = await Promise.all(sampledIds.map(id => this.getClipWithUser(id)));
+      const transformedClips: ClipWithUser[] = hydrated.filter((c): c is ClipWithUser => !!c);
+
       // If not enough clips from favorite games, supplement with trending clips
       if (transformedClips.length < limit) {
         const remainingLimit = limit - transformedClips.length;
@@ -5078,7 +5080,7 @@ export class DatabaseStorage implements IStorage {
       .from(profileBorders)
       .where(and(eq(profileBorders.isActive, true), eq(profileBorders.availableInLootbox, true), eq(profileBorders.shape, 'circle')));
 
-    if (lootboxBorders.length > 0 && Math.random() < 0.03) {
+    if (lootboxBorders.length > 0 && false) { // profile borders temporarily disabled (images not loading)
       const randomBorder = lootboxBorders[Math.floor(Math.random() * lootboxBorders.length)];
       const alreadyHasBorder = await this.userHasUnlockedBorder(userId, randomBorder.id);
 
@@ -5219,7 +5221,7 @@ export class DatabaseStorage implements IStorage {
     return db
       .select()
       .from(assetRewards)
-      .where(eq(assetRewards.isActive, true))
+      .where(and(eq(assetRewards.isActive, true), ne(assetRewards.assetType, 'avatar_border')))
       .orderBy(assetRewards.rarity);
   }
 

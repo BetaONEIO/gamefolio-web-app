@@ -4,11 +4,13 @@ import { useToast } from '@/hooks/use-toast';
 import { handleDiscordCallback, getDiscordCallbackParams } from '@/lib/discord';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { useAuthModal } from '@/hooks/use-auth-modal';
 
 export function DiscordCallback() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { closeModal } = useAuthModal();
 
   useEffect(() => {
     const processDiscordCallback = async () => {
@@ -60,6 +62,7 @@ export function DiscordCallback() {
               variant: "gamefolioSuccess",
             });
           }
+          closeModal();
           setLocation("/onboarding");
         } else {
           // Existing user with completed onboarding
@@ -68,6 +71,7 @@ export function DiscordCallback() {
             description: `You're now signed in with Discord.`,
             variant: "gamefolioSuccess",
           });
+          closeModal();
           setLocation("/");
         }
 
@@ -78,6 +82,7 @@ export function DiscordCallback() {
           description: error.message || "There was an error signing you in with Discord. Please try again.",
           variant: "destructive",
         });
+        closeModal();
         setLocation("/auth");
       }
     };
@@ -86,7 +91,7 @@ export function DiscordCallback() {
   }, [setLocation, toast, queryClient]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0B2232] via-[#1E3A8A] to-[#4C51BF] flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-[#081017] via-[#091219] to-[#0B1218] flex items-center justify-center">
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
         <h2 className="text-xl font-semibold text-white mb-2">Completing Discord sign-in...</h2>

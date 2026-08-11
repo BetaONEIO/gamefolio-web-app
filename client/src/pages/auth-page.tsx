@@ -106,7 +106,7 @@ export default function AuthPage() {
         <div className="mb-4 sm:mb-8 text-center">
           <div className="flex flex-col items-center">
             <img
-              src="/attached_assets/Gamefolio logo.png"
+              src="/attached_assets/gamefolio-logo-green.png"
               alt="Gamefolio"
               className="h-16 sm:h-36 w-auto drop-shadow-lg"
             />
@@ -117,7 +117,7 @@ export default function AuthPage() {
         </div>
 
         {/* Popup Card Module */}
-        <div className="w-full max-w-md rounded-2xl bg-[#0f172a]/90 backdrop-blur-xl border border-white/10 shadow-2xl p-4 sm:p-6">
+        <div className="w-full max-w-md rounded-2xl bg-[#0B1218]/90 backdrop-blur-xl border border-white/10 shadow-2xl p-4 sm:p-6">
           <Tabs
             defaultValue="login"
             value={activeTab}

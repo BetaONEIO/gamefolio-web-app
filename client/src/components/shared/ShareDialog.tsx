@@ -142,7 +142,7 @@ export function ShareDialog({
               style={{ 
                 borderColor: 'hsl(var(--primary)) !important', 
                 color: copied ? '#166534' : 'hsl(var(--primary))',
-                backgroundColor: copied ? '#dcfce7' : '#101821'
+                backgroundColor: copied ? '#dcfce7' : '#0B1218'
               }}
             >
               <Copy className="h-4 w-4 mr-1" />

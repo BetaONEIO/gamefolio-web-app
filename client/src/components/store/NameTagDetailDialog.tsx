@@ -77,7 +77,7 @@ export function NameTagDetailDialog({
   const rarityColor = nameTag.rarity?.toLowerCase() === 'legendary' ? '#f0b100'
     : nameTag.rarity?.toLowerCase() === 'epic' ? '#F97316'
     : nameTag.rarity?.toLowerCase() === 'rare' ? '#2b7fff'
-    : '#94a3b8';
+    : '#B8C0AE';
 
   const rarityChance = nameTag.rarity?.toLowerCase() === 'legendary' ? '0.05%'
     : nameTag.rarity?.toLowerCase() === 'epic' ? '0.5%'
@@ -94,7 +94,7 @@ export function NameTagDetailDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        className="bg-[#101D27] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
+        className="bg-[#0B1218] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
       >
         <div
           className="flex-1 overflow-y-auto relative"
@@ -104,15 +104,15 @@ export function NameTagDetailDialog({
           <div className="hide-scrollbar flex flex-col">
 
             {/* Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 pt-12 pb-4 bg-[#101D27]/80 backdrop-blur-md">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-4 pt-12 pb-4 bg-[#0B1218]/80 backdrop-blur-md">
               <div className="flex items-center gap-4">
                 <button
                   onClick={handleClose}
-                  className="w-10 h-10 rounded-full bg-[#1e293b]/50 flex items-center justify-center transition-colors hover:bg-[#1e293b]/80"
+                  className="w-10 h-10 rounded-full bg-[#1B2A33]/50 flex items-center justify-center transition-colors hover:bg-[#1B2A33]/80"
                 >
                   <ArrowLeft className="h-6 w-6 text-white" />
                 </button>
-                <span className="text-xl font-bold text-[#f8fafc] uppercase" style={{ letterSpacing: '-0.5px' }}>
+                <span className="text-xl font-bold text-[#F5F7F2] uppercase" style={{ letterSpacing: '-0.5px' }}>
                   NFT Details
                 </span>
               </div>
@@ -173,52 +173,52 @@ export function NameTagDetailDialog({
               </div>
 
               {/* Name Tag Name */}
-              <h1 className="text-4xl font-black text-[#f8fafc] uppercase mb-3" style={{ letterSpacing: '-0.9px', lineHeight: '40px' }}>
+              <h1 className="text-4xl font-black text-[#F5F7F2] uppercase mb-3" style={{ letterSpacing: '-0.9px', lineHeight: '40px' }}>
                 {nameTag.name}
               </h1>
 
               {/* Owner & Viewers */}
               <div className="flex items-center gap-3 mb-6">
-                <div className="bg-[#1e293b]/30 rounded-full flex items-center gap-2 pr-4 pl-1 py-1">
+                <div className="bg-[#1B2A33]/30 rounded-full flex items-center gap-2 pr-4 pl-1 py-1">
                   {ownerAvatarUrl ? (
-                    <img src={ownerAvatarUrl} alt={ownerName || 'Owner'} className="w-7 h-7 rounded-full border-2 border-[#101D27] object-cover" />
+                    <img src={ownerAvatarUrl} alt={ownerName || 'Owner'} className="w-7 h-7 rounded-full border-2 border-[#0B1218] object-cover" />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#B7FF1A] to-[#A2F000] border-2 border-[#101D27]" />
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#B7FF1A] to-[#A2F000] border-2 border-[#0B1218]" />
                   )}
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-[#94a3b8] leading-[10px]">Owner</span>
-                    <span className="text-xs font-bold text-[#f8fafc] leading-4">{ownerName || 'Gamefolio'}</span>
+                    <span className="text-[10px] text-[#B8C0AE] leading-[10px]">Owner</span>
+                    <span className="text-xs font-bold text-[#F5F7F2] leading-4">{ownerName || 'Gamefolio'}</span>
                   </div>
                 </div>
-                <div className="bg-[#1e293b]/30 border border-[#1e293b]/50 rounded-full flex items-center gap-2 px-3 py-1.5">
+                <div className="bg-[#1B2A33]/30 border border-[#1B2A33]/50 rounded-full flex items-center gap-2 px-3 py-1.5">
                   <svg width="16" height="11" viewBox="0 0 14 11" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M0.849999 7.53066C0.283333 6.79466 0 6.42599 0 5.33333C0 4.24 0.283333 3.87266 0.849999 3.136C1.98133 1.66667 3.87866 0 6.66666 0C9.45466 0 11.352 1.66667 12.4833 3.136C13.05 3.87333 13.3333 4.24066 13.3333 5.33333C13.3333 6.42666 13.05 6.79399 12.4833 7.53066C11.352 8.99999 9.45466 10.6667 6.66666 10.6667C3.87866 10.6667 1.98133 8.99999 0.849999 7.53066Z" stroke="#94A3B8" strokeWidth="0.999999" />
-                    <path fillRule="evenodd" clipRule="evenodd" d="M8.66699 5.33325C8.66699 6.43782 7.77156 7.33325 6.66699 7.33325C5.56242 7.33325 4.66699 6.43782 4.66699 5.33325C4.66699 4.22868 5.56242 3.33325 6.66699 3.33325C7.77156 3.33325 8.66699 4.22868 8.66699 5.33325Z" stroke="#94A3B8" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M0.849999 7.53066C0.283333 6.79466 0 6.42599 0 5.33333C0 4.24 0.283333 3.87266 0.849999 3.136C1.98133 1.66667 3.87866 0 6.66666 0C9.45466 0 11.352 1.66667 12.4833 3.136C13.05 3.87333 13.3333 4.24066 13.3333 5.33333C13.3333 6.42666 13.05 6.79399 12.4833 7.53066C11.352 8.99999 9.45466 10.6667 6.66666 10.6667C3.87866 10.6667 1.98133 8.99999 0.849999 7.53066Z" stroke="#B8C0AE" strokeWidth="0.999999" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M8.66699 5.33325C8.66699 6.43782 7.77156 7.33325 6.66699 7.33325C5.56242 7.33325 4.66699 6.43782 4.66699 5.33325C4.66699 4.22868 5.56242 3.33325 6.66699 3.33325C7.77156 3.33325 8.66699 4.22868 8.66699 5.33325Z" stroke="#B8C0AE" />
                   </svg>
-                  <span className="text-xs font-bold text-[#94a3b8]">1.2k active</span>
+                  <span className="text-xs font-bold text-[#B8C0AE]">1.2k active</span>
                 </div>
               </div>
 
               {/* Description */}
               <div className="flex flex-col gap-3 mb-6">
-                <span className="text-xs font-black text-[#94a3b8] uppercase" style={{ letterSpacing: '2.4px' }}>Description</span>
-                <p className="text-sm text-[#94a3b8]/80 leading-[22.75px]">
-                  The <span className="text-[#f8fafc]">{nameTag.name}</span> name tag is a high-kinetic {nameTag.rarity?.toLowerCase()} asset from the Gamefolio Collection series. It features adaptive luminescence that reacts to your profile activity, symbolizing unmatched speed and precision on the leaderboard.
+                <span className="text-xs font-black text-[#B8C0AE] uppercase" style={{ letterSpacing: '2.4px' }}>Description</span>
+                <p className="text-sm text-[#B8C0AE]/80 leading-[22.75px]">
+                  The <span className="text-[#F5F7F2]">{nameTag.name}</span> name tag is a high-kinetic {nameTag.rarity?.toLowerCase()} asset from the Gamefolio Collection series. It features adaptive luminescence that reacts to your profile activity, symbolizing unmatched speed and precision on the leaderboard.
                 </p>
               </div>
 
               {/* Rarity Chance & Rating Cards */}
               <div className="flex gap-3 mb-6">
-                <div className="flex-1 bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col gap-2">
-                  <span className="text-[10px] font-black text-[#94a3b8] uppercase" style={{ letterSpacing: '1px' }}>Rarity Chance</span>
-                  <span className="text-2xl font-black text-[#f8fafc]">{rarityChance}</span>
+                <div className="flex-1 bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col gap-2">
+                  <span className="text-[10px] font-black text-[#B8C0AE] uppercase" style={{ letterSpacing: '1px' }}>Rarity Chance</span>
+                  <span className="text-2xl font-black text-[#F5F7F2]">{rarityChance}</span>
                 </div>
-                <div className="flex-1 bg-[#0f172a] border rounded-2xl p-4 flex items-center gap-3 overflow-hidden" style={{ borderColor: `${rarityColor}20` }}>
+                <div className="flex-1 bg-[#0B1218] border rounded-2xl p-4 flex items-center gap-3 overflow-hidden" style={{ borderColor: `${rarityColor}20` }}>
                   <div className="flex flex-col gap-2 flex-1">
-                    <span className="text-[10px] font-black text-[#94a3b8] uppercase" style={{ letterSpacing: '1px' }}>Rating</span>
+                    <span className="text-[10px] font-black text-[#B8C0AE] uppercase" style={{ letterSpacing: '1px' }}>Rating</span>
                     <div className="flex items-baseline gap-1">
                       <span className="text-2xl font-black" style={{ color: rarityColor }}>{rarityRating}</span>
-                      <span className="text-sm text-[#94a3b8]">/100</span>
+                      <span className="text-sm text-[#B8C0AE]">/100</span>
                     </div>
                   </div>
                   <div className="w-12 h-12 flex items-center justify-center">
@@ -266,7 +266,7 @@ export function NameTagDetailDialog({
                   )}
                 </Button>
               )}
-              <span className="text-[10px] font-bold text-[#94a3b8] uppercase text-center" style={{ letterSpacing: '1px' }}>
+              <span className="text-[10px] font-bold text-[#B8C0AE] uppercase text-center" style={{ letterSpacing: '1px' }}>
                 This asset is tradeable on the marketplace
               </span>
             </div>

@@ -24,13 +24,13 @@ export default function TransactionErrorScreen({
   return (
     <div
       className="flex flex-col min-h-screen w-full"
-      style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif" }}
+      style={{ background: "#0B1218", fontFamily: "Plus Jakarta Sans, sans-serif" }}
     >
       {/* Header with Red Gradient */}
       <div
         className="flex flex-col items-center gap-6 px-6 pt-12 pb-8"
         style={{
-          background: "linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, #101D27 100%)",
+          background: "linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, #0B1218 100%)",
           borderBottom: "1px solid rgba(30, 41, 59, 0.3)",
         }}
       >
@@ -39,20 +39,20 @@ export default function TransactionErrorScreen({
           <button
             onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
-            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
-            <ArrowLeft className="w-6 h-6" style={{ color: "#f8fafc" }} />
+            <ArrowLeft className="w-6 h-6" style={{ color: "#F5F7F2" }} />
           </button>
 
-          <span className="text-xl font-bold" style={{ color: "#f8fafc" }}>
+          <span className="text-xl font-bold" style={{ color: "#F5F7F2" }}>
             Transaction Error
           </span>
 
           <button
             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
-            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
-            <Info className="w-6 h-6" style={{ color: "#94a3b8" }} />
+            <Info className="w-6 h-6" style={{ color: "#B8C0AE" }} />
           </button>
         </div>
 
@@ -76,10 +76,10 @@ export default function TransactionErrorScreen({
 
         {/* Error Title */}
         <div className="flex flex-col items-center gap-2 text-center">
-          <h1 className="text-2xl font-bold" style={{ color: "#f8fafc" }}>
+          <h1 className="text-2xl font-bold" style={{ color: "#F5F7F2" }}>
             Insufficient GFT
           </h1>
-          <p className="text-sm max-w-[250px]" style={{ color: "#94a3b8", lineHeight: "20px" }}>
+          <p className="text-sm max-w-[250px]" style={{ color: "#B8C0AE", lineHeight: "20px" }}>
             Your current balance is not enough to cover the transaction and gas fees.
           </p>
         </div>
@@ -91,7 +91,7 @@ export default function TransactionErrorScreen({
         <div
           className="flex flex-col gap-4 p-6 rounded-2xl"
           style={{
-            background: "#0f172a",
+            background: "#0B1218",
             border: "1px solid rgba(30, 41, 59, 0.5)",
           }}
         >
@@ -100,10 +100,10 @@ export default function TransactionErrorScreen({
             className="flex items-center justify-between pb-4"
             style={{ borderBottom: "1px solid rgba(30, 41, 59, 0.3)" }}
           >
-            <span className="text-sm" style={{ color: "#94a3b8" }}>
+            <span className="text-sm" style={{ color: "#B8C0AE" }}>
               Transaction Type
             </span>
-            <span className="text-base" style={{ color: "#f8fafc" }}>
+            <span className="text-base" style={{ color: "#F5F7F2" }}>
               {transactionType}
             </span>
           </div>
@@ -112,17 +112,17 @@ export default function TransactionErrorScreen({
           <div className="flex flex-col gap-3 py-2">
             {/* Total Required */}
             <div className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: "#94a3b8" }}>
+              <span className="text-sm" style={{ color: "#B8C0AE" }}>
                 Total Required
               </span>
-              <span className="text-base font-bold" style={{ color: "#f8fafc" }}>
+              <span className="text-base font-bold" style={{ color: "#F5F7F2" }}>
                 {totalRequired.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
               </span>
             </div>
 
             {/* Available Balance */}
             <div className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: "#94a3b8" }}>
+              <span className="text-sm" style={{ color: "#B8C0AE" }}>
                 Available Balance
               </span>
               <span className="text-base font-bold" style={{ color: "#ef4444" }}>
@@ -157,7 +157,7 @@ export default function TransactionErrorScreen({
             className="w-5 h-5 rounded flex-shrink-0"
             style={{ background: "#B7FF1A" }}
           />
-          <p className="text-xs leading-relaxed" style={{ color: "#94a3b8" }}>
+          <p className="text-xs leading-relaxed" style={{ color: "#B8C0AE" }}>
             GFT tokens are required for all transactions on the SKALE network. You can top up your wallet using a credit card or by bridging from another network.
           </p>
         </div>
@@ -183,9 +183,9 @@ export default function TransactionErrorScreen({
             onClick={onBridge}
             className="flex items-center justify-center w-full py-4 rounded-2xl font-bold transition-all hover:bg-slate-700"
             style={{
-              background: "#1e293b",
-              border: "1px solid #1e293b",
-              color: "#f8fafc",
+              background: "#1B2A33",
+              border: "1px solid #1B2A33",
+              color: "#F5F7F2",
             }}
           >
             Bridge from Ethereum
@@ -195,7 +195,7 @@ export default function TransactionErrorScreen({
           <button
             onClick={onCancel}
             className="flex items-center justify-center w-full py-4 text-sm font-medium transition-colors hover:opacity-80"
-            style={{ color: "#94a3b8" }}
+            style={{ color: "#B8C0AE" }}
           >
             Cancel Transaction
           </button>

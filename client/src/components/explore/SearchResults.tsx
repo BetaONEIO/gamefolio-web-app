@@ -6,6 +6,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import VideoClipCard from "@/components/clips/VideoClipCard";
 import TrendingGameCard from "@/components/clips/TrendingGameCard";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
+import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreenshotsViewer";
+import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
+import { useMobile } from "@/hooks/use-mobile";
 import { Link, useLocation } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -20,6 +23,8 @@ interface SearchResultsProps {
 
 const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
   const [activeTab, setActiveTab] = useState("all");
+  const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
+  const isMobile = useMobile();
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
   
@@ -285,7 +290,7 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
                         screenshot={screenshot}
                         profile={screenshot.user || { username: 'Unknown', displayName: 'Unknown User' }}
                         isOwnProfile={user?.id === screenshot.userId}
-                        onSelect={(s) => console.log('Screenshot selected:', s.id)}
+                        onSelect={(s) => setSelectedScreenshot(s)}
                       />
                     ))}
                   </div>
@@ -344,7 +349,7 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
                       screenshot={screenshot}
                       profile={screenshot.user || { username: 'Unknown', displayName: 'Unknown User' }}
                       isOwnProfile={user?.id === screenshot.userId}
-                      onSelect={(s) => console.log('Screenshot selected:', s.id)}
+                      onSelect={(s) => setSelectedScreenshot(s)}
                     />
                   ))}
                 </div>
@@ -389,6 +394,13 @@ const SearchResults = ({ query: initialQuery }: SearchResultsProps) => {
           </>
         )}
       </Tabs>
+
+      <ScreenshotViewerPortal
+        selectedScreenshot={selectedScreenshot}
+        setSelectedScreenshot={setSelectedScreenshot}
+        screenshotResults={screenshotResults}
+        isMobile={isMobile}
+      />
     </div>
   );
 };
@@ -496,5 +508,32 @@ const UserResultCard = ({ user }: UserResultCardProps) => {
     </div>
   );
 };
+
+function ScreenshotViewerPortal({ selectedScreenshot, setSelectedScreenshot, screenshotResults, isMobile }: {
+  selectedScreenshot: any;
+  setSelectedScreenshot: (s: any) => void;
+  screenshotResults: any[] | undefined;
+  isMobile: boolean;
+}) {
+  if (!selectedScreenshot) return null;
+  const list = screenshotResults || [selectedScreenshot];
+  if (isMobile) {
+    return (
+      <MobileScreenshotsViewer
+        screenshots={list}
+        startId={selectedScreenshot.id}
+        onBack={() => setSelectedScreenshot(null)}
+      />
+    );
+  }
+  return (
+    <ScreenshotLightbox
+      screenshot={selectedScreenshot}
+      onClose={() => setSelectedScreenshot(null)}
+      screenshots={list}
+      onNavigate={(s: any) => setSelectedScreenshot(s)}
+    />
+  );
+}
 
 export default SearchResults;

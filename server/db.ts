@@ -10,9 +10,10 @@ if (!process.env.DATABASE_URL) {
 
 // Configure postgres connection for Supabase
 const connection = postgres(process.env.DATABASE_URL, {
-  max: 10, // Maximum pool size
+  max: 20, // Maximum pool size — increased to handle concurrent page-load bursts
   idle_timeout: 30, // Close idle connections after 30 seconds
   connect_timeout: 10, // Timeout after 10 seconds
+  max_lifetime: 1800, // Recycle connections every 30 min to avoid stale sockets
 });
 
 export const db = drizzle(connection, { schema });

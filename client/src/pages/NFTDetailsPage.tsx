@@ -144,12 +144,12 @@ export default function NFTDetailsPage() {
 
   if (!isValidTokenId || notFound) {
     return (
-      <div className="min-h-screen bg-[#101D27] text-white font-['Plus_Jakarta_Sans'] flex flex-col items-center justify-center px-6 text-center">
-        <div className="w-16 h-16 rounded-full bg-[#1e293b] flex items-center justify-center mb-4">
-          <Sparkles className="w-8 h-8 text-[#94a3b8]" />
+      <div className="min-h-screen bg-[#0B1218] text-white font-['Plus_Jakarta_Sans'] flex flex-col items-center justify-center px-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-[#101923] flex items-center justify-center mb-4">
+          <Sparkles className="w-8 h-8 text-[#B8C0AE]" />
         </div>
         <h1 className="text-2xl font-bold mb-2" data-testid="text-nft-not-found">NFT not found</h1>
-        <p className="text-sm text-[#94a3b8] mb-6 max-w-sm">
+        <p className="text-sm text-[#B8C0AE] mb-6 max-w-sm">
           This listing may have been sold, removed, or never existed. Browse the
           store to find another NFT.
         </p>
@@ -165,7 +165,7 @@ export default function NFTDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#101D27] text-white flex items-center justify-center">
+      <div className="min-h-screen bg-[#0B1218] text-white flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-[#B7FF1A]" />
       </div>
     );

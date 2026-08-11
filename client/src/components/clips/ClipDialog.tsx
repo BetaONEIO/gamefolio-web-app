@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { ClipWithUser, CommentWithUser } from "@shared/schema";
+import { useCreateComment } from "@/hooks/use-clips";
+import { StyledMentionInput } from "@/components/ui/mention-input";
 import VideoPlayer from "@/components/shared/VideoPlayer";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
@@ -34,7 +36,6 @@ import {
   UserMinus,
   UserCheck,
   AlertTriangle,
-  Trash2,
   Play,
   Pause,
   Volume2,
@@ -44,7 +45,7 @@ import { formatDistance } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+
 import { cn } from "@/lib/utils";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import CommentSection from "@/components/clips/CommentSection";
@@ -78,13 +79,28 @@ interface ClipDialogProps {
   onPrevious?: () => void;
   showNavigation?: boolean;
   viewAllHref?: string;
+  /** Hint from the caller so the dialog renders the correct layout immediately,
+   *  before the async clip fetch resolves. Prevents the clip→reel layout flash. */
+  initialVideoType?: 'clip' | 'reel';
 }
 
-const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigation = false, viewAllHref }: ClipDialogProps) => {
+const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigation = false, viewAllHref, initialVideoType }: ClipDialogProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { isOpen: joinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
+  const [stickyComment, setStickyComment] = useState("");
+  const stickyCommentMutation = useCreateComment();
+  const stickyInputRef = useRef<HTMLTextAreaElement>(null);
+  const handleStickyStickyCommentSubmit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!stickyComment.trim() || !clip?.id) return;
+    stickyCommentMutation.mutate(
+      { clipId: clip.id, text: stickyComment },
+      { onSuccess: () => setStickyComment("") }
+    );
+  };
   const [showComments, setShowComments] = useState(false);
+  const [isClosingComments, setIsClosingComments] = useState(false);
   const [commentSheetDragY, setCommentSheetDragY] = useState(0);
   const commentSheetTouchStartY = useRef<number | null>(null);
   const commentSheetTouchStartTime = useRef<number>(0);
@@ -106,6 +122,14 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     }
     setCommentSheetDragY(0);
     commentSheetTouchStartY.current = null;
+  };
+  const closeComments = (callback?: () => void) => {
+    setIsClosingComments(true);
+    setTimeout(() => {
+      setShowComments(false);
+      setIsClosingComments(false);
+      callback?.();
+    }, 420);
   };
   const [isMobile, setIsMobile] = useState(false);
   const [isPortraitClip, setIsPortraitClip] = useState(false);
@@ -136,6 +160,9 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
     },
     enabled: isOpen && clipId !== null,
   });
+
+  // Use the caller's hint until the fetch resolves — prevents the clip→reel layout flash.
+  const effectiveType = clip?.videoType ?? initialVideoType ?? 'clip';
 
   // Get signed URLs for private bucket assets
   const { signedUrl: signedThumbnailUrl } = useSignedUrl(clip?.thumbnailUrl);
@@ -224,6 +251,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
       setAgeRestrictionAccepted(false);
       setShowAgeRestrictionDialog(false);
       setIsPortraitClip(false);
+      setStickyComment("");
     }
   }, [clipId, previousClipId]);
 
@@ -526,23 +554,25 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
   // Note: FullscreenReelsViewer is handled separately via the ClipDialogProvider
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogPortal>
-        {/* Custom overlay that leaves footer visible on mobile reels */}
-        <DialogOverlay className={cn(
-          "z-[100]",
-          isMobile && clip?.videoType === 'reel' && "h-[calc(100dvh-64px)] bottom-auto"
+        {/* Custom overlay - no animation */}
+        <DialogPrimitive.Overlay className={cn(
+          "fixed inset-0 z-[9999] bg-black/80",
+          isMobile && effectiveType === 'reel' && "h-[calc(100dvh-64px)] bottom-auto"
         )} />
         <DialogPrimitive.Content
           ref={dialogRef}
           className={cn(
-            "fixed left-[50%] top-[50%] z-[100] grid w-full translate-x-[-50%] translate-y-[-50%] border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
-            "p-0 bg-background text-foreground clip-dialog-content",
-            isMobile && clip?.videoType === 'reel' 
-              ? "w-screen h-[calc(100dvh-64px)] max-w-none max-h-none overflow-hidden top-0 translate-y-0" // Leave space for footer on mobile reels, use dvh for dynamic viewport
+            "fixed left-[50%] top-[50%] z-[9999] grid w-full translate-x-[-50%] translate-y-[-50%] border shadow-lg sm:rounded-lg",
+            "p-0 text-foreground clip-dialog-content",
+            (effectiveType === 'reel' || (isMobile && effectiveType === 'reel')) ? "bg-black" : "bg-background",
+            isMobile && effectiveType === 'reel'
+              ? "w-screen h-[calc(100dvh-64px)] max-w-none max-h-none overflow-hidden top-0 translate-y-0 border-0 shadow-none rounded-none grid-rows-[1fr]" // Leave space for footer on mobile reels, use dvh for dynamic viewport
               : isMobile 
                 ? "w-screen h-[100dvh] max-w-none max-h-none overflow-hidden top-0 translate-y-0 border-0 rounded-none" // Full screen, no border/radius on mobile clips
-                : "max-w-[80%] w-[80%] max-h-[90vh] h-[90vh] overflow-hidden grid-rows-[1fr]" // Desktop size
+                : "max-w-5xl w-[90%] max-h-[90vh] h-[88vh] overflow-hidden grid-rows-[1fr]" // Desktop size
           )}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -554,24 +584,21 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         <DialogDescription className="sr-only">
           {clip ? `Video by ${clip.user?.displayName || clip.user?.username || 'Unknown user'}` : 'Video content viewer'}
         </DialogDescription>
-        {/* Top left back arrow button */}
-        <div
-          className={cn("absolute z-[110]", !isMobile && "left-4 top-4")}
-          style={isMobile ? { top: 'max(12px, env(safe-area-inset-top, 12px))', left: '12px' } : undefined}
-        >
-          <button
-            onClick={onClose}
-            className={cn(
-              "rounded-full ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 flex items-center gap-1.5",
-              isMobile
-                ? "p-3 bg-black/60 backdrop-blur-sm hover:bg-black/80 opacity-100"
-                : "p-2 opacity-70 hover:opacity-100 bg-black/40 hover:bg-black/60"
-            )}
-            aria-label="Back"
+        {/* Top left back arrow button - mobile only */}
+        {isMobile && (
+          <div
+            className="absolute z-[110]"
+            style={{ top: 'max(12px, env(safe-area-inset-top, 12px))', left: '12px' }}
           >
-            <ChevronLeft className={cn("text-white", isMobile ? "h-6 w-6" : "h-5 w-5")} />
-          </button>
-        </div>
+            <button
+              onClick={onClose}
+              className="rounded-full ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 flex items-center gap-1.5 p-3 bg-black/60 backdrop-blur-sm hover:bg-black/80 opacity-100"
+              aria-label="Back"
+            >
+              <ChevronLeft className="text-white h-6 w-6" />
+            </button>
+          </div>
+        )}
 
         {/* Top right action buttons */}
         <div
@@ -587,25 +614,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
             >
               View all
             </Link>
-          )}
-          {/* Delete button - only show for clip owner, not on mobile (shown in overlay for clips) */}
-          {isOwnClip && clip && (!isMobile || clip.videoType === 'reel') && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowDeleteConfirm(true);
-              }}
-              className={cn(
-                "rounded-sm opacity-70 ring-offset-background transition-all hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 group/trash",
-                isMobile 
-                  ? "p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50"
-                  : "p-2"
-              )}
-              title="Delete clip"
-            >
-              <Trash2 className={cn("text-white group-hover/trash:text-red-500 transition-colors", isMobile ? "h-6 w-6" : "h-5 w-5")} />
-              <span className="sr-only">Delete</span>
-            </button>
           )}
           {/* Volume toggle - only for mobile clips (not reels, reels have their own) */}
           {isMobile && clip && clip.videoType !== 'reel' && (
@@ -626,7 +634,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
           )}
           {/* Close button */}
           <DialogClose className={cn(
-            "rounded-full ring-offset-background transition-opacity focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
+            "rounded-full ring-offset-background transition-opacity focus:outline-none disabled:pointer-events-none",
             isMobile 
               ? "p-3 bg-black/60 backdrop-blur-sm hover:bg-black/80 opacity-100"
               : "p-2 opacity-70 hover:opacity-100"
@@ -685,18 +693,15 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
               clip.videoType === 'reel' && isMobile ? (
                 // TikTok-style mobile fullscreen layout for reels only
                 <div
-                  className="w-full h-full flex items-center justify-center bg-black relative transition-all duration-300 ease-out"
-                  style={{
-                    paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
-                    ...(showComments ? { transform: 'translateY(-8px) scale(0.97)', transformOrigin: 'center top' } : {}),
-                  }}
+                  className="absolute inset-0 bg-black"
+                  style={showComments ? { transform: 'translateY(-8px) scale(0.97)', transformOrigin: 'center top' } : undefined}
                 >
                   <VideoPlayer 
                     videoUrl={clip.videoUrl} 
                     thumbnailUrl={clip.thumbnailUrl || (clip.videoUrl ? clip.videoUrl.replace(/\.[^/.]+$/, ".jpg") : undefined)} 
                     autoPlay={true}
                     className="w-full h-full"
-                    objectFit="contain"
+                    objectFit="cover"
                     clipId={clip.id}
                     disableAspectRatio={true}
                     hideControls={true}
@@ -889,12 +894,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     objectFit="contain"
                     clipId={clip.id}
                   />
-                  {/* Reel badge indicator */}
-                  <div className="absolute top-4 left-4 z-50">
-                    <span className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-bold">
-                      Reel
-                    </span>
-                  </div>
                 </div>
               ) : isMobile ? (
                 // Mobile clips: flex-column so comments push video up rather than overlaying it
@@ -994,14 +993,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       className="absolute right-3 flex flex-col items-center space-y-5 z-50 pointer-events-auto"
                       style={{ bottom: showComments ? '0.75rem' : '2rem' }}
                     >
-                      {isOwnClip && !showComments && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
-                          className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 flex items-center justify-center"
-                        >
-                          <Trash2 className="h-5 w-5 text-white hover:text-red-500 transition-colors" />
-                        </button>
-                      )}
                       <FireButton
                         contentId={clip.id}
                         contentType="clip"
@@ -1049,10 +1040,16 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   </div>
 
                   {/* ── Comments panel — flex-1, pushes video up ── */}
-                  {showComments && (
+                  {(showComments || isClosingComments) && (
                     <div
                       className="flex-1 flex flex-col overflow-hidden"
-                      style={{ background: '#0F1923', borderRadius: '20px 20px 0 0', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+                      style={{
+                        background: '#0B1218',
+                        borderRadius: '20px 20px 0 0',
+                        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+                        transform: isClosingComments ? 'translateY(100%)' : 'translateY(0)',
+                        transition: 'transform 0.42s cubic-bezier(0.32, 0, 0.67, 0)',
+                      }}
                     >
                       <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
                         <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
@@ -1063,7 +1060,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           <span className="text-white/45 font-normal text-sm">{comments?.length || 0}</span>
                         </h3>
                         <button
-                          onClick={() => setShowComments(false)}
+                          onClick={() => closeComments()}
                           className="w-8 h-8 flex items-center justify-center rounded-full"
                           style={{ background: 'rgba(255,255,255,0.08)' }}
                         >
@@ -1141,11 +1138,14 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       ? "w-full lg:w-[35%] h-full overflow-hidden" // Reels: fixed 35% width for comments
                       : "w-full lg:flex-1 lg:min-w-0 min-h-0 h-full overflow-hidden" // Clips: take remaining space, allow internal scroll
             )}>
-              {clip.videoType === 'reel' && isMobile && showComments ? (
+              {clip.videoType === 'reel' && isMobile && (showComments || isClosingComments) ? (
                 /* ── Mobile reel comments bottom sheet ── */
                 <div
                   className="flex flex-col h-full overflow-hidden"
-                  style={{
+                  style={isClosingComments ? {
+                    transform: 'translateY(100%)',
+                    transition: 'transform 0.42s cubic-bezier(0.32, 0, 0.67, 0)',
+                  } : {
                     transform: `translateY(${commentSheetDragY}px)`,
                     transition: commentSheetDragY > 0 ? 'none' : 'transform 0.3s ease-out',
                   }}
@@ -1156,7 +1156,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   {/* Drag handle + header */}
                   <div
                     className="flex-shrink-0 px-4 pt-3 pb-3"
-                    style={{ background: '#0F1923', borderRadius: '20px 20px 0 0', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+                    style={{ background: '#0B1218', borderRadius: '20px 20px 0 0', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
                   >
                     <div className="flex justify-center mb-3">
                       <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
@@ -1167,7 +1167,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         <span className="text-white/45 font-normal text-sm">{comments?.length || 0}</span>
                       </h3>
                       <button
-                        onClick={() => setShowComments(false)}
+                        onClick={() => closeComments()}
                         className="w-8 h-8 flex items-center justify-center rounded-full"
                         style={{ background: 'rgba(255,255,255,0.08)' }}
                         data-testid="button-close-comments"
@@ -1177,7 +1177,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     </div>
                   </div>
                   {/* Scrollable comments list */}
-                  <div className="flex-1 min-h-0 overflow-y-auto" style={{ background: '#0F1923' }}>
+                  <div className="flex-1 min-h-0 overflow-y-auto" style={{ background: '#0B1218' }}>
                     <CommentSection
                       clipId={clip.id}
                       currentUserId={user?.id || null}
@@ -1187,7 +1187,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                 </div>
               ) : (
                 /* ── Desktop / non-reel shared panel ── */
-                <>
+                <div className="flex flex-col h-full overflow-hidden">
                   {/* Header with username - FIXED */}
                   <div className={cn(
                     "border-b border-border flex items-center justify-between flex-shrink-0",
@@ -1196,11 +1196,13 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="flex-shrink-0">
                         {clip?.user && (
-                          <CustomAvatar 
-                            user={clip.user} 
-                            size="md" 
-                            showBorder={true}
-                          />
+                          <Link href={`/profile/${clip.user?.username}`} onClick={(e: React.MouseEvent) => { e.stopPropagation(); onClose(); }}>
+                            <CustomAvatar 
+                              user={clip.user} 
+                              size="md" 
+                              showBorder={true}
+                            />
+                          </Link>
                         )}
                       </div>
                       <div className="flex items-center gap-2 flex-wrap min-w-0">
@@ -1321,17 +1323,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                                   if (!user) {
                                     openDialog('comment');
                                   } else {
-                                    const commentInput = document.querySelector('[data-testid="input-comment"]') as HTMLTextAreaElement;
-                                    const scrollContainer = document.querySelector('[data-scroll-container]');
-                                    if (commentInput && scrollContainer) {
-                                      const containerRect = scrollContainer.getBoundingClientRect();
-                                      const inputRect = commentInput.getBoundingClientRect();
-                                      const scrollTop = scrollContainer.scrollTop + (inputRect.top - containerRect.top) - 100;
-                                      scrollContainer.scrollTo({ top: scrollTop, behavior: 'smooth' });
-                                      setTimeout(() => commentInput.focus(), 300);
-                                    } else if (commentInput) {
-                                      commentInput.focus();
-                                    }
+                                    stickyInputRef.current?.focus();
                                   }
                                 }}
                                 className="p-0 h-auto transition-colors text-muted-foreground hover:text-white focus:outline-none"
@@ -1370,16 +1362,51 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       </div>
                     </div>
 
-                    {/* Comments section */}
-                    <div className="pt-2 pb-4">
+                    {/* Comments section - form hidden, sticky form below */}
+                    <div className="pt-2 pb-2">
                       <CommentSection 
                         clipId={clip.id}
                         currentUserId={user?.id || null} 
                         onUsernameClick={() => onClose()}
+                        hideForm={true}
                       />
                     </div>
                   </div>
-                </>
+
+                  {/* Sticky comment input - always visible at bottom */}
+                  <div className="flex-shrink-0 border-t border-border p-3 bg-background">
+                    {user ? (
+                      <form onSubmit={handleStickyStickyCommentSubmit} className="flex items-center gap-2">
+                        <div className="flex-shrink-0">
+                          <CustomAvatar user={user} size="sm" showBorder={false} />
+                        </div>
+                        <div className="flex-1 flex gap-2 items-center">
+                          <StyledMentionInput
+                            ref={stickyInputRef}
+                            value={stickyComment}
+                            onChange={setStickyComment}
+                            onSubmit={() => handleStickyStickyCommentSubmit()}
+                            placeholder="Add a comment..."
+                            className="min-h-[36px] max-h-[80px] text-sm resize-none rounded-xl flex-1"
+                            data-testid="input-comment"
+                          />
+                          <Button
+                            type="submit"
+                            size="sm"
+                            disabled={!stickyComment.trim() || stickyCommentMutation.isPending}
+                            className="flex-shrink-0"
+                          >
+                            {stickyCommentMutation.isPending ? "..." : "Post"}
+                          </Button>
+                        </div>
+                      </form>
+                    ) : (
+                      <Button variant="outline" onClick={() => openDialog('comment')} className="w-full text-sm">
+                        <span style={{ color: '#B7FF1A' }}>Sign in</span>&nbsp;to comment
+                      </Button>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -1411,31 +1438,6 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         )}
       </DialogPortal>
       
-      <JoinGamefolioDialog 
-        open={joinDialogOpen} 
-        onOpenChange={closeDialog} 
-        actionType={actionType} 
-      />
-      
-      {clip && (
-        <AgeRestrictionDialog
-          isOpen={showAgeRestrictionDialog}
-          onAccept={() => {
-            isAcceptingRef.current = true;
-            setAgeRestrictionAccepted(true);
-            // Dialog will auto-close via useEffect
-          }}
-          onDecline={() => {
-            // Only close if we're not in the middle of accepting
-            if (!isAcceptingRef.current) {
-              setShowAgeRestrictionDialog(false);
-              onClose();
-            }
-          }}
-          contentType={clip.videoType === 'reel' ? 'reel' : 'clip'}
-        />
-      )}
-      
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent className="z-[200]">
@@ -1459,6 +1461,19 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   });
                   if (response.ok) {
                     toast({ title: `${contentLabel.charAt(0).toUpperCase() + contentLabel.slice(1)} deleted successfully` });
+                    // Immediately remove from all caches for instant UI update
+                    const removeClip = (old: any) => {
+                      if (!old) return old;
+                      if (Array.isArray(old)) return old.filter((c: any) => c.id !== clip.id);
+                      if (old?.clips && Array.isArray(old.clips)) return { ...old, clips: old.clips.filter((c: any) => c.id !== clip.id) };
+                      return old;
+                    };
+                    if (clip.user?.username) {
+                      queryClient.setQueryData([`/api/users/${clip.user.username}/clips`], removeClip);
+                    }
+                    queryClient.setQueryData(['/api/clips/latest'], removeClip);
+                    queryClient.setQueryData(['/api/reels/latest'], removeClip);
+                    // Background invalidations for eventual consistency
                     queryClient.invalidateQueries({ queryKey: ['/api/clips'] });
                     if (clip.user?.username) {
                       queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/clips`] });
@@ -1486,6 +1501,24 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
         </AlertDialogContent>
       </AlertDialog>
     </Dialog>
+
+    {clip && (
+      <AgeRestrictionDialog
+        isOpen={showAgeRestrictionDialog}
+        onAccept={() => {
+          isAcceptingRef.current = true;
+          setAgeRestrictionAccepted(true);
+        }}
+        onDecline={() => {
+          if (!isAcceptingRef.current) {
+            setShowAgeRestrictionDialog(false);
+            onClose();
+          }
+        }}
+        contentType={clip.videoType === 'reel' ? 'reel' : 'clip'}
+      />
+    )}
+    </>
   );
 };
 

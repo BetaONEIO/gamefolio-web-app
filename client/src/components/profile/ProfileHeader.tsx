@@ -23,6 +23,7 @@ import {
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { PartnerBadge } from "@/components/ui/partner-badge";
 import {
   Tooltip,
   TooltipContent,
@@ -31,7 +32,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+
 import PlatformConnections from "./PlatformConnections";
 import { GamefolioShareDialog } from "./GamefolioShareDialog";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
@@ -188,7 +189,7 @@ const ProfileHeader = ({
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const bannerStyle = {
-    backgroundColor: "#02172C",
+    backgroundColor: "#071013",
     backgroundImage: signedBannerUrl ? `url(${signedBannerUrl})` : undefined,
     backgroundSize: "cover",
     backgroundPosition: "center",
@@ -294,7 +295,7 @@ const ProfileHeader = ({
               </Link>
 
               {(() => {
-                const isLight = getRelativeLuminance(profile.backgroundColor || "#0B2232") > 0.179;
+                const isLight = getRelativeLuminance(profile.backgroundColor || "#071013") > 0.179;
                 const numColor = isLight ? "#111827" : "#FFFFFF";
                 const lblColor = isLight ? "#374151" : profile.accentColor || undefined;
 
@@ -422,6 +423,8 @@ const ProfileHeader = ({
                     : profile.displayName}
                 </h1>
 
+                <PartnerBadge isPartner={(profile as any).isPartner} size="md" />
+
                 {nameTagData?.nameTag && signedNameTagUrl && (
                   <TooltipProvider>
                     <Tooltip>
@@ -545,8 +548,36 @@ const ProfileHeader = ({
             ) : (
               <GamefolioShareDialog
                 username={profile.username}
+                userId={profile.id}
                 open={shareDialogOpen}
                 onOpenChange={setShareDialogOpen}
+                userProfile={{
+                  displayName: profile.displayName,
+                  bio: profile.bio,
+                  avatarUrl: profile.avatarUrl,
+                  bannerUrl: profile.bannerUrl,
+                  hideBanner: profile.hideBanner,
+                  selectedAvatarBorderId: profile.selectedAvatarBorderId,
+                  avatarBorderColor: profile.avatarBorderColor,
+                  nftProfileTokenId: profile.nftProfileTokenId,
+                  nftProfileImageUrl: profile.nftProfileImageUrl,
+                  activeProfilePicType: profile.activeProfilePicType,
+                  emailVerified: profile.emailVerified,
+                  role: profile.role,
+                  isPro: profile.isPro,
+                  selectedVerificationBadgeId: profile.selectedVerificationBadgeId,
+                  userType: profile.userType,
+                  showUserType: profile.showUserType,
+                  accentColor: profile.accentColor,
+                  backgroundColor: profile.backgroundColor,
+                  cardColor: profile.cardColor,
+                  primaryColor: profile.primaryColor,
+                }}
+                userStats={{
+                  clips: (profile._count?.clips || 0) + (profile._count?.screenshots || 0),
+                  followers: profile._count?.followers || 0,
+                  following: profile._count?.following || 0,
+                }}
                 trigger={
                   <Button variant="outline" size="sm" className="h-8 px-4">
                     <ShareLaunchIcon size={16} className="mr-1" /> Share
@@ -562,12 +593,6 @@ const ProfileHeader = ({
           <PlatformConnections profile={profile} />
         </div>
       </div>
-
-      <JoinGamefolioDialog
-        open={isOpen}
-        onOpenChange={closeDialog}
-        actionType={actionType}
-      />
 
       {nftPopup && (
         <NftProfilePopup

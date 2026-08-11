@@ -94,10 +94,10 @@ export function LazyVideoPlayer({
             <div className="absolute inset-0 flex items-center justify-center bg-black/20">
               <Button
                 onClick={handlePlayClick}
-                className="bg-primary/90 hover:bg-primary text-white rounded-full p-4 transform scale-100 hover:scale-110 transition-transform duration-200 shadow-lg"
+                className="bg-[#22c55e] hover:bg-[#16a34a] text-white rounded-full p-4 transform scale-100 hover:scale-110 transition-transform duration-200 shadow-lg"
                 data-testid="button-play-video"
               >
-                <Play className="h-8 w-8 fill-current" />
+                <Play className="h-8 w-8 fill-white text-white" />
               </Button>
             </div>
           )}

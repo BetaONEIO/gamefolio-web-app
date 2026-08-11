@@ -86,7 +86,7 @@ export default function ConfirmStakeScreen({
   return (
     <div
       className="flex flex-col w-full"
-      style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif", height: "100dvh" }}
+      style={{ background: "#0B1218", fontFamily: "Plus Jakarta Sans, sans-serif", height: "100dvh" }}
     >
       {/* Header */}
       <div
@@ -97,21 +97,21 @@ export default function ConfirmStakeScreen({
           <button
             onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
-            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
-            <ArrowLeft className="w-6 h-6" style={{ color: "#f8fafc" }} />
+            <ArrowLeft className="w-6 h-6" style={{ color: "#F5F7F2" }} />
           </button>
 
           <span
             className="text-xl font-bold"
-            style={{ color: "#f8fafc" }}
+            style={{ color: "#F5F7F2" }}
           >
             Confirm Stake
           </span>
 
           <button
             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors hover:bg-slate-700"
-            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
             <Info className="w-6 h-6" style={{ color: "#B7FF1A" }} />
           </button>
@@ -126,20 +126,20 @@ export default function ConfirmStakeScreen({
           <div className="flex items-center justify-between">
             <span
               className="text-sm font-bold uppercase tracking-wider"
-              style={{ color: "#94a3b8", letterSpacing: "0.7px" }}
+              style={{ color: "#B8C0AE", letterSpacing: "0.7px" }}
             >
               Stake Amount
             </span>
             <div className="flex items-center gap-1">
               <span
                 className="text-xs font-medium"
-                style={{ color: "#94a3b8" }}
+                style={{ color: "#B8C0AE" }}
               >
                 Available:
               </span>
               <span
                 className="text-xs font-medium"
-                style={{ color: "#f8fafc" }}
+                style={{ color: "#F5F7F2" }}
               >
                 {availableBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
               </span>
@@ -149,7 +149,7 @@ export default function ConfirmStakeScreen({
           {/* Amount Input Box */}
           <div
             className="flex items-center justify-center gap-3 p-6 rounded-2xl"
-            style={{ background: "#1e293b", border: "2px solid #1e293b" }}
+            style={{ background: "#1B2A33", border: "2px solid #1B2A33" }}
           >
             <input
               type="text"
@@ -185,28 +185,28 @@ export default function ConfirmStakeScreen({
         <div className="flex flex-col gap-4">
           <span
             className="text-sm font-bold uppercase tracking-wider"
-            style={{ color: "#94a3b8", letterSpacing: "0.7px" }}
+            style={{ color: "#B8C0AE", letterSpacing: "0.7px" }}
           >
             Staking Summary
           </span>
 
           <div
             className="flex flex-col gap-4 p-5 rounded-2xl"
-            style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+            style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
           >
             {/* Current Stake Row */}
             <div className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: "#94a3b8" }}>
+              <span className="text-sm" style={{ color: "#B8C0AE" }}>
                 Current Stake
               </span>
-              <span className="text-sm font-bold" style={{ color: "#f8fafc" }}>
+              <span className="text-sm font-bold" style={{ color: "#F5F7F2" }}>
                 {currentStake.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GFT
               </span>
             </div>
 
             {/* APY Row */}
             <div className="flex items-center justify-between">
-              <span className="text-sm" style={{ color: "#94a3b8" }}>
+              <span className="text-sm" style={{ color: "#B8C0AE" }}>
                 Staking Reward APY
               </span>
               <div className="flex items-center gap-1.5">
@@ -226,7 +226,7 @@ export default function ConfirmStakeScreen({
                 <span className="text-sm font-bold" style={{ color: "#fff" }}>
                   New Total Balance
                 </span>
-                <span className="text-[10px]" style={{ color: "#94a3b8" }}>
+                <span className="text-[10px]" style={{ color: "#B8C0AE" }}>
                   After confirmation
                 </span>
               </div>
@@ -257,7 +257,7 @@ export default function ConfirmStakeScreen({
             <span className="text-sm font-bold" style={{ color: "#B7FF1A" }}>
               Liquid Staking
             </span>
-            <span className="text-xs leading-relaxed" style={{ color: "#94a3b8" }}>
+            <span className="text-xs leading-relaxed" style={{ color: "#B8C0AE" }}>
               Your GFT remains liquid. There is no lock-up period and you can unstake or claim rewards at any time.
             </span>
           </div>

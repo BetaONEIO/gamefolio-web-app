@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
-import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
 import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import TrendingGameCard from "@/components/clips/TrendingGameCard";
 import GameClipsSection from "@/components/clips/GameClipsSection";
@@ -12,12 +11,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClipWithUser, Game } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
+import { useBlockedUsers } from "@/hooks/use-blocked-users";
 import { ChevronRight, ChevronLeft, Video, Plus, Camera, Image, Eye } from "lucide-react";
 import BannerImage from "@assets/Untitled (1920 x 1080 px).png";
 import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 import { useLocation, Link } from "wouter";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
+import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
+import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
+import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
+import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient as globalQueryClient } from "@/lib/queryClient";
@@ -49,7 +53,6 @@ const HomePage = () => {
   const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
   const [selectedGameFilter, setSelectedGameFilter] = useState<string | null>(null);
   const [activeContentTab, setActiveContentTab] = useState<'clips' | 'reels' | 'screenshots'>('clips');
-  const [mobileViewer, setMobileViewer] = useState<{ clips: ClipWithUser[]; startId: number } | null>(null);
   const [reelsViewer, setReelsViewer] = useState<number | null>(null);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -65,6 +68,7 @@ const HomePage = () => {
   // Get current user from auth context
   const { user } = useAuth();
   const userId = user?.id;
+  const { blockedUserIds } = useBlockedUsers();
   const { openClipDialog } = useClipDialog();
   const isMobile = useMobile();
   const { toast } = useToast();
@@ -125,11 +129,11 @@ const HomePage = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const proPayment = params.get("pro_payment");
-    const paymentIntentId = params.get("pi");
+    const sessionId = params.get("session_id");
     const plan = params.get("plan");
 
-    if (proPayment === "success" && paymentIntentId && plan) {
-      apiRequest("POST", "/api/stripe/confirm-pro-subscription", { paymentIntentId, plan })
+    if (proPayment === "success" && sessionId && plan) {
+      apiRequest("POST", "/api/stripe/confirm-pro-subscription", { sessionId, plan })
         .then(() => {
           globalQueryClient.invalidateQueries({ queryKey: ["/api/user"] });
           toast({
@@ -331,7 +335,7 @@ const HomePage = () => {
   });
 
   // Latest screenshots — sorted newest first
-  const { data: latestScreenshots, isLoading: isLoadingLatestScreenshots } = useQuery<any[]>({
+  const { data: latestScreenshotsRaw, isLoading: isLoadingLatestScreenshots } = useQuery<any[]>({
     queryKey: ['/api/screenshots/latest'],
     queryFn: async () => {
       const response = await fetch('/api/screenshots/latest?limit=20', { credentials: 'include' });
@@ -366,29 +370,35 @@ const HomePage = () => {
     gcTime: 0,
   });
 
-  // Latest clips (already sorted newest first by the backend)
-  const latestClips = latestClipsRaw ?? [];
+  // Filter screenshots from blocked users
+  const latestScreenshots = useMemo(() =>
+    (latestScreenshotsRaw ?? []).filter((s: any) => !blockedUserIds.has(s.userId)),
+    [latestScreenshotsRaw, blockedUserIds]
+  );
 
-  // Latest reels (already sorted newest first by the backend)
-  const latestReels = latestReelsRaw ?? [];
-  
+  // Latest clips (already sorted newest first by the backend), with blocked users filtered out
+  const latestClips = useMemo(() =>
+    (latestClipsRaw ?? []).filter(c => !blockedUserIds.has(c.userId)),
+    [latestClipsRaw, blockedUserIds]
+  );
+
+  // Latest reels (already sorted newest first by the backend), with blocked users filtered out
+  const latestReels = useMemo(() =>
+    (latestReelsRaw ?? []).filter(c => !blockedUserIds.has(c.userId)),
+    [latestReelsRaw, blockedUserIds]
+  );
+
   // Filter user clips by game name instead of ID
   const filteredClips = useMemo(() => {
     if (!userClips) return [];
+    const nonBlocked = userClips.filter(clip => !blockedUserIds.has(clip.userId));
     
     if (selectedGameFilter && selectedGameFilter !== 'all') {
-      // Filter by game name - convert both to lowercase and slugified format for comparison
-      return userClips.filter(clip => {
-        // Get the game name from clip data
+      return nonBlocked.filter(clip => {
         const gameName = clip.game?.name || '';
-        
-        // Convert to lowercase slug format (replace spaces and special chars with dashes)
         const gameSlug = gameName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        
-        // Compare with selected filter
         return gameSlug.includes(selectedGameFilter) || 
                selectedGameFilter.includes(gameSlug) ||
-               // Special case for Minecraft
                (selectedGameFilter === 'minecraft' && 
                 (gameName.toLowerCase().includes('minecraft') || 
                  clip.gameId === 7 || 
@@ -396,16 +406,16 @@ const HomePage = () => {
       });
     }
     
-    return userClips;
-  }, [userClips, selectedGameFilter]);
+    return nonBlocked;
+  }, [userClips, selectedGameFilter, blockedUserIds]);
 
   const popularClips = useMemo(() => {
     if (!userClips) return [];
-    // Sort by most views
-    return [...userClips].sort((a, b) => 
-      (b.views || 0) - (a.views || 0)
-    ).slice(0, 4);
-  }, [userClips]);
+    return [...userClips]
+      .filter(c => !blockedUserIds.has(c.userId))
+      .sort((a, b) => (b.views || 0) - (a.views || 0))
+      .slice(0, 4);
+  }, [userClips, blockedUserIds]);
   
   const isLoadingClips = isLoadingLatestClips || isLoadingLatestReels;
 
@@ -484,7 +494,15 @@ const HomePage = () => {
                         {slide.buttonText && (
                           <Button
                             className="w-fit px-6 py-5 h-auto text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground mt-4"
-                            onClick={() => slide.buttonLink && setLocation(slide.buttonLink)}
+                            onClick={() => {
+                              if (!slide.buttonLink) return;
+                              const link = slide.buttonLink.toLowerCase();
+                              if (link === '#pro' || link === '/pro' || link.includes('pro')) {
+                                window.dispatchEvent(new CustomEvent('open-pro-upgrade'));
+                              } else {
+                                setLocation(slide.buttonLink);
+                              }
+                            }}
                           >
                             {slide.buttonText}
                           </Button>
@@ -553,6 +571,9 @@ const HomePage = () => {
           )}
         </div>
       </section>
+
+      {/* Ecosystem Activity Rail */}
+      {/* <EcosystemActivityRail /> */}
       
       {/* Latest Clips Section */}
       <section className="px-0">
@@ -603,7 +624,6 @@ const HomePage = () => {
                     userId={userId}
                     compact={true}
                     clipsList={latestClips ?? undefined}
-                    onCardClick={isMobile ? (clipId, clips) => setMobileViewer({ clips, startId: clipId }) : undefined}
                   />
                 ))
               )}
@@ -666,14 +686,16 @@ const HomePage = () => {
                           <div className="absolute top-2 left-2 flex items-center gap-1.5">
                             <div className="w-6 h-6 rounded-full overflow-hidden border border-white/50">
                               <img
-                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio-logo-green.png'}
                                 alt={reel.user.displayName}
                                 className="w-full h-full object-cover"
                               />
                             </div>
-                            <span className="text-white text-xs font-medium drop-shadow-lg">
-                              {reel.user.displayName || reel.user.username}
-                            </span>
+                            <ProfileHoverCard username={reel.user.username}>
+                              <span className="text-white text-xs font-medium drop-shadow-lg cursor-default">
+                                {reel.user.displayName || reel.user.username}
+                              </span>
+                            </ProfileHoverCard>
                           </div>
                           
                           {/* View count and game - bottom left */}
@@ -740,14 +762,16 @@ const HomePage = () => {
                           <div className="flex items-center gap-2 mb-2">
                             <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/50">
                               <img
-                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio social logo 3d circle web.png'}
+                                src={reel.user.avatarUrl || '/uploaded_assets/gamefolio-logo-green.png'}
                                 alt={reel.user.displayName}
                                 className="w-full h-full object-cover"
                               />
                             </div>
-                            <span className="text-white text-sm font-medium">
-                              {reel.user.displayName || reel.user.username}
-                            </span>
+                            <ProfileHoverCard username={reel.user.username}>
+                              <span className="text-white text-sm font-medium cursor-default">
+                                {reel.user.displayName || reel.user.username}
+                              </span>
+                            </ProfileHoverCard>
                           </div>
 
                           {/* Title */}
@@ -805,8 +829,7 @@ const HomePage = () => {
               {latestScreenshots?.slice(0, 12).map((screenshot) => (
                 <div 
                   key={`screenshot-${screenshot.id}`} 
-                  className="relative overflow-hidden rounded-xl cursor-pointer group shadow-lg transition-all duration-500 border aspect-video"
-                  style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+                  className="relative overflow-hidden rounded-xl cursor-pointer group shadow-lg transition-all duration-500 aspect-video"
                   onClick={() => setLocation(`/view/screenshot/${screenshot.id}`)}
                 >
                   <img 
@@ -827,11 +850,13 @@ const HomePage = () => {
                     <div className="space-y-1">
                       <h4 className="text-white text-sm font-medium line-clamp-2 leading-tight">{screenshot.title}</h4>
                       {screenshot.user && (
-                        <Link href={`/profile/${screenshot.user.username}`} onClick={(e) => e.stopPropagation()}>
-                          <p className="text-white/80 hover:text-white text-xs cursor-pointer transition-colors">
-                            {screenshot.user.displayName || screenshot.user.username}
-                          </p>
-                        </Link>
+                        <ProfileHoverCard username={screenshot.user.username}>
+                          <Link href={`/profile/${screenshot.user.username}`} onClick={(e) => e.stopPropagation()}>
+                            <p className="text-white/80 hover:text-white text-xs cursor-pointer transition-colors">
+                              {screenshot.user.displayName || screenshot.user.username}
+                            </p>
+                          </Link>
+                        </ProfileHoverCard>
                       )}
                     </div>
                   </div>
@@ -853,23 +878,19 @@ const HomePage = () => {
         </Tabs>
       </section>
 
+      {/* Daily XP Challenges */}
+      {/* <DailyXPChallenges /> */}
+
+      {/* Live Streams Section */}
+      {/* <LiveStreamsSection /> */}
+
       {/* Recommended for You Section - Only show for authenticated users */}
       {user && <RecommendedForYou userId={user.id} />}
       
-      {/* Featured Gamers Section */}
-      <section className="mt-16 px-0">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-medium text-foreground">Featured Gamers</h2>
-          <Link 
-            href="/explore" 
-            className="text-primary text-sm font-medium hover:underline flex items-center"
-          >
-            View all <ChevronRight className="h-4 w-4 ml-1" />
-          </Link>
-        </div>
-        
+      {/* Trending Gamefolios Section */}
+      {/* <section className="mt-16 px-0">
         <FeaturedUsersSection />
-      </section>
+      </section> */}
 
       {/* Trending Games Section */}
       <section className="mt-16 px-0">
@@ -975,6 +996,7 @@ const HomePage = () => {
                 key={clip.id} 
                 clip={clip} 
                 userId={userId}
+                clipsList={topClips ?? undefined}
               />
             ))
           )}
@@ -1007,6 +1029,7 @@ const HomePage = () => {
                 clip={clip} 
                 userId={userId}
                 compact={true}
+                clipsList={popularClips ?? undefined}
               />
             ))
           )}
@@ -1016,14 +1039,6 @@ const HomePage = () => {
 
     </div>
 
-    {mobileViewer && (
-      <MobileClipsViewerOverlay
-        clips={mobileViewer.clips}
-        startClipId={mobileViewer.startId}
-        onBack={() => setMobileViewer(null)}
-      />
-    )}
-
     {reelsViewer !== null && latestReels.length > 0 && (
       <MobileTrendingViewer
         content={latestReels}
@@ -1032,6 +1047,7 @@ const HomePage = () => {
         hideCloseButton={false}
       />
     )}
+
     </>
   );
 };

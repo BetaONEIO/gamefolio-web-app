@@ -385,7 +385,7 @@ export default function LevelTrackerPage() {
                     style={{
                       width: 140,
                       height: 140,
-                      background: '#03080A',
+                      background: '#081017',
                       border: '2px solid #B7FF1A',
                       boxShadow: '0 0 24px rgba(183,255,26,0.35), inset 0 0 16px rgba(183,255,26,0.04)',
                     }}
@@ -441,6 +441,25 @@ export default function LevelTrackerPage() {
                   />
                 </div>
               </div>
+
+              {/* Streak */}
+              <div className="flex items-center gap-3 pt-1">
+                <div
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
+                  style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.25)' }}
+                >
+                  <Flame className="w-4 h-4 text-orange-400" />
+                  <span className="text-sm font-bold text-orange-400">
+                    {activityLoading ? '—' : (currentStreak)}
+                  </span>
+                  <span className="text-xs font-medium" style={{ color: '#B8C0AE' }}>day streak</span>
+                </div>
+                {!activityLoading && streak?.longestStreak != null && streak.longestStreak > 0 && (
+                  <div className="text-xs" style={{ color: '#B8C0AE' }}>
+                    Best: <span className="font-semibold" style={{ color: '#F5F7F2' }}>{streak.longestStreak}d</span>
+                  </div>
+                )}
+              </div>
             </div>
           ) : progressLoading ? (
             <div className="flex-1 space-y-3">
@@ -462,7 +481,7 @@ export default function LevelTrackerPage() {
             <TabsTrigger
               key={tab}
               value={tab}
-              className="flex-1 text-xs whitespace-nowrap py-2 rounded-lg data-[state=active]:text-black font-semibold capitalize"
+              className="flex-1 text-xs whitespace-nowrap py-2 rounded-lg data-[state=active]:text-[#B7FF1A] font-semibold capitalize"
               style={{}}
             >
               {tab === 'earnxp' ? 'Earn XP' : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -813,7 +832,7 @@ export default function LevelTrackerPage() {
                       >
                         <div
                           className="p-2 rounded-full shrink-0"
-                          style={{ background: '#03080A' }}
+                          style={{ background: '#081017' }}
                         >
                           <Icon className={`w-4 h-4 ${colorClass}`} />
                         </div>

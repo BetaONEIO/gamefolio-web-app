@@ -5,6 +5,24 @@ import { InsertGame } from '@shared/schema';
 
 const router = express.Router();
 
+// Get top live streams from Twitch
+router.get('/twitch/streams/top', async (req: express.Request, res: express.Response) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 12;
+    const streams = await twitchApi.getTopStreams(limit);
+    res.json(streams);
+  } catch (error) {
+    console.error('Error fetching top streams from Twitch:', error);
+    if (error instanceof Error && error.message.includes('credentials not configured')) {
+      res.status(503).json({
+        message: 'Twitch API integration is not configured.',
+      });
+    } else {
+      res.status(500).json({ message: 'Failed to fetch top streams from Twitch' });
+    }
+  }
+});
+
 // Get top games from Twitch
 router.get('/twitch/games/top', async (req: express.Request, res: express.Response) => {
   try {

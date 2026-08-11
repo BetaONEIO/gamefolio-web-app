@@ -100,8 +100,8 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
   legendary: {
     bg: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
     glow: "shadow-[0_0_25px_rgba(236,72,153,0.4)]",
-    dotColor: "bg-primary shadow-[0_0_8px_#A2F000]",
-    textStyle: "bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] bg-clip-text text-transparent font-black",
+    dotColor: "bg-primary shadow-[0_0_8px_#B7FF1A]",
+    textStyle: "text-[#B7FF1A] font-black",
     nameColor: "text-slate-800",
   },
   epic: {
@@ -121,7 +121,7 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
   common: {
     bg: "bg-slate-900",
     glow: "",
-    dotColor: "bg-slate-400/50 shadow-[0_0_8px_#1e293b]",
+    dotColor: "bg-slate-400/50 shadow-[0_0_8px_#1B2A33]",
     textStyle: "text-slate-400 font-normal",
     nameColor: "text-slate-50",
   },
@@ -131,7 +131,7 @@ const rarityDotColors: Record<string, string> = {
   legendary: "bg-primary shadow-[0_0_8px_#A2F000]",
   epic: "bg-primary shadow-[0_0_8px_#6FA800]",
   rare: "bg-primary shadow-[0_0_8px_#B7FF1A]",
-  common: "bg-slate-400/50 shadow-[0_0_8px_#1e293b]",
+  common: "bg-slate-400/50 shadow-[0_0_8px_#1B2A33]",
 };
 
 function NftCard({ nft, onClick }: { nft: OwnedNft; onClick: () => void }) {
@@ -300,7 +300,7 @@ export default function CollectionPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#101D27] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 text-center">
           <p className="text-slate-400 mb-4">Please log in to view your collection</p>
           <Button 
@@ -325,8 +325,8 @@ export default function CollectionPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#101D27] flex flex-col">
-      <div className="sticky top-0 z-10 backdrop-blur-md bg-[#101D27]/80 border-b border-slate-800/30">
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="sticky top-0 z-10 backdrop-blur-md bg-background/80 border-b border-slate-800/30">
         <div className="w-full px-6 md:px-12 lg:px-16 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/">

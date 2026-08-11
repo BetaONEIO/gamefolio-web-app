@@ -67,6 +67,7 @@ export function useCreateComment() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [`/api/clips/${variables.clipId}/comments`] });
       queryClient.invalidateQueries({ queryKey: [`/api/clips/${variables.clipId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
     },
   });
 }
@@ -81,6 +82,7 @@ export function useDeleteComment() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [`/api/clips/${variables.clipId}/comments`] });
       queryClient.invalidateQueries({ queryKey: [`/api/clips/${variables.clipId}`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
     },
   });
 }

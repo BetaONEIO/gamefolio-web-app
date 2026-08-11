@@ -17,6 +17,7 @@ import { LikeButton } from '@/components/engagement/LikeButton';
 import { FireButton } from '@/components/engagement/FireButton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Link } from 'wouter';
+import { ProfileHoverCard } from '@/components/ui/ProfileHoverCard';
 
 interface ClipFeedCardProps {
   clip: ClipWithUser;
@@ -129,7 +130,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
     <div
       ref={cardRef}
       className={commentsOverlay ? "fixed inset-0 z-[75] flex flex-col overflow-hidden" : "w-full"}
-      style={{ background: commentsOverlay ? '#000' : '#03080A' }}
+      style={{ background: commentsOverlay ? '#000' : '#081017' }}
     >
       {/* Video */}
       <div
@@ -141,16 +142,18 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
         } : {}}
       >
         {isNear ? (
-          <VideoPlayer
-            videoUrl={clip.videoUrl || ''}
-            thumbnailUrl={clip.thumbnailUrl || undefined}
-            autoPlay={isInView}
-            clipId={clip.id}
-            objectFit="contain"
-            autoHideControls
-            externalPaused={!isInView}
-            className={commentsOverlay ? "w-full h-full" : "w-full"}
-          />
+          <div className={commentsOverlay ? "w-full h-full" : "w-full aspect-video overflow-hidden bg-black"}>
+            <VideoPlayer
+              videoUrl={clip.videoUrl || ''}
+              thumbnailUrl={clip.thumbnailUrl || undefined}
+              autoPlay={isInView}
+              clipId={clip.id}
+              objectFit="contain"
+              autoHideControls
+              externalPaused={!isInView}
+              className="w-full h-full"
+            />
+          </div>
         ) : (
           <div className={commentsOverlay ? "w-full h-full bg-black flex items-center justify-center" : "w-full aspect-video bg-black flex items-center justify-center relative overflow-hidden"}>
             {clip.thumbnailUrl ? (
@@ -176,7 +179,8 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
               <CustomAvatar user={clip.user as any} size="sm" showBorder={true} />
             </Link>
 
-            <div className="flex-1 min-w-0">
+            <ProfileHoverCard username={clip.user.username}>
+            <div className="flex-1 min-w-0 cursor-default">
               <div className="flex items-center gap-1.5">
                 <Link href={`/profile/${clip.user.username}`} className="no-underline min-w-0">
                   <span className="font-bold text-[15px] leading-tight truncate block" style={{ color: '#F5F7F2' }}>
@@ -203,6 +207,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
                 </Link>
               )}
             </div>
+            </ProfileHoverCard>
 
             <div className="flex items-center gap-2 flex-shrink-0">
               {!isSelf && !isAlreadyFollowing && (
@@ -225,7 +230,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
         </div>
 
         {/* Caption + social */}
-        <div className="px-4" style={{ background: '#03080A' }}>
+        <div className="px-4" style={{ background: '#081017' }}>
           {caption && (
             <div className="pb-3">
               <p className="text-[14px] leading-relaxed" style={{ color: '#B8C0AE' }}>
@@ -319,7 +324,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
         <div
           className="flex-1 flex flex-col overflow-hidden"
           style={{
-            background: '#0F1923',
+            background: '#0B1218',
             borderRadius: '20px 20px 0 0',
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
             transform: sheetMounted ? `translateY(${sheetDragY}px)` : 'translateY(100%)',

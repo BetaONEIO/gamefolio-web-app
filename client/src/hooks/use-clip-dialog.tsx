@@ -1,14 +1,16 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { ClipDialog } from '@/components/clips/ClipDialog';
-import { FullscreenReelsViewer } from '@/components/clips/FullscreenReelsViewer';
+import { MobileTrendingViewer } from '@/components/clips/MobileTrendingViewer';
+import MobileClipsViewerOverlay from '@/components/clips/MobileClipsViewerOverlay';
 import { useQuery } from '@tanstack/react-query';
 import { ClipWithUser } from '@shared/schema';
 import { silentReplaceState } from '@/lib/native-history';
+import { useMobile } from '@/hooks/use-mobile';
 
 interface ClipDialogContextType {
   isOpen: boolean;
   clipId: number | null;
-  openClipDialog: (id: number, clipsList?: ClipWithUser[], viewAllHref?: string) => void;
+  openClipDialog: (id: number, clipsList?: ClipWithUser[], viewAllHref?: string, forceViewerType?: 'clip' | 'reel') => void;
   closeClipDialog: () => void;
 }
 
@@ -32,24 +34,25 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   const [clipId, setClipId] = useState<number | null>(null);
   const [clipsList, setClipsList] = useState<ClipWithUser[] | null>(null);
   const [viewAllHref, setViewAllHref] = useState<string | undefined>(undefined);
+  const [forcedViewerType, setForcedViewerType] = useState<'clip' | 'reel' | null>(null);
   const previousUrlRef = useRef<string | null>(null);
   const closeTimestampRef = useRef<number>(0);
 
   const buildClipUrl = (clip: ClipWithUser) => {
-    const username = clip.user?.username;
-    const shareCode = clip.shareCode;
+    const username = clip.user?.username || 'unknown';
+    const shareCode = clip.shareCode || '';
     const type = clip.videoType === 'reel' ? 'reel' : 'clip';
-    if (username && shareCode) return `/@${username}/${type}/${shareCode}`;
-    return `/${type}/${clip.id}`;
+    return `/@${username}/${type}/${shareCode}`;
   };
 
-  const openClipDialog = (id: number, providedClipsList?: ClipWithUser[], href?: string) => {
+  const openClipDialog = (id: number, providedClipsList?: ClipWithUser[], href?: string, forceViewerType?: 'clip' | 'reel') => {
     // Block ghost clicks that arrive within 250ms of the dialog closing
     if (Date.now() - closeTimestampRef.current < 250) return;
     previousUrlRef.current = window.location.pathname + window.location.search + window.location.hash;
     setClipId(id);
     setClipsList(providedClipsList || null);
     setViewAllHref(href);
+    setForcedViewerType(forceViewerType ?? null);
     setIsOpen(true);
     // If the clip is in the provided list we can build the pretty URL right away
     const matchingClip = providedClipsList?.find(c => c.id === id);
@@ -66,6 +69,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
     setClipId(null);
     setClipsList(null);
     setViewAllHref(undefined);
+    setForcedViewerType(null);
   };
 
   // Get current clip to check if it's a reel
@@ -79,18 +83,25 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
     enabled: !!clipId && isOpen,
   });
 
-  const isReel = currentClip?.videoType === 'reel';
+  // Resolve the video type without waiting for the async fetch to complete.
+  // The clip is almost always already present in clipsList; using that data
+  // immediately prevents the reel→clip layout flash on first open.
+  const localClipData = clipsList?.find(c => c.id === clipId);
+  const effectiveVideoType = currentClip?.videoType ?? localClipData?.videoType;
+
+  // Respect forceViewerType when provided; otherwise fall back to the clip's own videoType.
+  // This ensures clips appearing in a "clips" context always open in the clip viewer,
+  // even if their videoType field in the DB is set to 'reel'.
+  const isReel =
+    forcedViewerType === 'clip' ? false :
+    forcedViewerType === 'reel' ? true :
+    effectiveVideoType === 'reel';
+
   const currentIndex = clipsList ? clipsList.findIndex(clip => clip.id === clipId) : -1;
   // Enable navigation for any clip list with more than 1 clip
   const hasNavigation = clipsList && clipsList.length > 1;
 
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
+  const isMobile = useMobile();
 
   // Once currentClip data loads, refine the URL to the pretty /@username/type/shareCode format
   useEffect(() => {
@@ -98,7 +109,13 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
     silentReplaceState(buildClipUrl(currentClip));
   }, [isOpen, clipId, currentClip?.shareCode, currentClip?.videoType]);
 
-  const showFullscreenReelsViewer = isReel && isMobile && isOpen && clipsList && clipsList.length > 0;
+  const showMobileReelsViewer = isReel && isMobile && isOpen && clipsList && clipsList.length > 0;
+
+  // For mobile clips: use MobileClipsViewerOverlay. Fall back to [currentClip] if no list was provided.
+  const effectiveClipsList: ClipWithUser[] | null =
+    !isReel ? (clipsList || (currentClip ? [currentClip] : null)) : null;
+  const showMobileTrendingViewer =
+    !isReel && isMobile && isOpen && !!effectiveClipsList && effectiveClipsList.length > 0;
 
   const handleNext = () => {
     if (!clipsList || currentIndex === -1) return;
@@ -119,9 +136,16 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
   return (
     <ClipDialogContext.Provider value={{ isOpen, clipId, openClipDialog, closeClipDialog }}>
       {children}
-      {showFullscreenReelsViewer ? (
-        <FullscreenReelsViewer
-          reels={clipsList || []}
+      {showMobileTrendingViewer ? (
+        <MobileClipsViewerOverlay
+          clips={effectiveClipsList!}
+          startClipId={clipId!}
+          onBack={closeClipDialog}
+          viewAllHref={viewAllHref}
+        />
+      ) : showMobileReelsViewer ? (
+        <MobileTrendingViewer
+          content={clipsList || []}
           initialIndex={currentIndex >= 0 ? currentIndex : 0}
           onClose={closeClipDialog}
         />
@@ -134,6 +158,7 @@ export function ClipDialogProvider({ children }: { children: ReactNode }) {
           onPrevious={hasNavigation ? handlePrevious : undefined}
           showNavigation={hasNavigation || false}
           viewAllHref={viewAllHref}
+          initialVideoType={effectiveVideoType as 'clip' | 'reel' | undefined}
         />
       )}
     </ClipDialogContext.Provider>

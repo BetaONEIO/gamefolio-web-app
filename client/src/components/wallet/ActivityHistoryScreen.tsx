@@ -113,14 +113,14 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
   const getActivityIcon = (type: Activity["type"]) => {
     switch (type) {
       case "reward":
-        return <Gift className="w-6 h-6" style={{ color: '#f8fafc' }} />;
+        return <Gift className="w-6 h-6" style={{ color: '#F5F7F2' }} />;
       case "stake":
       case "unstake":
-        return <TrendingUp className="w-6 h-6" style={{ color: '#f8fafc' }} />;
+        return <TrendingUp className="w-6 h-6" style={{ color: '#F5F7F2' }} />;
       case "purchase":
-        return <ShoppingCart className="w-6 h-6" style={{ color: '#f8fafc' }} />;
+        return <ShoppingCart className="w-6 h-6" style={{ color: '#F5F7F2' }} />;
       default:
-        return <Award className="w-6 h-6" style={{ color: '#f8fafc' }} />;
+        return <Award className="w-6 h-6" style={{ color: '#F5F7F2' }} />;
     }
   };
 
@@ -171,13 +171,13 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
   return (
     <div
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: '#101D27' }}
+      style={{ background: '#0B1218' }}
     >
       {/* Header with gradient */}
       <div
         className="flex flex-col gap-4 px-6 pt-12 pb-6"
         style={{
-          background: 'linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #101D27 100%)',
+          background: 'linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #0B1218 100%)',
           borderBottom: '1px solid rgba(30, 41, 59, 0.3)',
         }}
       >
@@ -186,20 +186,20 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
           <button
             onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
-            style={{ background: '#1e293b', border: '1px solid #1e293b' }}
+            style={{ background: '#1B2A33', border: '1px solid #1B2A33' }}
           >
-            <ArrowLeft className="w-6 h-6" style={{ color: '#f8fafc' }} />
+            <ArrowLeft className="w-6 h-6" style={{ color: '#F5F7F2' }} />
           </button>
 
-          <span className="text-xl font-bold" style={{ color: '#f8fafc' }}>
+          <span className="text-xl font-bold" style={{ color: '#F5F7F2' }}>
             Activity History
           </span>
 
           <button
             className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
-            style={{ background: '#1e293b', border: '1px solid #1e293b' }}
+            style={{ background: '#1B2A33', border: '1px solid #1B2A33' }}
           >
-            <Filter className="w-5 h-5" style={{ color: '#f8fafc' }} />
+            <Filter className="w-5 h-5" style={{ color: '#F5F7F2' }} />
           </button>
         </div>
 
@@ -211,9 +211,9 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
               onClick={() => setActiveFilter(filter.id)}
               className="flex-shrink-0 px-4 py-3 rounded-full text-sm font-bold transition-all"
               style={{
-                background: activeFilter === filter.id ? '#B7FF1A' : '#1e293b',
-                border: `1px solid ${activeFilter === filter.id ? '#B7FF1A' : '#1e293b'}`,
-                color: activeFilter === filter.id ? '#071013' : '#94a3b8',
+                background: activeFilter === filter.id ? '#B7FF1A' : '#1B2A33',
+                border: `1px solid ${activeFilter === filter.id ? '#B7FF1A' : '#1B2A33'}`,
+                color: activeFilter === filter.id ? '#071013' : '#B8C0AE',
               }}
             >
               {filter.label}
@@ -235,7 +235,7 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
               {/* Date Label */}
               <span
                 className="text-xs font-bold uppercase"
-                style={{ color: '#94a3b8', letterSpacing: '1.2px' }}
+                style={{ color: '#B8C0AE', letterSpacing: '1.2px' }}
               >
                 {formatDateLabel(date)}
               </span>
@@ -248,14 +248,14 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
                     onClick={() => setSelectedActivity(activity)}
                     className="flex items-center gap-4 p-3 rounded-2xl w-full text-left transition-all hover:bg-slate-800/50"
                     style={{
-                      background: 'rgba(15, 23, 42, 0.4)',
-                      border: '1px solid rgba(30, 41, 59, 0.2)',
+                      background: 'rgba(11, 18, 24, 0.4)',
+                      border: '1px solid rgba(27, 42, 51, 0.2)',
                     }}
                   >
                     {/* Icon */}
                     <div
                       className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
-                      style={{ background: '#1e293b', border: '1px solid #1e293b' }}
+                      style={{ background: '#1B2A33', border: '1px solid #1B2A33' }}
                     >
                       {getActivityIcon(activity.type)}
                     </div>
@@ -264,7 +264,7 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
                     <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                       <span
                         className="text-base font-normal truncate"
-                        style={{ color: '#f8fafc' }}
+                        style={{ color: '#F5F7F2' }}
                       >
                         {activity.title}
                       </span>
@@ -272,7 +272,7 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
                         {getStatusBadge(activity.status)}
                         <span
                           className="text-[10px]"
-                          style={{ color: '#94a3b8' }}
+                          style={{ color: '#B8C0AE' }}
                         >
                           {activity.time}
                         </span>
@@ -283,13 +283,13 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
                     <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                       <span
                         className="text-base font-bold"
-                        style={{ color: activity.isPositive ? '#B7FF1A' : '#f8fafc' }}
+                        style={{ color: activity.isPositive ? '#B7FF1A' : '#F5F7F2' }}
                       >
                         {activity.isPositive ? '+' : '-'}{activity.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                       </span>
                       <span
                         className="text-[10px]"
-                        style={{ color: '#94a3b8' }}
+                        style={{ color: '#B8C0AE' }}
                       >
                         GFT
                       </span>
@@ -306,11 +306,11 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
                 className="w-16 h-16 rounded-full flex items-center justify-center"
                 style={{ background: 'rgba(30, 41, 59, 0.5)' }}
               >
-                <Award className="w-8 h-8" style={{ color: '#94a3b8' }} />
+                <Award className="w-8 h-8" style={{ color: '#B8C0AE' }} />
               </div>
               <span
                 className="text-base font-medium text-center"
-                style={{ color: '#94a3b8' }}
+                style={{ color: '#B8C0AE' }}
               >
                 No activities found
               </span>

@@ -96,7 +96,7 @@ function ExplorerLink({ hash, label }: { hash: string; label: string }) {
       href={`${SKALE_EXPLORER_BASE_URL}/tx/${hash}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-1 text-[10px] font-mono text-[#94a3b8] hover:text-[#B7FF1A] transition-colors"
+      className="flex items-center gap-1 text-[10px] font-mono text-[#B8C0AE] hover:text-[#B7FF1A] transition-colors"
       data-testid={`link-explorer-${hash.slice(0, 10)}`}
     >
       <span className="uppercase tracking-wider font-bold not-italic">{label}:</span>
@@ -124,17 +124,17 @@ function PaymentRow({
 
   return (
     <div
-      className={`bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col gap-3 ${
+      className={`bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col gap-3 ${
         isDismissed ? "opacity-60" : ""
       }`}
       data-testid={`payment-row-${payment.id}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <span className="text-sm font-bold text-[#f8fafc]">
+          <span className="text-sm font-bold text-[#F5F7F2]">
             {payment.quantity} NFT{payment.quantity === 1 ? "" : "s"} · {payment.amountGft.toLocaleString()} GFT
           </span>
-          <span className="text-[10px] text-[#94a3b8]">
+          <span className="text-[10px] text-[#B8C0AE]">
             {formatDate(payment.createdAt)}
           </span>
         </div>
@@ -153,7 +153,7 @@ function PaymentRow({
               type="button"
               onClick={() => onRestore(payment.id)}
               disabled={isMutating}
-              className="flex items-center gap-1 rounded-full border border-[#1e293b] bg-[#1e293b]/40 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#94a3b8] hover:text-[#f8fafc] hover:border-[#334155] transition-colors disabled:opacity-50"
+              className="flex items-center gap-1 rounded-full border border-[#1B2A33] bg-[#1B2A33]/40 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#B8C0AE] hover:text-[#F5F7F2] hover:border-[#22313A] transition-colors disabled:opacity-50"
               data-testid={`button-restore-${payment.id}`}
               aria-label="Restore entry"
               title="Restore entry"
@@ -166,7 +166,7 @@ function PaymentRow({
               type="button"
               onClick={() => onDismiss(payment.id)}
               disabled={isMutating}
-              className="flex items-center gap-1 rounded-full border border-[#1e293b] bg-[#1e293b]/40 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#94a3b8] hover:text-[#f8fafc] hover:border-[#334155] transition-colors disabled:opacity-50"
+              className="flex items-center gap-1 rounded-full border border-[#1B2A33] bg-[#1B2A33]/40 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#B8C0AE] hover:text-[#F5F7F2] hover:border-[#22313A] transition-colors disabled:opacity-50"
               data-testid={`button-dismiss-${payment.id}`}
               aria-label="Dismiss entry"
               title="Hide this entry"
@@ -189,16 +189,16 @@ function PaymentRow({
       </div>
 
       {payment.status === "consumed" && payment.tokenIds.length > 0 && (
-        <div className="text-[11px] text-[#94a3b8]">
+        <div className="text-[11px] text-[#B8C0AE]">
           Token{payment.tokenIds.length === 1 ? "" : "s"}:{" "}
-          <span className="text-[#f8fafc] font-mono">
+          <span className="text-[#F5F7F2] font-mono">
             #{payment.tokenIds.join(", #")}
           </span>
         </div>
       )}
 
       {payment.status === "refunded" && (
-        <div className="text-[11px] text-[#94a3b8] leading-relaxed">
+        <div className="text-[11px] text-[#B8C0AE] leading-relaxed">
           The mint didn't complete on-chain, so your {payment.amountGft.toLocaleString()} GFT was
           automatically returned to your wallet.
           {payment.refundReason && (
@@ -214,7 +214,7 @@ function PaymentRow({
           The mint failed and the automatic refund hasn't confirmed yet. Our team has been notified
           and will resolve this shortly.
           {payment.refundReason && (
-            <span className="block mt-1 text-[10px] text-[#94a3b8]">
+            <span className="block mt-1 text-[10px] text-[#B8C0AE]">
               Reason: {payment.refundReason}
             </span>
           )}
@@ -222,7 +222,7 @@ function PaymentRow({
       )}
 
       {(payment.status === "pending" || payment.status === "processing") && (
-        <div className="text-[11px] text-[#94a3b8] leading-relaxed">
+        <div className="text-[11px] text-[#B8C0AE] leading-relaxed">
           Your payment is being processed. If anything goes wrong, your GFT will be automatically
           returned to your wallet.
         </div>
@@ -287,9 +287,9 @@ export default function RecentMintActivity() {
 
   if (isLoading) {
     return (
-      <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-3xl p-5 flex items-center gap-3">
-        <Loader2 className="h-4 w-4 text-[#94a3b8] animate-spin" />
-        <span className="text-xs text-[#94a3b8]">Loading recent mint activity…</span>
+      <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-3xl p-5 flex items-center gap-3">
+        <Loader2 className="h-4 w-4 text-[#B8C0AE] animate-spin" />
+        <span className="text-xs text-[#B8C0AE]">Loading recent mint activity…</span>
       </div>
     );
   }
@@ -311,7 +311,7 @@ export default function RecentMintActivity() {
   return (
     <div className="flex flex-col gap-3" data-testid="recent-mint-activity">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-[1.2px]">
+        <span className="text-[10px] font-bold text-[#B8C0AE] uppercase tracking-[1.2px]">
           Recent Mint Activity
         </span>
         <div className="flex items-center gap-3">
@@ -322,7 +322,7 @@ export default function RecentMintActivity() {
             <button
               type="button"
               onClick={() => setShowDismissed((v) => !v)}
-              className="flex items-center gap-1 text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider hover:text-[#f8fafc] transition-colors"
+              className="flex items-center gap-1 text-[10px] font-bold text-[#B8C0AE] uppercase tracking-wider hover:text-[#F5F7F2] transition-colors"
               data-testid="button-toggle-dismissed"
             >
               {showDismissed ? (
@@ -341,7 +341,7 @@ export default function RecentMintActivity() {
         </div>
       </div>
       {payments.length === 0 ? (
-        <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 text-[11px] text-[#94a3b8]">
+        <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 text-[11px] text-[#B8C0AE]">
           {showDismissed
             ? "No entries to show."
             : "All entries are dismissed. Use \"Show dismissed\" to view them."}

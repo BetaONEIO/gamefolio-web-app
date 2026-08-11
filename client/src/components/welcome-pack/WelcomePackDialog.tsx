@@ -125,7 +125,7 @@ export function WelcomePackDialog({ open, onOpenChange, onClaimComplete }: Welco
 
   return (
     <Dialog open={open} onOpenChange={handleDismiss}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden bg-gradient-to-b from-[#0f0f1a] to-[#1a1a2e] border border-amber-500/30 rounded-2xl">
+      <DialogContent className="sm:max-w-lg p-0 overflow-hidden bg-gradient-to-b from-[#0f0f1a] to-[#0B1218] border border-amber-500/30 rounded-2xl">
         <div className="flex flex-col items-center px-6 py-8">
           <AnimatePresence mode="wait">
             {phase === "preview" && (
@@ -295,7 +295,7 @@ export function WelcomePackDialog({ open, onOpenChange, onClaimComplete }: Welco
                   )}
                 >
                   <div className={cn(
-                    "w-40 h-40 rounded-xl border-2 overflow-hidden flex items-center justify-center bg-[#1a1a2e]",
+                    "w-40 h-40 rounded-xl border-2 overflow-hidden flex items-center justify-center bg-[#0B1218]",
                     rarityStyle.border
                   )}>
                     {currentReward.imageUrl ? (

@@ -23,10 +23,6 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stripe || !elements) return;
@@ -103,7 +99,7 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
   return (
     <div
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: "#101D27" }}
+      style={{ background: "#0B1218" }}
     >
       {/* Header */}
       <div
@@ -114,12 +110,12 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
           <button
             onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
-            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path
                 d="M20 12H4M4 12L10 6M4 12L10 18"
-                stroke="#F8FAFC"
+                stroke="#F5F7F2"
                 strokeWidth="1.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -159,14 +155,14 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
             <h2 className="text-2xl font-bold text-white mb-2">
               Choose your payment method
             </h2>
-            <p className="text-sm" style={{ color: "#94a3b8" }}>
+            <p className="text-sm" style={{ color: "#B8C0AE" }}>
               All transactions are encrypted and secured.
             </p>
           </div>
 
           {/* Payment Element */}
           <div className="space-y-6">
-            <div className="rounded-2xl overflow-hidden" style={{ background: "#0f172a" }}>
+            <div className="rounded-2xl overflow-hidden" style={{ background: "#0B1218" }}>
               <PaymentElement
                 onReady={() => setIsReady(true)}
                 options={{
@@ -194,7 +190,7 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
         <div
           className="px-6 pb-24 pt-6"
           style={{
-            background: "#101D27",
+            background: "#0B1218",
             borderTop: "1px solid rgba(30, 41, 59, 0.3)",
           }}
         >
@@ -202,7 +198,7 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
             {/* Total */}
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium" style={{ color: "#94a3b8" }}>
+                <p className="text-sm font-medium" style={{ color: "#B8C0AE" }}>
                   Total to Pay
                 </p>
                 <p className="text-xs font-bold" style={{ color: "#B7FF1A" }}>
@@ -291,7 +287,7 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
     return (
       <div
         className="w-full min-h-screen flex items-center justify-center"
-        style={{ background: "#101D27" }}
+        style={{ background: "#0B1218" }}
       >
         <div className="flex flex-col items-center gap-4 px-6 text-center">
           <p className="text-sm text-red-400">{loadError}</p>
@@ -310,7 +306,7 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
     return (
       <div
         className="w-full min-h-screen flex items-center justify-center"
-        style={{ background: "#101D27" }}
+        style={{ background: "#0B1218" }}
       >
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -329,8 +325,8 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
           theme: "night",
           variables: {
             colorPrimary: "#B7FF1A",
-            colorBackground: "#1e293b",
-            colorText: "#f8fafc",
+            colorBackground: "#1B2A33",
+            colorText: "#F5F7F2",
             colorDanger: "#ef4444",
             fontFamily: "'Plus Jakarta Sans', sans-serif",
             borderRadius: "16px",
@@ -338,7 +334,7 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
           },
           rules: {
             ".Input": {
-              backgroundColor: "#1e293b",
+              backgroundColor: "#1B2A33",
               border: "1px solid rgba(30, 41, 59, 0.5)",
               padding: "16px",
             },
@@ -347,7 +343,7 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
               boxShadow: "0 0 0 1px #B7FF1A",
             },
             ".Label": {
-              color: "#94a3b8",
+              color: "#B8C0AE",
               fontSize: "10px",
               fontWeight: "700",
               textTransform: "uppercase",
@@ -355,18 +351,18 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
               marginBottom: "8px",
             },
             ".Tab": {
-              backgroundColor: "#1e293b",
+              backgroundColor: "#1B2A33",
               border: "1px solid rgba(30, 41, 59, 0.5)",
-              color: "#94a3b8",
+              color: "#B8C0AE",
             },
             ".Tab:hover": {
-              backgroundColor: "#334155",
-              color: "#f8fafc",
+              backgroundColor: "#22313A",
+              color: "#F5F7F2",
             },
             ".Tab--selected": {
-              backgroundColor: "#334155",
+              backgroundColor: "#22313A",
               border: "1px solid #B7FF1A",
-              color: "#f8fafc",
+              color: "#F5F7F2",
             },
           },
         },

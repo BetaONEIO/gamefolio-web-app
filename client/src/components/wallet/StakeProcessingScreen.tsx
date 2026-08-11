@@ -80,7 +80,7 @@ export default function StakeProcessingScreen({
     return (
       <div
         className="w-8 h-8 rounded-full flex items-center justify-center"
-        style={{ background: "#1e293b", border: "2px solid #1e293b" }}
+        style={{ background: "#1B2A33", border: "2px solid #1B2A33" }}
       >
         <div className="w-2 h-2 rounded-full" style={{ background: "#64748b" }} />
       </div>
@@ -96,7 +96,7 @@ export default function StakeProcessingScreen({
   return (
     <div
       className="flex flex-col w-full"
-      style={{ background: "#101D27", fontFamily: "Plus Jakarta Sans, sans-serif", height: "100dvh" }}
+      style={{ background: "#0B1218", fontFamily: "Plus Jakarta Sans, sans-serif", height: "100dvh" }}
     >
       {/* Header */}
       <div
@@ -107,19 +107,19 @@ export default function StakeProcessingScreen({
           <button
             onClick={onBack}
             className="w-10 h-10 rounded-full flex items-center justify-center opacity-50 cursor-not-allowed"
-            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
             disabled
           >
-            <ArrowLeft className="w-6 h-6" style={{ color: "#f8fafc" }} />
+            <ArrowLeft className="w-6 h-6" style={{ color: "#F5F7F2" }} />
           </button>
 
-          <span className="text-xl font-bold" style={{ color: "#f8fafc" }}>
+          <span className="text-xl font-bold" style={{ color: "#F5F7F2" }}>
             Processing
           </span>
 
           <button
             className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{ background: "#1e293b", border: "1px solid #1e293b" }}
+            style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
             <Info className="w-6 h-6" style={{ color: "#B7FF1A" }} />
           </button>
@@ -130,10 +130,10 @@ export default function StakeProcessingScreen({
       <div className="scrollbar-hide flex-1 overflow-y-auto flex flex-col items-center justify-center gap-12 px-6 py-8 max-w-[430px] md:max-w-[600px] lg:max-w-[800px] mx-auto w-full">
         {/* Title Section */}
         <div className="flex flex-col items-center gap-3 text-center">
-          <span className="text-2xl font-bold" style={{ color: "#f8fafc" }}>
+          <span className="text-2xl font-bold" style={{ color: "#F5F7F2" }}>
             Submitting Transaction...
           </span>
-          <span className="text-base max-w-[280px]" style={{ color: "#94a3b8" }}>
+          <span className="text-base max-w-[280px]" style={{ color: "#B8C0AE" }}>
             Please don't close the app or lock your screen while we process your request.
           </span>
         </div>
@@ -153,7 +153,7 @@ export default function StakeProcessingScreen({
           <div
             className="relative w-32 h-32 rounded-full flex items-center justify-center"
             style={{
-              background: "#0f172a",
+              background: "#0B1218",
               border: "4px solid #B7FF1A",
               boxShadow: "0 8px 25px -5px rgba(0, 0, 0, 0.1)",
             }}
@@ -189,13 +189,13 @@ export default function StakeProcessingScreen({
                 <span
                   className="text-sm font-bold transition-colors duration-300"
                   style={{
-                    color: step.status === "active" ? "#B7FF1A" : step.status === "completed" ? "#f8fafc" : "#94a3b8",
+                    color: step.status === "active" ? "#B7FF1A" : step.status === "completed" ? "#F5F7F2" : "#B8C0AE",
                   }}
                 >
                   {step.title}
                 </span>
                 {step.subtitle && (
-                  <span className="text-xs" style={{ color: "#94a3b8" }}>
+                  <span className="text-xs" style={{ color: "#B8C0AE" }}>
                     {step.subtitle}
                   </span>
                 )}
@@ -207,12 +207,12 @@ export default function StakeProcessingScreen({
         {/* Transaction Info Card */}
         <div
           className="flex flex-col gap-3 p-5 rounded-2xl w-full max-w-[382px]"
-          style={{ background: "#0f172a", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+          style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
         >
           <div className="flex items-center justify-between">
             <span
               className="text-xs font-bold uppercase tracking-wider"
-              style={{ color: "#94a3b8", letterSpacing: "0.6px" }}
+              style={{ color: "#B8C0AE", letterSpacing: "0.6px" }}
             >
               Transaction Type
             </span>
@@ -223,11 +223,11 @@ export default function StakeProcessingScreen({
           <div className="flex items-center justify-between">
             <span
               className="text-xs font-bold uppercase tracking-wider"
-              style={{ color: "#94a3b8", letterSpacing: "0.6px" }}
+              style={{ color: "#B8C0AE", letterSpacing: "0.6px" }}
             >
               Network Fee
             </span>
-            <span className="text-sm font-bold" style={{ color: "#f8fafc" }}>
+            <span className="text-sm font-bold" style={{ color: "#F5F7F2" }}>
               Free (SKALE)
             </span>
           </div>
@@ -238,7 +238,7 @@ export default function StakeProcessingScreen({
           <button
             disabled
             className="w-full h-[68px] rounded-2xl font-bold text-lg flex items-center justify-center gap-3 cursor-not-allowed"
-            style={{ background: "#1e293b", color: "#94a3b8" }}
+            style={{ background: "#1B2A33", color: "#B8C0AE" }}
           >
             <Loader2 className="w-6 h-6 animate-spin" />
             <span>Processing...</span>

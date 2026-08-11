@@ -3,8 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Loader2, Search, Upload, Plus, Gamepad2 } from "lucide-react";
+import { Loader2, Search, Gamepad2 } from "lucide-react";
 import SearchResults from "@/components/explore/SearchResults";
 import { GamePickerSheet } from "@/components/clips/GamePickerSheet";
 import { Game } from "@shared/schema";
@@ -23,17 +22,27 @@ export default function ExplorePage() {
   const [gamesPerPage] = useState(12);
   const [allLoadedGames, setAllLoadedGames] = useState<TwitchGame[]>([]);
   const [hasMore, setHasMore] = useState(true);
+  const [isMobileView, setIsMobileView] = useState(false);
   const loadingRef = useRef<HTMLDivElement>(null);
 
-  // Check for search query in URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const searchQuery = urlParams.get('q');
+  // Reactively read search query from URL — re-read on location changes
+  const searchQuery = (() => {
+    try {
+      return new URLSearchParams(window.location.search).get("q") ?? "";
+    } catch {
+      return "";
+    }
+  })();
 
-  if (searchQuery) {
-    return <SearchResults query={searchQuery} />;
-  }
+  // Keep mobile detection in a side effect (not during render)
+  useEffect(() => {
+    const check = () => setIsMobileView(window.innerWidth <= 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
-  // Fetch games with pagination
+  // Fetch games with pagination — disabled when in search mode
   const { data: games, isLoading: isLoadingGames, error } = useQuery<TwitchGame[]>({
     queryKey: ["/api/twitch/games/top", page],
     queryFn: async () => {
@@ -42,24 +51,25 @@ export default function ExplorePage() {
       if (!response.ok) throw new Error("Failed to fetch trending games");
       return response.json();
     },
-    enabled: hasMore,
+    enabled: !searchQuery && hasMore,
   });
 
   useEffect(() => {
-    if (games && games.length > 0) {
+    if (!searchQuery && games && games.length > 0) {
       setAllLoadedGames(prev => {
         const existingIds = new Set(prev.map(g => g.id));
         const newGames = games.filter(g => !existingIds.has(g.id));
         return [...prev, ...newGames];
       });
       if (games.length < gamesPerPage) setHasMore(false);
-    } else if (games && games.length === 0 && page === 0) {
+    } else if (!searchQuery && games && games.length === 0 && page === 0) {
       setHasMore(false);
     }
-  }, [games, gamesPerPage, page]);
+  }, [games, gamesPerPage, page, searchQuery]);
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
+    if (searchQuery) return;
     const currentLoadingRef = loadingRef.current;
     if (!currentLoadingRef || !hasMore || isLoadingGames) return;
     const observer = new IntersectionObserver(
@@ -72,15 +82,15 @@ export default function ExplorePage() {
     );
     observer.observe(currentLoadingRef);
     return () => { if (currentLoadingRef) observer.unobserve(currentLoadingRef); };
-  }, [hasMore, isLoadingGames]);
+  }, [hasMore, isLoadingGames, searchQuery]);
 
   const navigateToGame = (gameName: string) => {
-    const gameSlug = gameName
+    const gameSlug = (gameName ?? "")
       .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    setLocation(`/games/${gameSlug}`);
+      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    if (gameSlug) setLocation(`/games/${gameSlug}`);
   };
 
   const handleGameClick = (gameName: string) => navigateToGame(gameName);
@@ -89,6 +99,11 @@ export default function ExplorePage() {
     setSelectedGame(game);
     if (game) navigateToGame(game.name);
   };
+
+  // Show search results overlay when URL has ?q=
+  if (searchQuery) {
+    return <SearchResults query={searchQuery} />;
+  }
 
   if (isLoadingGames && page === 0) {
     return (
@@ -112,10 +127,8 @@ export default function ExplorePage() {
     );
   }
 
-  const isMobileView = window.innerWidth <= 768;
-
   return (
-    <div className={`bg-background ${isMobileView ? 'pb-24' : ''}`}>
+    <div className={`bg-background ${isMobileView ? "pb-24" : ""}`}>
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -130,14 +143,14 @@ export default function ExplorePage() {
               onClick={() => setPickerOpen(true)}
               className="w-full flex items-center gap-3 rounded-full px-4 py-3 text-left transition-colors"
               style={{
-                background: 'rgba(255,255,255,0.06)',
-                border: selectedGame ? '1.5px solid #B7FF1A' : '1.5px solid rgba(255,255,255,0.15)',
+                background: "rgba(255,255,255,0.06)",
+                border: selectedGame ? "1.5px solid #B7FF1A" : "1.5px solid rgba(255,255,255,0.15)",
               }}
             >
               {selectedGame ? (
                 <>
-                  <Gamepad2 className="h-5 w-5 shrink-0" style={{ color: '#B7FF1A' }} />
-                  <span className="flex-1 truncate font-medium" style={{ color: '#B7FF1A' }}>
+                  <Gamepad2 className="h-5 w-5 shrink-0" style={{ color: "#B7FF1A" }} />
+                  <span className="flex-1 truncate font-medium" style={{ color: "#B7FF1A" }}>
                     {selectedGame.name}
                   </span>
                 </>
@@ -165,17 +178,22 @@ export default function ExplorePage() {
                   <div className="aspect-[3/4] relative overflow-hidden rounded-t-lg">
                     {game.box_art_url ? (
                       <img
-                        src={game.box_art_url.replace('{width}x{height}', '285x380')}
-                        alt={game.name}
+                        src={game.box_art_url
+                          .replace("{width}x{height}", "285x380")
+                          .replace("{width}", "285")
+                          .replace("{height}", "380")}
+                        alt={game.name ?? "Game"}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
-                          target.src = "/api/placeholder/300x400?text=" + encodeURIComponent(game.name);
+                          target.style.display = "none";
                         }}
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                        <span className="text-primary text-4xl font-bold">{game.name.charAt(0)}</span>
+                        <span className="text-primary text-4xl font-bold">
+                          {(game.name ?? "?").charAt(0)}
+                        </span>
                       </div>
                     )}
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
@@ -186,7 +204,7 @@ export default function ExplorePage() {
                   </div>
                   <div className="p-4">
                     <h3 className="font-semibold text-sm line-clamp-2 min-h-[2.5rem] text-foreground group-hover:text-primary transition-colors">
-                      {game.name}
+                      {game.name ?? ""}
                     </h3>
                   </div>
                 </CardContent>
@@ -213,8 +231,12 @@ export default function ExplorePage() {
           {!hasMore && allLoadedGames.length > 0 && (
             <div className="flex justify-center py-8">
               <div className="text-center">
-                <p className="text-muted-foreground text-sm mb-2">You've reached the end of trending games</p>
-                <p className="text-xs text-muted-foreground">Showing all {allLoadedGames.length} games</p>
+                <p className="text-muted-foreground text-sm mb-2">
+                  You've reached the end of trending games
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Showing all {allLoadedGames.length} games
+                </p>
               </div>
             </div>
           )}

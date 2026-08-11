@@ -272,6 +272,36 @@ export class SupabaseStorage {
   }
 
   /**
+   * Upload a buffer to a fixed/deterministic storage path, overwriting any existing file.
+   * Used for user-specific resources like outro videos that should overwrite on regeneration.
+   */
+  async uploadBufferToFixedPath(
+    buffer: Buffer,
+    storagePath: string,
+    contentType: string
+  ): Promise<{ url: string; path: string }> {
+    const client = this.supabaseAdmin || this.supabase;
+    const { error } = await client.storage
+      .from(this.bucketName)
+      .upload(storagePath, buffer, {
+        contentType,
+        upsert: true,
+        cacheControl: '3600',
+      });
+
+    if (error) {
+      console.error('Supabase fixed-path upload error:', error);
+      throw error;
+    }
+
+    const { data: { publicUrl } } = client.storage
+      .from(this.bucketName)
+      .getPublicUrl(storagePath);
+
+    return { url: publicUrl, path: storagePath };
+  }
+
+  /**
    * Get signed URL for direct client-side upload to Supabase
    */
   async getSignedUploadUrl(filePath: string, contentType: string): Promise<{ uploadUrl: string; publicUrl: string }> {

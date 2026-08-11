@@ -69,13 +69,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex flex-col sm:items-center sm:justify-center p-0 sm:p-4 bg-[#0a1a0f]">
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-[#0a1a0f] to-primary/5" />
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/8 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-      </div>
-
+    <div className="relative min-h-screen flex flex-col sm:items-center sm:justify-center p-0 sm:p-4 bg-[#071013]">
       <div className="relative z-10 w-full min-h-screen sm:min-h-0 max-w-full sm:max-w-lg md:max-w-5xl">
         <OnboardingFlow
           userId={user.id}

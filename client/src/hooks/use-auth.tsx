@@ -10,7 +10,7 @@ import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { isNative } from "@/lib/platform";
 import { clearTokens, setTokens } from "@/lib/auth-token";
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // and run the full flow.
   const isInitialAuthCheckRef = useRef(true);
 
-  // Handle Firebase authentication state changes
+  // Handle Firebase authentication state changes (+ redirect sign-in results)
   useEffect(() => {
     if (!auth) {
       setFirebaseAuthChecked(true);
@@ -106,74 +106,83 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let mounted = true;
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser && firebaseUser.email) {
-        const isInitialRestore = isInitialAuthCheckRef.current;
-        isInitialAuthCheckRef.current = false;
+    // Dedup: track which Firebase UID we've already processed in this page
+    // load so that rapid onAuthStateChanged fires don't double-call
+    // /api/auth/google for the same user.
+    const processedUid = { current: null as string | null };
 
-        if (isInitialRestore) {
-          if (mounted) setFirebaseAuthChecked(true);
-          return;
+    const handleFirebaseSignIn = async (firebaseUser: FirebaseUser) => {
+      if (!firebaseUser.email) return;
+      if (processedUid.current === firebaseUser.uid) return;
+      processedUid.current = firebaseUser.uid;
+
+      try {
+        const idToken = await firebaseUser.getIdToken();
+        const response = await apiRequest("POST", "/api/auth/google", {
+          idToken
+        });
+
+        if (!mounted) return;
+
+        const userData = await response.json();
+
+        if (!mounted) return;
+
+        // On native, exchange the freshly-created session for a JWT pair.
+        await issueNativeTokens();
+
+        const streakInfo = userData.streakInfo;
+        // Mark reward as shown so the session-restore useEffect doesn't double-fire
+        if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
+          dailyRewardShownRef.current = true;
         }
+        queryClient.setQueryData(["/api/user"], userData);
 
-        try {
-          const response = await apiRequest("POST", "/api/auth/google", {
-            email: firebaseUser.email,
-            displayName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-            photoURL: firebaseUser.photoURL,
-            uid: firebaseUser.uid
-          });
-
-          if (!mounted) return;
-
-          const userData = await response.json();
-
-          if (!mounted) return;
-
-          // On native, exchange the freshly-created session for a JWT pair.
-          await issueNativeTokens();
-
-          const streakInfo = userData.streakInfo;
-          // Mark reward as shown so the session-restore useEffect doesn't double-fire
-          if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
-            dailyRewardShownRef.current = true;
-          }
-          queryClient.setQueryData(["/api/user"], userData);
-
-          if (userData.needsOnboarding) {
-            if (userData.isNewGoogleUser) {
-              toast({
-                title: "Welcome to Gamefolio!",
-                description: "Let's set up your gaming profile.",
-                variant: "gamefolioSuccess",
-              });
-            } else {
-              toast({
-                title: "Complete your profile",
-                description: "Finish setting up your gaming profile to continue.",
-                variant: "gamefolioSuccess",
-              });
-            }
-            setLocation("/onboarding");
-          } else {
+        if (userData.needsOnboarding) {
+          if (userData.isNewGoogleUser) {
             toast({
-              title: "Welcome back!",
-              description: `You're now signed in with Google.`,
+              title: "Welcome to Gamefolio!",
+              description: "Let's set up your gaming profile.",
               variant: "gamefolioSuccess",
             });
-
-            setLocation("/");
+          } else {
+            toast({
+              title: "Complete your profile",
+              description: "Finish setting up your gaming profile to continue.",
+              variant: "gamefolioSuccess",
+            });
           }
-        } catch (error) {
-          if (!mounted) return;
-          console.error('Google auth error:', error);
+          setLocation("/onboarding");
+        } else {
           toast({
-            title: "Authentication failed",
-            description: "There was an error signing you in. Please try again.",
-            variant: "gamefolioError",
+            title: "Welcome back!",
+            description: `You're now signed in with Google.`,
+            variant: "gamefolioSuccess",
           });
+          setLocation("/");
         }
+      } catch (error) {
+        if (!mounted) return;
+        console.error('Google auth error:', error);
+        toast({
+          title: "Authentication failed",
+          description: "There was an error signing you in. Please try again.",
+          variant: "gamefolioError",
+        });
       }
+    };
+
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Firebase always emits one onAuthStateChanged on init to report the
+      // restored session state. Consume the flag on that very first fire
+      // regardless of whether a user is present.
+      const isInitialRestore = isInitialAuthCheckRef.current;
+      isInitialAuthCheckRef.current = false;
+
+      if (firebaseUser && firebaseUser.email && !isInitialRestore) {
+        if (mounted) await handleFirebaseSignIn(firebaseUser);
+      }
+
       if (mounted) {
         setFirebaseAuthChecked(true);
       }

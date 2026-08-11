@@ -1,5 +1,5 @@
 import { Browser } from '@capacitor/browser';
-import { isNative, openExternal, API_BASE } from './platform';
+import { isNative, API_BASE } from './platform';
 import { CAPACITOR_APP_SCHEME, awaitMobileAuthCallback } from './native-auth-bridge';
 
 interface XboxUser {
@@ -34,16 +34,25 @@ function generateOAuthState(): string {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
+/**
+ * Store and retrieve OAuth state via a short-lived cookie.
+ * Cookies are not subject to COOP-induced browsing context group resets or
+ * Chrome Storage Partitioning — the most reliable option for cross-navigation
+ * state where localStorage and sessionStorage have both proven unreliable.
+ */
 function storeOAuthState(state: string): void {
-  localStorage.setItem('xbox_oauth_state', state);
+  const expires = new Date(Date.now() + 5 * 60 * 1000).toUTCString(); // 5 min TTL
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `xbox_oauth_state=${state}; path=/; expires=${expires}; SameSite=Lax${secure}`;
 }
 
 function getStoredOAuthState(): string | null {
-  return localStorage.getItem('xbox_oauth_state');
+  const match = document.cookie.match(/(?:^|;\s*)xbox_oauth_state=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
 function clearOAuthState(): void {
-  localStorage.removeItem('xbox_oauth_state');
+  document.cookie = 'xbox_oauth_state=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
 }
 
 function buildXboxAuthUrl(state: string): string {
@@ -95,7 +104,9 @@ export const signInWithXbox = async (): Promise<XboxNativeLoginResult | void> =>
   const state = generateOAuthState();
   storeOAuthState(state);
   localStorage.removeItem('xbox_oauth_mode');
-  await openExternal(buildXboxAuthUrl(state));
+  // Same-tab redirect so localStorage state is readable in the callback tab.
+  // window.open/_blank partitions storage in Chrome 115+ with noopener.
+  window.location.href = buildXboxAuthUrl(state);
 };
 
 export const connectXboxAccount = async (): Promise<XboxNativeConnectResult | void> => {
@@ -114,7 +125,9 @@ export const connectXboxAccount = async (): Promise<XboxNativeConnectResult | vo
   const state = generateOAuthState();
   storeOAuthState(state);
   localStorage.setItem('xbox_oauth_mode', 'connect');
-  await openExternal(buildXboxAuthUrl(state));
+  // Same-tab redirect so localStorage state is readable in the callback tab.
+  // window.open/_blank partitions storage in Chrome 115+ with noopener.
+  window.location.href = buildXboxAuthUrl(state);
 };
 
 export const handleXboxCallback = async (code: string, state: string): Promise<XboxUser> => {

@@ -93,7 +93,7 @@ export default function ProOnboardingScreen({ onComplete, lootboxReward }: ProOn
     const RarityIcon = rarityIcons[rarity] || Package;
 
     return (
-      <div className="flex flex-col w-full h-full min-h-[500px] md:min-h-[600px] bg-[#101D27] relative overflow-hidden">
+      <div className="flex flex-col w-full h-full min-h-[500px] md:min-h-[600px] bg-[#0B1218] relative overflow-hidden">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[344px] h-[746px] rounded-full bg-[#B7FF1A33] blur-[60px]" />
         <div className="absolute top-1/4 left-1/3 -translate-x-1/2 w-[344px] h-[746px] rounded-full bg-[#2b7fff1a] blur-[60px]" />
 
@@ -108,10 +108,10 @@ export default function ProOnboardingScreen({ onComplete, lootboxReward }: ProOn
                 Subscription Active
               </span>
             </div>
-            <h1 className="text-4xl font-black text-[#f8fafc] uppercase text-center" style={{ letterSpacing: '-0.9px' }}>
+            <h1 className="text-4xl font-black text-[#F5F7F2] uppercase text-center" style={{ letterSpacing: '-0.9px' }}>
               Pro Unlocked
             </h1>
-            <p className="text-base font-medium text-[#94a3b8] text-center max-w-[293px] leading-[26px]">
+            <p className="text-base font-medium text-[#B8C0AE] text-center max-w-[293px] leading-[26px]">
               The ultimate gaming experience starts now. All premium features, assets, and perks are now at your fingertips.
             </p>
           </motion.div>
@@ -128,7 +128,7 @@ export default function ProOnboardingScreen({ onComplete, lootboxReward }: ProOn
                 <span className="text-sm font-bold uppercase tracking-wider">Welcome Bonus Lootbox</span>
               </div>
               <div className={`relative p-1 rounded-2xl ${rarityStyle.bg} border-2 ${rarityStyle.border}`}>
-                <div className="w-28 h-28 rounded-xl overflow-hidden flex items-center justify-center bg-[#1a1a2e]">
+                <div className="w-28 h-28 rounded-xl overflow-hidden flex items-center justify-center bg-[#0B1218]">
                   {lootboxReward.reward.assetType === 'xp_reward' ? (
                     <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 flex items-center justify-center">
                       <Zap className="w-8 h-8 text-yellow-900" />
@@ -184,11 +184,11 @@ export default function ProOnboardingScreen({ onComplete, lootboxReward }: ProOn
   const slide = slides[currentSlide];
 
   return (
-    <div className="flex flex-col w-full h-full min-h-[500px] md:min-h-[600px] bg-[#101D27] overflow-hidden">
+    <div className="flex flex-col w-full h-full min-h-[500px] md:min-h-[600px] bg-[#0B1218] overflow-hidden">
       <div className="flex justify-end items-center h-[92px] px-6 pt-12 pb-2">
         <button
           onClick={handleSkip}
-          className="text-sm font-medium text-[#94a3b8] hover:text-white transition-colors px-4 py-2"
+          className="text-sm font-medium text-[#B8C0AE] hover:text-white transition-colors px-4 py-2"
         >
           Skip
         </button>
@@ -207,7 +207,7 @@ export default function ProOnboardingScreen({ onComplete, lootboxReward }: ProOn
             <h2 className="text-[30px] font-bold text-white text-center" style={{ letterSpacing: '-0.75px', lineHeight: '36px' }}>
               {slide.title}
             </h2>
-            <p className="text-lg text-[#94a3b8] text-center max-w-[260px] leading-[29.25px]">
+            <p className="text-lg text-[#B8C0AE] text-center max-w-[260px] leading-[29.25px]">
               {slide.description}
             </p>
           </motion.div>
@@ -224,7 +224,7 @@ export default function ProOnboardingScreen({ onComplete, lootboxReward }: ProOn
           >
             <div className="absolute w-72 h-72 rounded-full bg-[#B7FF1A33] blur-[40px] -top-10 -left-10" />
             <div className="absolute w-48 h-48 rounded-full bg-[#14532d4d] blur-[20px]" />
-            <div className="relative backdrop-blur-sm bg-[#1e293b80] border border-[#1e293b80] rounded-[40px] w-48 h-48 flex items-center justify-center" style={{ boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+            <div className="relative backdrop-blur-sm bg-[#1B2A3380] border border-[#1B2A3380] rounded-[40px] w-48 h-48 flex items-center justify-center" style={{ boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
               {slide.icon}
             </div>
           </motion.div>
@@ -237,7 +237,7 @@ export default function ProOnboardingScreen({ onComplete, lootboxReward }: ProOn
             <div
               key={i}
               className={`flex-1 h-2 rounded-full transition-colors duration-300 ${
-                i <= currentSlide ? 'bg-[#B7FF1A]' : 'bg-[#1e293b]'
+                i <= currentSlide ? 'bg-[#B7FF1A]' : 'bg-[#1B2A33]'
               }`}
             />
           ))}

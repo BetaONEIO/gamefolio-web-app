@@ -1,4 +1,4 @@
-import * as brevo from '@getbrevo/brevo';
+import { BrevoClient } from '@getbrevo/brevo';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -6,10 +6,9 @@ if (!process.env.BREVO_API_KEY) {
   console.warn("BREVO_API_KEY not set - email functionality will be disabled");
 }
 
-const apiInstance = new brevo.TransactionalEmailsApi();
-if (process.env.BREVO_API_KEY) {
-  apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
-}
+const apiInstance = process.env.BREVO_API_KEY
+  ? new BrevoClient({ apiKey: process.env.BREVO_API_KEY })
+  : null;
 
 const FROM_EMAIL = 'noreply@gamefolio.com';
 
@@ -89,15 +88,14 @@ async function sendEmail(params: EmailParams): Promise<boolean> {
   }
 
   try {
-    const sendSmtpEmail = new brevo.SendSmtpEmail();
-    sendSmtpEmail.to = [{ email: params.to }];
-    sendSmtpEmail.sender = { email: FROM_EMAIL, name: 'Gamefolio' };
-    sendSmtpEmail.subject = params.subject;
-    sendSmtpEmail.htmlContent = params.html;
-
-    const response = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    const response = await apiInstance!.transactionalEmails.sendTransacEmail({
+      to: [{ email: params.to }],
+      sender: { email: FROM_EMAIL, name: 'Gamefolio' },
+      subject: params.subject,
+      htmlContent: params.html,
+    });
     console.log('Email sent successfully to:', params.to);
-    console.log('Brevo API response:', JSON.stringify(response?.body || response));
+    console.log('Brevo API response:', JSON.stringify(response));
     return true;
   } catch (error: any) {
     console.error('Failed to send email:', error);

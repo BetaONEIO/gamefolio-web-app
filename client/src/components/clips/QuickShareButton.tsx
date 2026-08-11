@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Popover,
   PopoverContent,
@@ -35,16 +35,48 @@ const QuickShareButton: React.FC<QuickShareButtonProps> = ({
 }) => {
   const [showPopover, setShowPopover] = useState(false);
   const { toast } = useToast();
-  
-  // Generate share URL for the clip
-  const shareUrl = typeof window !== 'undefined' 
-    ? `${window.location.origin}/clips/${clipId}`
-    : `/clips/${clipId}`;
-  
+
+  // Resolve the canonical /@username/clip/<shareCode> URL from the server rather
+  // than exposing the internal numeric id (/clips/123). Fetched lazily the first
+  // time the popover opens — this button renders once per clip in a list, so
+  // fetching on mount would fire a request for every clip on screen.
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const resolvePromiseRef = useRef<Promise<void> | null>(null);
+
+  const resolveShareUrl = useCallback(() => {
+    if (shareUrl) return resolvePromiseRef.current ?? Promise.resolve();
+    if (!resolvePromiseRef.current) {
+      resolvePromiseRef.current = (async () => {
+        try {
+          const res = await fetch(`/api/clips/${clipId}/share`);
+          if (res.ok) {
+            const data = await res.json();
+            const url = data.shareUrl || data.clipUrl;
+            if (url) {
+              setShareUrl(url);
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Error resolving share URL:', error);
+        }
+        // Last-resort fallback if the share endpoint is unavailable.
+        resolvePromiseRef.current = null; // allow a retry on next open
+      })();
+    }
+    return resolvePromiseRef.current;
+  }, [clipId, shareUrl]);
+
+  // Prefetch the canonical URL as soon as the popover opens so the share
+  // actions are ready by the time the user clicks one.
+  useEffect(() => {
+    if (showPopover) void resolveShareUrl();
+  }, [showPopover, resolveShareUrl]);
+
   // Generate share text
   const shareText = `Check out this awesome gaming clip: ${clipTitle}`;
   const encodedShareText = encodeURIComponent(shareText);
-  const encodedShareUrl = encodeURIComponent(shareUrl);
+  const encodedShareUrl = encodeURIComponent(shareUrl ?? '');
   
   // Create social media share URLs
   const twitterUrl = `https://twitter.com/intent/tweet?text=${encodedShareText}&url=${encodedShareUrl}`;
@@ -57,6 +89,7 @@ const QuickShareButton: React.FC<QuickShareButtonProps> = ({
   // Define sharing platforms
   const platforms = [
     { name: 'Copy Link', icon: <FaLink className="h-4 w-4" />, color: 'bg-gray-600', action: () => {
+      if (!shareUrl) return;
       navigator.clipboard.writeText(shareUrl);
       toast({
         title: "Link copied!",
@@ -90,6 +123,7 @@ const QuickShareButton: React.FC<QuickShareButtonProps> = ({
     
     if (platform.url) {
       void (async () => {
+        if (!shareUrl) return;
         if (isNative) {
           const handled = await nativeShare({
             title: 'Shared from Gamefolio',
@@ -124,6 +158,14 @@ const QuickShareButton: React.FC<QuickShareButtonProps> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-2" align="center">
+        {!shareUrl ? (
+          <div className="flex items-center justify-center px-4 py-2">
+            <div
+              className="h-4 w-4 rounded-full border-2 border-t-transparent animate-spin"
+              style={{ borderColor: "#B7FF1A", borderTopColor: "transparent" }}
+            />
+          </div>
+        ) : (
         <div className="flex items-center gap-1">
           {platforms.map((platform, index) => (
             <button
@@ -139,6 +181,7 @@ const QuickShareButton: React.FC<QuickShareButtonProps> = ({
             </button>
           ))}
         </div>
+        )}
       </PopoverContent>
     </Popover>
   );

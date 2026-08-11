@@ -11,16 +11,23 @@ import { Palette, Eye, RotateCcw } from "lucide-react";
 
 const DEFAULT_COLORS = {
   accentColor: "#4C8",
-  primaryColor: "#02172C", 
-  backgroundColor: "#0B2232",
+  primaryColor: "#071013", 
+  backgroundColor: "#071013",
   cardColor: "#1E3A8A"
 };
 
 const PRESET_THEMES = [
   {
+    name: "Mayhem",
+    accentColor: "#00DFFF",
+    backgroundColor: "#0d0d0d",
+    cardColor: "#000000",
+    profileBackgroundGradientCss: "linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)"
+  },
+  {
     name: "Default",
     accentColor: "#4C8",
-    backgroundColor: "#0B2232",
+    backgroundColor: "#071013",
     cardColor: "#1E3A8A"
   },
   {
@@ -44,7 +51,7 @@ const PRESET_THEMES = [
   {
     name: "Sunset Orange",
     accentColor: "#FF6B35",
-    backgroundColor: "#1A1A2E",
+    backgroundColor: "#0B1218",
     cardColor: "#16213E"
   },
   {
@@ -117,8 +124,21 @@ export default function CustomizePage() {
   const [colors, setColors] = useState({
     accentColor: user?.accentColor || DEFAULT_COLORS.accentColor,
     backgroundColor: user?.backgroundColor || DEFAULT_COLORS.backgroundColor,
-    cardColor: user?.cardColor || DEFAULT_COLORS.cardColor
+    cardColor: user?.cardColor || DEFAULT_COLORS.cardColor,
+    profileBackgroundGradientCss: (user as any)?.profileBackgroundGradientCss || ""
   });
+
+  const savedColors = {
+    accentColor: user?.accentColor || DEFAULT_COLORS.accentColor,
+    backgroundColor: user?.backgroundColor || DEFAULT_COLORS.backgroundColor,
+    cardColor: user?.cardColor || DEFAULT_COLORS.cardColor,
+    profileBackgroundGradientCss: (user as any)?.profileBackgroundGradientCss || ""
+  };
+  const isColorsDirty =
+    colors.accentColor !== savedColors.accentColor ||
+    colors.backgroundColor !== savedColors.backgroundColor ||
+    colors.cardColor !== savedColors.cardColor ||
+    colors.profileBackgroundGradientCss !== savedColors.profileBackgroundGradientCss;
 
   const [activeColorPicker, setActiveColorPicker] = useState<string | null>(null);
 
@@ -151,12 +171,13 @@ export default function CustomizePage() {
     setColors({
       accentColor: preset.accentColor,
       backgroundColor: preset.backgroundColor,
-      cardColor: preset.cardColor
+      cardColor: preset.cardColor,
+      profileBackgroundGradientCss: (preset as any).profileBackgroundGradientCss || ""
     });
   };
 
   const resetToDefaults = () => {
-    setColors(DEFAULT_COLORS);
+    setColors({ ...DEFAULT_COLORS, profileBackgroundGradientCss: "" });
   };
 
   const saveColors = () => {
@@ -253,9 +274,9 @@ export default function CustomizePage() {
                 <div className="flex gap-3">
                   <Button 
                     onClick={saveColors}
-                    disabled={updateColorsMutation.isPending}
+                    disabled={updateColorsMutation.isPending || !isColorsDirty}
                     className="flex-1"
-                    style={{ backgroundColor: colors.accentColor }}
+                    style={{ backgroundColor: isColorsDirty ? colors.accentColor : undefined }}
                   >
                     {updateColorsMutation.isPending ? "Saving..." : "Save Colors"}
                   </Button>
@@ -278,7 +299,9 @@ export default function CustomizePage() {
               </CardHeader>
               <CardContent className="max-h-none overflow-visible">
                 <div className="grid grid-cols-2 gap-3 auto-rows-max">
-                  {PRESET_THEMES.map((preset) => (
+                  {PRESET_THEMES.map((preset) => {
+                    const gradientCss = (preset as any).profileBackgroundGradientCss;
+                    return (
                     <div
                       key={preset.name}
                       className="p-3 rounded-lg border-2 border-gray-600 cursor-pointer hover:border-primary transition-colors"
@@ -289,18 +312,28 @@ export default function CustomizePage() {
                           className="w-4 h-4 rounded" 
                           style={{ backgroundColor: preset.accentColor }}
                         />
-                        <div 
-                          className="w-4 h-4 rounded" 
-                          style={{ backgroundColor: preset.backgroundColor }}
-                        />
-                        <div 
-                          className="w-4 h-4 rounded" 
-                          style={{ backgroundColor: preset.cardColor }}
-                        />
+                        {gradientCss ? (
+                          <div
+                            className="w-8 h-4 rounded"
+                            style={{ background: gradientCss }}
+                          />
+                        ) : (
+                          <>
+                            <div 
+                              className="w-4 h-4 rounded" 
+                              style={{ backgroundColor: preset.backgroundColor }}
+                            />
+                            <div 
+                              className="w-4 h-4 rounded" 
+                              style={{ backgroundColor: preset.cardColor }}
+                            />
+                          </>
+                        )}
                       </div>
                       <p className="text-sm text-white font-medium">{preset.name}</p>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -319,7 +352,9 @@ export default function CustomizePage() {
               <CardContent>
                 <div 
                   className="p-6 rounded-lg min-h-[400px]"
-                  style={{ backgroundColor: colors.backgroundColor }}
+                  style={colors.profileBackgroundGradientCss
+                    ? { background: colors.profileBackgroundGradientCss }
+                    : { backgroundColor: colors.backgroundColor }}
                 >
                   {/* Profile Header Preview */}
                   <div 

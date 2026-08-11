@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
@@ -21,11 +22,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Drawer as DrawerPrimitive } from "vaul";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,10 +33,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 interface TrendingClipMenuProps {
   clip: ClipWithUser;
   onHide?: () => void;
+  contentType?: 'clip' | 'screenshot';
+  screenshotImageUrl?: string | null;
 }
 
 function MenuItem({
@@ -75,18 +85,24 @@ function MenuDivider() {
   return <div className="my-1 mx-3 h-px bg-white/10" />;
 }
 
-export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
+export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screenshotImageUrl }: TrendingClipMenuProps) {
+  const isScreenshot = contentType === 'screenshot';
+  const noun = isScreenshot ? 'screenshot' : (clip.videoType === 'reel' ? 'reel' : 'clip');
+  const Noun = noun.charAt(0).toUpperCase() + noun.slice(1);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
-  const { openClipDialog, closeClipDialog } = useClipDialog();
+  const { closeClipDialog } = useClipDialog();
 
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showEditCaption, setShowEditCaption] = useState(false);
+  const [editTitle, setEditTitle] = useState(clip.title);
+  const [editDescription, setEditDescription] = useState((clip as any).description ?? "");
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -116,14 +132,28 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => apiRequest("DELETE", `/api/clips/${clip.id}`),
+    mutationFn: () => apiRequest("DELETE", isScreenshot ? `/api/screenshots/${clip.id}` : `/api/clips/${clip.id}`),
     onSuccess: () => {
       toast({
-        title: clip.videoType === "reel" ? "Reel deleted" : "Clip deleted",
+        title: `${Noun} deleted`,
         variant: "gamefolioSuccess",
       });
+      // Immediately remove from all caches for instant UI update
+      const removeClip = (old: any) => {
+        if (!old) return old;
+        if (Array.isArray(old)) return old.filter((c: any) => c.id !== clip.id);
+        if (old?.clips && Array.isArray(old.clips)) return { ...old, clips: old.clips.filter((c: any) => c.id !== clip.id) };
+        return old;
+      };
+      queryClient.setQueryData([`/api/users/${clip.user.username}/clips`], removeClip);
+      queryClient.setQueryData(['/api/clips/latest'], removeClip);
+      queryClient.setQueryData(['/api/reels/latest'], removeClip);
+      // Background invalidations
       queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
       queryClient.invalidateQueries({ queryKey: ["/api/trending"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/clips`] });
+      queryClient.invalidateQueries({ queryKey: ['/api/clips/latest'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });
       setShowDeleteConfirm(false);
       onHide?.();
     },
@@ -133,7 +163,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
   });
 
   const pinMutation = useMutation({
-    mutationFn: () => apiRequest("PATCH", `/api/clips/${clip.id}/pin`),
+    mutationFn: () => apiRequest("PATCH", isScreenshot ? `/api/screenshots/${clip.id}/pin` : `/api/clips/${clip.id}/pin`),
     onSuccess: (data: any) => {
       const isPinned = !!data?.pinnedAt;
       toast({
@@ -151,37 +181,116 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
     },
   });
 
+  const editCaptionMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("PATCH", isScreenshot ? `/api/screenshots/${clip.id}` : `/api/clips/${clip.id}`, {
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+      }),
+    onSuccess: () => {
+      toast({
+        title: `${Noun} updated`,
+        description: "Your caption has been saved.",
+        variant: "gamefolioSuccess",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/trending"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/clips/${clip.id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/clips`] });
+      setShowEditCaption(false);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to update caption", description: err.message, variant: "destructive" });
+    },
+  });
+
   const handleDownload = async () => {
     close();
     setIsDownloading(true);
     try {
-      toast({
-        title: "⚡ Preparing your clip…",
-        description: "Adding Gamefolio watermark. This may take a moment.",
-      });
-      const response = await fetch(`/api/clips/${clip.id}/download`, {
-        credentials: "include",
-        headers: { Accept: "video/mp4" },
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error((data as any).error || "Download failed");
-      }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
       const safeTitle = clip.title.replace(/[^a-z0-9]/gi, "_").slice(0, 60);
-      a.download = `${safeTitle}_gamefolio.mp4`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast({
-        title: "Download complete!",
-        description: "Saved with Gamefolio watermark. Share it anywhere!",
-        variant: "gamefolioSuccess",
-      });
+
+      if (isScreenshot) {
+        toast({
+          title: "⚡ Preparing your screenshot…",
+          description: "Adding Gamefolio watermark. This may take a moment.",
+        });
+        const response = await fetch(`/api/screenshots/${clip.id}/download`, {
+          credentials: "include",
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error((data as any).error || "Download failed");
+        }
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${safeTitle}_gamefolio.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast({
+          title: "Download complete!",
+          description: "Saved with Gamefolio watermark. Share it anywhere!",
+          variant: "gamefolioSuccess",
+        });
+      } else {
+        let downloadedViaWatermark = false;
+        try {
+          const response = await fetch(`/api/clips/${clip.id}/download`, {
+            credentials: "include",
+            headers: { Accept: "video/mp4" },
+          });
+          if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error((data as any).error || "Download failed");
+          }
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${safeTitle}_gamefolio.mp4`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          downloadedViaWatermark = true;
+          toast({
+            title: "Download complete!",
+            description: "Saved with Gamefolio watermark. Share it anywhere!",
+            variant: "gamefolioSuccess",
+          });
+        } catch (watermarkErr: any) {
+          // Watermark/FFmpeg stream failed — fall back to direct signed URL download
+          console.warn("Watermark download failed, falling back to direct download:", watermarkErr?.message);
+        }
+
+        if (!downloadedViaWatermark) {
+          // Fallback: fetch a short-lived signed URL and trigger browser download directly
+          const fallback = await fetch(`/api/clips/${clip.id}/download-url`, {
+            credentials: "include",
+          });
+          if (!fallback.ok) {
+            const errData = await fallback.json().catch(() => ({}));
+            throw new Error((errData as any).error || "Download failed");
+          }
+          const { url: directUrl, filename } = await fallback.json();
+          const a = document.createElement("a");
+          a.href = directUrl;
+          a.download = filename || `${safeTitle}_gamefolio.mp4`;
+          a.target = "_blank";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          toast({
+            title: "Download started!",
+            description: "Your video is downloading.",
+            variant: "gamefolioSuccess",
+          });
+        }
+      }
     } catch (err: any) {
       toast({
         title: "Download failed",
@@ -215,7 +324,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
             <Download className="h-4 w-4" />
           )
         }
-        label={isDownloading ? "Downloading…" : "Download Clip"}
+        label={isDownloading ? "Downloading…" : `Download ${Noun}`}
         disabled={isDownloading}
         onClick={handleDownload}
       />
@@ -239,7 +348,9 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
         label="Edit Caption"
         onClick={() => {
           close();
-          openClipDialog(clip.id);
+          setEditTitle(clip.title);
+          setEditDescription((clip as any).description ?? "");
+          setShowEditCaption(true);
         }}
       />
       <MenuItem
@@ -250,10 +361,24 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
           pinMutation.mutate();
         }}
       />
+      {!isScreenshot && (
+        <MenuItem
+          icon={
+            isDownloading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )
+          }
+          label={isDownloading ? "Downloading…" : `Download ${Noun}`}
+          disabled={isDownloading}
+          onClick={handleDownload}
+        />
+      )}
       <MenuDivider />
       <MenuItem
         icon={<Trash2 className="h-4 w-4" />}
-        label={clip.videoType === "reel" ? "Delete Reel" : "Delete Clip"}
+        label={`Delete ${Noun}`}
         destructive
         onClick={() => {
           close();
@@ -267,7 +392,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
     <div className="py-1">{isOwn ? ownMenu : otherUserMenu}</div>
   );
 
-  const menuLabel = isOwn ? "Creator tools" : "Clip options";
+  const menuLabel = isOwn ? "Creator tools" : `${Noun} options`;
 
   // Mobile: manually toggles the Sheet (no SheetTrigger wrapper)
   const mobileTriggerBtn = (
@@ -308,23 +433,26 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
       {isMobile ? (
         <>
           {mobileTriggerBtn}
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetContent
-              side="bottom"
-              className="p-0 bg-[#0d1b26] border-t border-white/10 rounded-t-2xl [&>button]:hidden"
-            >
-              <SheetTitle className="sr-only">{menuLabel}</SheetTitle>
-              <div className="flex justify-center pt-3 pb-2">
-                <div className="w-10 h-1 rounded-full bg-white/20" />
-              </div>
-              <div className="px-4 py-2 border-b border-white/10 mb-1">
-                <p className="text-xs text-muted-foreground truncate font-medium">{clip.title}</p>
-                <p className="text-xs text-muted-foreground/60 truncate">@{clip.user.username}</p>
-              </div>
-              {menuContent}
-              <div className="pb-20" />
-            </SheetContent>
-          </Sheet>
+          <DrawerPrimitive.Root open={isOpen} onOpenChange={setIsOpen} shouldScaleBackground={false}>
+            <DrawerPrimitive.Portal>
+              <DrawerPrimitive.Overlay className="fixed inset-0 z-[9999] bg-black/60" />
+              <DrawerPrimitive.Content
+                className="fixed inset-x-0 bottom-0 z-[9999] flex flex-col rounded-t-2xl bg-[#0B1218] border-t border-white/10 outline-none"
+              >
+                <DrawerPrimitive.Title className="sr-only">{menuLabel}</DrawerPrimitive.Title>
+                {/* Drag handle */}
+                <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing">
+                  <div className="w-10 h-1 rounded-full bg-white/30" />
+                </div>
+                <div className="px-4 py-2 border-b border-white/10 mb-1">
+                  <p className="text-xs text-muted-foreground truncate font-medium">{clip.title}</p>
+                  <p className="text-xs text-muted-foreground/60 truncate">@{clip.user.username}</p>
+                </div>
+                {menuContent}
+                <div className="pb-6" />
+              </DrawerPrimitive.Content>
+            </DrawerPrimitive.Portal>
+          </DrawerPrimitive.Root>
         </>
       ) : (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -332,19 +460,89 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
           <PopoverContent
             align="end"
             sideOffset={6}
-            className="w-52 p-0 bg-[#0d1b26] border border-white/10 shadow-2xl rounded-xl overflow-hidden"
+            className="w-52 p-0 bg-[#0B1218] border border-white/10 shadow-2xl rounded-xl overflow-hidden"
           >
             {menuContent}
           </PopoverContent>
         </Popover>
       )}
 
+      {/* Edit Caption dialog */}
+      <Dialog open={showEditCaption} onOpenChange={setShowEditCaption}>
+        <DialogContent
+          className="bg-[#0B1218] border border-white/10 text-foreground sm:max-w-md"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              Edit {noun} caption
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-title" className="text-sm text-muted-foreground">
+                Title
+              </Label>
+              <Input
+                id="edit-title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                maxLength={100}
+                className="bg-white/5 border-white/10 focus-visible:ring-primary"
+                placeholder="Enter a title…"
+              />
+              <p className="text-xs text-muted-foreground/60 text-right">
+                {editTitle.length}/100
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-description" className="text-sm text-muted-foreground">
+                Description
+              </Label>
+              <Textarea
+                id="edit-description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                maxLength={500}
+                rows={3}
+                className="bg-white/5 border-white/10 focus-visible:ring-primary resize-none"
+                placeholder="Add a description…"
+              />
+              <p className="text-xs text-muted-foreground/60 text-right">
+                {editDescription.length}/500
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              className="border-white/10 hover:bg-white/5"
+              onClick={() => setShowEditCaption(false)}
+              disabled={editCaptionMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => editCaptionMutation.mutate()}
+              disabled={editCaptionMutation.isPending || !editTitle.trim()}
+              className="bg-primary text-[#071013] hover:bg-primary/90 font-semibold"
+            >
+              {editCaptionMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving…</>
+              ) : (
+                "Save"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete confirmation */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Delete {clip.videoType === "reel" ? "reel" : "clip"}?
+              Delete {noun}?
             </AlertDialogTitle>
             <AlertDialogDescription>
               "{clip.title}" will be permanently deleted. This action cannot be undone.
@@ -369,7 +567,7 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Block @{clip.user.username}?</AlertDialogTitle>
             <AlertDialogDescription>
-              You won't see their clips, comments, or interactions anymore. You can unblock them
+              You won't see their content, comments, or interactions anymore. You can unblock them
               from your account settings at any time.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -385,6 +583,48 @@ export function TrendingClipMenu({ clip, onHide }: TrendingClipMenuProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Flashing download indicator — fixed bottom-right, visible on all screen sizes */}
+      {isDownloading && createPortal(
+        <div className="fixed bottom-6 right-6 z-[9999] flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-[#071013]/90 border border-[#BFFF00]/40 shadow-[0_0_24px_rgba(191,255,0,0.25)] backdrop-blur-sm animate-bounce-subtle">
+          <div className="relative flex-shrink-0">
+            <Download className="h-5 w-5 text-[#BFFF00]" style={{ animation: 'downloadFlash 0.8s ease-in-out infinite' }} />
+            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[#BFFF00]" style={{ animation: 'downloadPing 0.8s ease-in-out infinite' }} />
+          </div>
+          <div className="flex flex-col leading-tight">
+            <span className="text-xs font-bold text-[#BFFF00] tracking-wide uppercase">Downloading</span>
+            <span className="text-[10px] text-white/50">Adding watermark…</span>
+          </div>
+          <div className="flex gap-0.5 ml-1">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="block w-1 rounded-full bg-[#BFFF00]"
+                style={{
+                  height: '14px',
+                  animation: `downloadBar 1s ease-in-out ${i * 0.2}s infinite`,
+                  transformOrigin: 'bottom',
+                }}
+              />
+            ))}
+          </div>
+          <style>{`
+            @keyframes downloadFlash {
+              0%, 100% { opacity: 1; transform: translateY(0); }
+              50% { opacity: 0.3; transform: translateY(2px); }
+            }
+            @keyframes downloadPing {
+              0%, 100% { transform: scale(1); opacity: 1; }
+              50% { transform: scale(1.8); opacity: 0; }
+            }
+            @keyframes downloadBar {
+              0%, 100% { transform: scaleY(0.4); opacity: 0.5; }
+              50% { transform: scaleY(1); opacity: 1; }
+            }
+          `}</style>
+        </div>,
+        document.body
+      )}
     </>
   );
 }

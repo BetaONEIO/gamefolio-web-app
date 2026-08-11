@@ -49,9 +49,17 @@ interface TopContributor {
 
 type TabType = "weekly" | "monthly" | "alltime";
 
+// Easter egg: the "mystery legend" hint toward Mac (/mac) only appears on a
+// fraction of leaderboard visits, so it stays elusive and intriguing rather
+// than a permanent fixture. Tune this to make Mac easier/harder to stumble on.
+const MYSTERY_LEGEND_CHANCE = 0.25; // ~1 in 4 visits
+
 const LeaderboardPage = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>("weekly");
+  // Rolled once per mount (lazy init) so it's stable for the whole visit and
+  // doesn't flicker on re-render as leaderboard data loads.
+  const [showMysteryLegend] = useState(() => Math.random() < MYSTERY_LEGEND_CHANCE);
 
   // Fetch all-time leaderboard data from API
   const { data: allTimeData, isLoading: allTimeLoading } = useQuery<PointsLeaderboardEntry[]>({
@@ -157,9 +165,9 @@ const LeaderboardPage = () => {
       };
     }
     return {
-      cardBg: "bg-[#0f172a]",
-      cardBorder: "border-[#1e293b]/50",
-      avatarBorder: "border-[#1e293b]/50",
+      cardBg: "bg-[#0B1218]",
+      cardBorder: "border-[#1B2A33]/50",
+      avatarBorder: "border-[#1B2A33]/50",
       scoreBg: "bg-gradient-to-b from-[#615fff] to-[#9810fa]",
       scoreText: "text-white",
       scoreShadow: "",
@@ -217,10 +225,10 @@ const LeaderboardPage = () => {
               <img src={entry.user.nftProfileImageUrl} alt={entry.user.displayName} className="w-full h-full object-cover" loading="lazy" />
             </div>
           ) : (
-            <div className={`w-12 h-12 rounded-2xl border ${styles.avatarBorder} bg-[#0f172a] overflow-hidden flex-shrink-0`}>
+            <div className={`w-12 h-12 rounded-2xl border ${styles.avatarBorder} bg-[#0B1218] overflow-hidden flex-shrink-0`}>
               <Avatar className="w-full h-full rounded-none">
                 <AvatarImage src={entry.user.avatarUrl || undefined} className="object-cover" />
-                <AvatarFallback className="bg-[#0f172a] text-slate-400 rounded-none">
+                <AvatarFallback className="bg-[#0B1218] text-slate-400 rounded-none">
                   {entry.user.displayName.charAt(0)}
                 </AvatarFallback>
               </Avatar>
@@ -298,10 +306,10 @@ const LeaderboardPage = () => {
             <img src={contributor.user.nftProfileImageUrl} alt={contributor.user.displayName} className="w-full h-full object-cover" loading="lazy" />
           </div>
         ) : (
-          <div className="w-10 h-10 rounded-xl border border-[#f0b100]/30 bg-[#0f172a] overflow-hidden flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl border border-[#f0b100]/30 bg-[#0B1218] overflow-hidden flex-shrink-0">
             <Avatar className="w-full h-full rounded-none">
               <AvatarImage src={contributor.user.avatarUrl || undefined} className="object-cover" />
-              <AvatarFallback className="bg-[#0f172a] text-slate-400 rounded-none text-xs">
+              <AvatarFallback className="bg-[#0B1218] text-slate-400 rounded-none text-xs">
                 {contributor.user.displayName.charAt(0)}
               </AvatarFallback>
             </Avatar>
@@ -329,7 +337,7 @@ const LeaderboardPage = () => {
   const LoadingSkeleton = () => (
     <div className="space-y-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 px-4 py-5 rounded-2xl border border-[#1e293b]/50 bg-[#0f172a]">
+        <div key={i} className="flex items-center gap-4 px-4 py-5 rounded-2xl border border-[#1B2A33]/50 bg-[#0B1218]">
           <Skeleton className="w-8 h-6 bg-slate-700" />
           <Skeleton className="w-12 h-12 rounded-2xl bg-slate-700" />
           <div className="flex-1 space-y-2">
@@ -349,7 +357,7 @@ const LeaderboardPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#101D27] overflow-y-auto">
+    <div className="min-h-screen bg-[#0B1218] overflow-y-auto">
       <div className="max-w-md lg:max-w-4xl xl:max-w-5xl mx-auto px-6 py-12 pb-32">
         {/* Hero Section */}
         <div className="flex flex-col items-center text-center mb-8">
@@ -371,7 +379,7 @@ const LeaderboardPage = () => {
         </div>
 
         {/* Tab Pills */}
-        <div className="bg-[#0f172a] border border-[#1e293b] rounded-full p-1.5 flex gap-2 mb-8 lg:max-w-lg lg:mx-auto">
+        <div className="bg-[#0B1218] border border-[#1B2A33] rounded-full p-1.5 flex gap-2 mb-8 lg:max-w-lg lg:mx-auto">
           <button
             onClick={() => setActiveTab("weekly")}
             className={`flex-1 px-4 py-2.5 rounded-full text-sm font-bold transition-colors ${
@@ -437,6 +445,25 @@ const LeaderboardPage = () => {
           )}
         </div>
 
+        {/* Hidden easter egg: a faint "mystery legend" nudging the curious toward
+            Mac's secret profile (/mac). Only shown on a fraction of visits (see
+            MYSTERY_LEGEND_CHANCE) so it feels elusive. Intentionally NOT a ranked
+            card so it can't be mistaken for a real entry — just a dim, clickable
+            footnote. The 999,999 XP matches Mac's profile total. */}
+        {showMysteryLegend && (
+          <Link href="/mac">
+            <div
+              className="group mb-8 -mt-2 flex items-center justify-center text-center cursor-pointer select-none opacity-40 hover:opacity-100 transition-opacity"
+              data-testid="leaderboard-mystery-legend"
+              title="???"
+            >
+              <span className="text-xs italic text-slate-500 group-hover:text-[#B7FF1A] transition-colors">
+                ✨ ??? — a mysterious cat sits beyond the board at 999,999 XP 🐾
+              </span>
+            </div>
+          </Link>
+        )}
+
         {/* Historic Winners Section */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-2">
@@ -449,7 +476,7 @@ const LeaderboardPage = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Top Monthly Contributors */}
-            <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4">
+            <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Calendar className="w-4 h-4 text-slate-50" />
                 <h3 className="text-sm font-bold text-slate-50">Top Monthly Contributors</h3>
@@ -468,7 +495,7 @@ const LeaderboardPage = () => {
             </div>
 
             {/* Top Weekly Contributors */}
-            <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4">
+            <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Clock className="w-4 h-4 text-slate-50" />
                 <h3 className="text-sm font-bold text-slate-50">Top Weekly Contributors</h3>
@@ -497,7 +524,7 @@ const LeaderboardPage = () => {
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
             {/* Clips Uploaded */}
-            <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
+            <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col items-center text-center">
               <div className="w-12 h-12 rounded-full bg-[#00a6f4]/10 flex items-center justify-center mb-3">
                 <Upload className="w-6 h-6 text-[#00bcff]" />
               </div>
@@ -507,7 +534,7 @@ const LeaderboardPage = () => {
             </div>
 
             {/* Likes Given */}
-            <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
+            <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col items-center text-center">
               <div className="w-12 h-12 rounded-full bg-[#ff2056]/10 flex items-center justify-center mb-3">
                 <Heart className="w-6 h-6 text-[#ff2056]" />
               </div>
@@ -517,7 +544,7 @@ const LeaderboardPage = () => {
             </div>
 
             {/* Comments Made */}
-            <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
+            <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col items-center text-center">
               <div className="w-12 h-12 rounded-full bg-[#00bc7d]/10 flex items-center justify-center mb-3">
                 <MessageCircle className="w-6 h-6 text-[#00d492]" />
               </div>
@@ -527,7 +554,7 @@ const LeaderboardPage = () => {
             </div>
 
             {/* Fire Reactions */}
-            <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-4 flex flex-col items-center text-center">
+            <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col items-center text-center">
               <div className="w-12 h-12 rounded-full bg-[#ff6900]/10 flex items-center justify-center mb-3">
                 <ZapIconSvg className="w-6 h-6" active={true} />
               </div>
@@ -561,7 +588,7 @@ const LeaderboardPage = () => {
                 </Button>
               </Link>
               <Link href="/explore" className="block lg:w-auto">
-                <Button variant="outline" className="w-full lg:w-48 h-12 rounded-full bg-[#0f172a] hover:bg-[#1e293b] border-[#1e293b] text-slate-50 font-bold text-sm">
+                <Button variant="outline" className="w-full lg:w-48 h-12 rounded-full bg-[#0B1218] hover:bg-[#1B2A33] border-[#1B2A33] text-slate-50 font-bold text-sm">
                   Explore Content
                 </Button>
               </Link>

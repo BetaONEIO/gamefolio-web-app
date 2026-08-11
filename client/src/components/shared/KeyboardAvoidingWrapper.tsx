@@ -1,74 +1,53 @@
 import { useEffect, useRef, ReactNode } from "react";
+import { useKeyboardHeight } from "@/hooks/use-keyboard-height";
 
 interface KeyboardAvoidingWrapperProps {
   children: ReactNode;
   className?: string;
+  /** Extra padding (px) to add below the keyboard; defaults to 16 */
+  extraPadding?: number;
 }
 
-export function KeyboardAvoidingWrapper({ children, className = "" }: KeyboardAvoidingWrapperProps) {
+export function KeyboardAvoidingWrapper({ children, className = "", extraPadding = 16 }: KeyboardAvoidingWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const keyboardHeight = useKeyboardHeight();
 
   useEffect(() => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isAndroid = /Android/.test(navigator.userAgent);
-    const isMobile = isIOS || isAndroid;
-
+    const isMobile = /iPad|iPhone|iPod|Android/.test(navigator.userAgent) || window.innerWidth < 768;
     if (!isMobile) return;
+
+    const scrollActiveIntoView = () => {
+      const el = document.activeElement as HTMLElement | null;
+      if (!el || !(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el.isContentEditable)) return;
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    };
 
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement;
-      if (!target || !(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) {
-        return;
-      }
-
-      setTimeout(() => {
-        target.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-          inline: "nearest"
-        });
-
-        if (isIOS) {
-          const viewportHeight = window.visualViewport?.height || window.innerHeight;
-          const elementRect = target.getBoundingClientRect();
-          const elementBottom = elementRect.bottom;
-          
-          if (elementBottom > viewportHeight - 50) {
-            const scrollAmount = elementBottom - viewportHeight + 100;
-            window.scrollBy({ top: scrollAmount, behavior: "smooth" });
-          }
-        }
-      }, 300);
+      if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable)) return;
+      // Delay to allow keyboard to fully open before scrolling
+      setTimeout(scrollActiveIntoView, 320);
     };
 
     const handleViewportResize = () => {
-      const activeElement = document.activeElement as HTMLElement;
-      if (activeElement && (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement)) {
-        setTimeout(() => {
-          activeElement.scrollIntoView({
-            behavior: "smooth",
-            block: "center"
-          });
-        }, 100);
-      }
+      setTimeout(scrollActiveIntoView, 100);
     };
 
     document.addEventListener("focusin", handleFocusIn);
-    
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", handleViewportResize);
-    }
+    window.visualViewport?.addEventListener("resize", handleViewportResize, { passive: true });
 
     return () => {
       document.removeEventListener("focusin", handleFocusIn);
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener("resize", handleViewportResize);
-      }
+      window.visualViewport?.removeEventListener("resize", handleViewportResize);
     };
   }, []);
 
   return (
-    <div ref={containerRef} className={className}>
+    <div
+      ref={containerRef}
+      className={className}
+      style={keyboardHeight > 0 ? { paddingBottom: `${keyboardHeight + extraPadding}px` } : undefined}
+    >
       {children}
     </div>
   );

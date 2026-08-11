@@ -13,11 +13,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Send } from "lucide-react";
 import { PixelHeartReaction } from "@/components/ui/PixelHeartReaction";
+import { EmojiPickerButton } from "@/components/ui/EmojiPickerButton";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useSignedUrl } from "@/hooks/use-signed-url";
+import { useAuthModal } from "@/hooks/use-auth-modal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,7 +42,7 @@ function CommentAvatar({ avatarUrl, username }: { avatarUrl: string | null | und
   return (
     <Avatar className="h-8 w-8 flex-shrink-0">
       <AvatarImage 
-        src={signedUrl || avatarUrl || undefined} 
+        src={signedUrl ?? undefined} 
         alt={username || "User"} 
       />
       <AvatarFallback className="text-xs">
@@ -113,8 +115,11 @@ function ScreenshotCommentLikeButton({ commentId, isLoggedIn }: ScreenshotCommen
 export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: ScreenshotCommentSectionProps) {
   const [newComment, setNewComment] = useState("");
   
+  const { openModal } = useAuthModal();
+
   const { user } = useAuth();
   const { toast } = useToast();
+  const { signedUrl: currentUserAvatarUrl } = useSignedUrl(user?.avatarUrl ?? null);
   
   const { data: comments, isLoading } = useScreenshotComments(screenshotId);
   const createCommentMutation = useCreateScreenshotComment();
@@ -124,11 +129,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
     if (!newComment.trim()) return;
     
     if (!user) {
-      toast({
-        title: "Login required",
-        description: "Please log in to comment",
-        variant: "default"
-      });
+      setShowJoinDialog(true);
       return;
     }
 
@@ -289,7 +290,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
           <div className="flex items-start gap-3">
             <Avatar className="h-8 w-8 hidden sm:flex flex-shrink-0">
               <AvatarImage 
-                src={user?.avatarUrl || undefined} 
+                src={currentUserAvatarUrl || undefined} 
                 alt={user?.username || "User"} 
               />
               <AvatarFallback className="text-xs">
@@ -305,7 +306,8 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
                 className="min-h-[60px] resize-none text-sm"
                 data-testid="input-comment"
               />
-              <div className="flex justify-end">
+              <div className="flex justify-end items-center gap-2">
+                <EmojiPickerButton onEmojiSelect={(emoji) => setNewComment((prev) => prev + emoji)} />
                 <Button 
                   type="submit" 
                   variant="default"
@@ -321,9 +323,19 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
         </form>
       ) : (
         <div className="text-center py-4 border-t">
-          <p className="text-sm text-muted-foreground">Log in to comment</p>
+          <p className="text-sm text-muted-foreground">
+            <button
+              onClick={() => openModal('login')}
+              className="cursor-pointer hover:opacity-80 transition-opacity"
+              style={{ color: '#B7FF1A' }}
+            >
+              Log in
+            </button>
+            {' '}to comment
+          </p>
         </div>
       )}
+
     </div>
   );
 }

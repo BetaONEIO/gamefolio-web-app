@@ -33,6 +33,7 @@ export const users = pgTable("users", {
   hideBanner: boolean("hide_banner").default(false),
   statsGlassEffect: boolean("stats_glass_effect").default(false),
   profileBackgroundGradient: boolean("profile_background_gradient").default(true),
+  profileBackgroundGradientCss: text("profile_background_gradient_css"),
   layoutStyle: text("layout_style").default("grid"), // grid, masonry, classic
   // Platform connections
   steamUsername: text("steam_username"),
@@ -84,7 +85,13 @@ export const users = pgTable("users", {
   rumbleChannelName: text("rumble_channel_name"), // Rumble channel slug/username
   rumbleId: text("rumble_id"),              // Rumble user ID (set when OAuth-connected)
   rumbleVerified: boolean("rumble_verified").default(false), // Connected via OAuth
+  youtubeChannelName: text("youtube_channel_name"), // YouTube channel display name/handle
+  youtubeChannelId: text("youtube_channel_id"),     // YouTube channel ID (UC…) for embeds/API
+  youtubeVerified: boolean("youtube_verified").default(false), // Connected via Google/YouTube OAuth
+  youtubeShowOnProfile: boolean("youtube_show_on_profile").default(true), // Embed YouTube on profile
   showLiveOverlay: boolean("show_live_overlay").default(false), // Show LIVE badge on avatar
+  twitchShowOnProfile: boolean("twitch_show_on_profile").default(true), // Embed Twitch stream on profile
+  kickShowOnProfile: boolean("kick_show_on_profile").default(true),     // Embed Kick stream on profile
   ageRange: text("age_range"), // Age range: 13-17, 18-24, 25-34, 35-44, 45-54, 55+
   // Authentication provider fields
   authProvider: text("auth_provider").default("local"), // "local", "google", "discord", "steam", "apple"
@@ -119,6 +126,7 @@ export const users = pgTable("users", {
   partnerFeaturedStreamUrl: text("partner_featured_stream_url"), // Partner's featured stream link
   partnerStreamerVisible: boolean("partner_streamer_visible").default(true).notNull(), // Show on public /streamer page
   partnerAppliedAt: timestamp("partner_applied_at"), // When the user submitted a Streamer Partner application
+  hideFromLeaderboard: boolean("hide_from_leaderboard").default(false).notNull(), // Admin-controlled leaderboard exclusion
   proSubscriptionType: text("pro_subscription_type"), // "yearly", "monthly", etc.
   proSubscriptionStartDate: timestamp("pro_subscription_start_date"), // When subscription started
   proSubscriptionEndDate: timestamp("pro_subscription_end_date"), // When subscription expires
@@ -154,6 +162,9 @@ export const users = pgTable("users", {
   referralCode: text("referral_code").unique(), // User's unique referral code
   referredBy: text("referred_by"), // The referral code used when this user signed up
   referralCodeCustomized: boolean("referral_code_customized").default(false).notNull(), // Whether the user has already customised their referral code
+  // Outro videos — auto-appended on download; separate files for landscape (16:9) and portrait (9:16)
+  outroVideoPath: text("outro_video_path"),          // landscape 1920×1080 — "outros/42.mp4"
+  outroVideoPathPortrait: text("outro_video_path_portrait"), // portrait 1080×1920 — "outros/42_portrait.mp4"
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -1755,3 +1766,12 @@ export type AdminAlert = typeof adminAlerts.$inferSelect;
 export type InsertAdminAlert = typeof adminAlerts.$inferInsert;
 
 export type XpSetting = typeof xpSettings.$inferSelect;
+
+export const usedPaymentHashes = pgTable("used_payment_hashes", {
+  id: serial("id").primaryKey(),
+  txHash: text("tx_hash").notNull().unique(),
+  userId: integer("user_id").notNull(),
+  purpose: text("purpose").notNull(),
+  itemId: text("item_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

@@ -30,6 +30,20 @@
                 <data android:scheme="com.gamefolio.app" />
             </intent-filter>
 
+            <!-- App Links: https://app.gamefolio.com content links open the app
+                 when installed (verified against /.well-known/assetlinks.json). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="app.gamefolio.com" />
+                <data android:pathPrefix="/clip" />
+                <data android:pathPrefix="/clips" />
+                <data android:pathPrefix="/reel" />
+                <data android:pathPrefix="/reels" />
+                <data android:pathPrefix="/profile" />
+            </intent-filter>
+
         </activity>
 
         <provider

@@ -82,17 +82,17 @@ export default function CreatingWallet({
   return (
     <div 
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: '#101D27' }}
+      style={{ background: '#0B1218' }}
     >
       {/* Header with back button */}
       <div className="flex items-center justify-between px-6 pt-12 pb-4">
         <button
           onClick={onBack}
           className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
-          style={{ background: '#1e293b', border: '1px solid #1e293b' }}
+          style={{ background: '#1B2A33', border: '1px solid #1B2A33' }}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F5F7F2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
         <div className="w-10 h-10" />
@@ -188,7 +188,7 @@ export default function CreatingWallet({
         {/* Description */}
         <p 
           className="text-center mb-8 max-w-[280px] md:max-w-[340px]"
-          style={{ color: '#94a3b8', fontSize: '16px', lineHeight: '26px' }}
+          style={{ color: '#B8C0AE', fontSize: '16px', lineHeight: '26px' }}
         >
           Encrypting your private keys and establishing a secure connection to the blockchain.
         </p>
@@ -197,7 +197,7 @@ export default function CreatingWallet({
         <div className="w-full max-w-[240px] md:max-w-[300px] mb-6">
           <div 
             className="h-1.5 rounded-full overflow-hidden"
-            style={{ background: '#1e293b' }}
+            style={{ background: '#1B2A33' }}
           >
             <div 
               className="h-full rounded-full"
@@ -264,7 +264,7 @@ export default function CreatingWallet({
                 <span 
                   className="text-sm font-medium"
                   style={{ 
-                    color: isCompleted ? '#B7FF1A' : isActive ? '#f8fafc' : '#64748b',
+                    color: isCompleted ? '#B7FF1A' : isActive ? '#F5F7F2' : '#64748b',
                     transition: 'color 0.3s ease'
                   }}
                 >
@@ -284,22 +284,22 @@ export default function CreatingWallet({
             onClick={onRetry}
             className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl font-bold mb-4 transition-all hover:bg-slate-700"
             style={{ 
-              background: '#1e293b',
-              border: '1px solid #1e293b',
+              background: '#1B2A33',
+              border: '1px solid #1B2A33',
               height: '58px'
             }}
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M17.5 10C17.5 14.1421 14.1421 17.5 10 17.5C5.85786 17.5 2.5 14.1421 2.5 10C2.5 5.85786 5.85786 2.5 10 2.5C12.5 2.5 14.7 3.7 16.1 5.5M17.5 3V7H13.5" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M17.5 10C17.5 14.1421 14.1421 17.5 10 17.5C5.85786 17.5 2.5 14.1421 2.5 10C2.5 5.85786 5.85786 2.5 10 2.5C12.5 2.5 14.7 3.7 16.1 5.5M17.5 3V7H13.5" stroke="#F5F7F2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <span style={{ color: '#f8fafc', fontSize: '16px' }}>Retry Creation</span>
+            <span style={{ color: '#F5F7F2', fontSize: '16px' }}>Retry Creation</span>
           </button>
         )}
         
         {/* Helper text */}
         <p 
           className="text-center text-xs"
-          style={{ color: '#94a3b8' }}
+          style={{ color: '#B8C0AE' }}
         >
           This usually takes less than 30 seconds
         </p>

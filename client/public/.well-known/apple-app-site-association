@@ -1,0 +1,16 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["V925W88UW6.com.gamefolio.app"],
+        "components": [
+          { "/": "/clip/*", "comment": "Clip pages" },
+          { "/": "/clips/*", "comment": "Clip pages" },
+          { "/": "/reel/*", "comment": "Reel pages" },
+          { "/": "/reels/*", "comment": "Reel pages" },
+          { "/": "/profile/*", "comment": "Profile pages" }
+        ]
+      }
+    ]
+  }
+}

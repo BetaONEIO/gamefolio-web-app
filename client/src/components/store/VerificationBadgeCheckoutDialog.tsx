@@ -66,7 +66,7 @@ export function VerificationBadgeCheckoutDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="bg-[#101D27] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden">
+        <DialogContent className="bg-[#0B1218] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden">
           {isProcessing || isPurchasing ? (
             <AssetPurchaseProcessing onComplete={handleProcessingComplete} />
           ) : (
@@ -75,11 +75,11 @@ export function VerificationBadgeCheckoutDialog({
               <div className="flex items-center gap-4 px-6 pt-12 pb-6">
                 <button
                   onClick={() => onOpenChange(false)}
-                  className="w-10 h-10 rounded-full bg-[#1e293b]/50 flex items-center justify-center transition-colors hover:bg-[#1e293b]/80"
+                  className="w-10 h-10 rounded-full bg-[#1B2A33]/50 flex items-center justify-center transition-colors hover:bg-[#1B2A33]/80"
                 >
                   <ArrowLeft className="h-6 w-6 text-white" />
                 </button>
-                <span className="text-xl font-bold text-[#f8fafc] uppercase tracking-[-0.5px]">
+                <span className="text-xl font-bold text-[#F5F7F2] uppercase tracking-[-0.5px]">
                   Checkout
                 </span>
               </div>
@@ -89,17 +89,17 @@ export function VerificationBadgeCheckoutDialog({
                 
                 {/* Item Details Section */}
                 <div className="space-y-4">
-                  <span className="text-[12px] font-black text-[#94a3b8] uppercase tracking-[2.4px]">Item Details</span>
-                  <div className="bg-[#0f172a] border border-[#1e293b80] rounded-[24px] p-6 flex items-center gap-5">
-                    <div className="w-24 h-24 bg-[#1e293b4d] border border-[#1e293b4d] rounded-[16px] flex items-center justify-center p-4 overflow-hidden">
+                  <span className="text-[12px] font-black text-[#B8C0AE] uppercase tracking-[2.4px]">Item Details</span>
+                  <div className="bg-[#0B1218] border border-[#1B2A3380] rounded-[24px] p-6 flex items-center gap-5">
+                    <div className="w-24 h-24 bg-[#1B2A334d] border border-[#1B2A334d] rounded-[16px] flex items-center justify-center p-4 overflow-hidden">
                       <img src={badge.imageUrl} alt={badge.name} className="w-full h-full object-contain" />
                     </div>
                     <div className="flex flex-col justify-center">
                       <span className="text-[10px] font-black text-[#00c950] uppercase tracking-[1px] mb-1">Identity Series</span>
-                      <h3 className="text-2xl font-black text-[#f8fafc] uppercase tracking-[-0.6px] leading-tight mb-1">{badge.name}</h3>
+                      <h3 className="text-2xl font-black text-[#F5F7F2] uppercase tracking-[-0.6px] leading-tight mb-1">{badge.name}</h3>
                       <div className="flex items-center gap-1.5">
-                        <ShieldCheck className="w-3.5 h-3.5 text-[#94a3b8]" />
-                        <span className="text-[12px] font-bold text-[#94a3b8]">Legendary Asset</span>
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#B8C0AE]" />
+                        <span className="text-[12px] font-bold text-[#B8C0AE]">Legendary Asset</span>
                       </div>
                     </div>
                   </div>
@@ -107,28 +107,28 @@ export function VerificationBadgeCheckoutDialog({
 
                 {/* Purchase Summary Section */}
                 <div className="space-y-4">
-                  <span className="text-[12px] font-black text-[#94a3b8] uppercase tracking-[2.4px]">Purchase Summary</span>
-                  <div className="bg-[#0f172a] border border-[#1e293b80] rounded-[24px] overflow-hidden">
-                    <div className="flex justify-between items-center p-4 border-b border-[#1e293b4d]">
-                      <span className="text-sm text-[#94a3b8]">Price</span>
+                  <span className="text-[12px] font-black text-[#B8C0AE] uppercase tracking-[2.4px]">Purchase Summary</span>
+                  <div className="bg-[#0B1218] border border-[#1B2A3380] rounded-[24px] overflow-hidden">
+                    <div className="flex justify-between items-center p-4 border-b border-[#1B2A334d]">
+                      <span className="text-sm text-[#B8C0AE]">Price</span>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-bold text-[#f8fafc]">{badge.gfCost}</span>
+                        <span className="text-sm font-bold text-[#F5F7F2]">{badge.gfCost}</span>
                         <div className="bg-[#B7FF1A1a] rounded px-1.5 py-0.5">
                           <span className="text-[10px] font-bold text-[#B7FF1A] uppercase">GF</span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex justify-between items-center p-4 border-b border-[#1e293b4d]">
-                      <span className="text-sm text-[#94a3b8]">Network Fee</span>
+                    <div className="flex justify-between items-center p-4 border-b border-[#1B2A334d]">
+                      <span className="text-sm text-[#B8C0AE]">Network Fee</span>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-bold text-[#f8fafc]">{networkFee}</span>
+                        <span className="text-sm font-bold text-[#F5F7F2]">{networkFee}</span>
                         <div className="bg-[#B7FF1A1a] rounded px-1.5 py-0.5">
                           <span className="text-[10px] font-bold text-[#B7FF1A] uppercase">GF</span>
                         </div>
                       </div>
                     </div>
                     <div className="flex justify-between items-center p-5">
-                      <span className="text-[16px] font-bold text-[#f8fafc] uppercase tracking-[1.4px]">Total Cost</span>
+                      <span className="text-[16px] font-bold text-[#F5F7F2] uppercase tracking-[1.4px]">Total Cost</span>
                       <div className="flex items-baseline gap-1">
                         <span className="text-2xl font-black text-[#B7FF1A] tracking-[-0.5px] uppercase">{totalCost}</span>
                         <span className="text-2xl font-black text-[#B7FF1A] tracking-[-0.5px] uppercase ml-1">GF</span>
@@ -139,14 +139,14 @@ export function VerificationBadgeCheckoutDialog({
 
                 {/* Wallet Balance Section */}
                 <div className="space-y-4">
-                  <div className="bg-[#1e293b33] border border-[#1e293b4d] rounded-[16px] p-4 flex items-center justify-between">
+                  <div className="bg-[#1B2A3333] border border-[#1B2A334d] rounded-[16px] p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-[#B7FF1A1a] flex items-center justify-center p-2.5">
                         <img src={gfTokenLogo} alt="G" className="w-full h-full" />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-[#94a3b8] uppercase">Your Balance</span>
-                        <span className={`text-lg font-bold ${canAfford ? 'text-[#f8fafc]' : 'text-red-400'}`}>{gfBalance} GF</span>
+                        <span className="text-[10px] font-black text-[#B8C0AE] uppercase">Your Balance</span>
+                        <span className={`text-lg font-bold ${canAfford ? 'text-[#F5F7F2]' : 'text-red-400'}`}>{gfBalance} GF</span>
                       </div>
                     </div>
                     {!canAfford && (
@@ -159,13 +159,13 @@ export function VerificationBadgeCheckoutDialog({
               </div>
 
               {/* Bottom Action */}
-              <div className="p-6 bg-[#101D27] space-y-4">
+              <div className="p-6 bg-[#0B1218] space-y-4">
                 <Button
                   onClick={handleConfirm}
                   disabled={!canAfford || isPurchasing}
                   className="w-full h-[68px] rounded-[16px] text-lg font-black uppercase"
                   style={{
-                    background: canAfford && !isPurchasing ? '#B7FF1A' : '#1e293b',
+                    background: canAfford && !isPurchasing ? '#B7FF1A' : '#1B2A33',
                     color: canAfford && !isPurchasing ? '#071013' : '#475569',
                     letterSpacing: '-0.9px',
                     cursor: canAfford && !isPurchasing ? 'pointer' : 'not-allowed',
@@ -175,8 +175,8 @@ export function VerificationBadgeCheckoutDialog({
                   {isPurchasing ? "Processing..." : "Confirm Purchase"}
                 </Button>
                 <div className="flex items-center justify-center gap-2">
-                  <Info className="w-3 h-3 text-[#94a3b8]" />
-                  <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-[1px]">
+                  <Info className="w-3 h-3 text-[#B8C0AE]" />
+                  <span className="text-[10px] font-bold text-[#B8C0AE] uppercase tracking-[1px]">
                     Instant identity verification included
                   </span>
                 </div>

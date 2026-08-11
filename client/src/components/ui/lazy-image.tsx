@@ -44,10 +44,16 @@ export function LazyImage({
         </div>
       )}
       
-      {/* Error fallback - show dark background with play icon */}
-      {hasError && fallback ? (
+      {/* Error fallback */}
+      {hasError ? (
         <div className="absolute inset-0">
-          {fallback}
+          {fallback ? fallback : (
+            <div className="w-full h-full bg-[#0B1218] flex items-center justify-center">
+              <svg className="w-8 h-8 text-white/20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </div>
+          )}
         </div>
       ) : (
         <img
@@ -58,9 +64,6 @@ export function LazyImage({
             isLoading ? 'opacity-50' : 'opacity-100',
             className
           )}
-          onError={() => {
-            // Trigger fallback on native image error as backup
-          }}
           {...props}
         />
       )}

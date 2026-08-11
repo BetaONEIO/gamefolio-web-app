@@ -48,11 +48,11 @@ export async function nativeSignInWithGoogle(): Promise<{ user: any }> {
     throw new Error('nativeSignInWithGoogle is only valid on native platforms');
   }
   const profile = await signInWithGoogleNative();
+  if (!profile.idToken) {
+    throw new Error('Google sign-in did not return a Firebase ID token. Please try again.');
+  }
   const data = await postJson('/api/auth/mobile/google', {
-    email: profile.email,
-    displayName: profile.displayName,
-    photoURL: profile.photoURL,
-    uid: profile.uid,
+    idToken: profile.idToken,
   });
   if (!data.accessToken || !data.refreshToken) {
     throw new Error(data.message || 'Mobile Google sign-in did not return tokens');

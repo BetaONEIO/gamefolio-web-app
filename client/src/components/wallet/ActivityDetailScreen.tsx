@@ -119,33 +119,33 @@ export default function ActivityDetailScreen({
   return (
     <div
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: '#101D27' }}
+      style={{ background: '#0B1218' }}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between px-6 pt-12 pb-6"
         style={{
-          background: 'linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #101D27 100%)',
+          background: 'linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #0B1218 100%)',
           borderBottom: '1px solid rgba(30, 41, 59, 0.3)',
         }}
       >
         <button
           onClick={onBack}
           className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
-          style={{ background: '#1e293b', border: '1px solid #1e293b' }}
+          style={{ background: '#1B2A33', border: '1px solid #1B2A33' }}
         >
-          <ArrowLeft className="w-6 h-6" style={{ color: '#f8fafc' }} />
+          <ArrowLeft className="w-6 h-6" style={{ color: '#F5F7F2' }} />
         </button>
 
-        <span className="text-xl font-bold" style={{ color: '#f8fafc' }}>
+        <span className="text-xl font-bold" style={{ color: '#F5F7F2' }}>
           Activity Details
         </span>
 
         <button
           className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-slate-700"
-          style={{ background: '#1e293b', border: '1px solid #1e293b' }}
+          style={{ background: '#1B2A33', border: '1px solid #1B2A33' }}
         >
-          <ShareLaunchIcon size={20} className="text-[#f8fafc]" />
+          <ShareLaunchIcon size={20} className="text-[#F5F7F2]" />
         </button>
       </div>
 
@@ -157,8 +157,8 @@ export default function ActivityDetailScreen({
           <div
             className="w-20 h-20 rounded-3xl flex items-center justify-center"
             style={{
-              background: '#1e293b',
-              border: '1px solid #1e293b',
+              background: '#1B2A33',
+              border: '1px solid #1B2A33',
               boxShadow: '0 4px 6px -4px rgba(183, 255, 26, 0.05), 0 10px 15px -3px rgba(183, 255, 26, 0.05)',
             }}
           >
@@ -167,10 +167,10 @@ export default function ActivityDetailScreen({
 
           {/* Title & Date */}
           <div className="flex flex-col items-center gap-1">
-            <h1 className="text-2xl font-bold" style={{ color: '#f8fafc' }}>
+            <h1 className="text-2xl font-bold" style={{ color: '#F5F7F2' }}>
               {activity.title}
             </h1>
-            <span className="text-sm font-medium" style={{ color: '#94a3b8' }}>
+            <span className="text-sm font-medium" style={{ color: '#B8C0AE' }}>
               {activity.date}, {activity.time}
             </span>
           </div>
@@ -179,13 +179,13 @@ export default function ActivityDetailScreen({
           <div className="flex items-end gap-2">
             <span
               className="text-3xl font-bold"
-              style={{ color: activity.isPositive ? '#B7FF1A' : '#f8fafc' }}
+              style={{ color: activity.isPositive ? '#B7FF1A' : '#F5F7F2' }}
             >
               {activity.isPositive ? '+' : '-'}{activity.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
             <span
               className="text-base font-bold pb-1"
-              style={{ color: '#94a3b8' }}
+              style={{ color: '#B8C0AE' }}
             >
               GFT
             </span>
@@ -225,13 +225,13 @@ export default function ActivityDetailScreen({
         <div
           className="flex flex-col gap-6 p-6 rounded-2xl"
           style={{
-            background: 'rgba(15, 23, 42, 0.4)',
-            border: '1px solid rgba(30, 41, 59, 0.2)',
+            background: 'rgba(11, 18, 24, 0.4)',
+            border: '1px solid rgba(27, 42, 51, 0.2)',
           }}
         >
           <span
             className="text-xs font-bold uppercase"
-            style={{ color: '#94a3b8', letterSpacing: '1.2px' }}
+            style={{ color: '#B8C0AE', letterSpacing: '1.2px' }}
           >
             Status Timeline
           </span>
@@ -262,12 +262,12 @@ export default function ActivityDetailScreen({
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
                     style={{
-                      background: step.status === 'completed' ? '#B7FF1A' : step.status === 'current' ? '#3b82f6' : '#1e293b',
-                      boxShadow: '0 0 0 4px #101D27',
+                      background: step.status === 'completed' ? '#B7FF1A' : step.status === 'current' ? '#3b82f6' : '#1B2A33',
+                      boxShadow: '0 0 0 4px #0B1218',
                     }}
                   >
                     {step.status === 'completed' && (
-                      <Check className="w-3.5 h-3.5" style={{ color: '#101D27' }} />
+                      <Check className="w-3.5 h-3.5" style={{ color: '#0B1218' }} />
                     )}
                     {step.status === 'current' && (
                       <Clock className="w-3.5 h-3.5" style={{ color: '#fff' }} />
@@ -276,7 +276,7 @@ export default function ActivityDetailScreen({
                   {index < arr.length - 1 && (
                     <div
                       className="w-0.5 h-8"
-                      style={{ background: step.status === 'completed' ? '#B7FF1A' : '#1e293b' }}
+                      style={{ background: step.status === 'completed' ? '#B7FF1A' : '#1B2A33' }}
                     />
                   )}
                 </div>
@@ -284,14 +284,14 @@ export default function ActivityDetailScreen({
                 {/* Step Content */}
                 <div className="flex flex-col gap-0.5 pb-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold" style={{ color: '#f8fafc' }}>
+                    <span className="text-sm font-bold" style={{ color: '#F5F7F2' }}>
                       {step.title}
                     </span>
-                    <span className="text-[10px]" style={{ color: '#94a3b8' }}>
+                    <span className="text-[10px]" style={{ color: '#B8C0AE' }}>
                       {step.time}
                     </span>
                   </div>
-                  <span className="text-xs" style={{ color: '#94a3b8' }}>
+                  <span className="text-xs" style={{ color: '#B8C0AE' }}>
                     {step.description}
                   </span>
                 </div>
@@ -304,13 +304,13 @@ export default function ActivityDetailScreen({
         <div
           className="flex flex-col gap-4 p-6 rounded-2xl"
           style={{
-            background: 'rgba(15, 23, 42, 0.4)',
-            border: '1px solid rgba(30, 41, 59, 0.2)',
+            background: 'rgba(11, 18, 24, 0.4)',
+            border: '1px solid rgba(27, 42, 51, 0.2)',
           }}
         >
           <span
             className="text-xs font-bold uppercase"
-            style={{ color: '#94a3b8', letterSpacing: '1.2px' }}
+            style={{ color: '#B8C0AE', letterSpacing: '1.2px' }}
           >
             Transaction Details
           </span>
@@ -318,7 +318,7 @@ export default function ActivityDetailScreen({
           {/* Transaction Hash */}
           {activity.transactionHash && (
             <div className="flex items-center justify-between py-2">
-              <span className="text-sm" style={{ color: '#94a3b8' }}>
+              <span className="text-sm" style={{ color: '#B8C0AE' }}>
                 Transaction Hash
               </span>
               <button
@@ -346,12 +346,12 @@ export default function ActivityDetailScreen({
           {/* From Address */}
           {activity.fromAddress && (
             <div className="flex items-center justify-between py-2">
-              <span className="text-sm" style={{ color: '#94a3b8' }}>
+              <span className="text-sm" style={{ color: '#B8C0AE' }}>
                 From
               </span>
               <span
                 className="text-sm font-mono"
-                style={{ color: '#f8fafc', fontFamily: 'JetBrains Mono, monospace' }}
+                style={{ color: '#F5F7F2', fontFamily: 'JetBrains Mono, monospace' }}
               >
                 {activity.fromAddress}
               </span>
@@ -364,12 +364,12 @@ export default function ActivityDetailScreen({
           {/* To Address */}
           {activity.toAddress && (
             <div className="flex items-center justify-between py-2">
-              <span className="text-sm" style={{ color: '#94a3b8' }}>
+              <span className="text-sm" style={{ color: '#B8C0AE' }}>
                 To
               </span>
               <span
                 className="text-sm font-mono"
-                style={{ color: '#f8fafc', fontFamily: 'JetBrains Mono, monospace' }}
+                style={{ color: '#F5F7F2', fontFamily: 'JetBrains Mono, monospace' }}
               >
                 {activity.toAddress}
               </span>
@@ -382,12 +382,12 @@ export default function ActivityDetailScreen({
           {/* Network Fee */}
           {activity.networkFee && (
             <div className="flex items-center justify-between py-2">
-              <span className="text-sm" style={{ color: '#94a3b8' }}>
+              <span className="text-sm" style={{ color: '#B8C0AE' }}>
                 Network Fee
               </span>
               <span
                 className="text-sm font-bold"
-                style={{ color: activity.networkFee === 'Free' ? '#B7FF1A' : '#f8fafc' }}
+                style={{ color: activity.networkFee === 'Free' ? '#B7FF1A' : '#F5F7F2' }}
               >
                 {activity.networkFee}
               </span>
@@ -400,10 +400,10 @@ export default function ActivityDetailScreen({
           {/* Payment Method */}
           {activity.paymentMethod && (
             <div className="flex items-center justify-between py-2">
-              <span className="text-sm" style={{ color: '#94a3b8' }}>
+              <span className="text-sm" style={{ color: '#B8C0AE' }}>
                 Payment Method
               </span>
-              <span className="text-sm font-bold" style={{ color: '#f8fafc' }}>
+              <span className="text-sm font-bold" style={{ color: '#F5F7F2' }}>
                 {activity.paymentMethod}
               </span>
             </div>
@@ -414,9 +414,9 @@ export default function ActivityDetailScreen({
         <button
           className="w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all hover:bg-slate-700"
           style={{
-            background: '#1e293b',
-            border: '1px solid #1e293b',
-            color: '#f8fafc',
+            background: '#1B2A33',
+            border: '1px solid #1B2A33',
+            color: '#F5F7F2',
           }}
         >
           <ExternalLink className="w-5 h-5" />

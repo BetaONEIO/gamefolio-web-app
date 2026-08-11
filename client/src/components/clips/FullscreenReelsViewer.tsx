@@ -2,18 +2,19 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
-import { MessageCircle, Trash2, ChevronDown, ChevronLeft, BarChart2, Gamepad2, Music } from "lucide-react";
+import { MessageCircle, Trash2, ChevronDown, ChevronLeft, BarChart2, Gamepad2, Music, Download, X } from "lucide-react";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { Button } from "@/components/ui/button";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
-import { Link } from "wouter";
+import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
+import { Link, useLocation } from "wouter";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import CommentSection from "@/components/clips/CommentSection";
 import ShareMenu from "@/components/clips/ShareMenu";
 import { useAuth } from "@/hooks/use-auth";
 import { useJoinDialog } from "@/hooks/use-join-dialog";
-import { JoinGamefolioDialog } from "@/components/auth/JoinGamefolioDialog";
+
 import { AgeRestrictionDialog } from "@/components/content/AgeRestrictionDialog";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -40,14 +41,35 @@ interface FullscreenReelsViewerProps {
 export function FullscreenReelsViewer({ reels, initialIndex, onClose }: FullscreenReelsViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showComments, setShowComments] = useState(false);
+  const [isClosingComments, setIsClosingComments] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [ageRestrictionAccepted, setAgeRestrictionAccepted] = useState<Record<number, boolean>>({});
   const [showAgeRestrictionDialog, setShowAgeRestrictionDialog] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 1024);
+  const [isDownloading, setIsDownloading] = useState(false);
   const isAcceptingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const isSwiping = useRef(false);
+  const closeComments = (callback?: () => void) => {
+    setIsClosingComments(true);
+    setTimeout(() => {
+      setShowComments(false);
+      setIsClosingComments(false);
+      callback?.();
+    }, 420);
+  };
   const videoAreaRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
   const { isOpen: isJoinDialogOpen, actionType, openDialog, closeDialog } = useJoinDialog();
@@ -91,6 +113,40 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
     }
     if (user.id === currentReel.user.id) return;
     followMutation.mutate();
+  };
+
+  const handleDownload = async () => {
+    if (isDownloading || !currentReel) return;
+    setIsDownloading(true);
+    const safeTitle = (currentReel.title || 'reel').replace(/[^a-z0-9]/gi, '_').slice(0, 60);
+    let done = false;
+    try {
+      const res = await fetch(`/api/clips/${currentReel.id}/download`, { credentials: 'include', headers: { Accept: 'video/mp4' } });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `${safeTitle}_gamefolio.mp4`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        done = true;
+        toast({ title: "Download complete!", description: "Saved with Gamefolio watermark.", variant: "gamefolioSuccess" as any });
+      }
+    } catch { /* fall through to fallback */ }
+    if (!done) {
+      try {
+        const fb = await fetch(`/api/clips/${currentReel.id}/download-url`, { credentials: 'include' });
+        if (!fb.ok) throw new Error('unavailable');
+        const { url: directUrl, filename } = await fb.json();
+        const a = document.createElement('a');
+        a.href = directUrl; a.download = filename || `${safeTitle}_gamefolio.mp4`; a.target = '_blank';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        toast({ title: "Download started!", description: "Your reel is downloading.", variant: "gamefolioSuccess" as any });
+      } catch {
+        toast({ title: "Download failed", description: "Please try again.", variant: "destructive" });
+      }
+    }
+    setIsDownloading(false);
   };
 
   const deleteReelMutation = useMutation({
@@ -149,7 +205,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       e.preventDefault();
       container.scrollTo({ top: (currentIndex + 1) * h, behavior: 'smooth' });
     } else if (e.key === 'Escape') {
-      if (showComments) setShowComments(false);
+      if (showComments) closeComments();
       else onClose();
     }
   }, [currentIndex, reels.length, onClose, showComments]);
@@ -187,7 +243,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
 
   return (
     <div
-      className="fixed inset-0 bg-black z-[60] flex flex-col"
+      className="fixed inset-0 bg-black z-[9999] flex flex-col lg:flex-row"
       style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
     >
 
@@ -207,7 +263,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
       {/* ── Video area — shrinks to 38% when comments open ── */}
       <div
         ref={videoAreaRef}
-        className="relative flex-shrink-0 overflow-hidden transition-[height] duration-300 ease-in-out"
+        className="relative flex-shrink-0 overflow-hidden transition-[height,width] duration-300 ease-in-out lg:flex-shrink lg:h-full"
         style={{ height: showComments ? '38%' : '100%', flex: showComments ? 'none' : '1' }}
         onClick={() => { if (!showComments) setIsPlaying(p => !p); }}
       >
@@ -216,12 +272,34 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           ref={containerRef}
           className="absolute inset-0 overflow-y-scroll overflow-x-hidden snap-y snap-mandatory [&::-webkit-scrollbar]:hidden"
           style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehavior: 'contain', pointerEvents: showComments ? 'none' : 'auto' }}
+          onTouchStart={(e) => {
+            touchStartYRef.current = e.touches[0].clientY;
+            isSwiping.current = false;
+          }}
+          onTouchMove={(e) => {
+            if (touchStartYRef.current === null) return;
+            const diff = touchStartYRef.current - e.touches[0].clientY;
+            if (Math.abs(diff) > 8) isSwiping.current = true;
+          }}
+          onTouchEnd={(e) => {
+            if (touchStartYRef.current === null) return;
+            const diff = touchStartYRef.current - e.changedTouches[0].clientY;
+            touchStartYRef.current = null;
+            const container = containerRef.current;
+            if (!container || !isSwiping.current) return;
+            const h = container.clientHeight;
+            if (diff > 40 && currentIndex < reels.length - 1) {
+              container.scrollTo({ top: (currentIndex + 1) * h, behavior: 'smooth' });
+            } else if (diff < -40 && currentIndex > 0) {
+              container.scrollTo({ top: (currentIndex - 1) * h, behavior: 'smooth' });
+            }
+          }}
         >
           {reels.map((reel, index) => (
             <div
               key={reel.id}
-              className="snap-start snap-always h-full w-full relative"
-              style={{ scrollSnapStop: 'always' }}
+              className="snap-start snap-always w-full relative flex-shrink-0"
+              style={{ scrollSnapStop: 'always', height: 'calc(100dvh - 64px - env(safe-area-inset-bottom, 0px))' }}
             >
               {/* Video */}
               <div className="absolute inset-0 pointer-events-none">
@@ -231,7 +309,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     thumbnailUrl={reel.thumbnailUrl || undefined}
                     autoPlay={index === currentIndex && isPlaying}
                     className="w-full h-full"
-                    objectFit="contain"
+                    objectFit="cover"
                     clipId={reel.id}
                     disableAspectRatio={true}
                     hideControls={true}
@@ -286,11 +364,11 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         {currentReel && (
           <div className="absolute inset-0 z-[3] pointer-events-none">
 
-            {/* Right side engagement buttons — hidden when comments open */}
-            {!showComments && (
+            {/* Right side engagement buttons — hidden when comments open, hidden on desktop (moved to right panel) */}
+            {!showComments && !isDesktop && (
               <div
-                className="absolute right-3 flex flex-col items-center gap-3 pointer-events-auto"
-                style={{ bottom: 24 }}
+                className="absolute right-3 flex flex-col items-center gap-3 pointer-events-auto z-[5]"
+                style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 80px)' }}
                 onClick={e => e.stopPropagation()}
               >
                 {/* Views */}
@@ -344,11 +422,21 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                   className="text-white drop-shadow"
                   onClick={(e) => { e.stopPropagation(); setShowShare(true); }}
                 />
+                <button
+                  className="flex flex-col items-center gap-0.5"
+                  onClick={(e) => { e.stopPropagation(); handleDownload(); }}
+                  disabled={isDownloading}
+                >
+                  <Download className={`h-6 w-6 drop-shadow ${isDownloading ? 'text-white/40' : 'text-white'}`} />
+                  <span className={`text-[10px] font-semibold drop-shadow ${isDownloading ? 'text-white/40' : 'text-white'}`}>
+                    {isDownloading ? '…' : 'Save'}
+                  </span>
+                </button>
               </div>
             )}
 
-            {/* Bottom gradient overlay — hidden when comments open */}
-            {!showComments && (
+            {/* Bottom gradient overlay — hidden when comments open, hidden on desktop (moved to right panel) */}
+            {!showComments && !isDesktop && (
               <div className="absolute bottom-0 left-0 right-0 z-[3] px-4 pb-8 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none">
                 <div className="pr-14">
                   {/* User row */}
@@ -356,13 +444,21 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     <Link
                       href={`/profile/${currentReel.user.username}`}
                       onClick={(e) => { e.stopPropagation(); onClose(); }}
-                      className="flex items-center gap-1.5 no-underline flex-shrink-0 pointer-events-auto"
+                      className="flex-shrink-0 pointer-events-auto"
                     >
                       <CustomAvatar user={currentReel.user as any} size="sm" showBorder={true} />
-                      <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
-                        @{currentReel.user.username}
-                      </span>
                     </Link>
+                    <ProfileHoverCard username={currentReel.user.username}>
+                      <Link
+                        href={`/profile/${currentReel.user.username}`}
+                        onClick={(e) => { e.stopPropagation(); onClose(); }}
+                        className="no-underline flex-shrink-0 pointer-events-auto"
+                      >
+                        <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
+                          @{currentReel.user.username}
+                        </span>
+                      </Link>
+                    </ProfileHoverCard>
                     {user && user.id !== currentReel.user.id && !isFollowing && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleFollow(); }}
@@ -391,15 +487,19 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                   {currentReel.game?.name && (
                     <div className="flex items-center gap-1 mb-0.5">
                       <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-                      <Link
-                        href={`/games/${currentReel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-                        onClick={onClose}
+                      <button
                         className="pointer-events-auto"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const slug = currentReel.game!.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                          onClose();
+                          navigate(`/games/${slug}`);
+                        }}
                       >
                         <span className="text-[11px] font-semibold" style={{ color: '#B7FF1A' }}>
                           {currentReel.game.name}
                         </span>
-                      </Link>
+                      </button>
                     </div>
                   )}
 
@@ -417,11 +517,166 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         )}
       </div>
 
+      {/* ── Desktop right panel — shown only on desktop ── */}
+      {currentReel && isDesktop && (
+        <div
+          className="flex flex-col justify-between w-[340px] flex-shrink-0 h-full border-l border-white/10"
+          style={{ background: '#081017', paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Profile + info */}
+          <div className="flex flex-col gap-5 p-6 overflow-y-auto flex-1">
+            {/* Avatar + username + follow */}
+            <div className="flex items-center gap-3">
+              <Link
+                href={`/profile/${currentReel.user.username}`}
+                onClick={onClose}
+                className="flex-shrink-0"
+              >
+                <CustomAvatar user={currentReel.user as any} size="lg" showBorder={true} />
+              </Link>
+              <ProfileHoverCard username={currentReel.user.username}>
+                <div className="flex-1 min-w-0 cursor-default">
+                  <Link
+                    href={`/profile/${currentReel.user.username}`}
+                    onClick={onClose}
+                    className="no-underline"
+                  >
+                    <p className="text-white font-bold text-sm leading-tight truncate">
+                      {currentReel.user.displayName || currentReel.user.username}
+                    </p>
+                    <p className="text-white/50 text-xs truncate">@{currentReel.user.username}</p>
+                  </Link>
+                </div>
+              </ProfileHoverCard>
+              {user && user.id !== currentReel.user.id && !isFollowing && (
+                <button
+                  onClick={handleFollow}
+                  disabled={followMutation.isPending}
+                  className="text-xs font-bold px-3 py-1.5 rounded-full flex-shrink-0 transition-all"
+                  style={{ background: '#B7FF1A', color: '#000' }}
+                >
+                  {followMutation.isPending ? '…' : 'Follow'}
+                </button>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="h-px w-full" style={{ background: 'rgba(255,255,255,0.07)' }} />
+
+            {/* Title */}
+            <div>
+              <p className="text-white font-bold text-base leading-snug mb-2">
+                {currentReel.title}
+              </p>
+              {currentReel.description && (
+                <p className="text-white/60 text-sm leading-relaxed">
+                  {currentReel.description}
+                </p>
+              )}
+            </div>
+
+            {/* Game */}
+            {currentReel.game?.name && (
+              <div className="flex items-center gap-1.5">
+                <Gamepad2 className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#B7FF1A' }} />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const slug = currentReel.game!.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    onClose();
+                    navigate(`/games/${slug}`);
+                  }}
+                >
+                  <span className="text-sm font-semibold" style={{ color: '#B7FF1A' }}>
+                    {currentReel.game.name}
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {/* Original audio */}
+            <div className="flex items-center gap-1.5">
+              <Music className="h-3.5 w-3.5 text-white/40 flex-shrink-0" />
+              <span className="text-white/40 text-xs truncate">
+                Original audio · {currentReel.user.displayName || currentReel.user.username}
+              </span>
+            </div>
+          </div>
+
+          {/* Engagement buttons at bottom */}
+          <div className="flex items-center justify-around px-6 py-5 border-t border-white/10">
+            <div className="flex flex-col items-center gap-1">
+              <BarChart2 className="h-6 w-6 text-white/60" />
+              <span className="text-white/60 text-xs font-semibold">
+                {(() => {
+                  const v = currentReel.views || 0;
+                  if (v >= 1000000) return `${(v / 1000000).toFixed(1)}M`;
+                  if (v >= 1000) return `${(v / 1000).toFixed(1)}K`;
+                  return v.toString();
+                })()}
+              </span>
+            </div>
+            <LikeButton
+              contentId={currentReel.id}
+              contentType="clip"
+              contentOwnerId={currentReel.userId}
+              initialLiked={false}
+              initialCount={parseInt(currentReel._count?.likes?.toString() || '0')}
+              size="sm"
+              showCount={true}
+              variant="vertical"
+            />
+            <FireButton
+              contentId={currentReel.id}
+              contentType="clip"
+              contentOwnerId={currentReel.userId}
+              initialCount={parseInt(currentReel._count?.reactions?.toString() || '0')}
+              size="sm"
+              showCount={true}
+              variant="vertical"
+              clipRef={videoAreaRef}
+            />
+            <button
+              className="flex flex-col items-center gap-1"
+              onClick={() => {
+                if (!user) { openDialog('comment'); }
+                else { setShowComments(true); setIsPlaying(false); }
+              }}
+            >
+              <MessageCircle className="h-6 w-6 text-white/60" />
+              <span className="text-white/60 text-xs font-semibold">{currentReel._count?.comments || 0}</span>
+            </button>
+            <ShareLaunchIcon
+              size={24}
+              className="text-white/60"
+              onClick={() => setShowShare(true)}
+            />
+            <button
+              className="flex flex-col items-center gap-1"
+              onClick={handleDownload}
+              disabled={isDownloading}
+            >
+              <Download className={`h-6 w-6 ${isDownloading ? 'text-white/30' : 'text-white/60'}`} />
+              <span className={`text-xs font-semibold ${isDownloading ? 'text-white/30' : 'text-white/60'}`}>
+                {isDownloading ? '…' : 'Save'}
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Comments panel — flex-1, pushes video up ── */}
-      {showComments && currentReel && (
+      {(showComments || isClosingComments) && currentReel && (
         <div
           className="flex-1 flex flex-col overflow-hidden"
-          style={{ background: '#0F1923', borderRadius: '20px 20px 0 0', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+          style={{
+            background: '#0B1218',
+            borderRadius: '20px 20px 0 0',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            transform: isClosingComments ? 'translateY(100%)' : 'translateY(0)',
+            transition: 'transform 0.42s cubic-bezier(0.32, 0, 0.67, 0)',
+          }}
         >
           {/* Drag handle */}
           <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
@@ -435,7 +690,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
               <span className="text-white/45 font-normal text-sm">{currentReel._count?.comments || 0}</span>
             </h3>
             <button
-              onClick={() => { setShowComments(false); setIsPlaying(true); }}
+              onClick={() => closeComments(() => setIsPlaying(true))}
               className="w-8 h-8 flex items-center justify-center rounded-full"
               style={{ background: 'rgba(255,255,255,0.08)' }}
             >
@@ -486,12 +741,6 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
           contentType="reel"
         />
       )}
-
-      <JoinGamefolioDialog
-        open={isJoinDialogOpen}
-        onOpenChange={(open) => !open && closeDialog()}
-        actionType={actionType}
-      />
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent>

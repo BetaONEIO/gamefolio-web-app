@@ -41,7 +41,7 @@ export function decryptPrivateKey(encryptedData: string): string {
   let decrypted = decipher.update(encrypted, 'hex', 'utf8');
   decrypted += decipher.final('utf8');
 
-  return decrypted;
+  return decrypted.trim();
 }
 
 export function getUserWalletClient(encryptedPrivateKey: string) {

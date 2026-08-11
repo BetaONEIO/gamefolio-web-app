@@ -3,13 +3,12 @@ import { motion, AnimatePresence } from "motion/react";
 import { Crown, Loader2, X, Check, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
+import { useAuth } from "@/hooks/use-auth";
 import { Package } from "@revenuecat/purchases-js";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import {
-  Elements,
-  PaymentElement,
-  useStripe,
-  useElements,
+  EmbeddedCheckoutProvider,
+  EmbeddedCheckout,
 } from "@stripe/react-stripe-js";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -17,10 +16,24 @@ import { isNative } from "@/lib/platform";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import ProOnboardingScreen from "@/components/pro/ProOnboardingScreen";
 
+type SubscriptionTier = "pro" | "partner" | "indie";
+
+interface StripePricing {
+  currency: string;
+  monthly: number;
+  yearly: number;
+  formattedMonthly: string;
+  formattedYearly: string;
+  country: string;
+}
+
 interface ProUpgradeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   subtitle?: string;
+  onAuthRequired?: () => void;
+  /** Which tier this dialog sells. Defaults to "pro". */
+  tier?: SubscriptionTier;
 }
 
 const premiumBenefits = [
@@ -75,6 +88,114 @@ const premiumBenefits = [
   },
 ];
 
+// Streamer Partner includes every Pro perk, plus stream-on-profile + showcase.
+const partnerExtras = [
+  {
+    title: "Stream on your profile",
+    description: "Showcase your live Twitch, Kick or Rumble stream to fans",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="4" width="20" height="14" rx="2" stroke="#B7FF1A" strokeWidth="1.5"/>
+        <path d="M8 21H16M12 18V21" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round"/>
+        <path d="M10.5 8.5L14 11L10.5 13.5V8.5Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    title: "Featured across Gamefolio",
+    description: "Get your stream spotlighted on Gamefolio pages",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 3L14.09 8.26L20 9.27L15.5 13.14L16.82 19L12 15.77L7.18 19L8.5 13.14L4 9.27L9.91 8.26L12 3Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+];
+const partnerBenefits = [...partnerExtras, ...premiumBenefits];
+
+// Indie Partner mirrors Streamer Partner, but for indie game developers: every
+// Pro perk plus game-showcase + cross-Gamefolio featuring.
+//
+// IMPORTANT: the Indie Partner *backend* (Stripe /api/stripe/indie-* endpoints,
+// the RevenueCat "Gamefolio Indie Partner" offering, and server provisioning)
+// lives on the `indie-partner` branch and is NOT wired up here. This is
+// front-end advertising only — flip INDIE_BACKEND_READY to true once that
+// branch is merged in and the endpoints/offering exist.
+const INDIE_BACKEND_READY = false;
+const indieExtras = [
+  {
+    title: "Showcase your game",
+    description: "Feature your indie game on your profile for players to discover",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 11H10M8 9V13M15 12H15.01M18 10H18.01" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M17.32 5H6.68C4.65 5 3 6.65 3 8.68C3 9.36 3.13 10.03 3.38 10.66L5.2 15.2C5.66 16.34 6.76 17.09 7.99 17.09C8.79 17.09 9.55 16.77 10.11 16.21L10.83 15.5H13.17L13.89 16.21C14.45 16.77 15.21 17.09 16.01 17.09C17.24 17.09 18.34 16.34 18.8 15.2L20.62 10.66C20.87 10.03 21 9.36 21 8.68C21 6.65 19.35 5 17.32 5Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    title: "Featured across Gamefolio",
+    description: "Get your game spotlighted on Gamefolio pages",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 3L14.09 8.26L20 9.27L15.5 13.14L16.82 19L12 15.77L7.18 19L8.5 13.14L4 9.27L9.91 8.26L12 3Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+];
+const indieBenefits = [...indieExtras, ...premiumBenefits];
+
+interface TierMeta {
+  name: string;        // hero heading, e.g. "Streamer Partner"
+  cardTitle: string;   // plan-card line 1, e.g. "Streamer"
+  cardSub: string;     // plan-card line 2, e.g. "Partner"
+  blurb: string;       // short subtitle (mobile)
+  benefits: typeof premiumBenefits;
+  cta: string;
+  tagline: string;     // hero subtitle (desktop)
+  api: "pro" | "partner" | "indie"; // builds /api/stripe/{create,confirm,pricing} routes
+  teaserMonthly: number;            // GBP, plan-card teaser only — real price comes from the pricing endpoint
+}
+
+const TIER_META: Record<SubscriptionTier, TierMeta> = {
+  pro: {
+    name: "Gamefolio Pro",
+    cardTitle: "Pro",
+    cardSub: "Membership",
+    blurb: "Elevate your gaming identity with premium features",
+    benefits: premiumBenefits,
+    cta: "Join Gamefolio Pro",
+    tagline: "Elevate your gaming identity with premium features designed for elite creators",
+    api: "pro",
+    teaserMonthly: 2.99,
+  },
+  partner: {
+    name: "Streamer Partner",
+    cardTitle: "Streamer",
+    cardSub: "Partner",
+    blurb: "Put your live stream front and centre across Gamefolio",
+    benefits: partnerBenefits,
+    cta: "Become a Streamer Partner",
+    tagline: "Go pro and put your live stream front and centre across Gamefolio",
+    api: "partner",
+    teaserMonthly: 4.99,
+  },
+  indie: {
+    name: "Indie Partner",
+    cardTitle: "Indie",
+    cardSub: "Partner",
+    blurb: "Put your indie game front and centre across Gamefolio",
+    benefits: indieBenefits,
+    cta: "Become an Indie Partner",
+    tagline: "Showcase your indie game front and centre across Gamefolio",
+    api: "indie",
+    teaserMonthly: 4.99, // placeholder — confirm with the Indie Partner pricing on merge
+  },
+};
+
+// Order the plan cards render in.
+const TIER_ORDER: SubscriptionTier[] = ["pro", "partner", "indie"];
+
 
 function isYearlyPackage(pkg: Package): boolean {
   const id = pkg.identifier.toLowerCase();
@@ -99,7 +220,29 @@ function getCurrency(pkg: Package): string {
 }
 
 function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(amount);
+}
+
+// Pricing returned by /api/stripe/pro-pricing.
+// `currency` / `monthly` / `yearly` are always present (GBP base).
+// When the server can detect the visitor's country via the Cloudflare
+// cf-ipcountry header it also returns an approximate local-currency conversion
+// (`localCurrency`, `localMonthly`, `localYearly`).  The paywall shows the
+// local price (with a "~" prefix) so international users aren't put off by £.
+// The exact amount is always confirmed inside Stripe's embedded checkout.
+interface WebPricing {
+  currency: string;
+  monthly: number;
+  yearly: number;
+  localCurrency?: string;
+  localMonthly?: number;
+  localYearly?: number;
+}
+
+interface PlanView {
+  amount: number;
+  formatted: string;
+  perMonthFormatted: string;
 }
 
 interface LootboxReward {
@@ -107,138 +250,27 @@ interface LootboxReward {
   isDuplicate: boolean;
 }
 
-interface CheckoutFormProps {
-  plan: "monthly" | "yearly";
-  planLabel: string;
-  priceFormatted: string;
-  periodLabel: string;
-  paymentIntentId: string;
-  onBack: () => void;
-  onSuccess: (lootboxReward: LootboxReward | null) => void;
-}
-
-function CheckoutForm({ plan, planLabel, priceFormatted, periodLabel, paymentIntentId, onBack, onSuccess }: CheckoutFormProps) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const { toast } = useToast();
-  const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isReady, setIsReady] = useState(false);
-
-  const handlePay = async () => {
-    if (!stripe || !elements || !paymentIntentId || processing) return;
-
-    setProcessing(true);
-    setError(null);
-
-    try {
-      const { error: submitError } = await elements.submit();
-      if (submitError) {
-        throw new Error(submitError.message || "Please check your payment details");
-      }
-
-      const result = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: window.location.origin + "/?pro_payment=success&pi=" + paymentIntentId + "&plan=" + plan,
-        },
-        redirect: "if_required",
-      });
-
-      if (result.error) {
-        throw new Error(result.error.message || "Payment failed");
-      }
-
-      if (result.paymentIntent?.status === "succeeded") {
-        let lootboxReward: LootboxReward | null = null;
-        try {
-          const confirmRes = await apiRequest("POST", "/api/stripe/confirm-pro-subscription", { paymentIntentId, plan });
-          const confirmData = await confirmRes.json();
-          lootboxReward = confirmData.lootboxReward || null;
-        } catch {
-        }
-        await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-        onSuccess(lootboxReward);
-      } else if (result.paymentIntent?.status === "processing") {
-        toast({ title: "Payment processing", description: "You'll be notified when complete." });
-        onSuccess(null);
-      } else {
-        throw new Error("Payment could not be completed. Please try again.");
-      }
-    } catch (err: any) {
-      const msg = err?.message || "Payment failed";
-      setError(msg);
-      toast({ title: "Payment failed", description: msg, variant: "destructive" });
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col h-full bg-[#101D27]">
-      <div className="flex items-center py-[25px] px-6 border-b border-[#1e293b80]">
-        <button
-          onClick={onBack}
-          className="w-10 h-10 rounded-2xl bg-[#1e293b] flex items-center justify-center flex-shrink-0"
-        >
-          <ArrowLeft className="w-5 h-5 text-white" />
-        </button>
-        <span className="flex-1 text-center text-white text-lg font-bold pr-10">Gamefolio</span>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-6 pt-6 pb-8" style={{ scrollbarWidth: "none" }}>
-        <div className="max-w-[382px] mx-auto flex flex-col gap-8">
-          <div className="bg-[#0f172a66] backdrop-blur-[12px] border border-[#1e293b80] rounded-2xl p-6">
-            <p className="text-[#f8fafc] text-lg font-bold leading-7">
-              Subscribe to {planLabel} Pro Subscription
-            </p>
-            <div className="flex items-end gap-2 mt-2">
-              <span className="text-[#f8fafc] text-[30px] font-black leading-9">{priceFormatted}</span>
-              <span className="text-[#94a3b8] text-sm pb-1">{periodLabel}</span>
-            </div>
-            <div className="border-t border-[#1e293b80] pt-4 mt-4 flex items-center justify-between">
-              <span className="text-[#94a3b8] text-sm font-medium">Total due today</span>
-              <span className="text-[#B7FF1A] text-2xl font-black">{priceFormatted}</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-6">
-            <div className="rounded-2xl overflow-hidden" style={{ background: "#0f172a" }}>
-              <PaymentElement
-                onReady={() => setIsReady(true)}
-                options={{ layout: "tabs" }}
-              />
-            </div>
-
-            {error && (
-              <p className="text-red-400 text-sm text-center">{error}</p>
-            )}
-
-            <button
-              onClick={handlePay}
-              disabled={processing || !stripe || !isReady}
-              className="w-full bg-[#B7FF1A] hover:bg-[#A2F000] rounded-2xl h-[60px] flex items-center justify-center transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-              style={{ boxShadow: "0 12px 40px -10px #B7FF1A80" }}
-            >
-              {processing ? (
-                <Loader2 className="w-6 h-6 animate-spin text-[#071013]" />
-              ) : (
-                <span className="text-[#071013] text-lg font-black">Pay now</span>
-              )}
-            </button>
-
-            <p className="text-[#94a3b8] text-xs text-center leading-[19.5px]">
-              By subscribing, you agree to allow Gamefolio to charge you according to their terms until you cancel. Subscription renews automatically. Cancel anytime. Secure checkout by Gamefolio
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUpgradeDialogProps) {
-  const { isInitialized, isLoading, isPro, getCurrentOffering, purchasePackage } = useRevenueCat();
+export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthRequired, tier = "pro" }: ProUpgradeDialogProps) {
+  const { isInitialized, isLoading, isPro, isPartner, getCurrentOffering, getPartnerOffering, purchasePackage } = useRevenueCat();
+  const { user } = useAuth();
+  // The dialog can switch tiers in-place (e.g. cross-sell Streamer Partner from
+  // the Go-Pro screen). Start from the requested tier and reset on each open.
+  const [activeTier, setActiveTier] = useState<SubscriptionTier>(tier);
+  useEffect(() => { if (open) setActiveTier(tier); }, [open, tier]);
+  const meta = TIER_META[activeTier];
+  const isPartnerTier = activeTier === "partner";
+  const isIndieTier = activeTier === "indie";
+  // Indie Partner can't be purchased here yet — its backend lands with the
+  // indie-partner merge. Until then the card advertises but can't check out.
+  const indieComingSoon = isIndieTier && !INDIE_BACKEND_READY;
+  const tierName = meta.name;
+  const ownsThisTier = activeTier === "partner" ? isPartner : activeTier === "pro" ? isPro : false;
+  const benefits = meta.benefits;
+  const createEndpoint = `/api/stripe/create-${meta.api}-subscription`;
+  const confirmEndpoint = `/api/stripe/confirm-${meta.api}-subscription`;
+  const pricingEndpoint = `/api/stripe/${meta.api}-pricing`;
+  const ctaLabel = meta.cta;
+  const tagline = meta.tagline;
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
   const [purchasing, setPurchasing] = useState(false);
   const [step, setStep] = useState<"plans" | "checkout" | "success">("plans");
@@ -246,16 +278,17 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
   const [proLootboxReward, setProLootboxReward] = useState<LootboxReward | null>(null);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
-  const [checkoutPaymentIntentId, setCheckoutPaymentIntentId] = useState<string | null>(null);
+  const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [webPricing, setWebPricing] = useState<WebPricing | null>(null);
   const scrollContainerRef = useCallback((node: HTMLDivElement | null) => {
     if (node) {
       node.scrollTop = 0;
     }
   }, [step, open]);
 
-  const packages = getCurrentOffering();
+  const packages = activeTier === "partner" ? getPartnerOffering() : activeTier === "indie" ? null : getCurrentOffering();
 
   const { monthlyPkg, yearlyPkg } = useMemo(() => {
     if (!packages) return { monthlyPkg: null, yearlyPkg: null };
@@ -273,16 +306,61 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
     return yearlyPkg || monthlyPkg || (packages?.[0] ?? null);
   }, [billingPeriod, monthlyPkg, yearlyPkg, packages]);
 
+  // Normalised plan views: native reads RevenueCat packages (store-localised),
+  // web reads the server price book (region-localised). Everything below
+  // renders from these, so display always matches what will be charged.
+  const { monthlyView, yearlyView } = useMemo<{ monthlyView: PlanView | null; yearlyView: PlanView | null }>(() => {
+    if (isNative) {
+      return {
+        monthlyView: monthlyPkg
+          ? {
+              amount: getPriceAmount(monthlyPkg),
+              formatted: formatPrice(monthlyPkg),
+              perMonthFormatted: formatCurrency(getPriceAmount(monthlyPkg), getCurrency(monthlyPkg)),
+            }
+          : null,
+        yearlyView: yearlyPkg
+          ? {
+              amount: getPriceAmount(yearlyPkg),
+              formatted: formatPrice(yearlyPkg),
+              perMonthFormatted: formatCurrency(getPriceAmount(yearlyPkg) / 12, getCurrency(yearlyPkg)),
+            }
+          : null,
+      };
+    }
+    if (!webPricing) return { monthlyView: null, yearlyView: null };
+
+    // If the server detected the visitor's country and provided a local-currency
+    // approximation, show that instead of GBP. Use a "~" prefix so users know
+    // the paywall price is an estimate; the exact amount is shown at checkout.
+    const hasLocal = !!(webPricing.localCurrency && webPricing.localMonthly != null && webPricing.localYearly != null);
+    const displayCurrency = hasLocal ? webPricing.localCurrency! : webPricing.currency;
+    const displayMonthly  = hasLocal ? webPricing.localMonthly!  : webPricing.monthly;
+    const displayYearly   = hasLocal ? webPricing.localYearly!   : webPricing.yearly;
+    return {
+      monthlyView: {
+        amount: displayMonthly,
+        formatted: formatCurrency(displayMonthly, displayCurrency),
+        perMonthFormatted: formatCurrency(displayMonthly, displayCurrency),
+      },
+      yearlyView: {
+        amount: displayYearly,
+        formatted: formatCurrency(displayYearly, displayCurrency),
+        perMonthFormatted: formatCurrency(displayYearly / 12, displayCurrency),
+      },
+    };
+  }, [monthlyPkg, yearlyPkg, webPricing]);
+
   const savings = useMemo(() => {
-    if (!monthlyPkg || !yearlyPkg) return 0;
-    const monthlyPrice = getPriceAmount(monthlyPkg);
-    const yearlyMonthly = getPriceAmount(yearlyPkg) / 12;
+    if (!monthlyView || !yearlyView) return 0;
+    const monthlyPrice = monthlyView.amount;
+    const yearlyMonthly = yearlyView.amount / 12;
     if (monthlyPrice > 0) {
       const s = Math.round((1 - yearlyMonthly / monthlyPrice) * 100);
       return s > 0 ? s : 0;
     }
     return 0;
-  }, [monthlyPkg, yearlyPkg]);
+  }, [monthlyView, yearlyView]);
 
   const loadStripeInstance = useCallback(async () => {
     if (stripePromise) return;
@@ -304,25 +382,67 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
       setPurchasing(false);
       setPurchaseInProgress(false);
       setCheckoutClientSecret(null);
-      setCheckoutPaymentIntentId(null);
+      setCheckoutSessionId(null);
       setCheckoutError(null);
       setProLootboxReward(null);
     }
   }, [open]);
 
+  // Fetch localized Stripe pricing when dialog opens on web
   useEffect(() => {
     if (step === "checkout") {
       loadStripeInstance();
     }
   }, [step, loadStripeInstance]);
 
+  // On web, fetch the base (GBP) price for the paywall. The local converted
+  // amount is shown inside Stripe's embedded checkout via Adaptive Pricing.
+  // Native uses RevenueCat store prices instead.
+  useEffect(() => {
+    if (!open || isNative) return;
+    let cancelled = false;
+    // Clear stale pricing so the button re-gates while a tier switch repriced.
+    setWebPricing(null);
+    // Indie Partner has no pricing endpoint yet — the card shows an indicative
+    // price (TIER_META.teaserMonthly); don't hit a 404 here.
+    if (indieComingSoon) return;
+    (async () => {
+      try {
+        const res = await fetch(pricingEndpoint, { credentials: "include" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data?.currency) {
+          setWebPricing({
+            currency: data.currency,
+            monthly: data.monthly,
+            yearly: data.yearly,
+            localCurrency: data.localCurrency,
+            localMonthly: data.localMonthly,
+            localYearly: data.localYearly,
+          });
+        }
+      } catch {
+        // Non-fatal: button stays disabled until pricing resolves.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, pricingEndpoint, indieComingSoon]);
+
   const handleJoinPro = async () => {
-    if (!selectedPackage || purchasing) return;
+    if (!user) {
+      onAuthRequired?.();
+      return;
+    }
+
+    if (purchasing) return;
 
     // On native (iOS/Android) Apple/Google require all digital subscription
     // purchases to flow through the platform's IAP. RevenueCat handles that;
     // we never present Stripe on a native build.
     if (isNative) {
+      if (!selectedPackage) return;
       setCheckoutError(null);
       setPurchasing(true);
       setPurchaseInProgress(true);
@@ -339,17 +459,23 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
       return;
     }
 
+    // Web (Stripe) path — open an embedded Checkout Session. Stripe Adaptive
+    // Pricing (enabled in the Dashboard) converts £2.99 to the buyer's local
+    // currency inside the checkout; the server only sends the base GBP price.
+    if (!webPricing) return;
     setCheckoutLoading(true);
     setCheckoutError(null);
     setCheckoutClientSecret(null);
-    setCheckoutPaymentIntentId(null);
+    setCheckoutSessionId(null);
     setPurchaseInProgress(true);
     try {
       await loadStripeInstance();
-      const res = await apiRequest("POST", "/api/stripe/create-pro-subscription", { plan: billingPeriod });
+      const res = await apiRequest("POST", createEndpoint, {
+        plan: billingPeriod,
+      });
       const data = await res.json();
       setCheckoutClientSecret(data.clientSecret);
-      setCheckoutPaymentIntentId(data.paymentIntentId);
+      setCheckoutSessionId(data.sessionId);
       setStep("checkout");
     } catch (err: any) {
       setCheckoutError(err?.message || "Failed to start checkout");
@@ -358,21 +484,43 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
     }
   };
 
-  const checkoutPlanLabel = billingPeriod === "yearly" ? "Yearly" : "Monthly";
-  const checkoutPriceFormatted = selectedPackage ? formatPrice(selectedPackage) : "";
-  const checkoutPeriodLabel = billingPeriod === "yearly" ? "per year" : "per month";
+  // Called by the embedded checkout when payment completes (redirect_on_
+  // completion is 'never'). Confirm with the server to provision Pro + lootbox,
+  // then show the success screen.
+  const handleCheckoutComplete = useCallback(async () => {
+    let lootboxReward: LootboxReward | null = null;
+    try {
+      if (checkoutSessionId) {
+        const res = await apiRequest("POST", confirmEndpoint, {
+          sessionId: checkoutSessionId,
+          plan: billingPeriod,
+        });
+        const data = await res.json();
+        lootboxReward = data.lootboxReward || null;
+      }
+    } catch {
+      // The webhook backstop will still provision the tier server-side.
+    }
+    await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    setProLootboxReward(lootboxReward);
+    setStep("success");
+  }, [checkoutSessionId, billingPeriod, confirmEndpoint]);
 
-  if (isPro && step !== "success" && !purchaseInProgress) {
+  if (ownsThisTier && step !== "success" && !purchaseInProgress) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[430px] w-full bg-[#101D27] border-none p-0 overflow-hidden [&>button]:hidden">
+        <DialogContent className="max-w-[430px] w-full bg-[#0B1218] border-none p-0 overflow-hidden [&>button]:hidden">
           <div className="p-8 text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#B7FF1A] to-[#6FA800] mb-6">
               <Crown className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">You're already Pro!</h2>
-            <p className="text-[#94a3b8] mb-6">
-              You have full access to all Gamefolio Pro features. Thank you for your support!
+            <h2 className="text-2xl font-bold text-white mb-2">
+              {isPartnerTier ? "You're a Streamer Partner!" : "You're already Pro!"}
+            </h2>
+            <p className="text-[#B8C0AE] mb-6">
+              {isPartnerTier
+                ? "You have full access to all Streamer Partner features. Thank you for your support!"
+                : "You have full access to all Gamefolio Pro features. Thank you for your support!"}
             </p>
             <button
               onClick={() => onOpenChange(false)}
@@ -386,23 +534,24 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
     );
   }
 
-  const buttonDisabled = !isInitialized || isLoading || purchasing || !selectedPackage || checkoutLoading;
+  const canPurchase = !indieComingSoon && (isNative ? !!selectedPackage : !!webPricing);
+  const buttonDisabled = indieComingSoon || (!onAuthRequired && (isLoading || purchasing || checkoutLoading || !canPurchase || (isNative && !isInitialized)));
 
   const planSelector = (compact: boolean = false) => {
-    const yearlyPerMonth = yearlyPkg ? formatCurrency(getPriceAmount(yearlyPkg) / 12, getCurrency(yearlyPkg)) : null;
-    const yearlyTotal = yearlyPkg ? formatPrice(yearlyPkg) : null;
-    const monthlyPrice = monthlyPkg ? formatPrice(monthlyPkg) : null;
+    const yearlyPerMonth = yearlyView?.perMonthFormatted ?? null;
+    const yearlyTotal = yearlyView?.formatted ?? null;
+    const monthlyPrice = monthlyView?.formatted ?? null;
 
     return (
       <div className="flex flex-col gap-2">
-        {yearlyPkg && (
+        {yearlyView && (
           <button
             type="button"
             onClick={() => setBillingPeriod("yearly")}
             className={`relative w-full rounded-xl border-2 transition-all p-3 text-left ${
               billingPeriod === "yearly"
                 ? "border-[#B7FF1A] bg-[#B7FF1A0d]"
-                : "border-[#1e293b] bg-[#0f172a] hover:border-[#334155]"
+                : "border-[#1B2A33] bg-[#0B1218] hover:border-[#22313A]"
             }`}
           >
             {savings > 0 && (
@@ -419,27 +568,27 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                 </div>
                 <div>
                   <div className="text-white font-semibold text-sm">Yearly</div>
-                  <div className="text-[#94a3b8] text-[11px]">
+                  <div className="text-[#B8C0AE] text-[11px]">
                     {yearlyTotal} billed annually
                   </div>
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-white font-bold text-base">{yearlyPerMonth}</div>
-                <div className="text-[#94a3b8] text-[11px]">/month</div>
+                <div className="text-[#B8C0AE] text-[11px]">/month</div>
               </div>
             </div>
           </button>
         )}
 
-        {monthlyPkg && (
+        {monthlyView && (
           <button
             type="button"
             onClick={() => setBillingPeriod("monthly")}
             className={`w-full rounded-xl border-2 transition-all p-3 text-left ${
               billingPeriod === "monthly"
                 ? "border-[#B7FF1A] bg-[#B7FF1A0d]"
-                : "border-[#1e293b] bg-[#0f172a] hover:border-[#334155]"
+                : "border-[#1B2A33] bg-[#0B1218] hover:border-[#22313A]"
             }`}
           >
             <div className="flex items-center justify-between">
@@ -451,20 +600,20 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                 </div>
                 <div>
                   <div className="text-white font-semibold text-sm">Monthly</div>
-                  <div className="text-[#94a3b8] text-[11px]">
+                  <div className="text-[#B8C0AE] text-[11px]">
                     Billed monthly, cancel anytime
                   </div>
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-white font-bold text-base">{monthlyPrice}</div>
-                <div className="text-[#94a3b8] text-[11px]">/month</div>
+                <div className="text-[#B8C0AE] text-[11px]">/month</div>
               </div>
             </div>
           </button>
         )}
 
-        {!monthlyPkg && !yearlyPkg && packages && packages.length > 0 && (
+        {!monthlyView && !yearlyView && packages && packages.length > 0 && (
           <div className="w-full rounded-xl border-2 border-[#B7FF1A] bg-[#B7FF1A0d] p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -481,9 +630,63 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
             </div>
           </div>
         )}
+
+        {!isNative && (monthlyView || yearlyView) && (
+          <p className="text-[#B8C0AE] text-[10px] text-center mt-0.5">
+            {webPricing?.localCurrency
+              ? "Approximate local price · Exact amount confirmed at checkout"
+              : "Shown in GBP · Your local currency shown at checkout"}
+          </p>
+        )}
       </div>
     );
   };
+
+  // Plan picker: Pro / Streamer Partner / Indie Partner as selectable cards.
+  // Selecting a card switches the whole dialog (benefits, pricing, checkout) to
+  // that tier. Indie shows a "Soon" tag until its backend is wired in.
+  const tierCards = (
+    <div className="grid grid-cols-3 gap-2" data-testid="tier-cards">
+      {TIER_ORDER.map((t) => {
+        const m = TIER_META[t];
+        const selected = activeTier === t;
+        const soon = t === "indie" && !INDIE_BACKEND_READY;
+        return (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setActiveTier(t)}
+            className={`relative rounded-xl border-2 p-2.5 text-left transition-all ${
+              selected
+                ? "border-[#B7FF1A] bg-[#B7FF1A0d]"
+                : "border-[#1B2A33] bg-[#0B1218] hover:border-[#22313A]"
+            }`}
+            data-testid={`tier-card-${t}`}
+          >
+            {soon && (
+              <div className="absolute -top-2 right-1.5 bg-[#1B2A33] text-[#B8C0AE] text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border border-[#22313A]">
+                Soon
+              </div>
+            )}
+            <div className="text-white font-semibold text-[12px] leading-tight">{m.cardTitle}</div>
+            <div className="text-[#B8C0AE] text-[9px] leading-tight mb-1.5">{m.cardSub}</div>
+            <div className="text-white font-bold text-[13px] leading-none">£{m.teaserMonthly.toFixed(2)}</div>
+            <div className="text-[#B8C0AE] text-[9px] mt-0.5">from /mo</div>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  // Shown in place of the billing selector while Indie Partner is pre-launch.
+  const comingSoonNotice = (
+    <div className="rounded-xl border-2 border-[#1B2A33] bg-[#0B1218] p-3 text-center" data-testid="indie-coming-soon">
+      <div className="text-white font-semibold text-sm mb-1">Coming soon</div>
+      <div className="text-[#B8C0AE] text-[11px] leading-relaxed">
+        Indie Partner launches with the Indie programme. The price shown is indicative.
+      </div>
+    </div>
+  );
 
   const leftPanel = (
     <div className="relative w-full h-full min-h-0">
@@ -495,9 +698,9 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
           style={{ objectPosition: "center 70%" }}
         />
         {/* Top vignette for depth */}
-        <div className="absolute inset-x-0 top-0 h-1/4" style={{ background: 'linear-gradient(to bottom, rgba(3,8,10,0.5) 0%, transparent 100%)' }} />
+        <div className="absolute inset-x-0 top-0 h-1/4" style={{ background: 'linear-gradient(to bottom, rgba(8,16,23,0.5) 0%, transparent 100%)' }} />
         {/* Bottom fade into page background */}
-        <div className="absolute inset-x-0 bottom-0 h-[75%]" style={{ background: 'linear-gradient(to top, #03080A 0%, #03080A 8%, rgba(3,8,10,0.85) 35%, rgba(3,8,10,0.4) 65%, transparent 100%)' }} />
+        <div className="absolute inset-x-0 bottom-0 h-[75%]" style={{ background: 'linear-gradient(to top, #081017 0%, #081017 8%, rgba(8,16,23,0.85) 35%, rgba(8,16,23,0.4) 65%, transparent 100%)' }} />
       </div>
 
       <button
@@ -510,7 +713,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
       <div className="absolute bottom-0 left-0 right-0 z-10 px-5 pb-4">
         <div className="flex justify-center mb-3 md:justify-start">
           <div className="inline-flex items-center gap-1.5 bg-[#14532d4d] border border-[#B7FF1A33] rounded-full px-3 py-1">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="24" height="24" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path fillRule="evenodd" clipRule="evenodd" d="M13.3953 9.55057L13.524 8.28791C13.5926 7.61391 13.6373 7.16924 13.602 6.88858H13.6153C14.196 6.88858 14.6673 6.39124 14.6673 5.77791C14.6673 5.16458 14.196 4.66658 13.6146 4.66658C13.0333 4.66658 12.562 5.16391 12.562 5.77791C12.562 6.05524 12.6586 6.30924 12.818 6.50391C12.5893 6.65258 12.29 6.96724 11.8393 7.44058C11.4926 7.80524 11.3193 7.98724 11.126 8.01591C11.0186 8.03123 10.909 8.01502 10.8106 7.96924C10.632 7.88658 10.5126 7.66124 10.2746 7.20991L9.01864 4.83325C8.87197 4.55525 8.74864 4.32258 8.63731 4.13525C9.09264 3.88991 9.40397 3.39058 9.40397 2.81525C9.40397 1.99592 8.77597 1.33325 8.00064 1.33325C7.22531 1.33325 6.59731 1.99658 6.59731 2.81458C6.59731 3.39058 6.90864 3.88991 7.36398 4.13458C7.25264 4.32258 7.12998 4.55525 6.98264 4.83325L5.72731 7.21058C5.48864 7.66124 5.36931 7.88658 5.19065 7.96991C5.09227 8.01568 4.98272 8.0319 4.87531 8.01657C4.68198 7.98791 4.50865 7.80524 4.16198 7.44058C3.71131 6.96724 3.41198 6.65258 3.18331 6.50391C3.34331 6.30924 3.43931 6.05524 3.43931 5.77725C3.43931 5.16458 2.96732 4.66658 2.38598 4.66658C1.80598 4.66658 1.33398 5.16391 1.33398 5.77791C1.33398 6.39124 1.80532 6.88858 2.38665 6.88858H2.39932C2.36332 7.16858 2.40865 7.61391 2.47732 8.28791L2.60598 9.55057C2.67732 10.2512 2.73665 10.9179 2.80998 11.5186H13.1913C13.2646 10.9186 13.324 10.2512 13.3953 9.55057Z" fill="#B7FF1A" />
               <path fillRule="evenodd" clipRule="evenodd" d="M7.23731 14.6666H8.76397C10.754 14.6666 11.7493 14.6666 12.4133 14.0399C12.7026 13.7652 12.8866 13.2719 13.0186 12.6292H2.98265C3.11465 13.2719 3.29798 13.7652 3.58798 14.0392C4.25198 14.6666 5.24731 14.6666 7.23731 14.6666Z" fill="#B7FF1A" />
             </svg>
@@ -523,21 +726,21 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
         <div className="text-center md:text-left mb-1">
           <h2 className="text-xl font-bold leading-tight whitespace-nowrap">
             <span className="text-white">Unlock </span>
-            <span className="text-[#B7FF1A]">Gamefolio Pro</span>
+            <span className="text-[#B7FF1A]">{tierName}</span>
           </h2>
         </div>
 
-        <p className="text-[#94a3b8] text-sm text-center md:text-left leading-relaxed hidden md:block max-w-[280px]">
-          {subtitle || "Elevate your gaming identity with premium features designed for elite creators"}
+        <p className="text-[#B8C0AE] text-sm text-center md:text-left leading-relaxed hidden md:block max-w-[280px]">
+          {subtitle || tagline}
         </p>
       </div>
     </div>
   );
 
   const rightPanel = (
-    <div className="flex flex-col justify-between h-full px-5 py-5 bg-[#101D27]">
+    <div className="flex flex-col justify-between h-full px-5 py-5 bg-[#0B1218]">
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 mb-4">
-        {premiumBenefits.map((benefit, index) => (
+        {benefits.map((benefit, index) => (
           <motion.div
             key={benefit.title}
             initial={{ opacity: 0, x: -20 }}
@@ -545,14 +748,14 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
             transition={{ delay: index * 0.08 }}
             className="flex items-start gap-2"
           >
-            <div className="w-8 h-8 rounded-lg bg-[#1e293b] border border-[#1e293b] flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-[#1B2A33] border border-[#1B2A33] flex items-center justify-center flex-shrink-0">
               {benefit.icon}
             </div>
             <div className="flex flex-col justify-center min-h-[32px]">
-              <span className="text-[#f8fafc] text-xs font-semibold leading-4">
+              <span className="text-[#F5F7F2] text-xs font-semibold leading-4">
                 {benefit.title}
               </span>
-              <span className="text-[#94a3b8] text-[11px] leading-3.5">
+              <span className="text-[#B8C0AE] text-[11px] leading-3.5">
                 {benefit.description}
               </span>
             </div>
@@ -562,12 +765,14 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
 
       <div className="flex flex-col gap-3 mt-auto">
         <div className="mb-0.5">
-          <span className="text-[#94a3b8] text-[10px] font-bold uppercase tracking-[1.2px]">
+          <span className="text-[#B8C0AE] text-[10px] font-bold uppercase tracking-[1.2px]">
             Choose your plan
           </span>
         </div>
 
-        {planSelector()}
+        {tierCards}
+
+        {indieComingSoon ? comingSoonNotice : planSelector()}
 
         <button
           onClick={handleJoinPro}
@@ -578,9 +783,11 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
         >
           {purchasing || isLoading || checkoutLoading ? (
             <Loader2 className="w-5 h-5 animate-spin text-[#071013]" />
+          ) : indieComingSoon ? (
+            <span className="text-[#071013] text-base font-bold">Coming soon</span>
           ) : (
             <>
-              <span className="text-[#071013] text-base font-bold">Join Gamefolio Pro</span>
+              <span className="text-[#071013] text-base font-bold">{ctaLabel}</span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#022C22" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -592,7 +799,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
           <p className="text-red-400 text-xs text-center">{checkoutError}</p>
         )}
 
-        <span className="text-[#94a3b8] text-[11px] text-center">
+        <span className="text-[#B8C0AE] text-[11px] text-center">
           Cancel anytime. Terms and conditions apply.
         </span>
       </div>
@@ -603,78 +810,42 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
     <ProOnboardingScreen onComplete={() => onOpenChange(false)} lootboxReward={proLootboxReward} />
   );
 
-  const checkoutScreen = stripePromise && checkoutClientSecret && checkoutPaymentIntentId ? (
-    <Elements
-      stripe={stripePromise}
-      options={{
-        clientSecret: checkoutClientSecret,
-        appearance: {
-          theme: "night",
-          variables: {
-            colorPrimary: "#B7FF1A",
-            colorBackground: "#1e293b",
-            colorText: "#f8fafc",
-            colorDanger: "#ef4444",
-            fontFamily: "Plus Jakarta Sans, system-ui, sans-serif",
-            borderRadius: "16px",
-            spacingUnit: "4px",
-          },
-          rules: {
-            ".Input": {
-              backgroundColor: "#1e293b",
-              border: "1px solid rgba(30, 41, 59, 0.5)",
-              padding: "16px",
-            },
-            ".Input:focus": {
-              border: "1px solid #B7FF1A",
-              boxShadow: "0 0 0 1px #B7FF1A",
-            },
-            ".Label": {
-              color: "#94a3b8",
-              fontSize: "10px",
-              fontWeight: "700",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-              marginBottom: "8px",
-            },
-            ".Tab": {
-              backgroundColor: "#1e293b",
-              border: "1px solid rgba(30, 41, 59, 0.5)",
-              color: "#94a3b8",
-            },
-            ".Tab:hover": {
-              backgroundColor: "#334155",
-              color: "#f8fafc",
-            },
-            ".Tab--selected": {
-              backgroundColor: "#334155",
-              border: "1px solid #B7FF1A",
-              color: "#f8fafc",
-            },
-          },
-        },
-      }}
-    >
-      <CheckoutForm
-        plan={billingPeriod}
-        planLabel={checkoutPlanLabel}
-        priceFormatted={checkoutPriceFormatted}
-        periodLabel={checkoutPeriodLabel}
-        paymentIntentId={checkoutPaymentIntentId}
-        onBack={() => setStep("plans")}
-        onSuccess={(lootboxReward) => { setProLootboxReward(lootboxReward); setStep("success"); }}
-      />
-    </Elements>
-  ) : (
-    <div className="flex items-center justify-center min-h-[400px] bg-[#101D27]">
-      <Loader2 className="w-8 h-8 animate-spin text-[#B7FF1A]" />
+  const checkoutScreen = (
+    <div className="flex flex-col h-full bg-[#0B1218]">
+      <div className="flex items-center py-[25px] px-6 border-b border-[#1B2A3380]">
+        <button
+          onClick={() => setStep("plans")}
+          className="w-10 h-10 rounded-2xl bg-[#1B2A33] flex items-center justify-center flex-shrink-0"
+        >
+          <ArrowLeft className="w-5 h-5 text-white" />
+        </button>
+        <span className="flex-1 text-center text-white text-lg font-bold pr-10">Gamefolio</span>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-8" style={{ scrollbarWidth: "none" }}>
+        {stripePromise && checkoutClientSecret ? (
+          <EmbeddedCheckoutProvider
+            stripe={stripePromise}
+            options={{
+              clientSecret: checkoutClientSecret,
+              onComplete: handleCheckoutComplete,
+            }}
+          >
+            <EmbeddedCheckout />
+          </EmbeddedCheckoutProvider>
+        ) : (
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Loader2 className="w-8 h-8 animate-spin text-[#B7FF1A]" />
+          </div>
+        )}
+      </div>
     </div>
   );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[430px] md:max-w-[780px] w-full bg-[#101D27] border-none text-white p-0 overflow-hidden [&>button]:hidden max-h-[100dvh] h-[100dvh] md:h-auto md:max-h-[90vh] gap-0 rounded-none sm:rounded-none top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
+        className="max-w-[430px] md:max-w-[780px] w-full bg-[#0B1218] border-none text-white p-0 overflow-hidden [&>button]:hidden max-h-[100dvh] h-[100dvh] md:h-auto md:max-h-[90vh] gap-0 rounded-none sm:rounded-none top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
         data-testid="dialog-pro-upgrade"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
@@ -686,7 +857,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <div ref={scrollContainerRef} className="flex flex-col md:hidden h-[100dvh] overflow-y-auto" style={{ scrollbarWidth: "none", backgroundColor: "#03080A" }}>
+              <div ref={scrollContainerRef} className="flex flex-col md:hidden h-[100dvh] overflow-y-auto" style={{ scrollbarWidth: "none", backgroundColor: "#081017" }}>
                 <div className="relative w-full flex-shrink-0" style={{ height: "56vh" }}>
                   <img
                     src={proHeroImage}
@@ -695,9 +866,9 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                     style={{ objectPosition: "center 70%" }}
                   />
                   {/* Top vignette for depth */}
-                  <div className="absolute inset-x-0 top-0 h-1/4" style={{ background: "linear-gradient(to bottom, rgba(3,8,10,0.55) 0%, transparent 100%)" }} />
+                  <div className="absolute inset-x-0 top-0 h-1/4" style={{ background: "linear-gradient(to bottom, rgba(8,16,23,0.55) 0%, transparent 100%)" }} />
                   {/* Bottom fade — tall, strong, bleeds past image boundary */}
-                  <div className="absolute inset-x-0 bottom-0" style={{ height: "240px", background: "linear-gradient(to bottom, rgba(3,8,10,0) 0%, rgba(3,8,10,0.45) 45%, rgba(3,8,10,0.85) 75%, #03080A 100%)" }} />
+                  <div className="absolute inset-x-0 bottom-0" style={{ height: "240px", background: "linear-gradient(to bottom, rgba(8,16,23,0) 0%, rgba(8,16,23,0.45) 45%, rgba(8,16,23,0.85) 75%, #081017 100%)" }} />
                   <button
                     onClick={() => onOpenChange(false)}
                     className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center transition-colors hover:bg-black/60 z-10"
@@ -709,7 +880,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                 <div className="px-5 pb-5 relative z-10" style={{ marginTop: "-72px", backgroundColor: "transparent" }}>
                   <div className="flex justify-center mb-2">
                     <div className="inline-flex items-center gap-1.5 bg-[#14532d4d] border border-[#B7FF1A33] rounded-full px-3 py-1">
-                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <svg width="21" height="21" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path fillRule="evenodd" clipRule="evenodd" d="M13.3953 9.55057L13.524 8.28791C13.5926 7.61391 13.6373 7.16924 13.602 6.88858H13.6153C14.196 6.88858 14.6673 6.39124 14.6673 5.77791C14.6673 5.16458 14.196 4.66658 13.6146 4.66658C13.0333 4.66658 12.562 5.16391 12.562 5.77791C12.562 6.05524 12.6586 6.30924 12.818 6.50391C12.5893 6.65258 12.29 6.96724 11.8393 7.44058C11.4926 7.80524 11.3193 7.98724 11.126 8.01591C11.0186 8.03123 10.909 8.01502 10.8106 7.96924C10.632 7.88658 10.5126 7.66124 10.2746 7.20991L9.01864 4.83325C8.87197 4.55525 8.74864 4.32258 8.63731 4.13525C9.09264 3.88991 9.40397 3.39058 9.40397 2.81525C9.40397 1.99592 8.77597 1.33325 8.00064 1.33325C7.22531 1.33325 6.59731 1.99658 6.59731 2.81458C6.59731 3.39058 6.90864 3.88991 7.36398 4.13458C7.25264 4.32258 7.12998 4.55525 6.98264 4.83325L5.72731 7.21058C5.48864 7.66124 5.36931 7.88658 5.19065 7.96991C5.09227 8.01568 4.98272 8.0319 4.87531 8.01657C4.68198 7.98791 4.50865 7.80524 4.16198 7.44058C3.71131 6.96724 3.41198 6.65258 3.18331 6.50391C3.34331 6.30924 3.43931 6.05524 3.43931 5.77725C3.43931 5.16458 2.96732 4.66658 2.38598 4.66658C1.80598 4.66658 1.33398 5.16391 1.33398 5.77791C1.33398 6.39124 1.80532 6.88858 2.38665 6.88858H2.39932C2.36332 7.16858 2.40865 7.61391 2.47732 8.28791L2.60598 9.55057C2.67732 10.2512 2.73665 10.9179 2.80998 11.5186H13.1913C13.2646 10.9186 13.324 10.2512 13.3953 9.55057Z" fill="#B7FF1A" />
                         <path fillRule="evenodd" clipRule="evenodd" d="M7.23731 14.6666H8.76397C10.754 14.6666 11.7493 14.6666 12.4133 14.0399C12.7026 13.7652 12.8866 13.2719 13.0186 12.6292H2.98265C3.11465 13.2719 3.29798 13.7652 3.58798 14.0392C4.25198 14.6666 5.24731 14.6666 7.23731 14.6666Z" fill="#B7FF1A" />
                       </svg>
@@ -721,15 +892,15 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
 
                   <h2 className="text-center text-xl font-bold leading-tight mb-0.5">
                     <span className="text-white">Unlock </span>
-                    <span className="text-[#B7FF1A]">Gamefolio Pro</span>
+                    <span className="text-[#B7FF1A]">{tierName}</span>
                   </h2>
 
-                  <p className="text-[#94a3b8] text-xs text-center leading-relaxed mb-3 max-w-[260px] mx-auto">
-                    Elevate your gaming identity with premium features
+                  <p className="text-[#B8C0AE] text-xs text-center leading-relaxed mb-3 max-w-[260px] mx-auto">
+                    {meta.blurb}
                   </p>
 
                   <div className="flex flex-col gap-3 mb-4 pt-1">
-                    {premiumBenefits.map((benefit, index) => (
+                    {benefits.map((benefit, index) => (
                       <motion.div
                         key={benefit.title}
                         initial={{ opacity: 0, x: -10 }}
@@ -737,14 +908,14 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                         transition={{ delay: index * 0.05 }}
                         className="flex items-center gap-3"
                       >
-                        <div className="w-9 h-9 rounded-xl bg-[#1e293b] border border-[#1e293b] flex items-center justify-center flex-shrink-0">
+                        <div className="w-9 h-9 rounded-xl bg-[#1B2A33] border border-[#1B2A33] flex items-center justify-center flex-shrink-0">
                           {benefit.icon}
                         </div>
                         <div className="flex flex-col justify-center">
-                          <span className="text-[#f8fafc] text-sm font-semibold leading-5">
+                          <span className="text-[#F5F7F2] text-sm font-semibold leading-5">
                             {benefit.title}
                           </span>
-                          <span className="text-[#94a3b8] text-[11px] leading-3.5">
+                          <span className="text-[#B8C0AE] text-[11px] leading-3.5">
                             {benefit.description}
                           </span>
                         </div>
@@ -753,12 +924,16 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                   </div>
 
                   <div className="mb-2">
-                    <span className="text-[#94a3b8] text-[10px] font-bold uppercase tracking-[1px]">
+                    <span className="text-[#B8C0AE] text-[10px] font-bold uppercase tracking-[1px]">
                       Choose your plan
                     </span>
                   </div>
 
-                  {planSelector(true)}
+                  {tierCards}
+
+                  <div className="mt-3">
+                    {indieComingSoon ? comingSoonNotice : planSelector(true)}
+                  </div>
 
                   <button
                     onClick={handleJoinPro}
@@ -769,9 +944,11 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                   >
                     {purchasing || isLoading || checkoutLoading ? (
                       <Loader2 className="w-5 h-5 animate-spin text-[#071013]" />
+                    ) : indieComingSoon ? (
+                      <span className="text-[#071013] text-base font-bold">Coming soon</span>
                     ) : (
                       <>
-                        <span className="text-[#071013] text-base font-bold">Join Gamefolio Pro</span>
+                        <span className="text-[#071013] text-base font-bold">{ctaLabel}</span>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#022C22" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
@@ -779,7 +956,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle }: ProUp
                     )}
                   </button>
 
-                  <span className="text-[#94a3b8] text-[11px] text-center block mt-2">
+                  <span className="text-[#B8C0AE] text-[11px] text-center block mt-2">
                     Cancel anytime. Terms and conditions apply.
                   </span>
                 </div>

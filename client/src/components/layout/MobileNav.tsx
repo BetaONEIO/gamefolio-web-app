@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { useIsKeyboardOpen } from "@/hooks/use-keyboard-height";
 import AuthModal from "@/components/auth/auth-modal";
 import { ZapIconSvg, useZapFly, ZapFlyOverlay } from "@/components/ui/ZapReactionIcon";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
@@ -25,7 +26,31 @@ const MobileNav = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
   const trendingIconRef = useRef<HTMLSpanElement>(null);
+  const navRef = useRef<HTMLElement>(null);
   const { zapFlyState, triggerZapFly, dismissZapFly } = useZapFly();
+  const isKeyboardOpen = useIsKeyboardOpen();
+
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const update = () => {
+      document.documentElement.style.setProperty('--mobile-nav-height', `${nav.offsetHeight}px`);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(nav);
+    return () => ro.disconnect();
+  }, []);
+
+  // All hooks must be declared before any early return.
+  const handleUploadOptionClick = useCallback((type: string) => {
+    setUploadMenuOpen(false);
+    window.dispatchEvent(new CustomEvent("upload-type-change", { detail: type }));
+    setLocation(`/upload?type=${type}`);
+  }, [setLocation]);
+
+  // Hide navigation bar when keyboard is open so it doesn't overlap input fields.
+  if (isKeyboardOpen) return null;
 
   const navItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
@@ -54,12 +79,6 @@ const MobileNav = () => {
     }
   };
 
-  const handleUploadOptionClick = useCallback((type: string) => {
-    setUploadMenuOpen(false);
-    window.dispatchEvent(new CustomEvent("upload-type-change", { detail: type }));
-    setLocation(`/upload?type=${type}`);
-  }, [setLocation]);
-
   return (
     <>
       {uploadMenuOpen && (
@@ -86,7 +105,7 @@ const MobileNav = () => {
                 className={cn(
                   "absolute pointer-events-auto flex flex-col items-center justify-center",
                   "w-[76px] h-[88px] rounded-2xl",
-                  "bg-zinc-800 border-2 border-primary",
+                  "bg-background border-2 border-primary",
                   "shadow-lg shadow-black/40",
                   "hover:bg-primary active:bg-primary",
                   "group",
@@ -102,8 +121,8 @@ const MobileNav = () => {
                   transitionDelay: uploadMenuOpen ? `${index * 60}ms` : `${(total - 1 - index) * 30}ms`,
                 }}
               >
-                <option.icon className="w-6 h-6 mb-1.5 text-card group-hover:text-primary group-active:text-primary transition-colors" />
-                <span className="text-[10px] font-semibold leading-tight text-center px-1 text-card group-hover:text-primary group-active:text-primary transition-colors">
+                <option.icon className="w-6 h-6 mb-1.5 text-white transition-colors" />
+                <span className="text-[10px] font-semibold leading-tight text-center px-1 text-white transition-colors">
                   {option.label}
                 </span>
               </button>
@@ -112,7 +131,7 @@ const MobileNav = () => {
         </div>
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-[70] safe-area-bottom">
+      <nav ref={navRef} className="fixed bottom-0 left-0 right-0 bg-[#0B1218] border-t border-border z-[70] safe-area-bottom">
         <div className="flex justify-around py-3">
           {navItems.map((item) => {
             if ('isUpload' in item && item.isUpload) {
@@ -169,13 +188,15 @@ const MobileNav = () => {
                   onClick={(e) => handleNavClick(item, e)}
                   className="flex flex-col items-center text-xs w-full no-underline"
                 >
-                  <GamefolioIcon
-                    glow={isActive}
-                    className={cn(
-                      "mb-1 w-6 h-6",
-                      !isActive && "opacity-60"
-                    )}
-                  />
+                  <span className="mb-1 flex items-center justify-center w-6 h-6 overflow-visible">
+                    <GamefolioIcon
+                      glow={isActive}
+                      className={cn(
+                        "w-6 h-6 scale-[1.85]",
+                        !isActive && "opacity-60"
+                      )}
+                    />
+                  </span>
                   <span className={cn(
                     isActive ? 'text-white' : 'text-muted-foreground'
                   )}>{item.label}</span>

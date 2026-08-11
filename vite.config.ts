@@ -20,10 +20,16 @@ export default defineConfig({
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      "@assets": path.resolve(import.meta.dirname, "client", "public", "attached_assets"),
     },
   },
   root: path.resolve(import.meta.dirname, "client"),
+  // Vite's envDir defaults to `root` (client/), but the project's .env lives at
+  // the repo root. Without this, VITE_* keys (e.g. VITE_SEQUENCE_*) are NOT
+  // embedded in local/mobile builds, so sequenceConfig is null → no WagmiProvider
+  // → the wallet's wagmi hooks throw "useConfig must be used within WagmiProvider".
+  // (Replit web builds are unaffected: their keys are real env vars.)
+  envDir: path.resolve(import.meta.dirname),
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,

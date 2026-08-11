@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video, Star } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video, Star, Code, Eye, Coffee, Scroll } from "lucide-react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -31,8 +31,8 @@ import { FaSteam, FaXbox, FaPlaystation, FaYoutube, FaDiscord } from 'react-icon
 import { connectXboxAccount, isXboxConfigValid } from '@/lib/xbox';
 import { useTheme } from '@/hooks/use-theme';
 import { FaXTwitter } from 'react-icons/fa6';
-import gamefolioLogo from '@assets/gamefolio social logo 3d circle web.png';
-import { SiEpicgames, SiTwitch, SiKick } from 'react-icons/si';
+import gamefolioLogo from '@assets/gamefolio-logo-green.png';
+import { SiEpicgames, SiTwitch, SiKick, SiYoutube } from 'react-icons/si';
 import Cropper from "react-easy-crop";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -71,6 +71,19 @@ const EMOJI_CATEGORIES = [
     label: "Objects",
     emojis: ["💻","🖥️","🖨️","⌨️","🖱️","📱","📷","🎥","📡","🔭","🔬","💡","🔋","🔌","🧲","💾","💿","📀","🎵","🎶","🎸","🥁","🎺","🎷","🎻","🎤","🎧","📻","📺","🎬"],
   },
+];
+
+// Gamer "tag" options shown in Profile & Appearance so users can change the
+// type assigned during onboarding. Ids/labels mirror the onboarding flow.
+const GAMER_TAG_OPTIONS = [
+  { id: "gamer", label: "Gamer", icon: Gamepad2 },
+  { id: "professional_gamer", label: "Pro Gamer", icon: Trophy },
+  { id: "content_creator", label: "Content Creator", icon: Upload },
+  { id: "streamer", label: "Streamer", icon: Video },
+  { id: "indie_developer", label: "Indie Developer", icon: Code },
+  { id: "viewer", label: "Viewer", icon: Eye },
+  { id: "filthy_casual", label: "Filthy Casual", icon: Coffee },
+  { id: "doom_scroller", label: "Doom Scroller", icon: Scroll },
 ];
 
 const FONT_OPTIONS = [
@@ -132,6 +145,14 @@ const FONT_EFFECTS = [
   { value: 'outline-white', label: 'White Outline', textShadow: '-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff' },
   { value: 'outline-black', label: 'Black Outline', textShadow: '-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, -2px 0 0 #000, 2px 0 0 #000, 0 -2px 0 #000, 0 2px 0 #000' },
   { value: 'rainbow', label: 'Rainbow Glow', textShadow: '0 0 5px #ff0000, 0 0 10px #ff7700, 0 0 15px #ffff00, 0 0 20px #00ff00, 0 0 25px #0000ff, 0 0 30px #8b00ff' },
+];
+
+// Streamer Partner perks shown in the Streamer settings panel.
+const STREAMER_PARTNER_PERKS = [
+  "Everything in Gamefolio Pro",
+  "Your live stream featured on your profile",
+  "Showcased across Gamefolio (Trending & more)",
+  "Official Streamer Partner badge",
 ];
 
 // Component to fetch SVG and render it inline with color replacement
@@ -288,8 +309,8 @@ const PRESET_THEMES = [
     name: "None",
     backgroundColor: "#121F2B",
     accentColor: "#B7FF1A",
-    gradientTopColor: "#02172C",
-    primaryColor: "#02172C"
+    gradientTopColor: "#071013",
+    primaryColor: "#071013"
   },
   {
     name: "Cutesy Pink",
@@ -386,6 +407,23 @@ const PRESET_THEMES = [
     gradientTopColor: "#ffedd4",
     primaryColor: "#ffedd4",
     proOnly: true
+  },
+  {
+    name: "Mayhem",
+    backgroundColor: "#0d0d0d",
+    accentColor: "#00DFFF",
+    gradientTopColor: "#0d0d0d",
+    primaryColor: "#0d0d0d",
+    profileBackgroundGradientCss: "repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(255,255,255,0.04) 12px, rgba(255,255,255,0.04) 13px), linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)",
+    proOnly: true
+  },
+  {
+    name: "Bat",
+    backgroundColor: "#111111",
+    accentColor: "#ff8c00",
+    gradientTopColor: "#2a2a2a",
+    primaryColor: "#2a2a2a",
+    proOnly: true
   }
 ];
 
@@ -442,11 +480,27 @@ function getPlatformUrl(key: PlatformKey, username: string): string | null {
   if (!u) return null;
   switch (key) {
     case 'steamUsername': return `steamcommunity.com/id/${u}`;
+    case 'xboxUsername': return `account.xbox.com/en-US/profile?gamertag=${encodeURIComponent(u)}`;
     case 'playstationUsername': return `psnprofiles.com/${u}`;
     case 'twitterUsername': return `x.com/${u}`;
     case 'youtubeUsername': return `youtube.com/@${u}`;
     case 'rumbleUsername': return `rumble.com/user/${u}`;
     default: return null;
+  }
+}
+
+function getPlatformMaxLength(key: PlatformKey): number {
+  switch (key) {
+    case 'steamUsername': return 32;
+    case 'xboxUsername': return 15;
+    case 'playstationUsername': return 16;
+    case 'discordUsername': return 32;
+    case 'epicUsername': return 16;
+    case 'nintendoUsername': return 10;
+    case 'twitterUsername': return 15;
+    case 'youtubeUsername': return 30;
+    case 'rumbleUsername': return 50;
+    default: return 50;
   }
 }
 
@@ -458,6 +512,11 @@ function validatePlatformInput(key: PlatformKey, username: string): string | nul
       if (u.length < 2) return 'Must be at least 2 characters';
       if (u.length > 32) return 'Must be 32 characters or fewer';
       if (!/^[a-zA-Z0-9_-]+$/.test(u)) return 'Only letters, numbers, _ and - allowed';
+      return null;
+    case 'xboxUsername':
+      if (u.length < 1) return 'Must be at least 1 character';
+      if (u.length > 15) return 'Must be 15 characters or fewer';
+      if (!/^[a-zA-Z0-9 ]+$/.test(u)) return 'Only letters, numbers and spaces allowed';
       return null;
     case 'playstationUsername':
       if (u.length < 3) return 'Must be at least 3 characters';
@@ -771,6 +830,8 @@ export default function SettingsPage() {
   const [disconnectingKick, setDisconnectingKick] = useState(false);
   const [connectingTwitch, setConnectingTwitch] = useState(false);
   const [disconnectingTwitch, setDisconnectingTwitch] = useState(false);
+  const [connectingYouTube, setConnectingYouTube] = useState(false);
+  const [disconnectingYouTube, setDisconnectingYouTube] = useState(false);
   const [connectingRumble, setConnectingRumble] = useState(false);
   const [disconnectingRumble, setDisconnectingRumble] = useState(false);
 
@@ -995,7 +1056,7 @@ export default function SettingsPage() {
   const handleTwitchDisconnect = async () => {
     setDisconnectingTwitch(true);
     try {
-      await apiRequest("POST", "/api/auth/twitch/disconnect");
+      await apiRequest("POST", "/api/auth/twitch-stream/disconnect");
       await refreshUser();
       toast({ title: "Twitch disconnected", description: "Your Twitch channel has been unlinked.", duration: 3000 });
     } catch {
@@ -1018,7 +1079,20 @@ export default function SettingsPage() {
     }
   };
 
-  const handleStreamerSettingsSave = async (patch: { isStreamer?: boolean; streamPlatform?: string; liveEnabled?: boolean }) => {
+  const handleYouTubeDisconnect = async () => {
+    setDisconnectingYouTube(true);
+    try {
+      await apiRequest("POST", "/api/auth/youtube/disconnect");
+      await refreshUser();
+      toast({ title: "YouTube disconnected", description: "Your YouTube channel has been unlinked.", duration: 3000 });
+    } catch {
+      toast({ title: "Failed to disconnect", variant: "destructive" });
+    } finally {
+      setDisconnectingYouTube(false);
+    }
+  };
+
+  const handleStreamerSettingsSave = async (patch: { isStreamer?: boolean; streamPlatform?: string; liveEnabled?: boolean; twitchShowOnProfile?: boolean; kickShowOnProfile?: boolean; youtubeShowOnProfile?: boolean }) => {
     setSavingStreamerSettings(true);
     try {
       await apiRequest("PATCH", "/api/user/streamer-settings", patch);
@@ -1088,6 +1162,7 @@ export default function SettingsPage() {
     hideBanner: (user as any)?.hideBanner || false,
     statsGlassEffect: (user as any)?.statsGlassEffect || false,
     profileBackgroundGradient: (user as any)?.profileBackgroundGradient !== false,
+    profileBackgroundGradientCss: (user as any)?.profileBackgroundGradientCss || "",
     profileFont: (user as any)?.profileFont || "default",
     profileFontEffect: (user as any)?.profileFontEffect || "none",
     profileFontAnimation: (user as any)?.profileFontAnimation || "none",
@@ -1123,6 +1198,7 @@ export default function SettingsPage() {
   // Theme preview dialog state
   const [themePreviewData, setThemePreviewData] = useState<typeof PRESET_THEMES[0] | null>(null);
   const [showProUpgradeDialog, setShowProUpgradeDialog] = useState(false);
+  const [showPartnerDialog, setShowPartnerDialog] = useState(false);
 
   // Font preview dialog state
   const [fontPreviewOpen, setFontPreviewOpen] = useState(false);
@@ -1199,6 +1275,31 @@ export default function SettingsPage() {
   const { primary: initPrimaryType, isStreamer: initIsStreamer } = parseUserType(user?.userType);
   const [primaryUserType, setPrimaryUserType] = useState<string>(initPrimaryType);
   const [isStreamingEnabled, setIsStreamingEnabled] = useState<boolean>(initIsStreamer);
+
+  // Gamer tag selection. Capped at 2 to match the onboarding flow. "streamer"
+  // is stored separately in isStreamingEnabled but displayed in this grid so
+  // the user can pick it from one place. Only recognised option ids count toward
+  // the selection — legacy/foreign values are ignored and normalised on save.
+  const KNOWN_GAMER_TAG_IDS = GAMER_TAG_OPTIONS.map(o => o.id);
+  const selectedGamerTags = [
+    ...primaryUserType.split(',').map(t => t.trim()).filter(t => KNOWN_GAMER_TAG_IDS.includes(t) && t !== 'streamer'),
+    ...(isStreamingEnabled ? ['streamer'] : []),
+  ];
+  const toggleGamerTag = (id: string) => {
+    if (id === 'streamer') {
+      // At cap and trying to add — block it
+      if (!isStreamingEnabled && selectedGamerTags.length >= 3) return;
+      setIsStreamingEnabled(v => !v);
+      return;
+    }
+    const next = selectedGamerTags.includes(id)
+      ? selectedGamerTags.filter(t => t !== id)
+      : selectedGamerTags.length < 3
+        ? [...selectedGamerTags, id]
+        : selectedGamerTags;
+    // Persist in canonical GAMER_TAG_OPTIONS order (excluding streamer, tracked separately).
+    setPrimaryUserType(KNOWN_GAMER_TAG_IDS.filter(t => t !== 'streamer' && next.includes(t)).join(','));
+  };
   const [streamPlatform, setStreamPlatform] = useState<string>((user as any)?.streamPlatform || 'twitch');
   const [streamChannelName, setStreamChannelName] = useState<string>((user as any)?.streamChannelName || '');
   const [showLiveOverlay, setShowLiveOverlay] = useState<boolean>((user as any)?.showLiveOverlay || false);
@@ -1390,6 +1491,7 @@ export default function SettingsPage() {
     profileData.profileFontAnimation !== ((user as any)?.profileFontAnimation || "none") ||
     profileData.profileFontColor !== ((user as any)?.profileFontColor || "#FFFFFF") ||
     profileData.statsGlassEffect !== ((user as any)?.statsGlassEffect || false) ||
+    profileData.hideBanner !== ((user as any)?.hideBanner || false) ||
     profileData.profileBackgroundGradient !== ((user as any)?.profileBackgroundGradient !== false) ||
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
@@ -1554,10 +1656,20 @@ export default function SettingsPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
+    const isOAuthPopup = !!window.opener;
+
+    const notifyAndClose = (type: string) => {
+      if (isOAuthPopup) {
+        try { window.opener.postMessage({ type }, window.location.origin); } catch {}
+        setTimeout(() => window.close(), 1500);
+      }
+    };
+
     if (params.get('kick_connected') === 'true') {
       refreshUser();
-      toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
+      toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked." + (isOAuthPopup ? ' This tab will close shortly.' : ''), duration: 4000 });
       window.history.replaceState({}, '', window.location.pathname);
+      notifyAndClose('kick_connected');
     } else if (params.get('kick_error')) {
       const errMap: Record<string, string> = {
         access_denied: 'You cancelled the Kick authorisation.',
@@ -1571,8 +1683,9 @@ export default function SettingsPage() {
       window.history.replaceState({}, '', window.location.pathname);
     } else if (params.get('twitch_connected') === 'true') {
       refreshUser();
-      toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
+      toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked." + (isOAuthPopup ? ' This tab will close shortly.' : ''), duration: 4000 });
       window.history.replaceState({}, '', window.location.pathname);
+      notifyAndClose('twitch_connected');
     } else if (params.get('twitch_error')) {
       const errMap: Record<string, string> = {
         access_denied: 'You cancelled the Twitch authorisation.',
@@ -1597,7 +1710,38 @@ export default function SettingsPage() {
       };
       toast({ title: "Rumble connection failed", description: errMap[params.get('rumble_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
       window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('youtube_connected') === 'true') {
+      refreshUser();
+      toast({ title: "YouTube connected!", description: "Your YouTube channel has been verified and linked.", duration: 4000 });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('youtube_error')) {
+      const errMap: Record<string, string> = {
+        access_denied: 'You cancelled the YouTube authorisation.',
+        invalid_state: 'Invalid OAuth state. Please try again.',
+        not_configured: 'YouTube OAuth is not configured on this server.',
+        auth_failed: 'YouTube authentication failed. Please try again.',
+        no_channel: 'No YouTube channel found on your Google account.',
+      };
+      toast({ title: "YouTube connection failed", description: errMap[params.get('youtube_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+      window.history.replaceState({}, '', window.location.pathname);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Listen for OAuth completion messages from new-tab OAuth flow
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === 'twitch_connected') {
+        refreshUser();
+        toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
+      } else if (event.data?.type === 'kick_connected') {
+        refreshUser();
+        toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1707,34 +1851,6 @@ export default function SettingsPage() {
   }, [(user as any)?.selectedVerificationBadgeId, pendingVerificationBadgeId]);
   
 
-  // Handle OAuth callback URL params (Twitch/Kick)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const twitchConnected = params.get("twitch_connected");
-    const twitchError = params.get("twitch_error");
-    const kickConnected = params.get("kick_connected");
-    const kickError = params.get("kick_error");
-    if (twitchConnected) {
-      refreshUser();
-      toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
-      window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
-    }
-    if (twitchError) {
-      const msg = twitchError === "not_configured" ? "Twitch OAuth is not configured." : twitchError === "invalid_state" ? "OAuth state mismatch — please try again." : twitchError;
-      toast({ title: "Twitch connection failed", description: msg, variant: "destructive", duration: 5000 });
-      window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
-    }
-    if (kickConnected) {
-      refreshUser();
-      toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
-      window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
-    }
-    if (kickError) {
-      const msg = kickError === "not_configured" ? "Kick OAuth is not configured." : kickError === "invalid_state" ? "OAuth state mismatch — please try again." : kickError;
-      toast({ title: "Kick connection failed", description: msg, variant: "destructive", duration: 5000 });
-      window.history.replaceState({}, "", window.location.pathname + "?tab=platforms");
-    }
-  }, []);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -1876,7 +1992,7 @@ export default function SettingsPage() {
       const combinedUserType = buildUserType(primaryUserType, isStreamingEnabled);
       updateProfileMutation.mutate({
         ...updatedData,
-        avatarBorderColor,
+        avatarBorderColor: avatarBorderColor?.trim() || '#B7FF1A',
         userType: combinedUserType,
         streamPlatform,
         showLiveOverlay,
@@ -1977,7 +2093,8 @@ export default function SettingsPage() {
       ...prev,
       accentColor: theme.accentColor,
       backgroundColor: theme.backgroundColor,
-      ...(theme.primaryColor ? { primaryColor: theme.primaryColor } : {})
+      ...(theme.primaryColor ? { primaryColor: theme.primaryColor } : {}),
+      profileBackgroundGradientCss: (theme as any).profileBackgroundGradientCss || ""
     }));
     setAvatarBorderColor(theme.accentColor);
   };
@@ -1999,7 +2116,7 @@ export default function SettingsPage() {
   const bgRgb = user?.backgroundColor ? hexToRgb(user.backgroundColor) : null;
   const accentRgb = user?.accentColor ? hexToRgb(user.accentColor) : null;
 
-  const NAMED_THEME_NAMES = ['Zombie', 'Cyberpunk', 'NEO', 'Blocks', 'Watermelon', 'Forest', 'Gothic', 'Mac', 'Cartoon'];
+  const NAMED_THEME_NAMES = ['Zombie', 'Cyberpunk', 'NEO', 'Blocks', 'Watermelon', 'Forest', 'Gothic', 'Mac', 'Cartoon', 'Bat'];
   const isNamedThemeActive = PRESET_THEMES.some(t =>
     NAMED_THEME_NAMES.includes(t.name) &&
     profileData.accentColor === t.accentColor &&
@@ -2752,7 +2869,7 @@ export default function SettingsPage() {
                     >
                       {isNamedThemeActive && (
                         <div className="px-3 py-2 rounded-md bg-muted text-xs text-muted-foreground border border-border">
-                          A visual theme is active — its border colour overrides this setting. Switch to "None" in Themes to customise.
+                          A visual theme is active — its border colour overrides this setting. Switch to "Gamefolio Default" in Themes to customise.
                         </div>
                       )}
                       <div className="flex items-center justify-between">
@@ -2862,6 +2979,49 @@ export default function SettingsPage() {
                     rows={3}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Gamer Tag</Label>
+                    <span className="text-xs text-muted-foreground">
+                      {selectedGamerTags.length}/3 selected
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Change the tag you picked during onboarding. Choose up to three — they
+                    appear on your profile.
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {GAMER_TAG_OPTIONS.map((opt) => {
+                      const isSelected = selectedGamerTags.includes(opt.id);
+                      const atMax = selectedGamerTags.length >= 3 && !isSelected;
+                      const Icon = opt.icon;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => toggleGamerTag(opt.id)}
+                          disabled={atMax}
+                          aria-pressed={isSelected}
+                          data-testid={`gamer-tag-${opt.id}`}
+                          className={`relative flex items-center gap-2 rounded-lg border p-3 text-sm transition-all ${
+                            isSelected
+                              ? 'border-primary bg-primary/10 text-foreground'
+                              : atMax
+                                ? 'border-border opacity-40 cursor-not-allowed'
+                                : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <Icon className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{opt.label}</span>
+                          {isSelected && (
+                            <Check className="h-3.5 w-3.5 ml-auto text-primary shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -2908,8 +3068,8 @@ export default function SettingsPage() {
                       <CardContent>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {PRESET_THEMES.map((theme) => {
-                            const topColor = theme.gradientTopColor || '#0B2232';
-                            const defaultThemeColor = '#0B2232';
+                            const topColor = theme.gradientTopColor || '#071013';
+                            const defaultThemeColor = '#071013';
                             const isActive = profileData.accentColor === theme.accentColor && profileData.backgroundColor === theme.backgroundColor;
                             const isLocked = (theme as any).proOnly && !user?.isPro && theme.name !== "None";
                             return (
@@ -2922,11 +3082,102 @@ export default function SettingsPage() {
                                 }}
                               >
                                 <div
-                                  className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative"
+                                  className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative overflow-hidden"
                                   style={{ 
                                     background: `linear-gradient(180deg, ${topColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
                                   }}
                                 >
+                                  {/* ── Theme-specific visual overlays ── */}
+                                  {theme.name === 'None' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #B7FF1A06 1px, transparent 1px), linear-gradient(90deg, #B7FF1A06 1px, transparent 1px)', backgroundSize:'14px 14px' }} />
+                                    <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'2px', background:'linear-gradient(90deg, transparent, #B7FF1Acc, transparent)', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Zombie' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #9ae60028 1px, transparent 1px), linear-gradient(90deg, #9ae60028 1px, transparent 1px)', backgroundSize:'18px 18px' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 80% 60% at 50% 100%, #9ae60033 0%, transparent 70%)' }} />
+                                    <div style={{ position:'absolute', top:'-50%', left:'-50%', width:'200%', height:'200%', pointerEvents:'none', background:'linear-gradient(90deg, transparent 44%, #9ae60006 46%, #9ae60044 49%, #9ae600aa 50%, #9ae60044 51%, #9ae60006 54%, transparent 58%)', opacity:0.5 }} />
+                                  </>}
+                                  {theme.name === 'Cyberpunk' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'radial-gradient(circle, #00d3f230 1.5px, transparent 1.5px), linear-gradient(45deg, #00b8db18 1px, transparent 1px)', backgroundSize:'16px 16px' }} />
+                                    <div style={{ position:'absolute', left:0, right:0, top:'42%', height:'1px', pointerEvents:'none', background:'linear-gradient(90deg, transparent, #00d3f2aa 30%, #e12afbaa 70%, transparent)' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'repeating-linear-gradient(0deg, transparent, transparent 5px, rgba(0,0,0,0.15) 5px, rgba(0,0,0,0.15) 6px)' }} />
+                                  </>}
+                                  {theme.name === 'NEO' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'radial-gradient(circle at 50% 50%, #00ff4118 1px, transparent 1px)', backgroundSize:'10px 10px' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #00ff4100 30%, #00ff4118 100%)' }} />
+                                    <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', opacity:0.6 }} viewBox="0 0 120 80" preserveAspectRatio="none">
+                                      {['0','1','ア','イ','2','カ','3','ウ','キ','エ'].map((c,i) => (
+                                        <text key={i} x={8 + i*11} y={20 + (i%3)*22} style={{ font: '9px "Courier New", monospace', fill: i%3===0 ? '#ccffcc' : '#00ff41', opacity: 0.7 }}>{c}</text>
+                                      ))}
+                                    </svg>
+                                  </>}
+                                  {theme.name === 'Blocks' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #5ba3d0 0%, #87ceeb 45%, #5ea832 55%, #8b5e3c 72%, #6b4a2e 88%)', opacity:0.9 }} />
+                                    <div style={{ position:'absolute', top:'8%', left:'12%', width:'22px', height:'9px', background:'rgba(255,255,255,0.85)', borderRadius:'3px', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', top:'5%', left:'55%', width:'16px', height:'7px', background:'rgba(255,255,255,0.85)', borderRadius:'2px', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, rgba(0,0,0,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.12) 1px, transparent 1px)', backgroundSize:'12px 12px', opacity:0.5 }} />
+                                  </>}
+                                  {theme.name === 'Watermelon' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #1d3932 0%, #1d3932 30%, #ff4d6d 30%, #ff4d6d 100%)', opacity:0.9 }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'radial-gradient(ellipse 5px 8px at center, #1d393288 100%, transparent 100%)', backgroundSize:'18px 22px', backgroundPosition:'4px 36px', opacity:0.7 }} />
+                                    <div style={{ position:'absolute', top:'18%', left:'50%', transform:'translateX(-50%)', width:'40px', height:'1px', background:'rgba(255,255,255,0.3)', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Forest' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #e8d5b7 0%, #c5a97a 35%, #2d5a27 35%, #0a2f1f 100%)', opacity:0.88 }} />
+                                    <div style={{ position:'absolute', bottom:'38%', left:'8%', width:0, height:0, borderLeft:'10px solid transparent', borderRight:'10px solid transparent', borderBottom:'22px solid #1a4a2e', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'38%', left:'32%', width:0, height:0, borderLeft:'13px solid transparent', borderRight:'13px solid transparent', borderBottom:'28px solid #0d3520', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'38%', right:'15%', width:0, height:0, borderLeft:'9px solid transparent', borderRight:'9px solid transparent', borderBottom:'20px solid #1a4a2e', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Ice' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, rgba(56,189,248,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(56,189,248,0.1) 1px, transparent 1px)', backgroundSize:'12px 12px' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(135deg, rgba(255,255,255,0.55) 0%, transparent 45%, rgba(56,189,248,0.2) 100%)' }} />
+                                    <div style={{ position:'absolute', top:'10%', left:'10%', width:'30%', height:'1px', background:'rgba(255,255,255,0.8)', transform:'rotate(45deg)', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Gothic' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 90% 90% at 50% 40%, rgba(194,122,255,0.2) 0%, rgba(30,5,58,0.75) 100%)' }} />
+                                    <div style={{ position:'absolute', bottom:'15%', left:'50%', transform:'translateX(-50%)', width:'36px', height:'36px', borderRadius:'50%', background:'radial-gradient(circle, #c27aff55 0%, transparent 70%)', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', top:'10%', left:'15%', fontSize:'14px', color:'#c27affaa', pointerEvents:'none', lineHeight:1 }}>✦</div>
+                                    <div style={{ position:'absolute', top:'8%', right:'18%', fontSize:'10px', color:'#c27aff88', pointerEvents:'none', lineHeight:1 }}>✦</div>
+                                  </>}
+                                  {theme.name === 'Mac' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'rgba(255,255,255,0.55)' }} />
+                                    <div style={{ position:'absolute', top:'-20%', left:'-10%', width:'80%', height:'80%', borderRadius:'50%', background:'radial-gradient(circle, rgba(255,80,80,0.25) 0%, rgba(255,200,0,0.2) 30%, rgba(0,200,100,0.2) 55%, rgba(0,100,255,0.2) 80%, transparent 100%)', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'8px', left:'50%', transform:'translateX(-50%)', width:'75%', height:'7px', background:'rgba(0,0,0,0.07)', borderRadius:'6px', pointerEvents:'none', backdropFilter:'blur(2px)' }} />
+                                  </>}
+                                  {theme.name === 'Cartoon' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'rgba(255,255,255,0.55)' }} />
+                                    <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'28%', background:'#ff5e5e44', pointerEvents:'none', borderTop:'2px solid #1d1d1f33' }} />
+                                    <div style={{ position:'absolute', top:'18%', left:'50%', transform:'translateX(-50%)', width:'30px', height:'4px', background:'#1d1d1f55', borderRadius:'2px', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', top:'30%', left:'50%', transform:'translateX(-50%)', width:'20px', height:'4px', background:'#1d1d1f33', borderRadius:'2px', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Bubble Tea' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #ffedd4bb 0%, #fefce8bb 100%)' }} />
+                                    <div style={{ position:'absolute', bottom:'10px', left:'16%', width:'11px', height:'11px', borderRadius:'50%', background:'#d4a574', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'22px', left:'28%', width:'8px', height:'8px', borderRadius:'50%', background:'#c49060', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'8px', left:'42%', width:'10px', height:'10px', borderRadius:'50%', background:'#d4a574bb', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'18px', right:'22%', width:'9px', height:'9px', borderRadius:'50%', background:'#c49060', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', bottom:'7px', right:'12%', width:'12px', height:'12px', borderRadius:'50%', background:'#d4a574aa', pointerEvents:'none' }} />
+                                  </>}
+                                  {theme.name === 'Cutesy Pink' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 100% 70% at 50% 110%, #fce7f3cc 0%, transparent 60%)' }} />
+                                    <div style={{ position:'absolute', top:'18%', left:'18%', fontSize:'13px', color:'#ff2056bb', pointerEvents:'none', lineHeight:1, userSelect:'none' }}>♥</div>
+                                    <div style={{ position:'absolute', top:'12%', right:'22%', fontSize:'9px', color:'#ff2056dd', pointerEvents:'none', lineHeight:1, userSelect:'none' }}>♥</div>
+                                    <div style={{ position:'absolute', bottom:'22%', left:'38%', fontSize:'11px', color:'#ff205699', pointerEvents:'none', lineHeight:1, userSelect:'none' }}>♥</div>
+                                    <div style={{ position:'absolute', bottom:'15%', right:'14%', fontSize:'8px', color:'#ff2056bb', pointerEvents:'none', lineHeight:1, userSelect:'none' }}>♥</div>
+                                  </>}
+                                  {theme.name === 'Mayhem' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)', opacity:0.92 }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'repeating-linear-gradient(45deg, transparent, transparent 8px, rgba(255,255,255,0.04) 8px, rgba(255,255,255,0.04) 9px)' }} />
+                                    <img src="/attached_assets/MayhemLogo_1781627968574.png" alt="Mayhem" style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', width:'52px', height:'52px', objectFit:'contain', pointerEvents:'none', borderRadius:'6px', filter:'drop-shadow(0 2px 8px rgba(0,0,0,0.5))' }} />
+                                  </>}
+                                  {theme.name === 'Bat' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' }} />
+                                    <div style={{ position:'absolute', top:'12%', right:'22%', width:'22px', height:'22px', borderRadius:'50%', background:'radial-gradient(circle, #fffde7 60%, #ffe08244 100%)', pointerEvents:'none', boxShadow:'0 0 10px 3px #ffe08255' }} />
+                                    <div style={{ position:'absolute', top:'18%', left:'14%', fontSize:'13px', color:'#222', pointerEvents:'none', lineHeight:1, userSelect:'none', filter:'drop-shadow(0 0 1px #ff8c0066)' }}>🦇</div>
+                                    <div style={{ position:'absolute', top:'50%', left:'55%', fontSize:'10px', color:'#222', pointerEvents:'none', lineHeight:1, userSelect:'none', transform:'scaleX(-1)', filter:'drop-shadow(0 0 1px #ff8c0055)' }}>🦇</div>
+                                    <div style={{ position:'absolute', bottom:'25%', left:'30%', fontSize:'8px', color:'#222', pointerEvents:'none', lineHeight:1, userSelect:'none', filter:'drop-shadow(0 0 1px #ff8c0044)' }}>🦇</div>
+                                  </>}
+                                  {/* ── Badges ── */}
                                   {isActive && (
                                     <div
                                       className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
@@ -2941,14 +3192,19 @@ export default function SettingsPage() {
                                     </div>
                                   )}
                                 </div>
-                                <p className="text-center mt-2 text-sm font-medium">{theme.name}</p>
+                                <p className="text-center mt-2 text-sm font-medium">
+                                  {theme.name === 'None' ? 'Gamefolio Default' : theme.name}
+                                </p>
                                 {isLocked && theme.name !== "None" && (
                                   <p className="text-center text-xs text-muted-foreground">Pro only</p>
                                 )}
                                 <div className="flex justify-center p-2">
                                   <Button
                                     onClick={() => setThemePreviewData(theme)}
-                                    className="text-xs px-4 py-1.5 transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)] text-white"
+                                    className={isActive
+                                      ? "text-xs px-4 py-1.5 transition-all duration-300 bg-transparent border border-primary/60 text-primary/80 hover:bg-primary/10 shadow-none"
+                                      : "text-xs px-4 py-1.5 transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)] text-white"
+                                    }
                                   >
                                     {isActive ? 'Active' : 'Preview'}
                                   </Button>
@@ -2977,7 +3233,7 @@ export default function SettingsPage() {
                     )}
                     {isNamedThemeActive && !profileData.profileBackgroundImageUrl && (
                       <div className="mb-3 px-3 py-2 rounded-md bg-muted text-xs text-muted-foreground border border-border">
-                        A visual theme is active — its colours override this setting. Switch to "None" in Themes to use a custom colour.
+                        A visual theme is active — its colours override this setting. Switch to "Gamefolio Default" in Themes to use a custom colour.
                       </div>
                     )}
                     <Card>
@@ -3604,31 +3860,51 @@ export default function SettingsPage() {
                           )}
 
                           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                            {userVerificationBadges.map((badge: VerificationBadge) => {
+                            {userVerificationBadges.map((badge: VerificationBadge & { requiresPro?: boolean; proLocked?: boolean }) => {
                               const displayBadgeId = pendingVerificationBadgeId !== undefined ? pendingVerificationBadgeId : (user as any)?.selectedVerificationBadgeId;
                               const isSelected = displayBadgeId === badge.id;
+                              const isProLocked = !!(badge as any).proLocked;
                               return (
                                 <button
                                   key={badge.id}
                                   type="button"
-                                  onClick={() => setPendingVerificationBadgeId(badge.id)}
+                                  onClick={() => {
+                                    if (isProLocked) {
+                                      setShowProUpgradeDialog(true);
+                                    } else {
+                                      setPendingVerificationBadgeId(badge.id);
+                                    }
+                                  }}
                                   className={`
                                     relative p-3 rounded-lg transition-all transform hover:scale-105 flex flex-col items-center
-                                    ${isSelected 
-                                      ? 'ring-2 ring-primary bg-primary/20' 
-                                      : 'border border-border hover:border-primary/50'}
+                                    ${isProLocked
+                                      ? 'border border-border opacity-60 cursor-pointer'
+                                      : isSelected 
+                                        ? 'ring-2 ring-primary bg-primary/20' 
+                                        : 'border border-border hover:border-primary/50'}
                                   `}
                                 >
                                   <NameTagImage
                                     imageUrl={badge.imageUrl}
                                     alt={badge.name}
-                                    className="w-10 h-10 object-contain"
+                                    className={`w-10 h-10 object-contain ${isProLocked ? 'opacity-50' : ''}`}
                                   />
                                   <p className="text-xs text-center mt-1 truncate w-full">{badge.name}</p>
-                                  {badge.isDefault && (
+                                  {(badge as any).requiresPro ? (
+                                    <span className="text-[10px] text-yellow-400 font-medium flex items-center gap-0.5">
+                                      <Crown className="h-2.5 w-2.5" />Pro
+                                    </span>
+                                  ) : badge.isDefault ? (
                                     <span className="text-[10px] text-primary font-medium">Free</span>
+                                  ) : null}
+                                  {isProLocked && (
+                                    <div className="absolute inset-0 flex items-center justify-center rounded-lg">
+                                      <div className="bg-black/60 rounded-full p-1">
+                                        <Lock className="h-3.5 w-3.5 text-yellow-400" />
+                                      </div>
+                                    </div>
                                   )}
-                                  {isSelected && (
+                                  {isSelected && !isProLocked && (
                                     <div className="absolute -top-1 -right-1 bg-primary text-white rounded-full p-0.5">
                                       <Check className="h-2.5 w-2.5" />
                                     </div>
@@ -4041,6 +4317,7 @@ export default function SettingsPage() {
                                   value={platformHandle}
                                   onChange={(e) => setPlatformHandle(sanitizePlatformInput(platform.key, e.target.value))}
                                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPlatform(); } }}
+                                  maxLength={getPlatformMaxLength(platform.key)}
                                   autoFocus
                                   className={platformHandle.trim() && validatePlatformInput(platform.key, platformHandle) ? 'border-red-500 focus-visible:ring-red-500' : ''}
                                 />
@@ -4137,6 +4414,19 @@ export default function SettingsPage() {
                       )}
                       {syncingAchievements ? "Syncing..." : "Sync Now"}
                     </Button>
+                  </div>
+
+                  {/* Privacy settings info */}
+                  <div className="flex gap-2.5 rounded-xl border border-[#107C10]/20 bg-[#107C10]/5 px-4 py-3">
+                    <FaXbox className="w-4 h-4 text-[#107C10] shrink-0 mt-0.5" />
+                    <div className="text-xs text-slate-400 leading-relaxed">
+                      <span className="font-medium text-slate-300">Not seeing your achievements?</span>
+                      {" "}Your Xbox privacy settings may be blocking access. On Xbox.com or the Xbox app, go to{" "}
+                      <span className="text-slate-300">Settings → Privacy & online safety → Xbox privacy → View details & customise → Game content</span>
+                      {" "}and set{" "}
+                      <span className="text-slate-300">"Others can see your game and app history"</span>
+                      {" "}to <span className="text-[#107C10] font-medium">Everyone</span>, then sync again.
+                    </div>
                   </div>
 
                   {/* Toggle Display on Profile */}
@@ -4397,6 +4687,68 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
 
+                {/* Streamer Partner — informational panel + sign-up */}
+                {user?.isPartner ? (
+                  <div className="rounded-xl border border-primary/40 bg-primary/10 px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
+                        <Crown className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-primary">You're a Streamer Partner</div>
+                        <div className="text-xs text-slate-400 mt-0.5">
+                          Thanks for being an official Gamefolio Streamer Partner — your perks are active below.
+                        </div>
+                      </div>
+                    </div>
+                    <ul className="space-y-1.5 mt-3">
+                      {STREAMER_PARTNER_PERKS.map((perk) => (
+                        <li key={perk} className="flex items-start gap-2 text-xs text-slate-300">
+                          <Check className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
+                          <span>{perk}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
+                        <Crown className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-slate-100">Become a Streamer Partner</div>
+                        <div className="text-xs text-slate-400 mt-0.5">
+                          Our top tier for streamers — everything in Gamefolio Pro, plus your live stream front and centre across Gamefolio.
+                        </div>
+                      </div>
+                    </div>
+
+                    <ul className="space-y-1.5 mt-3">
+                      {STREAMER_PARTNER_PERKS.map((perk) => (
+                        <li key={perk} className="flex items-start gap-2 text-xs text-slate-300">
+                          <Check className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
+                          <span>{perk}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-primary/15">
+                      <div className="text-xs text-slate-400">
+                        {user?.isPro ? "Upgrade from Pro · " : "From "}
+                        <span className="text-slate-200 font-semibold">£4.99</span>/mo or{" "}
+                        <span className="text-slate-200 font-semibold">£44.99</span>/yr
+                      </div>
+                      <Button size="sm" className="flex-shrink-0" onClick={() => setShowPartnerDialog(true)}>
+                        {user?.isPro ? "Upgrade to Partner" : "Become a Partner"}
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-2">
+                      Sign up here — pick a monthly or yearly plan and your partner status activates instantly.
+                    </p>
+                  </div>
+                )}
+
                 {/* Is Streamer Toggle */}
                 <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
                   <div>
@@ -4410,43 +4762,8 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                {/* Platform Selector */}
-                <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
-                  <div>
-                    <div className="text-sm font-medium text-slate-200">Streaming Platform</div>
-                    <div className="text-xs text-slate-400 mt-0.5">Choose which platform to connect</div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleStreamerSettingsSave({ streamPlatform: "twitch" })}
-                      disabled={savingStreamerSettings}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                        (user as any)?.streamPlatform !== "kick"
-                          ? "border-[#9146FF]/60 bg-[#9146FF]/15 text-[#9146FF]"
-                          : "border-slate-700 text-slate-400 hover:border-slate-500"
-                      }`}
-                    >
-                      <SiTwitch className="w-3.5 h-3.5" />
-                      Twitch
-                    </button>
-                    <button
-                      onClick={() => handleStreamerSettingsSave({ streamPlatform: "kick" })}
-                      disabled={savingStreamerSettings}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                        (user as any)?.streamPlatform === "kick"
-                          ? "border-[#53FC18]/60 bg-[#53FC18]/10 text-[#53FC18]"
-                          : "border-slate-700 text-slate-400 hover:border-slate-500"
-                      }`}
-                    >
-                      <SiKick className="w-3.5 h-3.5" />
-                      Kick
-                    </button>
-                  </div>
-                </div>
-
                 {/* Twitch Connection */}
-                {(user as any)?.streamPlatform !== "kick" && (
-                  <>
+                <>
                     {(user as any)?.twitchVerified ? (
                       <div className="rounded-xl border border-[#9146FF]/30 bg-[#9146FF]/5 px-4 py-3 space-y-3">
                         <div className="flex items-center gap-3">
@@ -4474,6 +4791,17 @@ export default function SettingsPage() {
                             Disconnect
                           </Button>
                         </div>
+                        <div className="flex items-center justify-between border-t border-[#9146FF]/15 pt-3">
+                          <div>
+                            <div className="text-sm font-medium text-slate-200">Show on profile</div>
+                            <div className="text-xs text-slate-400 mt-0.5">Embed your Twitch stream on your profile</div>
+                          </div>
+                          <Switch
+                            checked={(user as any)?.twitchShowOnProfile ?? true}
+                            disabled={savingStreamerSettings}
+                            onCheckedChange={(val) => handleStreamerSettingsSave({ twitchShowOnProfile: val })}
+                          />
+                        </div>
                       </div>
                     ) : oauthConfig?.twitch === false ? (
                       <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
@@ -4497,9 +4825,9 @@ export default function SettingsPage() {
                           <Button
                             size="sm"
                             onClick={() => {
-                              const url = "/api/auth/twitch/connect";
+                              const url = "/api/auth/twitch-stream/connect";
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.location.href = url;
+                              else window.open(url, '_blank', 'noopener');
                             }}
                             className="gap-1.5 bg-[#9146FF] hover:bg-[#7d3ce8] text-white border-0"
                           >
@@ -4509,12 +4837,10 @@ export default function SettingsPage() {
                         </div>
                       </div>
                     )}
-                  </>
-                )}
+                </>
 
                 {/* Kick Connection */}
-                {(user as any)?.streamPlatform === "kick" && (
-                  <>
+                <>
                     {(user as any)?.kickVerified ? (
                       <div className="rounded-xl border border-[#53FC18]/20 bg-[#53FC18]/5 px-4 py-3 space-y-3">
                         <div className="flex items-center gap-3">
@@ -4542,6 +4868,17 @@ export default function SettingsPage() {
                             Disconnect
                           </Button>
                         </div>
+                        <div className="flex items-center justify-between border-t border-[#53FC18]/15 pt-3">
+                          <div>
+                            <div className="text-sm font-medium text-slate-200">Show on profile</div>
+                            <div className="text-xs text-slate-400 mt-0.5">Embed your Kick stream on your profile</div>
+                          </div>
+                          <Switch
+                            checked={(user as any)?.kickShowOnProfile ?? true}
+                            disabled={savingStreamerSettings}
+                            onCheckedChange={(val) => handleStreamerSettingsSave({ kickShowOnProfile: val })}
+                          />
+                        </div>
                       </div>
                     ) : oauthConfig?.kick === false ? (
                       <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
@@ -4567,7 +4904,7 @@ export default function SettingsPage() {
                             onClick={() => {
                               const url = "/api/auth/kick/connect";
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.location.href = url;
+                              else window.open(url, '_blank', 'noopener');
                             }}
                             className="gap-1.5 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-[#53FC18] border border-[#53FC18]/30"
                           >
@@ -4577,8 +4914,85 @@ export default function SettingsPage() {
                         </div>
                       </div>
                     )}
-                  </>
-                )}
+                </>
+
+                {/* YouTube Connection */}
+                <>
+                    {(user as any)?.youtubeVerified ? (
+                      <div className="rounded-xl border border-[#FF0000]/20 bg-[#FF0000]/5 px-4 py-3 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#FF0000]/10 flex items-center justify-center flex-shrink-0">
+                            <SiYoutube className="w-4 h-4 text-[#FF0000]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-slate-200">{(user as any)?.youtubeChannelName}</span>
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#FF0000]/10 text-[#FF0000] border border-[#FF0000]/30">
+                                <Check className="w-2.5 h-2.5" />
+                                Verified
+                              </span>
+                            </div>
+                            <div className="text-xs text-slate-400">youtube.com/channel/{(user as any)?.youtubeChannelId}</div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleYouTubeDisconnect}
+                            disabled={disconnectingYouTube}
+                            className="gap-1.5 border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                          >
+                            {disconnectingYouTube ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlink className="w-4 h-4" />}
+                            Disconnect
+                          </Button>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-[#FF0000]/15 pt-3">
+                          <div>
+                            <div className="text-sm font-medium text-slate-200">Show on profile</div>
+                            <div className="text-xs text-slate-400 mt-0.5">Embed your YouTube stream on your profile</div>
+                          </div>
+                          <Switch
+                            checked={(user as any)?.youtubeShowOnProfile ?? true}
+                            disabled={savingStreamerSettings}
+                            onCheckedChange={(val) => handleStreamerSettingsSave({ youtubeShowOnProfile: val })}
+                          />
+                        </div>
+                      </div>
+                    ) : oauthConfig?.youtube === false ? (
+                      <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <SiYoutube className="w-4 h-4 text-amber-400" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-amber-300">YouTube OAuth not configured</div>
+                            <div className="text-xs text-slate-400 mt-0.5">YouTube integration requires Google OAuth credentials to be set up by the administrator.</div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-medium text-slate-200">Connect YouTube</div>
+                            <div className="text-xs text-slate-400 mt-0.5">Authenticate via Google to verify your YouTube channel</div>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setConnectingYouTube(true);
+                              const url = "/api/auth/youtube/connect";
+                              if (isNative) void openExternal(`${API_BASE}${url}`);
+                              else { window.open(url, '_blank', 'noopener'); setConnectingYouTube(false); }
+                            }}
+                            className="gap-1.5 bg-[#FF0000] hover:bg-[#cc0000] text-white border-0"
+                          >
+                            {connectingYouTube ? <Loader2 className="w-4 h-4 animate-spin" /> : <SiYoutube className="w-4 h-4" />}
+                            Connect with YouTube
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                </>
 
                 {/* LIVE Badge Toggle */}
                 <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
@@ -4588,11 +5002,11 @@ export default function SettingsPage() {
                   </div>
                   <Switch
                     checked={!!(user as any)?.liveEnabled}
-                    disabled={savingStreamerSettings || (!(user as any)?.twitchVerified && !(user as any)?.kickVerified)}
+                    disabled={savingStreamerSettings || (!(user as any)?.twitchVerified && !(user as any)?.kickVerified && !(user as any)?.youtubeVerified)}
                     onCheckedChange={(val) => handleStreamerSettingsSave({ liveEnabled: val })}
                   />
                 </div>
-                {!(user as any)?.twitchVerified && !(user as any)?.kickVerified && (
+                {!(user as any)?.twitchVerified && !(user as any)?.kickVerified && !(user as any)?.youtubeVerified && (
                   <p className="text-xs text-slate-500 px-1">Connect a streaming platform first to enable the LIVE badge.</p>
                 )}
 
@@ -4688,6 +5102,20 @@ export default function SettingsPage() {
                     >
                       Kick
                     </button>
+                    <button
+                      type="button"
+                      disabled={!isStreamingEnabled}
+                      onClick={() => setStreamPlatform('youtube')}
+                      className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        !isStreamingEnabled
+                          ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
+                          : streamPlatform === 'youtube'
+                          ? 'border-[#FF0000] bg-[#FF0000]/20 text-[#FF0000]'
+                          : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
+                      }`}
+                    >
+                      YouTube
+                    </button>
                   </div>
                 </div>
 
@@ -4745,7 +5173,7 @@ export default function SettingsPage() {
                               setConnectingTwitch(true);
                               const url = '/api/auth/twitch-stream/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.location.href = url;
+                              else { window.open(url, '_blank', 'noopener'); setConnectingTwitch(false); }
                             }}
                           >
                             {connectingTwitch ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
@@ -4804,11 +5232,69 @@ export default function SettingsPage() {
                               setConnectingKick(true);
                               const url = '/api/auth/kick/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.location.href = url;
+                              else { window.open(url, '_blank', 'noopener'); setConnectingKick(false); }
                             }}
                           >
                             {connectingKick ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
                             Connect with Kick
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* YouTube OAuth connect option */}
+                  {streamPlatform === 'youtube' && isStreamingEnabled && oauthConfig?.youtube && (
+                    <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.youtubeVerified ? 'border-[#FF0000]/30 bg-[#FF0000]/5' : 'border-slate-700 bg-slate-800/30'}`}>
+                      {(user as any)?.youtubeVerified ? (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded bg-[#FF0000]/20 flex items-center justify-center">
+                              <Check className="w-3.5 h-3.5 text-[#FF0000]" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-medium text-[#FF0000]">YouTube OAuth Verified</p>
+                              <p className="text-[11px] text-slate-400">{(user as any)?.youtubeChannelName}</p>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={disconnectingYouTube}
+                            className="h-7 px-2 text-xs text-slate-400 hover:text-red-400"
+                            onClick={async () => {
+                              setDisconnectingYouTube(true);
+                              try {
+                                await apiRequest('POST', '/api/auth/youtube/disconnect');
+                                await refreshUser();
+                                toast({ title: 'YouTube disconnected', description: 'Your YouTube channel has been unlinked.', duration: 3000 });
+                              } catch {
+                                toast({ title: 'Failed to disconnect', description: 'Please try again.', variant: 'destructive' });
+                              } finally {
+                                setDisconnectingYouTube(false);
+                              }
+                            }}
+                          >
+                            {disconnectingYouTube ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Unlink className="w-3 h-3 mr-1" />}
+                            Disconnect
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-slate-400">Verify your YouTube channel via Google OAuth for a secure connection.</p>
+                          <Button
+                            size="sm"
+                            disabled={connectingYouTube}
+                            className="bg-[#FF0000] hover:bg-[#cc0000] text-white font-semibold border-0 h-8 px-3 text-xs"
+                            onClick={() => {
+                              setConnectingYouTube(true);
+                              const url = '/api/auth/youtube/connect';
+                              if (isNative) void openExternal(`${API_BASE}${url}`);
+                              else { window.open(url, '_blank', 'noopener'); setConnectingYouTube(false); }
+                            }}
+                          >
+                            {connectingYouTube ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <SiYoutube className="w-3.5 h-3.5 mr-1" />}
+                            Connect with YouTube
                           </Button>
                         </div>
                       )}
@@ -5057,7 +5543,7 @@ export default function SettingsPage() {
       {showNftSelector && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/70" onClick={() => setShowNftSelector(false)} />
-          <div className="relative bg-[#0f172a] border border-slate-700 rounded-xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl mx-4">
+          <div className="relative bg-[#0B1218] border border-slate-700 rounded-xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl mx-4">
             <div className="flex items-center justify-between p-4 border-b border-slate-700">
               <h3 className="text-lg font-semibold text-white">Select NFT as Profile Picture</h3>
               <button
@@ -5114,13 +5600,13 @@ export default function SettingsPage() {
                         common: "",
                       };
                       const dotColor: Record<string, string> = {
-                        legendary: "bg-primary shadow-[0_0_8px_#A2F000]",
+                        legendary: "bg-primary shadow-[0_0_8px_#B7FF1A]",
                         epic: "bg-primary shadow-[0_0_8px_#6FA800]",
                         rare: "bg-primary shadow-[0_0_8px_#B7FF1A]",
-                        common: "bg-slate-400/50 shadow-[0_0_8px_#1e293b]",
+                        common: "bg-slate-400/50 shadow-[0_0_8px_#1B2A33]",
                       };
                       const rarityText: Record<string, string> = {
-                        legendary: "bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] bg-clip-text text-transparent font-black",
+                        legendary: "text-[#B7FF1A] font-black",
                         epic: "text-slate-400 font-normal",
                         rare: "text-slate-400 font-normal",
                         common: "text-slate-400 font-normal",
@@ -5144,7 +5630,7 @@ export default function SettingsPage() {
                           }}
                           disabled={setNftProfileMutation.isPending}
                           className={`relative rounded-2xl overflow-hidden transition-all duration-200 hover:scale-[1.03] text-left ${cardBg[rarityLabel]} ${cardGlow[rarityLabel]} ${
-                            isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#0f172a]' : ''
+                            isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#0B1218]' : ''
                           }`}
                         >
                           <div className="relative">
@@ -5216,6 +5702,8 @@ export default function SettingsPage() {
         const isMac         = tn === 'Mac';
         const isBubbleTea   = tn === 'Bubble Tea';
         const isCutesyPink  = tn === 'Cutesy Pink';
+        const isMayhem      = tn === 'Mayhem';
+        const isBat         = tn === 'Bat';
         const isLight       = isMac || isCartoon || isIce || isBubbleTea || isWatermelon;
 
         const themeFont =
@@ -5328,6 +5816,14 @@ export default function SettingsPage() {
           borderRadius: '16px',
           background: 'rgba(255,237,212,0.7)',
           border: `1px solid ${accent}44`,
+        } : isMayhem ? {
+          borderRadius: '12px',
+          background: '#000000',
+          border: '1px solid rgba(0,223,255,0.25)',
+        } : isBat ? {
+          borderRadius: '12px',
+          background: '#000000',
+          border: '1px solid rgba(255,140,0,0.25)',
         } : {
           borderRadius: '12px',
           background: `${topColor}cc`,
@@ -5352,18 +5848,20 @@ export default function SettingsPage() {
         };
 
         const isThemeLocked = (themePreviewData as any).proOnly && !user?.isPro && tn !== "None";
+        const isCurrentTheme = !isThemeLocked && themePreviewData.accentColor === profileData.accentColor && themePreviewData.backgroundColor === profileData.backgroundColor;
+        const displayName = tn === 'None' ? 'Gamefolio Default' : tn;
 
         return (
           <Dialog open={!!themePreviewData} onOpenChange={(open) => { if (!open) setThemePreviewData(null); }}>
-            <DialogContent className="max-w-sm p-0 overflow-hidden border-none bg-transparent shadow-2xl [&>button:not([data-custom-close])]:hidden">
-              <DialogTitle className="sr-only">{tn} Theme Preview</DialogTitle>
+            <DialogContent className="max-w-[340px] w-[calc(100vw-32px)] p-0 overflow-hidden border-none bg-transparent shadow-2xl [&>button:not([data-custom-close])]:hidden">
+              <DialogTitle className="sr-only">{displayName} Theme Preview</DialogTitle>
               <button
                 onClick={() => setThemePreviewData(null)}
                 data-custom-close
-                className="absolute top-4 right-4 z-20 p-1 hover:bg-white/10 rounded-lg transition-colors"
+                className="absolute top-3 right-3 z-20 p-2 hover:bg-white/15 active:bg-white/25 rounded-xl transition-colors"
                 aria-label="Close"
               >
-                <X className="w-6 h-6 text-white" />
+                <X className="w-5 h-5 text-white" />
               </button>
               <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&family=Bangers&family=Bricolage+Grotesque:wght@400;800&display=swap');
@@ -5397,10 +5895,16 @@ export default function SettingsPage() {
 
                 /* Gothic */
                 @keyframes gothicPulse { 0%,100%{box-shadow:0 0 15px #c27aff44,0 0 30px #c27aff22} 50%{box-shadow:0 0 25px #c27aff88,0 0 50px #c27aff33} }
+
+                /* Mayhem */
+                @keyframes mayhemStripeFlow { 0%{background-position:0 0} 100%{background-position:26px 26px} }
+                @keyframes mayhemStripeReverse { 0%{background-position:0 0} 100%{background-position:-26px 26px} }
+                @keyframes mayhemGlowPulse { 0%,100%{opacity:0.6} 50%{opacity:1} }
+                @keyframes mayhemRippleCard { 0%{transform:translate(-50%,-50%) scale(0.05);opacity:0.7} 100%{transform:translate(-50%,-50%) scale(5);opacity:0} }
               `}</style>
               <div
                 className="rounded-2xl overflow-hidden relative"
-                style={{ background: `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)` }}
+                style={{ background: isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)` }}
               >
                 {/* ── Zombie layers ── */}
                 {isZombie && <>
@@ -5450,6 +5954,26 @@ export default function SettingsPage() {
                 {/* ── Gothic vignette ── */}
                 {isGothic && <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 80% 80% at 50% 40%, rgba(194,122,255,0.08) 0%, rgba(30,5,58,0.6) 100%)' }} />}
 
+                {/* ── Mayhem layers ── */}
+                {isMayhem && <>
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'repeating-linear-gradient(45deg, transparent, transparent 11px, rgba(0,223,255,0.12) 11px, rgba(0,223,255,0.12) 12px)', backgroundSize:'17px 17px', animation:'mayhemStripeFlow 2.5s linear infinite' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'repeating-linear-gradient(-45deg, transparent, transparent 17px, rgba(255,0,128,0.07) 17px, rgba(255,0,128,0.07) 18px)', backgroundSize:'25px 25px', animation:'mayhemStripeReverse 3.5s linear infinite' }} />
+                  <div style={{ position:'absolute', top:'50%', left:'50%', width:80, height:80, borderRadius:'50%', border:'2px solid rgba(0,223,255,0.55)', pointerEvents:'none', animation:'mayhemRippleCard 4s ease-out infinite', animationDelay:'0s' }} />
+                  <div style={{ position:'absolute', top:'50%', left:'50%', width:80, height:80, borderRadius:'50%', border:'2px solid rgba(155,48,255,0.5)', pointerEvents:'none', animation:'mayhemRippleCard 4s ease-out infinite', animationDelay:'1.33s' }} />
+                  <div style={{ position:'absolute', top:'50%', left:'50%', width:80, height:80, borderRadius:'50%', border:'2px solid rgba(255,0,128,0.5)', pointerEvents:'none', animation:'mayhemRippleCard 4s ease-out infinite', animationDelay:'2.66s' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 60% 60% at 30% 30%, rgba(0,223,255,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 50% at 75% 70%, rgba(255,0,128,0.15) 0%, transparent 60%)', animation:'mayhemGlowPulse 3s ease-in-out infinite' }} />
+                  <img src="/attached_assets/MayhemLogo_1781627968574.png" alt="" style={{ position:'absolute', top:12, right:14, width:56, height:56, objectFit:'contain', pointerEvents:'none', opacity:0.92, filter:'drop-shadow(0 2px 10px rgba(0,0,0,0.6))' }} />
+                </>}
+
+                {/* ── Bat moon & stars ── */}
+                {isBat && <>
+                  <div style={{ position:'absolute', top:'10%', right:'18%', width:28, height:28, borderRadius:'50%', background:'radial-gradient(circle, #fffde7 60%, #ffe08244 100%)', pointerEvents:'none', boxShadow:'0 0 14px 5px #ffe08244' }} />
+                  <div style={{ position:'absolute', top:'6%', left:'12%', width:3, height:3, borderRadius:'50%', background:'#ffffffcc', pointerEvents:'none', boxShadow:'0 0 4px #fff8' }} />
+                  <div style={{ position:'absolute', top:'14%', left:'28%', width:2, height:2, borderRadius:'50%', background:'#ffffffaa', pointerEvents:'none' }} />
+                  <div style={{ position:'absolute', top:'8%', left:'55%', width:2, height:2, borderRadius:'50%', background:'#ffffff88', pointerEvents:'none' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(42,42,42,0.0) 0%, rgba(0,0,0,0.45) 100%)' }} />
+                </>}
+
                 {/* ── Watermelon seeds ── */}
                 {isWatermelon && <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'radial-gradient(ellipse 6px 10px at center, #1d3932 100%, transparent 100%)', backgroundSize:'40px 50px', backgroundPosition:'10px 15px, 30px 35px', opacity:0.12 }} />}
 
@@ -5467,14 +5991,14 @@ export default function SettingsPage() {
                 </>}
 
                 {/* ── Content ── */}
-                <div className="relative z-10 px-5 pt-5 pb-0 text-center">
-                  <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ fontFamily: themeFont, color: isLight && !isWatermelon ? '#666' : `${accent}cc`, letterSpacing: '1.5px' }}>
-                    {tn} Theme
+                <div className="relative z-10 px-4 pt-4 pb-0 text-center">
+                  <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ fontFamily: themeFont, color: isLight && !isWatermelon ? '#666' : `${accent}cc`, letterSpacing: '1.5px' }}>
+                    {displayName}
                   </p>
 
                   {/* Avatar */}
-                  <div className="flex justify-center mb-3">
-                    <div className="w-20 h-20 overflow-hidden flex-shrink-0" style={{ ...avatarBorderStyle }}>
+                  <div className="flex justify-center mb-2">
+                    <div className="w-16 h-16 overflow-hidden flex-shrink-0" style={{ ...avatarBorderStyle }}>
                       {signedAvatarUrl ? (
                         <img src={signedAvatarUrl} alt="avatar" className="w-full h-full object-cover" />
                       ) : (
@@ -5487,13 +6011,13 @@ export default function SettingsPage() {
 
                   {/* Display Name */}
                   <h2 style={nameStyle}>{profileData.displayName || user?.username}</h2>
-                  <p className="text-xs mt-0.5 mb-4" style={{ color: isLight && !isWatermelon ? '#888' : `${accent}99`, fontFamily: themeFont }}>
+                  <p className="text-xs mt-0.5 mb-3" style={{ color: isLight && !isWatermelon ? '#888' : `${accent}99`, fontFamily: themeFont }}>
                     @{user?.username}
                   </p>
                 </div>
 
                 {/* Stats Card */}
-                <div className="relative z-10 mx-4 mb-5 p-3" style={statsCardStyle}>
+                <div className="relative z-10 mx-4 mb-3 p-2.5" style={statsCardStyle}>
                   <div className="grid grid-cols-3" style={{ gap: 0 }}>
                     {[
                       { label: 'Uploads', value: profileStats?._count?.clips ?? '—' },
@@ -5508,8 +6032,8 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Buttons */}
-                <div className="relative z-10 flex gap-3 px-4 pb-5">
+                {/* Buttons — pb accounts for mobile safe-area (home indicator) */}
+                <div className="relative z-10 flex gap-2.5 px-4 pb-4" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 1rem))' }}>
                   <button
                     onClick={() => setThemePreviewData(null)}
                     className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
@@ -5521,9 +6045,10 @@ export default function SettingsPage() {
                       fontSize: isBlocks ? '0.5rem' : '0.875rem',
                     }}
                   >
-                    Cancel
+                    Close
                   </button>
                   <button
+                    disabled={isCurrentTheme}
                     onClick={() => {
                       if (isThemeLocked) {
                         setThemePreviewData(null);
@@ -5535,16 +6060,18 @@ export default function SettingsPage() {
                     }}
                     className="flex-1 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2"
                     style={{
-                      background: isThemeLocked ? '#B7FF1A' : accent,
-                      color: isThemeLocked ? '#1a1a1a' : (isLight && !isGothic ? '#1d1d1f' : bg),
-                      boxShadow: isThemeLocked ? '0 8px 24px -8px #B7FF1A66' : `0 8px 24px -8px ${accent}`,
+                      background: isCurrentTheme ? `${accent}40` : isThemeLocked ? '#B7FF1A' : accent,
+                      color: isCurrentTheme ? (isLight ? '#333' : 'rgba(255,255,255,0.5)') : isThemeLocked ? '#1a1a1a' : (isLight && !isGothic ? '#1d1d1f' : bg),
+                      boxShadow: isCurrentTheme ? 'none' : isThemeLocked ? '0 8px 24px -8px #B7FF1A66' : `0 8px 24px -8px ${accent}`,
                       fontFamily: isThemeLocked ? undefined : themeFont,
                       fontSize: '0.875rem',
                       borderRadius: '12px',
+                      cursor: isCurrentTheme ? 'default' : 'pointer',
+                      border: isCurrentTheme ? `1px solid ${accent}44` : 'none',
                     }}
                   >
                     {isThemeLocked && <img src={gamefolioLogo} alt="Gamefolio" className="w-5 h-5 rounded-full flex-shrink-0" />}
-                    {isThemeLocked ? 'Go Pro' : 'Apply Theme'}
+                    {isCurrentTheme ? 'Current Theme' : isThemeLocked ? 'Go Pro' : 'Apply Theme'}
                   </button>
                 </div>
               </div>
@@ -5558,6 +6085,14 @@ export default function SettingsPage() {
         open={showProUpgradeDialog}
         onOpenChange={setShowProUpgradeDialog}
         subtitle="Unlock premium themes and elevate your gaming profile"
+      />
+
+      {/* Streamer Partner Upgrade Dialog */}
+      <ProUpgradeDialog
+        open={showPartnerDialog}
+        onOpenChange={setShowPartnerDialog}
+        tier="partner"
+        subtitle="Feature your live stream on your profile and across Gamefolio"
       />
 
     </KeyboardAvoidingWrapper>

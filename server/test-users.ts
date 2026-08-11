@@ -10,7 +10,7 @@ export const getTestUser = (): User => {
     emailVerified: true,
     displayName: "Goliath",
     bio: "Test user for messaging functionality",
-    avatarUrl: "/attached_assets/gamefolio social logo 3d circle web.png",
+    avatarUrl: "/attached_assets/gamefolio-logo-green.png",
     bannerUrl: null,
     backgroundColor: "#0B2232",
     cardColor: "#1E3A5F",

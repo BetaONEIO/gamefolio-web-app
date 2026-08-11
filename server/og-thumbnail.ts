@@ -46,13 +46,11 @@ export async function addPlayButtonOverlay(thumbnailUrl: string): Promise<Buffer
   const playButtonSvg = `
     <svg width="${buttonSize}" height="${buttonSize}" xmlns="http://www.w3.org/2000/svg">
       <circle cx="${buttonRadius}" cy="${buttonRadius}" r="${buttonRadius}"
-        fill="rgba(0, 0, 0, 0.7)" />
-      <circle cx="${buttonRadius}" cy="${buttonRadius}" r="${buttonRadius - 4}"
-        fill="none" stroke="rgba(255, 255, 255, 0.9)" stroke-width="3" />
-      <path d="M ${buttonRadius * 0.7} ${buttonRadius * 0.5}
-               L ${buttonRadius * 1.5} ${buttonRadius}
-               L ${buttonRadius * 0.7} ${buttonRadius * 1.5} Z"
-        fill="rgba(255, 255, 255, 0.95)" />
+        fill="#22c55e" />
+      <path d="M ${buttonRadius * 0.68} ${buttonRadius * 0.48}
+               L ${buttonRadius * 1.52} ${buttonRadius}
+               L ${buttonRadius * 0.68} ${buttonRadius * 1.52} Z"
+        fill="white" />
     </svg>
   `;
 

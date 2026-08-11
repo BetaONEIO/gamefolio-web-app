@@ -232,20 +232,20 @@ export function NFTPurchaseDialog({
     return (
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent 
-          className="bg-[#101D27] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
+          className="bg-[#0B1218] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
           data-testid="dialog-nft-checkout"
         >
           {/* Header - left aligned */}
-          <div className="flex items-center gap-4 px-4 pt-12 pb-4 bg-[#101D27]/80 backdrop-blur-md">
+          <div className="flex items-center gap-4 px-4 pt-12 pb-4 bg-[#0B1218]/80 backdrop-blur-md">
             <button
               onClick={() => setStep('details')}
-              className="w-10 h-10 rounded-full hover:bg-[#1e293b]/50 flex items-center justify-center transition-colors"
+              className="w-10 h-10 rounded-full hover:bg-[#1B2A33]/50 flex items-center justify-center transition-colors"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F8FAFC" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M20 12H4M4 12L10 6M4 12L10 18" stroke="#F5F7F2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
-            <span className="text-xl font-bold text-[#f8fafc] uppercase tracking-tight" style={{ letterSpacing: '-0.5px' }}>
+            <span className="text-xl font-bold text-[#F5F7F2] uppercase tracking-tight" style={{ letterSpacing: '-0.5px' }}>
               Checkout
             </span>
           </div>
@@ -260,10 +260,10 @@ export function NFTPurchaseDialog({
               
               {/* Item Details - matches Container_65_614 */}
               <div className="flex flex-col gap-4">
-                <span className="text-xs font-bold text-[#94a3b8] uppercase" style={{ letterSpacing: '1.2px' }}>
+                <span className="text-xs font-bold text-[#B8C0AE] uppercase" style={{ letterSpacing: '1.2px' }}>
                   Item details
                 </span>
-                <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-[17px] flex items-center gap-4 h-[130px]">
+                <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-[17px] flex items-center gap-4 h-[130px]">
                   {/* 96x96 image */}
                   <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0">
                     <img
@@ -280,12 +280,12 @@ export function NFTPurchaseDialog({
                       </span>
                       <VerifiedBadge />
                     </div>
-                    <span className="text-xl font-bold text-[#f8fafc] leading-7">
+                    <span className="text-xl font-bold text-[#F5F7F2] leading-7">
                       {nft.name.replace(/^.*#/, 'Guardian #')}
                     </span>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-[#94a3b8]">Unit Price</span>
-                      <span className="text-sm font-bold text-[#f8fafc]">{nft.price} GFT</span>
+                      <span className="text-xs text-[#B8C0AE]">Unit Price</span>
+                      <span className="text-sm font-bold text-[#F5F7F2]">{nft.price} GFT</span>
                     </div>
                   </div>
                 </div>
@@ -293,23 +293,23 @@ export function NFTPurchaseDialog({
 
               {/* Purchase Summary - matches Container_65_633 */}
               <div className="flex flex-col gap-4">
-                <span className="text-xs font-bold text-[#94a3b8] uppercase" style={{ letterSpacing: '1.2px' }}>
+                <span className="text-xs font-bold text-[#B8C0AE] uppercase" style={{ letterSpacing: '1.2px' }}>
                   Purchase Summary
                 </span>
-                <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl overflow-hidden">
+                <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl overflow-hidden">
                   {/* Item Price row - 53px height */}
-                  <div className="flex items-center justify-between px-4 h-[53px] border-b border-[#1e293b]/30">
-                    <span className="text-sm text-[#94a3b8]">Item Price</span>
-                    <span className="text-sm font-bold text-[#f8fafc]">{nft.price.toFixed(2)} GFT</span>
+                  <div className="flex items-center justify-between px-4 h-[53px] border-b border-[#1B2A33]/30">
+                    <span className="text-sm text-[#B8C0AE]">Item Price</span>
+                    <span className="text-sm font-bold text-[#F5F7F2]">{nft.price.toFixed(2)} GFT</span>
                   </div>
                   {/* Gas (sFUEL) row - 53px height */}
-                  <div className="flex items-center justify-between px-4 h-[53px] border-b border-[#1e293b]/30">
-                    <span className="text-sm text-[#94a3b8]">Gas (sFUEL)</span>
+                  <div className="flex items-center justify-between px-4 h-[53px] border-b border-[#1B2A33]/30">
+                    <span className="text-sm text-[#B8C0AE]">Gas (sFUEL)</span>
                     <span className="text-sm font-bold text-[#B7FF1A]">Free</span>
                   </div>
                   {/* Total Payment row - 75px height, green tinted bg */}
                   <div className="flex items-center justify-between px-4 h-[75px] bg-[#14532d]/10">
-                    <span className="text-sm font-bold text-[#f8fafc]">Total Payment</span>
+                    <span className="text-sm font-bold text-[#F5F7F2]">Total Payment</span>
                     <div className="flex flex-col items-end">
                       <span className="text-lg font-bold text-[#B7FF1A] leading-7">{totalAmount.toFixed(2)} GFT</span>
                     </div>
@@ -319,10 +319,10 @@ export function NFTPurchaseDialog({
 
               {/* Wallet Balance - matches Container_65_655 */}
               <div className="flex flex-col gap-4">
-                <span className="text-xs font-bold text-[#94a3b8] uppercase" style={{ letterSpacing: '1.2px' }}>
+                <span className="text-xs font-bold text-[#B8C0AE] uppercase" style={{ letterSpacing: '1.2px' }}>
                   Wallet Balance
                 </span>
-                <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-[17px] flex flex-col gap-4">
+                <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-[17px] flex flex-col gap-4">
                   {/* Wallet mode picker */}
                   <RadioGroup
                     value={walletMode === 'auto' ? 'gamefolio' : walletMode}
@@ -340,7 +340,7 @@ export function NFTPurchaseDialog({
                         className={`cursor-pointer rounded-xl border px-3 py-2 text-center text-xs font-bold transition-colors ${
                           walletMode === opt.val
                             ? 'border-[#B7FF1A] bg-[#B7FF1A]/10 text-[#B7FF1A]'
-                            : 'border-[#1e293b] text-[#94a3b8] hover:text-[#f8fafc]'
+                            : 'border-[#1B2A33] text-[#B8C0AE] hover:text-[#F5F7F2]'
                         }`}
                       >
                         <RadioGroupItem id={`wm-${opt.val}`} value={opt.val} className="sr-only" />
@@ -357,17 +357,17 @@ export function NFTPurchaseDialog({
                   {/* Wallet row */}
                   <div className="flex items-center justify-between h-10">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#1e293b] flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-[#1B2A33] flex items-center justify-center">
                         <WalletIcon />
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-[#f8fafc] leading-5">Personal Wallet</span>
-                        <span className="text-[10px] font-mono text-[#94a3b8] leading-[15px]">{walletAddress}</span>
+                        <span className="text-sm font-bold text-[#F5F7F2] leading-5">Personal Wallet</span>
+                        <span className="text-[10px] font-mono text-[#B8C0AE] leading-[15px]">{walletAddress}</span>
                       </div>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className="text-sm font-bold text-[#f8fafc] leading-5">{userBalance.toFixed(2)} GFT</span>
-                      <span className="text-[10px] text-[#94a3b8] leading-[15px]">Available</span>
+                      <span className="text-sm font-bold text-[#F5F7F2] leading-5">{userBalance.toFixed(2)} GFT</span>
+                      <span className="text-[10px] text-[#B8C0AE] leading-[15px]">Available</span>
                     </div>
                   </div>
                   
@@ -399,7 +399,7 @@ export function NFTPurchaseDialog({
                   </Button>
                 <button
                   onClick={() => setStep('details')}
-                  className="w-full h-[52px] text-sm font-bold text-[#94a3b8] hover:text-[#f8fafc] transition-colors"
+                  className="w-full h-[52px] text-sm font-bold text-[#B8C0AE] hover:text-[#F5F7F2] transition-colors"
                 >
                   Cancel Transaction
                 </button>
@@ -417,7 +417,7 @@ export function NFTPurchaseDialog({
     <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent 
-        className="bg-[#101D27] border-none text-white p-0 max-w-[430px] md:max-w-[860px] w-full md:h-auto h-[100dvh] md:max-h-[90vh] overflow-hidden flex flex-col [&>button]:hidden rounded-none sm:rounded-none md:rounded-lg top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
+        className="bg-[#0B1218] border-none text-white p-0 max-w-[430px] md:max-w-[860px] w-full md:h-auto h-[100dvh] md:max-h-[90vh] overflow-hidden flex flex-col [&>button]:hidden rounded-none sm:rounded-none md:rounded-lg top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
         data-testid="dialog-nft-purchase"
       >
         <div 
@@ -428,14 +428,14 @@ export function NFTPurchaseDialog({
           <div className="hide-scrollbar flex flex-col">
             
             {/* Header with back button */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-[#101D27]/80 backdrop-blur-md">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-[#0B1218]/80 backdrop-blur-md">
               <button
                 onClick={handleClose}
-                className="w-10 h-10 rounded-full hover:bg-[#1e293b]/50 flex items-center justify-center transition-colors"
+                className="w-10 h-10 rounded-full hover:bg-[#1B2A33]/50 flex items-center justify-center transition-colors"
               >
                 <ArrowLeft className="h-6 w-6 text-white/50" />
               </button>
-              <span className="text-lg font-bold text-[#f8fafc]">NFT Details</span>
+              <span className="text-lg font-bold text-[#F5F7F2]">NFT Details</span>
               <div className="w-10 h-10" />
             </div>
 
@@ -468,29 +468,29 @@ export function NFTPurchaseDialog({
                     <span className="text-sm text-[#B7FF1A]">Cyber Guardians</span>
                     <Check className="w-4 h-4 text-[#B7FF1A]" />
                   </div>
-                  <h1 className="text-3xl font-bold text-[#f8fafc]" data-testid="text-nft-name">
+                  <h1 className="text-3xl font-bold text-[#F5F7F2]" data-testid="text-nft-name">
                     {nft.name.replace(/^.*#/, 'Guardian #')}
                   </h1>
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#B7FF1A] to-[#A2F000] border-2 border-[#101D27]" />
-                    <span className="text-sm text-[#94a3b8]">Owned by</span>
-                    <span className="text-sm text-[#f8fafc]">{nft.owner}</span>
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#B7FF1A] to-[#A2F000] border-2 border-[#0B1218]" />
+                    <span className="text-sm text-[#B8C0AE]">Owned by</span>
+                    <span className="text-sm text-[#F5F7F2]">{nft.owner}</span>
                   </div>
                 </div>
 
                 {/* Price Card */}
-                <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-5 flex flex-col gap-4">
+                <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-5 flex flex-col gap-4">
                   <div className="flex items-start justify-between">
                     <div className="flex flex-col gap-1">
-                      <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">
+                      <span className="text-xs font-bold text-[#B8C0AE] uppercase tracking-wider">
                         Current Price
                       </span>
                       <div className="flex items-baseline gap-2">
-                        <span className="text-2xl font-bold text-[#f8fafc]">{nft.price} GFT</span>
+                        <span className="text-2xl font-bold text-[#F5F7F2]">{nft.price} GFT</span>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <span className="text-xs font-bold text-[#94a3b8] uppercase tracking-wider">
+                      <span className="text-xs font-bold text-[#B8C0AE] uppercase tracking-wider">
                         Ending In
                       </span>
                       <span className="text-sm font-bold text-[#B7FF1A]">2h 45m 02s</span>
@@ -510,7 +510,7 @@ export function NFTPurchaseDialog({
                       variant="outline"
                       onClick={() => nft && quickSellMutation.mutate({ tokenId: nft.id })}
                       disabled={quickSellMutation.isPending}
-                      className="w-full h-[58px] rounded-2xl bg-[#1e293b] border border-[#1e293b]/50 text-[#f8fafc] text-base font-bold flex items-center justify-center gap-2 hover:bg-[#1e293b]/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full h-[58px] rounded-2xl bg-[#1B2A33] border border-[#1B2A33]/50 text-[#F5F7F2] text-base font-bold flex items-center justify-center gap-2 hover:bg-[#1B2A33]/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <img src={gfTokenLogo} alt="GF" className="w-5 h-5" />
                       {quickSellMutation.isPending ? "Listing..." : "Sell To Gamefolio"}
@@ -520,7 +520,7 @@ export function NFTPurchaseDialog({
 
                 {/* Properties Section */}
                 <div className="flex flex-col gap-4">
-                  <span className="text-sm font-bold text-[#94a3b8] uppercase tracking-wider">
+                  <span className="text-sm font-bold text-[#B8C0AE] uppercase tracking-wider">
                     Properties
                   </span>
                   <div className="grid grid-cols-2 gap-3">
@@ -532,12 +532,12 @@ export function NFTPurchaseDialog({
                     ].map((prop) => (
                       <div
                         key={prop.label}
-                        className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl p-3 flex flex-col gap-1"
+                        className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-3 flex flex-col gap-1"
                       >
-                        <span className="text-[10px] font-bold text-[#94a3b8] uppercase">
+                        <span className="text-[10px] font-bold text-[#B8C0AE] uppercase">
                           {prop.label}
                         </span>
-                        <span className="text-sm text-[#f8fafc]">{prop.value}</span>
+                        <span className="text-sm text-[#F5F7F2]">{prop.value}</span>
                         <span className="text-[10px] text-[#B7FF1A]">{prop.percent}</span>
                       </div>
                     ))}
@@ -546,10 +546,10 @@ export function NFTPurchaseDialog({
 
                 {/* Details Section */}
                 <div className="flex flex-col gap-4">
-                  <span className="text-sm font-bold text-[#94a3b8] uppercase tracking-wider">
+                  <span className="text-sm font-bold text-[#B8C0AE] uppercase tracking-wider">
                     Details
                   </span>
-                  <div className="bg-[#0f172a] border border-[#1e293b]/50 rounded-2xl overflow-hidden">
+                  <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl overflow-hidden">
                     {[
                       { label: "Contract Address", value: contractAddress, mono: true, link: true },
                       { label: "Token ID", value: tokenId, mono: true },
@@ -559,14 +559,14 @@ export function NFTPurchaseDialog({
                       <div
                         key={detail.label}
                         className={`flex items-center justify-between px-4 py-4 ${
-                          idx < 3 ? "border-b border-[#1e293b]/30" : ""
+                          idx < 3 ? "border-b border-[#1B2A33]/30" : ""
                         }`}
                       >
-                        <span className="text-sm text-[#94a3b8]">{detail.label}</span>
+                        <span className="text-sm text-[#B8C0AE]">{detail.label}</span>
                         <div className="flex items-center gap-1">
                           <span
                             className={`text-sm ${
-                              detail.link ? "text-[#B7FF1A]" : "text-[#f8fafc]"
+                              detail.link ? "text-[#B7FF1A]" : "text-[#F5F7F2]"
                             } ${detail.mono ? "font-mono" : ""}`}
                           >
                             {detail.value}

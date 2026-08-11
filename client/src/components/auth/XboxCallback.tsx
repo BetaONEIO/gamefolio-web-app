@@ -4,11 +4,13 @@ import { useToast } from '@/hooks/use-toast';
 import { handleXboxCallback, getXboxCallbackParams } from '@/lib/xbox';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { useAuthModal } from '@/hooks/use-auth-modal';
 
 export function XboxCallback() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { closeModal } = useAuthModal();
 
   useEffect(() => {
     const processXboxCallback = async () => {
@@ -55,6 +57,7 @@ export function XboxCallback() {
             variant: "gamefolioSuccess"
           });
 
+          closeModal();
           setLocation("/settings");
         } else {
           const response = await apiRequest("POST", "/api/auth/xbox", {
@@ -80,6 +83,7 @@ export function XboxCallback() {
                 variant: "gamefolioSuccess"
               });
             }
+            closeModal();
             setLocation("/onboarding");
           } else {
             toast({
@@ -87,6 +91,7 @@ export function XboxCallback() {
               description: `You're signed in as ${userData.xboxUsername || userData.displayName}.`,
               variant: "gamefolioSuccess"
             });
+            closeModal();
             setLocation("/");
           }
         }
@@ -99,6 +104,7 @@ export function XboxCallback() {
           description: error.message || "There was an error connecting your Xbox account. Please try again.",
           variant: "destructive"
         });
+        closeModal();
         setLocation(isConnectMode ? "/settings" : "/auth");
       }
     };

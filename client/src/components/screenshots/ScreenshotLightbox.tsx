@@ -36,6 +36,8 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   const [isMobile, setIsMobile] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isDesktopFullscreen, setIsDesktopFullscreen] = useState(false);
+  const [liveViews, setLiveViews] = useState<number | null>(null);
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; time: number } | null>(null);
@@ -43,6 +45,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   const commentSectionRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const previousUrlRef = useRef<string | null>(null);
+  const desktopImageRef = useRef<HTMLDivElement>(null);
 
   // Update the address bar URL to reflect the current screenshot so it can be copied/shared
   useEffect(() => {
@@ -58,6 +61,16 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
       silentReplaceState(`/@${username}/screenshot/${screenshot.id}`);
     }
     return () => {};
+  }, [screenshot?.id]);
+
+  // Increment view count when a screenshot is opened
+  useEffect(() => {
+    if (!screenshot?.id) return;
+    setLiveViews(screenshot.views ?? 0);
+    fetch(`/api/screenshots/${screenshot.id}/views`, { method: 'POST', credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(() => setLiveViews(v => (v ?? 0) + 1))
+      .catch(() => {});
   }, [screenshot?.id]);
 
   const handleClose = useCallback(() => {
@@ -181,6 +194,21 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
     }
   }, []);
 
+  const toggleDesktopFullscreen = useCallback(() => {
+    if (!desktopImageRef.current) return;
+    if (!document.fullscreenElement) {
+      desktopImageRef.current.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setIsDesktopFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
+
   if (!screenshot) return null;
 
   const getVisibleDots = (total: number, current: number, windowSize = 5) => {
@@ -198,7 +226,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
       <div className="fixed inset-0 z-[100] bg-black flex flex-col">
         <div className="absolute top-3 right-3 z-50">
           <button
-            onClick={() => { setIsFullscreen(false); handleClose(); }}
+            onClick={() => setIsFullscreen(false)}
             className="rounded-sm opacity-70 transition-opacity hover:opacity-100 p-3 bg-black/30 backdrop-blur-sm hover:bg-black/50 flex items-center justify-center"
           >
             <X className="h-6 w-6 text-white" />
@@ -276,8 +304,8 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   if (isMobile) {
     const visibleDotsMobile = getVisibleDots(totalSlides, currentIndex);
     return createPortal(
-      <div className="fixed inset-0 z-[100] bg-background flex flex-col">
-        <div className="flex items-center justify-end px-3 py-2 flex-shrink-0">
+      <div className="fixed left-0 right-0 top-0 z-[100] bg-background flex flex-col" style={{ height: 'calc(100dvh - 64px)' }}>
+        <div className="flex items-center justify-start px-3 py-2 flex-shrink-0">
           <button
             onClick={handleClose}
             className="rounded-sm opacity-70 transition-opacity hover:opacity-100 p-2 bg-black/30 backdrop-blur-sm hover:bg-black/50 flex items-center justify-center"
@@ -435,7 +463,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
 
               <div className="flex items-center mt-2 text-sm text-muted-foreground">
                 <Eye className="h-4 w-4 mr-1" />
-                <span className="mr-3">{screenshot.views || 0} views</span>
+                <span className="mr-3">{liveViews ?? screenshot.views ?? 0} views</span>
                 <Clock className="h-4 w-4 mr-1" />
                 <span>{screenshot.createdAt ? formatDistance(new Date(screenshot.createdAt), new Date(), { addSuffix: true }) : 'Unknown time'}</span>
               </div>
@@ -516,12 +544,22 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
           </DialogPrimitive.Close>
 
           <div className="flex flex-row h-full">
-          <div className="bg-black flex items-center justify-center w-[75%] h-full flex-shrink-0">
+          <div ref={desktopImageRef} className="bg-black flex items-center justify-center w-[75%] h-full flex-shrink-0 relative">
             <img
               src={signedUrl || screenshot.imageUrl}
               alt={screenshot.title}
               className="max-w-full max-h-full object-contain"
             />
+            <button
+              onClick={toggleDesktopFullscreen}
+              className="absolute bottom-3 right-3 z-10 w-9 h-9 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm hover:bg-black/70 transition-colors"
+              title={isDesktopFullscreen ? "Exit fullscreen" : "View fullscreen"}
+            >
+              {isDesktopFullscreen
+                ? <Minimize2 className="h-4 w-4 text-white" />
+                : <Maximize2 className="h-4 w-4 text-white" />
+              }
+            </button>
           </div>
 
           <div className="flex flex-col w-[25%] h-full">
@@ -602,7 +640,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
 
                 <div className="flex items-center mt-2 text-sm text-muted-foreground">
                   <Eye className="h-4 w-4 mr-1" />
-                  <span className="mr-3">{screenshot.views || 0} views</span>
+                  <span className="mr-3">{liveViews ?? screenshot.views ?? 0} views</span>
                   <Clock className="h-4 w-4 mr-1" />
                   <span>{screenshot.createdAt ? formatDistance(new Date(screenshot.createdAt), new Date(), { addSuffix: true }) : 'Unknown time'}</span>
                 </div>

@@ -54,6 +54,11 @@ router.post('/auth/token/login', async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Invalid username or password' });
     }
 
+    // Enforce two-factor authentication when enabled
+    if (user.twoFactorEnabled && user.twoFactorSecret) {
+      return res.status(200).json({ requires2FA: true, userId: user.id });
+    }
+
     // Generate tokens
     const accessToken = generateAccessToken(user.id);
     const refreshToken = generateRefreshToken(user.id);
