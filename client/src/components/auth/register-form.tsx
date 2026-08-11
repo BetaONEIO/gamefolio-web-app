@@ -420,7 +420,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
         <div className="relative">
           <Calendar
             aria-hidden="true"
-            className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-primary"
           />
           <Input
             id="dateOfBirth"
