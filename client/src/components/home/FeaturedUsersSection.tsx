@@ -1,22 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GamefolioTrendingIcon } from "@/components/icons/GamefolioTrendingIcon";
 import { CreatorCard } from "@/components/home/CreatorCard";
 import { TrendingEntry, CREATOR_CARD_STYLES } from "@/components/home/creator-card-utils";
 
+const SCROLL_SPEED = 0.55; // px per rAF frame (~33px/s at 60fps)
+const CARD_GAP = 16;
+
 const STYLES = `
-  @keyframes fire-scroll {
-    0%   { transform: translateX(0); }
-    100% { transform: translateX(-33.3333%); }
+  .fire-carousel-scroll {
+    overflow-x: scroll;
+    scrollbar-width: none;
+    cursor: grab;
+    user-select: none;
   }
+  .fire-carousel-scroll::-webkit-scrollbar { display: none; }
+  .fire-carousel-scroll.dragging { cursor: grabbing; }
+
   .fire-carousel-track {
     display: flex;
-    animation: fire-scroll 90s linear infinite;
     width: max-content;
-    will-change: transform;
-  }
-  .fire-carousel-track:hover {
-    animation-play-state: paused;
   }
 
   .trending-bg-pattern {
@@ -26,10 +30,6 @@ const STYLES = `
     background-position: center;
     background-size: cover;
     background-repeat: repeat;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .fire-carousel-track { animation: none; }
   }
 
   ${CREATOR_CARD_STYLES}
@@ -73,6 +73,81 @@ const FeaturedUsersSection = () => {
     ? [...validEntries, ...validEntries, ...validEntries]
     : [];
 
+  /* ── Scroll refs ──────────────────────────────────────────── */
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const rafRef    = useRef<number>(0);
+  const dragging  = useRef(false);
+  const dragData  = useRef({ startX: 0, startScrollLeft: 0 });
+
+  /* ── Auto-scroll + init ───────────────────────────────────── */
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || validEntries.length === 0) return;
+
+    // Give layout one tick to paint cards before reading scrollWidth
+    const setup = setTimeout(() => {
+      const oneCopyWidth = el.scrollWidth / 3;
+      // Start in the middle copy so we can scroll both directions seamlessly
+      el.scrollLeft = oneCopyWidth;
+
+      const tick = () => {
+        if (!dragging.current) {
+          el.scrollLeft += SCROLL_SPEED;
+
+          // Seamless loop: when we scroll past the 2nd copy, jump back by one copy width
+          const w = el.scrollWidth / 3;
+          if (el.scrollLeft >= w * 2) {
+            el.scrollLeft -= w;
+          } else if (el.scrollLeft <= 0) {
+            el.scrollLeft += w;
+          }
+        }
+        rafRef.current = requestAnimationFrame(tick);
+      };
+
+      rafRef.current = requestAnimationFrame(tick);
+    }, 60);
+
+    return () => {
+      clearTimeout(setup);
+      cancelAnimationFrame(rafRef.current);
+    };
+  }, [validEntries.length]);
+
+  /* ── Drag handlers ────────────────────────────────────────── */
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    dragging.current = true;
+    dragData.current = { startX: e.clientX, startScrollLeft: el.scrollLeft };
+    el.setPointerCapture(e.pointerId);
+    el.classList.add('dragging');
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging.current) return;
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const dx = e.clientX - dragData.current.startX;
+    el.scrollLeft = dragData.current.startScrollLeft - dx;
+
+    // Keep seamless loop working during drag
+    const w = el.scrollWidth / 3;
+    if (el.scrollLeft >= w * 2) {
+      el.scrollLeft -= w;
+      dragData.current.startScrollLeft -= w;
+    } else if (el.scrollLeft < 0) {
+      el.scrollLeft += w;
+      dragData.current.startScrollLeft += w;
+    }
+  };
+
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragging.current = false;
+    scrollRef.current?.classList.remove('dragging');
+  };
+
   return (
     <div>
       <style>{STYLES}</style>
@@ -90,25 +165,37 @@ const FeaturedUsersSection = () => {
         className="relative overflow-hidden rounded-2xl trending-bg-pattern"
         style={{ padding: '20px 0' }}
       >
-        {/* Edge fade overlays */}
-        <div className="absolute left-0 top-0 bottom-0 w-16 pointer-events-none" style={{ background: 'linear-gradient(to right, #0B1319, transparent)', zIndex: 10 }} />
-        <div className="absolute right-0 top-0 bottom-0 w-16 pointer-events-none" style={{ background: 'linear-gradient(to left, #0B1319, transparent)', zIndex: 10 }} />
+        {/* Edge fade overlays (pointer-events: none so drag works underneath) */}
+        <div className="absolute left-0 top-0 bottom-0 w-16 pointer-events-none"
+          style={{ background: 'linear-gradient(to right, #0B1319, transparent)', zIndex: 10 }} />
+        <div className="absolute right-0 top-0 bottom-0 w-16 pointer-events-none"
+          style={{ background: 'linear-gradient(to left, #0B1319, transparent)', zIndex: 10 }} />
 
         {isLoading ? (
           <div className="flex gap-4 px-5" style={{ zIndex: 11, position: 'relative' }}>
             {Array(6).fill(0).map((_, i) => <CardSkeleton key={i} />)}
           </div>
         ) : validEntries.length === 0 ? (
-           <div className="flex items-center justify-center py-12 text-white/30 text-sm" style={{ zIndex: 11, position: 'relative' }}>
-             No trending data yet.
+          <div className="flex items-center justify-center py-12 text-white/30 text-sm" style={{ zIndex: 11, position: 'relative' }}>
+            No trending data yet.
           </div>
         ) : (
-          <div className="fire-carousel-track" style={{ zIndex: 11, position: 'relative' }}>
-            {displayEntries.map((entry, idx) => (
-              <div key={`${entry.userId}-${idx}`} style={{ paddingRight: 16, flexShrink: 0 }}>
-                <CreatorCard entry={entry} period={period} />
-              </div>
-            ))}
+          <div
+            ref={scrollRef}
+            className="fire-carousel-scroll"
+            style={{ zIndex: 11, position: 'relative' }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+          >
+            <div className="fire-carousel-track" style={{ paddingLeft: CARD_GAP }}>
+              {displayEntries.map((entry, idx) => (
+                <div key={`${entry.userId}-${idx}`} style={{ paddingRight: CARD_GAP, flexShrink: 0 }}>
+                  <CreatorCard entry={entry} period={period} />
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

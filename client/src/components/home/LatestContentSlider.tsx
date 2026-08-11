@@ -222,14 +222,14 @@ export default function LatestContentSlider() {
             {!playing && (
               <img src={current.thumbnailUrl || `/api/clips/${current.id}/thumbnail`}
                 alt={current.title}
-                className={`absolute inset-0 w-full h-full z-10 ${mode === "clips" ? "object-cover" : "object-contain"}`} />
+                className="absolute inset-0 w-full h-full z-10 object-contain" />
             )}
 
             {/* Video */}
             {playing && current.videoUrl && (
               <video ref={videoRef} src={current.videoUrl}
                 className="absolute inset-0 w-full h-full z-10"
-                style={{ objectFit: mode === "clips" ? "cover" : "contain", background: "#000" }}
+                style={{ objectFit: "contain", background: "#000" }}
                 autoPlay muted={muted} playsInline
                 onTimeUpdate={(e) => {
                   const v = e.currentTarget;
