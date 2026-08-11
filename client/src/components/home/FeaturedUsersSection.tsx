@@ -1,20 +1,8 @@
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GamefolioTrendingIcon } from "@/components/icons/GamefolioTrendingIcon";
 import { CreatorCard } from "@/components/home/CreatorCard";
 import { TrendingEntry, CREATOR_CARD_STYLES } from "@/components/home/creator-card-utils";
-import { useMobile } from "@/hooks/use-mobile";
-import { ChevronDown } from "lucide-react";
-
-type Period = 'week' | 'month' | 'alltime';
-
-const PERIOD_LABELS: Record<Period, string> = {
-  week: 'This Week',
-  month: 'This Month',
-  alltime: 'All Time',
-};
 
 const STYLES = `
   @keyframes fire-scroll {
@@ -68,8 +56,7 @@ function CardSkeleton() {
 }
 
 const FeaturedUsersSection = () => {
-  const [period, setPeriod] = useState<Period>('week');
-  const isMobile = useMobile();
+  const period = 'week' as const;
 
   const { data: entries = [], isLoading } = useQuery<TrendingEntry[]>({
     queryKey: ["/api/trending-gamefolios", period],
@@ -96,53 +83,6 @@ const FeaturedUsersSection = () => {
           <GamefolioTrendingIcon className="w-5 h-5 text-primary" />
           <h2 className="text-xl sm:text-2xl font-bold">Trending Gamefolios</h2>
         </div>
-        <div className="flex items-center gap-2">
-          {isMobile ? (
-            <label
-              className="relative flex items-center rounded-lg overflow-hidden"
-              style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(183,255,26,0.35)',
-              }}
-            >
-              <span className="sr-only">Filter trending Gamefolios by time period</span>
-              <select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value as Period)}
-                aria-label="Filter trending Gamefolios by time period"
-                className="appearance-none bg-transparent pl-3 pr-7 py-2 text-xs font-semibold outline-none cursor-pointer"
-                style={{ color: '#F5F7F2' }}
-              >
-                {(Object.keys(PERIOD_LABELS) as Period[]).map(p => (
-                  <option key={p} value={p} style={{ background: '#0B1319', color: '#F5F7F2' }}>
-                    {PERIOD_LABELS[p]}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                aria-hidden="true"
-                className="pointer-events-none absolute right-2 h-3.5 w-3.5"
-                style={{ color: '#B7FF1A' }}
-              />
-            </label>
-          ) : (
-            <div className="flex items-center gap-1 rounded-lg p-1" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              {(Object.keys(PERIOD_LABELS) as Period[]).map(p => (
-                <button
-                  key={p}
-                  onClick={() => setPeriod(p)}
-                  className="px-3 py-1 rounded-md text-xs font-semibold transition-all duration-150"
-                  style={period === p ? { background: '#B7FF1A', color: '#0B1319' } : { color: 'rgba(255,255,255,0.45)' }}
-                >
-                  {PERIOD_LABELS[p]}
-                </button>
-              ))}
-            </div>
-          )}
-          <Link href="/explore" className="text-sm font-medium hover:underline flex items-center gap-1" style={{ color: '#B7FF1A' }}>
-            View all <span>›</span>
-          </Link>
-        </div>
       </div>
 
       {/* Section body with lightning pattern background */}
@@ -159,8 +99,8 @@ const FeaturedUsersSection = () => {
             {Array(6).fill(0).map((_, i) => <CardSkeleton key={i} />)}
           </div>
         ) : validEntries.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-white/30 text-sm" style={{ zIndex: 11, position: 'relative' }}>
-            No data for this period yet.
+           <div className="flex items-center justify-center py-12 text-white/30 text-sm" style={{ zIndex: 11, position: 'relative' }}>
+             No trending data yet.
           </div>
         ) : (
           <div className="fire-carousel-track" style={{ zIndex: 11, position: 'relative' }}>
