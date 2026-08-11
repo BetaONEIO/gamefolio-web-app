@@ -1114,12 +1114,123 @@ function RecentActivity({ activity, isLoading }: { activity: DashboardData["rece
 
 /* ─── Section 7: Friends & Rivals ─── */
 
+function XPGapRow({
+  xpGap,
+  direction,
+}: {
+  xpGap: number;
+  direction: "overtake" | "lead";
+}) {
+  const isOvertake = direction === "overtake";
+  return (
+    <div className="flex items-center gap-2 px-1 py-0.5">
+      <div className="flex-1 h-px" style={{ background: `${BORDER}` }} />
+      <div
+        className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap"
+        style={{
+          background: isOvertake ? `${ACCENT}12` : "rgba(255,255,255,0.04)",
+          border: `1px solid ${isOvertake ? `${ACCENT}30` : BORDER}`,
+          color: isOvertake ? ACCENT : TEXT_MUTED,
+        }}
+      >
+        {isOvertake ? (
+          <>
+            <Zap className="w-2.5 h-2.5" />
+            {xpGap.toLocaleString()} XP to overtake
+          </>
+        ) : (
+          <>
+            <Swords className="w-2.5 h-2.5" />
+            {xpGap.toLocaleString()} XP ahead
+          </>
+        )}
+      </div>
+      <div className="flex-1 h-px" style={{ background: `${BORDER}` }} />
+    </div>
+  );
+}
+
+function RivalRow({
+  rival,
+  xpGapAbove,
+  xpGapBelow,
+}: {
+  rival: { rank: number; userId: number; username: string; displayName: string | null; avatarUrl: string | null; totalXP: number; isMe: boolean };
+  xpGapAbove?: number;
+  xpGapBelow?: number;
+}) {
+  const displayName = rival.displayName || rival.username;
+
+  return (
+    <div className="space-y-1">
+      {xpGapAbove !== undefined && (
+        <XPGapRow xpGap={xpGapAbove} direction="overtake" />
+      )}
+
+      <Link href={`/profile/${rival.username}`}>
+        <div
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
+            rival.isMe ? "" : "hover:bg-white/[0.02]"
+          }`}
+          style={{
+            background: rival.isMe ? `${ACCENT}08` : "transparent",
+            border: `1px solid ${rival.isMe ? `${ACCENT}30` : BORDER}`,
+          }}
+        >
+          {/* Rank badge */}
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-black tabular-nums"
+            style={{
+              background: rival.isMe ? `${ACCENT}18` : "rgba(255,255,255,0.04)",
+              color: rival.isMe ? ACCENT : TEXT_MUTED,
+            }}
+          >
+            {rival.rank > 0 ? `#${rival.rank}` : "—"}
+          </div>
+
+          {/* Avatar */}
+          <SimpleAvatar url={rival.avatarUrl} name={displayName} size="sm" />
+
+          {/* Name */}
+          <div className="flex-1 min-w-0">
+            <p
+              className="text-sm font-semibold truncate leading-tight"
+              style={{ color: rival.isMe ? ACCENT : TEXT_PRIMARY }}
+            >
+              {displayName}
+              {rival.isMe && (
+                <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: `${ACCENT}20`, color: ACCENT }}>
+                  You
+                </span>
+              )}
+            </p>
+          </div>
+
+          {/* XP */}
+          <span
+            className="text-xs font-bold tabular-nums flex-shrink-0"
+            style={{ color: rival.isMe ? ACCENT : TEXT_MUTED }}
+          >
+            {rival.totalXP.toLocaleString()} XP
+          </span>
+        </div>
+      </Link>
+
+      {xpGapBelow !== undefined && (
+        <XPGapRow xpGap={xpGapBelow} direction="lead" />
+      )}
+    </div>
+  );
+}
+
 function FriendsRivals({ data, isLoading }: { data: DashboardData["social"] | undefined; isLoading: boolean }) {
   if (isLoading) {
     return (
       <SectionCard>
         <SectionHeader icon={Users} title="Rivals" />
         <div className="px-5 pb-5 space-y-3">
+          <Skeleton className="h-10 rounded-xl w-full" />
+          <Skeleton className="h-14 rounded-xl w-full" />
           <Skeleton className="h-14 rounded-xl w-full" />
           <Skeleton className="h-14 rounded-xl w-full" />
         </div>
@@ -1127,7 +1238,9 @@ function FriendsRivals({ data, isLoading }: { data: DashboardData["social"] | un
     );
   }
 
-  const rivals = data?.nearbyRivals || [];
+  // Sort rivals by rank ascending so the ladder reads top → bottom
+  const rivals = [...(data?.nearbyRivals || [])].sort((a, b) => a.rank - b.rank);
+  const meIndex = rivals.findIndex((r) => r.isMe);
 
   return (
     <SectionCard>
@@ -1142,49 +1255,71 @@ function FriendsRivals({ data, isLoading }: { data: DashboardData["social"] | un
           </Link>
         }
       />
-      <div className="px-5 pb-5">
-        {/* Social counts */}
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex-1 p-3 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
-            <div className="text-lg font-bold" style={{ color: TEXT_PRIMARY }}>{data?.followersCount ?? 0}</div>
-            <div className="text-[10px]" style={{ color: TEXT_MUTED }}>Followers</div>
+      <div className="px-5 pb-5 space-y-4">
+        {/* Social counts row */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
+            <span className="text-sm font-black" style={{ color: TEXT_PRIMARY }}>{data?.followersCount ?? 0}</span>
+            <span className="text-[10px]" style={{ color: TEXT_MUTED }}>Followers</span>
           </div>
-          <div className="flex-1 p-3 rounded-xl text-center" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
-            <div className="text-lg font-bold" style={{ color: TEXT_PRIMARY }}>{data?.followingCount ?? 0}</div>
-            <div className="text-[10px]" style={{ color: TEXT_MUTED }}>Following</div>
+          <div className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}` }}>
+            <span className="text-sm font-black" style={{ color: TEXT_PRIMARY }}>{data?.followingCount ?? 0}</span>
+            <span className="text-[10px]" style={{ color: TEXT_MUTED }}>Following</span>
           </div>
         </div>
 
-        {/* Nearby rivals */}
+        {/* Leaderboard ladder */}
         {rivals.length > 0 ? (
-          <div className="space-y-2">
-            {rivals.map((r) => (
-              <Link key={r.userId} href={`/profile/${r.username}`}>
-                <div
-                  className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${
-                    r.isMe ? "bg-white/[0.04]" : "hover:bg-white/[0.02]"
-                  }`}
-                  style={{ border: `1px solid ${r.isMe ? `${ACCENT}20` : BORDER}` }}
-                >
-                  <div className="w-6 text-center text-xs font-black" style={{ color: r.isMe ? ACCENT : TEXT_MUTED }}>
-                    {formatRank(r.rank)}
-                  </div>
-                  <SimpleAvatar url={r.avatarUrl} name={r.displayName || r.username} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium truncate ${r.isMe ? "font-bold" : ""}`} style={{ color: r.isMe ? ACCENT : TEXT_PRIMARY }}>
-                      {r.displayName || r.username}{r.isMe ? " (You)" : ""}
-                    </p>
-                  </div>
-                  <span className="text-xs font-bold" style={{ color: TEXT_MUTED }}>
-                    {Math.round(r.totalXP).toLocaleString()} XP
-                  </span>
-                </div>
-              </Link>
-            ))}
+          <div className="space-y-1">
+            {rivals.map((rival, idx) => {
+              const rivalAbove = rivals[idx - 1];
+              const rivalBelow = rivals[idx + 1];
+
+              // XP gap from this rival to the one above (relevant when this rival IS the user)
+              const xpGapAbove =
+                rival.isMe && rivalAbove
+                  ? Math.max(1, rivalAbove.totalXP - rival.totalXP + 1)
+                  : undefined;
+
+              // XP gap from this rival to the one below (relevant when this rival IS the user,
+              // shown on the last row the user "owns" — i.e. the row below the user row)
+              // We render the "lead" gap on the rival-below row so it sits between user and next row.
+              // So: xpGapBelow on the user row = gap between user and next lower rank.
+              const xpGapBelow =
+                rival.isMe && rivalBelow
+                  ? Math.max(1, rival.totalXP - rivalBelow.totalXP + 1)
+                  : undefined;
+
+              // For non-me rows: if the row directly above is "me", skip xpGapAbove
+              // (it's already rendered as xpGapBelow on the me row).
+              // Show the "overtake" gap only on non-me rows whose immediate upper neighbour is me.
+              const showOvertakeGapAboveNonMe =
+                !rival.isMe && rivalAbove?.isMe === false && idx === meIndex + 1
+                  ? undefined // gap already rendered by "me" row as xpGapBelow
+                  : undefined;
+
+              return (
+                <RivalRow
+                  key={rival.userId}
+                  rival={rival}
+                  xpGapAbove={rival.isMe ? xpGapAbove : undefined}
+                  xpGapBelow={rival.isMe ? xpGapBelow : undefined}
+                />
+              );
+            })}
           </div>
         ) : (
-          <div className="text-center py-4">
-            <p className="text-sm" style={{ color: TEXT_MUTED }}>Climb the leaderboard to find rivals!</p>
+          <div className="text-center py-6 space-y-1">
+            <Swords className="w-8 h-8 mx-auto opacity-20" style={{ color: ACCENT }} />
+            <p className="text-sm font-medium" style={{ color: TEXT_MUTED }}>No rivals yet</p>
+            <p className="text-xs" style={{ color: `${TEXT_MUTED}80` }}>
+              Earn XP this week to appear on the leaderboard
+            </p>
+            <Link href="/leaderboard">
+              <span className="inline-block mt-2 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors hover:opacity-80" style={{ background: `${ACCENT}12`, color: ACCENT, border: `1px solid ${ACCENT}25` }}>
+                View Leaderboard
+              </span>
+            </Link>
           </div>
         )}
       </div>
