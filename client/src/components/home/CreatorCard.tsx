@@ -51,7 +51,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
     <Link href={`/profile/${user.username}`} className={className}>
       <div className="creator-card-wrap">
       <div
-        className="creator-card-inner flex-shrink-0 cursor-pointer transition-transform duration-200 hover:scale-[1.03] hover:-translate-y-2 fire-card"
+        className="creator-card-inner flex-shrink-0 cursor-pointer fire-card"
         style={{ width: 228, height: 480, borderRadius: 16, position: 'relative' }}
       >
         {/* ── Floating badge row (outside overflow-hidden background) ── */}
