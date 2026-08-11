@@ -3715,6 +3715,8 @@ const ProfilePage = () => {
                   size="xl" 
                 />
               </span>
+              <PartnerBadge isPartner={(profile as any).isPartner} size="xl" />
+              <AmbassadorBadge isAmbassador={(profile as any).isAmbassador} size="xl" />
               {profile.userType && profile.showUserType !== false && (() => {
                 const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
                 return userTypes.map((type, index) => {
@@ -5605,7 +5607,19 @@ const ProfilePage = () => {
         {/* Screenshot viewer — mobile snap-scroll or desktop lightbox */}
         {selectedScreenshot && isMobile ? (
           <MobileScreenshotsViewer
-            screenshots={(screenshots as any[]) || [selectedScreenshot]}
+            screenshots={((screenshots as any[]) || [selectedScreenshot]).map((s: any) => ({
+              ...s,
+              user: s.user || {
+                id: profile?.id,
+                username: profile?.username,
+                displayName: profile?.displayName,
+                avatarUrl: profile?.avatarUrl,
+                isPro: profile?.isPro,
+                isPartner: profile?.isPartner,
+                isAmbassador: profile?.isAmbassador,
+                selectedVerificationBadgeId: profile?.selectedVerificationBadgeId,
+              },
+            }))}
             startId={selectedScreenshot.id}
             onBack={() => setSelectedScreenshot(null)}
           />

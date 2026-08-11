@@ -15,6 +15,7 @@ import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { isNative } from "@/lib/platform";
 import { clearTokens, getAccessTokenSync, setTokens } from "@/lib/auth-token";
+import { getDeviceId } from "@/lib/device-id";
 import { initPushNotifications, unregisterCurrentPushToken } from "@/lib/push-notifications";
 import { setSentryUser } from "@/lib/sentry";
 
@@ -437,9 +438,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const registerMutation = useMutation({
     mutationFn: async (credentials: RegisterData) => {
+      const deviceId = await getDeviceId();
       const res = await fetch("/api/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Device-Id": deviceId },
         body: JSON.stringify(credentials),
         credentials: "include",
       });

@@ -177,6 +177,10 @@ export const users = pgTable("users", {
   // Outro videos — auto-appended on download; separate files for landscape (16:9) and portrait (9:16)
   outroVideoPath: text("outro_video_path"),          // landscape 1920×1080 — "outros/42.mp4"
   outroVideoPathPortrait: text("outro_video_path_portrait"), // portrait 1080×1920 — "outros/42_portrait.mp4"
+  // Spam/multi-account detection signals — captured server-side at registration only,
+  // never client-settable. See gamefolio-bot for the detection jobs that read these.
+  signupIp: text("signup_ip"),
+  signupDeviceId: text("signup_device_id"),
   // Indie game profile info (used by the "indie-game" layoutStyle to describe the developer's game)
   gameDescription: text("game_description"), // Longer "about the game" blurb shown on the Overview tab
   gameKeyFeatures: text("game_key_features").array(), // Bulleted feature list
@@ -226,6 +230,9 @@ export const clips = pgTable("clips", {
   ageRestricted: boolean("age_restricted").default(false).notNull(),
   shareCode: text("share_code").unique(),
   pinnedAt: timestamp("pinned_at"),
+  // Spam/multi-account detection signals — captured server-side at upload time.
+  uploadIp: text("upload_ip"),
+  uploadDeviceId: text("upload_device_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -269,6 +276,9 @@ export const screenshots = pgTable("screenshots", {
   ageRestricted: boolean("age_restricted").default(false).notNull(),
   shareCode: text("share_code").unique(),
   pinnedAt: timestamp("pinned_at"),
+  // Spam/multi-account detection signals — captured server-side at upload time.
+  uploadIp: text("upload_ip"),
+  uploadDeviceId: text("upload_device_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -624,10 +634,24 @@ export const VALID_OAUTH_SCOPES = [
 ] as const;
 export type OAuthScope = typeof VALID_OAUTH_SCOPES[number];
 
+// RFC 8252 §8.5: "public" clients (desktop/mobile/CLI apps) can't keep a
+// secret confidential since it ships inside the binary — they authenticate
+// with PKCE (code_challenge/code_verifier, already mandatory on every
+// client regardless of type) instead of a client_secret. "confidential"
+// clients (server-side apps that can hold a secret) keep the existing
+// secret-based flow. Fixed at registration — not editable after creation,
+// since flipping types mid-life would mean either fabricating a secret out
+// of nowhere (public -> confidential) or silently dropping one that was
+// already handed out (confidential -> public).
+export const OAUTH_CLIENT_TYPES = ['confidential', 'public'] as const;
+export type OAuthClientType = typeof OAUTH_CLIENT_TYPES[number];
+
 export const oauthClients = pgTable("oauth_clients", {
   id: serial("id").primaryKey(),
   clientId: uuid("client_id").defaultRandom().notNull().unique(),
-  clientSecretHash: text("client_secret_hash").notNull(), // scrypt hash.salt, same format as users.password
+  // Null for public clients — they never get a secret to begin with.
+  clientSecretHash: text("client_secret_hash"), // scrypt hash.salt, same format as users.password
+  clientType: text("client_type").notNull().default("confidential"), // OAuthClientType
   name: text("name").notNull(),
   description: text("description"),
   logoUrl: text("logo_url"),
@@ -645,6 +669,7 @@ export const insertOauthClientSchema = createInsertSchema(oauthClients)
   .extend({
     name: z.string().min(1).max(100),
     redirectUris: z.array(z.string().url()).min(1),
+    clientType: z.enum(OAUTH_CLIENT_TYPES).default('confidential'),
   });
 
 // Short-lived authorization codes (Authorization Code grant, step 1). PKCE required.
@@ -1457,6 +1482,28 @@ export const insertUserDailyFiresSchema = createInsertSchema(userDailyFires).omi
   updatedAt: true,
 });
 
+// Rolling 24h upload-count tracking - one row per (user, contentType) window,
+// mirroring userDailyFires above. contentType is 'clip' | 'reel' | 'screenshot'.
+// windowStartDate is a human-readable record of when the current window
+// started; the actual window-active check compares `createdAt` against now
+// (see isUploadWindowActive in database-storage.ts) - not a calendar-date key,
+// same rationale as the fire-reaction limit avoiding a UTC-midnight reset.
+export const userUploadUsage = pgTable("user_upload_usage", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  contentType: text("content_type").notNull(),
+  windowStartDate: text("window_start_date").notNull(),
+  uploadCount: integer("upload_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertUserUploadUsageSchema = createInsertSchema(userUploadUsage).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Daily Twitch-clip import limit: counts clips fetched from Twitch and
 // successfully posted. Free users: 2/day, Pro users: 10/day. Reset is by UTC day.
 export const userDailyImports = pgTable("user_daily_imports", {
@@ -1719,6 +1766,10 @@ export type InsertUserDailyFires = z.infer<typeof insertUserDailyFiresSchema>;
 export type UserDailyImports = typeof userDailyImports.$inferSelect;
 export type InsertUserDailyImports = z.infer<typeof insertUserDailyImportsSchema>;
 
+// Types for rolling-window upload-count tracking
+export type UserUploadUsage = typeof userUploadUsage.$inferSelect;
+export type InsertUserUploadUsage = z.infer<typeof insertUserUploadUsageSchema>;
+
 // Fire limits configuration type
 export interface FireLimits {
   isPro: boolean;
@@ -1736,8 +1787,9 @@ export interface ImportLimits {
 }
 
 // Upload limits configuration type
-// Free vs Pro users are limited only by file size and (for video) duration.
-// There is no per-day or total upload count cap — those have been removed.
+// Free vs Pro users are limited by file size, (for video) duration, and a
+// rolling 24h upload-count cap per content type - see userUploadUsage /
+// getFireLimits precedent in database-storage.ts.
 export interface UploadLimits {
   isPro: boolean;
   maxClipSizeMB: number;
@@ -1745,6 +1797,12 @@ export interface UploadLimits {
   maxScreenshotSizeMB: number;
   maxClipDurationSeconds: number;
   maxReelDurationSeconds: number;
+  maxClipsPerWindow: number;
+  clipsUsedInWindow: number;
+  maxReelsPerWindow: number;
+  reelsUsedInWindow: number;
+  maxScreenshotsPerWindow: number;
+  screenshotsUsedInWindow: number;
   // Max number of files a user can queue in a single bulk-upload batch.
   // Free: 3, Pro/Partner/admin: 10. This is a per-batch cap, not a daily quota.
   maxBulkUploads: number;

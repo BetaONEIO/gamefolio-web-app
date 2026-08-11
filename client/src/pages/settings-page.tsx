@@ -1471,10 +1471,19 @@ export default function SettingsPage() {
     const isOAuthPopup = !!window.opener;
 
     const notifyAndClose = (type: string) => {
+      // BroadcastChannel works reliably across same-origin tabs without needing
+      // window.opener (which browsers null out after cross-origin navigation).
+      try {
+        const bc = new BroadcastChannel('oauth_completion');
+        bc.postMessage({ type });
+        setTimeout(() => bc.close(), 2000);
+      } catch {}
+      // Fallback: postMessage to opener if it's still reachable
       if (isOAuthPopup) {
         try { window.opener.postMessage({ type }, window.location.origin); } catch {}
-        setTimeout(() => window.close(), 1500);
       }
+      // Always close the tab after a short delay
+      setTimeout(() => window.close(), 1500);
     };
 
     if (params.get('kick_connected') === 'true') {
@@ -1568,8 +1577,29 @@ export default function SettingsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Listen for OAuth completion messages from new-tab OAuth flow
+  // Listen for OAuth completion messages from new-tab OAuth flow.
+  // Uses BroadcastChannel (reliable cross-tab comms on the same origin even after
+  // cross-origin redirects clear window.opener) with a postMessage fallback.
   useEffect(() => {
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('oauth_completion');
+      bc.onmessage = (event) => {
+        const type = event.data?.type;
+        if (type === 'twitch_connected') {
+          refreshUser();
+          toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
+        } else if (type === 'kick_connected') {
+          refreshUser();
+          toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
+        } else if (type === 'vpzone_connected') {
+          refreshUser();
+          toast({ title: "VPZone connected!", description: "Your VPZone channel has been verified and linked.", duration: 4000 });
+        }
+      };
+    } catch {}
+
+    // Fallback: window.opener postMessage (for browsers without BroadcastChannel)
     const handler = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type === 'twitch_connected') {
@@ -1584,7 +1614,10 @@ export default function SettingsPage() {
       }
     };
     window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
+    return () => {
+      bc?.close();
+      window.removeEventListener('message', handler);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -4903,7 +4936,7 @@ export default function SettingsPage() {
                             onClick={() => {
                               const url = "/api/auth/twitch-stream/connect";
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.open(url, '_blank', 'noopener');
+                              else window.open(url, '_blank');
                             }}
                             className="gap-1.5 bg-[#9146FF] hover:bg-[#7d3ce8] text-white border-0"
                           >
@@ -4980,7 +5013,7 @@ export default function SettingsPage() {
                             onClick={() => {
                               const url = "/api/auth/kick/connect";
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.open(url, '_blank', 'noopener');
+                              else window.open(url, '_blank');
                             }}
                             className="gap-1.5 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-[#53FC18] border border-[#53FC18]/30"
                           >
@@ -5058,7 +5091,7 @@ export default function SettingsPage() {
                               setConnectingYouTube(true);
                               const url = "/api/auth/youtube/connect";
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else { window.open(url, '_blank', 'noopener'); setConnectingYouTube(false); }
+                              else { window.open(url, '_blank'); setConnectingYouTube(false); }
                             }}
                             className="gap-1.5 bg-[#FF0000] hover:bg-[#cc0000] text-white border-0"
                           >
@@ -5263,7 +5296,7 @@ export default function SettingsPage() {
                               setConnectingTwitch(true);
                               const url = '/api/auth/twitch-stream/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else { window.open(url, '_blank', 'noopener'); setConnectingTwitch(false); }
+                              else { window.open(url, '_blank'); setConnectingTwitch(false); }
                             }}
                           >
                             {connectingTwitch ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
@@ -5322,7 +5355,7 @@ export default function SettingsPage() {
                               setConnectingKick(true);
                               const url = '/api/auth/kick/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else { window.open(url, '_blank', 'noopener'); setConnectingKick(false); }
+                              else { window.open(url, '_blank'); setConnectingKick(false); }
                             }}
                           >
                             {connectingKick ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
@@ -5380,7 +5413,7 @@ export default function SettingsPage() {
                               setConnectingYouTube(true);
                               const url = '/api/auth/youtube/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else { window.open(url, '_blank', 'noopener'); setConnectingYouTube(false); }
+                              else { window.open(url, '_blank'); setConnectingYouTube(false); }
                             }}
                           >
                             {connectingYouTube ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <SiYoutube className="w-3.5 h-3.5 mr-1" />}
@@ -5451,7 +5484,7 @@ export default function SettingsPage() {
                   )}
 
                   {/* VPZone OAuth connect option */}
-                  {isStreamingEnabled && oauthConfig?.vpzone && (
+                  {streamPlatform === 'vpzone' && isStreamingEnabled && oauthConfig?.vpzone && (
                     <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.vpzoneVerified ? 'border-[#f9376b]/30 bg-[#f9376b]/5' : 'border-slate-700 bg-slate-800/30'}`}>
                       {(user as any)?.vpzoneVerified ? (
                         <div className="flex items-center justify-between">
@@ -5486,7 +5519,7 @@ export default function SettingsPage() {
                               setConnectingVpzone(true);
                               const url = '/api/auth/vpzone/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else { window.open(url, '_blank', 'noopener'); setConnectingVpzone(false); }
+                              else { window.open(url, '_blank'); setConnectingVpzone(false); }
                             }}
                           >
                             {connectingVpzone ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}

@@ -8,6 +8,7 @@ import {
   setTokens,
 } from "./auth-token";
 import { isNative } from "./platform";
+import { getDeviceIdSync } from "./device-id";
 
 // Diagnostic for the "logged out after force-quit" investigation: report the
 // first /api/user call of this app session in detail (token attached, initial
@@ -84,6 +85,13 @@ export async function authedFetch(
   const tokenAttached = !!token && !headers.has("Authorization");
   if (tokenAttached) {
     headers.set("Authorization", `Bearer ${token}`);
+  }
+  // Best-effort spam/multi-account signal (see gamefolio-bot) — null until
+  // device-id's startup hydrate() resolves, or on native where the global
+  // fetch patch in platform.ts already set it.
+  if (!headers.has("X-Device-Id")) {
+    const deviceId = getDeviceIdSync();
+    if (deviceId) headers.set("X-Device-Id", deviceId);
   }
   let res = await fetch(url, { ...init, headers, credentials: "include" });
   const initialStatus = res.status;

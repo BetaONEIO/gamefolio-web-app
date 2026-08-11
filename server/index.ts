@@ -424,7 +424,7 @@ app.use((req, res, next) => {
     // this serves both the API and the client.
     // It is the only port that is not firewalled.
     // (Overridable via PORT for local dev — macOS AirPlay squats 5000.)
-    const port = Number(process.env.PORT) || 5000;
+    const port = process.env.NODE_ENV === "development" && process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
     // reusePort uses SO_REUSEPORT, which macOS sockets reject with ENOTSUP —
     // only enable it off-darwin (Linux/Replit), where it's supported.
     // Overridable via HOST for local dev — on at least one dev machine, some

@@ -150,6 +150,7 @@ const CreateAppPage = lazyWithRecovery(() => import("./pages/developer/CreateApp
 const AppDetailPage = lazyWithRecovery(() => import("./pages/developer/AppDetailPage"));
 const ConnectedAppsPage = lazyWithRecovery(() => import("./pages/ConnectedAppsPage"));
 const TermsPage = lazyWithRecovery(() => import("./pages/terms-page"));
+const ChildSafetyPage = lazyWithRecovery(() => import("./pages/child-safety-page"));
 const PrivacyPage = lazyWithRecovery(() => import("./pages/privacy-page"));
 const ContactPage = lazyWithRecovery(() => import("./pages/contact-page"));
 const HelpPage = lazyWithRecovery(() => import("./pages/HelpPage"));
@@ -574,6 +575,7 @@ function Router() {
           <Route path="/settings/connected-apps" component={ConnectedAppsPage} />
           <Route path="/2fa-verify" component={TwoFactorVerifyPage} />
           <Route path="/terms" component={TermsPage} />
+          <Route path="/child-safety" component={ChildSafetyPage} />
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/contact" component={ContactPage} />
           <Route path="/help" component={HelpPage} />

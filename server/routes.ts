@@ -107,6 +107,7 @@ import { createPublicClient, http, parseUnits, decodeEventLog, type Address as V
 import { privateKeyToAccount } from "viem/accounts";
 import { GF_TOKEN_ADDRESS as NFT_GF_TOKEN_ADDRESS, GF_TOKEN_ABI as NFT_GF_TOKEN_ABI, SKALE_NEBULA_TESTNET as NFT_SKALE_CHAIN } from "../shared/contracts";
 import { TwoFactorService } from "./services/two-factor-service";
+import { getRequestMeta } from "./lib/request-meta";
 
 // Import upload middlewares from upload router
 import multer from "multer";
@@ -137,30 +138,20 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 async function comparePasswords(password: string, hashedPassword: string | null | undefined): Promise<boolean> {
-  console.log(`🔐 comparePasswords called with password length: ${password?.length}, hashedPassword length: ${hashedPassword?.length}`);
-  
   // Handle case where user doesn't have a password (e.g., OAuth users)
   if (!hashedPassword) {
-    console.log(`🔐 No hashed password provided`);
     return false;
   }
   
   const [hash, salt] = hashedPassword.split('.');
   if (!hash || !salt) {
-    console.log(`🔐 Invalid hash format - hash: ${!!hash}, salt: ${!!salt}`);
     return false;
   }
-  
-  console.log(`🔐 Hash parts - hash length: ${hash.length}, salt length: ${salt.length}`);
   
   try {
     const buf = (await scryptAsync(password, salt, 64)) as Buffer;
     const storedHash = Buffer.from(hash, 'hex');
-    const result = timingSafeEqual(storedHash, buf);
-    console.log(`🔐 Password comparison result: ${result}`);
-    console.log(`🔐 Generated hash: ${buf.toString('hex').substring(0, 20)}...`);
-    console.log(`🔐 Stored hash: ${hash.substring(0, 20)}...`);
-    return result;
+    return timingSafeEqual(storedHash, buf);
   } catch (error) {
     console.error(`🔐 Error in password comparison:`, error);
     return false;
@@ -400,7 +391,7 @@ function toPublicUser(user: any): Record<string, unknown> {
 // Use this on any endpoint that returns a full user row.
 function stripUserSecrets<T extends Record<string, any>>(user: T): Partial<T> {
   const {
-    password, twoFactorSecret, encryptedPrivateKey,
+    password, email, twoFactorSecret, encryptedPrivateKey,
     stripeCustomerId, stripeSubscriptionId, revenuecatUserId,
     twitchAccessToken, kickAccessToken,
     walletAddress, dateOfBirth, birthday, externalId,
@@ -668,16 +659,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Error blocking user" });
     }
   });
-
-  // Add debugging middleware for production
-  if (process.env.NODE_ENV === "production") {
-    app.use('/api/user', (req, res, next) => {
-      console.log('User endpoint - Session ID:', req.sessionID);
-      console.log('User endpoint - Is authenticated:', req.isAuthenticated());
-      console.log('User endpoint - Session user:', req.user);
-      next();
-    });
-  }
 
   // Configure passport
   passport.use(
@@ -1006,7 +987,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           externalId: uid,
           // Set userType and ageRange to null to force onboarding
           userType: null,
-          ageRange: null
+          ageRange: null,
+          signupIp: getRequestMeta(req).ip,
+          signupDeviceId: getRequestMeta(req).deviceId,
         });
 
         // Send welcome email for new Google users
@@ -1326,7 +1309,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           externalId: id,
           // Set userType and ageRange to null to force onboarding
           userType: null,
-          ageRange: null
+          ageRange: null,
+          signupIp: getRequestMeta(req).ip,
+          signupDeviceId: getRequestMeta(req).deviceId,
         });
 
         // Send welcome email for new Discord users
@@ -1601,7 +1586,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           xboxUsername: gamertag,
           xboxXuid: xuid,
           userType: null,
-          ageRange: null
+          ageRange: null,
+          signupIp: getRequestMeta(req).ip,
+          signupDeviceId: getRequestMeta(req).deviceId,
         });
 
         // Send new user notification to admin
@@ -2247,12 +2234,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create user — referralCode is always server-generated; referredBy records which code was used at signup
       // storage.createUser() hashes the password itself (like every other
       // caller here - OAuth/admin paths), so pass it through in plain text.
+      // signupIp/signupDeviceId are server-derived (never from parsed client
+      // body) — spam/multi-account detection signal, see gamefolio-bot.
+      const { ip: signupIp, deviceId: signupDeviceId } = getRequestMeta(req);
       const user = await storage.createUser({
         ...userData,
         username: userData.username.toLowerCase(),
         email: userData.email.toLowerCase(),
         emailVerified: false,
         ...(usedReferralCode && { referredBy: usedReferralCode }),
+        signupIp,
+        signupDeviceId,
       });
 
       // Generate verification code and store it in the database
@@ -2262,9 +2254,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const emailSent = await EmailService.sendVerificationEmail(user.email, verificationCode);
 
       if (emailSent) {
-        console.log(`Verification email sent to ${user.email}`);
+        console.log(`Verification email sent to user ${user.id}`);
       } else {
-        console.warn(`Failed to send verification email to ${user.email}`);
+        console.warn(`Failed to send verification email to user ${user.id}`);
       }
 
       // Send new user notification to admin
@@ -2788,6 +2780,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           twitterUsername: u.twitterUsername || null,
           youtubeUsername: u.youtubeUsername || null,
           rumbleUsername: u.rumbleUsername || null,
+          instagramUsername: u.instagramUsername || null,
+          facebookUsername: u.facebookUsername || null,
           nftProfileTokenId: u.nftProfileTokenId || null,
           nftProfileImageUrl: u.nftProfileImageUrl || null,
           activeProfilePicType: u.activeProfilePicType || 'upload',
@@ -2803,6 +2797,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hideBanner: u.hideBanner || false,
           statsGlassEffect: u.statsGlassEffect || false,
           profileBackgroundGradient: u.profileBackgroundGradient !== false,
+          profileBackgroundGradientCss: u.profileBackgroundGradientCss || '',
           profileBackgroundType: u.profileBackgroundType || 'solid',
           profileBackgroundTheme: u.profileBackgroundTheme || 'default',
           profileBackgroundAnimation: u.profileBackgroundAnimation || 'none',
@@ -2837,6 +2832,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           liveEnabled: u.liveEnabled || false,
           twitchShowOnProfile: u.twitchShowOnProfile ?? true,
           kickShowOnProfile: u.kickShowOnProfile ?? true,
+          youtubeChannelName: u.youtubeChannelName || null,
+          youtubeVerified: u.youtubeVerified || false,
+          youtubeShowOnProfile: u.youtubeShowOnProfile ?? true,
+          vpzoneChannelName: u.vpzoneChannelName || null,
+          vpzoneVerified: u.vpzoneVerified || false,
+          vpzoneShowOnProfile: u.vpzoneShowOnProfile ?? true,
           referralCode: u.referralCode || null,
           referredBy: u.referredBy || null,
         });
@@ -2890,6 +2891,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       twitterUsername: u.twitterUsername || null,
       youtubeUsername: u.youtubeUsername || null,
       rumbleUsername: u.rumbleUsername || null,
+      instagramUsername: u.instagramUsername || null,
+      facebookUsername: u.facebookUsername || null,
       nftProfileTokenId: u.nftProfileTokenId || null,
       nftProfileImageUrl: u.nftProfileImageUrl || null,
       activeProfilePicType: u.activeProfilePicType || 'upload',
@@ -2909,6 +2912,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       liveEnabled: u.liveEnabled || false,
       twitchShowOnProfile: u.twitchShowOnProfile ?? true,
       kickShowOnProfile: u.kickShowOnProfile ?? true,
+      youtubeChannelName: u.youtubeChannelName || null,
+      youtubeVerified: u.youtubeVerified || false,
+      youtubeShowOnProfile: u.youtubeShowOnProfile ?? true,
+      vpzoneChannelName: u.vpzoneChannelName || null,
+      vpzoneVerified: u.vpzoneVerified || false,
+      vpzoneShowOnProfile: u.vpzoneShowOnProfile ?? true,
     });
   });
 
@@ -5468,6 +5477,149 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // One-time repair: re-sync users.banner_url from active uploaded banners and
+  // recompute users.total_xp (points) + level from user_points_history.
+  // Fixes historical drift where history and totals fell out of sync.
+  app.post("/api/admin/repair-user-data", authMiddleware, async (req, res) => {
+    try {
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+
+      // 0) Fix user_points_history id sequence (production logs show duplicate-key
+      // failures on insert — the sequence fell behind max(id), blocking new awards)
+      await db.execute(sql`
+        SELECT setval(
+          pg_get_serial_sequence('user_points_history', 'id'),
+          GREATEST((SELECT COALESCE(MAX(id), 0) FROM user_points_history), 1)
+        )
+      `);
+
+      // db.execute returns rows directly with the postgres-js driver, but be
+      // defensive in case of a `.rows` wrapper
+      const asRows = (r: any): any[] => (Array.isArray(r) ? r : r?.rows ?? []);
+
+      // 1) Banner repair: users.banner_url must match their active uploaded banner
+      const bannerResult = asRows(await db.execute(sql`
+        UPDATE users u
+        SET banner_url = b.banner_url
+        FROM uploaded_banners b
+        WHERE b.user_id = u.id
+          AND b.is_active
+          AND u.banner_url IS DISTINCT FROM b.banner_url
+        RETURNING u.id, u.username
+      `));
+
+      // 2) XP repair: totalXP is fed by BOTH ledgers — user_points_history
+      // (leaderboard-service points) AND user_xp_history (xp-service: views,
+      // lootboxes, referrals...). It must equal the sum of both (0 for users
+      // with no history); recompute level. Only touch users whose totals
+      // drifted by more than 1 point (view points are fractional).
+      const driftedResult = asRows(await db.execute(sql`
+        UPDATE users u
+        SET total_xp = h.hist
+        FROM (
+          SELECT u2.id AS user_id,
+                 COALESCE(p.pts, 0) + COALESCE(x.xp, 0) AS hist
+          FROM users u2
+          LEFT JOIN (
+            SELECT user_id, SUM(points) AS pts FROM user_points_history GROUP BY user_id
+          ) p ON p.user_id = u2.id
+          LEFT JOIN (
+            SELECT user_id, SUM(xp_amount) AS xp FROM user_xp_history GROUP BY user_id
+          ) x ON x.user_id = u2.id
+        ) h
+        WHERE h.user_id = u.id
+          AND ABS(u.total_xp - h.hist) > 1
+        RETURNING u.id, u.username, u.total_xp, u.level
+      `));
+
+      // Recalculate levels for the repaired users
+      const { calculateLevel } = await import("./level-system");
+      let levelsUpdated = 0;
+      for (const row of driftedResult) {
+        const newLevel = calculateLevel(Number(row.total_xp));
+        if (newLevel !== Number(row.level)) {
+          await db.execute(sql`UPDATE users SET level = ${newLevel} WHERE id = ${row.id}`);
+          levelsUpdated++;
+          console.log(`✨ Repaired ${row.username}: level ${row.level} -> ${newLevel} (${row.total_xp} pts)`);
+        }
+      }
+
+      const bannersFixed = bannerResult.length;
+      const xpFixed = driftedResult.length;
+      console.log(`✅ Repair complete: ${bannersFixed} banners re-synced, ${xpFixed} XP totals recomputed, ${levelsUpdated} levels changed`);
+      res.json({ bannersFixed, xpTotalsFixed: xpFixed, levelsUpdated });
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error repairing user data:", error);
+      res.status(500).json({ message: "Error repairing user data" });
+    }
+  });
+
+  // One-time merge of legacy data from the pre-remix project's database dump
+  // (missing clips/users/history/ambassador flags). See server/legacy-import.ts.
+  app.post("/api/admin/import-legacy-data", authMiddleware, async (req, res) => {
+    try {
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      const { db } = await import("./db");
+      const { runLegacyImport } = await import("./legacy-import");
+      const result = await runLegacyImport(db);
+      console.log("✅ Legacy import complete:", JSON.stringify(result));
+      res.json(result);
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error importing legacy data:", error);
+      res.status(500).json({ message: "Error importing legacy data", detail: (error as Error).message });
+    }
+  });
+
+  // Deactivate duplicate active banners and remove exact duplicate clip rows.
+  // This remains admin-triggered so production data is never changed by boot.
+  app.post("/api/admin/cleanup-duplicate-uploads", authMiddleware, async (req, res) => {
+    try {
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      const { runDuplicateUploadCleanup } = await import("./duplicate-upload-cleanup");
+      const result = await runDuplicateUploadCleanup();
+      console.log("✅ Duplicate upload cleanup complete:", JSON.stringify(result));
+      res.json(result);
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error cleaning duplicate uploads:", error);
+      res.status(500).json({
+        message: "Error cleaning duplicate uploads",
+        detail: (error as Error).message,
+      });
+    }
+  });
+
+  // One-time repair: rebuild weekly/monthly leaderboard tables from the XP history ledgers
+  app.post("/api/admin/rebuild-leaderboards", authMiddleware, async (req, res) => {
+    try {
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      const { runLeaderboardRebuild } = await import("./leaderboard-rebuild");
+      const result = await runLeaderboardRebuild();
+      console.log("✅ Leaderboard rebuild complete:", JSON.stringify(result));
+      res.json(result);
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error rebuilding leaderboards:", error);
+      res.status(500).json({
+        message: "Error rebuilding leaderboards",
+        detail: (error as Error).message,
+      });
+    }
+  });
+
   // Award monthly top contributor badges retroactively
   app.post("/api/admin/award-monthly-badges", authMiddleware, async (req, res) => {
     try {
@@ -6850,6 +7002,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const safeBody = Object.fromEntries(
         Object.entries(req.body).filter(([key]) => ALLOWED_PROFILE_FIELDS.has(key))
       );
+
+      // Guard against stale banner overwrites: uploaded-banner activation goes
+      // through PUT /api/user/banners/:id/activate. If the PATCH carries a
+      // bannerUrl that matches one of the user's *inactive* uploaded banners,
+      // it's a stale cached profile object — drop it so it can't clobber the
+      // currently active banner. Preset/external/empty banner URLs still apply.
+      if (typeof safeBody.bannerUrl === "string" && safeBody.bannerUrl) {
+        try {
+          const uploaded = await storage.getUserUploadedBanners(userId);
+          const match = uploaded.find(b => b.bannerUrl === safeBody.bannerUrl);
+          if (match && !match.isActive) {
+            delete safeBody.bannerUrl;
+          }
+        } catch (e) {
+          console.error("Banner staleness check failed, dropping bannerUrl from update:", e);
+          delete safeBody.bannerUrl;
+        }
+      }
 
       // Prevent the onboarding test account from ever completing onboarding
       if (req.user?.email === 'onboarding@gamefolio.com') {
@@ -8388,6 +8558,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Short-link resolver for the gft.gg domain: gft.gg/<code> is redirected
+  // (via a Cloudflare redirect rule) to app.gamefolio.com/go/<code>, which
+  // looks the code up across clips/reels and screenshots and 302s to the
+  // canonical pretty URL. Falls back to the homepage if the code is unknown
+  // so a bad/expired link never dead-ends.
+  app.get("/go/:code", async (req, res) => {
+    const baseUrl = "https://app.gamefolio.com";
+    try {
+      const { code } = req.params;
+
+      const clip = await storage.getClipByShareCode(code);
+      if (clip) {
+        const user = await storage.getUser(clip.userId);
+        const username = user?.username || "unknown";
+        const segment = clip.videoType === "reel" ? "reel" : "clip";
+        return res.redirect(302, `${baseUrl}/@${username}/${segment}/${code}`);
+      }
+
+      const screenshot = await storage.getScreenshotByShareCode(code);
+      if (screenshot) {
+        const user = await storage.getUser(screenshot.userId);
+        const username = user?.username || "unknown";
+        return res.redirect(302, `${baseUrl}/@${username}/screenshot/${code}`);
+      }
+
+      return res.redirect(302, baseUrl);
+    } catch (err) {
+      captureRouteError(err);
+      console.error(`Error resolving short link for code ${req.params.code}:`, err);
+      return res.redirect(302, baseUrl);
+    }
+  });
+
   // Get clip by shareCode - used for nice URLs like /@username/clip/shareCode
   app.get("/api/clips/share/:shareCode", async (req, res) => {
     try {
@@ -8453,8 +8656,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clip.shareCode = shareCode;
       }
 
-      // Always use username-based URL format with alphanumeric share code
-      const clipUrl = `${baseUrl}/@${username}/clip/${clip.shareCode}`;
+      // Short gft.gg link resolved server-side by /go/:code to the full
+      // username-based URL — keeps share links short across all surfaces.
+      const clipUrl = `https://gft.gg/${clip.shareCode}`;
 
       const qrCodeDataUrl = await QRCode.toDataURL(clipUrl, {
         errorCorrectionLevel: 'M',
@@ -8479,25 +8683,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gamefolioProfileUrl = `${baseUrl}/profile/${user.username}`;
       const displayName = user.displayName || user.username;
 
-      // Generate social media sharing links with personalized messaging
+      // Generate social media sharing links with personalized messaging.
+      // Each caption mentions the clip but deliberately does NOT embed
+      // gamefolioProfileUrl inline — every platform here already gets the
+      // clip link via its own dedicated url param, and a second link
+      // stuffed into the caption text produces a double-link post (X shows
+      // both the caption's link and the url param's link) and can confuse
+      // which URL the platform unfurls a preview card for.
       const socialMediaLinks = {
         twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! Visit their profile for more amazing content: ${gamefolioProfileUrl}`
+          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio!`
         )}&url=${encodeURIComponent(clipUrl)}`,
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(clipUrl)}&quote=${encodeURIComponent(
-          `🎮 Amazing gaming clip from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
+          `🎮 Amazing gaming clip from ${displayName}'s Gamefolio!`
         )}`,
         reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(clipUrl)}&title=${encodeURIComponent(
           `🎮 Epic gaming clip from ${displayName}'s Gamefolio!`
         )}`,
         linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(clipUrl)}&summary=${encodeURIComponent(
-          `🎮 Check out this gaming clip from ${displayName}'s Gamefolio: ${gamefolioProfileUrl}`
+          `🎮 Check out this gaming clip from ${displayName}'s Gamefolio!`
         )}`,
         whatsapp: `https://wa.me/?text=${encodeURIComponent(
-          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! ${clipUrl} - See more on their profile: ${gamefolioProfileUrl}`
+          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! ${clipUrl}`
         )}`,
         telegram: `https://t.me/share/url?url=${encodeURIComponent(clipUrl)}&text=${encodeURIComponent(
-          `🎮 Epic gaming clip from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
+          `🎮 Epic gaming clip from ${displayName}'s Gamefolio!`
         )}`,
         discord: clipUrl,
         instagram: clipUrl,
@@ -8821,6 +9031,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         videoType: req.body.videoType || "clip", // "clip" or "reel"
         ageRestricted: req.body.ageRestricted === 'true' || req.body.ageRestricted === true,
         shareCode: generateShareCode(), // This generates 8-character alphanumeric codes
+        uploadIp: getRequestMeta(req).ip,
+        uploadDeviceId: getRequestMeta(req).deviceId,
       };
 
       // Create the clip
@@ -8928,10 +9140,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Generate QR code and social media links
           try {
-            const username = req.user?.username || 'unknown';
-            const contentType = clipData.videoType === 'reel' ? 'reel' : 'clip';
-            const qrCodeDataUrl = await generateContentQRCode(clipData.shareCode || clip.shareCode || '', username, contentType);
-            const socialMediaLinks = generateSocialMediaLinks(clipData.shareCode || clip.shareCode || '', username, clip.title, clip.description, contentType);
+            const contentUrl = `https://gft.gg/${clipData.shareCode || clip.shareCode || ''}`;
+            const qrCodeDataUrl = await generateContentQRCode(contentUrl);
+            const socialMediaLinks = generateSocialMediaLinks(contentUrl, clip.title);
 
             res.status(201).json({
               ...updatedClip,
@@ -8976,10 +9187,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Generate QR code and social media links
           try {
-            const username = req.user?.username || 'unknown';
-            const contentType = clipData.videoType === 'reel' ? 'reel' : 'clip';
-            const qrCodeDataUrl = await generateContentQRCode(clipData.shareCode || clip.shareCode || '', username, contentType);
-            const socialMediaLinks = generateSocialMediaLinks(clipData.shareCode || clip.shareCode || '', username, clip.title, clip.description, contentType);
+            const contentUrl = `https://gft.gg/${clipData.shareCode || clip.shareCode || ''}`;
+            const qrCodeDataUrl = await generateContentQRCode(contentUrl);
+            const socialMediaLinks = generateSocialMediaLinks(contentUrl, clip.title);
 
             res.status(201).json({
               ...updatedClip,
@@ -9496,8 +9706,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateScreenshot(screenshotId, { shareCode });
       }
 
-      // Always use username-based URL format with alphanumeric share code
-      const screenshotUrl = `${baseUrl}/@${username}/screenshot/${shareCode}`;
+      // Short gft.gg link resolved server-side by /go/:code to the full
+      // username-based URL — keeps share links short across all surfaces.
+      const screenshotUrl = `https://gft.gg/${shareCode}`;
 
       const qrCodeDataUrl = await QRCode.toDataURL(screenshotUrl);
 
@@ -9513,25 +9724,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gamefolioProfileUrl = `${baseUrl}/profile/${shareUsername}`;
       const displayName = shareUser?.displayName || shareUsername;
 
-      // Generate social media sharing links for screenshot with personalized messaging
+      // Generate social media sharing links for screenshot with personalized
+      // messaging. Same rule as the clip-share links above: no
+      // gamefolioProfileUrl embedded in the caption text — every platform
+      // here already gets the screenshot link via its own dedicated url
+      // param, and a second link in the caption produces a double-link post.
       const socialMediaLinks = {
         twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! Visit their profile for more amazing content: ${gamefolioProfileUrl}`
+          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio!`
         )}&url=${encodeURIComponent(screenshotUrl)}`,
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(screenshotUrl)}&quote=${encodeURIComponent(
-          `📸 Amazing gaming screenshot from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
+          `📸 Amazing gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
         reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(screenshotUrl)}&title=${encodeURIComponent(
           `📸 Epic gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
         linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(screenshotUrl)}&summary=${encodeURIComponent(
-          `📸 Check out this gaming screenshot from ${displayName}'s Gamefolio: ${gamefolioProfileUrl}`
+          `📸 Check out this gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
         whatsapp: `https://wa.me/?text=${encodeURIComponent(
-          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! ${screenshotUrl} - See more on their profile: ${gamefolioProfileUrl}`
+          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! ${screenshotUrl}`
         )}`,
         telegram: `https://t.me/share/url?url=${encodeURIComponent(screenshotUrl)}&text=${encodeURIComponent(
-          `📸 Epic gaming screenshot from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
+          `📸 Epic gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
         discord: screenshotUrl,
         instagram: screenshotUrl,
@@ -13412,7 +13627,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: description || null,
         tags: tags ? JSON.parse(tags) : [],
         ageRestricted: req.body.ageRestricted === 'true' || req.body.ageRestricted === true,
-        shareCode: generateShareCode()
+        shareCode: generateShareCode(),
+        uploadIp: getRequestMeta(req).ip,
+        uploadDeviceId: getRequestMeta(req).deviceId,
       };
 
       // Scheduled path: store the processed screenshot for later publishing.
@@ -14365,6 +14582,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         duration: actualDuration || 30,
         shareCode: shareCode,
         ageRestricted: false,
+        // Desktop app doesn't send a device id — IP-only signal here.
+        uploadIp: getRequestMeta(req).ip,
       };
 
       const validatedClipData = insertClipSchema.parse(clipData);
@@ -14381,9 +14600,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get updated user data
       const user = await storage.getUser(req.user!.id);
-      const username = user?.username || 'unknown';
-      const baseUrl = 'https://app.gamefolio.com';
-      const shareUrl = `${baseUrl}/@${username}/${videoType}/${shareCode}`;
+      const shareUrl = `https://gft.gg/${shareCode}`;
 
       console.log(`✅ Desktop video upload complete: ID=${clip.id}, shareCode=${shareCode}`);
 
@@ -14515,7 +14732,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         LIMIT 20
       `);
 
-      res.json((rows.rows as any[]).map((r) => r.tag));
+      const tagRows = ((rows as any).rows ?? rows) as any[];
+      res.json(tagRows.map((r) => r.tag));
     } catch (err) {
       console.error("Error fetching user top tags:", err);
       captureRouteError(err, { route: "/api/user/top-tags" });
@@ -14548,7 +14766,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         LIMIT 6
       `);
 
-      res.json(rows.rows);
+      res.json(Array.isArray(rows) ? rows : (rows as any)?.rows ?? []);
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching user top games:", err);

@@ -111,6 +111,8 @@ import {
   screenshotCommentLikes,
   UserDailyFires, InsertUserDailyFires,
   FireLimits,
+  userUploadUsage,
+  UserUploadUsage, InsertUserUploadUsage,
   UserDailyImports,
   ImportLimits,
   xpSettings,
@@ -175,7 +177,15 @@ export class DatabaseStorage implements IStorage {
     }
     
     this.sessionStore = new PgSession({
-      conString: connectionString, // Use DATABASE_URL connection string
+      // conObject (not conString) so connectionTimeoutMillis actually reaches
+      // pg.Pool — without it, a transient Neon backend blip (one DNS-resolved
+      // IP briefly unreachable — see the ETIMEDOUT/ENETUNREACH incident on
+      // 2026-07-30) can hang far longer than the main app DB pool's 10s
+      // connect_timeout (server/db.ts) before failing.
+      conObject: {
+        connectionString,
+        connectionTimeoutMillis: 10000,
+      },
       tableName: 'session', // Session table name
       createTableIfMissing: true, // Auto-create session table
       pruneSessionInterval: 60 * 15, // Prune expired sessions every 15 minutes
@@ -5794,6 +5804,12 @@ export class DatabaseStorage implements IStorage {
       ? this.PRO_MAX_BULK_UPLOADS
       : this.FREE_MAX_BULK_UPLOADS;
 
+    const [clipsUsedInWindow, reelsUsedInWindow, screenshotsUsedInWindow] = await Promise.all([
+      this.getUploadUsageInWindow(userId, 'clip'),
+      this.getUploadUsageInWindow(userId, 'reel'),
+      this.getUploadUsageInWindow(userId, 'screenshot'),
+    ]);
+
     if (isPro) {
       return {
         isPro: true,
@@ -5802,6 +5818,12 @@ export class DatabaseStorage implements IStorage {
         maxScreenshotSizeMB: this.PRO_MAX_SCREENSHOT_SIZE_MB,
         maxClipDurationSeconds: this.PRO_MAX_CLIP_DURATION_SECONDS,
         maxReelDurationSeconds: this.PRO_MAX_REEL_DURATION_SECONDS,
+        maxClipsPerWindow: this.PRO_MAX_CLIPS_PER_WINDOW,
+        clipsUsedInWindow,
+        maxReelsPerWindow: this.PRO_MAX_REELS_PER_WINDOW,
+        reelsUsedInWindow,
+        maxScreenshotsPerWindow: this.PRO_MAX_SCREENSHOTS_PER_WINDOW,
+        screenshotsUsedInWindow,
         maxBulkUploads,
       };
     }
@@ -5813,8 +5835,71 @@ export class DatabaseStorage implements IStorage {
       maxScreenshotSizeMB: this.FREE_MAX_SCREENSHOT_SIZE_MB,
       maxClipDurationSeconds: this.FREE_MAX_CLIP_DURATION_SECONDS,
       maxReelDurationSeconds: this.FREE_MAX_REEL_DURATION_SECONDS,
+      maxClipsPerWindow: this.FREE_MAX_CLIPS_PER_WINDOW,
+      clipsUsedInWindow,
+      maxReelsPerWindow: this.FREE_MAX_REELS_PER_WINDOW,
+      reelsUsedInWindow,
+      maxScreenshotsPerWindow: this.FREE_MAX_SCREENSHOTS_PER_WINDOW,
+      screenshotsUsedInWindow,
       maxBulkUploads,
     };
+  }
+
+  // Rolling 24h upload-count tracking - one row per (user, contentType)
+  // window, mirroring the fire-reaction limit pattern below
+  // (userDailyFires/getFireLimits) so the reset avoids a fixed UTC-midnight
+  // boundary that would let users near it double their allowance in one
+  // real day.
+  private readonly FREE_MAX_CLIPS_PER_WINDOW = 3;
+  private readonly PRO_MAX_CLIPS_PER_WINDOW = 10;
+  private readonly FREE_MAX_REELS_PER_WINDOW = 3;
+  private readonly PRO_MAX_REELS_PER_WINDOW = 10;
+  private readonly FREE_MAX_SCREENSHOTS_PER_WINDOW = 5;
+  private readonly PRO_MAX_SCREENSHOTS_PER_WINDOW = 15;
+
+  private async getUserUploadUsageRecord(userId: number, contentType: string): Promise<UserUploadUsage | null> {
+    const [record] = await db
+      .select()
+      .from(userUploadUsage)
+      .where(and(eq(userUploadUsage.userId, userId), eq(userUploadUsage.contentType, contentType)))
+      .orderBy(desc(userUploadUsage.createdAt))
+      .limit(1);
+    return record || null;
+  }
+
+  private isUploadWindowActive(record: UserUploadUsage, now: Date): boolean {
+    return now.getTime() - new Date(record.createdAt).getTime() < TWENTY_FOUR_HOURS_MS;
+  }
+
+  private async getUploadUsageInWindow(userId: number, contentType: string): Promise<number> {
+    const now = new Date();
+    const existing = await this.getUserUploadUsageRecord(userId, contentType);
+    return existing && this.isUploadWindowActive(existing, now) ? existing.uploadCount : 0;
+  }
+
+  async incrementUploadUsage(userId: number, contentType: 'clip' | 'reel' | 'screenshot'): Promise<UserUploadUsage> {
+    const now = new Date();
+    const existing = await this.getUserUploadUsageRecord(userId, contentType);
+
+    if (existing && this.isUploadWindowActive(existing, now)) {
+      const [updated] = await db
+        .update(userUploadUsage)
+        .set({ uploadCount: existing.uploadCount + 1, updatedAt: now })
+        .where(eq(userUploadUsage.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(userUploadUsage)
+        .values({
+          userId,
+          contentType,
+          windowStartDate: now.toISOString().split('T')[0],
+          uploadCount: 1,
+        })
+        .returning();
+      return created;
+    }
   }
 
   // ==================== SCHEDULED POSTS OPERATIONS ====================

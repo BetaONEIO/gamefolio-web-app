@@ -272,7 +272,11 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       const indieDev = info.entitlements?.active?.[INDIE_DEV_ENTITLEMENT_ID] !== undefined;
       setHasProEntitlement(pro);
       setHasIndieDevEntitlement(indieDev);
-      if (pro !== (user?.isPro === true)) await syncProStatusWithBackend(pro);
+      // Only sync upward (RC grants Pro that DB doesn't know about).
+      // Never revoke via this hook — Stripe/RC webhooks handle downgrades so
+      // Stripe-managed subscribers aren't accidentally stripped of Pro every
+      // time RevenueCat returns no entitlement.
+      if (pro && !user?.isPro) await syncProStatusWithBackend(true);
     } catch (error) {
       console.error("Failed to refresh customer info:", error);
     } finally {

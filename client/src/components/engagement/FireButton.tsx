@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import type React from "react";
+import * as Sentry from "@sentry/capacitor";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { ZapIconSvg, useZapFly, ZapFlyOverlay } from "@/components/ui/ZapReactionIcon";
+import { authedFetch } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 
 import { useJoinDialog } from "@/hooks/use-join-dialog";
@@ -61,7 +63,7 @@ export function FireButton({
   const { data: fireStatus } = useQuery({
     queryKey: [`/api/${contentType}s/${contentId}/reactions/status`],
     queryFn: async () => {
-      const res = await fetch(`/api/${contentType}s/${contentId}/reactions/status`, { credentials: "include" });
+      const res = await authedFetch(`/api/${contentType}s/${contentId}/reactions/status`, {});
       if (!res.ok) throw new Error("Failed to fetch zap status");
       return res.json();
     },
@@ -81,13 +83,12 @@ export function FireButton({
         ? `/api/clips/${contentId}/reactions`
         : `/api/screenshots/${contentId}/reactions`;
 
-      const response = await fetch(endpoint, {
+      const response = await authedFetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ emoji: '🔥' }),
-        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -140,6 +141,12 @@ export function FireButton({
           variant: "gamefolioError",
         });
       } else {
+        // Anything reaching here is unexpected (auth/network/server failure,
+        // not a known user-facing case) — report it so a repeat shows up in
+        // Sentry instead of only as a toast nobody sees.
+        Sentry.captureException(error, {
+          tags: { feature: "fire-reaction", contentType, contentId: String(contentId) },
+        });
         toast({
           title: "Cannot zap",
           description: error.message,

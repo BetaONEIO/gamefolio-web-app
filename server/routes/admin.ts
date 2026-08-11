@@ -763,6 +763,31 @@ adminRouter.delete("/clips/:id", async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/admin/clips/bulk-delete - Delete multiple clips by ID array
+adminRouter.post("/clips/bulk-delete", async (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body as { ids: number[] };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "ids must be a non-empty array of clip IDs" });
+    }
+    const results: { id: number; success: boolean }[] = [];
+    for (const id of ids) {
+      const clipId = parseInt(String(id));
+      if (isNaN(clipId)) { results.push({ id, success: false }); continue; }
+      const success = await storage.deleteClip(clipId);
+      results.push({ id: clipId, success });
+    }
+    const deleted = results.filter(r => r.success).map(r => r.id);
+    const failed  = results.filter(r => !r.success).map(r => r.id);
+    console.log(`[admin bulk-delete] deleted=${deleted.join(',')} failed=${failed.join(',')}`);
+    res.json({ deleted, failed });
+  } catch (err) {
+    captureRouteError(err);
+    console.error("Error bulk-deleting clips:", err);
+    res.status(500).json({ message: "Error bulk-deleting clips" });
+  }
+});
+
 // GET /api/admin/screenshots - Get all screenshots with pagination  
 adminRouter.get("/screenshots", async (req: Request, res: Response) => {
   try {

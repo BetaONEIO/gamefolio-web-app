@@ -119,6 +119,25 @@ const TagInput = ({
     setActiveIndex(-1);
   }, [query]);
 
+  // Belt-and-braces close: the dropdown's own onMouseDown below prevents
+  // the browser's default focus-shift on any click inside it (not just on
+  // suggestion buttons), which meant blur never fired for clicks that
+  // landed on its padding/header rather than a button — leaving it stuck
+  // open and, since it's absolutely positioned, visually blocking whatever
+  // sits below it (e.g. the Schedule tab). Closing on any real outside
+  // pointerdown doesn't depend on focus/blur timing at all.
+  useEffect(() => {
+    if (!showDropdown) return;
+    const handlePointerDown = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setDropdownOpen(false);
+        setActiveIndex(-1);
+      }
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [showDropdown]);
+
   return (
     <div ref={containerRef} className="relative">
       {/* Input area */}
