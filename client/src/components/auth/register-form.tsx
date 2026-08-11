@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,11 +9,84 @@ import { GoogleAuthButton } from "./GoogleAuthButton";
 import { DiscordAuthButton } from "./DiscordAuthButton";
 import { PasswordRequirementsDisplay } from "@/components/ui/password-requirements";
 import { FieldError, FieldStatus } from "@/components/ui/field-error";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, X } from "lucide-react";
+import { CalendarIcon, ChevronDown, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: CURRENT_YEAR - 1900 + 1 }, (_, i) => CURRENT_YEAR - i);
+
+function InlineSelect({ value, onChange, options, className }: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { label: string; value: string }[];
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const el = listRef.current?.querySelector('[data-selected="true"]');
+    el?.scrollIntoView({ block: "nearest" });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <div ref={ref} className={cn("relative", className)}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between h-8 rounded-md border border-input bg-[#0b1319] px-3 text-sm text-foreground hover:border-[#B7FF1A]/50 focus:outline-none focus:border-[#B7FF1A] transition-colors"
+      >
+        <span>{selected?.label ?? value}</span>
+        <ChevronDown className={cn("h-3.5 w-3.5 text-muted-foreground transition-transform", open && "rotate-180")} />
+      </button>
+      {open && (
+        <ul
+          ref={listRef}
+          className="absolute left-0 right-0 top-full mt-1 z-10 max-h-48 overflow-y-auto rounded-md border border-input bg-[#0b1319] shadow-xl py-1 gf-scrollbar"
+        >
+          {options.map((opt) => (
+            <li
+              key={opt.value}
+              data-selected={opt.value === value}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              className={cn(
+                "px-3 py-1.5 text-sm cursor-pointer transition-colors",
+                opt.value === value
+                  ? "bg-[#B7FF1A]/15 text-[#B7FF1A] font-medium"
+                  : "text-foreground hover:bg-white/5"
+              )}
+            >
+              {opt.label}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 interface RegisterFormProps {
   onSuccess: () => void;
@@ -38,6 +111,8 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   });
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [usernameTimer, setUsernameTimer] = useState<NodeJS.Timeout | null>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date(2000, 0));
   const usernameAbortRef = useRef<AbortController | null>(null);
   const checkedUsernameRef = useRef<string>("");
   const [emailValid, setEmailValid] = useState<boolean | null>(null);
@@ -421,27 +496,46 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <div className="space-y-2">
         <Label className="text-foreground">Date of Birth</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isLoading}
-              className={cn(
-                "w-full justify-start text-left font-normal bg-background border-input hover:bg-accent/50",
-                !formData.dateOfBirth && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-              {formData.dateOfBirth
-                ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
-                : "Select your date of birth"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 bg-gray-900 border-gray-700" style={{ zIndex: 999999 }} align="center" sideOffset={4}>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isLoading}
+          onClick={() => setDatePickerOpen((o) => !o)}
+          className={cn(
+            "w-full justify-start text-left font-normal bg-background border-input hover:bg-accent/50",
+            !formData.dateOfBirth && "text-muted-foreground"
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+          {formData.dateOfBirth
+            ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
+            : "Select your date of birth"}
+        </Button>
+        {datePickerOpen && (
+          <div className="mt-1 rounded-md border border-input bg-background shadow-lg w-full">
+            <div className="flex gap-2 px-3 pt-3">
+              <InlineSelect
+                className="flex-1"
+                value={String(calendarMonth.getMonth())}
+                onChange={(v) =>
+                  setCalendarMonth((prev) => new Date(prev.getFullYear(), Number(v), 1))
+                }
+                options={MONTHS.map((m, i) => ({ label: m, value: String(i) }))}
+              />
+              <InlineSelect
+                className="w-24"
+                value={String(calendarMonth.getFullYear())}
+                onChange={(v) =>
+                  setCalendarMonth((prev) => new Date(Number(v), prev.getMonth(), 1))
+                }
+                options={YEARS.map((y) => ({ label: String(y), value: String(y) }))}
+              />
+            </div>
             <Calendar
               mode="single"
               selected={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : undefined}
+              month={calendarMonth}
+              onMonthChange={setCalendarMonth}
               onSelect={(date) => {
                 if (date) {
                   const yyyy = date.getFullYear();
@@ -450,41 +544,30 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                   setFormData((prev) => ({ ...prev, dateOfBirth: `${yyyy}-${mm}-${dd}` }));
                   setFieldErrors((prev) => ({ ...prev, dateOfBirth: undefined }));
                 }
-              }}
-              onMonthChange={(newMonth) => {
-                if (formData.dateOfBirth) {
-                  const currentDate = new Date(formData.dateOfBirth + "T00:00:00");
-                  const day = currentDate.getDate();
-                  const daysInNewMonth = new Date(newMonth.getFullYear(), newMonth.getMonth() + 1, 0).getDate();
-                  const clampedDay = Math.min(day, daysInNewMonth);
-                  const yyyy = newMonth.getFullYear();
-                  const mm = String(newMonth.getMonth() + 1).padStart(2, "0");
-                  const dd = String(clampedDay).padStart(2, "0");
-                  setFormData((prev) => ({ ...prev, dateOfBirth: `${yyyy}-${mm}-${dd}` }));
-                }
+                setDatePickerOpen(false);
               }}
               disabled={(date) => {
                 const minAge = new Date();
                 minAge.setFullYear(minAge.getFullYear() - 15);
                 return date > minAge || date < new Date("1900-01-01");
               }}
-              month={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : undefined}
-              defaultMonth={formData.dateOfBirth ? new Date(formData.dateOfBirth + "T00:00:00") : new Date(new Date().getFullYear() - 18, 0, 1)}
-              captionLayout="dropdown-buttons"
-              fromYear={1900}
-              toYear={new Date().getFullYear() - 15}
-              className="rounded-md"
+              initialFocus
+              className="w-full"
               classNames={{
-                caption_label: "hidden",
-                caption_dropdowns: "flex gap-2 justify-center",
-                dropdown: "bg-gray-800 text-white border border-gray-600 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary",
-                dropdown_month: "",
-                dropdown_year: "",
-                vhidden: "sr-only",
+                months: "w-full",
+                month: "w-full space-y-3",
+                caption: "hidden",
+                nav: "hidden",
+                table: "w-full border-collapse",
+                head_row: "flex w-full",
+                head_cell: "text-muted-foreground font-normal text-[0.8rem] flex-1 text-center",
+                row: "flex w-full mt-2",
+                cell: "flex-1 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                day: "w-full h-9 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors",
               }}
             />
-          </PopoverContent>
-        </Popover>
+          </div>
+        )}
         <p className="text-xs text-muted-foreground">You must be at least 15 years old to sign up</p>
         <FieldError error={fieldErrors.dateOfBirth} />
       </div>
