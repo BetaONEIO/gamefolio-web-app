@@ -413,43 +413,10 @@ const Header = () => {
                   </>
                 )}
 
-                {/* Games Section */}
-                {gameResults && gameResults.length > 0 && (
-                  <>
-                    {searchQuery.startsWith('#') && <div className="border-t border-border my-2"></div>}
-                    <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Games</div>
-                    {gameResults.slice(0, 3).map((game) => (
-                      <button
-                        key={game.id}
-                        onClick={() => handleGameSelect(game.name)}
-                        className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left"
-                      >
-                        <div className="w-8 h-8 rounded-md overflow-hidden bg-secondary flex-shrink-0">
-                          {game.box_art_url ? (
-                            <img
-                              src={game.box_art_url.replace("{width}x{height}", "64x85").replace("{width}", "64").replace("{height}", "85")}
-                              alt={game.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs">
-                              {getInitials(game.name)}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="font-medium text-foreground block truncate">{game.name}</span>
-                          <div className="text-sm text-muted-foreground">Game</div>
-                        </div>
-                      </button>
-                    ))}
-                  </>
-                )}
-
                 {/* Users Section */}
                 {userResults && userResults.length > 0 && (
                   <>
-                    {((gameResults && gameResults.length > 0) || searchQuery.startsWith('#')) && <div className="border-t border-border my-2"></div>}
+                    {searchQuery.startsWith('#') && <div className="border-t border-border my-2"></div>}
                     <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Users</div>
                     {userResults.slice(0, 3).map((searchUser) => (
                       <button
@@ -473,6 +440,39 @@ const Header = () => {
                             <AmbassadorBadge isAmbassador={(searchUser as any).isAmbassador} size="sm" />
                           </div>
                           <div className="text-sm text-muted-foreground">@{searchUser.username}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </>
+                )}
+
+                {/* Games Section */}
+                {gameResults && gameResults.length > 0 && (
+                  <>
+                    {(userResults && userResults.length > 0 || searchQuery.startsWith('#')) && <div className="border-t border-border my-2"></div>}
+                    <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Games</div>
+                    {gameResults.slice(0, 3).map((game) => (
+                      <button
+                        key={game.id}
+                        onClick={() => handleGameSelect(game.name)}
+                        className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left"
+                      >
+                        <div className="w-8 h-8 rounded-md overflow-hidden bg-secondary flex-shrink-0">
+                          {game.box_art_url ? (
+                            <img
+                              src={game.box_art_url.replace("{width}x{height}", "64x85").replace("{width}", "64").replace("{height}", "85")}
+                              alt={game.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs">
+                              {getInitials(game.name)}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium text-foreground block truncate">{game.name}</span>
+                          <div className="text-sm text-muted-foreground">Game</div>
                         </div>
                       </button>
                     ))}
@@ -934,43 +934,10 @@ const Header = () => {
                       </>
                     )}
 
-                    {/* Games Section */}
-                    {gameResults && gameResults.length > 0 && (
-                      <>
-                        {searchQuery.startsWith('#') && <div className="border-t border-border my-2"></div>}
-                        <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Games</div>
-                        {gameResults.slice(0, 3).map((game) => (
-                          <button
-                            key={game.id}
-                            onClick={() => handleGameSelect(game.name)}
-                            className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left touch-manipulation active:bg-secondary/50"
-                          >
-                            <div className="w-8 h-8 rounded-md overflow-hidden bg-secondary flex-shrink-0">
-                              {game.box_art_url ? (
-                                <img
-                                  src={game.box_art_url.replace("{width}x{height}", "64x85").replace("{width}", "64").replace("{height}", "85")}
-                                  alt={game.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs">
-                                  {getInitials(game.name)}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <span className="font-medium text-foreground block truncate">{game.name}</span>
-                              <div className="text-sm text-muted-foreground">Game</div>
-                            </div>
-                          </button>
-                        ))}
-                      </>
-                    )}
-
                     {/* Users Section */}
                     {userResults && userResults.length > 0 && (
                       <>
-                        {((gameResults && gameResults.length > 0) || searchQuery.startsWith('#')) && <div className="border-t border-border my-2"></div>}
+                        {searchQuery.startsWith('#') && <div className="border-t border-border my-2"></div>}
                         <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Users</div>
                         {userResults.slice(0, 3).map((searchUser) => (
                           <button
@@ -994,6 +961,39 @@ const Header = () => {
                                 <AmbassadorBadge isAmbassador={(searchUser as any).isAmbassador} size="sm" />
                               </div>
                               <div className="text-sm text-muted-foreground">@{searchUser.username}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </>
+                    )}
+
+                    {/* Games Section */}
+                    {gameResults && gameResults.length > 0 && (
+                      <>
+                        {(userResults && userResults.length > 0 || searchQuery.startsWith('#')) && <div className="border-t border-border my-2"></div>}
+                        <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Games</div>
+                        {gameResults.slice(0, 3).map((game) => (
+                          <button
+                            key={game.id}
+                            onClick={() => handleGameSelect(game.name)}
+                            className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left touch-manipulation active:bg-secondary/50"
+                          >
+                            <div className="w-8 h-8 rounded-md overflow-hidden bg-secondary flex-shrink-0">
+                              {game.box_art_url ? (
+                                <img
+                                  src={game.box_art_url.replace("{width}x{height}", "64x85").replace("{width}", "64").replace("{height}", "85")}
+                                  alt={game.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs">
+                                  {getInitials(game.name)}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="font-medium text-foreground block truncate">{game.name}</span>
+                              <div className="text-sm text-muted-foreground">Game</div>
                             </div>
                           </button>
                         ))}
