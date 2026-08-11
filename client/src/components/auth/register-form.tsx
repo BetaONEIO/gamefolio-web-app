@@ -424,6 +424,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
         <Popover>
           <PopoverTrigger asChild>
             <Button
+              type="button"
               variant="outline"
               disabled={isLoading}
               className={cn(
