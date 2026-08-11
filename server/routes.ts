@@ -4054,29 +4054,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const enriched = await getCachedTrending(cacheKey, async () => {
       // Minimum entries needed for a meaningful podium display
       const MIN_PODIUM = 3;
+
+      // ── Qualified by real XP earned in the chosen window ────────────────────
+      // Helper: query user_xp_history for the given time window and return the
+      // top users by XP, together with their full user record.
+      const fetchXpWindow = async (windowStart: string | null, fetchLimit: number) => {
+        const timeFilter = windowStart
+          ? sql`AND xh.created_at >= ${windowStart}`
+          : sql``;
+        const rows = await db.execute(sql`
+          SELECT
+            u.id          AS "userId",
+            COALESCE(SUM(xh.xp_amount), 0)::int AS "totalPoints"
+          FROM user_xp_history xh
+          JOIN users u ON u.id = xh.user_id
+          WHERE xh.xp_amount > 0
+            ${timeFilter}
+            AND u.role NOT IN ('admin', 'moderator', 'system')
+            AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+            AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+          GROUP BY u.id
+          ORDER BY "totalPoints" DESC
+          LIMIT ${fetchLimit}
+        `);
+        const result = ((rows as any).rows ?? rows) as Array<{ userId: string | number; totalPoints: number }>;
+        if (result.length === 0) return [];
+        const ids = result.map(r => Number(r.userId));
+        const userRows = await db.select().from(users).where(inArray(users.id, ids));
+        const userMap: Record<number, any> = Object.fromEntries(userRows.map(u => [u.id, u]));
+        return result
+          .map(row => ({
+            userId: Number(row.userId),
+            uploadsCount: 0,
+            totalPoints: Number(row.totalPoints),
+            user: userMap[Number(row.userId)],
+          }))
+          .filter(e => !!e.user);
+      };
+
+      const now = new Date();
       let leaderboardData: Array<{ userId: number; uploadsCount: number; totalPoints: number; rank?: number; user: any }>;
+
       if (period === 'month') {
-        leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
-        if (!leaderboardData || leaderboardData.length === 0) {
-          leaderboardData = await LeaderboardService.getPreviousMonthLeaderboard(limit);
-        }
-        // Fall back to all-time if monthly is still sparse
-        if (!leaderboardData || leaderboardData.length < MIN_PODIUM) {
-          leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
+        // Last 30 days of XP
+        const monthStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        leaderboardData = await fetchXpWindow(monthStart, limit);
+        // Fall back to all-time if too sparse
+        if (leaderboardData.length < MIN_PODIUM) {
+          leaderboardData = await fetchXpWindow(null, limit);
         }
       } else if (period === 'week') {
-        leaderboardData = await LeaderboardService.getCurrentWeekLeaderboard(limit);
-        // Fall back to previous week if current week has no data
-        if (!leaderboardData || leaderboardData.length === 0) {
-          leaderboardData = await LeaderboardService.getPreviousWeekLeaderboard(limit);
+        // Last 7 days of XP
+        const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        leaderboardData = await fetchXpWindow(weekStart, limit);
+        // Fall back to last 30 days, then all-time if too sparse
+        if (leaderboardData.length < MIN_PODIUM) {
+          const monthStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          leaderboardData = await fetchXpWindow(monthStart, limit);
         }
-        // If still sparse (< 3 participants), fall back entirely to all-time so a
-        // single user with 0.04 XP is never shown as #1 over proper all-time leaders
-        if (!leaderboardData || leaderboardData.length < MIN_PODIUM) {
-          leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
+        if (leaderboardData.length < MIN_PODIUM) {
+          leaderboardData = await fetchXpWindow(null, limit);
         }
       } else {
-        leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
+        // All-time XP
+        leaderboardData = await fetchXpWindow(null, limit);
       }
 
       if (!leaderboardData || leaderboardData.length === 0) {
