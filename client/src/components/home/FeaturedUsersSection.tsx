@@ -92,7 +92,10 @@ const FeaturedUsersSection = () => {
 
       const tick = () => {
         if (!dragging.current) {
-          el.scrollLeft += SCROLL_SPEED;
+          const scrollSpeed = window.matchMedia("(max-width: 640px)").matches
+            ? SCROLL_SPEED / 2
+            : SCROLL_SPEED;
+          el.scrollLeft += scrollSpeed;
 
           // Seamless loop: when we scroll past the 2nd copy, jump back by one copy width
           const w = el.scrollWidth / 3;
