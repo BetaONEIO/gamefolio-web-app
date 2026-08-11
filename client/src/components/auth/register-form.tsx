@@ -548,7 +548,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
               }}
               disabled={(date) => {
                 const minAge = new Date();
-                minAge.setFullYear(minAge.getFullYear() - 15);
+                minAge.setFullYear(minAge.getFullYear() - 13);
                 return date > minAge || date < new Date("1900-01-01");
               }}
               initialFocus
@@ -568,7 +568,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             />
           </div>
         )}
-        <p className="text-xs text-muted-foreground">You must be at least 15 years old to sign up</p>
+        <p className="text-xs text-muted-foreground">You must be at least 13 years old to sign up</p>
         <FieldError error={fieldErrors.dateOfBirth} />
       </div>
 
