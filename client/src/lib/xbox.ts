@@ -41,7 +41,10 @@ function generateOAuthState(): string {
  * state where localStorage and sessionStorage have both proven unreliable.
  */
 function storeOAuthState(state: string): void {
-  const expires = new Date(Date.now() + 5 * 60 * 1000).toUTCString(); // 5 min TTL
+  // 20 min TTL: Microsoft's login can involve credential entry, MFA, and
+  // "Stay signed in?" prompts — a 5 min TTL was expiring mid-login and
+  // surfacing as a false "Invalid OAuth state parameter" error.
+  const expires = new Date(Date.now() + 20 * 60 * 1000).toUTCString();
   const secure = window.location.protocol === 'https:' ? '; Secure' : '';
   document.cookie = `xbox_oauth_state=${state}; path=/; expires=${expires}; SameSite=Lax${secure}`;
 }
@@ -136,7 +139,11 @@ export const handleXboxCallback = async (code: string, state: string): Promise<X
   }
 
   const storedState = getStoredOAuthState();
-  if (!storedState || storedState !== state) {
+  if (!storedState) {
+    clearOAuthState();
+    throw new Error('Your Xbox sign-in session expired. Please try again.');
+  }
+  if (storedState !== state) {
     clearOAuthState();
     throw new Error('Invalid OAuth state parameter');
   }
