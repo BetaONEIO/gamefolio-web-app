@@ -13,6 +13,10 @@ import { POINT_VALUES, XP_SETTINGS_DEFINITION, updatePointValue } from '../leade
 import { z } from 'zod';
 import { supabaseStorage } from '../supabase-storage';
 import { captureRouteError } from "../sentry";
+import { db } from "../db";
+import { eq, and, sql as dsql } from "drizzle-orm";
+import { impersonationAuditLog } from "@shared/schema";
+import { generateImpersonationToken } from "../services/impersonation-service";
 
 // Temporary directory for processing
 const tempDir = path.join(process.cwd(), "temp");
@@ -398,6 +402,78 @@ adminRouter.post("/users/:id/unsuspend", async (req: Request, res: Response) => 
     captureRouteError(err);
     console.error("Error unsuspending user:", err);
     res.status(500).json({ message: "Error unsuspending user" });
+  }
+});
+
+// POST /api/admin/users/:id/impersonate - Start an impersonation session for
+// support/debugging. Issues a short-lived, single-purpose token the admin's
+// client opens in a new tab; every session is audit-logged (see
+// impersonation_audit_log). See server/middleware/impersonation-auth.ts for how
+// the token is consumed.
+adminRouter.post("/users/:id/impersonate", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const admin = req.user as any;
+    const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+
+    if (reason.length < 10) {
+      return res.status(400).json({ message: "A reason of at least 10 characters is required" });
+    }
+
+    if (userId === admin.id) {
+      return res.status(400).json({ message: "Cannot impersonate yourself" });
+    }
+
+    const target = await storage.getUser(userId);
+    if (!target) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (target.role === "admin" || target.role === "moderator") {
+      return res.status(403).json({ message: "Cannot impersonate an admin or moderator account" });
+    }
+
+    const { token, tokenId } = generateImpersonationToken(admin, target);
+
+    await db.insert(impersonationAuditLog).values({
+      tokenId,
+      adminId: admin.id,
+      adminUsername: admin.username,
+      targetUserId: target.id,
+      targetUsername: target.username,
+      reason,
+      ipAddress: req.ip,
+    });
+
+    res.json({
+      token,
+      targetUser: {
+        id: target.id,
+        username: target.username,
+        displayName: target.displayName,
+        avatarUrl: target.avatarUrl,
+      },
+    });
+  } catch (err) {
+    captureRouteError(err);
+    console.error("Error starting impersonation session:", err);
+    res.status(500).json({ message: "Error starting impersonation session" });
+  }
+});
+
+// POST /api/admin/impersonation/:tokenId/end - Admin-side manual end, in case
+// the admin loses the impersonated tab rather than clicking Exit in it.
+adminRouter.post("/impersonation/:tokenId/end", async (req: Request, res: Response) => {
+  try {
+    const { tokenId } = req.params;
+    await db
+      .update(impersonationAuditLog)
+      .set({ endedAt: new Date(), endReason: "manual" })
+      .where(and(eq(impersonationAuditLog.tokenId, tokenId), dsql`${impersonationAuditLog.endedAt} IS NULL`));
+    res.json({ success: true });
+  } catch (err) {
+    captureRouteError(err);
+    console.error("Error ending impersonation session:", err);
+    res.status(500).json({ message: "Error ending impersonation session" });
   }
 });
 
