@@ -6024,6 +6024,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Escapes text interpolated into the hand-built SVG below — user-supplied
+  // display names/bios containing a bare &, <, or > otherwise break librsvg's
+  // XML parser and 500 the whole preview image.
+  function escapeSvgText(text: string): string {
+    return text.replace(/[&<>"']/g, (m) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
+    }[m]!));
+  }
+
   // Social media preview image generator
   app.get('/api/social-preview/:username', async (req: Request, res: Response) => {
     try {
@@ -6208,24 +6217,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ${!avatarLoaded ? `
           <!-- Initials fallback when no avatar photo -->
           <circle cx="${profileX + profilePicSize/2}" cy="${profileY + profilePicSize/2}" r="${profilePicSize/2}" fill="${accentColor}22"/>
-          <text x="${profileX + profilePicSize/2}" y="${profileY + profilePicSize/2 + 20}" text-anchor="middle" fill="${accentColor}" font-family="Arial, sans-serif" font-size="60" font-weight="bold">${(user.displayName || user.username || '?').substring(0, 2).toUpperCase()}</text>
+          <text x="${profileX + profilePicSize/2}" y="${profileY + profilePicSize/2 + 20}" text-anchor="middle" fill="${accentColor}" font-family="Arial, sans-serif" font-size="60" font-weight="bold">${escapeSvgText((user.displayName || user.username || '?').substring(0, 2).toUpperCase())}</text>
           ` : ''}
           
           <!-- Profile info section - positioned to the right of profile picture -->
           <g transform="translate(${profileX + profilePicSize + 40}, ${profileY + 20})">
             <!-- Username (much larger) with verified badge if applicable -->
             <g>
-              <text x="0" y="0" class="username">${displayName}</text>
+              <text x="0" y="0" class="username">${escapeSvgText(displayName)}</text>
               ${user.emailVerified ? `
                 <!-- Verified badge icon -->
                 <image x="${displayName.length * 29}" y="-32" width="32" height="32" href="/attached_assets/green_badge_128_1758978841463.png"/>
               ` : ''}
             </g>
             <!-- Handle -->
-            <text x="0" y="35" class="handle">@${user.username}</text>
-            
+            <text x="0" y="35" class="handle">@${escapeSvgText(user.username)}</text>
+
             <!-- Bio (larger and more prominent) -->
-            <text x="0" y="75" class="bio-text">${bio.length > 60 ? bio.substring(0, 60) + '...' : bio}</text>
+            <text x="0" y="75" class="bio-text">${escapeSvgText(bio.length > 60 ? bio.substring(0, 60) + '...' : bio)}</text>
             
             <!-- Stats in a row (aligned under bio text) -->
             <g transform="translate(0, 120)">
@@ -6250,7 +6259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const x = index === 0 ? 0 : displayUserTypes.slice(0, index).reduce((acc, type) => acc + Math.max(type.length * 8 + 20, 80) + 10, 0);
                 return `
                   <rect x="${x}" y="0" width="${width}" height="32" rx="16" fill="#8b5cf6"/>
-                  <text x="${x + width / 2}" y="21" class="badge-text" text-anchor="middle">${userType}</text>
+                  <text x="${x + width / 2}" y="21" class="badge-text" text-anchor="middle">${escapeSvgText(userType)}</text>
                 `;
               }).join('')}
               
@@ -6264,7 +6273,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }, 0);
                 return `
                   <rect x="${x}" y="40" width="${width}" height="28" rx="14" fill="#059669"/>
-                  <text x="${x + width / 2}" y="58" class="badge-text" text-anchor="middle" style="font-size: 14px;">${gameName}</text>
+                  <text x="${x + width / 2}" y="58" class="badge-text" text-anchor="middle" style="font-size: 14px;">${escapeSvgText(gameName)}</text>
                 `;
               }).join('')}
               
@@ -14653,7 +14662,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Test database connection (result intentionally not returned —
       // a public health check must not disclose business data).
-      await storage.getClipStats();
+      await db.execute(sql`SELECT 1`);
 
       res.json({
         status: "healthy",
