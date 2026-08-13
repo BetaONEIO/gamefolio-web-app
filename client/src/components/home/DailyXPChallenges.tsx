@@ -363,15 +363,30 @@ function StreakIndicator({ streak }: { streak: number }) {
   if (streak < 1) return null;
   const bonusPct = streak >= 30 ? 50 : streak >= 14 ? 30 : streak >= 7 ? 20 : streak >= 3 ? 10 : 0;
   return (
+    // flex-shrink-0 keeps the badge from being squeezed by the left column.
+    // max-width caps it so a 4-digit streak can never push outside the card.
+    // Padding uses clamp() so it reduces slightly on very narrow screens
+    // before any font size change is needed.
     <div
-      className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl flex-shrink-0"
-      style={{ background: 'rgba(255,100,0,0.08)', border: '1px solid rgba(255,100,0,0.2)' }}
+      className="flex items-center gap-1.5 rounded-xl flex-shrink-0"
+      style={{
+        background: 'rgba(255,100,0,0.08)',
+        border: '1px solid rgba(255,100,0,0.2)',
+        padding: 'clamp(5px, 1.5vw, 8px) clamp(7px, 2vw, 10px)',
+        maxWidth: 'clamp(100px, 48%, 180px)',
+      }}
     >
       <Flame className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#FF6B1A' }} />
+      {/* min-w-0 lets the inner box shrink if the badge hits its max-width */}
       <div className="min-w-0">
-        <div className="flex items-baseline gap-1">
-          <span className="text-sm font-extrabold text-white leading-none">{streak}</span>
-          <span className="text-[10px] font-semibold whitespace-nowrap" style={{ color: 'rgba(255,255,255,0.5)' }}>day streak</span>
+        {/* whitespace-nowrap on the ROW keeps 🔥 number "day streak" together */}
+        <div className="flex items-baseline gap-1 whitespace-nowrap overflow-hidden">
+          <span className="text-sm font-extrabold text-white leading-none shrink-0">
+            {streak.toLocaleString()}
+          </span>
+          <span className="text-[10px] font-semibold shrink-0" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            day streak
+          </span>
         </div>
         {bonusPct > 0 && (
           <div className="text-[10px] font-bold mt-0.5 whitespace-nowrap" style={{ color: '#FF8C42' }}>
