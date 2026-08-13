@@ -4931,17 +4931,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rankIndex = currentWeekBoard.findIndex((e: any) => Number(e.userId) === userId);
       const rank = rankIndex >= 0 ? Number(currentWeekBoard[rankIndex].rank ?? rankIndex + 1) : null;
 
-      // Recent XP activity (last 20) — only entries that actually granted XP
-      const recentActivity = xpHistory
-        .filter((h) => h.xpAmount > 0)
-        .slice(0, 20)
-        .map((h) => ({
-          id: h.id,
-          xpAmount: h.xpAmount,
-          source: h.source,
-          description: h.description,
-          createdAt: h.createdAt,
-        }));
+      // Recent XP activity (last 20) — merges both ledgers that feed
+      // totalXP: user_xp_history (views, uploads, fires received, ...) and
+      // user_points_history (likes, comments, shares, daily login, streak
+      // bonuses, watch-5/watch-20, ...). Reading only one made most activity
+      // (anything routed through LeaderboardService) invisible here even
+      // though it had already been added to the user's total XP.
+      // Points-history ids are negated so they can't collide with
+      // xp-history ids, which come from a different table/sequence.
+      const recentActivity = [
+        ...xpHistory
+          .filter((h) => h.xpAmount > 0)
+          .map((h) => ({
+            id: h.id,
+            xpAmount: h.xpAmount,
+            source: h.source,
+            description: h.description,
+            createdAt: h.createdAt,
+          })),
+        ...pointsHistory
+          .filter((h) => h.points > 0)
+          .map((h) => ({
+            id: -h.id,
+            xpAmount: h.points,
+            source: h.action,
+            description: h.description,
+            createdAt: h.createdAt,
+          })),
+      ]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 20);
 
       // XP earned today
       const xpEarnedToday = todayXP.reduce((s, h) => s + h.xpAmount, 0);
@@ -10072,9 +10091,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           maxFires: fireLimits.maxFiresPerDay
         });
 
-        // Background: creator XP and notification
+        // Background: reactor points, creator XP, and notification
         (async () => {
           try {
+            // The response above already promises the reactor `xpAwarded: 50`
+            // — this used to be a lie, since only the clip owner (fire_received,
+            // via XPService) was ever actually paid. Fire reactions are
+            // permanent and one-per-user-per-clip (enforced above), so no
+            // extra dedupe check is needed here.
+            await LeaderboardService.awardPoints(
+              userId,
+              'fire',
+              `Fired on clip #${clipId}`
+            );
+
             const hasEarnedXP = await storage.hasUserEarnedXPForReaction(
               clip.userId,
               'fire_received',
@@ -10148,6 +10178,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Respond immediately so the client isn't blocked.
       res.json({ success: true });
+
+      // Award the viewer (not the clip owner — that's handled inside
+      // incrementClipViews) their daily watch-progress XP in the background.
+      // req.user is populated here by the app-level Bearer/session bridge
+      // even though this route has no auth middleware of its own.
+      const viewerId = (req.user as any)?.id;
+      if (clip && viewerId && viewerId !== clip.userId) {
+        BonusEventsService.awardWatchClipXP(viewerId).catch((err) => {
+          console.error('Error awarding watch-clip XP:', err);
+        });
+      }
 
     } catch (error) {
       captureRouteError(error);
@@ -15274,6 +15315,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Award 50 XP to the screenshot creator for this unique reactor/content pair.
         if (emoji === '🔥') {
+          // The response below promises the reactor `xpAwarded: 50`, but that
+          // was never actually paid — only the screenshot owner (fire_received,
+          // via XPService) was. Fire reactions are permanent and
+          // one-per-user-per-content (enforced above), so no extra dedupe
+          // check is needed for the reactor's own award.
+          await LeaderboardService.awardPoints(
+            userId,
+            'fire',
+            `Fired on screenshot #${screenshotId}`
+          );
+
           const hasEarnedXP = await storage.hasUserEarnedXPForReaction(
             screenshot.userId,
             'fire_received',

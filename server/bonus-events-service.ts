@@ -119,11 +119,15 @@ export class BonusEventsService {
       let awarded5 = false;
       let awarded20 = false;
 
-      const has5 = history.some(
-        (h) => h.source === "watch_5_clips" && this.isSameDay(new Date(h.createdAt), today)
+      // watch_5_clips/watch_20_clips are awarded via LeaderboardService, which
+      // writes to the points ledger (user_points_history, keyed by "action"),
+      // not the XP ledger (user_xp_history, keyed by "source") queried above.
+      const pointsHistory = await storage.getUserPointsHistory(userId, 300);
+      const has5 = pointsHistory.some(
+        (h) => h.action === "watch_5_clips" && this.isSameDay(new Date(h.createdAt), today)
       );
-      const has20 = history.some(
-        (h) => h.source === "watch_20_clips" && this.isSameDay(new Date(h.createdAt), today)
+      const has20 = pointsHistory.some(
+        (h) => h.action === "watch_20_clips" && this.isSameDay(new Date(h.createdAt), today)
       );
 
       if (newCount >= 5 && !has5) {
