@@ -540,16 +540,6 @@ const HomePage = () => {
   return (
     <div className="pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-8 hide-scrollbar">
 
-      {!user && (
-        <div className="px-4 pt-4 pb-2 md:px-6 md:pt-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-white">Gamefolio</h1>
-          <p className="text-sm md:text-base text-gray-400 mt-1 max-w-2xl">
-            Share your gaming clips and highlights, track achievements, and connect with
-            streamers and gamers across Twitch, YouTube, Kick, Xbox, PlayStation, and Steam.
-          </p>
-        </div>
-      )}
-
       {/* Hero Banner Carousel */}
       <section className="mb-0 -mx-0">
         <div className="relative overflow-hidden">
