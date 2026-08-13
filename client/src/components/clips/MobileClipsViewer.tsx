@@ -213,9 +213,9 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
         </div>
       </div>
 
-      {/* Caption — line-clamped to 3 lines when collapsed so icons are never hidden */}
+      {/* Caption — flex-1 always so it absorbs slack and the action bar is never clipped */}
       <div
-        className={showFullDesc ? "flex-1 min-h-0 overflow-y-auto px-4" : "flex-shrink-0 px-4"}
+        className={`flex-1 min-h-0 px-4 ${showFullDesc ? "overflow-y-auto" : "overflow-hidden"}`}
         style={{ background: '#081017', overscrollBehaviorY: 'contain' }}
       >
         {caption && (
