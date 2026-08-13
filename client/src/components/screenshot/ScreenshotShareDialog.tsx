@@ -228,7 +228,7 @@ export function ScreenshotShareDialog({
                     <img
                       src={shareData.imageUrl}
                       alt="Screenshot preview"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain sm:object-cover"
                       data-testid="img-screenshot-preview"
                     />
                   )}
