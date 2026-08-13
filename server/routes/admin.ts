@@ -7,7 +7,9 @@ import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 import { ContentFilterService } from '../services/content-filter';
-import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides, insertAdminAlertSettingsSchema, KNOWN_ADMIN_ALERT_TYPES } from '@shared/schema';
+import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides, insertAdminAlertSettingsSchema, KNOWN_ADMIN_ALERT_TYPES, serverSettings } from '@shared/schema';
+import { db } from '../db';
+import { eq } from 'drizzle-orm';
 import { sendAdminAlert, postSlack, sendAdminEmail, sendSms, postPagerDuty } from '../admin-alert-service';
 import { POINT_VALUES, XP_SETTINGS_DEFINITION, updatePointValue } from '../leaderboard-service';
 import { z } from 'zod';
@@ -2666,6 +2668,35 @@ adminRouter.post("/alerts/:id/retry", async (req: Request, res: Response) => {
     captureRouteError(err);
     console.error("Error retrying admin alert deliveries:", err);
     res.status(500).json({ message: "Error retrying admin alert deliveries" });
+  }
+});
+
+// GET /api/admin/psn-health — current status of the PSN NPSSO token.
+// Returns the ISO timestamp of the last successful PSN authentication (either via
+// refresh-token chain or the NPSSO bootstrap), so the dashboard can display
+// "PSN token healthy / last used N days ago" without polling PSN itself.
+adminRouter.get("/psn-health", async (req: Request, res: Response) => {
+  try {
+    const rows = await db.select().from(serverSettings)
+      .where(eq(serverSettings.key, 'psn_auth_last_success'));
+    const lastSuccess: string | null = rows[0]?.value ?? null;
+    const hasRefreshToken = await (async () => {
+      const rt = await db.select().from(serverSettings)
+        .where(eq(serverSettings.key, 'psn_refresh_token'));
+      return rt.length > 0 && !!rt[0]?.value;
+    })();
+    res.json({
+      lastSuccessAt: lastSuccess,
+      hasRefreshToken,
+      // Convenience: days since last successful auth (null if never synced)
+      daysSinceLastSuccess: lastSuccess
+        ? Math.floor((Date.now() - new Date(lastSuccess).getTime()) / (1000 * 60 * 60 * 24))
+        : null,
+    });
+  } catch (err) {
+    captureRouteError(err);
+    console.error("Error fetching PSN health:", err);
+    res.status(500).json({ message: "Error fetching PSN health" });
   }
 });
 
