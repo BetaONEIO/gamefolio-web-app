@@ -221,13 +221,13 @@ export function ScreenshotShareDialog({
             </div>
           ) : shareData ? (
             <>
-              {/* Screenshot preview — fixed-height container so object-contain shows the full image */}
-              <div className="w-full h-[42vh] sm:h-[180px] sm:aspect-video bg-[#1B2A33] rounded-xl overflow-hidden border border-[#1B2A33]/80">
+              {/* Screenshot preview — object-contain always so full image is visible regardless of aspect ratio */}
+              <div className="w-full h-[200px] sm:h-[220px] bg-[#1B2A33] rounded-xl overflow-hidden border border-[#1B2A33]/80 flex items-center justify-center">
                 {shareData.imageUrl && (
                   <img
                     src={shareData.imageUrl}
                     alt="Screenshot preview"
-                    className="w-full h-full object-contain sm:object-cover"
+                    className="max-w-full max-h-full object-contain"
                     data-testid="img-screenshot-preview"
                   />
                 )}
