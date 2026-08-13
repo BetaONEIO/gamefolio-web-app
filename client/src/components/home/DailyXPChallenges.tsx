@@ -174,12 +174,12 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
     },
     {
       id: 'upload', icon: ICONS.upload, title: 'Upload Today',
-      xp: 200, progress: activity ? (activity.firstUploadOfDayDone ? 1 : 0) : 0, total: 1,
+      xp: 100, progress: activity ? (activity.firstUploadOfDayDone ? 1 : 0) : 0, total: 1,
       href: '/upload', color: '#B7FF1A', rarity: 'epic',
     },
     {
       id: 'lootbox', icon: ICONS.lootbox, title: 'Open Lootbox',
-      xp: 50, progress: activity ? (activity.lootboxOpenedToday ? 1 : 0) : 0, total: 1,
+      xp: 100, progress: activity ? (activity.lootboxOpenedToday ? 1 : 0) : 0, total: 1,
       href: '/level-tracker', color: '#B7FF1A', rarity: 'legendary',
     },
   ];

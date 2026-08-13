@@ -4750,6 +4750,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { BonusEventsService: BES } = await import("./bonus-events-service");
       const isWeekend = BES.isWeekend();
 
+      // All-challenges bonus — matches the 8 cards in the Daily XP
+      // Challenges widget exactly (login, watch5, watch20, comment, like,
+      // share, upload, lootbox). Idempotent, so safe to check on every load.
+      const allChallengesDone =
+        loginXPToday > 0 &&
+        watch5Done &&
+        watch20Done &&
+        commentedToday &&
+        likedToday &&
+        sharedToday &&
+        lootboxOpenedToday &&
+        creatorStatus.firstUploadOfDayDone;
+      BES.awardAllChallengesBonus(userId, allChallengesDone).catch((err: unknown) => {
+        console.error('Error awarding all-challenges bonus:', err);
+      });
+
       res.json({
         clipsWatchedToday,
         watch5Done,
@@ -4913,6 +4929,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const streakBonusToday = todayPts.filter((h) => h.action === "streak_milestone").reduce((s, h) => s + h.points, 0);
       const lootboxOpenedToday = todayPts.some((h) => h.action === "lootbox_bonus");
       const firstUploadOfDayDone = todayPts.some((h) => h.action === "first_upload_of_day");
+
+      // All-challenges bonus — matches the 8 cards in the Daily XP
+      // Challenges widget exactly. Idempotent, so safe to check on every load.
+      const allChallengesDone =
+        loginXPToday > 0 &&
+        watch5Done &&
+        watch20Done &&
+        commentedToday &&
+        likedToday &&
+        sharedToday &&
+        lootboxOpenedToday &&
+        firstUploadOfDayDone;
+      BonusEventsService.awardAllChallengesBonus(userId, allChallengesDone).catch((err) => {
+        console.error('Error awarding all-challenges bonus:', err);
+      });
 
       // Streak
       const { StreakService: SS } = await import("./streak-service");
@@ -5286,7 +5317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       dashGoals.push({
         type: "daily_upload",
         label: "Upload Content Today",
-        detail: firstUploadOfDayDone ? "Done! +250 XP earned" : "Earn 250 XP with your first upload",
+        detail: firstUploadOfDayDone ? "Done! +100 XP earned" : "Earn 100 XP with your first upload",
         current: firstUploadOfDayDone ? 1 : 0,
         target: 1,
         percent: firstUploadOfDayDone ? 100 : 0,
@@ -9073,6 +9104,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const uploadXpAmount = 250;
           const uploadLabel = clipData.videoType === 'reel' ? 'reel' : 'clip';
           await XPService.awardXP(userId, uploadXpAmount, 'upload', `Earned ${uploadXpAmount} XP for uploading a ${uploadLabel}`, clip.id);
+          // "Upload Today" daily challenge bonus — separate from the flat upload XP above.
+          await CreatorMilestoneService.checkFirstUploadOfDay(userId);
         } catch (e) { console.error('[clip upload] XP/bonus side-effects failed:', e); }
         try {
           const titleMentions = await mentionService.parseMentions(title);
@@ -16563,10 +16596,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const result = await storage.openDailyLootbox(userId);
-      
+
       if (!result) {
         return res.status(404).json({ message: "No rewards available in lootbox" });
       }
+
+      // "Open Lootbox" daily challenge bonus — separate from whatever the
+      // lootbox itself rewards (a cosmetic item, or its own XP roll). Gated
+      // naturally by the once-per-day `canOpen` check above.
+      BonusEventsService.awardLootboxBonus(userId).catch((err) => {
+        console.error('Error awarding lootbox-open daily bonus:', err);
+      });
 
       // Determine the appropriate message based on reward type
       let message: string;

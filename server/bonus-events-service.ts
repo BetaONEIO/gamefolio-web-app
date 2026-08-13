@@ -42,6 +42,32 @@ export class BonusEventsService {
     }
   }
 
+  // Awards the "All Challenges Bonus" shown in the Daily XP Challenges
+  // widget once a user has completed every one of that day's challenges.
+  // Idempotent per calendar day via the points-history dedupe check, so it's
+  // safe to call this on every daily-activity/dashboard read.
+  static async awardAllChallengesBonus(userId: number, allChallengesDone: boolean): Promise<boolean> {
+    if (!allChallengesDone) return false;
+    try {
+      const pointsHistory = await storage.getUserPointsHistory(userId, 300);
+      const today = new Date();
+      const alreadyAwarded = pointsHistory.some(
+        (h) => h.action === "all_challenges_bonus" && this.isSameDay(new Date(h.createdAt), today)
+      );
+      if (alreadyAwarded) return false;
+      await LeaderboardService.awardCustomPoints(
+        userId,
+        "all_challenges_bonus",
+        1000,
+        "Completed all daily challenges!"
+      );
+      return true;
+    } catch (error) {
+      console.error("Error awarding all-challenges bonus:", error);
+      return false;
+    }
+  }
+
   static async awardLootboxBonus(userId: number): Promise<void> {
     try {
       await LeaderboardService.awardCustomPoints(
