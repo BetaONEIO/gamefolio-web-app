@@ -658,7 +658,7 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 
     // Get username for URL and fetch updated user data with new XP/level
     const user = await storage.getUser(req.user!.id);
-    console.log(`🎯 XP Debug - User after screenshot award: ID=${user?.id}, totalXP=${user?.totalXP}, level=${user?.level}`);
+;
     const username = user?.username || 'unknown';
     const screenshotUrl = `${baseUrl}/@${username}/screenshot/${screenshot.shareCode}`;
     const qrCodeDataUrl = await QRCode.toDataURL(screenshotUrl);
@@ -684,8 +684,6 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
       message: 'Screenshot uploaded successfully'
     };
     
-    console.log(`🎯 XP Debug - Screenshot response: xpGained=${responseData.xpGained}, userXP=${responseData.userXP}, userLevel=${responseData.userLevel}`);
-    
     res.json(responseData);
 
   } catch (error) {
@@ -707,14 +705,6 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 
 // Video/Reel processing endpoint (called after TUS upload completes)
 router.post('/process-video', hybridFullAccess, async (req, res) => {
-  const { ageRestricted } = req.body;
-  console.log('🔞 Age Restriction Backend Debug:', {
-    ageRestricted,
-    ageRestrictedType: typeof ageRestricted,
-    rawBody: req.body,
-    evaluation: ageRestricted === true || ageRestricted === 'true'
-  });
-
   try {
     // Resolve scheduling intent up front so we can reject before doing the
     // expensive download/transcode work in processAndCreateClip below.
@@ -760,7 +750,6 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
       await storage.incrementDailyImportCount(req.user!.id);
     }
 
-    console.log(`🎯 XP Debug - Response data: xpGained=${responseData.xpGained}, userXP=${responseData.userXP}, userLevel=${responseData.userLevel}`);
     res.json(responseData);
   } catch (error) {
     captureRouteError(error);

@@ -418,7 +418,6 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
 
   const baseUrl = 'https://app.gamefolio.com';
   const user = await storage.getUser(userId);
-  console.log(`🎯 XP Debug - User after award: ID=${user?.id}, totalXP=${user?.totalXP}, level=${user?.level}`);
   const username = user?.username || 'unknown';
   const contentType = videoType === 'reel' ? 'reel' : 'clip';
   const clipUrl = `${baseUrl}/@${username}/${contentType}/${clip.shareCode}`;
