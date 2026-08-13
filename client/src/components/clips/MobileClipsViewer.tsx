@@ -34,6 +34,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
   const [descSheetDragY, setDescSheetDragY] = useState(0);
   const descTouchStartY = useRef<number | null>(null);
   const descTouchStartTime = useRef<number>(0);
+  const descCloseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [localFollowing, setLocalFollowing] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -53,10 +54,25 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
   }, [commentsOpen, isMobile]);
 
   useEffect(() => {
-    if (!descSheetOpen) { setDescSheetMounted(false); setDescSheetDragY(0); return; }
+    if (!descSheetOpen) return;
+    if (descCloseTimeout.current) {
+      clearTimeout(descCloseTimeout.current);
+      descCloseTimeout.current = null;
+    }
     const id = requestAnimationFrame(() => setDescSheetMounted(true));
     return () => cancelAnimationFrame(id);
   }, [descSheetOpen]);
+
+  const closeDescSheet = () => {
+    if (!descSheetOpen) return;
+    setDescSheetMounted(false);
+    setDescSheetDragY(0);
+    if (descCloseTimeout.current) clearTimeout(descCloseTimeout.current);
+    descCloseTimeout.current = setTimeout(() => {
+      setDescSheetOpen(false);
+      descCloseTimeout.current = null;
+    }, 280);
+  };
 
   const handleDescTouchStart = (e: React.TouchEvent) => {
     descTouchStartY.current = e.touches[0].clientY;
@@ -71,8 +87,11 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
     if (descTouchStartY.current === null) return;
     const elapsed = Date.now() - descTouchStartTime.current;
     const velocity = descSheetDragY / Math.max(elapsed, 1);
-    if (descSheetDragY > 80 || velocity > 0.5) setDescSheetOpen(false);
-    setDescSheetDragY(0);
+    if (descSheetDragY > 80 || velocity > 0.5) {
+      closeDescSheet();
+    } else {
+      setDescSheetDragY(0);
+    }
     descTouchStartY.current = null;
   };
 
@@ -385,7 +404,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
         >
           {/* Backdrop */}
           <div
-            onClick={() => setDescSheetOpen(false)}
+            onClick={closeDescSheet}
             style={{
               position: 'absolute', inset: 0,
               background: 'rgba(0,0,0,0.55)',
@@ -430,7 +449,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
                 </p>
               </div>
               <button
-                onClick={() => setDescSheetOpen(false)}
+                onClick={closeDescSheet}
                 className="w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0"
                 style={{ background: 'rgba(255,255,255,0.08)' }}
                 aria-label="Close"
