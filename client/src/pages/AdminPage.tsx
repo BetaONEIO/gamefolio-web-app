@@ -56,6 +56,12 @@ interface HeroTextData {
   targetAudience?: string;
 }
 
+interface PsnHealth {
+  lastSuccessAt: string | null;
+  hasRefreshToken: boolean;
+  daysSinceLastSuccess: number | null;
+}
+
 interface AssetReward {
   id: number;
   name: string;
@@ -2374,6 +2380,13 @@ const AdminPage = () => {
     refetchInterval: 60000, // Refresh every minute
   });
 
+  // Fetch PSN token health
+  const { data: psnHealth, isLoading: psnHealthLoading, refetch: refetchPsnHealth } = useQuery<PsnHealth>({
+    queryKey: ["/api/admin/psn-health"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    refetchInterval: 300000, // Refresh every 5 minutes
+  });
+
   // Fetch users with pagination
   const { data: usersData, isLoading: usersLoading } = useQuery<UsersData>({
     queryKey: ["/api/admin/users", { page: userPage, search: userSearch }],
@@ -3350,6 +3363,100 @@ const AdminPage = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* PSN Token Health Card */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle className="text-base font-semibold">PSN Token Health</CardTitle>
+                <CardDescription className="mt-1">
+                  Status of the PlayStation Network sync token
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => refetchPsnHealth()}
+                title="Refresh PSN health"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {psnHealthLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Clock className="h-4 w-4 animate-spin" />
+                  Checking PSN token status…
+                </div>
+              ) : !psnHealth ? (
+                <div className="flex items-center gap-2 text-destructive text-sm">
+                  <XCircle className="h-4 w-4" />
+                  Could not retrieve PSN health data.
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-6 items-center">
+                  {/* Colour-coded status badge */}
+                  <div className="flex items-center gap-2">
+                    {psnHealth.daysSinceLastSuccess === null ? (
+                      <>
+                        <XCircle className="h-5 w-5 text-destructive" />
+                        <span className="font-semibold text-destructive">No Data</span>
+                      </>
+                    ) : psnHealth.daysSinceLastSuccess > 50 ? (
+                      <>
+                        <XCircle className="h-5 w-5 text-destructive" />
+                        <span className="font-semibold text-destructive">Critical</span>
+                      </>
+                    ) : psnHealth.daysSinceLastSuccess >= 30 ? (
+                      <>
+                        <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                        <span className="font-semibold text-yellow-500">Warning</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <span className="font-semibold text-green-500">Healthy</span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Last success timestamp */}
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Last success: </span>
+                    <span className="font-medium">
+                      {psnHealth.lastSuccessAt
+                        ? new Date(psnHealth.lastSuccessAt).toLocaleString()
+                        : "Never"}
+                    </span>
+                  </div>
+
+                  {/* Days since last success */}
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Days since last success: </span>
+                    <span className="font-medium">
+                      {psnHealth.daysSinceLastSuccess !== null
+                        ? psnHealth.daysSinceLastSuccess
+                        : "—"}
+                    </span>
+                  </div>
+
+                  {/* Refresh token presence */}
+                  <div className="flex items-center gap-1 text-sm">
+                    <span className="text-muted-foreground">Refresh token: </span>
+                    {psnHealth.hasRefreshToken ? (
+                      <span className="flex items-center gap-1 text-green-500 font-medium">
+                        <CheckCircle className="h-3.5 w-3.5" /> Present
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-destructive font-medium">
+                        <XCircle className="h-3.5 w-3.5" /> Missing
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="grid gap-4 md:grid-cols-2">
             <Card className="col-span-1">
