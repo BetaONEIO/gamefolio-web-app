@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Play, Pause, Volume2, VolumeX, Maximize } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
@@ -6,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { formatDuration } from "@/lib/constants";
 import { useVideoAudioPreference } from "@/hooks/use-video-audio-preference";
 import { useSignedUrl } from "@/hooks/use-signed-url";
+import { useAuth } from "@/hooks/use-auth";
 
 
 interface VideoPlayerProps {
@@ -62,6 +64,8 @@ const VideoPlayer = ({
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasSetInitialTime = useRef(false);
   const hasTrackedView = useRef(false);
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   
   // Use shared audio preferences across all video players
   const { muted: isMuted, volume, setMuted, setVolume: setGlobalVolume, toggleMuted, isInitialized } = useVideoAudioPreference();
@@ -109,6 +113,12 @@ const VideoPlayer = ({
       
       if (response.ok) {
         console.log('Video view tracked for clip:', clipId);
+        // Watching clips earns daily-challenge XP (watch 5/20) — refresh the
+        // Daily XP Challenges widget, which otherwise never refetches on its own.
+        if (user) {
+          queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/daily-activity`] });
+          queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/level-progress`] });
+        }
       } else {
         // Reset flag if the request failed so it can be retried
         hasTrackedView.current = false;

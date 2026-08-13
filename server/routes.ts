@@ -4750,6 +4750,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { BonusEventsService: BES } = await import("./bonus-events-service");
       const isWeekend = BES.isWeekend();
 
+      // All-challenges bonus — matches the 8 cards in the Daily XP
+      // Challenges widget exactly (login, watch5, watch20, comment, like,
+      // share, upload, lootbox). Idempotent, so safe to check on every load.
+      const allChallengesDone =
+        loginXPToday > 0 &&
+        watch5Done &&
+        watch20Done &&
+        commentedToday &&
+        likedToday &&
+        sharedToday &&
+        lootboxOpenedToday &&
+        creatorStatus.firstUploadOfDayDone;
+      BES.awardAllChallengesBonus(userId, allChallengesDone).catch((err: unknown) => {
+        console.error('Error awarding all-challenges bonus:', err);
+      });
+
       res.json({
         clipsWatchedToday,
         watch5Done,
@@ -4914,6 +4930,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const lootboxOpenedToday = todayPts.some((h) => h.action === "lootbox_bonus");
       const firstUploadOfDayDone = todayPts.some((h) => h.action === "first_upload_of_day");
 
+      // All-challenges bonus — matches the 8 cards in the Daily XP
+      // Challenges widget exactly. Idempotent, so safe to check on every load.
+      const allChallengesDone =
+        loginXPToday > 0 &&
+        watch5Done &&
+        watch20Done &&
+        commentedToday &&
+        likedToday &&
+        sharedToday &&
+        lootboxOpenedToday &&
+        firstUploadOfDayDone;
+      BonusEventsService.awardAllChallengesBonus(userId, allChallengesDone).catch((err) => {
+        console.error('Error awarding all-challenges bonus:', err);
+      });
+
       // Streak
       const { StreakService: SS } = await import("./streak-service");
       const streakInfo = await SS.getUserStreak(userId);
@@ -4959,17 +4990,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rivalsData: any[] = (rivalsResult as any).rows ?? (rivalsResult as any);
       const rank = rivalsData.find((r: any) => Number(r.userId) === userId)?.rank ?? null;
 
-      // Recent XP activity (last 20) — only entries that actually granted XP
-      const recentActivity = xpHistory
-        .filter((h) => h.xpAmount > 0)
-        .slice(0, 20)
-        .map((h) => ({
-          id: h.id,
-          xpAmount: h.xpAmount,
-          source: h.source,
-          description: h.description,
-          createdAt: h.createdAt,
-        }));
+      // Recent XP activity (last 20) — merges both ledgers that feed
+      // totalXP: user_xp_history (views, uploads, fires received, ...) and
+      // user_points_history (likes, comments, shares, daily login, streak
+      // bonuses, watch-5/watch-20, ...). Reading only one made most activity
+      // (anything routed through LeaderboardService) invisible here even
+      // though it had already been added to the user's total XP.
+      // Points-history ids are negated so they can't collide with
+      // xp-history ids, which come from a different table/sequence.
+      const recentActivity = [
+        ...xpHistory
+          .filter((h) => h.xpAmount > 0)
+          .map((h) => ({
+            id: h.id,
+            xpAmount: h.xpAmount,
+            source: h.source,
+            description: h.description,
+            createdAt: h.createdAt,
+          })),
+        ...pointsHistory
+          .filter((h) => h.points > 0)
+          .map((h) => ({
+            id: -h.id,
+            xpAmount: h.points,
+            source: h.action,
+            description: h.description,
+            createdAt: h.createdAt,
+          })),
+      ]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 20);
 
       // XP earned today
       const xpEarnedToday = todayXP.reduce((s, h) => s + h.xpAmount, 0);
@@ -5292,7 +5342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       dashGoals.push({
         type: "daily_upload",
         label: "Upload Content Today",
-        detail: firstUploadOfDayDone ? "Done! +250 XP earned" : "Earn 250 XP with your first upload",
+        detail: firstUploadOfDayDone ? "Done! +100 XP earned" : "Earn 100 XP with your first upload",
         current: firstUploadOfDayDone ? 1 : 0,
         target: 1,
         percent: firstUploadOfDayDone ? 100 : 0,
@@ -9079,6 +9129,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const uploadXpAmount = 250;
           const uploadLabel = clipData.videoType === 'reel' ? 'reel' : 'clip';
           await XPService.awardXP(userId, uploadXpAmount, 'upload', `Earned ${uploadXpAmount} XP for uploading a ${uploadLabel}`, clip.id);
+          // "Upload Today" daily challenge bonus — separate from the flat upload XP above.
+          await CreatorMilestoneService.checkFirstUploadOfDay(userId);
         } catch (e) { console.error('[clip upload] XP/bonus side-effects failed:', e); }
         try {
           const titleMentions = await mentionService.parseMentions(title);
@@ -10097,9 +10149,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           maxFires: fireLimits.maxFiresPerDay
         });
 
-        // Background: creator XP and notification
+        // Background: reactor points, creator XP, and notification
         (async () => {
           try {
+            // The response above already promises the reactor `xpAwarded: 50`
+            // — this used to be a lie, since only the clip owner (fire_received,
+            // via XPService) was ever actually paid. Fire reactions are
+            // permanent and one-per-user-per-clip (enforced above), so no
+            // extra dedupe check is needed here.
+            await LeaderboardService.awardPoints(
+              userId,
+              'fire',
+              `Fired on clip #${clipId}`
+            );
+
             const hasEarnedXP = await storage.hasUserEarnedXPForReaction(
               clip.userId,
               'fire_received',
@@ -10173,6 +10236,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Respond immediately so the client isn't blocked.
       res.json({ success: true });
+
+      // Award the viewer (not the clip owner — that's handled inside
+      // incrementClipViews) their daily watch-progress XP in the background.
+      // req.user is populated here by the app-level Bearer/session bridge
+      // even though this route has no auth middleware of its own.
+      const viewerId = (req.user as any)?.id;
+      if (clip && viewerId && viewerId !== clip.userId) {
+        BonusEventsService.awardWatchClipXP(viewerId).catch((err) => {
+          console.error('Error awarding watch-clip XP:', err);
+        });
+      }
 
     } catch (error) {
       captureRouteError(error);
@@ -15299,6 +15373,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Award 50 XP to the screenshot creator for this unique reactor/content pair.
         if (emoji === '🔥') {
+          // The response below promises the reactor `xpAwarded: 50`, but that
+          // was never actually paid — only the screenshot owner (fire_received,
+          // via XPService) was. Fire reactions are permanent and
+          // one-per-user-per-content (enforced above), so no extra dedupe
+          // check is needed for the reactor's own award.
+          await LeaderboardService.awardPoints(
+            userId,
+            'fire',
+            `Fired on screenshot #${screenshotId}`
+          );
+
           const hasEarnedXP = await storage.hasUserEarnedXPForReaction(
             screenshot.userId,
             'fire_received',
@@ -16536,10 +16621,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const result = await storage.openDailyLootbox(userId);
-      
+
       if (!result) {
         return res.status(404).json({ message: "No rewards available in lootbox" });
       }
+
+      // "Open Lootbox" daily challenge bonus — separate from whatever the
+      // lootbox itself rewards (a cosmetic item, or its own XP roll). Gated
+      // naturally by the once-per-day `canOpen` check above.
+      BonusEventsService.awardLootboxBonus(userId).catch((err) => {
+        console.error('Error awarding lootbox-open daily bonus:', err);
+      });
 
       // Determine the appropriate message based on reward type
       let message: string;

@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { openShareWindow, nativeShare, isNative } from "@/lib/platform";
 import {
   Copy,
@@ -130,6 +131,8 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
   const [copySuccess, setCopySuccess] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const isOpen = open !== undefined ? open : internalOpen;
   const setIsOpen = onOpenChange || setInternalOpen;
@@ -157,6 +160,12 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
   const trackShare = async () => {
     try {
       await fetch(trackEndpoint, { method: "POST", credentials: "include" });
+      // Sharing a clip earns daily-challenge XP — refresh the Daily XP
+      // Challenges widget, which otherwise never refetches on its own.
+      if (user && !isScreenshot) {
+        queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/daily-activity`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/level-progress`] });
+      }
     } catch (_) {}
   };
 

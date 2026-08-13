@@ -42,6 +42,32 @@ export class BonusEventsService {
     }
   }
 
+  // Awards the "All Challenges Bonus" shown in the Daily XP Challenges
+  // widget once a user has completed every one of that day's challenges.
+  // Idempotent per calendar day via the points-history dedupe check, so it's
+  // safe to call this on every daily-activity/dashboard read.
+  static async awardAllChallengesBonus(userId: number, allChallengesDone: boolean): Promise<boolean> {
+    if (!allChallengesDone) return false;
+    try {
+      const pointsHistory = await storage.getUserPointsHistory(userId, 300);
+      const today = new Date();
+      const alreadyAwarded = pointsHistory.some(
+        (h) => h.action === "all_challenges_bonus" && this.isSameDay(new Date(h.createdAt), today)
+      );
+      if (alreadyAwarded) return false;
+      await LeaderboardService.awardCustomPoints(
+        userId,
+        "all_challenges_bonus",
+        1000,
+        "Completed all daily challenges!"
+      );
+      return true;
+    } catch (error) {
+      console.error("Error awarding all-challenges bonus:", error);
+      return false;
+    }
+  }
+
   static async awardLootboxBonus(userId: number): Promise<void> {
     try {
       await LeaderboardService.awardCustomPoints(
@@ -119,11 +145,15 @@ export class BonusEventsService {
       let awarded5 = false;
       let awarded20 = false;
 
-      const has5 = history.some(
-        (h) => h.source === "watch_5_clips" && this.isSameDay(new Date(h.createdAt), today)
+      // watch_5_clips/watch_20_clips are awarded via LeaderboardService, which
+      // writes to the points ledger (user_points_history, keyed by "action"),
+      // not the XP ledger (user_xp_history, keyed by "source") queried above.
+      const pointsHistory = await storage.getUserPointsHistory(userId, 300);
+      const has5 = pointsHistory.some(
+        (h) => h.action === "watch_5_clips" && this.isSameDay(new Date(h.createdAt), today)
       );
-      const has20 = history.some(
-        (h) => h.source === "watch_20_clips" && this.isSameDay(new Date(h.createdAt), today)
+      const has20 = pointsHistory.some(
+        (h) => h.action === "watch_20_clips" && this.isSameDay(new Date(h.createdAt), today)
       );
 
       if (newCount >= 5 && !has5) {

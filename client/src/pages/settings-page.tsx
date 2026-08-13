@@ -1099,6 +1099,10 @@ export default function SettingsPage() {
     // Persist in canonical GAMER_TAG_OPTIONS order (excluding streamer, tracked separately).
     setPrimaryUserType(KNOWN_GAMER_TAG_IDS.filter(t => t !== 'streamer' && next.includes(t)).join(','));
   };
+  // YouTube streaming-platform connect is disabled pending Google OAuth app
+  // verification (unverified apps show users a scary warning screen). Flip
+  // back to true once verification is complete.
+  const YOUTUBE_STREAMING_ENABLED = false;
   const [streamPlatform, setStreamPlatform] = useState<string>((user as any)?.streamPlatform || 'twitch');
   const [streamChannelName, setStreamChannelName] = useState<string>((user as any)?.streamChannelName || '');
   const [showLiveOverlay, setShowLiveOverlay] = useState<boolean>((user as any)?.showLiveOverlay || false);
@@ -5009,7 +5013,7 @@ export default function SettingsPage() {
                 </>
 
                 {/* YouTube Connection */}
-                <>
+                {YOUTUBE_STREAMING_ENABLED && <>
                     {(user as any)?.youtubeVerified ? (
                       <div className="rounded-xl border border-[#FF0000]/20 bg-[#FF0000]/5 px-4 py-3 space-y-3">
                         <div className="flex items-center gap-3">
@@ -5084,7 +5088,7 @@ export default function SettingsPage() {
                         </div>
                       </div>
                     )}
-                </>
+                </>}
 
                 {/* LIVE Badge Toggle */}
                 <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
@@ -5194,20 +5198,22 @@ export default function SettingsPage() {
                     >
                       Kick
                     </button>
-                    <button
-                      type="button"
-                      disabled={!isStreamingEnabled}
-                      onClick={() => setStreamPlatform('youtube')}
-                      className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                        !isStreamingEnabled
-                          ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
-                          : streamPlatform === 'youtube'
-                          ? 'border-[#FF0000] bg-[#FF0000]/20 text-[#FF0000]'
-                          : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
-                      }`}
-                    >
-                      YouTube
-                    </button>
+                    {YOUTUBE_STREAMING_ENABLED && (
+                      <button
+                        type="button"
+                        disabled={!isStreamingEnabled}
+                        onClick={() => setStreamPlatform('youtube')}
+                        className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                          !isStreamingEnabled
+                            ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
+                            : streamPlatform === 'youtube'
+                            ? 'border-[#FF0000] bg-[#FF0000]/20 text-[#FF0000]'
+                            : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
+                        }`}
+                      >
+                        YouTube
+                      </button>
+                    )}
                     <button
                       type="button"
                       disabled={!isStreamingEnabled}
@@ -5350,7 +5356,7 @@ export default function SettingsPage() {
                   )}
 
                   {/* YouTube OAuth connect option */}
-                  {streamPlatform === 'youtube' && isStreamingEnabled && oauthConfig?.youtube && (
+                  {YOUTUBE_STREAMING_ENABLED && streamPlatform === 'youtube' && isStreamingEnabled && oauthConfig?.youtube && (
                     <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.youtubeVerified ? 'border-[#FF0000]/30 bg-[#FF0000]/5' : 'border-slate-700 bg-slate-800/30'}`}>
                       {(user as any)?.youtubeVerified ? (
                         <div className="flex items-center justify-between">
@@ -5480,7 +5486,7 @@ export default function SettingsPage() {
                       Kick OAuth is not configured for this app. Contact the administrator to enable it.
                     </p>
                   )}
-                  {isStreamingEnabled && streamPlatform === 'youtube' && !oauthConfig?.youtube && (
+                  {YOUTUBE_STREAMING_ENABLED && isStreamingEnabled && streamPlatform === 'youtube' && !oauthConfig?.youtube && (
                     <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-slate-700 p-3">
                       YouTube OAuth is not configured for this app. Contact the administrator to enable it.
                     </p>

@@ -8,6 +8,7 @@ import { storage } from '../storage';
 import { insertClipSchema } from '@shared/schema';
 import { VideoProcessor } from '../video-processor';
 import { XPService } from '../xp-service';
+import { CreatorMilestoneService } from '../creator-milestone-service';
 
 const tempDir = path.join(process.cwd(), "temp");
 if (!fs.existsSync(tempDir)) {
@@ -410,6 +411,10 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
     `Earned 250 XP for uploading a ${videoType === 'reel' ? 'reel' : 'clip'}`,
     clip.id
   );
+  // "Upload Today" daily challenge bonus — separate from the flat upload XP above.
+  CreatorMilestoneService.checkFirstUploadOfDay(userId).catch((err) => {
+    console.error('Error checking first-upload-of-day milestone:', err);
+  });
 
   const baseUrl = 'https://app.gamefolio.com';
   const user = await storage.getUser(userId);
