@@ -227,8 +227,8 @@ function ChallengeCard({ challenge, isLoading }: { challenge: Challenge; isLoadi
 
   if (isLoading) {
     return (
-      <div className="flex-shrink-0 rounded-2xl p-4"
-        style={{ width: 188, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+      <div className="flex-shrink-0 rounded-2xl p-4 w-[82vw] max-w-[188px] sm:w-[188px]"
+        style={{ scrollSnapAlign: 'start', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
         <Skeleton className="w-12 h-12 rounded-xl mb-3" />
         <Skeleton className="h-3 w-1/2 mb-2" />
         <Skeleton className="h-5 w-3/4 mb-3" />
@@ -266,9 +266,9 @@ function ChallengeCard({ challenge, isLoading }: { challenge: Challenge; isLoadi
   return (
     // No overflow-hidden — allows hover lift to not clip card content
     <div
-      className="flex-shrink-0 relative rounded-2xl p-4 transition-transform duration-200 hover:-translate-y-[3px]"
+      className="flex-shrink-0 relative rounded-2xl p-4 transition-transform duration-200 hover:-translate-y-[3px] w-[82vw] max-w-[188px] sm:w-[188px]"
       style={{
-        width: 188,
+        scrollSnapAlign: 'start',
         background: bgColor,
         border: `1px solid ${borderColor}`,
         boxShadow: cardGlow,
@@ -364,17 +364,17 @@ function StreakIndicator({ streak }: { streak: number }) {
   const bonusPct = streak >= 30 ? 50 : streak >= 14 ? 30 : streak >= 7 ? 20 : streak >= 3 ? 10 : 0;
   return (
     <div
-      className="flex items-center gap-2 px-3 py-2 rounded-xl"
+      className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl flex-shrink-0"
       style={{ background: 'rgba(255,100,0,0.08)', border: '1px solid rgba(255,100,0,0.2)' }}
     >
-      <Flame className="w-4 h-4 flex-shrink-0" style={{ color: '#FF6B1A' }} />
-      <div>
-        <div className="flex items-baseline gap-1.5">
+      <Flame className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#FF6B1A' }} />
+      <div className="min-w-0">
+        <div className="flex items-baseline gap-1">
           <span className="text-sm font-extrabold text-white leading-none">{streak}</span>
-          <span className="text-[10px] font-semibold" style={{ color: 'rgba(255,255,255,0.5)' }}>day streak</span>
+          <span className="text-[10px] font-semibold whitespace-nowrap" style={{ color: 'rgba(255,255,255,0.5)' }}>day streak</span>
         </div>
         {bonusPct > 0 && (
-          <div className="text-[10px] font-bold mt-0.5" style={{ color: '#FF8C42' }}>
+          <div className="text-[10px] font-bold mt-0.5 whitespace-nowrap" style={{ color: '#FF8C42' }}>
             +{bonusPct}% XP bonus
           </div>
         )}
@@ -505,25 +505,29 @@ export function DailyXPChallenges() {
         {/* Summary bar + streak (authenticated users) */}
         {user && (
           <div
-            className="rounded-xl px-4 py-3"
+            className="rounded-xl px-3 py-3 sm:px-4 sm:py-3"
             style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
           >
-            {/* Top row: XP available + streak */}
-            <div className="flex items-start justify-between gap-3 mb-3">
-              {/* XP summary */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
+            {/* Top row: XP left, streak right — never overlaps */}
+            <div className="flex items-start justify-between gap-2 mb-3">
+
+              {/* Left: label + reset timer + XP total */}
+              <div className="min-w-0 flex-1">
+                {/* "Today's XP" label */}
+                <div className="flex items-center gap-1.5 mb-1">
                   <Zap className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#B7FF18' }} />
                   <span className="text-[11px] font-semibold text-white/55">Today's XP</span>
-                  <div className="ml-auto">
-                    <CountdownBadge />
-                  </div>
                 </div>
-                <div className="flex items-baseline gap-1.5">
+                {/* Reset timer — own row, never competes with streak */}
+                <div className="mb-1.5">
+                  <CountdownBadge />
+                </div>
+                {/* Big XP number */}
+                <div className="flex items-baseline gap-1.5 flex-wrap">
                   <span className="text-xl font-extrabold leading-none" style={{ color: '#B7FF18' }}>
                     {earnedXP.toLocaleString()}
                   </span>
-                  <span className="text-xs text-white/40 font-medium">
+                  <span className="text-xs text-white/40 font-medium whitespace-nowrap">
                     / {totalXPAvailable.toLocaleString()} available
                   </span>
                 </div>
@@ -532,7 +536,7 @@ export function DailyXPChallenges() {
                 </div>
               </div>
 
-              {/* Streak */}
+              {/* Right: streak badge */}
               {streak > 0 && <StreakIndicator streak={streak} />}
             </div>
 
@@ -549,28 +553,29 @@ export function DailyXPChallenges() {
               />
             </div>
 
-            {/* All-challenges bonus row */}
+            {/* All-challenges bonus row — three-column on all widths */}
             <div
-              className="flex items-center justify-between pt-2.5"
+              className="flex items-center gap-2 pt-2.5"
               style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
             >
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm" style={{ filter: allDone ? 'drop-shadow(0 0 6px rgba(183,255,26,0.7))' : 'none' }}>
+              {/* Trophy + label */}
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                <span className="text-sm flex-shrink-0" style={{ filter: allDone ? 'drop-shadow(0 0 6px rgba(183,255,26,0.7))' : 'none' }}>
                   🏆
                 </span>
-                <span className="text-[11px] font-semibold text-white/55">All Challenges Bonus</span>
+                <span className="text-[11px] font-semibold text-white/55 truncate">All Challenges Bonus</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  <Zap className="w-3.5 h-3.5" style={{ color: allDone ? '#B7FF18' : 'rgba(183,255,26,0.45)' }} />
-                  <span className="text-xs font-extrabold" style={{ color: allDone ? '#B7FF18' : 'rgba(183,255,26,0.45)' }}>
-                    +1,000 XP
-                  </span>
-                </div>
-                <span className="text-[10px] text-white/35">
-                  {allDone ? 'Claimed! 🎉' : `${completedCount}/${challenges.length} done`}
+              {/* XP amount */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <Zap className="w-3.5 h-3.5 flex-shrink-0" style={{ color: allDone ? '#B7FF18' : 'rgba(183,255,26,0.45)' }} />
+                <span className="text-xs font-extrabold whitespace-nowrap" style={{ color: allDone ? '#B7FF18' : 'rgba(183,255,26,0.45)' }}>
+                  +1,000 XP
                 </span>
               </div>
+              {/* Progress */}
+              <span className="text-[10px] text-white/35 flex-shrink-0 whitespace-nowrap">
+                {allDone ? 'Claimed! 🎉' : `${completedCount}/${challenges.length} done`}
+              </span>
             </div>
           </div>
         )}
@@ -606,7 +611,13 @@ export function DailyXPChallenges() {
           onPointerCancel={stopDragging}
           onLostPointerCapture={stopDragging}
           className={`flex gap-3 overflow-x-auto pb-3 px-4 sm:px-6 md:px-8 select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: 'pan-y' }}
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            touchAction: 'pan-y',
+            scrollSnapType: 'x mandatory',
+            scrollPaddingLeft: '1rem', /* matches px-4 so first card snaps flush */
+          }}
         >
           {(activityLoading && user)
             ? Array.from({ length: 6 }).map((_, i) => (
