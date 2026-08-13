@@ -405,43 +405,40 @@ export function MobileTrendingViewer({ content: rawContent, initialIndex = 0, on
                 onClick={e => e.stopPropagation()}
               >
                 <div className="pr-14" style={{ pointerEvents: 'auto' }}>
-                  <div className="mb-1.5">
-                    {/* Avatar — sits above the username row */}
+                  {/* Creator row — avatar, @gamertag and Follow all on one line */}
+                  <div className="flex items-center gap-2 mb-1.5 min-w-0">
                     <Link
                       href={`/profile/${item.user.username}`}
-                      className="flex-shrink-0 no-underline inline-block mb-1"
+                      className="flex-shrink-0 no-underline"
                       data-testid={`link-user-${item.user.username}`}
                     >
-                      <div className="w-12 h-12 rounded-full overflow-hidden" style={{ border: '2px solid #B7FF1A' }}>
+                      <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid #B7FF1A' }}>
                         <AuthorAvatar
                           avatarUrl={item.user.avatarUrl}
                           displayName={item.user.displayName}
                         />
                       </div>
                     </Link>
-                    {/* Username + follow — below avatar */}
-                    <div className="flex items-center gap-2">
-                      <ProfileHoverCard username={item.user.username}>
-                        <Link
-                          href={`/profile/${item.user.username}`}
-                          className="no-underline flex-shrink-0"
-                        >
-                          <span className="text-white font-bold text-[11px] drop-shadow leading-tight">
-                            @{item.user.username}
-                          </span>
-                        </Link>
-                      </ProfileHoverCard>
-                      {!isSelf && !isFollowing && (
-                        <button
-                          onClick={handleFollowPress}
-                          disabled={followMutation.isPending}
-                          className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all"
-                          style={{ background: '#B7FF1A', color: '#000', border: '1px solid transparent' }}
-                        >
-                          {followMutation.isPending ? '…' : 'Follow'}
-                        </button>
-                      )}
-                    </div>
+                    <ProfileHoverCard username={item.user.username}>
+                      <Link
+                        href={`/profile/${item.user.username}`}
+                        className="no-underline min-w-0 shrink"
+                      >
+                        <span className="text-white font-bold text-[13px] drop-shadow leading-tight truncate block">
+                          @{item.user.username}
+                        </span>
+                      </Link>
+                    </ProfileHoverCard>
+                    {!isSelf && !isFollowing && (
+                      <button
+                        onClick={handleFollowPress}
+                        disabled={followMutation.isPending}
+                        className="text-[12px] font-bold px-3 py-1 rounded-full flex-shrink-0 transition-all"
+                        style={{ background: '#B7FF1A', color: '#071013' }}
+                      >
+                        {followMutation.isPending ? '…' : 'Follow'}
+                      </button>
+                    )}
                   </div>
 
                   <p className="text-white font-bold text-[13px] drop-shadow mb-0.5 leading-snug">
