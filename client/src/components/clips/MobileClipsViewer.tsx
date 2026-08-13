@@ -164,7 +164,9 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
     },
   });
 
-  const caption = [clip.title, clip.description].filter(Boolean).join(' — ');
+  const postTitle = clip.title?.trim() || '';
+  const postDescription = clip.description?.trim() || '';
+  const caption = [postTitle, postDescription].filter(Boolean).join(' — ');
   const captionLong = caption.length > 60;
   const commentsOverlay = commentsOpen && isMobile;
 
@@ -209,36 +211,26 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
       {!commentsOverlay && (<>
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       <div className="px-4 pt-6 pb-2 flex-shrink-0">
-        <div className="flex items-start gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
           <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
             <CustomAvatar user={clip.user as any} size="sm" showBorder={true} />
           </Link>
 
-          <ProfileHoverCard username={clip.user.username}>
-          <div className="flex-1 min-w-0 cursor-default">
-            <div className="flex items-center gap-1.5">
-              <Link href={`/profile/${clip.user.username}`} className="no-underline min-w-0">
-                <span className="font-bold text-[15px] leading-tight truncate block" style={{ color: '#F5F7F2' }}>
-                  {clip.user.displayName || clip.user.username}
+          <div className="min-w-0 shrink">
+            <ProfileHoverCard username={clip.user.username}>
+              <Link
+                href={`/profile/${clip.user.username}`}
+                className="flex min-w-0 items-center gap-1.5 no-underline"
+              >
+                <span className="font-bold text-[15px] leading-tight truncate" style={{ color: '#F5F7F2' }}>
+                  @{clip.user.username}
                 </span>
+                {isPro && <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#B7FF1A' }} />}
+                <PartnerBadge isPartner={(clip.user as any).isPartner} size="sm" />
+                <AmbassadorBadge isAmbassador={(clip.user as any).isAmbassador} size="sm" />
               </Link>
-              {isPro && <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#B7FF1A' }} />}
-              <PartnerBadge isPartner={(clip.user as any).isPartner} size="sm" />
-              <AmbassadorBadge isAmbassador={(clip.user as any).isAmbassador} size="sm" />
-            </div>
-            <Link href={`/profile/${clip.user.username}`} className="no-underline">
-              <span className="text-[13px] block leading-tight mt-0.5" style={{ color: '#7E887A' }}>
-                @{clip.user.username}
-              </span>
-            </Link>
-            {clip.game?.name && gameSlug && (
-              <Link href={`/games/${gameSlug}`} className="inline-flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity">
-                <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-                <span className="text-[12px] font-medium" style={{ color: '#B7FF1A' }}>{clip.game.name}</span>
-              </Link>
-            )}
+            </ProfileHoverCard>
           </div>
-          </ProfileHoverCard>
 
           <div className="flex items-center gap-2 flex-shrink-0">
             {!isSelf && !isAlreadyFollowing && (
@@ -255,6 +247,9 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
                 {followMutation.isPending ? '…' : 'Follow'}
               </button>
             )}
+          </div>
+
+          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             <TrendingClipMenu clip={clip} />
           </div>
         </div>
@@ -265,11 +260,18 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
         className="flex-1 min-h-0 overflow-hidden px-4"
         style={{ background: '#081017' }}
       >
-        {caption && (
+        {(postTitle || postDescription || clip.game?.name) && (
           <div className="pb-2">
-            <p className="text-[14px] leading-relaxed line-clamp-2" style={{ color: '#B8C0AE' }}>
-              {caption}
-            </p>
+            {postTitle && (
+              <p className="text-[14px] font-medium leading-relaxed line-clamp-1" style={{ color: '#F5F7F2' }}>
+                {postTitle}
+              </p>
+            )}
+            {postDescription && (
+              <p className="text-[14px] leading-relaxed line-clamp-2" style={{ color: '#B8C0AE' }}>
+                {postDescription}
+              </p>
+            )}
             {captionLong && (
               <button
                 onClick={(e) => { e.stopPropagation(); setDescSheetOpen(true); }}
@@ -278,6 +280,17 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
               >
                 … more
               </button>
+            )}
+            {clip.game?.name && gameSlug && (
+              <Link
+                href={`/games/${gameSlug}`}
+                className="inline-flex items-center gap-1 mt-1 hover:opacity-80 transition-opacity"
+              >
+                <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
+                <span className="text-[12px] font-medium truncate" style={{ color: '#B7FF1A' }}>
+                  {clip.game.name}
+                </span>
+              </Link>
             )}
           </div>
         )}
