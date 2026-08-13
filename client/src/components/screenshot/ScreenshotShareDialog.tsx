@@ -221,14 +221,14 @@ export function ScreenshotShareDialog({
             </div>
           ) : shareData ? (
             <>
-              {/* Screenshot preview — capped height on mobile */}
+              {/* Screenshot preview — preserve the full image height on mobile */}
               <div className="flex justify-center">
-                <div className="relative w-full max-h-[140px] sm:max-h-[180px] aspect-video bg-[#1B2A33] rounded-xl overflow-hidden border border-[#1B2A33]/80">
+                <div className="relative w-full sm:max-h-[180px] sm:aspect-video bg-[#1B2A33] rounded-xl overflow-hidden border border-[#1B2A33]/80">
                   {shareData.imageUrl && (
                     <img
                       src={shareData.imageUrl}
                       alt="Screenshot preview"
-                      className="w-full h-full object-contain sm:object-cover"
+                      className="block w-full h-auto object-contain sm:h-full sm:object-cover"
                       data-testid="img-screenshot-preview"
                     />
                   )}
