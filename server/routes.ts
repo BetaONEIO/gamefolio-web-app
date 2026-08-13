@@ -4921,15 +4921,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Lootbox
       const lootboxStatus = await storage.getDailyLootboxStatus(userId);
 
-      // Rivals mirror the weekly leaderboard shown in the UI. Keep the
-      // leaderboard's stored totals, including fractional values, so this
-      // compact card reflects the same competition data as the full board.
-      let currentWeekBoard = await LeaderboardService.getCurrentWeekLeaderboard(9999);
-      if (!currentWeekBoard || currentWeekBoard.length === 0) {
-        currentWeekBoard = await LeaderboardService.getPreviousWeekLeaderboard(9999);
-      }
-      const rankIndex = currentWeekBoard.findIndex((e: any) => Number(e.userId) === userId);
-      const rank = rankIndex >= 0 ? Number(currentWeekBoard[rankIndex].rank ?? rankIndex + 1) : null;
+      // Rivals — same rolling 7-day user_xp_history window as the full
+      // weekly leaderboard page, so the two views are always in sync.
+      const rivalsNow = new Date();
+      const rivalsWeekStart = new Date(rivalsNow.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const rivalsResult = await db.execute(sql`
+        WITH week_board AS (
+          SELECT
+            u.id                                   AS "userId",
+            COALESCE(SUM(xh.xp_amount), 0)        AS "weekXP",
+            u.username,
+            u.display_name                         AS "displayName",
+            u.avatar_url                           AS "avatarUrl",
+            ROW_NUMBER() OVER (
+              ORDER BY COALESCE(SUM(xh.xp_amount), 0) DESC, u.id ASC
+            )                                      AS rank
+          FROM users u
+          LEFT JOIN user_xp_history xh
+            ON  xh.user_id    = u.id
+            AND xh.created_at >= ${rivalsWeekStart.toISOString()}
+            AND xh.created_at <  ${rivalsNow.toISOString()}
+            AND xh.xp_amount  >  0
+          WHERE u.role NOT IN ('admin', 'moderator', 'system')
+            AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+            AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+          GROUP BY u.id, u.username, u.display_name, u.avatar_url
+          HAVING COALESCE(SUM(xh.xp_amount), 0) > 0
+        ),
+        my_entry AS (
+          SELECT rank AS my_rank FROM week_board WHERE "userId" = ${userId}
+        )
+        SELECT wb."userId", wb."weekXP", wb.username, wb."displayName", wb."avatarUrl", wb.rank
+        FROM week_board wb, my_entry me
+        WHERE wb.rank BETWEEN GREATEST(1, me.my_rank - 2) AND me.my_rank + 2
+        ORDER BY wb.rank ASC
+      `);
+      const rivalsData: any[] = (rivalsResult as any).rows ?? (rivalsResult as any);
+      const rank = rivalsData.find((r: any) => Number(r.userId) === userId)?.rank ?? null;
 
       // Recent XP activity (last 20) — only entries that actually granted XP
       const recentActivity = xpHistory
@@ -4975,21 +5003,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const followersCount = followerRows[0]?.count ?? 0;
       const followingCount = followingRows[0]?.count ?? 0;
 
-      // Nearby leaderboard entries (rivals)
-      const nearbyRivals = rankIndex >= 0
-        ? currentWeekBoard
-            .slice(Math.max(0, rankIndex - 2), rankIndex + 3)
-            .map((e: any, idx: number) => ({
-              rank: Number(e.rank ?? Math.max(0, rankIndex - 2) + idx + 1),
-              userId: Number(e.userId),
-              username: typeof e.user?.username === "string" ? e.user.username.trim() : "",
-              displayName: e.user?.displayName,
-              avatarUrl: e.user?.avatarUrl,
-              totalXP: Math.round(Number(e.totalPoints ?? e.totalXP ?? 0)),
-              isMe: Number(e.userId) === userId,
-            }))
-            .filter((r: any) => r.userId > 0 && r.rank > 0 && r.username.length > 0)
-        : [];
+      // Nearby leaderboard entries (rivals) — built from the live XP query above
+      const nearbyRivals = rivalsData
+        .map((e: any) => ({
+          rank: Number(e.rank),
+          userId: Number(e.userId),
+          username: typeof e.username === "string" ? e.username.trim() : "",
+          displayName: e.displayName ?? null,
+          avatarUrl: e.avatarUrl ?? null,
+          totalXP: Math.round(Number(e.weekXP ?? 0)),
+          isMe: Number(e.userId) === userId,
+        }))
+        .filter((r: any) => r.userId > 0 && r.rank > 0 && r.username.length > 0);
 
       // Next rewards preview
       const nextLevel = user.level + 1;
