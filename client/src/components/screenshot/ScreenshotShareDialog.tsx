@@ -14,6 +14,7 @@ import { FaFacebook, FaReddit, FaWhatsapp, FaTelegram, FaEnvelope, FaLinkedin, F
 import { FaXTwitter, FaBluesky, FaTiktok, FaSnapchat, FaInstagram, FaThreads } from 'react-icons/fa6';
 import { useToast } from '@/hooks/use-toast';
 import { openShareWindow, nativeShare, isNative } from '@/lib/platform';
+import { getQueryFn } from '@/lib/queryClient';
 
 interface ShareData {
   screenshotUrl: string;
@@ -77,6 +78,7 @@ export function ScreenshotShareDialog({
 
   const { data: shareData, isLoading, error, refetch } = useQuery<ShareData>({
     queryKey: [`/api/screenshots/${screenshotId}/share`],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: open && validId,
     retry: 3,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
