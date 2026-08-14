@@ -5045,10 +5045,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Lootbox
       const lootboxStatus = await storage.getDailyLootboxStatus(userId);
 
-      // Rivals — same rolling 7-day user_xp_history window as the full
-      // weekly leaderboard page, so the two views are always in sync.
-      const rivalsNow = new Date();
-      const rivalsWeekStart = new Date(rivalsNow.getTime() - 7 * 24 * 60 * 60 * 1000);
+      // Rivals — use the same season window as /api/leaderboard/current-season/top
+      // so the rank shown here always matches the full leaderboard.
+      const rivalsSeasonDef = SEASON_DEFS[0];
+      const [rivSYear, rivSMonth] = rivalsSeasonDef.months[0].split('-').map(Number);
+      const rivLastKey = rivalsSeasonDef.months[rivalsSeasonDef.months.length - 1];
+      const [rivEYear, rivEMonth] = rivLastKey.split('-').map(Number);
+      const rivalsSeasonStart = new Date(Date.UTC(rivSYear, rivSMonth - 1, 1)).toISOString();
+      const rivalsSeasonEnd   = new Date(Date.UTC(rivEYear, rivEMonth, 1)).toISOString();
+
       const rivalsResult = await db.execute(sql`
         WITH week_board AS (
           SELECT
@@ -5063,8 +5068,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           FROM users u
           LEFT JOIN user_xp_history xh
             ON  xh.user_id    = u.id
-            AND xh.created_at >= ${rivalsWeekStart.toISOString()}
-            AND xh.created_at <  ${rivalsNow.toISOString()}
+            AND xh.created_at >= ${rivalsSeasonStart}
+            AND xh.created_at <  ${rivalsSeasonEnd}
             AND xh.xp_amount  >  0
           WHERE u.role NOT IN ('admin', 'moderator', 'system')
             AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
