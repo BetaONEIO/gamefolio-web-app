@@ -194,10 +194,10 @@ const FeaturedUsersSection = () => {
   const handleMobileScroll = () => {
     const el = mobileScrollRef.current;
     if (!el) return;
-    // Card width is 88vw; gap is 12px between cards; padding-left is 6vw.
+    // Card width is 76vw; gap is 12px between cards; padding-left is 12vw.
     // With scroll-snap-align: center, snap positions increment by (cardW + gap).
     const vw = window.innerWidth;
-    const cardW = vw * 0.88;
+    const cardW = vw * 0.76;
     const idx = Math.round(el.scrollLeft / (cardW + 12));
     setMobileActiveIdx(Math.max(0, Math.min(idx, validEntries.length - 1)));
   };
@@ -206,7 +206,7 @@ const FeaturedUsersSection = () => {
     const el = mobileScrollRef.current;
     if (!el) return;
     const vw = window.innerWidth;
-    const cardW = vw * 0.88;
+    const cardW = vw * 0.76;
     el.scrollTo({ left: idx * (cardW + 12), behavior: 'smooth' });
   };
 
@@ -253,15 +253,15 @@ const FeaturedUsersSection = () => {
               onScroll={handleMobileScroll}
               style={{
                 gap: 12,
-                /* 6vw padding on each side: first card starts at 6vw, peek = ~6vw of next */
-                padding: '20px 6vw 0',
+                /* 12vw padding on each side: first card starts at 12vw, peek = ~12vw of next */
+                padding: '20px 12vw 0',
               }}
             >
               {isLoading
                 ? Array.from({ length: 3 }).map((_, i) => (
                     <div
                       key={i}
-                      style={{ flexShrink: 0, width: '88vw', scrollSnapAlign: 'center' }}
+                      style={{ flexShrink: 0, width: '76vw', scrollSnapAlign: 'center' }}
                     >
                       <MobileCardSkeleton />
                     </div>
@@ -275,7 +275,7 @@ const FeaturedUsersSection = () => {
                   : validEntries.map((entry) => (
                       <div
                         key={entry.userId}
-                        style={{ flexShrink: 0, width: '88vw', scrollSnapAlign: 'center' }}
+                        style={{ flexShrink: 0, width: '76vw', scrollSnapAlign: 'center' }}
                       >
                         <CreatorCard entry={entry} period={period} compact />
                       </div>

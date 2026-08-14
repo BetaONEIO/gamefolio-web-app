@@ -82,10 +82,10 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
             </div>
           </div>
 
-          {/* Background + overflow container — same as standard but position:relative so height is auto */}
+          {/* Background + overflow container — flex column with min-height for portrait aspect ratio */}
           <div
             className="rounded-[inherit] overflow-hidden"
-            style={{ position: 'relative', zIndex: 2, ...theme.style }}
+            style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', minHeight: '64vh', ...theme.style }}
           >
             {theme.hasCustomBg && (
               <div
@@ -99,10 +99,10 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
               />
             )}
 
-            {/* Content — same as standard card, but flex-col without h-full */}
-            <div className="relative flex flex-col pt-7" style={{ zIndex: 3 }}>
+            {/* Content — flex-1 so it fills the min-height, flex-col so spacer pushes button to bottom */}
+            <div className="relative flex flex-col flex-1 pt-7" style={{ zIndex: 3 }}>
 
-              {/* Banner — identical to standard */}
+              {/* Banner */}
               <div className="relative flex-shrink-0 mx-2 rounded-lg overflow-hidden" style={{ height: 66 }}>
                 {hasBanner ? (
                   <>
@@ -114,8 +114,8 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
                 )}
               </div>
 
-              {/* Avatar — identical to standard */}
-              <div className="flex justify-center flex-shrink-0" style={{ marginTop: -20, position: 'relative', zIndex: 2 }}>
+              {/* Avatar */}
+              <div className="flex justify-center flex-shrink-0" style={{ marginTop: -22, position: 'relative', zIndex: 2 }}>
                 <div style={{ position: 'relative' }}>
                   {entry.rank === 1 && (
                     <Lottie
@@ -124,8 +124,8 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
                       autoplay
                       style={{
                         position: 'absolute',
-                        width: 112,
-                        height: 123,
+                        width: 120,
+                        height: 132,
                         left: '50%',
                         top: '50%',
                         transform: 'translate(-50%, -48%)',
@@ -136,7 +136,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
                   )}
                   <div
                     className="rounded-full overflow-hidden flex-shrink-0"
-                    style={{ width: 56, height: 56, border: `2.5px solid ${borderColor}`, boxShadow: `0 0 14px ${borderColor}88`, position: 'relative', zIndex: 1 }}
+                    style={{ width: 64, height: 64, border: `3px solid ${borderColor}`, boxShadow: `0 0 18px ${borderColor}99`, position: 'relative', zIndex: 1 }}
                   >
                     {user.avatarUrl ? (
                       <img src={user.avatarUrl} alt={user.displayName || user.username} className="w-full h-full object-cover" />
@@ -236,7 +236,10 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
                 </div>
               </div>
 
-              {/* XP button — no flex-1 spacer, natural margin instead */}
+              {/* Spacer — pushes XP button to the bottom */}
+              <div className="flex-1" />
+
+              {/* XP button */}
               <div className="px-3 pt-3 pb-3 flex-shrink-0">
                 <div
                   className="w-full rounded-xl py-2.5 flex items-center justify-center gap-1.5 text-xs font-bold"

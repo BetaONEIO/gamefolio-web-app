@@ -232,8 +232,8 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
   const handleScroll = () => {
     const el = scrollRef.current;
     if (!el) return;
-    // cards are 88vw wide with 12px gap; padding-left is 6vw (same as Trending)
-    const cardW = window.innerWidth * 0.88;
+    // cards are 76vw wide with 12px gap; padding-left is 12vw
+    const cardW = window.innerWidth * 0.76;
     const idx   = Math.round(el.scrollLeft / (cardW + 12));
     setActiveIdx(Math.max(0, Math.min(idx, entries.length - 1)));
   };
@@ -241,13 +241,13 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
   const scrollTo = (idx: number) => {
     const el = scrollRef.current;
     if (!el) return;
-    el.scrollTo({ left: idx * (window.innerWidth * 0.88 + 12), behavior: "smooth" });
+    el.scrollTo({ left: idx * (window.innerWidth * 0.76 + 12), behavior: "smooth" });
   };
 
   if (!active) {
     return (
       <div className="flex items-center justify-center py-8 px-4">
-        <Skeleton className="rounded-2xl bg-slate-800" style={{ width: "88vw", height: 380 }} />
+        <Skeleton className="rounded-2xl bg-slate-800" style={{ width: "76vw", height: 340 }} />
       </div>
     );
   }
@@ -303,7 +303,7 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
             msOverflowStyle: "none",
             WebkitOverflowScrolling: "touch",
             gap: 12,
-            padding: "8px 6vw 0",
+            padding: "8px 12vw 0",
           } as React.CSSProperties}
         >
           {entries.map((entry, idx) => {
@@ -315,7 +315,7 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
                 key={entry.userId}
                 style={{
                   flexShrink:      0,
-                  width:           "88vw",
+                  width:           "76vw",
                   scrollSnapAlign: "center",
                   filter:          isActive ? glow : "none",
                   transition:      "filter 0.35s ease",
