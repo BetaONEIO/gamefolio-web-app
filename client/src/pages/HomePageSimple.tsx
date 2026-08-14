@@ -176,10 +176,24 @@ const LEADERBOARD_STYLES = `
   animation: pro-sparkle 1.8s ease-in-out infinite;
   filter: drop-shadow(0 0 4px #ffe135);
 }
-/* Mobile: horizontal scroll podium */
+/* Mobile: horizontal scroll podium with snap */
 @media (max-width: 639px) {
-  .lb-podium-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .lb-podium-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    scroll-snap-type: x mandatory;
+    /* left padding so first card can centre in the viewport */
+    padding-left: calc(50vw - 82px);
+  }
   .lb-podium-scroll::-webkit-scrollbar { display: none; }
+  /* trailing spacer so last card can also centre */
+  .lb-podium-scale::after {
+    content: '';
+    display: block;
+    width: calc(50vw - 82px);
+    flex-shrink: 0;
+  }
   .lb-divider { display: none !important; }
 }
 @media (min-width: 640px) {
@@ -624,7 +638,7 @@ const HomePage = () => {
 
                                     if (!winner) {
                                       return (
-                                        <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', transform:`translateY(${elevate}px)` }}>
+                                        <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', transform:`translateY(${elevate}px)`, scrollSnapAlign:'center' }}>
                                           <div className={cardClass}>
                                             <div className="fire-card flex flex-col items-center justify-center"
                                               style={{ width:228, height:408, borderRadius:16 }}>
@@ -665,7 +679,7 @@ const HomePage = () => {
                                     };
 
                                     return (
-                                      <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', transform:`translateY(${elevate}px)` }}>
+                                      <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', transform:`translateY(${elevate}px)`, scrollSnapAlign:'center' }}>
                                         <div className={`relative ${cardClass}`}>
                                           {isFirst && (
                                             <div className="absolute pointer-events-none" style={{ inset:'-10px', zIndex:10 }}>
