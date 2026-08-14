@@ -168,8 +168,8 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
                   { icon: Upload, label: 'FOLLOWING', value: entry.followingCount ?? 0 },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex flex-col items-center gap-0.5">
-                    <Icon className="w-2.5 h-2.5" style={{ color: label === 'XP' ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }} />
-                    <span className="text-[10px] font-bold leading-tight" style={{ color: label === 'XP' ? '#B7FF1A' : 'white' }}>{fmt(value)}</span>
+                    <Icon className="w-3 h-3" style={{ color: label === 'XP' ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }} />
+                    <span className="text-[13px] font-bold leading-tight" style={{ color: label === 'XP' ? '#B7FF1A' : 'white' }}>{fmt(value)}</span>
                     <span className="text-white/30 text-[7px] font-semibold tracking-wide">{label}</span>
                   </div>
                 ))}
@@ -367,8 +367,8 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
                 { icon: Upload,label: 'FOLLOWING',  value: entry.followingCount ?? 0 },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex flex-col items-center gap-0.5">
-                  <Icon className="w-2.5 h-2.5" style={{ color: label === 'XP' ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }} />
-                  <span className="text-[10px] font-bold leading-tight" style={{ color: label === 'XP' ? '#B7FF1A' : 'white' }}>{fmt(value)}</span>
+                  <Icon className="w-3 h-3" style={{ color: label === 'XP' ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }} />
+                  <span className="text-[13px] font-bold leading-tight" style={{ color: label === 'XP' ? '#B7FF1A' : 'white' }}>{fmt(value)}</span>
                   <span className="text-white/30 text-[7px] font-semibold tracking-wide">{label}</span>
                 </div>
               ))}
