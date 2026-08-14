@@ -1588,6 +1588,13 @@ export default function LeaderboardPage() {
     queryFn: () => fetch("/api/leaderboard/weekly/current?limit=200").then(r => r.json()),
   });
 
+  // Season leaderboard — used by CompetitiveOverview and RivalSection so rank
+  // shown here always matches the main season board (not a rolling weekly window).
+  const { data: pageSeasonData } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard/current-season/top", "page"],
+    queryFn: () => fetch("/api/leaderboard/current-season/top?limit=500").then(r => r.json()),
+  });
+
   // All-time leaderboard (used by CompetitiveOverview)
   const { data: alltimeData } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard"],
@@ -1607,7 +1614,7 @@ export default function LeaderboardPage() {
   });
 
   const top3 = top3Data ?? [];
-  const leaderboard = (Array.isArray(seasonData) ? seasonData : []) as LeaderboardEntry[];
+  const leaderboard = (Array.isArray(pageSeasonData) ? pageSeasonData : []) as LeaderboardEntry[];
   const playerCount = playerCountData?.count ?? alltimeData?.length ?? weeklyData?.length ?? 0;
   const leagueTiers = leagueConfigData?.tiers ?? [];
 
