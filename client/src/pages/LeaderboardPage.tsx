@@ -303,7 +303,7 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
             msOverflowStyle: "none",
             WebkitOverflowScrolling: "touch",
             gap: 12,
-            padding: "8px 12vw 0",
+            padding: "28px 12vw 28px",
           } as React.CSSProperties}
         >
           {entries.map((entry, idx) => {
@@ -378,7 +378,7 @@ function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
   };
 
   return (
-    <div className="relative rs-season-hero overflow-hidden">
+    <div className="relative rs-season-hero overflow-x-hidden sm:overflow-hidden">
       {/* Background artwork — dimmed */}
       <div
         className="absolute inset-0"
