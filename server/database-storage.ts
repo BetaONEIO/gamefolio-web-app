@@ -1253,10 +1253,12 @@ export class DatabaseStorage implements IStorage {
     );
     const clipsWithDetails: ClipWithUser[] = fetched.filter((c): c is ClipWithUser => !!c);
 
-    // Fallback: if engagement query returned nothing (e.g. transient DB startup
-    // issue or no engagement data yet), serve the most-recent clips instead so
-    // the home page hero always has content.
-    if (clipsWithDetails.length === 0) {
+    // Fallback: if engagement query returned nothing and NO game filter was
+    // applied (i.e. home-page hero context), serve the most-recent clips so
+    // the hero always has content. When a gameId was supplied we must NOT
+    // fall back to unfiltered clips — that would show random content on a
+    // game-specific page (e.g. Jackbox showing Fortnite clips).
+    if (clipsWithDetails.length === 0 && !gameId) {
       const fallbackRows = await db
         .select({ clipId: clips.id })
         .from(clips)
