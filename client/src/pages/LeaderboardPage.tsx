@@ -222,7 +222,7 @@ const RANK_LABEL: Record<number, string> = {
 
 // ── Mobile carousel: premium swipeable hero card carousel ──
 const CAROUSEL_CARD_W = 228;                   // matches CreatorCard native width
-const CAROUSEL_STEP   = 200;                   // px between card centres
+const CAROUSEL_STEP   = 215;                   // px between card centres
 
 function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
   const [activeIdx, setActiveIdx]   = useState(0);
@@ -288,7 +288,7 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
            drop-shadow glow bleed past the top/bottom edges without clipping ── */}
       <div
         className="relative w-full"
-        style={{ overflowX: "clip", overflowY: "visible", height: 355 }}
+        style={{ overflowX: "clip", overflowY: "visible", height: 420 }}
       >
 
         {/* Cards */}
@@ -297,8 +297,8 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
           if (Math.abs(offset) > 2) return null;
 
           const isActive = offset === 0;
-          const scale    = isActive ? 0.82 : 0.74;
-          const opacity  = isActive ? 1 : 0.35;
+          const scale    = isActive ? 0.95 : 0.70;
+          const opacity  = isActive ? 1 : 0.32;
           const tx       = offset * CAROUSEL_STEP;
 
           return (
