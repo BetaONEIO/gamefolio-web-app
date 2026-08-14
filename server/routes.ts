@@ -27,7 +27,7 @@ import { eq, sql, desc, inArray, and } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
 import { captureRouteError } from "./sentry";
-import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes } from "@shared/schema";
+import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog } from "@shared/schema";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -95,6 +95,7 @@ import { initializeRealtimeNotificationService } from './realtime-notification-s
 import { adminMiddleware } from "./middleware/admin";
 import { optionalHybridAuth } from "./middleware/optional-hybrid-auth";
 import { hybridAuth, hybridEmailVerification } from "./middleware/hybrid-auth";
+import { impersonationAuthMiddleware } from "./middleware/impersonation-auth";
 import { isDeveloperSubdomainRequest } from "./middleware/subdomain-check";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
@@ -497,6 +498,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // Admin "impersonate user" bridge: if a valid impersonation token is present,
+  // authenticate as the *target* user (not the admin) for this request. Runs
+  // before the generic native-JWT bridge below, which no-ops once req.user is
+  // set. Deliberately not applied to /api/admin/* — see the middleware's own
+  // docblock for why that matters.
+  app.use(impersonationAuthMiddleware);
 
   // Bearer-token bridge: if the session didn't authenticate the request but a
   // valid Authorization: Bearer JWT is present, populate req.user from it.
@@ -2724,6 +2732,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(null);
     }
 
+    const impersonation = (req as any).impersonation as
+      | { tokenId: string; adminId: number; adminUsername: string }
+      | undefined;
+    const impersonatedBy = impersonation
+      ? { adminId: impersonation.adminId, adminUsername: impersonation.adminUsername }
+      : undefined;
+
     try {
       const freshUser = await storage.getUserById((req.user as any).id);
       if (freshUser) {
@@ -2840,6 +2855,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           vpzoneShowOnProfile: u.vpzoneShowOnProfile ?? true,
           referralCode: u.referralCode || null,
           referredBy: u.referredBy || null,
+          impersonatedBy,
         });
       }
     } catch (error) {
@@ -2918,7 +2934,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       vpzoneChannelName: u.vpzoneChannelName || null,
       vpzoneVerified: u.vpzoneVerified || false,
       vpzoneShowOnProfile: u.vpzoneShowOnProfile ?? true,
+      impersonatedBy,
     });
+  });
+
+  // Self-service end of an impersonation session — callable by the impersonated
+  // request itself (i.e. the admin's impersonation-token tab clicking "Exit"),
+  // not admin-gated. Closes out the audit row so it has an endedAt.
+  app.post("/api/impersonation/end", async (req, res) => {
+    const impersonation = (req as any).impersonation as { tokenId: string } | undefined;
+    if (!impersonation) {
+      return res.status(400).json({ message: "Not an impersonation session" });
+    }
+    try {
+      await db
+        .update(impersonationAuditLog)
+        .set({ endedAt: new Date(), endReason: "manual" })
+        .where(and(eq(impersonationAuditLog.tokenId, impersonation.tokenId), sql`${impersonationAuditLog.endedAt} IS NULL`));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error ending impersonation session:", error);
+      res.status(500).json({ message: "Error ending impersonation session" });
+    }
   });
 
   // ==========================================

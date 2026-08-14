@@ -28,6 +28,7 @@ import { AdminProtectedRoute } from "@/components/auth/admin-protected-route";
 import { AmbassadorProtectedRoute } from "@/components/auth/ambassador-protected-route";
 import { OnboardingGuard } from "@/components/auth/onboarding-guard";
 import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
+import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { PageTransition } from "@/components/ui/page-transition";
 import { BannerSettings } from "@shared/schema";
 import { WebPlatformRedirect } from "@/components/WebPlatformRedirect";
@@ -144,6 +145,7 @@ const PostUploadSuccessPage = lazyWithRecovery(() => import("./pages/PostUploadS
 const VerifyEmailPage = lazyWithRecovery(() => import("./pages/verify-email"));
 const VerifyCodePage = lazyWithRecovery(() => import("./pages/verify-code-page"));
 const OAuthAuthorizePage = lazyWithRecovery(() => import("./pages/OAuthAuthorizePage"));
+const ImpersonateSessionPage = lazyWithRecovery(() => import("./pages/ImpersonateSessionPage"));
 const DeveloperHomePage = lazyWithRecovery(() => import("./pages/developer/DeveloperHomePage"));
 const MyAppsPage = lazyWithRecovery(() => import("./pages/developer/MyAppsPage"));
 const CreateAppPage = lazyWithRecovery(() => import("./pages/developer/CreateAppPage"));
@@ -386,7 +388,8 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                            location.startsWith("/leaderboard/embed") ||
                            location.startsWith("/view/") ||
                            location === "/invite" ||
-                           location === "/register";
+                           location === "/register" ||
+                           location === "/impersonate-session";
 
   if (isAuthOrOnboarding) {
     return <>{children}</>;
@@ -395,6 +398,8 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
       <Header />
+
+      <ImpersonationBanner />
 
       {/* Email Verification Banner - shown app-wide until the user verifies */}
       {!isDeveloperSubdomain && user && !user.emailVerified && (
@@ -568,6 +573,7 @@ function Router() {
           <Route path="/verify-email" component={VerifyEmailPage} />
           <Route path="/verify-code" component={VerifyCodePage} />
           <Route path="/oauth/consent" component={OAuthAuthorizePage} />
+          <Route path="/impersonate-session" component={ImpersonateSessionPage} />
           <Route path="/developer" component={DeveloperHomePage} />
           <ProtectedRoute path="/developer/apps/new" component={CreateAppPage} />
           <ProtectedRoute path="/developer/apps/:id" component={AppDetailPage} />

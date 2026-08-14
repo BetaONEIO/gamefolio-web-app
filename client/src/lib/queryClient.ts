@@ -10,6 +10,19 @@ import {
 import { isNative } from "./platform";
 import { getDeviceIdSync } from "./device-id";
 
+// Admin "impersonate user" support tool: when present, this sessionStorage
+// entry (tab-scoped by design — never shared with the admin's own logged-in
+// tab) takes priority over the normal native/session auth token. See
+// client/src/pages/ImpersonateSessionPage.tsx for how it gets set.
+export const IMPERSONATION_TOKEN_KEY = "gf_impersonation_token";
+function getImpersonationToken(): string | null {
+  try {
+    return sessionStorage.getItem(IMPERSONATION_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
 // Diagnostic for the "logged out after force-quit" investigation: report the
 // first /api/user call of this app session in detail (token attached, initial
 // status, refresh attempted/outcome, final status) - this is the specific
@@ -81,7 +94,8 @@ export async function authedFetch(
   const callerStack = shouldReport ? new Error().stack ?? "" : "";
 
   const headers = new Headers(init.headers ?? {});
-  const token = (await getAccessToken()) ?? getAccessTokenSync();
+  const impersonationToken = getImpersonationToken();
+  const token = impersonationToken ?? (await getAccessToken()) ?? getAccessTokenSync();
   const tokenAttached = !!token && !headers.has("Authorization");
   if (tokenAttached) {
     headers.set("Authorization", `Bearer ${token}`);
@@ -99,7 +113,10 @@ export async function authedFetch(
 
   let refreshAttempted = false;
   let refreshSucceeded = false;
-  if (res.status === 401 && (await getRefreshToken())) {
+  // An expired/invalid impersonation token should just fail through — refreshing
+  // would try to renew the admin's own native refresh token, which is unrelated
+  // and would silently swap the impersonated session back to the admin's.
+  if (!impersonationToken && res.status === 401 && (await getRefreshToken())) {
     refreshAttempted = true;
     const newToken = await refreshAccessToken();
     if (newToken) {

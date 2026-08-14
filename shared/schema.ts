@@ -558,6 +558,24 @@ export const pushBroadcasts = pgTable("push_broadcasts", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Admin "impersonate user" audit trail — every impersonation session, who
+// started it, why, and when it ended.
+export const impersonationAuditLog = pgTable("impersonation_audit_log", {
+  id: serial("id").primaryKey(),
+  tokenId: text("token_id").notNull().unique(),
+  adminId: integer("admin_id").notNull().references(() => users.id),
+  adminUsername: text("admin_username").notNull(),
+  targetUserId: integer("target_user_id").notNull().references(() => users.id),
+  targetUsername: text("target_username").notNull(),
+  reason: text("reason").notNull(),
+  ipAddress: text("ip_address"),
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  endedAt: timestamp("ended_at"),
+  endReason: text("end_reason"),
+});
+export type ImpersonationAuditLog = typeof impersonationAuditLog.$inferSelect;
+export type InsertImpersonationAuditLog = typeof impersonationAuditLog.$inferInsert;
+
 // Clip mentions table - for tracking user mentions in clip uploads
 export const clipMentions = pgTable("clip_mentions", {
   id: serial("id").primaryKey(),
