@@ -220,56 +220,40 @@ const RANK_LABEL: Record<number, string> = {
   3: "🥉 3rd Place",
 };
 
-// ── Mobile carousel: premium swipeable hero card carousel ──
-const CAROUSEL_CARD_W = 228;                   // matches CreatorCard native width
-const CAROUSEL_STEP   = 215;                   // px between card centres
-
+// ── Mobile carousel: CSS scroll-snap, browser-native centering ──
 function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
-  const [activeIdx, setActiveIdx]   = useState(0);
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
-  const swiping     = useRef(false);
+  const scrollRef  = useRef<HTMLDivElement>(null);
+  const [activeIdx, setActiveIdx] = useState(0);
 
   const active     = entries[activeIdx];
   const activeRank = active?.rank ?? activeIdx + 1;
-  const podiumSrc  = PODIUM_IMG[activeRank]   ?? null;
-  const podiumW    = PODIUM_IMG_W[activeRank] ?? "w-24";
-  const glowFilter = PODIUM_GLOW[activeRank]  ?? "none";
+  const podiumSrc  = PODIUM_IMG[activeRank] ?? null;
 
-  const goTo = (i: number) =>
-    setActiveIdx(Math.max(0, Math.min(i, entries.length - 1)));
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-    swiping.current = true;
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // cards are 88vw wide with 12px gap; padding-left is 6vw (same as Trending)
+    const cardW = window.innerWidth * 0.88;
+    const idx   = Math.round(el.scrollLeft / (cardW + 12));
+    setActiveIdx(Math.max(0, Math.min(idx, entries.length - 1)));
   };
 
-  const onTouchEnd = (e: React.TouchEvent) => {
-    if (!swiping.current) return;
-    swiping.current = false;
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    const dy = e.changedTouches[0].clientY - touchStartY.current;
-    if (Math.abs(dx) < Math.abs(dy) || Math.abs(dx) < 36) return;
-    goTo(dx < 0 ? activeIdx + 1 : activeIdx - 1);
+  const scrollTo = (idx: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ left: idx * (window.innerWidth * 0.88 + 12), behavior: "smooth" });
   };
 
   if (!active) {
     return (
-      <div className="flex items-end justify-center gap-3 pt-8 pb-4 px-4">
-        <Skeleton className="w-[130px] h-[260px] rounded-2xl bg-slate-800" />
-        <Skeleton className="w-[200px] h-[310px] rounded-2xl bg-slate-800" />
-        <Skeleton className="w-[130px] h-[260px] rounded-2xl bg-slate-800" />
+      <div className="flex items-center justify-center py-8 px-4">
+        <Skeleton className="rounded-2xl bg-slate-800" style={{ width: "88vw", height: 380 }} />
       </div>
     );
   }
 
   return (
-    <div
-      className="relative w-full select-none"
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
-    >
+    <div className="relative w-full select-none">
       {/* ── Page heading ── */}
       <div className="text-center pt-5 pb-3 px-4">
         <p className="text-[#B7FF1A] text-[10px] tracking-[0.22em] uppercase font-bold mb-1">
@@ -283,83 +267,46 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
         </p>
       </div>
 
-      {/* ── Card sliding area ──
-           overflowX:clip clips side cards; overflowY:visible lets the
-           drop-shadow glow bleed past the top/bottom edges without clipping ── */}
+      {/* ── Snap scroll track ── */}
       <div
-        className="relative w-full"
-        style={{ overflowX: "clip", overflowY: "visible", height: 420 }}
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="lb-mobile-snap"
+        style={{
+          display: "flex",
+          overflowX: "auto",
+          scrollSnapType: "x mandatory",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          WebkitOverflowScrolling: "touch",
+          gap: 12,
+          /* 6vw padding each side: first card centred, ~6vw peek of adjacent */
+          padding: "8px 6vw 0",
+        } as React.CSSProperties}
       >
-
-        {/* Cards */}
         {entries.map((entry, idx) => {
-          const offset   = idx - activeIdx;
-          if (Math.abs(offset) > 2) return null;
-
-          const isActive = offset === 0;
-          const scale    = isActive ? 0.95 : 0.70;
-          const opacity  = isActive ? 1 : 0.32;
-          const tx       = offset * CAROUSEL_STEP;
-
+          const isActive = idx === activeIdx;
+          const rank     = entry.rank ?? idx + 1;
+          const glow     = PODIUM_GLOW[rank] ?? "none";
           return (
             <div
               key={entry.userId}
-              onClick={() => !isActive && goTo(idx)}
               style={{
-                position:   "absolute",
-                top:        4,
-                left:       "50%",
-                width:      0,
-                transform:  `translateX(${tx}px)`,
-                opacity,
-                transition: "transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.35s ease",
-                zIndex:     isActive ? 10 : 4 - Math.abs(offset),
-                cursor:     isActive ? "default" : "pointer",
+                flexShrink:      0,
+                width:           "88vw",
+                scrollSnapAlign: "center",
+                filter:          isActive ? glow : "none",
+                transition:      "filter 0.35s ease",
               }}
             >
-              <div style={{
-                position:        "absolute",
-                left:            0,
-                width:           CAROUSEL_CARD_W,
-                filter:          isActive ? glowFilter : "none",
-                transform:       `translateX(-${CAROUSEL_CARD_W / 2}px) scale(${scale})`,
-                transformOrigin: "top center",
-                transition:      "transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94), filter 0.35s ease",
-              }}>
-                <CreatorCard entry={entry} period="season" />
-              </div>
+              <CreatorCard entry={entry} period="season" compact />
             </div>
           );
         })}
-
-        {/* ── Left arrow ── */}
-        <button
-          onClick={() => goTo(activeIdx - 1)}
-          disabled={activeIdx === 0}
-          aria-label="Previous"
-          style={{ position: "absolute", left: 10, top: "45%", transform: "translateY(-50%)", zIndex: 20 }}
-          className="w-9 h-9 rounded-full bg-black/70 border border-white/20 flex items-center justify-center text-white transition-opacity disabled:opacity-20"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-
-        {/* ── Right arrow ── */}
-        <button
-          onClick={() => goTo(activeIdx + 1)}
-          disabled={activeIdx >= entries.length - 1}
-          aria-label="Next"
-          style={{ position: "absolute", right: 10, top: "45%", transform: "translateY(-50%)", zIndex: 20 }}
-          className="w-9 h-9 rounded-full bg-black/70 border border-white/20 flex items-center justify-center text-white transition-opacity disabled:opacity-20"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
       </div>
 
-      {/* ── Podium trophy — visually connected to card, z-index above card ── */}
-      <div
-        className="flex justify-center -mt-6 pointer-events-none"
-        style={{ position: "relative", zIndex: 30 }}
-      >
+      {/* ── Podium trophy ── */}
+      <div className="flex justify-center mt-3 mb-1 pointer-events-none" style={{ zIndex: 30, position: "relative" }}>
         {podiumSrc && (
           <img
             key={activeRank}
@@ -373,15 +320,20 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
 
       {/* ── Dot pagination ── */}
       {entries.length > 1 && (
-        <div className="flex justify-center gap-1.5 mt-2 pb-3">
+        <div className="flex justify-center gap-1.5 mt-1 pb-4">
           {entries.slice(0, 15).map((_, i) => (
-            <div
+            <button
               key={i}
+              aria-label={`Go to card ${i + 1}`}
+              onClick={() => scrollTo(i)}
               style={{
                 width:        i === activeIdx ? 18 : 5,
                 height:       3,
                 borderRadius: 2,
                 background:   i === activeIdx ? "#B7FF1A" : "rgba(255,255,255,0.18)",
+                border:       "none",
+                padding:      0,
+                cursor:       "pointer",
                 transition:   "width 0.3s ease, background 0.3s ease",
               }}
             />
@@ -1525,6 +1477,7 @@ const RS_STYLES = `
   .lb-card-1-border-wrap { animation: none !important; }
 }
 .rs-season-hero { height: calc(100dvh - 72px); min-height: 520px; }
+.lb-mobile-snap::-webkit-scrollbar { display: none; }
 /* Whole podium group — scale up vs the old .72 baseline */
 .lb-desktop-podium {
   position: absolute;
