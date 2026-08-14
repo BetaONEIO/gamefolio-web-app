@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GamefolioTrendingIcon } from "@/components/icons/GamefolioTrendingIcon";
 import { CreatorCard } from "@/components/home/CreatorCard";
@@ -32,9 +32,21 @@ const STYLES = `
     background-repeat: repeat;
   }
 
+  /* Mobile snap scroll container */
+  .mobile-snap-scroll {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-snap-scroll::-webkit-scrollbar { display: none; }
+
   ${CREATOR_CARD_STYLES}
 `;
 
+// ── Desktop skeleton card ────────────────────────────────────────────────────
 function CardSkeleton() {
   return (
     <div
@@ -51,6 +63,27 @@ function CardSkeleton() {
       <Skeleton className="h-10 mx-3 rounded-xl mb-2" />
       <Skeleton className="h-10 mx-3 rounded-xl mb-auto" />
       <Skeleton className="h-9 mx-3 rounded-xl mt-4" />
+    </div>
+  );
+}
+
+// ── Mobile skeleton card (compact height) ────────────────────────────────────
+function MobileCardSkeleton() {
+  return (
+    <div
+      className="rounded-2xl overflow-hidden w-full"
+      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+    >
+      <Skeleton className="w-full" style={{ height: 90 }} />
+      <div className="flex justify-center -mt-9 mb-2">
+        <Skeleton className="rounded-full" style={{ width: 72, height: 72 }} />
+      </div>
+      <Skeleton className="h-4 w-32 mx-auto mb-1" />
+      <Skeleton className="h-3 w-24 mx-auto mb-4" />
+      <Skeleton className="h-12 mx-3 rounded-xl mb-2" />
+      <Skeleton className="h-10 mx-3 rounded-xl mb-2" />
+      <Skeleton className="h-10 mx-3 rounded-xl mb-4" />
+      <Skeleton className="h-10 mx-3 rounded-xl mb-4" />
     </div>
   );
 }
@@ -73,35 +106,32 @@ const FeaturedUsersSection = () => {
     ? [...validEntries, ...validEntries, ...validEntries]
     : [];
 
-  /* ── Scroll refs ──────────────────────────────────────────── */
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const rafRef    = useRef<number>(0);
-  const dragging  = useRef(false);
+  // ── Desktop: auto-scroll refs ─────────────────────────────────────────────
+  const scrollRef    = useRef<HTMLDivElement>(null);
+  const rafRef       = useRef<number>(0);
+  const dragging     = useRef(false);
   const scrollPosition = useRef(0);
-  const dragData  = useRef({ startX: 0, startScrollLeft: 0 });
+  const dragData     = useRef({ startX: 0, startScrollLeft: 0 });
 
-  /* ── Auto-scroll + init ───────────────────────────────────── */
+  // ── Mobile: snap carousel state ───────────────────────────────────────────
+  const mobileScrollRef  = useRef<HTMLDivElement>(null);
+  const [mobileActiveIdx, setMobileActiveIdx] = useState(0);
+
+  /* ── Desktop auto-scroll + init ─────────────────────────────────────────── */
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || validEntries.length === 0) return;
 
-    // Give layout one tick to paint cards before reading scrollWidth
     const setup = setTimeout(() => {
       const oneCopyWidth = el.scrollWidth / 3;
-      // Start in the middle copy so we can scroll both directions seamlessly
       scrollPosition.current = oneCopyWidth;
       el.scrollLeft = scrollPosition.current;
 
       const tick = () => {
         if (!dragging.current) {
-          const scrollSpeed = window.matchMedia("(max-width: 640px)").matches
-            ? SCROLL_SPEED / 2
-            : SCROLL_SPEED;
-          // Keep sub-pixel progress in a ref; some browsers round scrollLeft.
-          scrollPosition.current += scrollSpeed;
+          scrollPosition.current += SCROLL_SPEED;
           el.scrollLeft = scrollPosition.current;
 
-          // Seamless loop: when we scroll past the 2nd copy, jump back by one copy width
           const w = el.scrollWidth / 3;
           if (scrollPosition.current >= w * 2) {
             scrollPosition.current -= w;
@@ -123,7 +153,7 @@ const FeaturedUsersSection = () => {
     };
   }, [validEntries.length]);
 
-  /* ── Drag handlers ────────────────────────────────────────── */
+  /* ── Desktop drag handlers ──────────────────────────────────────────────── */
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = scrollRef.current;
     if (!el) return;
@@ -138,11 +168,8 @@ const FeaturedUsersSection = () => {
     if (!dragging.current) return;
     const el = scrollRef.current;
     if (!el) return;
-
     const dx = e.clientX - dragData.current.startX;
     scrollPosition.current = dragData.current.startScrollLeft - dx;
-
-    // Keep seamless loop working during drag
     const w = el.scrollWidth / 3;
     if (scrollPosition.current >= w * 2) {
       scrollPosition.current -= w;
@@ -163,6 +190,26 @@ const FeaturedUsersSection = () => {
     }
   };
 
+  /* ── Mobile scroll → dot pagination ────────────────────────────────────── */
+  const handleMobileScroll = () => {
+    const el = mobileScrollRef.current;
+    if (!el) return;
+    // Card width is 88vw; gap is 12px between cards; padding-left is 6vw.
+    // With scroll-snap-align: center, snap positions increment by (cardW + gap).
+    const vw = window.innerWidth;
+    const cardW = vw * 0.88;
+    const idx = Math.round(el.scrollLeft / (cardW + 12));
+    setMobileActiveIdx(Math.max(0, Math.min(idx, validEntries.length - 1)));
+  };
+
+  const scrollMobileTo = (idx: number) => {
+    const el = mobileScrollRef.current;
+    if (!el) return;
+    const vw = window.innerWidth;
+    const cardW = vw * 0.88;
+    el.scrollTo({ left: idx * (cardW + 12), behavior: 'smooth' });
+  };
+
   return (
     <div>
       <style>{STYLES}</style>
@@ -175,12 +222,109 @@ const FeaturedUsersSection = () => {
         </div>
       </div>
 
-      {/* Section body with lightning pattern background */}
+      {/* ═══════════════════════════════════════════════════════════════════════
+          MOBILE — snap carousel (hidden on sm+)
+          ═══════════════════════════════════════════════════════════════════════ */}
+      <div className="sm:hidden">
+        {/* Dark, blurred background — card is the focal point */}
+        <div
+          className="relative rounded-2xl overflow-hidden"
+          style={{
+            backgroundImage: 'url("/attached_assets/background-trending_1785854153143.png")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          {/* Heavy dark overlay + blur to subordinate the background */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'rgba(3,8,12,0.88)',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+            }}
+          />
+
+          <div style={{ position: 'relative', zIndex: 2 }}>
+            {/* Snap scroll track */}
+            <div
+              ref={mobileScrollRef}
+              className="mobile-snap-scroll"
+              onScroll={handleMobileScroll}
+              style={{
+                gap: 12,
+                /* 6vw padding on each side: first card starts at 6vw, peek = ~6vw of next */
+                padding: '20px 6vw 0',
+              }}
+            >
+              {isLoading
+                ? Array.from({ length: 3 }).map((_, i) => (
+                    <div
+                      key={i}
+                      style={{ flexShrink: 0, width: '88vw', scrollSnapAlign: 'center' }}
+                    >
+                      <MobileCardSkeleton />
+                    </div>
+                  ))
+                : validEntries.length === 0
+                  ? (
+                    <div className="flex items-center justify-center py-16 text-white/30 text-sm w-full">
+                      No trending data yet.
+                    </div>
+                  )
+                  : validEntries.map((entry) => (
+                      <div
+                        key={entry.userId}
+                        style={{ flexShrink: 0, width: '88vw', scrollSnapAlign: 'center' }}
+                      >
+                        <CreatorCard entry={entry} period={period} compact />
+                      </div>
+                    ))
+              }
+            </div>
+
+            {/* Dot pagination */}
+            {validEntries.length > 1 && (
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '14px 0 20px',
+                }}
+              >
+                {validEntries.slice(0, 15).map((_, i) => (
+                  <button
+                    key={i}
+                    aria-label={`Go to card ${i + 1}`}
+                    onClick={() => scrollMobileTo(i)}
+                    style={{
+                      width: i === mobileActiveIdx ? 20 : 5,
+                      height: 4,
+                      borderRadius: 2,
+                      background: i === mobileActiveIdx ? '#B7FF1A' : 'rgba(255,255,255,0.22)',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      transition: 'width 0.28s ease, background 0.28s ease',
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          DESKTOP — existing infinite auto-scroll (hidden on mobile)
+          ═══════════════════════════════════════════════════════════════════════ */}
       <div
-        className="relative overflow-hidden rounded-2xl trending-bg-pattern"
+        className="hidden sm:block relative overflow-hidden rounded-2xl trending-bg-pattern"
         style={{ padding: '20px 0' }}
       >
-        {/* Edge fade overlays (pointer-events: none so drag works underneath) */}
+        {/* Edge fade overlays */}
         <div className="absolute left-0 top-0 bottom-0 w-16 pointer-events-none"
           style={{ background: 'linear-gradient(to right, #0B1319, transparent)', zIndex: 10 }} />
         <div className="absolute right-0 top-0 bottom-0 w-16 pointer-events-none"

@@ -9,6 +9,8 @@ interface CreatorCardProps {
   entry: TrendingEntry;
   period?: 'week' | 'month' | 'alltime' | 'season';
   className?: string;
+  /** Mobile-first content-height mode: no fixed height, card sizes to content */
+  compact?: boolean;
 }
 
 function timeAgo(dateStr: string): string {
@@ -25,7 +27,7 @@ function timeAgo(dateStr: string): string {
   return `${days} ${days === 1 ? 'day' : 'days'} ago`;
 }
 
-export function CreatorCard({ entry, period = 'alltime', className = '' }: CreatorCardProps) {
+export function CreatorCard({ entry, period = 'alltime', className = '', compact = false }: CreatorCardProps) {
   const { user } = entry;
   const [bannerError, setBannerError] = useState(false);
   const [, setLocation] = useLocation();
@@ -47,6 +49,231 @@ export function CreatorCard({ entry, period = 'alltime', className = '' }: Creat
     : null;
   const recentTime = entry.recentUpload ? timeAgo(entry.recentUpload.createdAt) : null;
 
+  // ── Compact (mobile) layout ──────────────────────────────────────────────────
+  if (compact) {
+    const avatarSize = 72;
+    const bannerH = 90;
+
+    return (
+      <Link href={`/profile/${user.username}`} className={className}>
+        <div className="creator-card-wrap">
+          {/* Shell: merges outer + bg, no fixed height */}
+          <div
+            className="cursor-pointer fire-card"
+            style={{
+              width: '100%',
+              borderRadius: 20,
+              position: 'relative',
+              overflow: 'hidden',
+              ...theme.style,
+            }}
+          >
+            {/* Gradient overlay for custom backgrounds */}
+            {theme.hasCustomBg && (
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: theme.isLight
+                    ? 'linear-gradient(to bottom, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.50) 50%, rgba(0,0,0,0.78) 100%)'
+                    : 'linear-gradient(to bottom, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.82) 100%)',
+                  zIndex: 1,
+                  borderRadius: 'inherit',
+                }}
+              />
+            )}
+
+            {/* Rank + XP badges */}
+            <div
+              className="absolute top-0 left-0 right-0 flex items-start justify-between px-3 pt-2"
+              style={{ zIndex: 5 }}
+            >
+              <div
+                className="flex items-center gap-1 text-[12px] font-extrabold px-2.5 py-1 rounded-full"
+                style={{
+                  background: 'rgba(0,0,0,0.70)',
+                  color: entry.rank <= 3 ? (['#FFD700','#C0C0C0','#CD7F32'] as const)[entry.rank - 1] : 'rgba(255,255,255,0.75)',
+                  border: '1px solid rgba(255,255,255,0.13)',
+                  backdropFilter: 'blur(6px)',
+                  letterSpacing: '0.01em',
+                }}
+              >
+                #{entry.rank}
+              </div>
+              <div
+                className="flex items-center gap-0.5 text-[11px] font-bold px-2 py-1 rounded-full"
+                style={{ background: 'rgba(0,0,0,0.70)', color: '#B7FF1A', border: '1px solid rgba(183,255,26,0.30)', backdropFilter: 'blur(6px)' }}
+              >
+                <Zap className="w-3 h-3" />
+                {fmt(entry.totalPoints)}
+              </div>
+            </div>
+
+            {/* Content — stacks naturally */}
+            <div className="relative flex flex-col" style={{ zIndex: 2, paddingTop: 28 }}>
+
+              {/* Banner */}
+              <div className="relative flex-shrink-0 mx-2.5 rounded-xl overflow-hidden" style={{ height: bannerH }}>
+                {hasBanner ? (
+                  <>
+                    <img src={user.bannerUrl!} alt="" className="w-full h-full object-cover" onError={() => setBannerError(true)} />
+                    <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(11,19,25,0.15) 0%, rgba(11,19,25,0.5) 100%)' }} />
+                  </>
+                ) : (
+                  <div className="w-full h-full" style={{ background: 'rgba(255,255,255,0.04)' }} />
+                )}
+              </div>
+
+              {/* Avatar — overlaps banner */}
+              <div className="flex justify-center flex-shrink-0" style={{ marginTop: -(avatarSize / 2 + 4), position: 'relative', zIndex: 2 }}>
+                <div style={{ position: 'relative' }}>
+                  {entry.rank === 1 && (
+                    <Lottie
+                      animationData={onFireData}
+                      loop
+                      autoplay
+                      style={{
+                        position: 'absolute',
+                        width: 130,
+                        height: 143,
+                        left: '50%',
+                        top: '50%',
+                        transform: 'translate(-50%, -48%)',
+                        zIndex: 0,
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  )}
+                  <div
+                    className="rounded-full overflow-hidden flex-shrink-0"
+                    style={{
+                      width: avatarSize,
+                      height: avatarSize,
+                      border: `3px solid ${borderColor}`,
+                      boxShadow: `0 0 18px ${borderColor}99`,
+                      position: 'relative',
+                      zIndex: 1,
+                    }}
+                  >
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.displayName || user.username} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-2xl font-bold" style={{ background: `${borderColor}22`, color: borderColor }}>
+                        {(user.displayName || user.username).charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Name / username */}
+              <div className="text-center px-4 mt-2.5 flex-shrink-0">
+                <p className="text-white text-[15px] font-extrabold truncate leading-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  {user.displayName || user.username}
+                </p>
+                <p className="text-white/40 text-[12px] truncate mt-0.5">@{user.username}</p>
+              </div>
+
+              {/* Stats row */}
+              <div
+                className="mx-3 mt-3.5 flex-shrink-0 grid grid-cols-3 gap-1 rounded-xl py-2.5"
+                style={{ background: 'rgba(11,19,25,0.85)', border: '1px solid rgba(255,255,255,0.07)' }}
+              >
+                {[
+                  { icon: Zap,   label: 'XP',        value: entry.totalPoints },
+                  { icon: Users, label: 'FOLLOWERS',  value: entry.followersCount },
+                  { icon: Upload,label: 'FOLLOWING',  value: entry.followingCount ?? 0 },
+                ].map(({ icon: Icon, label, value }) => (
+                  <div key={label} className="flex flex-col items-center gap-0.5">
+                    <Icon className="w-3 h-3" style={{ color: label === 'XP' ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }} />
+                    <span className="text-[11px] font-bold leading-tight" style={{ color: label === 'XP' ? '#B7FF1A' : 'white' }}>{fmt(value)}</span>
+                    <span className="text-white/30 text-[7px] font-semibold tracking-wide">{label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Most Played */}
+              <div className="mx-3 mt-2.5 flex-shrink-0">
+                <div
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl"
+                  style={{ background: 'rgba(11,19,25,0.85)', border: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  <Gamepad2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.38)' }} />
+                  <div className="flex flex-col justify-center gap-[3px] min-w-0 flex-1">
+                    <span className="text-[9px] font-medium tracking-[0.08em] leading-none uppercase" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                      Most Played
+                    </span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      {entry.mostPlayedGame?.imageUrl && (
+                        <img src={entry.mostPlayedGame.imageUrl} alt="" className="rounded object-cover flex-shrink-0" style={{ width: 20, height: 20 }} />
+                      )}
+                      <span
+                        className="text-[13px] font-semibold truncate leading-none"
+                        style={{ color: entry.mostPlayedGame ? 'white' : 'rgba(255,255,255,0.28)' }}
+                        title={entry.mostPlayedGame?.name ?? undefined}
+                      >
+                        {entry.mostPlayedGame ? entry.mostPlayedGame.name : 'No game uploads yet'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recently Uploaded */}
+              <div className="mx-3 mt-2 flex-shrink-0">
+                <div
+                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors"
+                  style={{
+                    background: 'rgba(11,19,25,0.85)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    cursor: entry.recentUpload ? 'pointer' : 'default',
+                  }}
+                  onClick={(e) => {
+                    if (!entry.recentUpload) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const { id, contentType } = entry.recentUpload;
+                    setLocation(
+                      contentType === 'screenshot' ? `/view/screenshot/${id}`
+                      : contentType === 'reel'     ? `/reel/${id}`
+                      :                              `/clip/${id}`
+                    );
+                  }}
+                >
+                  <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: entry.recentUpload ? '#B7FF1A' : 'rgba(255,255,255,0.28)', opacity: entry.recentUpload ? 0.75 : 1 }} />
+                  <div className="flex flex-col justify-center gap-[2px] min-w-0 flex-1">
+                    <span className="text-[9px] font-medium tracking-[0.08em] leading-none uppercase" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                      Recently Uploaded
+                    </span>
+                    <span className="text-[13px] font-semibold truncate leading-none" style={{ color: entry.recentUpload ? 'white' : 'rgba(255,255,255,0.28)' }}>
+                      {recentTitle ?? 'No uploads yet'}
+                    </span>
+                    {recentTime && (
+                      <span className="text-[10px] font-medium leading-none" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                        {recentTime}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* XP CTA — natural spacing after content */}
+              <div className="px-3 mt-4 mb-4 flex-shrink-0">
+                <div
+                  className="w-full rounded-xl py-3 flex items-center justify-center gap-1.5 text-xs font-bold"
+                  style={{ background: '#B7FF1A', color: '#0B1319', boxShadow: '0 0 14px rgba(183,255,26,0.45)', letterSpacing: '0.01em' }}
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  {ctaText}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
+  // ── Standard (desktop) layout — unchanged ────────────────────────────────────
   return (
     <Link href={`/profile/${user.username}`} className={className}>
       <div className="creator-card-wrap">
