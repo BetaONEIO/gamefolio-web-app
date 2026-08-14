@@ -122,7 +122,13 @@ export const CREATOR_CARD_STYLES = `
     width: 228px;
     height: 480px;
     flex-shrink: 0;
-    overflow: hidden;
+    /*
+     * Keep the wrapper transparent and let the card shadow/medal extend
+     * beyond it. Clipping here creates a visible rectangular background
+     * around the rounded card.
+     */
+    overflow: visible;
+    background: transparent;
   }
   .creator-card-inner {
     width: 228px;

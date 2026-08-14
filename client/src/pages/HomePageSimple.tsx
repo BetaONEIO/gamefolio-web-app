@@ -94,6 +94,8 @@ interface LeaderboardWinner {
   clipsCount?: number;
   reelsCount?: number;
   screenshotsCount?: number;
+  mostPlayedGame?: { name: string; imageUrl: string | null } | null;
+  recentUpload?: { id: number; contentType: string; createdAt: string; gameTitle: string | null; title: string | null } | null;
   user: {
     id: number;
     username: string;
@@ -641,6 +643,8 @@ const HomePage = () => {
                                       uploadsCount: winner.uploadsCount, totalPoints: winner.totalPoints,
                                       clipsCount: winner.clipsCount ?? winner.uploadsCount, reelsCount: winner.reelsCount ?? 0, screenshotsCount: winner.screenshotsCount ?? 0,
                                       followersCount: winner.followersCount ?? 0, followingCount: winner.followingCount ?? 0,
+                                      mostPlayedGame: winner.mostPlayedGame ?? null,
+                                      recentUpload: winner.recentUpload ?? null,
                                       user: {
                                         id: winner.user.id, username: winner.user.username,
                                         displayName: winner.user.displayName, avatarUrl: winner.user.avatarUrl,

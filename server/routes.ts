@@ -4465,12 +4465,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userIds = topRows.map(r => Number(r.userId));
 
       // Batch-fetch counts for all returned users
-      const [clipRows, reelRows, ssRows, followerRows, followingRows] = await Promise.all([
+      const userIdArr = userIds.length ? sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]` : sql`ARRAY[]::int[]`;
+      const [clipRows, reelRows, ssRows, followerRows, followingRows, mostPlayedRows, recentUploadRows] = await Promise.all([
         userIds.length ? db.execute(sql`SELECT user_id AS "userId", COUNT(*)::int AS count FROM clips WHERE user_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) AND (video_type='clip' OR video_type IS NULL) GROUP BY user_id`) : [],
         userIds.length ? db.execute(sql`SELECT user_id AS "userId", COUNT(*)::int AS count FROM clips WHERE user_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) AND video_type='reel' GROUP BY user_id`) : [],
         userIds.length ? db.execute(sql`SELECT user_id AS "userId", COUNT(*)::int AS count FROM screenshots WHERE user_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) GROUP BY user_id`) : [],
         userIds.length ? db.execute(sql`SELECT following_id AS "userId", COUNT(*)::int AS count FROM follows WHERE following_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) GROUP BY following_id`) : [],
         userIds.length ? db.execute(sql`SELECT follower_id AS "userId", COUNT(*)::int AS count FROM follows WHERE follower_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) GROUP BY follower_id`) : [],
+        // Most played game per user (game with the most clips/reels uploaded)
+        userIds.length ? db.execute(sql`
+          SELECT DISTINCT ON (c.user_id)
+            c.user_id      AS "userId",
+            g.name         AS "gameName",
+            g.image_url    AS "gameImageUrl"
+          FROM clips c
+          JOIN games g ON g.id = c.game_id
+          WHERE c.user_id = ANY(${userIdArr})
+            AND c.game_id IS NOT NULL
+          ORDER BY c.user_id,
+            (SELECT COUNT(*) FROM clips c2 WHERE c2.user_id = c.user_id AND c2.game_id = c.game_id) DESC
+        `) : [],
+        // Most recent upload (clip, reel, or screenshot) per user
+        userIds.length ? db.execute(sql`
+          SELECT DISTINCT ON ("userId") "userId", id, title, "contentType", "createdAt", "gameTitle"
+          FROM (
+            SELECT
+              c.user_id   AS "userId",
+              c.id,
+              c.title,
+              c.video_type AS "contentType",
+              c.created_at AS "createdAt",
+              g.name       AS "gameTitle"
+            FROM clips c
+            LEFT JOIN games g ON g.id = c.game_id
+            WHERE c.user_id = ANY(${userIdArr})
+            UNION ALL
+            SELECT
+              s.user_id    AS "userId",
+              s.id,
+              s.title,
+              'screenshot' AS "contentType",
+              s.created_at AS "createdAt",
+              g.name       AS "gameTitle"
+            FROM screenshots s
+            LEFT JOIN games g ON g.id = s.game_id
+            WHERE s.user_id = ANY(${userIdArr})
+          ) combined
+          ORDER BY "userId", "createdAt" DESC
+        `) : [],
       ]);
 
       const clipMap: Record<number,number> = Object.fromEntries((clipRows as any[]).map(r => [r.userId, r.count]));
@@ -4478,6 +4520,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ssMap: Record<number,number> = Object.fromEntries((ssRows as any[]).map(r => [r.userId, r.count]));
       const followerMap: Record<number,number> = Object.fromEntries((followerRows as any[]).map(r => [r.userId, r.count]));
       const followingMap: Record<number,number> = Object.fromEntries((followingRows as any[]).map(r => [r.userId, r.count]));
+      const mostPlayedMap: Record<number,{name:string;imageUrl:string|null}> = Object.fromEntries(
+        (mostPlayedRows as any[]).map(r => [Number(r.userId), { name: r.gameName, imageUrl: r.gameImageUrl || null }])
+      );
+      const recentUploadMap: Record<number,{id:number;contentType:string;createdAt:string;gameTitle:string|null;title:string|null}> = Object.fromEntries(
+        (recentUploadRows as any[]).map(r => [Number(r.userId), {
+          id: Number(r.id),
+          contentType: r.contentType,
+          createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+          gameTitle: r.gameTitle || null,
+          title: r.title || null,
+        }])
+      );
 
       const results = await Promise.all(topRows.map(async (r, idx) => {
         let avatarUrl = r.avatarUrl || null;
@@ -4512,6 +4566,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           screenshotsCount,
           followersCount: followerMap[uid] || 0,
           followingCount: followingMap[uid] || 0,
+          mostPlayedGame: mostPlayedMap[uid] || null,
+          recentUpload: recentUploadMap[uid] || null,
           user: {
             id: uid,
             username: r.username,
