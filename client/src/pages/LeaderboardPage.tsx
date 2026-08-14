@@ -1028,7 +1028,7 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
   });
   const { data: seasonData,    isLoading: sl,  dataUpdatedAt: sUpdated  } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard/current-season/top", "chart"],
-    queryFn: () => fetch("/api/leaderboard/current-season/top?limit=100").then(r => r.json()),
+    queryFn: () => fetch("/api/leaderboard/current-season/top?limit=500").then(r => r.json()),
     refetchInterval: POLL_MS,
   });
 
@@ -1607,7 +1607,7 @@ export default function LeaderboardPage() {
   });
 
   const top3 = top3Data ?? [];
-  const leaderboard = weeklyData ?? [];
+  const leaderboard = (Array.isArray(seasonData) ? seasonData : []) as LeaderboardEntry[];
   const playerCount = playerCountData?.count ?? alltimeData?.length ?? weeklyData?.length ?? 0;
   const leagueTiers = leagueConfigData?.tiers ?? [];
 
