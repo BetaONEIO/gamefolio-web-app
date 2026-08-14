@@ -38,15 +38,29 @@ async function main() {
       await sql`INSERT INTO _migrations (filename) VALUES (${file})`;
       console.log(`  ✅ Applied ${file}`);
     } catch (err: any) {
-      // Idempotent migrations use IF NOT EXISTS, so some errors are safe
-      const isSafe = err.message?.includes('already exists') ||
-                     err.message?.includes('duplicate key value violates unique constraint') ||
-                     err.code === '42P07' || err.code === '42701';
-      if (isSafe) {
-        console.log(`  ✅ ${file} skipped (already applied)`);
+      // Idempotent migrations use IF NOT EXISTS, so a genuine "this object is
+      // already there" is safe to record as applied.
+      //
+      // Match on SQLSTATE only, never on message text. The old version also
+      // accepted any error whose message contained 'already exists' or
+      // 'duplicate key value violates unique constraint', which is far wider
+      // than it looks — plenty of unrelated failures carry those words, and
+      // the migration got stamped into _migrations anyway. That is exactly how
+      // 0019_add_user_impersonation.sql came to be recorded as applied on prod
+      // on 2026-08-12 while impersonation_audit_log did not exist: the file
+      // was then skipped on every later run (see the appliedSet check above),
+      // so the table could never appear and the log stayed green.
+      //   42P07 duplicate_table    42701 duplicate_column
+      //   42710 duplicate_object   42P06 duplicate_schema
+      //   42P16 duplicate_index (older PG reports 42P07 here)
+      const SAFE_CODES = new Set(['42P07', '42701', '42710', '42P06', '42P16']);
+      if (SAFE_CODES.has(err.code)) {
+        console.log(`  ✅ ${file} skipped (object already exists, code ${err.code})`);
         await sql`INSERT INTO _migrations (filename) VALUES (${file}) ON CONFLICT DO NOTHING`;
       } else {
-        console.error(`  ❌ ${file} failed:`, err.message);
+        // Not recorded as applied — a rerun must retry this file.
+        console.error(`  ❌ ${file} failed [${err.code}]:`, err.message);
+        if (err.detail) console.error(`     detail: ${err.detail}`);
         throw err;
       }
     }
