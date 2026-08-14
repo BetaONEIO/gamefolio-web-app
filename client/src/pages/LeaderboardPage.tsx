@@ -267,42 +267,65 @@ function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
         </p>
       </div>
 
-      {/* ── Snap scroll track ── */}
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="lb-mobile-snap"
-        style={{
-          display: "flex",
-          overflowX: "auto",
-          scrollSnapType: "x mandatory",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-          WebkitOverflowScrolling: "touch",
-          gap: 12,
-          /* 6vw padding each side: first card centred, ~6vw peek of adjacent */
-          padding: "8px 6vw 0",
-        } as React.CSSProperties}
-      >
-        {entries.map((entry, idx) => {
-          const isActive = idx === activeIdx;
-          const rank     = entry.rank ?? idx + 1;
-          const glow     = PODIUM_GLOW[rank] ?? "none";
-          return (
-            <div
-              key={entry.userId}
-              style={{
-                flexShrink:      0,
-                width:           "88vw",
-                scrollSnapAlign: "center",
-                filter:          isActive ? glow : "none",
-                transition:      "filter 0.35s ease",
-              }}
-            >
-              <CreatorCard entry={entry} period="season" compact />
-            </div>
-          );
-        })}
+      {/* ── Snap scroll track + arrows ── */}
+      <div className="relative">
+        {/* Left arrow */}
+        <button
+          onClick={() => scrollTo(activeIdx - 1)}
+          disabled={activeIdx === 0}
+          aria-label="Previous"
+          className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full flex items-center justify-center text-white transition-opacity disabled:opacity-20"
+          style={{ background: 'rgba(0,0,0,0.70)', border: '1px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)' }}
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+
+        {/* Right arrow */}
+        <button
+          onClick={() => scrollTo(activeIdx + 1)}
+          disabled={activeIdx >= entries.length - 1}
+          aria-label="Next"
+          className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full flex items-center justify-center text-white transition-opacity disabled:opacity-20"
+          style={{ background: 'rgba(0,0,0,0.70)', border: '1px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)' }}
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="lb-mobile-snap"
+          style={{
+            display: "flex",
+            overflowX: "auto",
+            scrollSnapType: "x mandatory",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            WebkitOverflowScrolling: "touch",
+            gap: 12,
+            padding: "8px 6vw 0",
+          } as React.CSSProperties}
+        >
+          {entries.map((entry, idx) => {
+            const isActive = idx === activeIdx;
+            const rank     = entry.rank ?? idx + 1;
+            const glow     = PODIUM_GLOW[rank] ?? "none";
+            return (
+              <div
+                key={entry.userId}
+                style={{
+                  flexShrink:      0,
+                  width:           "88vw",
+                  scrollSnapAlign: "center",
+                  filter:          isActive ? glow : "none",
+                  transition:      "filter 0.35s ease",
+                }}
+              >
+                <CreatorCard entry={entry} period="season" compact />
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* ── Podium trophy ── */}
