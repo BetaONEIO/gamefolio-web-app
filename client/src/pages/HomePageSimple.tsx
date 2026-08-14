@@ -276,20 +276,24 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
 
   return (
     <div className="relative">
-      {/* Navigation Arrows - hidden on mobile, visible on larger screens */}
-      <button
-        onClick={() => scroll('left')}
-        className="absolute -left-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
-      >
-        <ChevronLeft className="h-5 w-5" />
-      </button>
-      
-      <button
-        onClick={() => scroll('right')}
-        className="absolute -right-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
-      >
-        <ChevronRight className="h-5 w-5" />
-      </button>
+      {/* Navigation arrows sit above the clips instead of over the card edges. */}
+      <div className="flex justify-end gap-2 px-2 sm:px-4 md:px-8 mb-2">
+        <button
+          onClick={() => scroll('left')}
+          aria-label="Show previous clips"
+          className="bg-black/70 hover:bg-black/90 text-white p-2 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+
+        <button
+          onClick={() => scroll('right')}
+          aria-label="Show more clips"
+          className="bg-black/70 hover:bg-black/90 text-white p-2 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </div>
 
       {/* Carousel Container */}
       <div 
