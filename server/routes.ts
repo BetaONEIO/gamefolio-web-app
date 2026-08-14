@@ -5045,8 +5045,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Lootbox
       const lootboxStatus = await storage.getDailyLootboxStatus(userId);
 
-      // Rivals — use the same season window as /api/leaderboard/current-season/top
-      // so the rank shown here always matches the full leaderboard.
+      // Rivals — mirror the exact ranking used by /api/leaderboard/current-season/top:
+      // season XP from user_xp_history, all qualifying users included (no HAVING),
+      // ordered by seasonXP DESC then user id ASC so ties are deterministic.
+      // Removing the HAVING clause means users with 0 season XP still get a rank
+      // (near the bottom) instead of disappearing from the board entirely, which
+      // was causing the user to show as #1 when they had 0 XP because my_entry
+      // was empty and the fallback render put them first.
       const rivalsSeasonDef = SEASON_DEFS[0];
       const [rivSYear, rivSMonth] = rivalsSeasonDef.months[0].split('-').map(Number);
       const rivLastKey = rivalsSeasonDef.months[rivalsSeasonDef.months.length - 1];
@@ -5055,16 +5060,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rivalsSeasonEnd   = new Date(Date.UTC(rivEYear, rivEMonth, 1)).toISOString();
 
       const rivalsResult = await db.execute(sql`
-        WITH week_board AS (
+        WITH season_board AS (
+          -- All qualifying users, LEFT JOIN so 0-XP users are included
           SELECT
-            u.id                                   AS "userId",
-            COALESCE(SUM(xh.xp_amount), 0)        AS "weekXP",
+            u.id                                          AS "userId",
+            COALESCE(SUM(xh.xp_amount), 0)               AS "seasonXP",
             u.username,
-            u.display_name                         AS "displayName",
-            u.avatar_url                           AS "avatarUrl",
+            u.display_name                                AS "displayName",
+            u.avatar_url                                  AS "avatarUrl",
             ROW_NUMBER() OVER (
               ORDER BY COALESCE(SUM(xh.xp_amount), 0) DESC, u.id ASC
-            )                                      AS rank
+            )                                             AS rank
           FROM users u
           LEFT JOIN user_xp_history xh
             ON  xh.user_id    = u.id
@@ -5075,15 +5081,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
             AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
           GROUP BY u.id, u.username, u.display_name, u.avatar_url
-          HAVING COALESCE(SUM(xh.xp_amount), 0) > 0
         ),
         my_entry AS (
-          SELECT rank AS my_rank FROM week_board WHERE "userId" = ${userId}
+          SELECT rank AS my_rank FROM season_board WHERE "userId" = ${userId}
         )
-        SELECT wb."userId", wb."weekXP", wb.username, wb."displayName", wb."avatarUrl", wb.rank
-        FROM week_board wb, my_entry me
-        WHERE wb.rank BETWEEN GREATEST(1, me.my_rank - 2) AND me.my_rank + 2
-        ORDER BY wb.rank ASC
+        SELECT sb."userId", sb."seasonXP" AS "weekXP", sb.username, sb."displayName", sb."avatarUrl", sb.rank
+        FROM season_board sb, my_entry me
+        WHERE sb.rank BETWEEN GREATEST(1, me.my_rank - 2) AND me.my_rank + 2
+        ORDER BY sb.rank ASC
       `);
       const rivalsData: any[] = (rivalsResult as any).rows ?? (rivalsResult as any);
       const rank = rivalsData.find((r: any) => Number(r.userId) === userId)?.rank ?? null;
