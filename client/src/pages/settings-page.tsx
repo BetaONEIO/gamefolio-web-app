@@ -1432,6 +1432,7 @@ export default function SettingsPage() {
     queryKey: ['/api/user/name-tags'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
+    select: (data) => data ?? [],
   });
   
   // Fetch user's unlocked verification badges
@@ -1439,6 +1440,7 @@ export default function SettingsPage() {
     queryKey: ['/api/user/verification-badges'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
+    select: (data) => data ?? [],
   });
   
   const { data: ownedNftsData, isLoading: nftsLoading } = useQuery<{ nfts: any[]; count: number }>({
