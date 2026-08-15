@@ -6510,28 +6510,49 @@ export class DatabaseStorage implements IStorage {
     return record || null;
   }
 
+  // The allowance is a rolling 24h window from the user's first import in it,
+  // not a UTC-calendar-day reset (which was confusing for users outside UTC —
+  // "resets tomorrow" could mean anywhere from 1-24h away depending on their
+  // timezone). Returns the row backing the current window, or null if the
+  // user's last window has already expired (full allowance available).
+  private async getActiveImportWindow(userId: number): Promise<UserDailyImports | null> {
+    const [latest] = await db
+      .select()
+      .from(userDailyImports)
+      .where(eq(userDailyImports.userId, userId))
+      .orderBy(desc(userDailyImports.createdAt))
+      .limit(1);
+
+    if (!latest) return null;
+    const windowAge = Date.now() - latest.createdAt.getTime();
+    return windowAge < 24 * 60 * 60 * 1000 ? latest : null;
+  }
+
   async incrementDailyImportCount(userId: number): Promise<UserDailyImports> {
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format (UTC)
+    const active = await this.getActiveImportWindow(userId);
 
-    const existing = await this.getUserDailyImports(userId, today);
-
-    if (existing) {
+    if (active) {
       const [updated] = await db
         .update(userDailyImports)
         .set({
-          importsCount: existing.importsCount + 1,
+          importsCount: active.importsCount + 1,
           updatedAt: new Date()
         })
-        .where(eq(userDailyImports.id, existing.id))
+        .where(eq(userDailyImports.id, active.id))
         .returning();
       return updated;
     } else {
+      const today = new Date().toISOString().split('T')[0]; // UTC date the new window starts
       const [created] = await db
         .insert(userDailyImports)
         .values({
           userId,
           importDate: today,
           importsCount: 1
+        })
+        .onConflictDoUpdate({
+          target: [userDailyImports.userId, userDailyImports.importDate],
+          set: { importsCount: 1, createdAt: new Date(), updatedAt: new Date() },
         })
         .returning();
       return created;
@@ -6545,15 +6566,15 @@ export class DatabaseStorage implements IStorage {
     // Pro users get 10 Twitch imports per day, free users get 2
     const maxImportsPerDay = isPro ? 10 : 2;
 
-    const today = new Date().toISOString().split('T')[0];
-    const dailyImports = await this.getUserDailyImports(userId, today);
-    const importsUsedToday = dailyImports?.importsCount ?? 0;
+    const active = await this.getActiveImportWindow(userId);
+    const importsUsedToday = active?.importsCount ?? 0;
 
     return {
       isPro,
       maxImportsPerDay,
       importsUsedToday,
-      canImport: importsUsedToday < maxImportsPerDay
+      canImport: importsUsedToday < maxImportsPerDay,
+      resetsAt: active ? new Date(active.createdAt.getTime() + 24 * 60 * 60 * 1000).toISOString() : null,
     };
   }
 

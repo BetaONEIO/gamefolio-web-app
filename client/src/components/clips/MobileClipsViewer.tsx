@@ -257,7 +257,7 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
 
       {/* Caption — always clamped; long captions open a bottom sheet so the action bar never moves */}
       <div
-        className="flex-1 min-h-0 overflow-hidden px-4"
+        className="flex-shrink-0 overflow-hidden px-4"
         style={{ background: '#081017' }}
       >
         {(postTitle || postDescription || clip.game?.name) && (
