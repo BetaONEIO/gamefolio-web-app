@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, getQueryFn } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import GameSelector from "@/components/clips/GameSelector";
 import TagInput from "@/components/clips/TagInput";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
+import { ScheduleControl, type ScheduleLimits } from "@/components/upload/ScheduleControl";
 import { Game } from "@shared/schema";
 import type { UploadLimits } from "@shared/schema";
 import {
@@ -33,6 +34,7 @@ import {
   Loader2,
   Crown,
   Plus,
+  CalendarClock,
 } from "lucide-react";
 
 // One file queued in the bulk-upload batch, with its own metadata + status.
@@ -56,6 +58,10 @@ interface BulkItem {
   status: ItemStatus;
   progress: number;
   error: string | null;
+  // Set once the item finishes, reflecting whether *this* upload was
+  // scheduled — kept per-item so the "Posted" vs "Scheduled" badge stays
+  // correct even if the batch-wide schedule toggle changes afterward.
+  wasScheduled: boolean;
 }
 
 const ALLOWED_VIDEO = ["video/mp4", "video/webm", "video/quicktime"];
@@ -115,6 +121,8 @@ const BulkUploadPage = () => {
   const [items, setItems] = useState<BulkItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [showProUpgrade, setShowProUpgrade] = useState(false);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: limits } = useQuery<UploadLimits>({
@@ -127,8 +135,23 @@ const BulkUploadPage = () => {
     staleTime: 60_000,
   });
 
+  // Scheduling quota (unlimited for Pro/Partner, capped pending count for Free)
+  // — same query UploadPage uses, so the two flows always agree on what's left.
+  const { data: scheduleLimits } = useQuery<ScheduleLimits>({
+    queryKey: ["/api/scheduled-posts/limits"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: !!user,
+  });
+
   const maxBulk = limits?.maxBulkUploads ?? 3;
   const isFreeTier = maxBulk < 10;
+
+  // ISO timestamp for the whole batch, or undefined for an immediate post.
+  const getScheduledIso = (): string | undefined => {
+    if (!scheduleEnabled || !scheduledAt) return undefined;
+    const d = new Date(scheduledAt);
+    return isNaN(d.getTime()) ? undefined : d.toISOString();
+  };
 
   // Revoke object URLs on unmount to avoid leaking blob memory.
   useEffect(() => {
@@ -231,6 +254,7 @@ const BulkUploadPage = () => {
         status: "pending",
         progress: 0,
         error: null,
+        wasScheduled: false,
       };
     });
 
@@ -267,7 +291,7 @@ const BulkUploadPage = () => {
   // Direct-to-Supabase + process-video, mirroring UploadPage's uploadMutation
   // but without client-side trimming (server uses the full clip when trimEnd
   // is omitted).
-  async function uploadVideoItem(item: BulkItem, onProgress: (p: number) => void) {
+  async function uploadVideoItem(item: BulkItem, onProgress: (p: number) => void, scheduledIso?: string) {
     const timestamp = Date.now();
     const randomId = Math.random().toString(36).substring(2, 15);
     const extension = item.file.name.split(".").pop() || "mp4";
@@ -318,6 +342,7 @@ const BulkUploadPage = () => {
         ageRestricted: item.ageRestricted,
         trimStart: 0,
         // trimEnd omitted → server keeps the full clip duration.
+        scheduledAt: scheduledIso,
       }),
       credentials: "include",
     });
@@ -328,7 +353,7 @@ const BulkUploadPage = () => {
     onProgress(100);
   }
 
-  async function uploadScreenshotItem(item: BulkItem, onProgress: (p: number) => void) {
+  async function uploadScreenshotItem(item: BulkItem, onProgress: (p: number) => void, scheduledIso?: string) {
     const formData = new FormData();
     formData.append("title", item.title.trim());
     formData.append("description", item.description.trim());
@@ -339,6 +364,7 @@ const BulkUploadPage = () => {
     }
     formData.append("tags", JSON.stringify(item.tags));
     formData.append("ageRestricted", item.ageRestricted.toString());
+    if (scheduledIso) formData.append("scheduledAt", scheduledIso);
     formData.append("screenshot", item.file);
 
     await new Promise<void>((resolve, reject) => {
@@ -394,6 +420,37 @@ const BulkUploadPage = () => {
       }
     }
 
+    if (scheduleEnabled) {
+      const iso = getScheduledIso();
+      if (!iso) {
+        toast({ title: "Pick a time", description: "Choose a date and time to schedule this batch.", variant: "destructive" });
+        return;
+      }
+      if (new Date(iso).getTime() <= Date.now()) {
+        toast({ title: "Time must be in the future", description: "Pick a date and time later than now.", variant: "destructive" });
+        return;
+      }
+    }
+    const scheduledIso = getScheduledIso();
+
+    // Every item in the batch consumes a scheduling slot, so fail fast rather
+    // than burn bandwidth/processing on items doomed to hit the per-user cap
+    // partway through the sequential loop below.
+    if (
+      scheduledIso &&
+      scheduleLimits &&
+      !scheduleLimits.isUnlimited &&
+      scheduleLimits.remaining !== null &&
+      pending.length > scheduleLimits.remaining
+    ) {
+      toast({
+        title: "Not enough scheduling slots",
+        description: `You have ${scheduleLimits.remaining} scheduled-post slot${scheduleLimits.remaining === 1 ? "" : "s"} left, but this batch has ${pending.length} files. Trim the batch or upgrade to Pro for unlimited scheduling.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsUploading(true);
     let succeeded = 0;
     let failed = 0;
@@ -404,11 +461,11 @@ const BulkUploadPage = () => {
       try {
         const onProgress = (p: number) => updateItem(it.id, { progress: p });
         if (it.kind === "video") {
-          await uploadVideoItem(it, onProgress);
+          await uploadVideoItem(it, onProgress, scheduledIso);
         } else {
-          await uploadScreenshotItem(it, onProgress);
+          await uploadScreenshotItem(it, onProgress, scheduledIso);
         }
-        updateItem(it.id, { status: "success", progress: 100 });
+        updateItem(it.id, { status: "success", progress: 100, wasScheduled: !!scheduledIso });
         succeeded++;
       } catch (err: any) {
         updateItem(it.id, { status: "error", error: err?.message || "Upload failed" });
@@ -428,15 +485,21 @@ const BulkUploadPage = () => {
     queryClient.invalidateQueries({ queryKey: [`/api/users/${user.username}`] });
     queryClient.invalidateQueries({ queryKey: ["/api/upload/limits"] });
     queryClient.refetchQueries({ queryKey: ["/api/user"] });
+    if (scheduledIso) {
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-posts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-posts/limits"] });
+    }
 
     if (failed === 0) {
       toast({
-        title: "All uploads complete",
-        description: `${succeeded} item${succeeded > 1 ? "s" : ""} posted to your gamefolio.`,
+        title: scheduledIso ? "All uploads scheduled" : "All uploads complete",
+        description: scheduledIso
+          ? `${succeeded} item${succeeded > 1 ? "s" : ""} scheduled to publish at ${new Date(scheduledIso).toLocaleString()}.`
+          : `${succeeded} item${succeeded > 1 ? "s" : ""} posted to your gamefolio.`,
       });
     } else {
       toast({
-        title: "Some uploads failed",
+        title: scheduledIso ? "Some items couldn't be scheduled" : "Some uploads failed",
         description: `${succeeded} succeeded, ${failed} failed. You can retry the failed ones.`,
         variant: "destructive",
       });
@@ -543,7 +606,15 @@ const BulkUploadPage = () => {
                       <div className="flex items-center gap-2 shrink-0">
                         {item.status === "success" && (
                           <span className="text-green-500 flex items-center gap-1 text-xs">
-                            <Check className="h-4 w-4" /> Posted
+                            {item.wasScheduled ? (
+                              <>
+                                <CalendarClock className="h-4 w-4" /> Scheduled
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-4 w-4" /> Posted
+                              </>
+                            )}
                           </span>
                         )}
                         {item.status === "error" && (
@@ -646,6 +717,19 @@ const BulkUploadPage = () => {
               Add more ({items.length}/{maxBulk})
             </Button>
           )}
+
+          {/* Batch-wide schedule toggle — applies the same publish time to
+              every item in this batch, rather than one picker per file. */}
+          {!isUploading && !allDone && (
+            <ScheduleControl
+              enabled={scheduleEnabled}
+              onEnabledChange={setScheduleEnabled}
+              value={scheduledAt}
+              onValueChange={setScheduledAt}
+              limits={scheduleLimits}
+              contentNoun="batch"
+            />
+          )}
         </div>
       )}
 
@@ -658,7 +742,16 @@ const BulkUploadPage = () => {
               {maxBulk - items.length === 1 ? "" : "s"} left
             </span>
             {allDone ? (
-              <Button onClick={() => navigate(`/profile/${user?.username}`)} data-testid="button-done">
+              <Button
+                onClick={() =>
+                  navigate(
+                    items.some((it) => it.wasScheduled)
+                      ? "/scheduled-posts"
+                      : `/profile/${user?.username}`,
+                  )
+                }
+                data-testid="button-done"
+              >
                 Done
               </Button>
             ) : (
@@ -670,7 +763,12 @@ const BulkUploadPage = () => {
                 {isUploading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Uploading…
+                    {scheduleEnabled ? "Scheduling…" : "Uploading…"}
+                  </>
+                ) : scheduleEnabled ? (
+                  <>
+                    <CalendarClock className="h-4 w-4 mr-2" />
+                    Schedule {pendingCount} file{pendingCount > 1 ? "s" : ""}
                   </>
                 ) : (
                   <>
