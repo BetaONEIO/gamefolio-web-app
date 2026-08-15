@@ -82,6 +82,12 @@ export function LootboxDialog({ open, onOpenChange }: LootboxDialogProps) {
       setIsDuplicate(data.isDuplicate);
       queryClient.invalidateQueries({ queryKey: ["/api/lootbox/status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/lootbox/rewards"] });
+      // "Open Lootbox" daily-challenge completion lives in daily-activity,
+      // not lootbox/status — without this the challenge card never updates.
+      if (user) {
+        queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/daily-activity`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/level-progress`] });
+      }
     },
     onError: (error: Error) => {
       console.error("Failed to open lootbox:", error);

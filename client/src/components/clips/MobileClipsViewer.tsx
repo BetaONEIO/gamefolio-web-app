@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -28,7 +29,12 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [showFullDesc, setShowFullDesc] = useState(false);
+  const [descSheetOpen, setDescSheetOpen] = useState(false);
+  const [descSheetMounted, setDescSheetMounted] = useState(false);
+  const [descSheetDragY, setDescSheetDragY] = useState(0);
+  const descTouchStartY = useRef<number | null>(null);
+  const descTouchStartTime = useRef<number>(0);
+  const descCloseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [localFollowing, setLocalFollowing] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -46,6 +52,48 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
     const id = requestAnimationFrame(() => setSheetMounted(true));
     return () => cancelAnimationFrame(id);
   }, [commentsOpen, isMobile]);
+
+  useEffect(() => {
+    if (!descSheetOpen) return;
+    if (descCloseTimeout.current) {
+      clearTimeout(descCloseTimeout.current);
+      descCloseTimeout.current = null;
+    }
+    const id = requestAnimationFrame(() => setDescSheetMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, [descSheetOpen]);
+
+  const closeDescSheet = () => {
+    if (!descSheetOpen) return;
+    setDescSheetMounted(false);
+    setDescSheetDragY(0);
+    if (descCloseTimeout.current) clearTimeout(descCloseTimeout.current);
+    descCloseTimeout.current = setTimeout(() => {
+      setDescSheetOpen(false);
+      descCloseTimeout.current = null;
+    }, 280);
+  };
+
+  const handleDescTouchStart = (e: React.TouchEvent) => {
+    descTouchStartY.current = e.touches[0].clientY;
+    descTouchStartTime.current = Date.now();
+  };
+  const handleDescTouchMove = (e: React.TouchEvent) => {
+    if (descTouchStartY.current === null) return;
+    const delta = e.touches[0].clientY - descTouchStartY.current;
+    if (delta > 0) setDescSheetDragY(delta);
+  };
+  const handleDescTouchEnd = () => {
+    if (descTouchStartY.current === null) return;
+    const elapsed = Date.now() - descTouchStartTime.current;
+    const velocity = descSheetDragY / Math.max(elapsed, 1);
+    if (descSheetDragY > 80 || velocity > 0.5) {
+      closeDescSheet();
+    } else {
+      setDescSheetDragY(0);
+    }
+    descTouchStartY.current = null;
+  };
 
   const handleSheetTouchStart = (e: React.TouchEvent) => {
     sheetTouchStartY.current = e.touches[0].clientY;
@@ -116,9 +164,10 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
     },
   });
 
-  const caption = [clip.title, clip.description].filter(Boolean).join(' — ');
-  const captionTrimmed = caption.length > 60 && !showFullDesc;
-  const canCollapse = caption.length > 60;
+  const postTitle = clip.title?.trim() || '';
+  const postDescription = clip.description?.trim() || '';
+  const caption = [postTitle, postDescription].filter(Boolean).join(' — ');
+  const captionLong = caption.length > 60;
   const commentsOverlay = commentsOpen && isMobile;
 
   return (
@@ -162,36 +211,26 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
       {!commentsOverlay && (<>
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       <div className="px-4 pt-6 pb-2 flex-shrink-0">
-        <div className="flex items-start gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
           <Link href={`/profile/${clip.user.username}`} className="flex-shrink-0">
             <CustomAvatar user={clip.user as any} size="sm" showBorder={true} />
           </Link>
 
-          <ProfileHoverCard username={clip.user.username}>
-          <div className="flex-1 min-w-0 cursor-default">
-            <div className="flex items-center gap-1.5">
-              <Link href={`/profile/${clip.user.username}`} className="no-underline min-w-0">
-                <span className="font-bold text-[15px] leading-tight truncate block" style={{ color: '#F5F7F2' }}>
-                  {clip.user.displayName || clip.user.username}
+          <div className="min-w-0 shrink">
+            <ProfileHoverCard username={clip.user.username}>
+              <Link
+                href={`/profile/${clip.user.username}`}
+                className="flex min-w-0 items-center gap-1.5 no-underline"
+              >
+                <span className="font-bold text-[15px] leading-tight truncate" style={{ color: '#F5F7F2' }}>
+                  @{clip.user.username}
                 </span>
+                {isPro && <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#B7FF1A' }} />}
+                <PartnerBadge isPartner={(clip.user as any).isPartner} size="sm" />
+                <AmbassadorBadge isAmbassador={(clip.user as any).isAmbassador} size="sm" />
               </Link>
-              {isPro && <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#B7FF1A' }} />}
-              <PartnerBadge isPartner={(clip.user as any).isPartner} size="sm" />
-              <AmbassadorBadge isAmbassador={(clip.user as any).isAmbassador} size="sm" />
-            </div>
-            <Link href={`/profile/${clip.user.username}`} className="no-underline">
-              <span className="text-[13px] block leading-tight mt-0.5" style={{ color: '#7E887A' }}>
-                @{clip.user.username}
-              </span>
-            </Link>
-            {clip.game?.name && gameSlug && (
-              <Link href={`/games/${gameSlug}`} className="inline-flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity">
-                <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-                <span className="text-[12px] font-medium" style={{ color: '#B7FF1A' }}>{clip.game.name}</span>
-              </Link>
-            )}
+            </ProfileHoverCard>
           </div>
-          </ProfileHoverCard>
 
           <div className="flex items-center gap-2 flex-shrink-0">
             {!isSelf && !isAlreadyFollowing && (
@@ -208,33 +247,50 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
                 {followMutation.isPending ? '…' : 'Follow'}
               </button>
             )}
+          </div>
+
+          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
             <TrendingClipMenu clip={clip} />
           </div>
         </div>
       </div>
 
-      {/* Caption — line-clamped to 3 lines when collapsed so icons are never hidden */}
+      {/* Caption — always clamped; long captions open a bottom sheet so the action bar never moves */}
       <div
-        className={showFullDesc ? "flex-1 min-h-0 overflow-y-auto px-4" : "flex-shrink-0 px-4"}
-        style={{ background: '#081017', overscrollBehaviorY: 'contain' }}
+        className="flex-shrink-0 overflow-hidden px-4"
+        style={{ background: '#081017' }}
       >
-        {caption && (
+        {(postTitle || postDescription || clip.game?.name) && (
           <div className="pb-2">
-            <p
-              className={`text-[14px] leading-relaxed${!showFullDesc ? ' line-clamp-3' : ''}`}
-              style={{ color: '#B8C0AE' }}
-            >
-              {caption}
-            </p>
-            {captionTrimmed && (
-              <button onClick={() => setShowFullDesc(true)} className="font-semibold text-[13px] mt-0.5" style={{ color: '#B7FF1A' }}>
+            {postTitle && (
+              <p className="text-[14px] font-medium leading-relaxed line-clamp-1" style={{ color: '#F5F7F2' }}>
+                {postTitle}
+              </p>
+            )}
+            {postDescription && (
+              <p className="text-[14px] leading-relaxed line-clamp-2" style={{ color: '#B8C0AE' }}>
+                {postDescription}
+              </p>
+            )}
+            {captionLong && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setDescSheetOpen(true); }}
+                className="font-semibold text-[13px] mt-0.5"
+                style={{ color: '#B7FF1A' }}
+              >
                 … more
               </button>
             )}
-            {showFullDesc && canCollapse && (
-              <button onClick={() => setShowFullDesc(false)} className="font-semibold text-[13px] mt-0.5" style={{ color: '#B7FF1A' }}>
-                See less
-              </button>
+            {clip.game?.name && gameSlug && (
+              <Link
+                href={`/games/${gameSlug}`}
+                className="inline-flex items-center gap-1 mt-1 hover:opacity-80 transition-opacity"
+              >
+                <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
+                <span className="text-[12px] font-medium truncate" style={{ color: '#B7FF1A' }}>
+                  {clip.game.name}
+                </span>
+              </Link>
             )}
           </div>
         )}
@@ -350,6 +406,81 @@ export const ClipFeedCard: React.FC<{ clip: ClipWithUser; clips: ClipWithUser[];
         onOpenChange={setShareOpen}
         contentType={(clip as any).type === 'reel' ? 'reel' : 'clip'}
       />
+
+      {/* Description bottom sheet — portal so it escapes any overflow clipping */}
+      {descSheetOpen && createPortal(
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200010,
+            display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+          }}
+        >
+          {/* Backdrop */}
+          <div
+            onClick={closeDescSheet}
+            style={{
+              position: 'absolute', inset: 0,
+              background: 'rgba(0,0,0,0.55)',
+              opacity: descSheetMounted ? 1 : 0,
+              transition: 'opacity 0.25s ease-out',
+            }}
+          />
+          {/* Sheet */}
+          <div
+            style={{
+              position: 'relative',
+              background: '#0B1218',
+              borderRadius: '20px 20px 0 0',
+              maxHeight: '70vh',
+              display: 'flex',
+              flexDirection: 'column',
+              paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+              transform: descSheetMounted ? `translateY(${descSheetDragY}px)` : 'translateY(100%)',
+              transition: descSheetDragY > 0 ? 'none' : 'transform 0.28s ease-out',
+            }}
+            onTouchStart={handleDescTouchStart}
+            onTouchMove={handleDescTouchMove}
+            onTouchEnd={handleDescTouchEnd}
+          >
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-2 flex-shrink-0">
+              <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
+            </div>
+
+            {/* User info + close */}
+            <div
+              className="flex items-center gap-3 px-4 pb-3 flex-shrink-0"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+            >
+              <CustomAvatar user={clip.user as any} size="sm" showBorder />
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-[15px] leading-tight truncate" style={{ color: '#F5F7F2' }}>
+                  {clip.user.displayName || clip.user.username}
+                </p>
+                <p className="text-[13px] leading-tight" style={{ color: '#7E887A' }}>
+                  @{clip.user.username}
+                </p>
+              </div>
+              <button
+                onClick={closeDescSheet}
+                className="w-8 h-8 flex items-center justify-center rounded-full flex-shrink-0"
+                style={{ background: 'rgba(255,255,255,0.08)' }}
+                aria-label="Close"
+              >
+                <ChevronDown className="h-5 w-5 text-white/70" />
+              </button>
+            </div>
+
+            {/* Full description — scrollable */}
+            <div className="flex-1 overflow-y-auto px-4 py-4" style={{ overscrollBehavior: 'contain' }}>
+              <p className="text-[15px] leading-relaxed whitespace-pre-wrap" style={{ color: '#B8C0AE' }}>
+                {caption}
+              </p>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

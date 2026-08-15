@@ -608,8 +608,6 @@ export default function SettingsPage() {
   const [disconnectingTwitch, setDisconnectingTwitch] = useState(false);
   const [connectingYouTube, setConnectingYouTube] = useState(false);
   const [disconnectingYouTube, setDisconnectingYouTube] = useState(false);
-  const [connectingRumble, setConnectingRumble] = useState(false);
-  const [disconnectingRumble, setDisconnectingRumble] = useState(false);
   const [connectingVpzone, setConnectingVpzone] = useState(false);
   const [disconnectingVpzone, setDisconnectingVpzone] = useState(false);
 
@@ -620,7 +618,6 @@ export default function SettingsPage() {
     return onExternalBrowserClosed(() => {
       setConnectingTwitch(false);
       setConnectingKick(false);
-      setConnectingRumble(false);
       setConnectingVpzone(false);
     });
   }, []);
@@ -1102,6 +1099,10 @@ export default function SettingsPage() {
     // Persist in canonical GAMER_TAG_OPTIONS order (excluding streamer, tracked separately).
     setPrimaryUserType(KNOWN_GAMER_TAG_IDS.filter(t => t !== 'streamer' && next.includes(t)).join(','));
   };
+  // YouTube streaming-platform connect is disabled pending Google OAuth app
+  // verification (unverified apps show users a scary warning screen). Flip
+  // back to true once verification is complete.
+  const YOUTUBE_STREAMING_ENABLED = false;
   const [streamPlatform, setStreamPlatform] = useState<string>((user as any)?.streamPlatform || 'twitch');
   const [streamChannelName, setStreamChannelName] = useState<string>((user as any)?.streamChannelName || '');
   const [showLiveOverlay, setShowLiveOverlay] = useState<boolean>((user as any)?.showLiveOverlay || false);
@@ -1431,6 +1432,7 @@ export default function SettingsPage() {
     queryKey: ['/api/user/name-tags'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
+    select: (data) => data ?? [],
   });
   
   // Fetch user's unlocked verification badges
@@ -1438,6 +1440,7 @@ export default function SettingsPage() {
     queryKey: ['/api/user/verification-badges'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
+    select: (data) => data ?? [],
   });
   
   const { data: ownedNftsData, isLoading: nftsLoading } = useQuery<{ nfts: any[]; count: number }>({
@@ -1453,7 +1456,7 @@ export default function SettingsPage() {
     enabled: !!user,
   });
 
-  const { data: oauthConfig } = useQuery<{ kick: boolean; twitch: boolean; rumble: boolean; vpzone: boolean }>({
+  const { data: oauthConfig } = useQuery<{ kick: boolean; twitch: boolean; youtube: boolean; vpzone: boolean }>({
     queryKey: ['/api/auth/social-oauth/config'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     staleTime: 60000,
@@ -1527,20 +1530,6 @@ export default function SettingsPage() {
         toast({ title: "Twitch connection failed", description: errMap[params.get('twitch_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
         window.history.replaceState({}, '', window.location.pathname);
       }
-    } else if (params.get('rumble_connected') === 'true') {
-      refreshUser();
-      toast({ title: "Rumble connected!", description: "Your Rumble channel has been verified and linked.", duration: 4000 });
-      window.history.replaceState({}, '', window.location.pathname);
-    } else if (params.get('rumble_error')) {
-      const errMap: Record<string, string> = {
-        access_denied: 'You cancelled the Rumble authorisation.',
-        invalid_state: 'Invalid OAuth state. Please try again.',
-        not_configured: 'Rumble OAuth is not configured on this server.',
-        auth_failed: 'Rumble authentication failed. Please try again.',
-        no_user: 'No Rumble user found on your account.',
-      };
-      toast({ title: "Rumble connection failed", description: errMap[params.get('rumble_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
-      window.history.replaceState({}, '', window.location.pathname);
     } else if (params.get('youtube_connected') === 'true') {
       refreshUser();
       toast({ title: "YouTube connected!", description: "Your YouTube channel has been verified and linked.", duration: 4000 });
@@ -4851,7 +4840,7 @@ export default function SettingsPage() {
                   <div className="flex-1">
                     <CardTitle className="text-base">Streamer Settings</CardTitle>
                     <CardDescription className="mt-0.5 text-xs">
-                      Verify your Twitch, Kick, YouTube, Rumble, or VPZone channel via OAuth to show a Streamer badge on your profile.
+                      Verify your Twitch, Kick, YouTube, or VPZone channel via OAuth to show a Streamer badge on your profile.
                     </CardDescription>
                   </div>
                 </div>
@@ -5026,7 +5015,7 @@ export default function SettingsPage() {
                 </>
 
                 {/* YouTube Connection */}
-                <>
+                {YOUTUBE_STREAMING_ENABLED && <>
                     {(user as any)?.youtubeVerified ? (
                       <div className="rounded-xl border border-[#FF0000]/20 bg-[#FF0000]/5 px-4 py-3 space-y-3">
                         <div className="flex items-center gap-3">
@@ -5101,7 +5090,7 @@ export default function SettingsPage() {
                         </div>
                       </div>
                     )}
-                </>
+                </>}
 
                 {/* LIVE Badge Toggle */}
                 <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
@@ -5211,20 +5200,22 @@ export default function SettingsPage() {
                     >
                       Kick
                     </button>
-                    <button
-                      type="button"
-                      disabled={!isStreamingEnabled}
-                      onClick={() => setStreamPlatform('youtube')}
-                      className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                        !isStreamingEnabled
-                          ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
-                          : streamPlatform === 'youtube'
-                          ? 'border-[#FF0000] bg-[#FF0000]/20 text-[#FF0000]'
-                          : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
-                      }`}
-                    >
-                      YouTube
-                    </button>
+                    {YOUTUBE_STREAMING_ENABLED && (
+                      <button
+                        type="button"
+                        disabled={!isStreamingEnabled}
+                        onClick={() => setStreamPlatform('youtube')}
+                        className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                          !isStreamingEnabled
+                            ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
+                            : streamPlatform === 'youtube'
+                            ? 'border-[#FF0000] bg-[#FF0000]/20 text-[#FF0000]'
+                            : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
+                        }`}
+                      >
+                        YouTube
+                      </button>
+                    )}
                     <button
                       type="button"
                       disabled={!isStreamingEnabled}
@@ -5367,7 +5358,7 @@ export default function SettingsPage() {
                   )}
 
                   {/* YouTube OAuth connect option */}
-                  {streamPlatform === 'youtube' && isStreamingEnabled && oauthConfig?.youtube && (
+                  {YOUTUBE_STREAMING_ENABLED && streamPlatform === 'youtube' && isStreamingEnabled && oauthConfig?.youtube && (
                     <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.youtubeVerified ? 'border-[#FF0000]/30 bg-[#FF0000]/5' : 'border-slate-700 bg-slate-800/30'}`}>
                       {(user as any)?.youtubeVerified ? (
                         <div className="flex items-center justify-between">
@@ -5418,65 +5409,6 @@ export default function SettingsPage() {
                           >
                             {connectingYouTube ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <SiYoutube className="w-3.5 h-3.5 mr-1" />}
                             Connect with YouTube
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Rumble OAuth connect option */}
-                  {isStreamingEnabled && oauthConfig?.rumble && (
-                    <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.rumbleVerified ? 'border-[#85C742]/30 bg-[#85C742]/5' : 'border-slate-700 bg-slate-800/30'}`}>
-                      {(user as any)?.rumbleVerified ? (
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded bg-[#85C742]/20 flex items-center justify-center">
-                              <Check className="w-3.5 h-3.5 text-[#85C742]" />
-                            </div>
-                            <div>
-                              <p className="text-xs font-medium text-[#85C742]">Rumble OAuth Verified</p>
-                              <p className="text-[11px] text-slate-400">@{(user as any)?.streamChannelName}</p>
-                            </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={disconnectingRumble}
-                            className="h-7 px-2 text-xs text-slate-400 hover:text-red-400"
-                            onClick={async () => {
-                              setDisconnectingRumble(true);
-                              try {
-                                await apiRequest('POST', '/api/auth/rumble/disconnect');
-                                await refreshUser();
-                                setStreamChannelName('');
-                                toast({ title: 'Rumble disconnected', description: 'Your Rumble channel has been unlinked.', duration: 3000 });
-                              } catch {
-                                toast({ title: 'Failed to disconnect', description: 'Please try again.', variant: 'destructive' });
-                              } finally {
-                                setDisconnectingRumble(false);
-                              }
-                            }}
-                          >
-                            {disconnectingRumble ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Unlink className="w-3 h-3 mr-1" />}
-                            Disconnect
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs text-slate-400">Verify your Rumble channel via OAuth for a secure connection.</p>
-                          <Button
-                            size="sm"
-                            disabled={connectingRumble}
-                            className="bg-[#85C742] hover:bg-[#72aa38] text-black font-semibold border-0 h-8 px-3 text-xs"
-                            onClick={() => {
-                              setConnectingRumble(true);
-                              const url = '/api/auth/rumble/connect';
-                              if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.location.href = url;
-                            }}
-                          >
-                            {connectingRumble ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
-                            Connect with Rumble
                           </Button>
                         </div>
                       )}
@@ -5556,9 +5488,9 @@ export default function SettingsPage() {
                       Kick OAuth is not configured for this app. Contact the administrator to enable it.
                     </p>
                   )}
-                  {isStreamingEnabled && !oauthConfig?.rumble && (
+                  {YOUTUBE_STREAMING_ENABLED && isStreamingEnabled && streamPlatform === 'youtube' && !oauthConfig?.youtube && (
                     <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-slate-700 p-3">
-                      Rumble connection is not configured for this app. Contact the administrator to enable it.
+                      YouTube OAuth is not configured for this app. Contact the administrator to enable it.
                     </p>
                   )}
                   {isStreamingEnabled && !oauthConfig?.vpzone && (

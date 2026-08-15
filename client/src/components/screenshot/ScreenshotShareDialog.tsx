@@ -14,6 +14,7 @@ import { FaFacebook, FaReddit, FaWhatsapp, FaTelegram, FaEnvelope, FaLinkedin, F
 import { FaXTwitter, FaBluesky, FaTiktok, FaSnapchat, FaInstagram, FaThreads } from 'react-icons/fa6';
 import { useToast } from '@/hooks/use-toast';
 import { openShareWindow, nativeShare, isNative } from '@/lib/platform';
+import { getQueryFn } from '@/lib/queryClient';
 
 interface ShareData {
   screenshotUrl: string;
@@ -77,6 +78,7 @@ export function ScreenshotShareDialog({
 
   const { data: shareData, isLoading, error, refetch } = useQuery<ShareData>({
     queryKey: [`/api/screenshots/${screenshotId}/share`],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: open && validId,
     retry: 3,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
@@ -178,7 +180,7 @@ export function ScreenshotShareDialog({
         </DialogTrigger>
       )}
       <DialogContent
-        className="p-0 border-[#1B2A33] bg-[#0B1218] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh] flex flex-col z-[10001]"
+        className="p-0 border-[#1B2A33] bg-[#0B1218] w-[calc(100vw-2rem)] max-w-[384px] sm:max-w-[540px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh] flex flex-col z-[10001]"
         aria-describedby="screenshot-share-description"
       >
         {/* Header */}
@@ -221,18 +223,16 @@ export function ScreenshotShareDialog({
             </div>
           ) : shareData ? (
             <>
-              {/* Screenshot preview — capped height on mobile */}
-              <div className="flex justify-center">
-                <div className="relative w-full max-h-[140px] sm:max-h-[180px] aspect-video bg-[#1B2A33] rounded-xl overflow-hidden border border-[#1B2A33]/80">
-                  {shareData.imageUrl && (
-                    <img
-                      src={shareData.imageUrl}
-                      alt="Screenshot preview"
-                      className="w-full h-full object-cover"
-                      data-testid="img-screenshot-preview"
-                    />
-                  )}
-                </div>
+              {/* Screenshot preview — mobile: object-contain to show full image; desktop: object-cover in aspect-video */}
+              <div className="w-full h-[200px] sm:h-auto sm:aspect-video bg-[#1B2A33] rounded-xl overflow-hidden border border-[#1B2A33]/80 flex items-center justify-center">
+                {shareData.imageUrl && (
+                  <img
+                    src={shareData.imageUrl}
+                    alt="Screenshot preview"
+                    className="max-w-full max-h-full object-contain sm:w-full sm:h-full sm:max-w-none sm:max-h-none sm:object-cover"
+                    data-testid="img-screenshot-preview"
+                  />
+                )}
               </div>
 
               {/* Copy link row */}

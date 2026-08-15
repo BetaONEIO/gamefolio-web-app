@@ -1,6 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
+// useLocation no longer needed — clip opens via ClipDialog, not navigation
+import { useClipDialog } from "@/hooks/use-clip-dialog";
+import type { ClipWithUser } from "@shared/schema";
 import {
   Flame, ChevronLeft, ChevronRight, Play, Pause,
   Volume2, VolumeX, Upload, Clapperboard, Video, Camera, Info, X,
@@ -142,17 +145,18 @@ function MobileTrendingCarousel({
   clips,
   contentType,
   onContentTypeChange,
+  onOpen,
 }: {
   clips: Clip[];
   contentType: "clips" | "reels";
   onContentTypeChange: (t: "clips" | "reels") => void;
+  onOpen: (id: number) => void;
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [, setLocation] = useLocation();
 
   const total = clips.length;
   const clip = clips[currentIndex] ?? null;
@@ -330,7 +334,7 @@ function MobileTrendingCarousel({
               <button
                 className="absolute inset-0 w-full h-full"
                 style={{ background: "transparent", zIndex: 5 }}
-                onClick={(e) => { e.stopPropagation(); setLocation(`/clips/${c.id}`); }}
+                onClick={(e) => { e.stopPropagation(); onOpen(c.id); }}
                 aria-label={`Open ${c.title}`}
               />
             </div>
@@ -408,7 +412,7 @@ function MobileTrendingCarousel({
           <>
             <button
               className="block text-left w-full"
-              onClick={() => setLocation(`/clips/${clip.id}`)}
+              onClick={() => onOpen(clip.id)}
             >
               <p className="text-white font-bold text-sm leading-snug line-clamp-1">
                 {clip.title}
@@ -459,7 +463,7 @@ export default function TrendingHeroSlide({
   const isInteracting = useRef(false);
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [, setLocation] = useLocation();
+  const { openClipDialog } = useClipDialog();
 
   const { data: clips = [] } = useQuery<Clip[]>({
     queryKey: contentType === "reels"
@@ -564,7 +568,7 @@ export default function TrendingHeroSlide({
     if (showInfo) { setShowInfo(false); return; }
     const vid = videoRef.current;
     if (!vid) {
-      if (clip) setLocation(`/clips/${clip.id}`);
+      if (clip) openClipDialog(clip.id, clips as unknown as ClipWithUser[], "/trending", contentType === "reels" ? "reel" : "clip");
       return;
     }
     if (isPlaying) {
@@ -613,6 +617,7 @@ export default function TrendingHeroSlide({
         clips={clips}
         contentType={contentType}
         onContentTypeChange={setContentType}
+        onOpen={(id) => openClipDialog(id, clips as unknown as ClipWithUser[], "/trending", contentType === "reels" ? "reel" : "clip")}
       />
     );
   }
@@ -759,7 +764,7 @@ export default function TrendingHeroSlide({
             <div className="min-w-0">
               {clip && (
                 <>
-                  <button onClick={(e) => { e.stopPropagation(); setLocation(`/clips/${clip.id}`); }} className="block text-left">
+                  <button onClick={(e) => { e.stopPropagation(); openClipDialog(clip.id, clips as unknown as ClipWithUser[], "/trending", contentType === "reels" ? "reel" : "clip"); }} className="block text-left">
                     <p className="text-white font-bold text-sm leading-snug line-clamp-1 drop-shadow hover:underline">
                       {clip.title}
                     </p>

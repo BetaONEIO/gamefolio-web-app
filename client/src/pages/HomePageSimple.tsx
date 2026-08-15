@@ -94,6 +94,8 @@ interface LeaderboardWinner {
   clipsCount?: number;
   reelsCount?: number;
   screenshotsCount?: number;
+  mostPlayedGame?: { name: string; imageUrl: string | null } | null;
+  recentUpload?: { id: number; contentType: string; createdAt: string; gameTitle: string | null; title: string | null } | null;
   user: {
     id: number;
     username: string;
@@ -174,10 +176,24 @@ const LEADERBOARD_STYLES = `
   animation: pro-sparkle 1.8s ease-in-out infinite;
   filter: drop-shadow(0 0 4px #ffe135);
 }
-/* Mobile: horizontal scroll podium */
+/* Mobile: horizontal scroll podium with snap */
 @media (max-width: 639px) {
-  .lb-podium-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .lb-podium-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    scroll-snap-type: x mandatory;
+    /* left padding so first card can centre in the viewport */
+    padding-left: calc(50vw - 82px);
+  }
   .lb-podium-scroll::-webkit-scrollbar { display: none; }
+  /* trailing spacer so last card can also centre */
+  .lb-podium-scale::after {
+    content: '';
+    display: block;
+    width: calc(50vw - 82px);
+    flex-shrink: 0;
+  }
   .lb-divider { display: none !important; }
 }
 @media (min-width: 640px) {
@@ -274,20 +290,24 @@ const TrendingContentCarousel = ({ clips, isLoading, userId }: TrendingContentCa
 
   return (
     <div className="relative">
-      {/* Navigation Arrows - hidden on mobile, visible on larger screens */}
-      <button
-        onClick={() => scroll('left')}
-        className="absolute -left-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
-      >
-        <ChevronLeft className="h-5 w-5" />
-      </button>
-      
-      <button
-        onClick={() => scroll('right')}
-        className="absolute -right-5 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2.5 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
-      >
-        <ChevronRight className="h-5 w-5" />
-      </button>
+      {/* Navigation arrows sit above the clips instead of over the card edges. */}
+      <div className="flex justify-end gap-2 px-2 sm:px-4 md:px-8 mb-2">
+        <button
+          onClick={() => scroll('left')}
+          aria-label="Show previous clips"
+          className="bg-black/70 hover:bg-black/90 text-white p-2 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+
+        <button
+          onClick={() => scroll('right')}
+          aria-label="Show more clips"
+          className="bg-black/70 hover:bg-black/90 text-white p-2 rounded-full transition-colors hidden sm:flex items-center justify-center shadow-lg"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </div>
 
       {/* Carousel Container */}
       <div 
@@ -539,7 +559,7 @@ const HomePage = () => {
 
   return (
     <div className="pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-8 hide-scrollbar">
-      
+
       {/* Hero Banner Carousel */}
       <section className="mb-0 -mx-0">
         <div className="relative overflow-hidden">
@@ -618,7 +638,7 @@ const HomePage = () => {
 
                                     if (!winner) {
                                       return (
-                                        <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', transform:`translateY(${elevate}px)` }}>
+                                        <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', transform:`translateY(${elevate}px)`, scrollSnapAlign:'center' }}>
                                           <div className={cardClass}>
                                             <div className="fire-card flex flex-col items-center justify-center"
                                               style={{ width:228, height:408, borderRadius:16 }}>
@@ -641,6 +661,8 @@ const HomePage = () => {
                                       uploadsCount: winner.uploadsCount, totalPoints: winner.totalPoints,
                                       clipsCount: winner.clipsCount ?? winner.uploadsCount, reelsCount: winner.reelsCount ?? 0, screenshotsCount: winner.screenshotsCount ?? 0,
                                       followersCount: winner.followersCount ?? 0, followingCount: winner.followingCount ?? 0,
+                                      mostPlayedGame: winner.mostPlayedGame ?? null,
+                                      recentUpload: winner.recentUpload ?? null,
                                       user: {
                                         id: winner.user.id, username: winner.user.username,
                                         displayName: winner.user.displayName, avatarUrl: winner.user.avatarUrl,
@@ -657,7 +679,7 @@ const HomePage = () => {
                                     };
 
                                     return (
-                                      <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', transform:`translateY(${elevate}px)` }}>
+                                      <div key={rank} style={{ display:'flex', flexDirection:'column', alignItems:'center', transform:`translateY(${elevate}px)`, scrollSnapAlign:'center' }}>
                                         <div className={`relative ${cardClass}`}>
                                           {isFirst && (
                                             <div className="absolute pointer-events-none" style={{ inset:'-10px', zIndex:10 }}>

@@ -472,83 +472,107 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(id: number): Promise<boolean> {
+    console.log(`Starting user deletion process for user ID: ${id}`);
     try {
-      // Delete all related data first to maintain referential integrity
-      console.log(`Starting user deletion process for user ID: ${id}`);
+      // The whole cascade runs in one transaction. The previous version fired
+      // ~15 sequential deletes with no rollback, so when it hit an FK it didn't
+      // handle it left the account half-removed — follows, likes, comments,
+      // messages, notifications and screenshots gone, but the profile and its
+      // clips still standing, and a bare `return false` to show for it. Either
+      // the whole account goes or none of it does.
+      const removed = await db.transaction(async (tx) => {
+        // Several tables below are keyed off the user's own clips rather than
+        // off the user, so resolve those ids up front.
+        const ownClips = await tx
+          .select({ id: clips.id })
+          .from(clips)
+          .where(eq(clips.userId, id));
+        const clipIds = ownClips.map((c) => c.id);
 
-      // Delete email verification tokens
-      await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, id));
-      console.log(`✅ Deleted email verification tokens for user ${id}`);
+        // XP ledger. user_xp_history has NO ACTION FKs on user_id, reactor_id
+        // and clip_id, and was added by 0016_authoritative_xp_system.sql long
+        // after this function was written — its clip_id rows are what made the
+        // `clips` delete below fail for any user who had ever earned XP.
+        await tx.delete(userXPHistory).where(
+          or(
+            eq(userXPHistory.userId, id),
+            eq(userXPHistory.reactorId, id),
+            ...(clipIds.length > 0 ? [inArray(userXPHistory.clipId, clipIds)] : []),
+          ),
+        );
 
-      // Delete user points history
-      await db.delete(userPointsHistory).where(eq(userPointsHistory.userId, id));
-      console.log(`✅ Deleted points history for user ${id}`);
+        await tx.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, id));
+        await tx.delete(userPointsHistory).where(eq(userPointsHistory.userId, id));
+        await tx.delete(userBadges).where(eq(userBadges.userId, id));
+        await tx.delete(userBlocks).where(or(
+          eq(userBlocks.blockerId, id),
+          eq(userBlocks.blockedId, id)
+        ));
+        await tx.delete(messages).where(or(
+          eq(messages.senderId, id),
+          eq(messages.receiverId, id)
+        ));
 
-      // Delete user badges
-      await db.delete(userBadges).where(eq(userBadges.userId, id));
-      console.log(`✅ Deleted badges for user ${id}`);
+        // Notifications point at the user three ways, and clip_id is NO ACTION
+        // — a notification *about* one of their clips blocks the delete even
+        // once the rows they received are gone.
+        await tx.delete(notifications).where(
+          or(
+            eq(notifications.userId, id),
+            eq(notifications.fromUserId, id),
+            ...(clipIds.length > 0 ? [inArray(notifications.clipId, clipIds)] : []),
+          ),
+        );
 
-      // Delete user blocks (both as blocker and blocked)
-      await db.delete(userBlocks).where(or(
-        eq(userBlocks.blockerId, id),
-        eq(userBlocks.blockedId, id)
-      ));
-      console.log(`✅ Deleted user blocks for user ${id}`);
+        await tx.delete(follows).where(or(
+          eq(follows.followerId, id),
+          eq(follows.followingId, id)
+        ));
+        await tx.delete(userGameFavorites).where(eq(userGameFavorites.userId, id));
+        await tx.delete(likes).where(eq(likes.userId, id));
 
-      // Delete messages (both sent and received)
-      await db.delete(messages).where(or(
-        eq(messages.senderId, id),
-        eq(messages.receiverId, id)
-      ));
-      console.log(`✅ Deleted messages for user ${id}`);
+        // comments.clip_id is NO ACTION, so other people's comments on this
+        // user's clips have to go with the clip.
+        await tx.delete(comments).where(
+          or(
+            eq(comments.userId, id),
+            ...(clipIds.length > 0 ? [inArray(comments.clipId, clipIds)] : []),
+          ),
+        );
 
-      // Delete notifications
-      await db.delete(notifications).where(eq(notifications.userId, id));
-      console.log(`✅ Deleted notifications for user ${id}`);
+        await tx.delete(clipReactions).where(eq(clipReactions.userId, id));
+        await tx.delete(screenshotComments).where(eq(screenshotComments.userId, id));
+        await tx.delete(screenshots).where(eq(screenshots.userId, id));
 
-      // Delete follows (both as follower and following)
-      await db.delete(follows).where(or(
-        eq(follows.followerId, id),
-        eq(follows.followingId, id)
-      ));
-      console.log(`✅ Deleted follows for user ${id}`);
+        // Leaderboard snapshots and unlockables keep a NO ACTION row per user
+        // per period, so they outlive everything above.
+        await tx.delete(monthlyLeaderboard).where(eq(monthlyLeaderboard.userId, id));
+        await tx.delete(weeklyLeaderboard).where(eq(weeklyLeaderboard.userId, id));
+        await tx.delete(topContributors).where(eq(topContributors.userId, id));
+        await tx.delete(userUnlockedBanners).where(eq(userUnlockedBanners.userId, id));
 
-      // Delete user game favorites
-      await db.delete(userGameFavorites).where(eq(userGameFavorites.userId, id));
-      console.log(`✅ Deleted game favorites for user ${id}`);
+        await tx.delete(clips).where(eq(clips.userId, id));
 
-      // Delete likes made by the user
-      await db.delete(likes).where(eq(likes.userId, id));
-      console.log(`✅ Deleted likes for user ${id}`);
+        const result = await tx.delete(users).where(eq(users.id, id)).returning();
+        return result.length > 0;
+      });
 
-      // Delete comments made by the user
-      await db.delete(comments).where(eq(comments.userId, id));
-      console.log(`✅ Deleted comments for user ${id}`);
-
-      // Delete clip reactions made by the user
-      await db.delete(clipReactions).where(eq(clipReactions.userId, id));
-      console.log(`✅ Deleted clip reactions for user ${id}`);
-
-      // Delete screenshots uploaded by the user
-      await db.delete(screenshots).where(eq(screenshots.userId, id));
-      console.log(`✅ Deleted screenshots for user ${id}`);
-
-      // Delete clips uploaded by the user (this will cascade delete related likes, comments, etc.)
-      await db.delete(clips).where(eq(clips.userId, id));
-      console.log(`✅ Deleted clips for user ${id}`);
-
-      // Finally, delete the user
-      const result = await db.delete(users).where(eq(users.id, id)).returning();
-
-      if (result.length > 0) {
-        console.log(`✅ Successfully deleted user ${id} and all related data`);
-        return true;
-      } else {
-        console.log(`❌ User ${id} not found for deletion`);
-        return false;
-      }
-    } catch (error) {
-      console.error("Error deleting user:", error);
+      console.log(
+        removed
+          ? `✅ Successfully deleted user ${id} and all related data`
+          : `❌ User ${id} not found for deletion`,
+      );
+      return removed;
+    } catch (error: any) {
+      // The transaction rolled back, so the account is exactly as it was. Log
+      // the constraint that blocked it — that name is the only thing that says
+      // which table still needs a delete added above.
+      const cause = error?.cause ?? error;
+      console.error(
+        `Error deleting user ${id} (rolled back, account untouched):`,
+        cause?.constraint_name ?? "",
+        cause?.detail ?? cause?.message ?? error,
+      );
       return false;
     }
   }
@@ -1229,10 +1253,12 @@ export class DatabaseStorage implements IStorage {
     );
     const clipsWithDetails: ClipWithUser[] = fetched.filter((c): c is ClipWithUser => !!c);
 
-    // Fallback: if engagement query returned nothing (e.g. transient DB startup
-    // issue or no engagement data yet), serve the most-recent clips instead so
-    // the home page hero always has content.
-    if (clipsWithDetails.length === 0) {
+    // Fallback: if engagement query returned nothing and NO game filter was
+    // applied (i.e. home-page hero context), serve the most-recent clips so
+    // the hero always has content. When a gameId was supplied we must NOT
+    // fall back to unfiltered clips — that would show random content on a
+    // game-specific page (e.g. Jackbox showing Fortnite clips).
+    if (clipsWithDetails.length === 0 && !gameId) {
       const fallbackRows = await db
         .select({ clipId: clips.id })
         .from(clips)

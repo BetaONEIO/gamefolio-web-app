@@ -157,19 +157,24 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
         variant: "gamefolioSuccess",
       });
       // Immediately remove from all caches for instant UI update
-      const removeClip = (old: any) => {
+      const removeItem = (old: any) => {
         if (!old) return old;
         if (Array.isArray(old)) return old.filter((c: any) => c.id !== clip.id);
         if (old?.clips && Array.isArray(old.clips)) return { ...old, clips: old.clips.filter((c: any) => c.id !== clip.id) };
+        if (old?.screenshots && Array.isArray(old.screenshots)) return { ...old, screenshots: old.screenshots.filter((c: any) => c.id !== clip.id) };
         return old;
       };
-      queryClient.setQueryData([`/api/users/${clip.user.username}/clips`], removeClip);
-      queryClient.setQueryData(['/api/clips/latest'], removeClip);
-      queryClient.setQueryData(['/api/reels/latest'], removeClip);
+      queryClient.setQueryData([`/api/users/${clip.user.username}/clips`], removeItem);
+      queryClient.setQueryData([`/api/users/${clip.user.username}/screenshots`], removeItem);
+      queryClient.setQueryData([`/api/users/${clip.userId}/screenshots`], removeItem);
+      queryClient.setQueryData(['/api/clips/latest'], removeItem);
+      queryClient.setQueryData(['/api/reels/latest'], removeItem);
       // Background invalidations
       queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
       queryClient.invalidateQueries({ queryKey: ["/api/trending"] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/clips`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/screenshots`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.userId}/screenshots`] });
       queryClient.invalidateQueries({ queryKey: ['/api/clips/latest'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });
       setShowDeleteConfirm(false);

@@ -1,6 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipWithUser, CommentWithUser, Game, User } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/use-auth";
+
+// Liking/commenting earns daily-challenge XP — the Daily XP Challenges
+// widget's queries default to staleTime: Infinity, so without an explicit
+// invalidation here it never reflects the change until something else
+// happens to refetch it (e.g. a full page reload).
+function useInvalidateDailyChallenges() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  return () => {
+    if (!user) return;
+    queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/daily-activity`] });
+    queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/level-progress`] });
+  };
+}
 
 export function useClip(clipId: string | number) {
   return useQuery<ClipWithUser>({
@@ -56,7 +71,8 @@ export function useClipComments(clipId: string | number) {
 
 export function useCreateComment() {
   const queryClient = useQueryClient();
-  
+  const invalidateDailyChallenges = useInvalidateDailyChallenges();
+
   return useMutation({
     mutationFn: async (data: { clipId: number; text: string }) => {
       const response = await apiRequest("POST", `/api/clips/${data.clipId}/comments`, {
@@ -68,6 +84,7 @@ export function useCreateComment() {
       queryClient.invalidateQueries({ queryKey: [`/api/clips/${variables.clipId}/comments`] });
       queryClient.invalidateQueries({ queryKey: [`/api/clips/${variables.clipId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/clips/trending'] });
+      invalidateDailyChallenges();
     },
   });
 }
@@ -89,7 +106,8 @@ export function useDeleteComment() {
 
 export function useLikeClip() {
   const queryClient = useQueryClient();
-  
+  const invalidateDailyChallenges = useInvalidateDailyChallenges();
+
   return useMutation({
     mutationFn: async (data: { clipId: number; unlike?: boolean }) => {
       // Always use POST for toggle behavior (backend handles like/unlike)
@@ -100,13 +118,15 @@ export function useLikeClip() {
       queryClient.invalidateQueries({ queryKey: ['clipLikeStatus', variables.clipId] });
       queryClient.invalidateQueries({ queryKey: [`/api/clips/${variables.clipId}/likes`] });
       queryClient.invalidateQueries({ queryKey: [`/api/clips/${variables.clipId}/likes/status`] });
+      invalidateDailyChallenges();
     },
   });
 }
 
 export function useLikeScreenshot() {
   const queryClient = useQueryClient();
-  
+  const invalidateDailyChallenges = useInvalidateDailyChallenges();
+
   return useMutation({
     mutationFn: async (data: { screenshotId: number; unlike?: boolean }) => {
       // Always use POST for toggle behavior (backend handles like/unlike)
@@ -117,6 +137,7 @@ export function useLikeScreenshot() {
       queryClient.invalidateQueries({ queryKey: ['screenshotLikeStatus', variables.screenshotId] });
       queryClient.invalidateQueries({ queryKey: [`/api/screenshots/${variables.screenshotId}/likes`] });
       queryClient.invalidateQueries({ queryKey: [`/api/screenshots/${variables.screenshotId}/likes/status`] });
+      invalidateDailyChallenges();
     },
   });
 }
@@ -135,7 +156,8 @@ export function useScreenshotComments(screenshotId: string | number) {
 
 export function useCreateScreenshotComment() {
   const queryClient = useQueryClient();
-  
+  const invalidateDailyChallenges = useInvalidateDailyChallenges();
+
   return useMutation({
     mutationFn: async (data: { screenshotId: number; text: string }) => {
       const response = await apiRequest("POST", `/api/screenshots/${data.screenshotId}/comments`, {
@@ -147,6 +169,7 @@ export function useCreateScreenshotComment() {
       queryClient.invalidateQueries({ queryKey: [`/api/screenshots/${variables.screenshotId}/comments`] });
       queryClient.invalidateQueries({ queryKey: [`/api/screenshots/${variables.screenshotId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/trending/screenshots'] });
+      invalidateDailyChallenges();
     },
   });
 }

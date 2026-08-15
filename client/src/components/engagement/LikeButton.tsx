@@ -92,12 +92,18 @@ export function LikeButton({
         setLiked(result.liked);
         setCount(result.count);
       }
-      queryClient.invalidateQueries({ 
-        queryKey: [`/api/${contentType}s/${contentId}/likes`] 
+      queryClient.invalidateQueries({
+        queryKey: [`/api/${contentType}s/${contentId}/likes`]
       });
-      queryClient.invalidateQueries({ 
-        queryKey: [`/api/${contentType}s/${contentId}/likes/status`] 
+      queryClient.invalidateQueries({
+        queryKey: [`/api/${contentType}s/${contentId}/likes/status`]
       });
+      // Liking earns daily-challenge XP — refresh the Daily XP Challenges
+      // widget (staleTime: Infinity means it otherwise never refetches).
+      if (user) {
+        queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/daily-activity`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/level-progress`] });
+      }
     },
     onError: (error: Error, _, context) => {
       if (context) {

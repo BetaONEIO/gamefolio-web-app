@@ -56,6 +56,12 @@ interface HeroTextData {
   targetAudience?: string;
 }
 
+interface PsnHealth {
+  lastSuccessAt: string | null;
+  hasRefreshToken: boolean;
+  daysSinceLastSuccess: number | null;
+}
+
 interface AssetReward {
   id: number;
   name: string;
@@ -2082,6 +2088,9 @@ const AdminPage = () => {
   const [actionType, setActionType] = useState<"ban" | "suspend">("ban");
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [restoreAction, setRestoreAction] = useState<"unsuspend" | "unban">("unsuspend");
+  const [impersonateDialogOpen, setImpersonateDialogOpen] = useState(false);
+  const [impersonateReason, setImpersonateReason] = useState("");
+  const [isImpersonating, setIsImpersonating] = useState(false);
   const [badgeDialogOpen, setBadgeDialogOpen] = useState(false);
   const [selectedBadgeType, setSelectedBadgeType] = useState("");
   const [badgeUserSearch, setBadgeUserSearch] = useState("");
@@ -2374,6 +2383,13 @@ const AdminPage = () => {
     refetchInterval: 60000, // Refresh every minute
   });
 
+  // Fetch PSN token health
+  const { data: psnHealth, isLoading: psnHealthLoading, refetch: refetchPsnHealth } = useQuery<PsnHealth>({
+    queryKey: ["/api/admin/psn-health"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    refetchInterval: 300000, // Refresh every 5 minutes
+  });
+
   // Fetch users with pagination
   const { data: usersData, isLoading: usersLoading } = useQuery<UsersData>({
     queryKey: ["/api/admin/users", { page: userPage, search: userSearch }],
@@ -2604,6 +2620,34 @@ const AdminPage = () => {
         description: "Failed to ban user. Please try again.",
         variant: "gamefolioError",
       });
+    }
+  };
+
+  // Popup blockers treat window.open() as not-a-user-gesture once it happens
+  // after an `await`, so the caller opens a blank tab synchronously on click
+  // and passes the handle in here — we just navigate it once the token is back.
+  const handleImpersonateUser = async (userId: number, targetWindow: Window | null) => {
+    try {
+      const res = await apiRequest("POST", `/api/admin/users/${userId}/impersonate`, {
+        reason: impersonateReason,
+      });
+      const data = await res.json();
+      const url = `/impersonate-session?token=${encodeURIComponent(data.token)}`;
+      if (targetWindow) {
+        targetWindow.location.href = url;
+      } else {
+        window.open(url, "_blank");
+      }
+      setImpersonateDialogOpen(false);
+    } catch (error) {
+      targetWindow?.close();
+      toast({
+        title: "Error",
+        description: "Failed to start impersonation session. Please try again.",
+        variant: "gamefolioError",
+      });
+    } finally {
+      setIsImpersonating(false);
     }
   };
 
@@ -3351,6 +3395,100 @@ const AdminPage = () => {
             </Card>
           </div>
 
+          {/* PSN Token Health Card */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle className="text-base font-semibold">PSN Token Health</CardTitle>
+                <CardDescription className="mt-1">
+                  Status of the PlayStation Network sync token
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => refetchPsnHealth()}
+                title="Refresh PSN health"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {psnHealthLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Clock className="h-4 w-4 animate-spin" />
+                  Checking PSN token status…
+                </div>
+              ) : !psnHealth ? (
+                <div className="flex items-center gap-2 text-destructive text-sm">
+                  <XCircle className="h-4 w-4" />
+                  Could not retrieve PSN health data.
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-6 items-center">
+                  {/* Colour-coded status badge */}
+                  <div className="flex items-center gap-2">
+                    {psnHealth.daysSinceLastSuccess === null ? (
+                      <>
+                        <XCircle className="h-5 w-5 text-destructive" />
+                        <span className="font-semibold text-destructive">No Data</span>
+                      </>
+                    ) : psnHealth.daysSinceLastSuccess > 50 ? (
+                      <>
+                        <XCircle className="h-5 w-5 text-destructive" />
+                        <span className="font-semibold text-destructive">Critical</span>
+                      </>
+                    ) : psnHealth.daysSinceLastSuccess >= 30 ? (
+                      <>
+                        <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                        <span className="font-semibold text-yellow-500">Warning</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <span className="font-semibold text-green-500">Healthy</span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Last success timestamp */}
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Last success: </span>
+                    <span className="font-medium">
+                      {psnHealth.lastSuccessAt
+                        ? new Date(psnHealth.lastSuccessAt).toLocaleString()
+                        : "Never"}
+                    </span>
+                  </div>
+
+                  {/* Days since last success */}
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Days since last success: </span>
+                    <span className="font-medium">
+                      {psnHealth.daysSinceLastSuccess !== null
+                        ? psnHealth.daysSinceLastSuccess
+                        : "—"}
+                    </span>
+                  </div>
+
+                  {/* Refresh token presence */}
+                  <div className="flex items-center gap-1 text-sm">
+                    <span className="text-muted-foreground">Refresh token: </span>
+                    {psnHealth.hasRefreshToken ? (
+                      <span className="flex items-center gap-1 text-green-500 font-medium">
+                        <CheckCircle className="h-3.5 w-3.5" /> Present
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-destructive font-medium">
+                        <XCircle className="h-3.5 w-3.5" /> Missing
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <div className="grid gap-4 md:grid-cols-2">
             <Card className="col-span-1">
               <CardHeader>
@@ -3595,7 +3733,23 @@ const AdminPage = () => {
                               >
                                 <User className="h-4 w-4" />
                               </Button>
-                              
+
+                              {user.role !== "admin" && user.role !== "moderator" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setSelectedUser(user);
+                                    setImpersonateReason("");
+                                    setImpersonateDialogOpen(true);
+                                  }}
+                                  title="Impersonate User"
+                                  className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              )}
+
                               {user.status === "active" ? (
                                 <>
                                   <Button
@@ -7099,6 +7253,66 @@ const AdminPage = () => {
               onClick={handleStatusAction}
             >
               {actionType === "ban" ? "Ban User" : "Suspend User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Impersonate User Dialog */}
+      <Dialog open={impersonateDialogOpen} onOpenChange={setImpersonateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Impersonate User</DialogTitle>
+            <DialogDescription>
+              Opens a new tab, fully logged in as this user, for up to 45 minutes. Every
+              action taken is attributed to you in the audit log — use only to
+              reproduce/debug a reported issue.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedUser && (
+            <div className="flex items-center gap-3 px-1 py-2 rounded-lg bg-muted/50">
+              <User className="h-5 w-5 text-muted-foreground shrink-0" />
+              <div>
+                <div className="font-medium text-sm">{selectedUser.displayName || selectedUser.username}</div>
+                <div className="text-xs text-muted-foreground">@{selectedUser.username}</div>
+              </div>
+              <Badge variant="outline" className="ml-auto border-amber-500 text-amber-600">
+                45 min session
+              </Badge>
+            </div>
+          )}
+
+          <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <label htmlFor="impersonate-reason" className="text-sm font-medium">
+                Reason <span className="text-muted-foreground font-normal">(required, logged)</span>
+              </label>
+              <Textarea
+                id="impersonate-reason"
+                placeholder="e.g. Ticket #123 — user reports clip upload fails on their account"
+                value={impersonateReason}
+                onChange={(e) => setImpersonateReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImpersonateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              disabled={isImpersonating || impersonateReason.trim().length < 10}
+              onClick={() => {
+                if (!selectedUser) return;
+                setIsImpersonating(true);
+                const targetWindow = window.open("about:blank", "_blank");
+                handleImpersonateUser(selectedUser.id, targetWindow);
+              }}
+            >
+              {isImpersonating ? "Starting…" : "Start Impersonation"}
             </Button>
           </DialogFooter>
         </DialogContent>

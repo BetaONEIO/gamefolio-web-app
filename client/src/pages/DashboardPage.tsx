@@ -2032,20 +2032,25 @@ export default function DashboardPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* ── Overview tab ── */}
         {activeTab === "overview" && (
-          <OverviewSnapshot
-            player={data?.player}
-            season={data?.seasonLeague}
-            rewards={data?.nextRewards}
-            goals={data?.goals}
-            isLoading={isLoading}
-            onViewLeague={() => setActiveTab("league")}
-            onViewGoals={() => setActiveTab("goals")}
-          />
+          <div style={isMobile ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 5rem)" } : undefined}>
+            <OverviewSnapshot
+              player={data?.player}
+              season={data?.seasonLeague}
+              rewards={data?.nextRewards}
+              goals={data?.goals}
+              isLoading={isLoading}
+              onViewLeague={() => setActiveTab("league")}
+              onViewGoals={() => setActiveTab("goals")}
+            />
+          </div>
         )}
 
         {/* ── League tab: complete competitive and seasonal progression ── */}
         {activeTab === "league" && (
-          <div className="space-y-5 pb-8">
+          <div
+            className="space-y-5"
+            style={isMobile ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 5rem)" } : { paddingBottom: "2rem" }}
+          >
             <RankedSeason data={data?.seasonLeague} isLoading={isLoading} />
             <FriendsRivals data={data?.social} isLoading={isLoading} />
           </div>
@@ -2053,7 +2058,10 @@ export default function DashboardPage() {
 
         {/* ── Goals tab: complete personal progression and action items ── */}
         {activeTab === "goals" && (
-          <div className="space-y-5 pb-8">
+          <div
+            className="space-y-5"
+            style={isMobile ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 5rem)" } : { paddingBottom: "2rem" }}
+          >
             <Goals goals={data?.goals} isLoading={isLoading} />
             {(data?.bounties ?? []).length > 0 && (
               <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
@@ -2063,7 +2071,7 @@ export default function DashboardPage() {
 
         {/* ── XP History tab ── */}
         {activeTab === "xp-history" && (
-          <div className="pb-8">
+          <div style={isMobile ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 5rem)" } : { paddingBottom: "2rem" }}>
             <RecentActivity activity={data?.recentActivity} isLoading={isLoading} />
           </div>
         )}
@@ -2072,7 +2080,7 @@ export default function DashboardPage() {
         {activeTab === "creator-analytics" && (
           <div
             className="space-y-5"
-            style={isMobile ? { paddingBottom: "calc(var(--mobile-nav-height, 3.5rem) + 1rem)" } : { paddingBottom: "2rem" }}
+            style={isMobile ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 5rem)" } : { paddingBottom: "2rem" }}
           >
             <CreatorAnalytics
               creator={data?.creator}

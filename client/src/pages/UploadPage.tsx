@@ -562,9 +562,22 @@ const UploadPage = () => {
   // Pro accounts. Confirmed live for three separate Pro users all seeing the
   // free-tier 50MB reel cap in this UI despite the server returning the
   // correct 250MB for their account.
+  //
+  // `user?.isPro` is included in the queryKey (not the URL — see the
+  // dedicated queryFn below) purely so a cache entry fetched while Pro
+  // status was stale/false becomes a cache miss the instant the canonical
+  // `/api/user` record flips to Pro, without depending on every Pro-granting
+  // code path remembering to also invalidate this separate query.
   const { data: uploadLimits, isLoading: limitsLoading } = useQuery<UploadLimits>({
-    queryKey: ['/api/upload/limits'],
-    queryFn: getQueryFn({ on401: 'returnNull' }),
+    queryKey: ['/api/upload/limits', user?.isPro],
+    queryFn: async () => {
+      const res = await authedFetch('/api/upload/limits', { method: 'GET' });
+      if (!res.ok) {
+        if (res.status === 401) return null;
+        throw new Error('Failed to fetch upload limits');
+      }
+      return res.json();
+    },
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
     retry: 2,
@@ -1641,6 +1654,11 @@ const UploadPage = () => {
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}/clips`] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user?.username}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/upload/limits'] });
+      // "Upload Today" daily-challenge completion lives in daily-activity.
+      if (user) {
+        queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/daily-activity`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/level-progress`] });
+      }
 
       // Reset form first
       resetFormAndNavigate();

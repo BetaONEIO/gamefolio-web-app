@@ -27,7 +27,7 @@ import { eq, sql, desc, inArray, and } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
 import { captureRouteError } from "./sentry";
-import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes } from "@shared/schema";
+import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog } from "@shared/schema";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -95,6 +95,7 @@ import { initializeRealtimeNotificationService } from './realtime-notification-s
 import { adminMiddleware } from "./middleware/admin";
 import { optionalHybridAuth } from "./middleware/optional-hybrid-auth";
 import { hybridAuth, hybridEmailVerification } from "./middleware/hybrid-auth";
+import { impersonationAuthMiddleware } from "./middleware/impersonation-auth";
 import { isDeveloperSubdomainRequest } from "./middleware/subdomain-check";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
@@ -497,6 +498,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // Admin "impersonate user" bridge: if a valid impersonation token is present,
+  // authenticate as the *target* user (not the admin) for this request. Runs
+  // before the generic native-JWT bridge below, which no-ops once req.user is
+  // set. Deliberately not applied to /api/admin/* — see the middleware's own
+  // docblock for why that matters.
+  app.use(impersonationAuthMiddleware);
 
   // Bearer-token bridge: if the session didn't authenticate the request but a
   // valid Authorization: Bearer JWT is present, populate req.user from it.
@@ -2724,6 +2732,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(null);
     }
 
+    const impersonation = (req as any).impersonation as
+      | { tokenId: string; adminId: number; adminUsername: string }
+      | undefined;
+    const impersonatedBy = impersonation
+      ? { adminId: impersonation.adminId, adminUsername: impersonation.adminUsername }
+      : undefined;
+
     try {
       const freshUser = await storage.getUserById((req.user as any).id);
       if (freshUser) {
@@ -2840,6 +2855,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           vpzoneShowOnProfile: u.vpzoneShowOnProfile ?? true,
           referralCode: u.referralCode || null,
           referredBy: u.referredBy || null,
+          impersonatedBy,
         });
       }
     } catch (error) {
@@ -2918,7 +2934,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       vpzoneChannelName: u.vpzoneChannelName || null,
       vpzoneVerified: u.vpzoneVerified || false,
       vpzoneShowOnProfile: u.vpzoneShowOnProfile ?? true,
+      impersonatedBy,
     });
+  });
+
+  // Self-service end of an impersonation session — callable by the impersonated
+  // request itself (i.e. the admin's impersonation-token tab clicking "Exit"),
+  // not admin-gated. Closes out the audit row so it has an endedAt.
+  app.post("/api/impersonation/end", async (req, res) => {
+    const impersonation = (req as any).impersonation as { tokenId: string } | undefined;
+    if (!impersonation) {
+      return res.status(400).json({ message: "Not an impersonation session" });
+    }
+    try {
+      await db
+        .update(impersonationAuditLog)
+        .set({ endedAt: new Date(), endReason: "manual" })
+        .where(and(eq(impersonationAuditLog.tokenId, impersonation.tokenId), sql`${impersonationAuditLog.endedAt} IS NULL`));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error ending impersonation session:", error);
+      res.status(500).json({ message: "Error ending impersonation session" });
+    }
   });
 
   // ==========================================
@@ -4465,12 +4502,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userIds = topRows.map(r => Number(r.userId));
 
       // Batch-fetch counts for all returned users
-      const [clipRows, reelRows, ssRows, followerRows, followingRows] = await Promise.all([
+      const userIdArr = userIds.length ? sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]` : sql`ARRAY[]::int[]`;
+      const [clipRows, reelRows, ssRows, followerRows, followingRows, mostPlayedRows, recentUploadRows] = await Promise.all([
         userIds.length ? db.execute(sql`SELECT user_id AS "userId", COUNT(*)::int AS count FROM clips WHERE user_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) AND (video_type='clip' OR video_type IS NULL) GROUP BY user_id`) : [],
         userIds.length ? db.execute(sql`SELECT user_id AS "userId", COUNT(*)::int AS count FROM clips WHERE user_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) AND video_type='reel' GROUP BY user_id`) : [],
         userIds.length ? db.execute(sql`SELECT user_id AS "userId", COUNT(*)::int AS count FROM screenshots WHERE user_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) GROUP BY user_id`) : [],
         userIds.length ? db.execute(sql`SELECT following_id AS "userId", COUNT(*)::int AS count FROM follows WHERE following_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) GROUP BY following_id`) : [],
         userIds.length ? db.execute(sql`SELECT follower_id AS "userId", COUNT(*)::int AS count FROM follows WHERE follower_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) GROUP BY follower_id`) : [],
+        // Most played game per user (game with the most clips/reels uploaded)
+        userIds.length ? db.execute(sql`
+          SELECT DISTINCT ON (c.user_id)
+            c.user_id      AS "userId",
+            g.name         AS "gameName",
+            g.image_url    AS "gameImageUrl"
+          FROM clips c
+          JOIN games g ON g.id = c.game_id
+          WHERE c.user_id = ANY(${userIdArr})
+            AND c.game_id IS NOT NULL
+          ORDER BY c.user_id,
+            (SELECT COUNT(*) FROM clips c2 WHERE c2.user_id = c.user_id AND c2.game_id = c.game_id) DESC
+        `) : [],
+        // Most recent upload (clip, reel, or screenshot) per user
+        userIds.length ? db.execute(sql`
+          SELECT DISTINCT ON ("userId") "userId", id, title, "contentType", "createdAt", "gameTitle"
+          FROM (
+            SELECT
+              c.user_id   AS "userId",
+              c.id,
+              c.title,
+              c.video_type AS "contentType",
+              c.created_at AS "createdAt",
+              g.name       AS "gameTitle"
+            FROM clips c
+            LEFT JOIN games g ON g.id = c.game_id
+            WHERE c.user_id = ANY(${userIdArr})
+            UNION ALL
+            SELECT
+              s.user_id    AS "userId",
+              s.id,
+              s.title,
+              'screenshot' AS "contentType",
+              s.created_at AS "createdAt",
+              g.name       AS "gameTitle"
+            FROM screenshots s
+            LEFT JOIN games g ON g.id = s.game_id
+            WHERE s.user_id = ANY(${userIdArr})
+          ) combined
+          ORDER BY "userId", "createdAt" DESC
+        `) : [],
       ]);
 
       const clipMap: Record<number,number> = Object.fromEntries((clipRows as any[]).map(r => [r.userId, r.count]));
@@ -4478,6 +4557,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ssMap: Record<number,number> = Object.fromEntries((ssRows as any[]).map(r => [r.userId, r.count]));
       const followerMap: Record<number,number> = Object.fromEntries((followerRows as any[]).map(r => [r.userId, r.count]));
       const followingMap: Record<number,number> = Object.fromEntries((followingRows as any[]).map(r => [r.userId, r.count]));
+      const mostPlayedMap: Record<number,{name:string;imageUrl:string|null}> = Object.fromEntries(
+        (mostPlayedRows as any[]).map(r => [Number(r.userId), { name: r.gameName, imageUrl: r.gameImageUrl || null }])
+      );
+      const recentUploadMap: Record<number,{id:number;contentType:string;createdAt:string;gameTitle:string|null;title:string|null}> = Object.fromEntries(
+        (recentUploadRows as any[]).map(r => [Number(r.userId), {
+          id: Number(r.id),
+          contentType: r.contentType,
+          createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+          gameTitle: r.gameTitle || null,
+          title: r.title || null,
+        }])
+      );
 
       const results = await Promise.all(topRows.map(async (r, idx) => {
         let avatarUrl = r.avatarUrl || null;
@@ -4512,6 +4603,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           screenshotsCount,
           followersCount: followerMap[uid] || 0,
           followingCount: followingMap[uid] || 0,
+          mostPlayedGame: mostPlayedMap[uid] || null,
+          recentUpload: recentUploadMap[uid] || null,
           user: {
             id: uid,
             username: r.username,
@@ -4750,6 +4843,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { BonusEventsService: BES } = await import("./bonus-events-service");
       const isWeekend = BES.isWeekend();
 
+      // All-challenges bonus — matches the 8 cards in the Daily XP
+      // Challenges widget exactly (login, watch5, watch20, comment, like,
+      // share, upload, lootbox). Idempotent, so safe to check on every load.
+      const allChallengesDone =
+        loginXPToday > 0 &&
+        watch5Done &&
+        watch20Done &&
+        commentedToday &&
+        likedToday &&
+        sharedToday &&
+        lootboxOpenedToday &&
+        creatorStatus.firstUploadOfDayDone;
+      BES.awardAllChallengesBonus(userId, allChallengesDone).catch((err: unknown) => {
+        console.error('Error awarding all-challenges bonus:', err);
+      });
+
       res.json({
         clipsWatchedToday,
         watch5Done,
@@ -4914,6 +5023,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const lootboxOpenedToday = todayPts.some((h) => h.action === "lootbox_bonus");
       const firstUploadOfDayDone = todayPts.some((h) => h.action === "first_upload_of_day");
 
+      // All-challenges bonus — matches the 8 cards in the Daily XP
+      // Challenges widget exactly. Idempotent, so safe to check on every load.
+      const allChallengesDone =
+        loginXPToday > 0 &&
+        watch5Done &&
+        watch20Done &&
+        commentedToday &&
+        likedToday &&
+        sharedToday &&
+        lootboxOpenedToday &&
+        firstUploadOfDayDone;
+      BonusEventsService.awardAllChallengesBonus(userId, allChallengesDone).catch((err) => {
+        console.error('Error awarding all-challenges bonus:', err);
+      });
+
       // Streak
       const { StreakService: SS } = await import("./streak-service");
       const streakInfo = await SS.getUserStreak(userId);
@@ -4921,27 +5045,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Lootbox
       const lootboxStatus = await storage.getDailyLootboxStatus(userId);
 
-      // Rivals mirror the weekly leaderboard shown in the UI. Keep the
-      // leaderboard's stored totals, including fractional values, so this
-      // compact card reflects the same competition data as the full board.
-      let currentWeekBoard = await LeaderboardService.getCurrentWeekLeaderboard(9999);
-      if (!currentWeekBoard || currentWeekBoard.length === 0) {
-        currentWeekBoard = await LeaderboardService.getPreviousWeekLeaderboard(9999);
-      }
-      const rankIndex = currentWeekBoard.findIndex((e: any) => Number(e.userId) === userId);
-      const rank = rankIndex >= 0 ? Number(currentWeekBoard[rankIndex].rank ?? rankIndex + 1) : null;
+      // Rivals — mirror the exact ranking used by /api/leaderboard/current-season/top:
+      // season XP from user_xp_history, all qualifying users included (no HAVING),
+      // ordered by seasonXP DESC then user id ASC so ties are deterministic.
+      // Removing the HAVING clause means users with 0 season XP still get a rank
+      // (near the bottom) instead of disappearing from the board entirely, which
+      // was causing the user to show as #1 when they had 0 XP because my_entry
+      // was empty and the fallback render put them first.
+      const rivalsSeasonDef = SEASON_DEFS[0];
+      const [rivSYear, rivSMonth] = rivalsSeasonDef.months[0].split('-').map(Number);
+      const rivLastKey = rivalsSeasonDef.months[rivalsSeasonDef.months.length - 1];
+      const [rivEYear, rivEMonth] = rivLastKey.split('-').map(Number);
+      const rivalsSeasonStart = new Date(Date.UTC(rivSYear, rivSMonth - 1, 1)).toISOString();
+      const rivalsSeasonEnd   = new Date(Date.UTC(rivEYear, rivEMonth, 1)).toISOString();
 
-      // Recent XP activity (last 20) — only entries that actually granted XP
-      const recentActivity = xpHistory
-        .filter((h) => h.xpAmount > 0)
-        .slice(0, 20)
-        .map((h) => ({
-          id: h.id,
-          xpAmount: h.xpAmount,
-          source: h.source,
-          description: h.description,
-          createdAt: h.createdAt,
-        }));
+      const rivalsResult = await db.execute(sql`
+        WITH season_board AS (
+          -- All qualifying users, LEFT JOIN so 0-XP users are included
+          SELECT
+            u.id                                          AS "userId",
+            COALESCE(SUM(xh.xp_amount), 0)               AS "seasonXP",
+            u.username,
+            u.display_name                                AS "displayName",
+            u.avatar_url                                  AS "avatarUrl",
+            ROW_NUMBER() OVER (
+              ORDER BY COALESCE(SUM(xh.xp_amount), 0) DESC, u.id ASC
+            )                                             AS rank
+          FROM users u
+          LEFT JOIN user_xp_history xh
+            ON  xh.user_id    = u.id
+            AND xh.created_at >= ${rivalsSeasonStart}
+            AND xh.created_at <  ${rivalsSeasonEnd}
+            AND xh.xp_amount  >  0
+          WHERE u.role NOT IN ('admin', 'moderator', 'system')
+            AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+            AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+          GROUP BY u.id, u.username, u.display_name, u.avatar_url
+        ),
+        my_entry AS (
+          SELECT rank AS my_rank FROM season_board WHERE "userId" = ${userId}
+        )
+        SELECT sb."userId", sb."seasonXP" AS "weekXP", sb.username, sb."displayName", sb."avatarUrl", sb.rank
+        FROM season_board sb, my_entry me
+        WHERE sb.rank BETWEEN GREATEST(1, me.my_rank - 2) AND me.my_rank + 2
+        ORDER BY sb.rank ASC
+      `);
+      const rivalsData: any[] = (rivalsResult as any).rows ?? (rivalsResult as any);
+      const rank = rivalsData.find((r: any) => Number(r.userId) === userId)?.rank ?? null;
+
+      // Recent XP activity (last 20) — merges both ledgers that feed
+      // totalXP: user_xp_history (views, uploads, fires received, ...) and
+      // user_points_history (likes, comments, shares, daily login, streak
+      // bonuses, watch-5/watch-20, ...). Reading only one made most activity
+      // (anything routed through LeaderboardService) invisible here even
+      // though it had already been added to the user's total XP.
+      // Points-history ids are negated so they can't collide with
+      // xp-history ids, which come from a different table/sequence.
+      const recentActivity = [
+        ...xpHistory
+          .filter((h) => h.xpAmount > 0)
+          .map((h) => ({
+            id: h.id,
+            xpAmount: h.xpAmount,
+            source: h.source,
+            description: h.description,
+            createdAt: h.createdAt,
+          })),
+        ...pointsHistory
+          .filter((h) => h.points > 0)
+          .map((h) => ({
+            id: -h.id,
+            xpAmount: h.points,
+            source: h.action,
+            description: h.description,
+            createdAt: h.createdAt,
+          })),
+      ]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 20);
 
       // XP earned today
       const xpEarnedToday = todayXP.reduce((s, h) => s + h.xpAmount, 0);
@@ -4975,21 +5156,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const followersCount = followerRows[0]?.count ?? 0;
       const followingCount = followingRows[0]?.count ?? 0;
 
-      // Nearby leaderboard entries (rivals)
-      const nearbyRivals = rankIndex >= 0
-        ? currentWeekBoard
-            .slice(Math.max(0, rankIndex - 2), rankIndex + 3)
-            .map((e: any, idx: number) => ({
-              rank: Number(e.rank ?? Math.max(0, rankIndex - 2) + idx + 1),
-              userId: Number(e.userId),
-              username: typeof e.user?.username === "string" ? e.user.username.trim() : "",
-              displayName: e.user?.displayName,
-              avatarUrl: e.user?.avatarUrl,
-              totalXP: Math.round(Number(e.totalPoints ?? e.totalXP ?? 0)),
-              isMe: Number(e.userId) === userId,
-            }))
-            .filter((r: any) => r.userId > 0 && r.rank > 0 && r.username.length > 0)
-        : [];
+      // Nearby leaderboard entries (rivals) — built from the live XP query above
+      const nearbyRivals = rivalsData
+        .map((e: any) => ({
+          rank: Number(e.rank),
+          userId: Number(e.userId),
+          username: typeof e.username === "string" ? e.username.trim() : "",
+          displayName: e.displayName ?? null,
+          avatarUrl: e.avatarUrl ?? null,
+          totalXP: Math.round(Number(e.weekXP ?? 0)),
+          isMe: Number(e.userId) === userId,
+        }))
+        .filter((r: any) => r.userId > 0 && r.rank > 0 && r.username.length > 0);
 
       // Next rewards preview
       const nextLevel = user.level + 1;
@@ -5267,7 +5445,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       dashGoals.push({
         type: "daily_upload",
         label: "Upload Content Today",
-        detail: firstUploadOfDayDone ? "Done! +250 XP earned" : "Earn 250 XP with your first upload",
+        detail: firstUploadOfDayDone ? "Done! +100 XP earned" : "Earn 100 XP with your first upload",
         current: firstUploadOfDayDone ? 1 : 0,
         target: 1,
         percent: firstUploadOfDayDone ? 100 : 0,
@@ -6024,6 +6202,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Escapes text interpolated into the hand-built SVG below — user-supplied
+  // display names/bios containing a bare &, <, or > otherwise break librsvg's
+  // XML parser and 500 the whole preview image.
+  function escapeSvgText(text: string): string {
+    return text.replace(/[&<>"']/g, (m) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
+    }[m]!));
+  }
+
   // Social media preview image generator
   app.get('/api/social-preview/:username', async (req: Request, res: Response) => {
     try {
@@ -6208,24 +6395,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ${!avatarLoaded ? `
           <!-- Initials fallback when no avatar photo -->
           <circle cx="${profileX + profilePicSize/2}" cy="${profileY + profilePicSize/2}" r="${profilePicSize/2}" fill="${accentColor}22"/>
-          <text x="${profileX + profilePicSize/2}" y="${profileY + profilePicSize/2 + 20}" text-anchor="middle" fill="${accentColor}" font-family="Arial, sans-serif" font-size="60" font-weight="bold">${(user.displayName || user.username || '?').substring(0, 2).toUpperCase()}</text>
+          <text x="${profileX + profilePicSize/2}" y="${profileY + profilePicSize/2 + 20}" text-anchor="middle" fill="${accentColor}" font-family="Arial, sans-serif" font-size="60" font-weight="bold">${escapeSvgText((user.displayName || user.username || '?').substring(0, 2).toUpperCase())}</text>
           ` : ''}
           
           <!-- Profile info section - positioned to the right of profile picture -->
           <g transform="translate(${profileX + profilePicSize + 40}, ${profileY + 20})">
             <!-- Username (much larger) with verified badge if applicable -->
             <g>
-              <text x="0" y="0" class="username">${displayName}</text>
+              <text x="0" y="0" class="username">${escapeSvgText(displayName)}</text>
               ${user.emailVerified ? `
                 <!-- Verified badge icon -->
                 <image x="${displayName.length * 29}" y="-32" width="32" height="32" href="/attached_assets/green_badge_128_1758978841463.png"/>
               ` : ''}
             </g>
             <!-- Handle -->
-            <text x="0" y="35" class="handle">@${user.username}</text>
-            
+            <text x="0" y="35" class="handle">@${escapeSvgText(user.username)}</text>
+
             <!-- Bio (larger and more prominent) -->
-            <text x="0" y="75" class="bio-text">${bio.length > 60 ? bio.substring(0, 60) + '...' : bio}</text>
+            <text x="0" y="75" class="bio-text">${escapeSvgText(bio.length > 60 ? bio.substring(0, 60) + '...' : bio)}</text>
             
             <!-- Stats in a row (aligned under bio text) -->
             <g transform="translate(0, 120)">
@@ -6250,7 +6437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const x = index === 0 ? 0 : displayUserTypes.slice(0, index).reduce((acc, type) => acc + Math.max(type.length * 8 + 20, 80) + 10, 0);
                 return `
                   <rect x="${x}" y="0" width="${width}" height="32" rx="16" fill="#8b5cf6"/>
-                  <text x="${x + width / 2}" y="21" class="badge-text" text-anchor="middle">${userType}</text>
+                  <text x="${x + width / 2}" y="21" class="badge-text" text-anchor="middle">${escapeSvgText(userType)}</text>
                 `;
               }).join('')}
               
@@ -6264,7 +6451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }, 0);
                 return `
                   <rect x="${x}" y="40" width="${width}" height="28" rx="14" fill="#059669"/>
-                  <text x="${x + width / 2}" y="58" class="badge-text" text-anchor="middle" style="font-size: 14px;">${gameName}</text>
+                  <text x="${x + width / 2}" y="58" class="badge-text" text-anchor="middle" style="font-size: 14px;">${escapeSvgText(gameName)}</text>
                 `;
               }).join('')}
               
@@ -9045,6 +9232,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const uploadXpAmount = 250;
           const uploadLabel = clipData.videoType === 'reel' ? 'reel' : 'clip';
           await XPService.awardXP(userId, uploadXpAmount, 'upload', `Earned ${uploadXpAmount} XP for uploading a ${uploadLabel}`, clip.id);
+          // "Upload Today" daily challenge bonus — separate from the flat upload XP above.
+          await CreatorMilestoneService.checkFirstUploadOfDay(userId);
         } catch (e) { console.error('[clip upload] XP/bonus side-effects failed:', e); }
         try {
           const titleMentions = await mentionService.parseMentions(title);
@@ -10063,9 +10252,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           maxFires: fireLimits.maxFiresPerDay
         });
 
-        // Background: creator XP and notification
+        // Background: reactor points, creator XP, and notification
         (async () => {
           try {
+            // The response above already promises the reactor `xpAwarded: 50`
+            // — this used to be a lie, since only the clip owner (fire_received,
+            // via XPService) was ever actually paid. Fire reactions are
+            // permanent and one-per-user-per-clip (enforced above), so no
+            // extra dedupe check is needed here.
+            await LeaderboardService.awardPoints(
+              userId,
+              'fire',
+              `Fired on clip #${clipId}`
+            );
+
             const hasEarnedXP = await storage.hasUserEarnedXPForReaction(
               clip.userId,
               'fire_received',
@@ -10139,6 +10339,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Respond immediately so the client isn't blocked.
       res.json({ success: true });
+
+      // Award the viewer (not the clip owner — that's handled inside
+      // incrementClipViews) their daily watch-progress XP in the background.
+      // req.user is populated here by the app-level Bearer/session bridge
+      // even though this route has no auth middleware of its own.
+      const viewerId = (req.user as any)?.id;
+      if (clip && viewerId && viewerId !== clip.userId) {
+        BonusEventsService.awardWatchClipXP(viewerId).catch((err) => {
+          console.error('Error awarding watch-clip XP:', err);
+        });
+      }
 
     } catch (error) {
       captureRouteError(error);
@@ -14653,7 +14864,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Test database connection (result intentionally not returned —
       // a public health check must not disclose business data).
-      await storage.getClipStats();
+      await db.execute(sql`SELECT 1`);
 
       res.json({
         status: "healthy",
@@ -15265,6 +15476,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Award 50 XP to the screenshot creator for this unique reactor/content pair.
         if (emoji === '🔥') {
+          // The response below promises the reactor `xpAwarded: 50`, but that
+          // was never actually paid — only the screenshot owner (fire_received,
+          // via XPService) was. Fire reactions are permanent and
+          // one-per-user-per-content (enforced above), so no extra dedupe
+          // check is needed for the reactor's own award.
+          await LeaderboardService.awardPoints(
+            userId,
+            'fire',
+            `Fired on screenshot #${screenshotId}`
+          );
+
           const hasEarnedXP = await storage.hasUserEarnedXPForReaction(
             screenshot.userId,
             'fire_received',
@@ -16502,10 +16724,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const result = await storage.openDailyLootbox(userId);
-      
+
       if (!result) {
         return res.status(404).json({ message: "No rewards available in lootbox" });
       }
+
+      // "Open Lootbox" daily challenge bonus — separate from whatever the
+      // lootbox itself rewards (a cosmetic item, or its own XP roll). Gated
+      // naturally by the once-per-day `canOpen` check above.
+      BonusEventsService.awardLootboxBonus(userId).catch((err) => {
+        console.error('Error awarding lootbox-open daily bonus:', err);
+      });
 
       // Determine the appropriate message based on reward type
       let message: string;

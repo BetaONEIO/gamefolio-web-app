@@ -174,12 +174,12 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
     },
     {
       id: 'upload', icon: ICONS.upload, title: 'Upload Today',
-      xp: 200, progress: activity ? (activity.firstUploadOfDayDone ? 1 : 0) : 0, total: 1,
+      xp: 100, progress: activity ? (activity.firstUploadOfDayDone ? 1 : 0) : 0, total: 1,
       href: '/upload', color: '#B7FF1A', rarity: 'epic',
     },
     {
       id: 'lootbox', icon: ICONS.lootbox, title: 'Open Lootbox',
-      xp: 50, progress: activity ? (activity.lootboxOpenedToday ? 1 : 0) : 0, total: 1,
+      xp: 100, progress: activity ? (activity.lootboxOpenedToday ? 1 : 0) : 0, total: 1,
       href: '/level-tracker', color: '#B7FF1A', rarity: 'legendary',
     },
   ];
@@ -219,6 +219,30 @@ function CountdownBadge() {
   );
 }
 
+// ─── Compact reset countdown (text only — caller supplies the icon) ───────────
+function ResetCountdown() {
+  const [timeLeft, setTimeLeft] = useState("");
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const midnight = new Date(now);
+      midnight.setHours(24, 0, 0, 0);
+      const diff = midnight.getTime() - now.getTime();
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      setTimeLeft(`${h}h ${String(m).padStart(2, "0")}m`);
+    };
+    update();
+    const id = setInterval(update, 30000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <span className="text-[10px] font-medium tabular-nums" style={{ color: 'rgba(255,255,255,0.3)' }}>
+      {timeLeft}
+    </span>
+  );
+}
+
 // ─── Challenge card ───────────────────────────────────────────────────────────
 function ChallengeCard({ challenge, isLoading }: { challenge: Challenge; isLoading: boolean }) {
   const pct = challenge.total > 0 ? Math.min((challenge.progress / challenge.total) * 100, 100) : 0;
@@ -227,8 +251,8 @@ function ChallengeCard({ challenge, isLoading }: { challenge: Challenge; isLoadi
 
   if (isLoading) {
     return (
-      <div className="flex-shrink-0 rounded-2xl p-4"
-        style={{ width: 188, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+      <div className="flex-shrink-0 rounded-2xl p-4 w-[82vw] max-w-[188px] sm:w-[188px]"
+        style={{ scrollSnapAlign: 'start', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
         <Skeleton className="w-12 h-12 rounded-xl mb-3" />
         <Skeleton className="h-3 w-1/2 mb-2" />
         <Skeleton className="h-5 w-3/4 mb-3" />
@@ -266,9 +290,9 @@ function ChallengeCard({ challenge, isLoading }: { challenge: Challenge; isLoadi
   return (
     // No overflow-hidden — allows hover lift to not clip card content
     <div
-      className="flex-shrink-0 relative rounded-2xl p-4 transition-transform duration-200 hover:-translate-y-[3px]"
+      className="flex-shrink-0 relative rounded-2xl p-4 transition-transform duration-200 hover:-translate-y-[3px] w-[82vw] max-w-[188px] sm:w-[188px]"
       style={{
-        width: 188,
+        scrollSnapAlign: 'start',
         background: bgColor,
         border: `1px solid ${borderColor}`,
         boxShadow: cardGlow,
@@ -363,18 +387,33 @@ function StreakIndicator({ streak }: { streak: number }) {
   if (streak < 1) return null;
   const bonusPct = streak >= 30 ? 50 : streak >= 14 ? 30 : streak >= 7 ? 20 : streak >= 3 ? 10 : 0;
   return (
+    // flex-shrink-0 keeps the badge from being squeezed by the left column.
+    // max-width caps it so a 4-digit streak can never push outside the card.
+    // Padding uses clamp() so it reduces slightly on very narrow screens
+    // before any font size change is needed.
     <div
-      className="flex items-center gap-2 px-3 py-2 rounded-xl"
-      style={{ background: 'rgba(255,100,0,0.08)', border: '1px solid rgba(255,100,0,0.2)' }}
+      className="flex items-center gap-1.5 rounded-xl flex-shrink-0"
+      style={{
+        background: 'rgba(255,100,0,0.08)',
+        border: '1px solid rgba(255,100,0,0.2)',
+        padding: 'clamp(5px, 1.5vw, 8px) clamp(7px, 2vw, 10px)',
+        maxWidth: 'clamp(100px, 48%, 180px)',
+      }}
     >
-      <Flame className="w-4 h-4 flex-shrink-0" style={{ color: '#FF6B1A' }} />
-      <div>
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-sm font-extrabold text-white leading-none">{streak}</span>
-          <span className="text-[10px] font-semibold" style={{ color: 'rgba(255,255,255,0.5)' }}>day streak</span>
+      <Flame className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#FF6B1A' }} />
+      {/* min-w-0 lets the inner box shrink if the badge hits its max-width */}
+      <div className="min-w-0">
+        {/* whitespace-nowrap on the ROW keeps 🔥 number "day streak" together */}
+        <div className="flex items-baseline gap-1 whitespace-nowrap overflow-hidden">
+          <span className="text-sm font-extrabold text-white leading-none shrink-0">
+            {streak.toLocaleString()}
+          </span>
+          <span className="text-[10px] font-semibold shrink-0" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            day streak
+          </span>
         </div>
         {bonusPct > 0 && (
-          <div className="text-[10px] font-bold mt-0.5" style={{ color: '#FF8C42' }}>
+          <div className="text-[10px] font-bold mt-0.5 whitespace-nowrap" style={{ color: '#FF8C42' }}>
             +{bonusPct}% XP bonus
           </div>
         )}
@@ -502,42 +541,40 @@ export function DailyXPChallenges() {
             View All <span aria-hidden="true">→</span>
           </Link>
         </div>
-        {/* Summary bar + streak (authenticated users) */}
+        {/* Summary card (authenticated users) */}
         {user && (
           <div
-            className="rounded-xl px-4 py-3"
+            className="rounded-xl px-3 py-3.5 sm:px-4 sm:py-4"
             style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
           >
-            {/* Top row: XP available + streak */}
+            {/* Row 1: Big XP number (primary focus) + streak badge */}
             <div className="flex items-start justify-between gap-3 mb-3">
-              {/* XP summary */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-0.5">
+              <div className="min-w-0">
+                {/* "Today's XP" label */}
+                <div className="flex items-center gap-1.5 mb-2">
                   <Zap className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#B7FF18' }} />
                   <span className="text-[11px] font-semibold text-white/55">Today's XP</span>
-                  <div className="ml-auto">
-                    <CountdownBadge />
-                  </div>
                 </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-xl font-extrabold leading-none" style={{ color: '#B7FF18' }}>
+                {/* XP number — strongest visual weight */}
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <span
+                    className="text-3xl font-black leading-none tabular-nums"
+                    style={{ color: '#B7FF18', textShadow: '0 0 18px rgba(183,255,26,0.4)' }}
+                  >
                     {earnedXP.toLocaleString()}
                   </span>
-                  <span className="text-xs text-white/40 font-medium">
-                    / {totalXPAvailable.toLocaleString()} available
+                  <span className="text-sm font-semibold text-white/35 whitespace-nowrap">
+                    / {totalXPAvailable.toLocaleString()} XP
                   </span>
-                </div>
-                <div className="text-[10px] text-white/35 mt-0.5">
-                  {completedCount} / {challenges.length} challenges completed
                 </div>
               </div>
 
-              {/* Streak */}
+              {/* Streak — secondary, right-aligned */}
               {streak > 0 && <StreakIndicator streak={streak} />}
             </div>
 
-            {/* Daily progress bar */}
-            <div className="h-2 rounded-full overflow-hidden mb-2" style={{ background: 'rgba(255,255,255,0.08)' }}>
+            {/* Row 2: Progress bar */}
+            <div className="h-2 rounded-full overflow-hidden mb-5" style={{ background: 'rgba(255,255,255,0.08)' }}>
               <div
                 className="h-full rounded-full"
                 style={{
@@ -549,27 +586,39 @@ export function DailyXPChallenges() {
               />
             </div>
 
-            {/* All-challenges bonus row */}
-            <div
-              className="flex items-center justify-between pt-2.5"
-              style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm" style={{ filter: allDone ? 'drop-shadow(0 0 6px rgba(183,255,26,0.7))' : 'none' }}>
+            {/* Row 3: Completion bonus + reset timer */}
+            <div className="flex items-center justify-between gap-3">
+              {/* Trophy + label + XP reward */}
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className="text-base flex-shrink-0"
+                  style={{ filter: allDone ? 'drop-shadow(0 0 6px rgba(183,255,26,0.7))' : 'none' }}
+                >
                   🏆
                 </span>
-                <span className="text-[11px] font-semibold text-white/55">All Challenges Bonus</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  <Zap className="w-3.5 h-3.5" style={{ color: allDone ? '#B7FF18' : 'rgba(183,255,26,0.45)' }} />
-                  <span className="text-xs font-extrabold" style={{ color: allDone ? '#B7FF18' : 'rgba(183,255,26,0.45)' }}>
-                    +1,000 XP
-                  </span>
+                <div className="min-w-0">
+                  <div className="text-[11px] font-semibold text-white/50 leading-none mb-1">
+                    Complete all {challenges.length} challenges
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Zap
+                      className="w-3.5 h-3.5 flex-shrink-0"
+                      style={{ color: allDone ? '#B7FF18' : 'rgba(183,255,26,0.5)' }}
+                    />
+                    <span
+                      className="text-sm font-extrabold whitespace-nowrap"
+                      style={{ color: allDone ? '#B7FF18' : 'rgba(183,255,26,0.5)' }}
+                    >
+                      {allDone ? '+1,000 XP Claimed! 🎉' : '+1,000 XP Bonus'}
+                    </span>
+                  </div>
                 </div>
-                <span className="text-[10px] text-white/35">
-                  {allDone ? 'Claimed! 🎉' : `${completedCount}/${challenges.length} done`}
-                </span>
+              </div>
+
+              {/* Reset timer — small, unobtrusive */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <Clock className="w-3 h-3 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }} />
+                <ResetCountdown />
               </div>
             </div>
           </div>
@@ -606,7 +655,13 @@ export function DailyXPChallenges() {
           onPointerCancel={stopDragging}
           onLostPointerCapture={stopDragging}
           className={`flex gap-3 overflow-x-auto pb-3 px-4 sm:px-6 md:px-8 select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: 'pan-y' }}
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            touchAction: 'pan-y',
+            scrollSnapType: 'x mandatory',
+            scrollPaddingLeft: '1rem', /* matches px-4 so first card snaps flush */
+          }}
         >
           {(activityLoading && user)
             ? Array.from({ length: 6 }).map((_, i) => (

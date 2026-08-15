@@ -7,6 +7,7 @@
 // Disabled by design when VITE_SENTRY_DSN is unset — same no-op pattern as the
 // Firebase service account (see CLAUDE.md). Every Sentry.* call elsewhere is
 // safe to make even when init() was never run; it just does nothing.
+import { Capacitor } from "@capacitor/core";
 import * as Sentry from "@sentry/capacitor";
 import { init as reactInit } from "@sentry/react";
 
@@ -52,6 +53,15 @@ export function initSentry(): void {
       // Crash-capture focus for QA: errors on, performance tracing off (it
       // burns quota fast and isn't what we're after). Raise later if wanted.
       tracesSampleRate: 0,
+      // The same bundle ships to the Replit web deploy and to both native
+      // shells, and every event lands as Sentry platform "javascript" — so
+      // without a tag there is no way to tell a browser error from an Android
+      // one. The `release` doesn't help either: vite.config.ts derives it from
+      // android/app/build.gradle, so web deploys get stamped with whatever
+      // Android versionCode was last committed. getPlatform() returns
+      // "web" | "ios" | "android", which joins the server's `runtime: server`
+      // (server/sentry.ts) to make one tag that separates all four.
+      initialScope: { tags: { runtime: Capacitor.getPlatform() } },
       beforeSend(event) {
         const msg =
           event.exception?.values?.[0]?.value ?? event.message ?? "";
