@@ -5,6 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { supabaseStorage } from '../supabase-storage';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 
@@ -100,6 +101,7 @@ router.post('/upload-attachments', supportUpload.array('attachments', 5), async 
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Support attachment upload error:', error);
 
     // Clean up temp files on error
@@ -239,6 +241,7 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Support form error:', error);
     
     if (error instanceof z.ZodError) {

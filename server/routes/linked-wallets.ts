@@ -5,6 +5,7 @@ import { db } from '../db';
 import { linkedWallets } from '@shared/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { publicClient } from '../skale-pow';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 
@@ -56,6 +57,7 @@ router.get('/api/wallet/linked', async (req: Request, res: Response) => {
 
     return res.json({ wallets: rows });
   } catch (err: any) {
+    captureRouteError(err);
     console.error('linked-wallets list error:', err);
     return res.status(500).json({ error: err?.message || 'Failed to load linked wallets' });
   }
@@ -85,6 +87,7 @@ router.post('/api/wallet/link/nonce', async (req: Request, res: Response) => {
     // client to echo back a different message.
     return res.json({ nonce, message, issuedAt, expiresInSeconds: Math.floor(NONCE_TTL_MS / 1000) });
   } catch (err: any) {
+    captureRouteError(err);
     console.error('linked-wallets nonce error:', err);
     return res.status(500).json({ error: err?.message || 'Failed to issue nonce' });
   }
@@ -150,6 +153,7 @@ router.post('/api/wallet/link/verify', async (req: Request, res: Response) => {
 
     return res.json({ success: true, walletAddress: address });
   } catch (err: any) {
+    captureRouteError(err);
     console.error('linked-wallets verify error:', err);
     return res.status(500).json({ error: err?.message || 'Failed to verify wallet' });
   }

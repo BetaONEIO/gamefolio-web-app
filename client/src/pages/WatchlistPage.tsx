@@ -115,7 +115,7 @@ export default function WatchlistPage() {
   return (
     <div className="min-h-screen bg-[#081017]">
       {/* Header */}
-      <div className="border-b border-gray-800 bg-[#081017]/90 backdrop-blur-md sticky top-0 z-10">
+      <div className="border-b border-[var(--gf-border)] bg-[var(--gf-surface-1)] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">

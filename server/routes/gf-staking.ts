@@ -7,6 +7,7 @@ import { writeContractWithPoW, publicClient } from '../skale-pow';
 import { GF_STAKING_ADDRESS, GF_STAKING_ABI, GF_TOKEN_ADDRESS, GF_TOKEN_ABI } from '../../shared/contracts';
 import { getStakingStats, getStakePosition } from '../gf-staking-service';
 import { getAddressFromEncryptedKey } from '../wallet-crypto';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 const GF_DECIMALS = 18;
@@ -55,6 +56,7 @@ router.get('/api/staking/history', async (req: Request, res: Response) => {
 
     return res.json(history);
   } catch (error: any) {
+    captureRouteError(error);
     console.error('[Staking] Get history error:', error);
     return res.status(500).json({ error: 'Failed to get staking history' });
   }
@@ -233,6 +235,7 @@ router.post('/api/staking/stake', async (req: Request, res: Response) => {
       stakedAmount: existing ? existing.stakedAmount + amountFloat : amountFloat,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('[Staking] Stake error:', error);
     return res.status(500).json({ error: error.message || 'Stake failed' });
   }
@@ -366,6 +369,7 @@ router.post('/api/staking/unstake', async (req: Request, res: Response) => {
       unstaked: finalAmountFloat,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('[Staking] Unstake error:', error);
     return res.status(500).json({ error: error.message || 'Unstake failed' });
   }
@@ -467,6 +471,7 @@ router.post('/api/staking/claim', async (req: Request, res: Response) => {
       rewards,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('[Staking] Claim error:', error);
     return res.status(500).json({ error: error.message || 'Claim failed' });
   }

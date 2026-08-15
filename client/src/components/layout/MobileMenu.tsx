@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { X, Plus, Gift, Users, Bookmark, ChevronDown } from "lucide-react";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
+import { GamefolioDashboardIcon } from "@/components/icons/GamefolioDashboardIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import { GamefolioCollectionIcon } from "@/components/icons/GamefolioCollectionIcon";
@@ -139,6 +140,13 @@ const MobileMenu = () => {
   });
   const followerCount = (ownProfileData as any)?._count?.followers ?? 0;
   const followingCount = (ownProfileData as any)?._count?.following ?? 0;
+  const isIndieDev = user?.userType?.split(",").includes("indie_developer");
+  const isStreamerType = user?.userType?.split(",").includes("streamer");
+  const dashboardHref = isIndieDev
+    ? "/studio-dashboard"
+    : isStreamerType
+      ? "/streamer/dashboard"
+      : "/dashboard";
 
   const { data: favoriteGames } = useQuery<Game[]>({
     queryKey: [`/api/users/${user?.id}/favorites`],
@@ -278,6 +286,18 @@ const MobileMenu = () => {
                   <span className="font-medium">Home</span>
                 </Link>
               </li>
+              {user && (
+                <li>
+                  <Link
+                    href={dashboardHref}
+                    onClick={handleClose}
+                    className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
+                  >
+                    <GamefolioDashboardIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                    <span className="font-medium">Dashboard</span>
+                  </Link>
+                </li>
+              )}
               <li>
                 <Link 
                   href="/explore"
@@ -494,7 +514,7 @@ const MobileMenu = () => {
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-border">
+          <div className="p-4">
             {user ? (
               <Button 
                 variant="default" 

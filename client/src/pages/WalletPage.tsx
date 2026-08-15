@@ -179,19 +179,6 @@ export default function WalletPage() {
     }
   }, [hasExistingWallet]);
 
-  useEffect(() => {
-    if (
-      user?.email && 
-      user?.emailVerified && 
-      !hasExistingWallet && 
-      !walletInitiatedRef.current &&
-      !isCreatingWallet
-    ) {
-      walletInitiatedRef.current = true;
-      createWallet();
-    }
-  }, [user?.email, user?.emailVerified, hasExistingWallet, isCreatingWallet, createWallet]);
-
   const handleRetryWalletCreation = () => {
     walletInitiatedRef.current = false;
     createWallet();

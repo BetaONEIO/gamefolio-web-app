@@ -4,6 +4,7 @@ import { users } from '@shared/schema';
 import { isNotNull } from 'drizzle-orm';
 import { adminMiddleware } from '../middleware/admin';
 import { getAddressFromEncryptedKey } from '../wallet-crypto';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 
@@ -83,6 +84,7 @@ router.get('/api/admin/wallet-integrity-audit', adminMiddleware, async (_req: Re
       mismatches,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('[WalletAudit] Audit error:', error);
     return res.status(500).json({ error: error.message || 'Audit failed' });
   }

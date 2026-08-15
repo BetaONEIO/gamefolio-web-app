@@ -1120,7 +1120,7 @@ const MessagesPage: React.FC = () => {
                         <div
                           className={`rounded-lg px-4 py-2 relative group ${
                             isMine
-                              ? "bg-card border border-border/60 shadow-md text-foreground"
+                              ? "bg-primary text-primary-foreground shadow-md"
                               : "bg-muted"
                           }`}
                         >

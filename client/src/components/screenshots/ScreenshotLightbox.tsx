@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getQueryFn, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { ReportButton } from "@/components/reporting/ReportButton";
@@ -14,6 +15,7 @@ import { formatDistance } from "date-fns";
 import { Link } from "wouter";
 import { Eye, Clock, MessageSquare, User as UserIcon, UserPlus, UserCheck, ChevronLeft, ChevronRight, X, Maximize2, Minimize2, ArrowLeft } from "lucide-react";
 import { ProBadge } from "@/components/ui/pro-badge";
+import { AmbassadorBadge } from "@/components/ui/ambassador-badge";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import type { Game, Screenshot } from "@shared/schema";
 
@@ -33,6 +35,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
   const avatarUrl = screenshot?.user?.avatarUrl;
   const { signedUrl: avatarSignedUrl } = useSignedUrl(avatarUrl);
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const [isMobile, setIsMobile] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -186,6 +189,9 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/users/${username}/follow-status`] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update follow status", variant: "destructive" });
     },
   });
 
@@ -426,6 +432,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                   </span>
                 </Link>
                 <ProBadge selectedVerificationBadgeId={(screenshot.user as any)?.selectedVerificationBadgeId} size="sm" />
+                <AmbassadorBadge isAmbassador={(screenshot.user as any)?.isAmbassador} size="sm" />
               </div>
               {currentUserId && screenshotUser?.id && currentUserId !== screenshotUser.id && (
                 <Button
@@ -601,6 +608,7 @@ export function ScreenshotLightbox({ screenshot, onClose, currentUserId, screens
                     </div>
                   </Link>
                   <ProBadge selectedVerificationBadgeId={(screenshot.user as any)?.selectedVerificationBadgeId} size="sm" />
+                  <AmbassadorBadge isAmbassador={(screenshot.user as any)?.isAmbassador} size="sm" />
                 </div>
                 {currentUserId && screenshotUser?.id && currentUserId !== screenshotUser.id && (
                   <Button

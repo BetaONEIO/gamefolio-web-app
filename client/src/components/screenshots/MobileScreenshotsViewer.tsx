@@ -15,6 +15,7 @@ import CommentSection from "@/components/clips/CommentSection";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { PartnerBadge } from "@/components/ui/partner-badge";
+import { AmbassadorBadge } from "@/components/ui/ambassador-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -312,6 +313,9 @@ export const ScreenshotFeedCard: React.FC<{
       setLocalFollowing(true);
       queryClient.invalidateQueries({ queryKey: [`/api/users/${screenshot.user.username}/follow-status`] });
     },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update follow status", variant: "destructive" });
+    },
   });
 
   return (
@@ -355,6 +359,7 @@ export const ScreenshotFeedCard: React.FC<{
                 </Link>
                 <ProBadge selectedVerificationBadgeId={screenshot.user.selectedVerificationBadgeId} size="sm" />
                 <PartnerBadge isPartner={(screenshot.user as any).isPartner} size="sm" />
+                <AmbassadorBadge isAmbassador={(screenshot.user as any).isAmbassador} size="sm" />
               </div>
               <Link href={`/profile/${screenshot.user.username}`} className="no-underline">
                 <span className="text-[13px] block leading-tight mt-0.5" style={{ color: '#7E887A' }}>

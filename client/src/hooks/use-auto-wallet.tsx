@@ -49,10 +49,12 @@ export function useAutoWallet(): UseAutoWalletResult {
           ? ` (tx ${String(data.sweepTxHash).slice(0, 10)}…)`
           : '';
         toast({
-          title: 'Wallet Created!',
-          description: data.sweepAmount
-            ? `Wallet created. ${data.sweepAmount} GFT was moved over from your previous wallet${txShort}.`
-            : 'Your wallet has been created and linked to your account',
+          title: data.gftRewardSent ? 'Wallet Created & 100 GFT Rewarded!' : 'Wallet Created!',
+          description: data.gftRewardSent
+            ? `Your Gamefolio Wallet is ready and 100 GFT has been credited.${txShort}`
+            : data.sweepAmount
+              ? `Wallet created. ${data.sweepAmount} GFT was moved over from your previous wallet${txShort}.`
+              : 'Your Gamefolio Wallet has been created and linked to your account',
           variant: 'gamefolioSuccess',
         });
       }

@@ -86,11 +86,6 @@ export function DiscordCallback() {
           setLocation("/onboarding");
         } else {
           // Existing user with completed onboarding
-          toast({
-            title: "Welcome back!",
-            description: `You're now signed in with Discord.`,
-            variant: "gamefolioSuccess",
-          });
           closeModal();
           setLocation("/");
         }

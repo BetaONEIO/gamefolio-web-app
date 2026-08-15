@@ -46,6 +46,7 @@ import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWra
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
+import ManageGameSettings from "@/components/indie/ManageGameSettings";
 
 const EMOJI_CATEGORIES = [
   {
@@ -557,7 +558,46 @@ export default function SettingsPage() {
   const { customerInfo, refreshCustomerInfo } = useRevenueCat();
   
   const updateProfile = useUpdateProfile();
-  
+
+  const { data: steamVerification } = useQuery<{
+    verified: boolean;
+    steamVerifiedAppId: string | null;
+    steamVerifiedAt: string | null;
+    pending: { steamAppId: string; code: string; expiresAt: string } | null;
+  }>({
+    queryKey: ['/api/indie/steam/status'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!user,
+  });
+
+  const startSteamVerificationMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/indie/steam/start-verification');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/indie/steam/status'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Could not start verification', description: error.message, variant: 'gamefolioError' });
+    },
+  });
+
+  const verifySteamMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/indie/steam/verify');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/indie/steam/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      toast({ title: 'Steam ownership verified!', description: 'Your game details have been updated from Steam.', variant: 'gamefolioSuccess' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Verification failed', description: error.message, variant: 'gamefolioError' });
+    },
+  });
+
   const [showAddPlatform, setShowAddPlatform] = useState(false);
   const [selectedPlatform, setSelectedPlatform] = useState<PlatformKey | null>(null);
   const [platformHandle, setPlatformHandle] = useState('');
@@ -570,8 +610,8 @@ export default function SettingsPage() {
   const [disconnectingTwitch, setDisconnectingTwitch] = useState(false);
   const [connectingYouTube, setConnectingYouTube] = useState(false);
   const [disconnectingYouTube, setDisconnectingYouTube] = useState(false);
-  const [connectingRumble, setConnectingRumble] = useState(false);
-  const [disconnectingRumble, setDisconnectingRumble] = useState(false);
+  const [connectingVpzone, setConnectingVpzone] = useState(false);
+  const [disconnectingVpzone, setDisconnectingVpzone] = useState(false);
 
   // When the in-app browser closes (user dismissed without finishing OAuth),
   // clear the per-platform "Connecting…" spinners so the buttons aren't stuck
@@ -580,7 +620,7 @@ export default function SettingsPage() {
     return onExternalBrowserClosed(() => {
       setConnectingTwitch(false);
       setConnectingKick(false);
-      setConnectingRumble(false);
+      setConnectingVpzone(false);
     });
   }, []);
   const [syncingAchievements, setSyncingAchievements] = useState(false);
@@ -817,6 +857,19 @@ export default function SettingsPage() {
     }
   };
 
+  const handleVpzoneDisconnect = async () => {
+    setDisconnectingVpzone(true);
+    try {
+      await apiRequest("POST", "/api/auth/vpzone/disconnect");
+      await refreshUser();
+      toast({ title: "VPZone disconnected", description: "Your VPZone channel has been unlinked.", duration: 3000 });
+    } catch {
+      toast({ title: "Failed to disconnect", variant: "destructive" });
+    } finally {
+      setDisconnectingVpzone(false);
+    }
+  };
+
   const handleYouTubeDisconnect = async () => {
     setDisconnectingYouTube(true);
     try {
@@ -830,7 +883,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleStreamerSettingsSave = async (patch: { isStreamer?: boolean; streamPlatform?: string; liveEnabled?: boolean; twitchShowOnProfile?: boolean; kickShowOnProfile?: boolean; youtubeShowOnProfile?: boolean }) => {
+  const handleStreamerSettingsSave = async (patch: { isStreamer?: boolean; streamPlatform?: string; liveEnabled?: boolean; twitchShowOnProfile?: boolean; kickShowOnProfile?: boolean; youtubeShowOnProfile?: boolean; vpzoneShowOnProfile?: boolean }) => {
     setSavingStreamerSettings(true);
     try {
       await apiRequest("PATCH", "/api/user/streamer-settings", patch);
@@ -904,8 +957,19 @@ export default function SettingsPage() {
     profileFont: (user as any)?.profileFont || "default",
     profileFontEffect: (user as any)?.profileFontEffect || "none",
     profileFontAnimation: (user as any)?.profileFontAnimation || "none",
-    profileFontColor: (user as any)?.profileFontColor || "#FFFFFF"
+    profileFontColor: (user as any)?.profileFontColor || "#FFFFFF",
+    gameDescription: (user as any)?.gameDescription || "",
+    gameKeyFeatures: ((user as any)?.gameKeyFeatures || []) as string[],
+    studioFoundedYear: (user as any)?.studioFoundedYear || "",
+    studioTeamSize: (user as any)?.studioTeamSize || "",
+    gameReleaseDate: (user as any)?.gameReleaseDate || "",
+    gameSteamUrl: (user as any)?.gameSteamUrl || "",
+    gameEpicUrl: (user as any)?.gameEpicUrl || "",
+    gameTrailerUrl: (user as any)?.gameTrailerUrl || "",
+    gameScreenshotUrls: ((user as any)?.gameScreenshotUrls || []) as string[],
   });
+  const [newKeyFeature, setNewKeyFeature] = useState("");
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
   
   const [avatarBorderColor, setAvatarBorderColor] = useState<string>(user?.avatarBorderColor || '#B7FF1A');
   const [selectedBorderId, setSelectedBorderId] = useState<number | null>(user?.selectedAvatarBorderId ?? -1);
@@ -1037,6 +1101,10 @@ export default function SettingsPage() {
     // Persist in canonical GAMER_TAG_OPTIONS order (excluding streamer, tracked separately).
     setPrimaryUserType(KNOWN_GAMER_TAG_IDS.filter(t => t !== 'streamer' && next.includes(t)).join(','));
   };
+  // YouTube streaming-platform connect is disabled pending Google OAuth app
+  // verification (unverified apps show users a scary warning screen). Flip
+  // back to true once verification is complete.
+  const YOUTUBE_STREAMING_ENABLED = false;
   const [streamPlatform, setStreamPlatform] = useState<string>((user as any)?.streamPlatform || 'twitch');
   const [streamChannelName, setStreamChannelName] = useState<string>((user as any)?.streamChannelName || '');
   const [showLiveOverlay, setShowLiveOverlay] = useState<boolean>((user as any)?.showLiveOverlay || false);
@@ -1137,6 +1205,7 @@ export default function SettingsPage() {
         };
 
         return {
+          ...prev,
           displayName: user.displayName || "",
           bio: user.bio || "",
           avatarUrl: user.avatarUrl || "",
@@ -1239,7 +1308,16 @@ export default function SettingsPage() {
     primaryUserType !== savedPrimary ||
     isStreamingEnabled !== savedIsStreamer ||
     streamPlatform !== ((user as any)?.streamPlatform || 'twitch') ||
-    showLiveOverlay !== ((user as any)?.showLiveOverlay || false);
+    showLiveOverlay !== ((user as any)?.showLiveOverlay || false) ||
+    normalizeValue(profileData.gameDescription) !== normalizeValue((user as any)?.gameDescription) ||
+    normalizeValue(profileData.studioFoundedYear) !== normalizeValue((user as any)?.studioFoundedYear) ||
+    normalizeValue(profileData.studioTeamSize) !== normalizeValue((user as any)?.studioTeamSize) ||
+    normalizeValue(profileData.gameReleaseDate) !== normalizeValue((user as any)?.gameReleaseDate) ||
+    normalizeValue(profileData.gameSteamUrl) !== normalizeValue((user as any)?.gameSteamUrl) ||
+    normalizeValue(profileData.gameEpicUrl) !== normalizeValue((user as any)?.gameEpicUrl) ||
+    normalizeValue(profileData.gameTrailerUrl) !== normalizeValue((user as any)?.gameTrailerUrl) ||
+    JSON.stringify(profileData.gameKeyFeatures) !== JSON.stringify((user as any)?.gameKeyFeatures || []) ||
+    JSON.stringify(profileData.gameScreenshotUrls) !== JSON.stringify((user as any)?.gameScreenshotUrls || []);
   
 
   // Handle crop complete callback
@@ -1356,6 +1434,7 @@ export default function SettingsPage() {
     queryKey: ['/api/user/name-tags'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
+    select: (data) => data ?? [],
   });
   
   // Fetch user's unlocked verification badges
@@ -1363,6 +1442,7 @@ export default function SettingsPage() {
     queryKey: ['/api/user/verification-badges'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
+    select: (data) => data ?? [],
   });
   
   const { data: ownedNftsData, isLoading: nftsLoading } = useQuery<{ nfts: any[]; count: number }>({
@@ -1378,7 +1458,7 @@ export default function SettingsPage() {
     enabled: !!user,
   });
 
-  const { data: oauthConfig } = useQuery<{ kick: boolean; twitch: boolean; rumble: boolean }>({
+  const { data: oauthConfig } = useQuery<{ kick: boolean; twitch: boolean; youtube: boolean; vpzone: boolean }>({
     queryKey: ['/api/auth/social-oauth/config'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     staleTime: 60000,
@@ -1396,10 +1476,19 @@ export default function SettingsPage() {
     const isOAuthPopup = !!window.opener;
 
     const notifyAndClose = (type: string) => {
+      // BroadcastChannel works reliably across same-origin tabs without needing
+      // window.opener (which browsers null out after cross-origin navigation).
+      try {
+        const bc = new BroadcastChannel('oauth_completion');
+        bc.postMessage({ type });
+        setTimeout(() => bc.close(), 2000);
+      } catch {}
+      // Fallback: postMessage to opener if it's still reachable
       if (isOAuthPopup) {
         try { window.opener.postMessage({ type }, window.location.origin); } catch {}
-        setTimeout(() => window.close(), 1500);
       }
+      // Always close the tab after a short delay
+      setTimeout(() => window.close(), 1500);
     };
 
     if (params.get('kick_connected') === 'true') {
@@ -1416,8 +1505,13 @@ export default function SettingsPage() {
         auth_failed: 'Kick authentication failed. Please try again.',
         no_channel: 'No Kick channel found on your account.',
       };
-      toast({ title: "Kick connection failed", description: errMap[params.get('kick_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
-      window.history.replaceState({}, '', window.location.pathname);
+      if (isOAuthPopup) {
+        try { window.opener.postMessage({ type: 'kick_error', error: params.get('kick_error')! }, window.location.origin); } catch {}
+        setTimeout(() => window.close(), 1500);
+      } else {
+        toast({ title: "Kick connection failed", description: errMap[params.get('kick_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     } else if (params.get('twitch_connected') === 'true') {
       refreshUser();
       toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked." + (isOAuthPopup ? ' This tab will close shortly.' : ''), duration: 4000 });
@@ -1431,22 +1525,13 @@ export default function SettingsPage() {
         auth_failed: 'Twitch authentication failed. Please try again.',
         no_user: 'No Twitch user found on your account.',
       };
-      toast({ title: "Twitch connection failed", description: errMap[params.get('twitch_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
-      window.history.replaceState({}, '', window.location.pathname);
-    } else if (params.get('rumble_connected') === 'true') {
-      refreshUser();
-      toast({ title: "Rumble connected!", description: "Your Rumble channel has been verified and linked.", duration: 4000 });
-      window.history.replaceState({}, '', window.location.pathname);
-    } else if (params.get('rumble_error')) {
-      const errMap: Record<string, string> = {
-        access_denied: 'You cancelled the Rumble authorisation.',
-        invalid_state: 'Invalid OAuth state. Please try again.',
-        not_configured: 'Rumble OAuth is not configured on this server.',
-        auth_failed: 'Rumble authentication failed. Please try again.',
-        no_user: 'No Rumble user found on your account.',
-      };
-      toast({ title: "Rumble connection failed", description: errMap[params.get('rumble_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
-      window.history.replaceState({}, '', window.location.pathname);
+      if (isOAuthPopup) {
+        try { window.opener.postMessage({ type: 'twitch_error', error: params.get('twitch_error')! }, window.location.origin); } catch {}
+        setTimeout(() => window.close(), 1500);
+      } else {
+        toast({ title: "Twitch connection failed", description: errMap[params.get('twitch_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+        window.history.replaceState({}, '', window.location.pathname);
+      }
     } else if (params.get('youtube_connected') === 'true') {
       refreshUser();
       toast({ title: "YouTube connected!", description: "Your YouTube channel has been verified and linked.", duration: 4000 });
@@ -1461,12 +1546,51 @@ export default function SettingsPage() {
       };
       toast({ title: "YouTube connection failed", description: errMap[params.get('youtube_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
       window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('vpzone_connected') === 'true') {
+      window.history.replaceState({}, '', window.location.pathname);
+      notifyAndClose('vpzone_connected');
+      (async () => {
+        await refreshUser();
+        toast({ title: "VPZone connected!", description: "Your VPZone channel has been verified and linked." + (isOAuthPopup ? ' This tab will close shortly.' : ''), duration: 4000 });
+      })();
+    } else if (params.get('vpzone_error')) {
+      const errMap: Record<string, string> = {
+        access_denied: 'You cancelled the VPZone authorisation.',
+        redirect_uri_mismatch: 'Redirect URI mismatch — the callback URL is not registered in your VPZone app. Check the VPZone developer dashboard.',
+        invalid_state: 'Invalid OAuth state. Please try again.',
+        not_configured: 'VPZone OAuth is not configured on this server.',
+        auth_failed: 'VPZone authentication failed. Please try again.',
+        no_channel: 'No VPZone channel found on your account.',
+      };
+      toast({ title: "VPZone connection failed", description: errMap[params.get('vpzone_error')!] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+      window.history.replaceState({}, '', window.location.pathname);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Listen for OAuth completion messages from new-tab OAuth flow
+  // Listen for OAuth completion messages from new-tab OAuth flow.
+  // Uses BroadcastChannel (reliable cross-tab comms on the same origin even after
+  // cross-origin redirects clear window.opener) with a postMessage fallback.
   useEffect(() => {
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('oauth_completion');
+      bc.onmessage = (event) => {
+        const type = event.data?.type;
+        if (type === 'twitch_connected') {
+          refreshUser();
+          toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
+        } else if (type === 'kick_connected') {
+          refreshUser();
+          toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
+        } else if (type === 'vpzone_connected') {
+          refreshUser();
+          toast({ title: "VPZone connected!", description: "Your VPZone channel has been verified and linked.", duration: 4000 });
+        }
+      };
+    } catch {}
+
+    // Fallback: window.opener postMessage (for browsers without BroadcastChannel)
     const handler = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type === 'twitch_connected') {
@@ -1475,10 +1599,16 @@ export default function SettingsPage() {
       } else if (event.data?.type === 'kick_connected') {
         refreshUser();
         toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
+      } else if (event.data?.type === 'vpzone_connected') {
+        refreshUser();
+        toast({ title: "VPZone connected!", description: "Your VPZone channel has been verified and linked.", duration: 4000 });
       }
     };
     window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
+    return () => {
+      bc?.close();
+      window.removeEventListener('message', handler);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1588,6 +1718,44 @@ export default function SettingsPage() {
   }, [(user as any)?.selectedVerificationBadgeId, pendingVerificationBadgeId]);
   
 
+
+  // Listen for OAuth results posted back from a popup tab
+  useEffect(() => {
+    const twitchErrMap: Record<string, string> = {
+      access_denied: 'You cancelled the Twitch authorisation.',
+      invalid_state: 'Invalid OAuth state. Please try again.',
+      not_configured: 'Twitch OAuth is not configured on this server.',
+      auth_failed: 'Twitch authentication failed. Please try again.',
+      no_user: 'No Twitch user found on your account.',
+    };
+    const kickErrMap: Record<string, string> = {
+      access_denied: 'You cancelled the Kick authorisation.',
+      redirect_uri_mismatch: 'Redirect URI mismatch — check the Kick developer dashboard.',
+      invalid_state: 'Invalid OAuth state. Please try again.',
+      not_configured: 'Kick OAuth is not configured on this server.',
+      auth_failed: 'Kick authentication failed. Please try again.',
+      no_channel: 'No Kick channel found on your account.',
+    };
+    const handler = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      const { type, error } = e.data ?? {};
+      if (type === 'twitch_connected') {
+        refreshUser();
+        setConnectingTwitch(false);
+        toast({ title: "Twitch connected!", description: "Your Twitch channel has been verified and linked.", duration: 4000 });
+      } else if (type === 'twitch_error') {
+        setConnectingTwitch(false);
+        toast({ title: "Twitch connection failed", description: twitchErrMap[error] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+      } else if (type === 'kick_connected') {
+        refreshUser();
+        toast({ title: "Kick connected!", description: "Your Kick channel has been verified and linked.", duration: 4000 });
+      } else if (type === 'kick_error') {
+        toast({ title: "Kick connection failed", description: kickErrMap[error] || 'Something went wrong.', variant: 'destructive', duration: 5000 });
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -1840,6 +2008,12 @@ export default function SettingsPage() {
     return <div>Please log in to access settings.</div>;
   }
 
+  // Indie Game accounts get a completely separate management experience
+  const isIndieGame = user.isPartner && user.partnerType === "indie";
+  if (isIndieGame) {
+    return <ManageGameSettings />;
+  }
+
   // Convert hex colors to RGB for opacity support
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -1880,32 +2054,36 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 gap-1">
+          <TabsList className={`grid w-full gap-1 ${user.isPartner ? "grid-cols-2" : "grid-cols-3 sm:grid-cols-5"}`}>
             <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Profile</span>
-              <span className="sm:hidden">Profile</span>
+              <span>Profile</span>
             </TabsTrigger>
-            <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Appearance</span>
-              <span className="sm:hidden">Look</span>
-            </TabsTrigger>
-            <TabsTrigger value="banners" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Banner Images</span>
-              <span className="sm:hidden">Banner</span>
-            </TabsTrigger>
+            {!user.isPartner && (
+              <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Appearance</span>
+                <span className="sm:hidden">Look</span>
+              </TabsTrigger>
+            )}
+            {!user.isPartner && (
+              <TabsTrigger value="banners" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Banner Images</span>
+                <span className="sm:hidden">Banner</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="platforms" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <Gamepad2 className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Platforms</span>
-              <span className="sm:hidden">Platforms</span>
+              <span>Platforms</span>
             </TabsTrigger>
-            <TabsTrigger value="streamer" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Video className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Streamer</span>
-              <span className="sm:hidden">Stream</span>
-            </TabsTrigger>
+            {!user.isPartner && (
+              <TabsTrigger value="streamer" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Video className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Streamer</span>
+                <span className="sm:hidden">Stream</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Profile Tab */}
@@ -2711,6 +2889,256 @@ export default function SettingsPage() {
                     rows={3}
                   />
                 </div>
+
+                {primaryUserType.split(',').map(t => t.trim()).includes('indie_developer') && (
+                  <div className="space-y-4 border border-border rounded-lg p-4">
+                    <div>
+                      <h3 className="text-sm font-semibold">Indie Game Details</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Shown on your public Gamefolio profile in the Overview tab.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="gameDescription">Game Description</Label>
+                      <Textarea
+                        id="gameDescription"
+                        value={profileData.gameDescription}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, gameDescription: e.target.value }))}
+                        placeholder="Tell players about your game..."
+                        rows={4}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Key Features</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={newKeyFeature}
+                          onChange={(e) => setNewKeyFeature(e.target.value)}
+                          placeholder="Add a feature..."
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const val = newKeyFeature.trim();
+                              if (val) {
+                                setProfileData(prev => ({ ...prev, gameKeyFeatures: [...prev.gameKeyFeatures, val] }));
+                                setNewKeyFeature("");
+                              }
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={() => {
+                            const val = newKeyFeature.trim();
+                            if (val) {
+                              setProfileData(prev => ({ ...prev, gameKeyFeatures: [...prev.gameKeyFeatures, val] }));
+                              setNewKeyFeature("");
+                            }
+                          }}
+                        >
+                          Add
+                        </Button>
+                      </div>
+                      {profileData.gameKeyFeatures.length > 0 && (
+                        <ul className="space-y-1 mt-2">
+                          {profileData.gameKeyFeatures.map((feature, idx) => (
+                            <li key={idx} className="flex items-center justify-between text-sm bg-muted/50 rounded px-2 py-1">
+                              <span>{feature}</span>
+                              <button
+                                type="button"
+                                className="text-muted-foreground hover:text-destructive"
+                                onClick={() => setProfileData(prev => ({
+                                  ...prev,
+                                  gameKeyFeatures: prev.gameKeyFeatures.filter((_, i) => i !== idx),
+                                }))}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="studioFoundedYear">Studio Founded Year</Label>
+                        <Input
+                          id="studioFoundedYear"
+                          value={profileData.studioFoundedYear}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, studioFoundedYear: e.target.value }))}
+                          placeholder="e.g. 2021"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="studioTeamSize">Team Size</Label>
+                        <Input
+                          id="studioTeamSize"
+                          value={profileData.studioTeamSize}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, studioTeamSize: e.target.value }))}
+                          placeholder="e.g. 5 people"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="gameReleaseDate">Release Date</Label>
+                      <Input
+                        id="gameReleaseDate"
+                        value={profileData.gameReleaseDate}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, gameReleaseDate: e.target.value }))}
+                        placeholder="e.g. Q4 2026 or Available Now"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="gameSteamUrl">Steam Store URL</Label>
+                        <Input
+                          id="gameSteamUrl"
+                          value={profileData.gameSteamUrl}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, gameSteamUrl: e.target.value }))}
+                          placeholder="https://store.steampowered.com/app/..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="gameEpicUrl">Epic Games Store URL</Label>
+                        <Input
+                          id="gameEpicUrl"
+                          value={profileData.gameEpicUrl}
+                          onChange={(e) => setProfileData(prev => ({ ...prev, gameEpicUrl: e.target.value }))}
+                          placeholder="https://store.epicgames.com/..."
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 border rounded-lg p-3">
+                      {steamVerification?.verified ? (
+                        <div className="flex items-center gap-2 text-sm text-primary">
+                          <Check className="h-4 w-4" />
+                          <span>Verified owner of this Steam store page</span>
+                        </div>
+                      ) : steamVerification?.pending ? (
+                        <div className="space-y-2">
+                          <p className="text-sm">
+                            Add this code to your game's Steam store page description (Steamworks &gt; Store Page), save it, then verify:
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <code className="text-foreground bg-muted rounded px-2 py-1 text-sm font-mono">{steamVerification.pending.code}</code>
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={verifySteamMutation.isPending}
+                              onClick={() => verifySteamMutation.mutate()}
+                            >
+                              {verifySteamMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "I've added it — Verify"}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">Code expires 15 minutes after starting.</p>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm text-muted-foreground">Prove you own this Steam store page to get a verified badge and auto-fill your game details.</p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={startSteamVerificationMutation.isPending || !profileData.gameSteamUrl}
+                            onClick={() => startSteamVerificationMutation.mutate()}
+                          >
+                            {startSteamVerificationMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><FaSteam className="h-4 w-4 mr-2" />Verify ownership</>}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="gameTrailerUrl">Video Trailer</Label>
+                      <Input
+                        id="gameTrailerUrl"
+                        value={profileData.gameTrailerUrl}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, gameTrailerUrl: e.target.value }))}
+                        placeholder="YouTube link or direct video URL"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Shown as the default video at the top of your Overview tab.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Screenshots</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Add screenshots of your game, shown in a gallery on your Overview tab.
+                      </p>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
+                        {profileData.gameScreenshotUrls.map((url, idx) => (
+                          <div key={idx} className="relative aspect-video rounded-md overflow-hidden group border border-border">
+                            <img src={url} alt={`Screenshot ${idx + 1}`} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              className="absolute top-1 right-1 bg-black/60 rounded-full p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => setProfileData(prev => ({
+                                ...prev,
+                                gameScreenshotUrls: prev.gameScreenshotUrls.filter((_, i) => i !== idx),
+                              }))}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                        <label
+                          htmlFor="gameScreenshotUpload"
+                          className="aspect-video rounded-md border border-dashed border-border flex flex-col items-center justify-center gap-1 cursor-pointer hover:bg-muted/50 transition-colors"
+                        >
+                          {uploadingScreenshot ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          ) : (
+                            <>
+                              <Plus className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-[10px] text-muted-foreground">Add</span>
+                            </>
+                          )}
+                        </label>
+                        <input
+                          id="gameScreenshotUpload"
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={uploadingScreenshot}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = '';
+                            if (!file) return;
+                            setUploadingScreenshot(true);
+                            try {
+                              const formData = new FormData();
+                              formData.append('screenshot', file);
+                              const response = await fetch('/api/upload/game-screenshot', {
+                                method: 'POST',
+                                body: formData,
+                              });
+                              if (!response.ok) throw new Error('Failed to upload screenshot');
+                              const data = await response.json();
+                              setProfileData(prev => ({ ...prev, gameScreenshotUrls: data.gameScreenshotUrls }));
+                              queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+                            } catch (err) {
+                              toast({
+                                title: "Upload failed",
+                                description: err instanceof Error ? err.message : "Failed to upload screenshot",
+                                variant: "destructive",
+                              });
+                            } finally {
+                              setUploadingScreenshot(false);
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -4407,12 +4835,14 @@ export default function SettingsPage() {
                   <div className="w-9 h-9 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
                     {(user as any)?.streamPlatform === "kick"
                       ? <SiKick className="w-5 h-5 text-[#53FC18]" />
+                      : (user as any)?.streamPlatform === "vpzone"
+                      ? <Video className="w-5 h-5 text-[#f9376b]" />
                       : <SiTwitch className="w-5 h-5 text-[#9146FF]" />}
                   </div>
                   <div className="flex-1">
                     <CardTitle className="text-base">Streamer Settings</CardTitle>
                     <CardDescription className="mt-0.5 text-xs">
-                      Verify your Twitch or Kick channel via OAuth to show a Streamer badge on your profile.
+                      Verify your Twitch, Kick, YouTube, or VPZone channel via OAuth to show a Streamer badge on your profile.
                     </CardDescription>
                   </div>
                 </div>
@@ -4511,7 +4941,7 @@ export default function SettingsPage() {
                             onClick={() => {
                               const url = "/api/auth/twitch-stream/connect";
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.open(url, '_blank', 'noopener');
+                              else window.open(url, '_blank');
                             }}
                             className="gap-1.5 bg-[#9146FF] hover:bg-[#7d3ce8] text-white border-0"
                           >
@@ -4588,7 +5018,7 @@ export default function SettingsPage() {
                             onClick={() => {
                               const url = "/api/auth/kick/connect";
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.open(url, '_blank', 'noopener');
+                              else window.open(url, '_blank');
                             }}
                             className="gap-1.5 bg-[#1a1a1a] hover:bg-[#2a2a2a] text-[#53FC18] border border-[#53FC18]/30"
                           >
@@ -4601,7 +5031,7 @@ export default function SettingsPage() {
                 </>
 
                 {/* YouTube Connection */}
-                <>
+                {YOUTUBE_STREAMING_ENABLED && <>
                     {(user as any)?.youtubeVerified ? (
                       <div className="rounded-xl border border-[#FF0000]/20 bg-[#FF0000]/5 px-4 py-3 space-y-3">
                         <div className="flex items-center gap-3">
@@ -4666,7 +5096,7 @@ export default function SettingsPage() {
                               setConnectingYouTube(true);
                               const url = "/api/auth/youtube/connect";
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else { window.open(url, '_blank', 'noopener'); setConnectingYouTube(false); }
+                              else { window.open(url, '_blank'); setConnectingYouTube(false); }
                             }}
                             className="gap-1.5 bg-[#FF0000] hover:bg-[#cc0000] text-white border-0"
                           >
@@ -4676,7 +5106,7 @@ export default function SettingsPage() {
                         </div>
                       </div>
                     )}
-                </>
+                </>}
 
                 {/* LIVE Badge Toggle */}
                 <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
@@ -4686,11 +5116,11 @@ export default function SettingsPage() {
                   </div>
                   <Switch
                     checked={!!(user as any)?.liveEnabled}
-                    disabled={savingStreamerSettings || (!(user as any)?.twitchVerified && !(user as any)?.kickVerified && !(user as any)?.youtubeVerified)}
+                    disabled={savingStreamerSettings || (!(user as any)?.twitchVerified && !(user as any)?.kickVerified && !(user as any)?.youtubeVerified && !(user as any)?.vpzoneVerified)}
                     onCheckedChange={(val) => handleStreamerSettingsSave({ liveEnabled: val })}
                   />
                 </div>
-                {!(user as any)?.twitchVerified && !(user as any)?.kickVerified && !(user as any)?.youtubeVerified && (
+                {!(user as any)?.twitchVerified && !(user as any)?.kickVerified && !(user as any)?.youtubeVerified && !(user as any)?.vpzoneVerified && (
                   <p className="text-xs text-slate-500 px-1">Connect a streaming platform first to enable the LIVE badge.</p>
                 )}
 
@@ -4786,19 +5216,35 @@ export default function SettingsPage() {
                     >
                       Kick
                     </button>
+                    {YOUTUBE_STREAMING_ENABLED && (
+                      <button
+                        type="button"
+                        disabled={!isStreamingEnabled}
+                        onClick={() => setStreamPlatform('youtube')}
+                        className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                          !isStreamingEnabled
+                            ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
+                            : streamPlatform === 'youtube'
+                            ? 'border-[#FF0000] bg-[#FF0000]/20 text-[#FF0000]'
+                            : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
+                        }`}
+                      >
+                        YouTube
+                      </button>
+                    )}
                     <button
                       type="button"
                       disabled={!isStreamingEnabled}
-                      onClick={() => setStreamPlatform('youtube')}
+                      onClick={() => setStreamPlatform('vpzone')}
                       className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
                         !isStreamingEnabled
                           ? 'border-muted text-muted-foreground/40 cursor-not-allowed'
-                          : streamPlatform === 'youtube'
-                          ? 'border-[#FF0000] bg-[#FF0000]/20 text-[#FF0000]'
+                          : streamPlatform === 'vpzone'
+                          ? 'border-[#f9376b] bg-[#f9376b]/20 text-[#f9376b]'
                           : 'border-muted hover:border-muted-foreground/50 text-muted-foreground'
                       }`}
                     >
-                      YouTube
+                      VPZone
                     </button>
                   </div>
                 </div>
@@ -4857,7 +5303,7 @@ export default function SettingsPage() {
                               setConnectingTwitch(true);
                               const url = '/api/auth/twitch-stream/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else { window.open(url, '_blank', 'noopener'); setConnectingTwitch(false); }
+                              else { window.open(url, '_blank'); setConnectingTwitch(false); }
                             }}
                           >
                             {connectingTwitch ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
@@ -4916,7 +5362,7 @@ export default function SettingsPage() {
                               setConnectingKick(true);
                               const url = '/api/auth/kick/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else { window.open(url, '_blank', 'noopener'); setConnectingKick(false); }
+                              else { window.open(url, '_blank'); setConnectingKick(false); }
                             }}
                           >
                             {connectingKick ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
@@ -4928,7 +5374,7 @@ export default function SettingsPage() {
                   )}
 
                   {/* YouTube OAuth connect option */}
-                  {streamPlatform === 'youtube' && isStreamingEnabled && oauthConfig?.youtube && (
+                  {YOUTUBE_STREAMING_ENABLED && streamPlatform === 'youtube' && isStreamingEnabled && oauthConfig?.youtube && (
                     <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.youtubeVerified ? 'border-[#FF0000]/30 bg-[#FF0000]/5' : 'border-slate-700 bg-slate-800/30'}`}>
                       {(user as any)?.youtubeVerified ? (
                         <div className="flex items-center justify-between">
@@ -4974,7 +5420,7 @@ export default function SettingsPage() {
                               setConnectingYouTube(true);
                               const url = '/api/auth/youtube/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else { window.open(url, '_blank', 'noopener'); setConnectingYouTube(false); }
+                              else { window.open(url, '_blank'); setConnectingYouTube(false); }
                             }}
                           >
                             {connectingYouTube ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <SiYoutube className="w-3.5 h-3.5 mr-1" />}
@@ -4985,62 +5431,65 @@ export default function SettingsPage() {
                     </div>
                   )}
 
-                  {/* Rumble OAuth connect option */}
-                  {isStreamingEnabled && oauthConfig?.rumble && (
-                    <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.rumbleVerified ? 'border-[#85C742]/30 bg-[#85C742]/5' : 'border-slate-700 bg-slate-800/30'}`}>
-                      {(user as any)?.rumbleVerified ? (
+                  {/* VPZone OAuth connect option */}
+                  {streamPlatform === 'vpzone' && isStreamingEnabled && oauthConfig?.vpzone && (
+                    <div className={`rounded-lg border p-3 space-y-2 ${(user as any)?.vpzoneVerified ? 'border-[#f9376b]/30 bg-[#f9376b]/5' : 'border-slate-700 bg-slate-800/30'}`}>
+                      {(user as any)?.vpzoneVerified ? (
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded bg-[#85C742]/20 flex items-center justify-center">
-                              <Check className="w-3.5 h-3.5 text-[#85C742]" />
+                            <div className="w-6 h-6 rounded bg-[#f9376b]/20 flex items-center justify-center">
+                              <Check className="w-3.5 h-3.5 text-[#f9376b]" />
                             </div>
                             <div>
-                              <p className="text-xs font-medium text-[#85C742]">Rumble OAuth Verified</p>
-                              <p className="text-[11px] text-slate-400">@{(user as any)?.streamChannelName}</p>
+                              <p className="text-xs font-medium text-[#f9376b]">VPZone OAuth Verified</p>
+                              <p className="text-[11px] text-slate-400">@{(user as any)?.vpzoneChannelName}</p>
                             </div>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
-                            disabled={disconnectingRumble}
+                            disabled={disconnectingVpzone}
                             className="h-7 px-2 text-xs text-slate-400 hover:text-red-400"
-                            onClick={async () => {
-                              setDisconnectingRumble(true);
-                              try {
-                                await apiRequest('POST', '/api/auth/rumble/disconnect');
-                                await refreshUser();
-                                setStreamChannelName('');
-                                toast({ title: 'Rumble disconnected', description: 'Your Rumble channel has been unlinked.', duration: 3000 });
-                              } catch {
-                                toast({ title: 'Failed to disconnect', description: 'Please try again.', variant: 'destructive' });
-                              } finally {
-                                setDisconnectingRumble(false);
-                              }
-                            }}
+                            onClick={handleVpzoneDisconnect}
                           >
-                            {disconnectingRumble ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Unlink className="w-3 h-3 mr-1" />}
+                            {disconnectingVpzone ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Unlink className="w-3 h-3 mr-1" />}
                             Disconnect
                           </Button>
                         </div>
                       ) : (
                         <div className="flex items-center justify-between">
-                          <p className="text-xs text-slate-400">Verify your Rumble channel via OAuth for a secure connection.</p>
+                          <p className="text-xs text-slate-400">Verify your VPZone channel via OAuth for a secure connection.</p>
                           <Button
                             size="sm"
-                            disabled={connectingRumble}
-                            className="bg-[#85C742] hover:bg-[#72aa38] text-black font-semibold border-0 h-8 px-3 text-xs"
+                            disabled={connectingVpzone}
+                            className="bg-[#f9376b] hover:bg-[#e0245e] text-white font-semibold border-0 h-8 px-3 text-xs"
                             onClick={() => {
-                              setConnectingRumble(true);
-                              const url = '/api/auth/rumble/connect';
+                              setConnectingVpzone(true);
+                              const url = '/api/auth/vpzone/connect';
                               if (isNative) void openExternal(`${API_BASE}${url}`);
-                              else window.location.href = url;
+                              else { window.open(url, '_blank'); setConnectingVpzone(false); }
                             }}
                           >
-                            {connectingRumble ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
-                            Connect with Rumble
+                            {connectingVpzone ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+                            Connect with VPZone
                           </Button>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* VPZone "show on profile" toggle - only relevant once connected */}
+                  {(user as any)?.vpzoneVerified && (
+                    <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/30 p-3">
+                      <div>
+                        <p className="text-xs font-medium text-slate-200">Show VPZone on profile</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Embed your VPZone stream on your profile</p>
+                      </div>
+                      <Switch
+                        checked={(user as any)?.vpzoneShowOnProfile ?? true}
+                        disabled={savingStreamerSettings}
+                        onCheckedChange={(val) => handleStreamerSettingsSave({ vpzoneShowOnProfile: val })}
+                      />
                     </div>
                   )}
 
@@ -5055,9 +5504,14 @@ export default function SettingsPage() {
                       Kick OAuth is not configured for this app. Contact the administrator to enable it.
                     </p>
                   )}
-                  {isStreamingEnabled && !oauthConfig?.rumble && (
+                  {YOUTUBE_STREAMING_ENABLED && isStreamingEnabled && streamPlatform === 'youtube' && !oauthConfig?.youtube && (
                     <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-slate-700 p-3">
-                      Rumble connection is not configured for this app. Contact the administrator to enable it.
+                      YouTube OAuth is not configured for this app. Contact the administrator to enable it.
+                    </p>
+                  )}
+                  {isStreamingEnabled && !oauthConfig?.vpzone && (
+                    <p className="text-xs text-muted-foreground rounded-lg border border-dashed border-slate-700 p-3">
+                      VPZone connection is not configured for this app. Contact the administrator to enable it.
                     </p>
                   )}
                 </div>

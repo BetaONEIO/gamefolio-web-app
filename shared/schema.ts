@@ -14,7 +14,7 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
   bannerUrl: text("banner_url").default("/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg"),
   // Customization options
-  accentColor: text("accent_color").default("#4C8"), // Default green accent
+  accentColor: text("accent_color").default("#B7FF1A"), // Default neon green accent
   primaryColor: text("primary_color").default("#02172C"), // Default navy primary
   backgroundColor: text("background_color").default("#0B2232"), // Default navy background
   cardColor: text("card_color").default("#1E3A8A"), // Default card background
@@ -58,7 +58,9 @@ export const users = pgTable("users", {
   instagramUsername: text("instagram_username"), // Instagram
   facebookUsername: text("facebook_username"), // Facebook
   rumbleUsername: text("rumble_username"),    // Rumble
-  // Streamer settings (OAuth-verified Twitch/Kick connections)
+  // Streamer settings (OAuth-verified Twitch/Kick connections).
+  // twitchChannelId/kickChannelId overlap conceptually with main's
+  // twitchUserId/kickId (below) — left for a later schema reconciliation.
   isStreamer: boolean("is_streamer").default(false),
   streamPlatform: text("stream_platform"), // "twitch" or "kick"
   twitchChannelName: text("twitch_channel_name"), // Verified via OAuth
@@ -89,6 +91,10 @@ export const users = pgTable("users", {
   showLiveOverlay: boolean("show_live_overlay").default(false), // Show LIVE badge on avatar
   twitchShowOnProfile: boolean("twitch_show_on_profile").default(true), // Embed Twitch stream on profile
   kickShowOnProfile: boolean("kick_show_on_profile").default(true),     // Embed Kick stream on profile
+  vpzoneChannelName: text("vpzone_channel_name"), // VPZone channel slug, verified via OAuth
+  vpzoneId: text("vpzone_id"),                    // VPZone user ID (set when OAuth-connected)
+  vpzoneVerified: boolean("vpzone_verified").default(false), // Connected via OAuth
+  vpzoneShowOnProfile: boolean("vpzone_show_on_profile").default(true), // Embed VPZone stream on profile
   ageRange: text("age_range"), // Age range: 13-17, 18-24, 25-34, 35-44, 45-54, 55+
   // Authentication provider fields
   authProvider: text("auth_provider").default("local"), // "local", "google", "discord", "steam", "apple"
@@ -119,7 +125,12 @@ export const users = pgTable("users", {
   gfTokenBalance: real("gf_token_balance").default(0).notNull(),
   // Gamefolio Pro subscription
   isPro: boolean("is_pro").default(false).notNull(), // Gamefolio Pro subscriber status
-  isPartner: boolean("is_partner").default(false).notNull(), // Official Gamefolio Partner
+  isPartner: boolean("is_partner").default(false).notNull(), // Has a partner entitlement (includes all Pro perks)
+  // Which paid partner subscription the user holds. NULL = not a partner.
+  // Distinct from user_type (self-selected onboarding personas): a "streamer"
+  // persona tag is NOT a paid Streamer Partner. Drives partner-only dashboards.
+  partnerType: text("partner_type"), // "streamer" | "indie" | null
+  isAmbassador: boolean("is_ambassador").default(false).notNull(), // Official Gamefolio Ambassador
   hideFromLeaderboard: boolean("hide_from_leaderboard").default(false).notNull(), // Admin-controlled leaderboard exclusion
   proSubscriptionType: text("pro_subscription_type"), // "yearly", "monthly", etc.
   proSubscriptionStartDate: timestamp("pro_subscription_start_date"), // When subscription started
@@ -127,6 +138,13 @@ export const users = pgTable("users", {
   stripeCustomerId: text("stripe_customer_id"), // Stripe customer ID for recurring billing
   stripeSubscriptionId: text("stripe_subscription_id"), // Stripe subscription ID for managing recurring payments
   revenuecatUserId: text("revenuecat_user_id"), // RevenueCat app user ID for mobile subscription verification
+  // Gamefolio Indie Developer subscription — a separate paid tier from Pro/Partner.
+  // Raises the active-bounty concurrency cap (free: 1, subscriber: 5).
+  isIndieDevSubscriber: boolean("is_indie_dev_subscriber").default(false).notNull(),
+  indieDevSubscriptionType: text("indie_dev_subscription_type"), // "monthly" | "yearly"
+  indieDevSubscriptionStartDate: timestamp("indie_dev_subscription_start_date"),
+  indieDevSubscriptionEndDate: timestamp("indie_dev_subscription_end_date"),
+  indieDevStripeSubscriptionId: text("indie_dev_stripe_subscription_id"), // separate from stripeSubscriptionId — a user can hold Pro + Indie Dev at once
   // Selected Avatar Border (from lootbox rewards)
   selectedAvatarBorderId: integer("selected_avatar_border_id"), // References asset_rewards table
   // Selected Name Tag
@@ -159,6 +177,22 @@ export const users = pgTable("users", {
   // Outro videos — auto-appended on download; separate files for landscape (16:9) and portrait (9:16)
   outroVideoPath: text("outro_video_path"),          // landscape 1920×1080 — "outros/42.mp4"
   outroVideoPathPortrait: text("outro_video_path_portrait"), // portrait 1080×1920 — "outros/42_portrait.mp4"
+  // Spam/multi-account detection signals — captured server-side at registration only,
+  // never client-settable. See gamefolio-bot for the detection jobs that read these.
+  signupIp: text("signup_ip"),
+  signupDeviceId: text("signup_device_id"),
+  // Indie game profile info (used by the "indie-game" layoutStyle to describe the developer's game)
+  gameDescription: text("game_description"), // Longer "about the game" blurb shown on the Overview tab
+  gameKeyFeatures: text("game_key_features").array(), // Bulleted feature list
+  studioFoundedYear: text("studio_founded_year"),
+  studioTeamSize: text("studio_team_size"),
+  gameReleaseDate: text("game_release_date"),
+  gameSteamUrl: text("game_steam_url"),
+  gameEpicUrl: text("game_epic_url"),
+  gameTrailerUrl: text("game_trailer_url"), // YouTube or direct video URL shown at the top of the Overview tab
+  gameScreenshotUrls: text("game_screenshot_urls").array(), // Steam-style screenshot gallery on the Overview tab
+  steamVerifiedAppId: text("steam_verified_app_id"), // Set once the dev proves ownership of this Steam store page
+  steamVerifiedAt: timestamp("steam_verified_at"), // null = not verified
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -203,6 +237,9 @@ export const clips = pgTable("clips", {
   // order in this file doesn't matter (Drizzle resolves it on first use, not
   // at module-init time).
   aiJobId: integer("ai_job_id").references((): any => aiClipJobs.id),
+  // Spam/multi-account detection signals — captured server-side at upload time.
+  uploadIp: text("upload_ip"),
+  uploadDeviceId: text("upload_device_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -317,9 +354,39 @@ export const screenshots = pgTable("screenshots", {
   ageRestricted: boolean("age_restricted").default(false).notNull(),
   shareCode: text("share_code").unique(),
   pinnedAt: timestamp("pinned_at"),
+  // Spam/multi-account detection signals — captured server-side at upload time.
+  uploadIp: text("upload_ip"),
+  uploadDeviceId: text("upload_device_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Scheduled posts table - clips/screenshots queued to publish at a future time.
+// The post is fully processed (thumbnails, transcode, Supabase upload) up front;
+// `payload` holds the validated clip/screenshot insert data plus publish-time
+// extras (e.g. videoType), and the background worker inserts it into the real
+// clips/screenshots table when scheduledAt is reached.
+export const scheduledPosts = pgTable("scheduled_posts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  contentType: text("content_type").notNull(), // "clip" | "screenshot"
+  scheduledAt: timestamp("scheduled_at").notNull(),
+  status: text("status").default("scheduled").notNull(), // scheduled | published | failed | cancelled
+  payload: json("payload").notNull(), // validated insert data + extras
+  // Denormalized for list display without parsing payload:
+  title: text("title").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  videoType: text("video_type"), // "clip" | "reel" for content_type=clip, null for screenshots
+  publishedAt: timestamp("published_at"),
+  publishedContentId: integer("published_content_id"),
+  errorMessage: text("error_message"),
+  attempts: integer("attempts").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  dueIdx: index("scheduled_posts_due_idx").on(table.status, table.scheduledAt),
+  userIdx: index("scheduled_posts_user_idx").on(table.userId, table.status),
+}));
 
 // UserGameFavorites table
 export const userGameFavorites = pgTable("user_game_favorites", {
@@ -569,6 +636,24 @@ export const pushBroadcasts = pgTable("push_broadcasts", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Admin "impersonate user" audit trail — every impersonation session, who
+// started it, why, and when it ended.
+export const impersonationAuditLog = pgTable("impersonation_audit_log", {
+  id: serial("id").primaryKey(),
+  tokenId: text("token_id").notNull().unique(),
+  adminId: integer("admin_id").notNull().references(() => users.id),
+  adminUsername: text("admin_username").notNull(),
+  targetUserId: integer("target_user_id").notNull().references(() => users.id),
+  targetUsername: text("target_username").notNull(),
+  reason: text("reason").notNull(),
+  ipAddress: text("ip_address"),
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  endedAt: timestamp("ended_at"),
+  endReason: text("end_reason"),
+});
+export type ImpersonationAuditLog = typeof impersonationAuditLog.$inferSelect;
+export type InsertImpersonationAuditLog = typeof impersonationAuditLog.$inferInsert;
+
 // Clip mentions table - for tracking user mentions in clip uploads
 export const clipMentions = pgTable("clip_mentions", {
   id: serial("id").primaryKey(),
@@ -609,6 +694,21 @@ export const emailVerificationTokens = pgTable("email_verification_tokens", {
   // Allow multiple codes per user but only track the most recent one
 });
 
+// One-time codes for proving ownership of a Steam store page — dev pastes the
+// code into their store description, we check it via Steam's public appdetails
+// API. Deleted once verification succeeds (see steamVerifiedAppId/steamVerifiedAt
+// on the users table for the permanent record).
+export const steamVerificationCodes = pgTable("steam_verification_codes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .references(() => users.id)
+    .notNull(),
+  steamAppId: text("steam_app_id").notNull(),
+  code: text("code").notNull(), // 6-digit, same generator as email verification
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Password reset tokens table
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: serial("id").primaryKey(),
@@ -630,10 +730,24 @@ export const VALID_OAUTH_SCOPES = [
 ] as const;
 export type OAuthScope = typeof VALID_OAUTH_SCOPES[number];
 
+// RFC 8252 §8.5: "public" clients (desktop/mobile/CLI apps) can't keep a
+// secret confidential since it ships inside the binary — they authenticate
+// with PKCE (code_challenge/code_verifier, already mandatory on every
+// client regardless of type) instead of a client_secret. "confidential"
+// clients (server-side apps that can hold a secret) keep the existing
+// secret-based flow. Fixed at registration — not editable after creation,
+// since flipping types mid-life would mean either fabricating a secret out
+// of nowhere (public -> confidential) or silently dropping one that was
+// already handed out (confidential -> public).
+export const OAUTH_CLIENT_TYPES = ['confidential', 'public'] as const;
+export type OAuthClientType = typeof OAUTH_CLIENT_TYPES[number];
+
 export const oauthClients = pgTable("oauth_clients", {
   id: serial("id").primaryKey(),
   clientId: uuid("client_id").defaultRandom().notNull().unique(),
-  clientSecretHash: text("client_secret_hash").notNull(), // scrypt hash.salt, same format as users.password
+  // Null for public clients — they never get a secret to begin with.
+  clientSecretHash: text("client_secret_hash"), // scrypt hash.salt, same format as users.password
+  clientType: text("client_type").notNull().default("confidential"), // OAuthClientType
   name: text("name").notNull(),
   description: text("description"),
   logoUrl: text("logo_url"),
@@ -651,6 +765,7 @@ export const insertOauthClientSchema = createInsertSchema(oauthClients)
   .extend({
     name: z.string().min(1).max(100),
     redirectUris: z.array(z.string().url()).min(1),
+    clientType: z.enum(OAUTH_CLIENT_TYPES).default('confidential'),
   });
 
 // Short-lived authorization codes (Authorization Code grant, step 1). PKCE required.
@@ -946,6 +1061,8 @@ export const emailVerificationSchema = z.object({
 // Types
 export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect;
 export type InsertEmailVerificationToken = typeof emailVerificationTokens.$inferInsert;
+export type SteamVerificationCode = typeof steamVerificationCodes.$inferSelect;
+export type InsertSteamVerificationCode = typeof steamVerificationCodes.$inferInsert;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 export type PasswordResetRequest = z.infer<typeof passwordResetRequestSchema>;
@@ -1017,6 +1134,19 @@ export const insertScreenshotSchema = createInsertSchema(screenshots).omit({
   title: z.string().min(1, "Title is required").max(200, "Title must be 200 characters or less"),
   description: z.string().max(5000, "Description must be 5000 characters or less").optional(),
   tags: z.array(z.string().max(50, "Each tag must be 50 characters or less")).max(20, "Maximum 20 tags allowed").optional(),
+});
+
+// Schema for inserting a scheduled post (server constructs payload internally;
+// status/publish bookkeeping fields are set by the worker, not the client)
+export const insertScheduledPostSchema = createInsertSchema(scheduledPosts).omit({
+  id: true,
+  status: true,
+  publishedAt: true,
+  publishedContentId: true,
+  errorMessage: true,
+  attempts: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 // Schema for inserting a user game favorite
@@ -1156,6 +1286,10 @@ export const userXPHistory = pgTable("user_xp_history", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   clipId: integer("clip_id").references(() => clips.id), // Optional - only for clip-related XP
+  contentType: text("content_type"), // Optional content type for deduplicated creator rewards
+  contentId: integer("content_id"), // Optional content id for deduplicated creator rewards
+  reactorId: integer("reactor_id").references(() => users.id), // Optional reactor for received-reaction rewards
+  dedupeKey: text("dedupe_key"), // Optional idempotency key for one-time XP events
   xpAmount: integer("xp_amount").notNull(), // XP earned
   viewCount: integer("view_count"), // Optional - for view milestones
   source: text("source").notNull().default("view"), // "view", "lootbox", "like_received", "fire_received", "upload", "daily_login", "welcome_bonus", "other"
@@ -1463,6 +1597,51 @@ export const insertUserDailyFiresSchema = createInsertSchema(userDailyFires).omi
   updatedAt: true,
 });
 
+// Rolling 24h upload-count tracking - one row per (user, contentType) window,
+// mirroring userDailyFires above. contentType is 'clip' | 'reel' | 'screenshot'.
+// windowStartDate is a human-readable record of when the current window
+// started; the actual window-active check compares `createdAt` against now
+// (see isUploadWindowActive in database-storage.ts) - not a calendar-date key,
+// same rationale as the fire-reaction limit avoiding a UTC-midnight reset.
+export const userUploadUsage = pgTable("user_upload_usage", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  contentType: text("content_type").notNull(),
+  windowStartDate: text("window_start_date").notNull(),
+  uploadCount: integer("upload_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertUserUploadUsageSchema = createInsertSchema(userUploadUsage).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Daily Twitch-clip import limit: counts clips fetched from Twitch and
+// successfully posted. Free users: 2/day, Pro users: 10/day. The allowance
+// is a rolling 24h window starting at the user's first import in it (see
+// getActiveImportWindow in database-storage.ts) — importDate just records
+// the UTC calendar date the window started, for auditing/uniqueness.
+export const userDailyImports = pgTable("user_daily_imports", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  importDate: text("import_date").notNull(), // UTC date (YYYY-MM-DD) the window started
+  importsCount: integer("imports_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  uniqueUserDate: unique().on(table.userId, table.importDate),
+}));
+
+// Schema for inserting daily import record
+export const insertUserDailyImportsSchema = createInsertSchema(userDailyImports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Schema for inserting pro lootbox grant
 export const insertProLootboxGrantSchema = createInsertSchema(proLootboxGrants).omit({
   id: true,
@@ -1547,6 +1726,15 @@ export type Screenshot = typeof screenshots.$inferSelect & {
   _count?: { likes: number; reactions: number; comments: number };
 };
 export type InsertScreenshot = z.infer<typeof insertScreenshotSchema>;
+
+export type ScheduledPost = typeof scheduledPosts.$inferSelect;
+export type InsertScheduledPost = z.infer<typeof insertScheduledPostSchema>;
+export type ScheduledPostLimits = {
+  isUnlimited: boolean;
+  max: number | null; // null when unlimited
+  used: number;
+  remaining: number | null; // null when unlimited
+};
 
 export type Badge = typeof badges.$inferSelect;
 export type InsertBadge = z.infer<typeof insertBadgeSchema>;
@@ -1699,6 +1887,12 @@ export type InsertProLootboxGrant = z.infer<typeof insertProLootboxGrantSchema>;
 // Types for daily fire tracking
 export type UserDailyFires = typeof userDailyFires.$inferSelect;
 export type InsertUserDailyFires = z.infer<typeof insertUserDailyFiresSchema>;
+export type UserDailyImports = typeof userDailyImports.$inferSelect;
+export type InsertUserDailyImports = z.infer<typeof insertUserDailyImportsSchema>;
+
+// Types for rolling-window upload-count tracking
+export type UserUploadUsage = typeof userUploadUsage.$inferSelect;
+export type InsertUserUploadUsage = z.infer<typeof insertUserUploadUsageSchema>;
 
 // Fire limits configuration type
 export interface FireLimits {
@@ -1708,9 +1902,22 @@ export interface FireLimits {
   canFire: boolean;
 }
 
+// Twitch clip import limits configuration type
+export interface ImportLimits {
+  isPro: boolean;
+  maxImportsPerDay: number;
+  importsUsedToday: number;
+  canImport: boolean;
+  // ISO timestamp of when the rolling 24h window (from the user's first
+  // import in it) expires and the allowance becomes fully available again.
+  // null when the user has no active window (full allowance available).
+  resetsAt: string | null;
+}
+
 // Upload limits configuration type
-// Free vs Pro users are limited only by file size and (for video) duration.
-// There is no per-day or total upload count cap — those have been removed.
+// Free vs Pro users are limited by file size, (for video) duration, and a
+// rolling 24h upload-count cap per content type - see userUploadUsage /
+// getFireLimits precedent in database-storage.ts.
 export interface UploadLimits {
   isPro: boolean;
   maxClipSizeMB: number;
@@ -1718,6 +1925,15 @@ export interface UploadLimits {
   maxScreenshotSizeMB: number;
   maxClipDurationSeconds: number;
   maxReelDurationSeconds: number;
+  maxClipsPerWindow: number;
+  clipsUsedInWindow: number;
+  maxReelsPerWindow: number;
+  reelsUsedInWindow: number;
+  maxScreenshotsPerWindow: number;
+  screenshotsUsedInWindow: number;
+  // Max number of files a user can queue in a single bulk-upload batch.
+  // Free: 3, Pro/Partner/admin: 10. This is a per-batch cap, not a daily quota.
+  maxBulkUploads: number;
 }
 
 // Linked external wallets - addresses the user has cryptographically proven control of.
@@ -1845,6 +2061,23 @@ export const gamefolioPurchases = pgTable("gamefolio_purchases", {
 
 export type GamefolioPurchase = typeof gamefolioPurchases.$inferSelect;
 
+// Records a Pro purchase attributed to an ambassador's referral code.
+// referredUserId is unique so a user is only ever attributed once (their
+// first Pro purchase) — renewals never insert a second row.
+export const ambassadorConversions = pgTable("ambassador_conversions", {
+  id: serial("id").primaryKey(),
+  ambassadorUserId: integer("ambassador_user_id").references(() => users.id).notNull(),
+  referredUserId: integer("referred_user_id").references(() => users.id).notNull().unique(),
+  referralCode: text("referral_code").notNull(),
+  subscriptionType: text("subscription_type"), // "monthly" | "yearly"
+  source: text("source").notNull(), // "stripe" | "revenuecat"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  ambassadorIdx: index("ambassador_conversions_ambassador_idx").on(table.ambassadorUserId),
+}));
+
+export type AmbassadorConversion = typeof ambassadorConversions.$inferSelect;
+
 export const heroSlides = pgTable("hero_slides", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -1971,6 +2204,98 @@ export type InsertAdminAlert = typeof adminAlerts.$inferInsert;
 
 export type XpSetting = typeof xpSettings.$inferSelect;
 
+export const gameBounties = pgTable("game_bounties", {
+  id: serial("id").primaryKey(),
+  gameId: integer("game_id").notNull(),
+  createdByUserId: integer("created_by_user_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  campaignTitle: text("campaign_title"),
+  rewardType: text("reward_type").notNull().default("game_key"),
+  rewardValue: text("reward_value"),
+  keyCount: integer("key_count").default(0),
+  creatorSlots: integer("creator_slots").default(10),
+  maxParticipants: integer("max_participants").default(10),
+  difficulty: text("difficulty").default("medium"),
+  endDate: timestamp("end_date"),
+  status: text("status").default("active"),
+  demoKeyPool: text("demo_key_pool"),
+  fullKeyPool: text("full_key_pool"),
+  requiredClips: integer("required_clips").default(0),
+  requiredReels: integer("required_reels").default(0),
+  requiredScreenshots: integer("required_screenshots").default(0),
+  requiredViews: integer("required_views").default(0),
+  xpJoin: integer("xp_join").default(500),
+  xpPerClip: integer("xp_per_clip").default(1000),
+  xpPerReel: integer("xp_per_reel").default(2500),
+  xpPerScreenshot: integer("xp_per_screenshot").default(200),
+  xpViewMilestone: integer("xp_view_milestone").default(2500),
+  xpCompletionBonus: integer("xp_completion_bonus").default(5000),
+  totalXpAvailable: integer("total_xp_available").default(0),
+  demoKeysRemaining: integer("demo_keys_remaining").default(0),
+  fullKeysRemaining: integer("full_keys_remaining").default(0),
+  completionBadge: text("completion_badge"),
+  bountyType: text("bounty_type").default("upload_clips"), // upload_clips | upload_reels | upload_screenshots | stream | review | tutorial | first_impressions | bug_report
+  hashtags: text("hashtags").array(),
+  regionRestriction: text("region_restriction"),
+  startDate: timestamp("start_date"),
+  rewardMode: text("reward_mode").default("per_submission"), // per_submission | top_winners | completion | all_approved
+  rewardTiers: json("reward_tiers"), // e.g. [{ place: 1, xp: 2000, gft: 500, key: 'full' }, ...]
+  minClipLength: integer("min_clip_length").default(0),
+  requiredTag: text("required_tag"),
+  requiredKeywords: text("required_keywords"),
+  maxSubmissionsPerUser: integer("max_submissions_per_user").default(1),
+  manualApprovalRequired: boolean("manual_approval_required").default(true),
+  mustBePublic: boolean("must_be_public").default(true),
+  blockDuplicates: boolean("block_duplicates").default(true),
+  trailerUrl: text("trailer_url"),
+  screenshotUrls: text("screenshot_urls").array(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const bountySubmissions = pgTable("bounty_submissions", {
+  id: serial("id").primaryKey(),
+  bountyId: integer("bounty_id").notNull(),
+  userId: integer("user_id").notNull(),
+  contentType: text("content_type").notNull(), // clip | reel | screenshot
+  contentId: integer("content_id").notNull(),
+  status: text("status").default("pending"), // pending | approved | rejected
+  rejectionReason: text("rejection_reason"),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedByUserId: integer("reviewed_by_user_id"),
+  rewardSummary: json("reward_summary"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const gameBountyAcceptances = pgTable("game_bounty_acceptances", {
+  id: serial("id").primaryKey(),
+  bountyId: integer("bounty_id").notNull(),
+  userId: integer("user_id").notNull(),
+  status: text("status").default("active"),
+  demoKey: text("demo_key"),
+  fullKey: text("full_key"),
+  clipsUploaded: integer("clips_uploaded").default(0),
+  reelsUploaded: integer("reels_uploaded").default(0),
+  screenshotsUploaded: integer("screenshots_uploaded").default(0),
+  totalViews: integer("total_views").default(0),
+  xpEarned: integer("xp_earned").default(0),
+  progressPercent: integer("progress_percent").default(0),
+  joinedAt: timestamp("joined_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  completedBadgeAwarded: boolean("completed_badge_awarded").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertGameBountySchema = createInsertSchema(gameBounties).omit({ id: true, createdAt: true });
+export const insertGameBountyAcceptanceSchema = createInsertSchema(gameBountyAcceptances).omit({ id: true, createdAt: true });
+export const insertBountySubmissionSchema = createInsertSchema(bountySubmissions).omit({ id: true, createdAt: true });
+export type GameBounty = typeof gameBounties.$inferSelect;
+export type InsertGameBounty = z.infer<typeof insertGameBountySchema>;
+export type GameBountyAcceptance = typeof gameBountyAcceptances.$inferSelect;
+export type InsertGameBountyAcceptance = z.infer<typeof insertGameBountyAcceptanceSchema>;
+export type BountySubmission = typeof bountySubmissions.$inferSelect;
+export type InsertBountySubmission = z.infer<typeof insertBountySubmissionSchema>;
+
 export const usedPaymentHashes = pgTable("used_payment_hashes", {
   id: serial("id").primaryKey(),
   txHash: text("tx_hash").notNull().unique(),
@@ -1979,3 +2304,96 @@ export const usedPaymentHashes = pgTable("used_payment_hashes", {
   itemId: text("item_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// ─── Indie Game Profile System ───────────────────────────────────────────────
+
+// Canonical per-developer game profile — one row per indie developer user
+export const indieGameProfiles = pgTable("indie_game_profiles", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+
+  // Section 1: Basic Info
+  gameName: text("game_name"),
+  releaseStatus: text("release_status").default("coming_soon"), // coming_soon | early_access | released
+  releaseDate: text("release_date"),
+  price: text("price"),
+  isFree: boolean("is_free").default(false),
+
+  // Section 2: Studio
+  studioName: text("studio_name"),
+  studioFoundedYear: text("studio_founded_year"),
+  studioTeamSize: text("studio_team_size"),
+  studioWebsite: text("studio_website"),
+  studioCountry: text("studio_country"),
+
+  // Section 3: Description
+  shortDescription: text("short_description"),
+  fullDescription: text("full_description"),
+
+  // Section 4: Features & Genre
+  keyFeatures: text("key_features").array(),
+  genres: text("genres").array(),
+  tags: text("tags").array(),
+
+  // Section 5: Media
+  headerImageUrl: text("header_image_url"),
+  capsuleImageUrl: text("capsule_image_url"),
+  trailerUrl: text("trailer_url"),
+  screenshotUrls: text("screenshot_urls").array(),
+
+  // Section 6: Platforms
+  platforms: text("platforms").array(), // windows, mac, linux, ps5, xbox, switch, ios, android
+
+  // Section 7: Store Links
+  steamUrl: text("steam_url"),
+  steamAppId: text("steam_app_id"),
+  epicUrl: text("epic_url"),
+  epicSlug: text("epic_slug"),
+  itchUrl: text("itch_url"),
+  itchApiKey: text("itch_api_key"),       // encrypted at rest; validated via itch.io API
+  itchUsername: text("itch_username"),    // populated when API key is first connected
+
+  // Section 8: Social & Contact
+  websiteUrl: text("website_url"),
+  twitterUrl: text("twitter_url"),
+  discordUrl: text("discord_url"),
+
+  // Section 9: Store-Specific Info
+  ageRating: text("age_rating"),
+  supportedLanguages: text("supported_languages").array(),
+  contentDescriptors: text("content_descriptors").array(),
+
+  // Section 10: Sync Settings
+  autoSyncEnabled: boolean("auto_sync_enabled").default(false),
+  preferredSyncSource: text("preferred_sync_source"), // "steam" | "epic" | "itch"
+
+  // Store import tracking
+  steamLastImportedAt: timestamp("steam_last_imported_at"),
+  epicLastImportedAt: timestamp("epic_last_imported_at"),
+  itchLastImportedAt: timestamp("itch_last_imported_at"),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Per-field import/override metadata — tracks source of truth for each field
+export const indieGameFieldOverrides = pgTable("indie_game_field_overrides", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  fieldName: text("field_name").notNull(),
+  importedValue: text("imported_value"),   // JSON string of last imported value
+  importSource: text("import_source"),     // "steam" | "epic" | "itch"
+  isManualOverride: boolean("is_manual_override").default(false).notNull(),
+  useImported: boolean("use_imported").default(false).notNull(),
+  lastImportedAt: timestamp("last_imported_at"),
+  lastEditedAt: timestamp("last_edited_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertIndieGameProfileSchema = createInsertSchema(indieGameProfiles).omit({ id: true, createdAt: true, updatedAt: true });
+export type IndieGameProfile = typeof indieGameProfiles.$inferSelect;
+export type InsertIndieGameProfile = z.infer<typeof insertIndieGameProfileSchema>;
+
+export const insertIndieGameFieldOverrideSchema = createInsertSchema(indieGameFieldOverrides).omit({ id: true, createdAt: true });
+export type IndieGameFieldOverride = typeof indieGameFieldOverrides.$inferSelect;
+export type InsertIndieGameFieldOverride = z.infer<typeof insertIndieGameFieldOverrideSchema>;

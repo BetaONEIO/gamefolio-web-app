@@ -7,7 +7,8 @@ import { supabaseStorage } from '../supabase-storage';
 import { storage } from '../storage';
 import { insertClipSchema } from '@shared/schema';
 import { VideoProcessor } from '../video-processor';
-import { LeaderboardService, POINT_VALUES } from '../leaderboard-service';
+import { XPService } from '../xp-service';
+import { CreatorMilestoneService } from '../creator-milestone-service';
 
 const tempDir = path.join(process.cwd(), "temp");
 if (!fs.existsSync(tempDir)) {
@@ -37,6 +38,14 @@ export interface ProcessAndCreateClipParams {
   ageRestricted?: boolean | string;
   trimStart?: string | number;
   trimEnd?: string | number;
+  // When set, the fully-processed clip is stored as a scheduled post instead
+  // of being published immediately — see routes/upload.ts for the pre-check
+  // that rejects invalid/over-limit schedules before this expensive pipeline runs.
+  scheduledAt?: Date;
+  // Spam/multi-account detection signals — caller derives these from the
+  // request (see server/lib/request-meta.ts) since this service has no req.
+  uploadIp?: string;
+  uploadDeviceId?: string | null;
 }
 
 /**
@@ -47,7 +56,7 @@ export interface ProcessAndCreateClipParams {
  * pipeline instead of a second, divergent copy of this logic.
  */
 export async function processAndCreateClip(userId: number, params: ProcessAndCreateClipParams) {
-  const { uploadResult, title, description, gameId, tags, ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd } = params;
+  const { uploadResult, title, description, gameId, tags, ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd, scheduledAt, uploadIp, uploadDeviceId } = params;
   const videoType = params.videoType || 'clip';
 
   if (!uploadResult || !title) {
@@ -67,6 +76,19 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   const maxDurationSeconds = isReel ? limits.maxReelDurationSeconds : limits.maxClipDurationSeconds;
   const maxSizeMB = isReel ? limits.maxReelSizeMB : limits.maxClipSizeMB;
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
+
+  // Rolling 24h upload-count cap - reject before any expensive
+  // download/transcode work below. Covers both the browser upload route and
+  // the OAuth public API, since both call through this shared function.
+  const usedInWindow = isReel ? limits.reelsUsedInWindow : limits.clipsUsedInWindow;
+  const maxPerWindow = isReel ? limits.maxReelsPerWindow : limits.maxClipsPerWindow;
+  if (usedInWindow >= maxPerWindow) {
+    throw new ClipProcessingError(403, {
+      error: 'Upload limit reached',
+      message: `You've reached your ${maxPerWindow} ${isReel ? 'reel' : 'clip'} upload limit for now.${limits.isPro ? '' : ' Upgrade to Pro for a higher limit.'}`,
+      limits,
+    });
+  }
 
   // Handle game ID - ensure game exists in database
   let finalGameId = null;
@@ -350,20 +372,52 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
     trimEnd: rawTrimEnd !== undefined && rawTrimEnd !== null ? parseInt(String(rawTrimEnd)) : actualDuration,
     ageRestricted: ageRestricted === true || ageRestricted === 'true',
     shareCode,
+    uploadIp: uploadIp ?? null,
+    uploadDeviceId: uploadDeviceId ?? null,
   };
 
   const validatedClipData = insertClipSchema.parse(finalClipData);
-  const clip = await storage.createClip(validatedClipData);
 
-  await LeaderboardService.awardPoints(
+  // Scheduled path: store the fully-processed record for later publishing
+  // instead of going live now. The background worker (scheduled-posts-service.ts)
+  // inserts it and runs the upload XP side-effects when scheduledAt is reached.
+  if (scheduledAt) {
+    const scheduled = await storage.createScheduledPost({
+      userId,
+      contentType: 'clip',
+      scheduledAt,
+      payload: validatedClipData,
+      title: validatedClipData.title,
+      thumbnailUrl: validatedClipData.thumbnailUrl || null,
+      videoType,
+    });
+    // The file was actually processed/uploaded now, not at the future
+    // publish time, so it consumes the window now.
+    await storage.incrementUploadUsage(userId, videoType);
+    return {
+      success: true,
+      scheduled,
+      message: `${videoType === 'reel' ? 'Reel' : 'Clip'} scheduled for ${scheduledAt.toISOString()}`,
+    };
+  }
+
+  const clip = await storage.createClip(validatedClipData);
+  await storage.incrementUploadUsage(userId, videoType);
+
+  await XPService.awardXP(
     userId,
+    250,
     'upload',
-    `Upload: ${videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`
+    `Earned 250 XP for uploading a ${videoType === 'reel' ? 'reel' : 'clip'}`,
+    clip.id
   );
+  // "Upload Today" daily challenge bonus — separate from the flat upload XP above.
+  CreatorMilestoneService.checkFirstUploadOfDay(userId).catch((err) => {
+    console.error('Error checking first-upload-of-day milestone:', err);
+  });
 
   const baseUrl = 'https://app.gamefolio.com';
   const user = await storage.getUser(userId);
-  console.log(`🎯 XP Debug - User after award: ID=${user?.id}, totalXP=${user?.totalXP}, level=${user?.level}`);
   const username = user?.username || 'unknown';
   const contentType = videoType === 'reel' ? 'reel' : 'clip';
   const clipUrl = `${baseUrl}/@${username}/${contentType}/${clip.shareCode}`;
@@ -379,7 +433,7 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   return {
     success: true,
     clip: { ...clip, qrCode: qrCodeDataUrl, shareUrl: clipUrl, socialMediaLinks },
-    xpGained: POINT_VALUES['upload'] ?? 200,
+    xpGained: 250,
     userXP: user?.totalXP || 0,
     userLevel: user?.level || 1,
     message: 'Video processed successfully'

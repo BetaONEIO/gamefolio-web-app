@@ -6,16 +6,16 @@ import fs from 'fs';
 import { supabaseTusStore } from '../tus-storage';
 import { supabaseStorage } from '../supabase-storage';
 import { storage } from '../storage';
-import { insertScreenshotSchema, type UploadLimits } from '@shared/schema';
+import { insertClipSchema, insertScreenshotSchema, type UploadLimits } from '@shared/schema';
 import { VideoProcessor } from '../video-processor';
 import sharp from 'sharp';
 import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
 import { fullAccessMiddleware } from '../middleware/full-access';
 import { hybridFullAccess } from '../middleware/hybrid-auth';
-import { LeaderboardService, POINT_VALUES } from '../leaderboard-service';
-import { BonusEventsService } from '../bonus-events-service';
-import { CreatorMilestoneService } from '../creator-milestone-service';
+import { XPService } from '../xp-service';
+import { captureRouteError } from "../sentry";
+import { getRequestMeta } from "../lib/request-meta";
 import { processAndCreateClip, ClipProcessingError } from '../services/clip-processing';
 
 const router = express.Router();
@@ -105,6 +105,40 @@ const avatarUpload = multer({
   }
 });
 
+// `@tus/server` (via srvx) reconstructs its own fetch-standard Request before
+// invoking hooks like `onUploadFinish`, so `req.user` set by Express's
+// `hybridFullAccess` middleware earlier in the chain doesn't carry over onto
+// that object directly. srvx does, however, stash the original Node
+// `req`/`res` it was built from at `req.runtime.node.req` — and since Express
+// middleware mutates that same `IncomingMessage` in place (rather than
+// cloning it), `.user` is still there, just one level deeper. Falls back to
+// `req.user` directly for the direct-invocation contract tests rely on
+// (see tests/upload-limits.test.ts, which calls this function with a
+// hand-built `{ user: { id } }` and no `runtime`).
+function resolveTusRequestUserId(req: Record<string, any>): number | undefined {
+  return req?.user?.id ?? req?.runtime?.node?.req?.user?.id;
+}
+
+// Parse and validate a client-supplied `scheduledAt` for deferred publishing.
+// Returns { date } on success or { error } with a user-facing message. Returns
+// {} (neither) when no scheduling was requested — a normal immediate upload.
+const MAX_SCHEDULE_AHEAD_MS = 365 * 24 * 60 * 60 * 1000; // 1 year
+export function parseScheduledAt(raw: unknown): { date?: Date; error?: string } {
+  if (raw === undefined || raw === null || raw === '') return {};
+  const date = new Date(raw as string);
+  if (isNaN(date.getTime())) {
+    return { error: 'Invalid schedule date/time.' };
+  }
+  const now = Date.now();
+  if (date.getTime() <= now) {
+    return { error: 'Schedule time must be in the future.' };
+  }
+  if (date.getTime() - now > MAX_SCHEDULE_AHEAD_MS) {
+    return { error: 'Posts can be scheduled at most one year in advance.' };
+  }
+  return { date };
+}
+
 // TUS `onUploadFinish` handler — exported so tests can exercise the
 // upload-error contract directly without requiring the underlying TUS HTTP
 // transport (the contract that desktop and mobile clients depend on lives in
@@ -115,7 +149,7 @@ export async function tusOnUploadFinish(
 ): Promise<{ status_code: number; headers?: Record<string, string>; body: string }> {
   let limits: UploadLimits | undefined;
   try {
-    const userId = req.user?.id;
+    const userId = resolveTusRequestUserId(req);
     if (!userId) {
       throw new Error('User not authenticated');
     }
@@ -172,6 +206,13 @@ export async function tusOnUploadFinish(
     const message = error?.message || 'Upload processing failed';
     // Surface limit errors as 4xx so the client gets a clear, actionable message.
     const isLimitError = typeof message === 'string' && message.startsWith('Maximum ');
+    // Tier-limit rejections are expected, not bugs — same exclusion the
+    // client applies for UploadLimitError — so only genuine transport/finish
+    // failures (e.g. the runtime.node.req auth propagation bug this function
+    // used to hit on every real HTTP upload) reach Sentry.
+    if (!isLimitError) {
+      captureRouteError(error);
+    }
     const errorBody: Record<string, any> = {
       error: isLimitError ? 'Upload exceeds tier limit' : 'Upload processing failed',
       message,
@@ -299,6 +340,7 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('❌ Direct video upload error:', error);
 
     // Clean up temp file on error
@@ -315,7 +357,7 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
 });
 
 // Get Supabase upload credentials for direct client-side upload
-router.post('/upload/supabase-creds', fullAccessMiddleware, async (req, res) => {
+router.post('/upload/supabase-creds', hybridFullAccess, async (req, res) => {
   try {
     const { filePath, contentType } = req.body;
     
@@ -328,17 +370,44 @@ router.post('/upload/supabase-creds', fullAccessMiddleware, async (req, res) => 
     
     res.json({ uploadUrl, publicUrl });
   } catch (error) {
+    captureRouteError(error);
     console.error('Error generating Supabase upload credentials:', error);
     res.status(500).json({ error: 'Failed to generate upload credentials' });
   }
 });
 
+// srvx (the fetch-Request adapter @tus/server uses internally) finishes a
+// response via `res.end(callback)` — Node's callback-only overload of
+// ServerResponse#end, with no chunk. express-session@1.18.2's res.end patch
+// (installed earlier in the middleware chain, per-request) assumes its first
+// argument is always body data and never checks for this shape, so it hands
+// the callback straight to the real `res.write(chunk)`, which throws because
+// a function isn't valid response data. This only fires for session-cookie
+// requests (web) — JWT requests never touch `req.session`, so express-session
+// never re-wraps the response for them, which is why this stayed invisible
+// until a real cookie-authenticated upload was tested end-to-end. Intercept
+// just that one calling shape before it reaches express-session's patch;
+// every other shape passes through unchanged.
+function patchResEndForSessionCompat(res: express.Response) {
+  const originalEnd = res.end.bind(res);
+  (res as any).end = (...args: any[]) => {
+    if (args.length === 1 && typeof args[0] === 'function') {
+      const callback = args[0];
+      res.once('finish', callback);
+      return originalEnd();
+    }
+    return (originalEnd as any)(...args);
+  };
+}
+
 // TUS endpoints (keep for future use)
-router.all('/tus/*', fullAccessMiddleware, (req, res) => {
+router.all('/tus/*', hybridFullAccess, (req, res) => {
+  patchResEndForSessionCompat(res);
   return tusServer.handle(req, res);
 });
 
-router.all('/tus', fullAccessMiddleware, (req, res) => {
+router.all('/tus', hybridFullAccess, (req, res) => {
+  patchResEndForSessionCompat(res);
   return tusServer.handle(req, res);
 });
 
@@ -361,10 +430,39 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
       });
     }
 
-    const { title, description, gameId, tags, ageRestricted } = req.body;
+    // Rolling 24h upload-count cap
+    if (limits.screenshotsUsedInWindow >= limits.maxScreenshotsPerWindow) {
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
+      return res.status(403).json({
+        error: 'Upload limit reached',
+        message: `You've reached your ${limits.maxScreenshotsPerWindow} screenshot upload limit for now.${limits.isPro ? '' : ' Upgrade to Pro for a higher limit.'}`,
+        limits
+      });
+    }
+
+    const { title, description, gameId, tags, ageRestricted, scheduledAt: rawScheduledAt } = req.body;
 
     if (!title) {
       return res.status(400).json({ error: 'Title is required' });
+    }
+
+    // Resolve scheduling intent before the (cheaper, but still real) image
+    // processing + upload below.
+    const { date: scheduledAt, error: scheduleError } = parseScheduledAt(rawScheduledAt);
+    if (scheduleError) {
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
+      return res.status(400).json({ error: scheduleError });
+    }
+    if (scheduledAt) {
+      const scheduleLimits = await storage.getScheduledPostLimits(req.user!.id);
+      if (!scheduleLimits.isUnlimited && scheduleLimits.remaining !== null && scheduleLimits.remaining <= 0) {
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+        return res.status(403).json({
+          error: 'Scheduled post limit reached',
+          message: `Your plan allows ${scheduleLimits.max} scheduled posts at a time. Publish or cancel one to schedule another.`,
+          scheduleLimits,
+        });
+      }
     }
 
     // Handle game ID - ensure game exists in database
@@ -452,6 +550,8 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
       imageUrl: '', // Will be set after upload
       thumbnailUrl: '', // Will be set after processing
       ageRestricted: ageRestricted === true || ageRestricted === 'true',
+      uploadIp: getRequestMeta(req).ip,
+      uploadDeviceId: getRequestMeta(req).deviceId,
     };
 
     // Validate screenshot data with detailed error logging
@@ -521,31 +621,44 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
       shareCode: shareCode
     };
 
+    // Scheduled path: store the processed screenshot for later publishing.
+    if (scheduledAt) {
+      const validatedScheduled = insertScreenshotSchema.parse(screenshotDataWithShareCode);
+      const scheduled = await storage.createScheduledPost({
+        userId: req.user!.id,
+        contentType: 'screenshot',
+        scheduledAt,
+        payload: validatedScheduled,
+        title: validatedScheduled.title,
+        thumbnailUrl: validatedScheduled.thumbnailUrl || null,
+        videoType: null,
+      });
+      // The file was actually processed/uploaded now, not at the future
+      // publish time, so it consumes the window now.
+      await storage.incrementUploadUsage(req.user!.id, 'screenshot');
+      return res.json({
+        success: true,
+        scheduled,
+        message: `Screenshot scheduled for ${scheduledAt.toISOString()}`,
+      });
+    }
+
     const screenshot = await storage.createScreenshot(screenshotDataWithShareCode);
+    await storage.incrementUploadUsage(req.user!.id, 'screenshot');
 
-    // Award upload points to the user (screenshots are worth 100 XP)
-    await LeaderboardService.awardPoints(
+    await XPService.awardXP(
       req.user!.id,
-      'screenshot_upload',
-      `Upload: Screenshot - ${screenshot.title}`
+      100,
+      'upload',
+      `Earned 100 XP for uploading a screenshot`
     );
-
-    // Weekend upload bonus (+50% XP on Sat/Sun)
-    await BonusEventsService.awardWeekendUploadBonus(req.user!.id, 100);
-
-    // Creator milestones: first upload of the day + weekly milestones
-    await CreatorMilestoneService.checkFirstUploadOfDay(req.user!.id);
-    await CreatorMilestoneService.checkWeeklyUploadMilestones(req.user!.id);
-
-    // Consecutive upload bonus
-    await BonusEventsService.checkConsecutiveUploadBonus(req.user!.id);
 
     // Generate QR code and sharing data for screenshot
     const baseUrl = 'https://app.gamefolio.com';
 
     // Get username for URL and fetch updated user data with new XP/level
     const user = await storage.getUser(req.user!.id);
-    console.log(`🎯 XP Debug - User after screenshot award: ID=${user?.id}, totalXP=${user?.totalXP}, level=${user?.level}`);
+;
     const username = user?.username || 'unknown';
     const screenshotUrl = `${baseUrl}/@${username}/screenshot/${screenshot.shareCode}`;
     const qrCodeDataUrl = await QRCode.toDataURL(screenshotUrl);
@@ -565,17 +678,16 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
         shareUrl: screenshotUrl,
         socialMediaLinks
       },
-      xpGained: POINT_VALUES['screenshot_upload'] ?? 100,
+      xpGained: 100,
       userXP: user?.totalXP || 0,
       userLevel: user?.level || 1,
       message: 'Screenshot uploaded successfully'
     };
     
-    console.log(`🎯 XP Debug - Screenshot response: xpGained=${responseData.xpGained}, userXP=${responseData.userXP}, userLevel=${responseData.userLevel}`);
-    
     res.json(responseData);
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Screenshot upload error:', error);
 
     // Clean up temp file on error
@@ -593,19 +705,54 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 
 // Video/Reel processing endpoint (called after TUS upload completes)
 router.post('/process-video', hybridFullAccess, async (req, res) => {
-  const { ageRestricted } = req.body;
-  console.log('🔞 Age Restriction Backend Debug:', {
-    ageRestricted,
-    ageRestrictedType: typeof ageRestricted,
-    rawBody: req.body,
-    evaluation: ageRestricted === true || ageRestricted === 'true'
-  });
-
   try {
-    const responseData = await processAndCreateClip(req.user!.id, req.body);
-    console.log(`🎯 XP Debug - Response data: xpGained=${responseData.xpGained}, userXP=${responseData.userXP}, userLevel=${responseData.userLevel}`);
+    // Resolve scheduling intent up front so we can reject before doing the
+    // expensive download/transcode work in processAndCreateClip below.
+    const { date: scheduledAt, error: scheduleError } = parseScheduledAt(req.body.scheduledAt);
+    if (scheduleError) {
+      return res.status(400).json({ error: scheduleError });
+    }
+    if (scheduledAt) {
+      const scheduleLimits = await storage.getScheduledPostLimits(req.user!.id);
+      if (!scheduleLimits.isUnlimited && scheduleLimits.remaining !== null && scheduleLimits.remaining <= 0) {
+        return res.status(403).json({
+          error: 'Scheduled post limit reached',
+          message: `Your plan allows ${scheduleLimits.max} scheduled posts at a time. Publish or cancel one to schedule another.`,
+          scheduleLimits,
+        });
+      }
+    }
+
+    // Clips fetched from Twitch count against a daily import allowance
+    // (free: 2/day, Pro: 10/day). Gate before any expensive processing; the
+    // counter is incremented only after the clip is successfully created.
+    const isTwitchImport = req.body.source === 'twitch';
+    if (isTwitchImport) {
+      const importLimits = await storage.getImportLimits(req.user!.id);
+      if (!importLimits.canImport) {
+        return res.status(429).json({
+          error: 'Daily Twitch import limit reached',
+          message: importLimits.isPro
+            ? `You've imported all ${importLimits.maxImportsPerDay} Twitch clips for today. Your limit refreshes tomorrow.`
+            : `You've imported your ${importLimits.maxImportsPerDay} Twitch clips for today. Pro members can import up to 10 a day — and your limit refreshes tomorrow.`,
+          limits: importLimits,
+        });
+      }
+    }
+
+    const { ip: uploadIp, deviceId: uploadDeviceId } = getRequestMeta(req);
+    const responseData = await processAndCreateClip(req.user!.id, { ...req.body, scheduledAt, uploadIp, uploadDeviceId });
+
+    // Count this against the user's daily Twitch import allowance (post-time,
+    // so fetching/previewing a clip without posting it never burns quota;
+    // scheduled imports aren't counted until they'd actually publish).
+    if (isTwitchImport && 'clip' in responseData) {
+      await storage.incrementDailyImportCount(req.user!.id);
+    }
+
     res.json(responseData);
   } catch (error) {
+    captureRouteError(error);
     if (error instanceof ClipProcessingError) {
       return res.status(error.status).json(error.body);
     }
@@ -676,6 +823,7 @@ router.post('/fix-durations', fullAccessMiddleware, async (req, res) => {
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Duration fix error:', error);
     res.status(500).json({ 
       error: error instanceof Error ? error.message : 'Duration fix failed' 
@@ -684,7 +832,7 @@ router.post('/fix-durations', fullAccessMiddleware, async (req, res) => {
 });
 
 // Get upload limits and configuration
-router.get('/config', fullAccessMiddleware, (req, res) => {
+router.get('/config', hybridFullAccess, (req, res) => {
   res.json({
     limits: {
       video: {
@@ -709,12 +857,13 @@ router.get('/config', fullAccessMiddleware, (req, res) => {
 });
 
 // Get user-specific upload limits and remaining quota
-router.get('/limits', fullAccessMiddleware, async (req, res) => {
+router.get('/limits', hybridFullAccess, async (req, res) => {
   try {
     const userId = req.user!.id;
     const limits = await storage.getUploadLimits(userId);
     res.json(limits);
   } catch (error) {
+    captureRouteError(error);
     console.error('Error fetching upload limits:', error);
     res.status(500).json({ error: 'Failed to fetch upload limits' });
   }
@@ -786,6 +935,7 @@ router.post('/avatar', fullAccessMiddleware, avatarUpload.single('avatar'), asyn
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Avatar upload error:', error);
 
     // Clean up temp file on error

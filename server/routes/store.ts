@@ -5,6 +5,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { privateKeyToAccount } from 'viem/accounts';
 import { createPublicClient, http, parseUnits, decodeEventLog, type Address } from 'viem';
 import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, SKALE_NEBULA_TESTNET } from '../../shared/contracts';
+import { captureRouteError } from "../sentry";
 
 const GF_DECIMALS = 18;
 
@@ -51,6 +52,7 @@ router.get('/api/store/items', async (req: Request, res: Response) => {
 
     return res.json(itemsWithDiscount);
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Get store items error:', error);
     return res.status(500).json({ error: 'Failed to fetch store items' });
   }
@@ -83,6 +85,7 @@ router.get('/api/store/owned', async (req: Request, res: Response) => {
       txHash: o.purchase.txHash,
     })));
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Get owned items error:', error);
     return res.status(500).json({ error: 'Failed to fetch owned items' });
   }
@@ -152,6 +155,7 @@ router.post('/api/store/purchase-intent', async (req: Request, res: Response) =>
       treasuryAddress,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Create purchase intent error:', error);
     return res.status(500).json({ error: 'Failed to create purchase intent' });
   }
@@ -253,6 +257,7 @@ router.post('/api/store/verify-purchase', async (req: Request, res: Response) =>
 
     return res.json({ success: true, message: 'Purchase verified' });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('Verify purchase error:', error);
     return res.status(500).json({ error: 'Failed to verify purchase' });
   }

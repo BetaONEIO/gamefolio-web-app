@@ -51,11 +51,6 @@ export function DiscordAuthButton({ disabled = false }: DiscordAuthButtonProps) 
           });
           setLocation("/onboarding");
         } else {
-          toast({
-            title: "Welcome back!",
-            description: "You're now signed in with Discord.",
-            variant: "gamefolioSuccess",
-          });
           setLocation("/");
         }
         setIsLoading(false);

@@ -49,21 +49,17 @@ export function GoogleAuthButton({ disabled = false }: GoogleAuthButtonProps) {
           });
           setLocation("/onboarding");
         } else {
-          toast({
-            title: "Welcome back!",
-            description: "You're now signed in with Google.",
-            variant: "gamefolioSuccess",
-          });
           setLocation("/");
         }
         setIsLoading(false);
         return;
       }
 
-      // Web: signInWithPopup — opens a Google sign-in popup. Firebase fires
-      // onAuthStateChanged in use-auth.tsx once the popup completes, which
-      // calls /api/auth/google and navigates. Loading ends here since the
-      // page does not navigate.
+      // Web: signInWithRedirect — navigates away to Google entirely (popup
+      // was silently broken by COOP; see firebase.ts). setIsLoading(false)
+      // below only runs if this throws before the redirect happens; on
+      // success the page unloads and use-auth.tsx picks up the result via
+      // getGoogleRedirectResult() when it comes back.
       await signInWithGoogle();
       setIsLoading(false);
     } catch (error: any) {

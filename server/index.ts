@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import { eq } from 'drizzle-orm';
+import { initServerSentry } from './sentry';
+import * as Sentry from '@sentry/node';
 import { db } from './db';
 import { users } from '../shared/schema';
 import { scrypt, randomBytes } from 'crypto';
@@ -29,6 +31,7 @@ async function ensureBabyTomlinsonAccount() {
       status: 'active',
       isPro: false,
       isPartner: false,
+      isAmbassador: false,
       level: 1,
       totalXP: 0,
       messagingEnabled: true,
@@ -82,6 +85,7 @@ import uploadRoutes from './routes/upload';
 import twitchGamesRoutes from './routes/twitch-games';
 import gfCheckoutRoutes from './routes/gf-checkout';
 import proSubscriptionRoutes from './routes/pro-subscription';
+import indieDevSubscriptionRoutes from './routes/indie-dev-subscription';
 import gfWebhookRoutes from './routes/gf-webhook';
 import gfStakingRoutes from './routes/gf-staking';
 import { blockCryptoOnNative } from './middleware/block-crypto-on-native';
@@ -89,6 +93,7 @@ import { requestContextMiddleware } from './request-context';
 import storeRoutes from './routes/store';
 import gamefolioPurchaseRoutes from './routes/gamefolio-purchases';
 import revenuecatRoutes from './routes/revenuecat';
+import { ambassadorRouter } from './routes/ambassador';
 import oauthProviderRoutes from './routes/oauth-provider';
 import developerPortalRoutes from './routes/developer-portal';
 import publicApiV1Routes from './routes/public-api-v1';
@@ -105,6 +110,8 @@ import { dirname } from 'path';
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+initServerSentry();
 
 const app = express();
 
@@ -182,6 +189,18 @@ app.use((req, res, next) => {
   next();
 });
 
+// Prevent browsers from caching HTML responses in development so Vite HMR
+// changes are always visible without manual cache clearing.
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/@') && !req.path.includes('.')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+    }
+    next();
+  });
+}
+
 // IMPORTANT: Register webhook routes BEFORE express.json() middleware
 // Webhooks need raw body for signature verification
 app.use(gfWebhookRoutes);
@@ -253,10 +272,12 @@ app.use((req, res, next) => {
     app.use('/api/twitch', twitchGamesRoutes);
     app.use(gfCheckoutRoutes);
     app.use(proSubscriptionRoutes);
+    app.use(indieDevSubscriptionRoutes);
     app.use(gfStakingRoutes);
     app.use(storeRoutes);
     app.use(gamefolioPurchaseRoutes);
     app.use(revenuecatRoutes);
+    app.use(ambassadorRouter);
     app.use(oauthProviderRoutes); // /oauth/authorize, /oauth/token, /oauth/revoke — unprefixed, standard OAuth issuer paths
     app.use('/api/developer', developerPortalRoutes);
     app.use('/api/public/v1', publicApiV1Routes);
@@ -379,6 +400,7 @@ app.use((req, res, next) => {
       const message = err.message || "Internal Server Error";
 
       console.error("Server error:", err);
+      Sentry.captureException(err);
       res.status(status).json({ message });
     });
 
@@ -398,18 +420,27 @@ app.use((req, res, next) => {
       serveStatic(app);
     }
 
-    // Production (Replit) always serves on port 5000 — the only port that
-    // isn't firewalled. Local dev allows a PORT override since 5000 collides
-    // with macOS AirPlay Receiver, and reusePort is skipped outside prod
-    // since it throws ENOTSUP on some local Node/macOS combinations and buys
-    // nothing for a single dev process.
-    const isDev = app.get("env") === "development";
-    const port = isDev && process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
-    server.listen({
+    // ALWAYS serve the app on port 5000
+    // this serves both the API and the client.
+    // It is the only port that is not firewalled.
+    // (Overridable via PORT for local dev — macOS AirPlay squats 5000.)
+    const port = process.env.NODE_ENV === "development" && process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
+    // reusePort uses SO_REUSEPORT, which macOS sockets reject with ENOTSUP —
+    // only enable it off-darwin (Linux/Replit), where it's supported.
+    // Overridable via HOST for local dev — on at least one dev machine, some
+    // local network/security software silently intercepted connections to a
+    // *specific* port (5050) with no error and no visible LISTEN socket;
+    // switching PORT resolved it, HOST=127.0.0.1 didn't independently confirm
+    // as necessary. Left here as a defensive knob for the same symptom
+    // elsewhere. Production/Replit still needs 0.0.0.0, so default unchanged.
+    const listenOptions: { port: number; host: string; reusePort?: boolean } = {
       port,
-      host: "0.0.0.0",
-      ...(isDev ? {} : { reusePort: true }),
-    }, () => {
+      host: process.env.HOST || "0.0.0.0",
+    };
+    if (process.platform !== "darwin") {
+      listenOptions.reusePort = true;
+    }
+    server.listen(listenOptions, () => {
       log(`serving on port ${port}`);
 
       LeaderboardService.processPeriodicLeaderboardClosures()
@@ -499,6 +530,27 @@ app.use((req, res, next) => {
         setTimeout(expiryTick, 3 * 60 * 1000);
         setInterval(expiryTick, EXPIRY_SWEEP_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule AI VOD clip job poller:', err));
+
+      // Publish scheduled posts whose time has come. Posts are processed up
+      // front (thumbnails/transcode/upload), so this tick just inserts the real
+      // clip/screenshot record and runs the upload XP side-effects. 60s cadence
+      // keeps publish latency low; each tick only touches due rows.
+      import('./scheduled-posts-service').then(({ publishDueScheduledPosts }) => {
+        const SCHEDULE_INTERVAL_MS = 60 * 1000;
+        const tick = () => {
+          publishDueScheduledPosts()
+            .catch((err: any) => {
+              // Suppress noisy "relation does not exist" error when the
+              // scheduled_posts table hasn't been migrated yet.
+              const msg: string = err?.cause?.message ?? err?.message ?? '';
+              if (!msg.includes('relation "scheduled_posts" does not exist')) {
+                console.error('scheduled-posts publish failed:', err);
+              }
+            });
+        };
+        setTimeout(tick, 30 * 1000);
+        setInterval(tick, SCHEDULE_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule scheduled-posts worker:', err));
     });
   } catch (error) {
     console.error("Fatal server error:", error);

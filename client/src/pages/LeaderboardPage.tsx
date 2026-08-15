@@ -1,14 +1,27 @@
-import { Trophy, Upload, Heart, MessageCircle, Calendar, Clock } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import {
+  Trophy, Crown, Gem, Shield, Flame, TrendingUp, TrendingDown, Minus,
+  Calendar, Clock, Users, Upload, Heart, MessageCircle, Star, Award,
+  Play, Camera, Image as ImageIcon, Gamepad2, ChevronRight, ChevronLeft, Sparkles,
+  ChevronDown, ArrowUp, ArrowDown, Medal, Zap, Target,
+} from "lucide-react";
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { useState } from "react";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { CreatorCard } from "@/components/home/CreatorCard";
+import { TrendingEntry, CREATOR_CARD_STYLES } from "@/components/home/creator-card-utils";
+import goldBannerImg from "@assets/goldr-flat-banner-_1783016208886.png";
+import silverBannerImg from "@assets/silver-flat-banne-_1783016206432.png";
+import bronzeBannerImg from "@assets/bronze-flat-banner_(1)_1783016211069.png";
+import imgLootboxBanner from "@assets/lootbox-banner-1_1770362095039.png";
 
-interface PointsLeaderboardEntry {
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+interface LeaderboardEntry {
   userId: number;
   uploadsCount: number;
   likesGivenCount: number;
@@ -23,6 +36,9 @@ interface PointsLeaderboardEntry {
     avatarUrl?: string | null;
     nftProfileTokenId?: string | null;
     nftProfileImageUrl?: string | null;
+    activeProfilePicType?: string | null;
+    level?: number | null;
+    accentColor?: string | null;
   };
 }
 
@@ -33,9 +49,6 @@ interface TopContributor {
   year: number;
   totalPoints: number;
   uploadsCount: number;
-  likesGivenCount: number;
-  commentsCount: number;
-  firesGivenCount: number;
   achievedAt: string;
   user: {
     id: number;
@@ -44,560 +57,1610 @@ interface TopContributor {
     avatarUrl?: string | null;
     nftProfileTokenId?: string | null;
     nftProfileImageUrl?: string | null;
+    activeProfilePicType?: string | null;
   };
 }
 
-type TabType = "weekly" | "monthly" | "alltime";
+type TabType = "weekly" | "monthly" | "alltime" | "season";
 
-// Easter egg: the "mystery legend" hint toward Mac (/mac) only appears on a
-// fraction of leaderboard visits, so it stays elusive and intriguing rather
-// than a permanent fixture. Tune this to make Mac easier/harder to stumble on.
-const MYSTERY_LEGEND_CHANCE = 0.25; // ~1 in 4 visits
+// ─── Helpers ───────────────────────────────────────────────────────────────
 
-const LeaderboardPage = () => {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabType>("weekly");
-  // Rolled once per mount (lazy init) so it's stable for the whole visit and
-  // doesn't flicker on re-render as leaderboard data loads.
-  const [showMysteryLegend] = useState(() => Math.random() < MYSTERY_LEGEND_CHANCE);
+interface LeagueConfigTier {
+  name: string;
+  icon: string;
+  color: string;
+  min: number;
+  max: number;
+  philosophy: string;
+  reward: string;
+  rankGate?: number;
+}
 
-  // Fetch all-time leaderboard data from API
-  const { data: allTimeData, isLoading: allTimeLoading } = useQuery<PointsLeaderboardEntry[]>({
-    queryKey: ["/api/leaderboard"],
-    queryFn: async () => {
-      const res = await fetch("/api/leaderboard");
-      if (!res.ok) throw new Error("Failed to fetch leaderboard");
-      return res.json();
-    },
-  });
-
-  // Fetch weekly leaderboard
-  const { data: weeklyData, isLoading: weeklyLoading } = useQuery<PointsLeaderboardEntry[]>({
-    queryKey: ["/api/leaderboard/weekly/current"],
-    queryFn: async () => {
-      const res = await fetch("/api/leaderboard/weekly/current");
-      if (!res.ok) throw new Error("Failed to fetch weekly leaderboard");
-      return res.json();
-    },
-  });
-
-  // Fetch monthly leaderboard
-  const { data: monthlyData, isLoading: monthlyLoading } = useQuery<PointsLeaderboardEntry[]>({
-    queryKey: ["/api/leaderboard/monthly/current"],
-    queryFn: async () => {
-      const res = await fetch("/api/leaderboard/monthly/current");
-      if (!res.ok) throw new Error("Failed to fetch monthly leaderboard");
-      return res.json();
-    },
-  });
-
-  const { data: historicMonthlyData } = useQuery<TopContributor[]>({
-    queryKey: ["/api/leaderboard/top-contributors/monthly"],
-    queryFn: async () => {
-      const res = await fetch("/api/leaderboard/top-contributors/monthly?limit=50");
-      if (!res.ok) throw new Error("Failed to fetch historic monthly winners");
-      return res.json();
-    },
-  });
-
-  const { data: historicWeeklyData } = useQuery<TopContributor[]>({
-    queryKey: ["/api/leaderboard/top-contributors/weekly"],
-    queryFn: async () => {
-      const res = await fetch("/api/leaderboard/top-contributors/weekly?limit=50");
-      if (!res.ok) throw new Error("Failed to fetch historic weekly winners");
-      return res.json();
-    },
-  });
-
-  const getCurrentData = () => {
-    switch (activeTab) {
-      case "monthly":
-        return { data: monthlyData, isLoading: monthlyLoading };
-      case "alltime":
-        return { data: allTimeData, isLoading: allTimeLoading };
-      default:
-        return { data: weeklyData, isLoading: weeklyLoading };
-    }
+function getLeagueStyle(name: string) {
+  const styles: Record<string, { gradient: string; border: string; glow: string }> = {
+    Bronze: { gradient: "from-orange-700/30 to-orange-800/10", border: "border-orange-700/40", glow: "shadow-[0_0_14px_rgba(205,127,50,0.2)]" },
+    Silver: { gradient: "from-gray-400/30 to-gray-500/10", border: "border-gray-400/40", glow: "shadow-[0_0_14px_rgba(192,192,192,0.2)]" },
+    Gold: { gradient: "from-yellow-400/30 to-amber-500/10", border: "border-yellow-400/40", glow: "shadow-[0_0_16px_rgba(255,215,0,0.25)]" },
+    Platinum: { gradient: "from-cyan-300/30 to-blue-400/10", border: "border-cyan-300/40", glow: "shadow-[0_0_16px_rgba(79,195,247,0.25)]" },
+    Onyx: { gradient: "from-violet-500/30 to-purple-600/10", border: "border-violet-500/40", glow: "shadow-[0_0_16px_rgba(139,92,246,0.25)]" },
+    Diamond: { gradient: "from-cyan-400/30 to-blue-500/10", border: "border-cyan-400/40", glow: "shadow-[0_0_20px_rgba(168,237,255,0.3)]" },
+    Champion: { gradient: "from-lime-400/30 to-green-600/10", border: "border-lime-400/40", glow: "shadow-[0_0_20px_rgba(183,255,26,0.3)]" },
   };
+  return styles[name] ?? styles.Bronze;
+}
 
-  const { data: currentData, isLoading } = getCurrentData();
+function getLeagueFromEntry(tiers: LeagueConfigTier[], totalPoints: number, rank: number) {
+  const availableTiers = tiers.length ? tiers : [{
+    name: "Bronze",
+    icon: "🥉",
+    color: "#CD7F32",
+    min: 0,
+    max: Number.MAX_SAFE_INTEGER,
+    philosophy: "",
+    reward: "",
+  }];
+  let current = availableTiers[0];
+  for (const tier of availableTiers) if (totalPoints >= tier.min) current = tier;
+  if (current.name === "Champion" && rank > (current.rankGate ?? 10)) {
+    current = availableTiers.find((tier) => tier.name === "Diamond") ?? current;
+  } else if (current.name === "Diamond" && rank > (current.rankGate ?? 100)) {
+    current = availableTiers.find((tier) => tier.name === "Onyx") ?? current;
+  }
+  return { ...current, ...getLeagueStyle(current.name) };
+}
 
-  const getSectionTitle = () => {
-    switch (activeTab) {
-      case "monthly":
-        return "This Month's Top Contributors";
-      case "alltime":
-        return "All-Time Top Contributors";
-      default:
-        return "This Week's Top Contributors";
-    }
-  };
-
-  const getRankStyles = (rank: number) => {
-    if (rank === 1) {
-      return {
-        cardBg: "bg-[#f0b100]/5",
-        cardBorder: "border-[#f0b100]/20",
-        avatarBorder: "border-[#f0b100]/30",
-        scoreBg: "bg-gradient-to-b from-[#fdc700] to-[#d08700]",
-        scoreText: "text-black",
-        scoreShadow: "shadow-[0_4px_6px_-4px_#f0b10033,0_10px_15px_-3px_#f0b10033]",
-      };
-    }
-    if (rank === 2) {
-      return {
-        cardBg: "bg-[#c0c0c0]/8",
-        cardBorder: "border-[#c0c0c0]/30",
-        avatarBorder: "border-[#c0c0c0]/40",
-        scoreBg: "bg-gradient-to-b from-[#e8e8e8] to-[#a8a8a8]",
-        scoreText: "text-slate-800",
-        scoreShadow: "shadow-[0_4px_6px_-4px_#c0c0c044,0_10px_15px_-3px_#c0c0c044]",
-      };
-    }
-    if (rank === 3) {
-      return {
-        cardBg: "bg-[#f54900]/5",
-        cardBorder: "border-[#f54900]/20",
-        avatarBorder: "border-[#f54900]/30",
-        scoreBg: "bg-gradient-to-b from-[#ff6900] to-[#ca3500]",
-        scoreText: "text-white",
-        scoreShadow: "shadow-[0_4px_6px_-4px_#ca350033,0_10px_15px_-3px_#ca350033]",
-      };
-    }
-    return {
-      cardBg: "bg-[#0B1218]",
-      cardBorder: "border-[#1B2A33]/50",
-      avatarBorder: "border-[#1B2A33]/50",
-      scoreBg: "bg-gradient-to-b from-[#615fff] to-[#9810fa]",
-      scoreText: "text-white",
-      scoreShadow: "",
-    };
-  };
-
-  const RankIcon = ({ rank }: { rank: number }) => {
-    if (rank === 1) {
-      return (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path fillRule="evenodd" clipRule="evenodd" d="M20.0858 14.3219L20.2787 12.4285C20.3817 11.4178 20.4487 10.751 20.3957 10.3301H20.4157C21.2864 10.3301 21.9932 9.58431 21.9932 8.66458C21.9932 7.74485 21.2864 6.99806 20.4147 6.99806C19.5429 6.99806 18.8361 7.74385 18.8361 8.66458C18.8361 9.08046 18.9811 9.46135 19.22 9.75326C18.8771 9.9762 18.4283 10.4481 17.7525 11.1579C17.2326 11.7047 16.9727 11.9776 16.6828 12.0206C16.5217 12.0436 16.3574 12.0193 16.2099 11.9506C15.942 11.8267 15.763 11.4888 15.4061 10.812L13.5227 7.24799C13.3027 6.83111 13.1178 6.48221 12.9508 6.20129C13.6336 5.8334 14.1005 5.08462 14.1005 4.22187C14.1005 2.99322 13.1588 1.99951 11.9961 1.99951C10.8335 1.99951 9.89173 2.99422 9.89173 4.22087C9.89173 5.08462 10.3586 5.8334 11.0414 6.20029C10.8744 6.48221 10.6905 6.83111 10.4696 7.24799L8.58711 10.813C8.22922 11.4888 8.05027 11.8267 7.78235 11.9516C7.63483 12.0203 7.47056 12.0446 7.30948 12.0216C7.01957 11.9786 6.75964 11.7047 6.23979 11.1579C5.56399 10.4481 5.11512 9.9762 4.77222 9.75326C5.01215 9.46135 5.15611 9.08046 5.15611 8.66358C5.15611 7.74485 4.44831 6.99806 3.57657 6.99806C2.70682 6.99806 1.99902 7.74385 1.99902 8.66458C1.99902 9.58431 2.70582 10.3301 3.57757 10.3301H3.59656C3.54258 10.75 3.61056 11.4178 3.71353 12.4285L3.90647 14.3219C4.01344 15.3726 4.10241 16.3723 4.21238 17.2731H19.7799C19.8898 16.3733 19.9788 15.3726 20.0858 14.3219Z" fill="#F0B100" />
-          <path fillRule="evenodd" clipRule="evenodd" d="M10.8515 21.9937H13.1408C16.1249 21.9937 17.6175 21.9937 18.6132 21.054C19.0471 20.6421 19.323 19.9023 19.5209 18.9386H4.47131C4.66925 19.9023 4.94417 20.6421 5.37904 21.053C6.37475 21.9937 7.86732 21.9937 10.8515 21.9937Z" fill="#F0B100" />
-        </svg>
-      );
-    }
-    if (rank === 2) {
-      return (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path fillRule="evenodd" clipRule="evenodd" d="M13.4324 5.41528C12.5375 4.92741 11.4561 4.92741 10.5612 5.41528L5.76763 8.02853C4.8042 8.55424 4.20487 9.56423 4.20508 10.6618V15.5983C4.20487 16.6959 4.8042 17.7059 5.76763 18.2316L10.5612 20.8448C11.4561 21.3327 12.5375 21.3327 13.4324 20.8448L18.225 18.2316C19.1888 17.7061 19.7886 16.6961 19.7886 15.5983V10.6608C19.7886 9.56302 19.1888 8.55298 18.225 8.02753L13.4324 5.41528ZM11.9968 10.1309C11.7129 10.1309 11.523 10.4708 11.1431 11.1536L11.0451 11.3296C10.9371 11.5235 10.8831 11.6195 10.7992 11.6835C10.7142 11.7474 10.6092 11.7714 10.3993 11.8184L10.2093 11.8624C9.47155 12.0294 9.10266 12.1123 9.01469 12.3943C8.92671 12.6762 9.17864 12.9711 9.68149 13.5589L9.81146 13.7109C9.95441 13.8778 10.0264 13.9608 10.0584 14.0648C10.0904 14.1687 10.0794 14.2797 10.0584 14.5027L10.0384 14.7056C9.96241 15.4904 9.92442 15.8833 10.1534 16.0572C10.3833 16.2312 10.7292 16.0722 11.42 15.7543L11.5979 15.6723C11.7949 15.5823 11.8929 15.5374 11.9968 15.5374C12.1008 15.5374 12.1988 15.5823 12.3957 15.6723L12.5737 15.7543C13.2645 16.0732 13.6104 16.2312 13.8403 16.0572C14.0702 15.8833 14.0312 15.4904 13.9553 14.7056L13.9353 14.5027C13.9143 14.2797 13.9033 14.1687 13.9353 14.0648C13.9673 13.9608 14.0392 13.8778 14.1822 13.7109L14.3122 13.5589C14.815 12.9711 15.0669 12.6772 14.979 12.3943C14.891 12.1123 14.5221 12.0294 13.7843 11.8624L13.5944 11.8184C13.3844 11.7714 13.2795 11.7484 13.1945 11.6835C13.1105 11.6195 13.0565 11.5235 12.9485 11.3296L12.8506 11.1536C12.4707 10.4718 12.2807 10.1309 11.9968 10.1309Z" fill="#C0C0C0" />
-          <path fillRule="evenodd" clipRule="evenodd" d="M10.9969 1.99927H12.9963C14.8818 1.99927 15.8235 1.99927 16.4093 2.5851C16.9952 3.17093 16.9952 4.11266 16.9952 5.99811V6.0161L14.15 4.46455C12.8077 3.73275 11.1855 3.73275 9.84322 4.46455L6.99805 6.0161V5.99811C6.99805 4.11266 6.99805 3.17093 7.58388 2.5851C8.16971 1.99927 9.11144 1.99927 10.9969 1.99927Z" fill="#C0C0C0" />
-        </svg>
-      );
-    }
-    if (rank === 3) {
-      return (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path fillRule="evenodd" clipRule="evenodd" d="M21.9932 8.15968V8.23266C21.9932 9.09241 21.9932 9.52329 21.7863 9.87519C21.5794 10.2271 21.2025 10.436 20.4507 10.8549L19.6579 11.2948C20.2038 9.44731 20.3867 7.46188 20.4537 5.76438L20.4637 5.54344L20.4657 5.49146C21.1165 5.71739 21.4824 5.88634 21.7103 6.20225C21.9932 6.59514 21.9932 7.11698 21.9932 8.15968Z" fill="#F54900" />
-          <path fillRule="evenodd" clipRule="evenodd" d="M1.99902 8.15968V8.23266C1.99902 9.09241 1.99902 9.52329 2.20596 9.87519C2.4129 10.2271 2.78979 10.436 3.54158 10.8549L4.33535 11.2948C3.78851 9.44731 3.60556 7.46188 3.53858 5.76438L3.52858 5.54344L3.52758 5.49146C2.87577 5.71739 2.50988 5.88634 2.28194 6.20225C1.99902 6.59514 1.99902 7.11798 1.99902 8.15968Z" fill="#F54900" />
-          <path fillRule="evenodd" clipRule="evenodd" d="M16.3466 2.34617C14.9001 2.10923 13.4365 1.9932 11.9708 1.99927C10.1883 1.99927 8.71869 2.15622 7.595 2.34617C6.45632 2.53812 5.88747 2.63409 5.41161 3.21993C4.93674 3.80576 4.96173 4.43859 5.01172 5.70424C5.18467 10.051 6.12241 15.4815 11.221 15.9614V19.4944H9.79139C9.31502 19.4947 8.90503 19.831 8.81166 20.2982L8.62171 21.2439H5.97245C5.55835 21.2439 5.22266 21.5796 5.22266 21.9937C5.22266 22.4078 5.55835 22.7435 5.97245 22.7435H17.9691C18.3832 22.7435 18.7189 22.4078 18.7189 21.9937C18.7189 21.5796 18.3832 21.2439 17.9691 21.2439H15.3198L15.1299 20.2982C15.0365 19.831 14.6265 19.4947 14.1502 19.4944H12.7206V15.9614C17.8192 15.4815 18.7579 10.052 18.9298 5.70424C18.9798 4.43859 19.0058 3.80476 18.53 3.21993C18.0541 2.63409 17.4852 2.53812 16.3466 2.34617Z" fill="#F54900" />
-        </svg>
-      );
-    }
-    return (
-      <span className="text-sm font-medium text-slate-400">#{rank}</span>
-    );
-  };
-
-  const LeaderboardCard = ({ entry }: { entry: PointsLeaderboardEntry }) => {
-    const styles = getRankStyles(entry.rank);
-    
-    return (
-      <Link href={`/profile/${entry.user.username}`}>
-        <div
-          className={`flex items-center gap-4 px-4 py-5 rounded-2xl border ${styles.cardBg} ${styles.cardBorder} transition-all hover:scale-[1.02] cursor-pointer`}
-          data-testid={`leaderboard-entry-${entry.userId}`}
-        >
-          {/* Rank Icon */}
-          <div className="w-8 flex items-center justify-center">
-            <RankIcon rank={entry.rank} />
-          </div>
-
-          {/* Avatar */}
-          {entry.user.nftProfileTokenId && entry.user.nftProfileImageUrl && (entry.user as any).activeProfilePicType === 'nft' ? (
-            <div className="w-12 h-12 rounded-lg border border-[#B7FF1A]/40 overflow-hidden flex-shrink-0">
-              <img src={entry.user.nftProfileImageUrl} alt={entry.user.displayName} className="w-full h-full object-cover" loading="lazy" />
-            </div>
-          ) : (
-            <div className={`w-12 h-12 rounded-2xl border ${styles.avatarBorder} bg-[#0B1218] overflow-hidden flex-shrink-0`}>
-              <Avatar className="w-full h-full rounded-none">
-                <AvatarImage src={entry.user.avatarUrl || undefined} className="object-cover" />
-                <AvatarFallback className="bg-[#0B1218] text-slate-400 rounded-none">
-                  {entry.user.displayName.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-          )}
-
-          {/* User Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-col gap-0.5">
-              <span className="font-bold text-slate-50 text-base truncate">
-                {entry.user.displayName}
-              </span>
-              <span className="text-slate-400 text-xs truncate">
-                @{entry.user.username}
-              </span>
-            </div>
-            
-            {/* Stats Row */}
-            <div className="flex items-center gap-3 mt-2">
-              <div className="flex items-center gap-1">
-                <Upload className="w-3 h-3 text-[#00bcff]" />
-                <span className="text-[10px] font-bold text-[#00bcff]">{entry.uploadsCount}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Heart className="w-3 h-3 text-[#ff2056] fill-[#ff2056]" />
-                <span className="text-[10px] font-bold text-[#ff2056]">{entry.likesGivenCount}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <MessageCircle className="w-3 h-3 text-[#00d492] fill-[#00d492]" />
-                <span className="text-[10px] font-bold text-[#00d492]">{entry.commentsCount}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <ZapIconSvg className="w-3 h-3" active={true} />
-                <span className="text-[10px] font-bold text-[#ff6900]">{entry.firesGivenCount}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Score Badge */}
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${styles.scoreBg} ${styles.scoreShadow}`}>
-            <span className={`text-sm font-medium ${styles.scoreText}`}>
-              {Math.round(entry.totalPoints)}
-            </span>
-          </div>
-        </div>
-      </Link>
-    );
-  };
-
-  const HistoricWinnerCard = ({ contributor, type }: { contributor: TopContributor; type: "monthly" | "weekly" }) => {
-    const formatPeriodLabel = () => {
-      if (type === "monthly") {
-        const [year, month] = contributor.period.split("-");
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        const monthIndex = parseInt(month) - 1;
-        return `${monthNames[monthIndex] || month} ${year}`;
-      }
-      const weekMatch = contributor.period.match(/W(\d+)/);
-      const weekNum = weekMatch ? weekMatch[1] : contributor.period;
-      return `Week ${weekNum}, ${contributor.year}`;
-    };
-    const periodLabel = formatPeriodLabel();
-    
-    return (
-      <div className="flex items-center gap-4 px-4 py-5 rounded-2xl border border-[#f0b100]/20 bg-[#f0b100]/5">
-        <div className="w-6 flex items-center justify-center">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path fillRule="evenodd" clipRule="evenodd" d="M20.0858 14.3219L20.2787 12.4285C20.3817 11.4178 20.4487 10.751 20.3957 10.3301H20.4157C21.2864 10.3301 21.9932 9.58431 21.9932 8.66458C21.9932 7.74485 21.2864 6.99806 20.4147 6.99806C19.5429 6.99806 18.8361 7.74385 18.8361 8.66458C18.8361 9.08046 18.9811 9.46135 19.22 9.75326C18.8771 9.9762 18.4283 10.4481 17.7525 11.1579C17.2326 11.7047 16.9727 11.9776 16.6828 12.0206C16.5217 12.0436 16.3574 12.0193 16.2099 11.9506C15.942 11.8267 15.763 11.4888 15.4061 10.812L13.5227 7.24799C13.3027 6.83111 13.1178 6.48221 12.9508 6.20129C13.6336 5.8334 14.1005 5.08462 14.1005 4.22187C14.1005 2.99322 13.1588 1.99951 11.9961 1.99951C10.8335 1.99951 9.89173 2.99422 9.89173 4.22087C9.89173 5.08462 10.3586 5.8334 11.0414 6.20029C10.8744 6.48221 10.6905 6.83111 10.4696 7.24799L8.58711 10.813C8.22922 11.4888 8.05027 11.8267 7.78235 11.9516C7.63483 12.0203 7.47056 12.0446 7.30948 12.0216C7.01957 11.9786 6.75964 11.7047 6.23979 11.1579C5.56399 10.4481 5.11512 9.9762 4.77222 9.75326C5.01215 9.46135 5.15611 9.08046 5.15611 8.66358C5.15611 7.74485 4.44831 6.99806 3.57657 6.99806C2.70682 6.99806 1.99902 7.74385 1.99902 8.66458C1.99902 9.58431 2.70582 10.3301 3.57757 10.3301H3.59656C3.54258 10.75 3.61056 11.4178 3.71353 12.4285L3.90647 14.3219C4.01344 15.3726 4.10241 16.3723 4.21238 17.2731H19.7799C19.8898 16.3733 19.9788 15.3726 20.0858 14.3219Z" fill="#F0B100" />
-            <path fillRule="evenodd" clipRule="evenodd" d="M10.8515 21.9937H13.1408C16.1249 21.9937 17.6175 21.9937 18.6132 21.054C19.0471 20.6421 19.323 19.9023 19.5209 18.9386H4.47131C4.66925 19.9023 4.94417 20.6421 5.37904 21.053C6.37475 21.9937 7.86732 21.9937 10.8515 21.9937Z" fill="#F0B100" />
-          </svg>
-        </div>
-        
-        {contributor.user.nftProfileTokenId && contributor.user.nftProfileImageUrl && (contributor.user as any).activeProfilePicType === 'nft' ? (
-          <div className="w-10 h-10 rounded-lg border border-[#B7FF1A]/40 overflow-hidden flex-shrink-0">
-            <img src={contributor.user.nftProfileImageUrl} alt={contributor.user.displayName} className="w-full h-full object-cover" loading="lazy" />
-          </div>
-        ) : (
-          <div className="w-10 h-10 rounded-xl border border-[#f0b100]/30 bg-[#0B1218] overflow-hidden flex-shrink-0">
-            <Avatar className="w-full h-full rounded-none">
-              <AvatarImage src={contributor.user.avatarUrl || undefined} className="object-cover" />
-              <AvatarFallback className="bg-[#0B1218] text-slate-400 rounded-none text-xs">
-                {contributor.user.displayName.charAt(0)}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-        )}
-        
-        <div className="flex-1 min-w-0">
-          <div className="font-bold text-slate-50 text-sm truncate">
-            {contributor.user.displayName}
-          </div>
-          <div className="text-slate-400 text-[10px]">
-            {periodLabel} · {contributor.totalPoints} points
-          </div>
-        </div>
-        
-        <div className="flex-shrink-0 px-2.5 py-1 rounded-lg bg-gradient-to-b from-[#fdc700] to-[#d08700] shadow-[0_4px_6px_-4px_#f0b10033,0_10px_15px_-3px_#f0b10033]">
-          <span className="text-xs font-bold text-black whitespace-nowrap">
-            {Number.isInteger(contributor.totalPoints) ? contributor.totalPoints : contributor.totalPoints.toFixed(1)} pts
-          </span>
-        </div>
-      </div>
-    );
-  };
-
-  const LoadingSkeleton = () => (
-    <div className="space-y-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 px-4 py-5 rounded-2xl border border-[#1B2A33]/50 bg-[#0B1218]">
-          <Skeleton className="w-8 h-6 bg-slate-700" />
-          <Skeleton className="w-12 h-12 rounded-2xl bg-slate-700" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-4 w-24 bg-slate-700" />
-            <Skeleton className="h-3 w-16 bg-slate-700" />
-            <div className="flex gap-3">
-              <Skeleton className="h-3 w-8 bg-slate-700" />
-              <Skeleton className="h-3 w-8 bg-slate-700" />
-              <Skeleton className="h-3 w-8 bg-slate-700" />
-              <Skeleton className="h-3 w-8 bg-slate-700" />
-            </div>
-          </div>
-          <Skeleton className="w-10 h-10 rounded-full bg-slate-700" />
-        </div>
-      ))}
-    </div>
-  );
-
-  return (
-    <div className="min-h-screen bg-[#0B1218] overflow-y-auto">
-      <div className="max-w-md lg:max-w-4xl xl:max-w-5xl mx-auto px-6 py-12 pb-32">
-        {/* Hero Section */}
-        <div className="flex flex-col items-center text-center mb-8">
-          {/* Trophy Icon */}
-          <div className="w-20 h-20 rounded-full bg-[#f0b100] flex items-center justify-center mb-4 shadow-[0_4px_6px_-4px_#f0b1004d,0_10px_15px_-3px_#f0b1004d]">
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" clipRule="evenodd" d="M36.6663 13.6034V13.725C36.6663 15.1584 36.6663 15.8767 36.3213 16.4634C35.9763 17.05 35.348 17.3984 34.0947 18.0967L32.773 18.83C33.683 15.75 33.988 12.44 34.0997 9.61003L34.1163 9.2417L34.1197 9.15503C35.2047 9.5317 35.8147 9.81336 36.1947 10.34C36.6663 10.995 36.6663 11.865 36.6663 13.6034Z" fill="white" />
-              <path fillRule="evenodd" clipRule="evenodd" d="M3.33301 13.6034V13.725C3.33301 15.1584 3.33301 15.8767 3.67801 16.4634C4.02301 17.05 4.65134 17.3984 5.90467 18.0967L7.22801 18.83C6.31634 15.75 6.01134 12.44 5.89967 9.61003L5.88301 9.2417L5.88134 9.15503C4.79467 9.5317 4.18467 9.81336 3.80467 10.34C3.33301 10.995 3.33301 11.8667 3.33301 13.6034Z" fill="white" />
-              <path fillRule="evenodd" clipRule="evenodd" d="M27.2523 3.91135C24.8409 3.51634 22.4008 3.32289 19.9573 3.33301C16.9856 3.33301 14.5355 3.59468 12.6622 3.91135C10.7638 4.23135 9.81548 4.39135 9.02214 5.36803C8.23047 6.34471 8.27213 7.39972 8.35547 9.50974C8.64381 16.7565 10.2072 25.8099 18.7073 26.6099V32.5H16.3239C15.5297 32.5005 14.8462 33.0612 14.6905 33.84L14.3739 35.4167H9.95715C9.26679 35.4167 8.70714 35.9763 8.70714 36.6667C8.70714 37.3571 9.26679 37.9167 9.95715 37.9167H29.9574C30.6477 37.9167 31.2074 37.3571 31.2074 36.6667C31.2074 35.9763 30.6477 35.4167 29.9574 35.4167H25.5407L25.224 33.84C25.0683 33.0612 24.3848 32.5005 23.5906 32.5H21.2073V26.6099C29.7074 25.8099 31.2724 16.7582 31.5591 9.50974C31.6424 7.39972 31.6857 6.34304 30.8924 5.36803C30.099 4.39135 29.1507 4.23135 27.2523 3.91135Z" fill="white" />
-            </svg>
-          </div>
-          
-          <h1 className="text-[30px] font-bold text-slate-50 leading-9 mb-2">
-            Community Leaderboard
-          </h1>
-          <p className="text-slate-400 text-sm leading-5 max-w-[342px]">
-            Top gamers ranked by community engagement and content contribution!
-          </p>
-        </div>
-
-        {/* Tab Pills */}
-        <div className="bg-[#0B1218] border border-[#1B2A33] rounded-full p-1.5 flex gap-2 mb-8 lg:max-w-lg lg:mx-auto">
-          <button
-            onClick={() => setActiveTab("weekly")}
-            className={`flex-1 px-4 py-2.5 rounded-full text-sm font-bold transition-colors ${
-              activeTab === "weekly"
-                ? "bg-[#B7FF1A] text-[#071013]"
-                : "text-slate-400 hover:text-slate-50"
-            }`}
-            data-testid="tab-weekly"
-          >
-            This Week
-          </button>
-          <button
-            onClick={() => setActiveTab("monthly")}
-            className={`flex-1 px-4 py-2.5 rounded-full text-sm font-bold transition-colors ${
-              activeTab === "monthly"
-                ? "bg-[#B7FF1A] text-[#071013]"
-                : "text-slate-400 hover:text-slate-50"
-            }`}
-            data-testid="tab-monthly"
-          >
-            This Month
-          </button>
-          <button
-            onClick={() => setActiveTab("alltime")}
-            className={`flex-1 px-4 py-2.5 rounded-full text-sm font-bold transition-colors ${
-              activeTab === "alltime"
-                ? "bg-[#B7FF1A] text-[#071013]"
-                : "text-slate-400 hover:text-slate-50"
-            }`}
-            data-testid="tab-alltime"
-          >
-            All Time
-          </button>
-        </div>
-
-        {/* Section Header */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <ZapIconSvg className="w-5 h-5" active={true} />
-            <h2 className="text-xl font-bold text-slate-50">{getSectionTitle()}</h2>
-          </div>
-          <p className="text-slate-400 text-xs leading-4">
-            Best {activeTab === "alltime" ? "all-time" : activeTab === "monthly" ? "monthly" : "weekly"} content and highest engagement, sorted by the leaderboard table
-          </p>
-        </div>
-
-        {/* Leaderboard List */}
-        <div className="space-y-8 lg:space-y-4 mb-8">
-          {isLoading ? (
-            <LoadingSkeleton />
-          ) : !currentData || currentData.length === 0 ? (
-            <div className="text-center py-12">
-              <Trophy className="h-16 w-16 mx-auto mb-4 text-slate-600" />
-              <h3 className="text-lg font-semibold text-slate-50 mb-2">No Rankings Yet</h3>
-              <p className="text-sm text-slate-400">
-                Start uploading clips and engaging with content to appear here!
-              </p>
-            </div>
-          ) : (
-            currentData.map((entry: PointsLeaderboardEntry) => (
-              <LeaderboardCard key={entry.userId} entry={entry} />
-            ))
-          )}
-        </div>
-
-        {/* Hidden easter egg: a faint "mystery legend" nudging the curious toward
-            Mac's secret profile (/mac). Only shown on a fraction of visits (see
-            MYSTERY_LEGEND_CHANCE) so it feels elusive. Intentionally NOT a ranked
-            card so it can't be mistaken for a real entry — just a dim, clickable
-            footnote. The 999,999 XP matches Mac's profile total. */}
-        {showMysteryLegend && (
-          <Link href="/mac">
-            <div
-              className="group mb-8 -mt-2 flex items-center justify-center text-center cursor-pointer select-none opacity-40 hover:opacity-100 transition-opacity"
-              data-testid="leaderboard-mystery-legend"
-              title="???"
-            >
-              <span className="text-xs italic text-slate-500 group-hover:text-[#B7FF1A] transition-colors">
-                ✨ ??? — a mysterious cat sits beyond the board at 999,999 XP 🐾
-              </span>
-            </div>
-          </Link>
-        )}
-
-        {/* Historic Winners Section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-2">
-            <Trophy className="w-5 h-5 text-[#f0b100]" />
-            <h2 className="text-xl font-bold text-slate-50">Historic Winners</h2>
-          </div>
-          <p className="text-slate-400 text-xs leading-4 mb-4">
-            Hall of fame for past top performers
-          </p>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Top Monthly Contributors */}
-            <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="w-4 h-4 text-slate-50" />
-                <h3 className="text-sm font-bold text-slate-50">Top Monthly Contributors</h3>
-              </div>
-              <p className="text-slate-400 text-xs mb-3">Best monthly content and highest engagement</p>
-              
-              {historicMonthlyData && historicMonthlyData.length > 0 ? (
-                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-                  {historicMonthlyData.map((contributor: TopContributor) => (
-                    <HistoricWinnerCard key={`${contributor.userId}-${contributor.period}`} contributor={contributor} type="monthly" />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4 text-slate-400 text-sm">No historic monthly winners yet</div>
-              )}
-            </div>
-
-            {/* Top Weekly Contributors */}
-            <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Clock className="w-4 h-4 text-slate-50" />
-                <h3 className="text-sm font-bold text-slate-50">Top Weekly Contributors</h3>
-              </div>
-              <p className="text-slate-400 text-xs mb-3">Best weekly content and highest engagement</p>
-              
-              {historicWeeklyData && historicWeeklyData.length > 0 ? (
-                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-                  {historicWeeklyData.map((contributor: TopContributor) => (
-                    <HistoricWinnerCard key={`${contributor.userId}-${contributor.period}`} contributor={contributor} type="weekly" />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4 text-slate-400 text-sm">No historic weekly winners yet</div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* How Rankings Work Section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <Trophy className="w-5 h-5 text-slate-50" />
-            <h2 className="text-xl font-bold text-slate-50">How Rankings Work</h2>
-          </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-            {/* Clips Uploaded */}
-            <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-[#00a6f4]/10 flex items-center justify-center mb-3">
-                <Upload className="w-6 h-6 text-[#00bcff]" />
-              </div>
-              <span className="text-2xl font-bold text-[#00bcff] mb-1">+10 Points</span>
-              <span className="text-slate-400 text-xs mb-1">Clips Uploaded</span>
-              <span className="text-slate-400 text-[10px]">Share your gaming moments</span>
-            </div>
-
-            {/* Likes Given */}
-            <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-[#ff2056]/10 flex items-center justify-center mb-3">
-                <Heart className="w-6 h-6 text-[#ff2056]" />
-              </div>
-              <span className="text-2xl font-bold text-[#ff2056] mb-1">+2 Points</span>
-              <span className="text-slate-400 text-xs mb-1">Likes Given</span>
-              <span className="text-slate-400 text-[10px]">Appreciate others' content</span>
-            </div>
-
-            {/* Comments Made */}
-            <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-[#00bc7d]/10 flex items-center justify-center mb-3">
-                <MessageCircle className="w-6 h-6 text-[#00d492]" />
-              </div>
-              <span className="text-2xl font-bold text-[#00d492] mb-1">+5 Points</span>
-              <span className="text-slate-400 text-xs mb-1">Comments Made</span>
-              <span className="text-slate-400 text-[10px]">Engage with the community</span>
-            </div>
-
-            {/* Fire Reactions */}
-            <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-full bg-[#ff6900]/10 flex items-center justify-center mb-3">
-                <ZapIconSvg className="w-6 h-6" active={true} />
-              </div>
-              <span className="text-2xl font-bold text-[#ff6900] mb-1">+3 Points</span>
-              <span className="text-slate-400 text-xs mb-1">Fire Reactions</span>
-              <span className="text-slate-400 text-[10px]">Give epic reactions to content</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Call to Action Section */}
-        <div className="bg-gradient-to-b from-[#B7FF1A]/10 to-[#B7FF1A]/5 border border-[#B7FF1A]/20 rounded-2xl p-6">
-          <div className="flex flex-col items-center text-center">
-            {/* Icon */}
-            <div className="w-16 h-16 rounded-full bg-[#B7FF1A]/20 flex items-center justify-center mb-4">
-              <ZapIconSvg className="w-8 h-8" active={true} />
-            </div>
-            
-            <h3 className="text-xl font-bold text-slate-50 mb-2">
-              Ready to Climb the Rankings?
-            </h3>
-            <p className="text-slate-400 text-sm leading-5 mb-6 max-w-[319px]">
-              Start uploading your best gaming moments and engaging with the community to earn points and climb the leaderboard!
-            </p>
-            
-            {/* Buttons */}
-            <div className="w-full flex flex-col lg:flex-row gap-3 lg:justify-center">
-              <Link href="/upload" className="block lg:w-auto">
-                <Button className="w-full lg:w-48 h-11 rounded-full bg-[#B7FF1A] hover:bg-[#A2F000] text-[#071013] font-bold text-sm">
-                  Upload Your Clip
-                </Button>
-              </Link>
-              <Link href="/explore" className="block lg:w-auto">
-                <Button variant="outline" className="w-full lg:w-48 h-12 rounded-full bg-[#0B1218] hover:bg-[#1B2A33] border-[#1B2A33] text-slate-50 font-bold text-sm">
-                  Explore Content
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+// Mirrors server SEASON_DEFS — update when a new season begins
+const CURRENT_SEASON = {
+  num: 8,
+  name: "Summer Showdown",
+  startDate: new Date("2026-06-01T00:00:00"),
+  endDate:   new Date("2026-08-31T23:59:59"),
 };
 
-export default LeaderboardPage;
+function getSeasonInfo() {
+  const now = new Date();
+  const msPerDay = 86_400_000;
+  const daysSinceStart = Math.max(0, Math.floor((now.getTime() - CURRENT_SEASON.startDate.getTime()) / msPerDay));
+  const weekInSeason = Math.min(Math.floor(daysSinceStart / 7) + 1, 13);
+  return { number: CURRENT_SEASON.num, name: CURRENT_SEASON.name, weekInSeason };
+}
+
+function getSeasonEndDate() {
+  return CURRENT_SEASON.endDate;
+}
+
+function useCountdown(target: Date) {
+  const [diff, setDiff] = useState(Math.max(0, target.getTime() - Date.now()));
+  useEffect(() => {
+    const id = setInterval(() => setDiff(Math.max(0, target.getTime() - Date.now())), 1000);
+    return () => clearInterval(id);
+  }, [target]);
+  const days    = Math.floor(diff / 86_400_000);
+  const hours   = Math.floor((diff % 86_400_000) / 3_600_000);
+  const minutes = Math.floor((diff % 3_600_000) / 60_000);
+  const seconds = Math.floor((diff % 60_000) / 1000);
+  return { days, hours, minutes, seconds };
+}
+
+function formatPoints(n: number) {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return n.toFixed(n % 1 === 0 ? 0 : 1);
+}
+
+function periodLabel(contributor: TopContributor) {
+  if (contributor.periodType === "monthly") {
+    const [y, m] = contributor.period.split("-");
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return `${months[parseInt(m) - 1]} ${y}`;
+  }
+  const m = contributor.period.match(/W(\d+)/);
+  return `Week ${m ? m[1] : contributor.period}, ${contributor.year}`;
+}
+
+// ─── Sub-components ────────────────────────────────────────────────────────
+
+function UserAvatar({ user, size = "md" }: { user: LeaderboardEntry["user"] | TopContributor["user"]; size?: "sm" | "md" | "lg" }) {
+  const dim = size === "lg" ? "w-14 h-14" : size === "sm" ? "w-8 h-8" : "w-10 h-10";
+  const radius = size === "lg" ? "rounded-xl" : "rounded-lg";
+  if ((user as any).nftProfileTokenId && (user as any).nftProfileImageUrl && (user as any).activeProfilePicType === "nft") {
+    return (
+      <div className={`${dim} ${radius} border border-[#B7FF1A]/40 overflow-hidden flex-shrink-0`}>
+        <img src={(user as any).nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" loading="lazy" />
+      </div>
+    );
+  }
+  return (
+    <div className={`${dim} ${radius} border border-white/10 bg-[#0d1a24] overflow-hidden flex-shrink-0`}>
+      <Avatar className="w-full h-full rounded-none">
+        <AvatarImage src={(user as any).avatarUrl || undefined} className="object-cover" />
+        <AvatarFallback className="bg-[#0d1a24] text-slate-400 rounded-none text-xs">
+          {user.displayName?.charAt(0) ?? "?"}
+        </AvatarFallback>
+      </Avatar>
+    </div>
+  );
+}
+
+// ─── Section: Season Hero (banner + top-3 podium) ─────────────────────────
+
+const PODIUM_GLOW: Record<number, string> = {
+  1: "drop-shadow(0 0 28px rgba(255,215,0,1.0)) drop-shadow(0 0 10px rgba(255,190,0,0.7)) drop-shadow(0 8px 18px rgba(220,160,0,0.5))",
+  2: "drop-shadow(0 0 18px rgba(220,220,220,0.8)) drop-shadow(0 4px 10px rgba(180,180,180,0.4))",
+  3: "drop-shadow(0 0 18px rgba(205,127,50,0.8)) drop-shadow(0 4px 10px rgba(165,90,20,0.4))",
+};
+
+const PODIUM_IMG: Record<number, string> = {
+  1: "/podium-1st.webp",
+  2: "/podium-2nd.webp",
+  3: "/podium-3rd.webp",
+};
+
+// Match the homepage leaderboard podium artwork dimensions and overlap.
+const PODIUM_IMG_W: Record<number, number> = {
+  1: 393,
+  2: 357,
+  3: 393,
+};
+
+const PODIUM_IMG_H: Record<number, number> = {
+  1: 123,
+  2: 105,
+  3: 123,
+};
+
+const RANK_ACCENT: Record<number, string> = {
+  1: "#FFD700",
+  2: "#C0C0C0",
+  3: "#CD7F32",
+};
+
+const RANK_LABEL: Record<number, string> = {
+  1: "🥇 1st Place",
+  2: "🥈 2nd Place",
+  3: "🥉 3rd Place",
+};
+
+// ── Mobile carousel: CSS scroll-snap, browser-native centering ──
+function MobileCarousel({ entries }: { entries: TrendingEntry[] }) {
+  const scrollRef  = useRef<HTMLDivElement>(null);
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  const active     = entries[activeIdx];
+  const activeRank = active?.rank ?? activeIdx + 1;
+  const podiumSrc  = PODIUM_IMG[activeRank] ?? null;
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // cards are 76vw wide with 12px gap; padding-left is 12vw
+    const cardW = window.innerWidth * 0.76;
+    const idx   = Math.round(el.scrollLeft / (cardW + 12));
+    setActiveIdx(Math.max(0, Math.min(idx, entries.length - 1)));
+  };
+
+  const scrollTo = (idx: number) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ left: idx * (window.innerWidth * 0.76 + 12), behavior: "smooth" });
+  };
+
+  if (!active) {
+    return (
+      <div className="flex items-center justify-center py-8 px-4">
+        <Skeleton className="rounded-2xl bg-slate-800" style={{ width: "76vw", height: 340 }} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full select-none">
+      {/* ── Page heading ── */}
+      <div className="text-center pt-5 pb-3 px-4">
+        <p className="text-[#B7FF1A] text-[10px] tracking-[0.22em] uppercase font-bold mb-1">
+          Season Rankings
+        </p>
+        <h1 className="text-2xl font-black text-white tracking-widest uppercase leading-none">
+          Leaderboard
+        </h1>
+        <p className="text-slate-400 text-[11px] tracking-wide mt-1">
+          Compete in Ranked Seasons
+        </p>
+      </div>
+
+      {/* ── Snap scroll track + arrows ── */}
+      <div className="relative">
+        {/* Left arrow */}
+        <button
+          onClick={() => scrollTo(activeIdx - 1)}
+          disabled={activeIdx === 0}
+          aria-label="Previous"
+          className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full flex items-center justify-center text-white transition-opacity disabled:opacity-20"
+          style={{ background: 'rgba(0,0,0,0.70)', border: '1px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)' }}
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+
+        {/* Right arrow */}
+        <button
+          onClick={() => scrollTo(activeIdx + 1)}
+          disabled={activeIdx >= entries.length - 1}
+          aria-label="Next"
+          className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full flex items-center justify-center text-white transition-opacity disabled:opacity-20"
+          style={{ background: 'rgba(0,0,0,0.70)', border: '1px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)' }}
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="lb-mobile-snap"
+          style={{
+            display: "flex",
+            overflowX: "auto",
+            scrollSnapType: "x mandatory",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            WebkitOverflowScrolling: "touch",
+            gap: 12,
+            padding: "28px 12vw 28px",
+          } as React.CSSProperties}
+        >
+          {entries.map((entry, idx) => {
+            const isActive = idx === activeIdx;
+            const rank     = entry.rank ?? idx + 1;
+            const glow     = PODIUM_GLOW[rank] ?? "none";
+            return (
+              <div
+                key={entry.userId}
+                style={{
+                  flexShrink:      0,
+                  width:           "76vw",
+                  scrollSnapAlign: "center",
+                  filter:          isActive ? glow : "none",
+                  transition:      "filter 0.35s ease",
+                }}
+              >
+                <CreatorCard entry={entry} period="season" compact />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Podium trophy ── */}
+      <div className="flex justify-center mt-3 mb-1 pointer-events-none" style={{ zIndex: 30, position: "relative" }}>
+        {podiumSrc && (
+          <img
+            key={activeRank}
+            src={podiumSrc}
+            alt={`#${activeRank} podium`}
+            className="w-28 object-contain"
+            draggable={false}
+          />
+        )}
+      </div>
+
+      {/* ── Dot pagination ── */}
+      {entries.length > 1 && (
+        <div className="flex justify-center gap-1.5 mt-1 pb-4">
+          {entries.slice(0, 15).map((_, i) => (
+            <button
+              key={i}
+              aria-label={`Go to card ${i + 1}`}
+              onClick={() => scrollTo(i)}
+              style={{
+                width:        i === activeIdx ? 18 : 5,
+                height:       3,
+                borderRadius: 2,
+                background:   i === activeIdx ? "#B7FF1A" : "rgba(255,255,255,0.18)",
+                border:       "none",
+                padding:      0,
+                cursor:       "pointer",
+                transition:   "width 0.3s ease, background 0.3s ease",
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SeasonHero({ entries }: { entries: TrendingEntry[] }) {
+  // Desktop uses top 3 only; mobile gets all entries for the carousel
+  const top3 = entries.slice(0, 3);
+  // Podium order: 2nd left · 1st centre · 3rd right
+  const ordered = [top3[1], top3[0], top3[2]].filter(Boolean) as TrendingEntry[];
+  const podiumRank = (entry: TrendingEntry) => {
+    const idx = [top3[1], top3[0], top3[2]].findIndex(e => e?.userId === entry.userId);
+    return idx === 0 ? 2 : idx === 1 ? 1 : 3;
+  };
+
+  return (
+    <div className="relative rs-season-hero overflow-x-hidden sm:overflow-hidden">
+      {/* Background artwork — dimmed */}
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: "url('/electrical-bg.webp')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          filter: "brightness(0.55) saturate(0.75)",
+        }}
+      />
+      {/* Dark base overlay */}
+      <div className="absolute inset-0" style={{ background: "rgba(3,10,14,0.72)" }} />
+      {/* Subtle neon-green radial glow behind the #1 card (centre) */}
+      <div className="absolute inset-0 pointer-events-none hidden sm:block"
+        style={{ background: "radial-gradient(ellipse at 62% 58%, rgba(183,255,26,0.09) 0%, transparent 42%)" }} />
+      {/* Vignette — darken edges */}
+      <div className="absolute inset-0 pointer-events-none"
+        style={{ background: "radial-gradient(ellipse at center, transparent 30%, rgba(3,10,14,0.65) 100%)" }} />
+      {/* Bottom fade */}
+      <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none"
+        style={{ background: "linear-gradient(0deg, rgba(3,10,14,0.92) 0%, transparent 100%)" }} />
+
+      {/* Gold glow orb behind rank-1 — above bronze card, below silver/gold */}
+      <div className="absolute bottom-0 left-[62%] -translate-x-1/2 w-[480px] h-56 blur-3xl opacity-30 pointer-events-none hidden sm:block z-[5]"
+        style={{ background: "radial-gradient(ellipse,rgba(255,215,0,0.9),transparent 65%)" }} />
+
+      {/* ── DESKTOP: page title — upper-left of hero ── */}
+      <div className="absolute top-8 left-8 z-10 hidden sm:block max-w-[560px]">
+        <p className="text-[#B7FF1A] text-[10px] tracking-[0.22em] uppercase font-bold mb-2">
+          Season Rankings
+        </p>
+        <div className="flex items-center gap-4 mb-3">
+          <h1 className="text-3xl font-black text-white tracking-tight uppercase leading-none">
+            Leaderboard
+          </h1>
+          <button
+            type="button"
+            onClick={() => document.getElementById("current-season")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="flex flex-row items-center gap-2 rounded-full px-4 py-2 text-[#07131A] hover:bg-[#D0FF55] transition-colors whitespace-nowrap"
+            style={{ background: "#B7FF1A", border: "1px solid rgba(183,255,26,0.9)", boxShadow: "0 0 18px rgba(183,255,26,0.3)" }}
+            aria-label="View current season"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
+              View current season
+            </span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+        <p className="text-slate-400 text-xs leading-relaxed">
+          Compete in ranked seasons, climb the rankings and become a Gamefolio Champion.
+        </p>
+      </div>
+
+      {/* ── MOBILE: premium swipeable carousel ── */}
+      <div className="relative sm:hidden">
+        <MobileCarousel entries={entries} />
+      </div>
+
+      {/* ── DESKTOP: three-column podium — absolutely fills hero, cards centred ── */}
+      <div className="lb-desktop-podium hidden sm:flex sm:items-end sm:justify-center gap-2 lg:gap-3 px-4 pb-16">
+        {top3.length === 0 ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex flex-col items-center">
+              <div className="w-[228px]">
+                <Skeleton className="h-[480px] rounded-2xl bg-slate-800" />
+              </div>
+              <Skeleton className="mt-1 h-28 w-48 bg-slate-800/60 rounded" />
+            </div>
+          ))
+        ) : (
+          ordered.map((entry) => {
+            const rank = podiumRank(entry);
+            return (
+              <div
+                key={entry.userId}
+                className={`relative flex flex-col items-center flex-shrink-0 lb-card-${rank}`}
+                style={{ zIndex: rank === 3 ? 2 : 20 }}
+              >
+                <div className={rank === 1 ? "lb-card-1-glow relative z-10" : "relative z-10"}
+                  style={{ filter: PODIUM_GLOW[rank] }}
+                >
+                  {rank === 1 ? (
+                    <div className="lb-card-1-border-wrap">
+                      <CreatorCard entry={entry} period="season" />
+                    </div>
+                  ) : (
+                    <CreatorCard entry={entry} period="season" />
+                  )}
+                </div>
+                <img
+                  src={PODIUM_IMG[rank]}
+                  alt={`#${rank}`}
+                  className="object-contain pointer-events-none select-none relative z-10"
+                  style={{
+                    width: PODIUM_IMG_W[rank],
+                    height: PODIUM_IMG_H[rank],
+                    marginTop: -22,
+                    filter: PODIUM_GLOW[rank],
+                  }}
+                  draggable={false}
+                />
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* ── Current-season scroll cue ── */}
+      <button
+        type="button"
+        onClick={() => document.getElementById("current-season")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+        className="absolute bottom-4 left-1/2 z-[60] -translate-x-1/2 flex flex-row items-center gap-2 rounded-full px-4 py-2 text-[#07131A] hover:bg-[#D0FF55] transition-colors sm:hidden"
+        style={{ background: "#B7FF1A", border: "1px solid rgba(183,255,26,0.9)", boxShadow: "0 0 18px rgba(183,255,26,0.3)" }}
+        aria-label="View current season"
+      >
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em] whitespace-nowrap">
+          View current season
+        </span>
+        <ChevronRight className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
+// ─── Section: Season Info Bar (below banner) ───────────────────────────────
+
+function SeasonInfoBar({ playerCount }: { playerCount: number }) {
+  const season = useMemo(() => getSeasonInfo(), []);
+  const seasonEnd = useMemo(() => getSeasonEndDate(), []);
+  const { days, hours, minutes, seconds } = useCountdown(seasonEnd);
+
+  return (
+    <div className="bg-[#05090d] py-6 sm:py-8 px-4 text-center">
+      {/* Season badge */}
+      <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#B7FF1A]/30 bg-[#B7FF1A]/10 mb-4">
+        <Trophy className="w-4 h-4 text-[#B7FF1A]" />
+        <span className="text-xs font-bold text-[#B7FF1A] tracking-widest uppercase">Ranked Season {season.number}</span>
+      </div>
+
+      {/* Title */}
+      <h1 className="text-3xl sm:text-4xl font-black text-white mb-1 tracking-tight">
+        {season.name}
+      </h1>
+      <p className="text-slate-500 text-sm mb-6">Week {season.weekInSeason} of Season {season.number}</p>
+
+      {/* Countdown */}
+      <div className="mb-6">
+        <p className="text-slate-600 text-[11px] uppercase tracking-widest mb-3">Season Ends In</p>
+        <div className="flex items-center justify-center gap-2 sm:gap-4">
+          {[
+            { v: days,    l: "Days" },
+            { v: hours,   l: "Hours" },
+            { v: minutes, l: "Mins" },
+            { v: seconds, l: "Secs" },
+          ].map(({ v, l }, i) => (
+            <div key={l} className="flex items-center gap-2 sm:gap-4">
+              {i > 0 && <span className="text-slate-700 text-lg">•</span>}
+              <div className="flex flex-col items-center">
+                <div className="w-13 h-13 sm:w-15 sm:h-15 w-14 h-14 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center">
+                  <span className="text-xl sm:text-2xl font-black text-white tabular-nums">{String(v).padStart(2, "0")}</span>
+                </div>
+                <span className="text-[10px] text-slate-600 mt-1 uppercase tracking-widest">{l}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-sm">
+        <div className="flex items-center gap-2 text-slate-400 text-center">
+          <Users className="w-4 h-4 text-[#B7FF1A]" />
+          <span><strong className="text-white">{playerCount.toLocaleString()}</strong> Players Competing</span>
+        </div>
+        <div className="flex items-center gap-2 text-slate-400 text-center">
+          <Trophy className="w-4 h-4 text-[#FFD700]" />
+          <span><strong className="text-white">20,000</strong> GFT Prize Pool</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Section: Competitive Overview ────────────────────────────────────────
+
+function CompetitiveOverview({ leaderboard, userId, tiers }: { leaderboard: LeaderboardEntry[]; userId: number; tiers: LeagueConfigTier[] }) {
+  const myEntry = leaderboard.find(e => e.userId === userId);
+  if (!myEntry) {
+    return null;
+  }
+  const league = getLeagueFromEntry(tiers, myEntry.totalPoints, myEntry.rank);
+  const nextRankEntry = leaderboard.find(e => e.rank === myEntry.rank - 1);
+  const xpToNextRank = nextRankEntry ? Math.ceil(nextRankEntry.totalPoints - myEntry.totalPoints) : null;
+
+  const nextXpTier = tiers.find(t => myEntry.totalPoints < t.min && t.name !== "Champion") ?? null;
+  const xpToNextLeague = nextXpTier ? Math.max(0, nextXpTier.min - myEntry.totalPoints) : null;
+
+  const stats = [
+    { label: "Current Rank",  value: `#${myEntry.rank}`,               icon: <Trophy className="w-4 h-4 text-[#B7FF1A]" /> },
+    { label: "Current League",value: `${league.icon} ${league.name}`,   icon: <Shield className="w-4 h-4" style={{ color: league.color }} /> },
+    { label: "Season XP",     value: formatPoints(myEntry.totalPoints), icon: <Zap className="w-4 h-4 text-[#615fff]" /> },
+    { label: "Level",         value: myEntry.user.level != null ? `Lv.${myEntry.user.level}` : "—", icon: <Star className="w-4 h-4 text-[#FFD700]" /> },
+    { label: "Uploads",       value: myEntry.uploadsCount.toString(),   icon: <Upload className="w-4 h-4 text-[#00bcff]" /> },
+  ];
+
+  return (
+    <div className="px-4 mb-6">
+      <div className={`rounded-2xl border bg-gradient-to-br ${league.gradient} ${league.border} ${league.glow} p-4 sm:p-5`}>
+        <div className="flex items-start gap-2 mb-4 flex-wrap">
+          <div className="w-7 h-7 rounded-full flex items-center justify-center bg-white/10">
+            <span className="text-sm">{league.icon}</span>
+          </div>
+          <h2 className="font-bold text-white text-base leading-7">Your Competitive Overview</h2>
+          <span className="sm:ml-auto text-xs font-semibold px-2.5 py-0.5 rounded-full border" style={{ color: league.color, borderColor: league.color + "50", background: league.color + "18" }}>
+            {league.name} League
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 mb-4">
+          {stats.map(s => (
+            <div key={s.label} className="rounded-xl border border-white/8 bg-black/20 px-2.5 sm:px-3 py-2.5">
+              <div className="flex items-center gap-1.5 mb-1">{s.icon}<span className="text-[10px] text-slate-500 uppercase tracking-wider">{s.label}</span></div>
+              <span className="font-black text-white text-lg">{s.value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Motivational messages */}
+        <div className="space-y-2">
+          {xpToNextRank !== null && xpToNextRank > 0 && (
+            <div className="flex items-center gap-2 text-xs text-slate-300 bg-white/5 rounded-lg px-3 py-2">
+              <ArrowUp className="w-3.5 h-3.5 text-[#B7FF1A] flex-shrink-0" />
+              <span>Only <strong className="text-[#B7FF1A]">{formatPoints(xpToNextRank)} XP</strong> until you move up to Rank #{myEntry.rank - 1}</span>
+            </div>
+          )}
+          {xpToNextLeague !== null && xpToNextLeague > 0 && nextXpTier && (
+            <div className="flex items-center gap-2 text-xs text-slate-300 bg-white/5 rounded-lg px-3 py-2">
+              <TrendingUp className="w-3.5 h-3.5 text-[#FFD700] flex-shrink-0" />
+              <span><strong className="text-[#FFD700]">{formatPoints(xpToNextLeague)} XP</strong> until {nextXpTier.icon} {nextXpTier.name} League</span>
+            </div>
+          )}
+          {league.name === "Champion" && (
+            <div className="flex items-center gap-2 text-xs text-slate-300 bg-[#B7FF1A]/10 rounded-lg px-3 py-2">
+              <Crown className="w-3.5 h-3.5 text-[#B7FF1A] flex-shrink-0" />
+              <span className="text-[#B7FF1A] font-semibold">You are a Champion — an elite Top 10 player this season! 🏆</span>
+            </div>
+          )}
+          {league.name === "Diamond" && (
+            <div className="flex items-center gap-2 text-xs text-slate-300 bg-white/5 rounded-lg px-3 py-2">
+              <Crown className="w-3.5 h-3.5 text-[#A8EDFF] flex-shrink-0" />
+              <span className="text-[#A8EDFF] font-semibold">You are in Diamond League — Top 100 with 50,000+ Season XP! 💠</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Section: Ranked Leagues ───────────────────────────────────────────────
+
+function RankedLeagues({ leaderboard, userId, tiers }: { leaderboard: LeaderboardEntry[]; userId?: number; tiers: LeagueConfigTier[] }) {
+  const myEntry = userId ? leaderboard.find(e => e.userId === userId) : null;
+  const myLeague = myEntry ? getLeagueFromEntry(tiers, myEntry.totalPoints, myEntry.rank).name : null;
+  const leagueTiers: LeagueConfigTier[] = tiers.length ? tiers : [{
+    name: "Bronze",
+    icon: "🥉",
+    color: "#CD7F32",
+    min: 0,
+    max: Number.MAX_SAFE_INTEGER,
+    philosophy: "",
+    reward: "",
+  }];
+
+  return (
+    <section className="px-4 mb-8">
+      <div className="flex items-center gap-2 mb-4">
+        <Shield className="w-5 h-5 text-[#B7FF1A]" />
+        <h2 className="text-xl font-black text-white">Ranked Leagues</h2>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+        {leagueTiers.slice().reverse().map(l => (
+          <div
+            key={l.name}
+            className={`rounded-2xl border p-4 flex flex-col items-center text-center gap-2 relative ${l.name === myLeague ? "ring-2 ring-[#B7FF1A]/60 ring-offset-1 ring-offset-[#0B1218]" : ""}`}
+            style={{ background: `${l.color}18`, borderColor: `${l.color}55` }}
+          >
+            {l.name === myLeague && (
+              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-[#B7FF1A] text-black text-[10px] font-black whitespace-nowrap">YOU</div>
+            )}
+            <span className="text-3xl">{l.icon}</span>
+            <div>
+              <div className="font-black text-sm" style={{ color: l.color }}>{l.name}</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">
+                {l.min.toLocaleString()}+ XP{l.rankGate ? ` · Top ${l.rankGate}` : ""}
+              </div>
+            </div>
+            <div className="text-[10px] text-slate-400 leading-tight">{l.reward}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ─── Section: Live Leaderboard ─────────────────────────────────────────────
+
+function LeaderboardRow({ entry, isCurrentUser, tiers }: { entry: LeaderboardEntry; isCurrentUser: boolean; tiers: LeagueConfigTier[] }) {
+  const league = getLeagueFromEntry(tiers, entry.totalPoints, entry.rank);
+  const isTop3 = entry.rank <= 3;
+  const rankColors: Record<number, string> = { 1: "#FFD700", 2: "#C0C0C0", 3: "#CD7F32" };
+  const rankColor = rankColors[entry.rank] ?? "#6b7280";
+
+  return (
+    <Link href={`/profile/${entry.user.username}`}>
+      <div
+        className={`flex items-center gap-3 px-4 py-3.5 rounded-xl border transition-all hover:scale-[1.01] cursor-pointer mb-2 ${
+          isCurrentUser
+            ? "border-[#B7FF1A]/40 bg-[#B7FF1A]/8"
+            : isTop3
+            ? "border-white/10 bg-white/3"
+            : "border-white/5 bg-[#0a1520]/60"
+        }`}
+      >
+        {/* Rank */}
+        <div className="w-9 flex-shrink-0 text-center">
+          {entry.rank <= 3 ? (
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto" style={{ background: `${rankColor}22`, border: `1px solid ${rankColor}55` }}>
+              <span className="text-sm font-black" style={{ color: rankColor }}>{entry.rank}</span>
+            </div>
+          ) : (
+            <span className="text-sm font-bold text-slate-500">#{entry.rank}</span>
+          )}
+        </div>
+
+        {/* Avatar */}
+        <UserAvatar user={entry.user} size="sm" />
+
+        {/* Name + stats */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className={`font-bold text-sm truncate ${isCurrentUser ? "text-[#B7FF1A]" : "text-white"}`}>
+              {entry.user.displayName}
+            </span>
+            {isCurrentUser && <span className="text-[10px] font-bold text-black bg-[#B7FF1A] px-1.5 py-0.5 rounded-full flex-shrink-0">YOU</span>}
+          </div>
+          <div className="flex items-center gap-2.5 mt-0.5">
+            {entry.user.level != null && (
+              <div className="flex items-center gap-1">
+                <Star className="w-2.5 h-2.5 text-[#FFD700]" />
+                <span className="text-[10px] font-semibold text-[#FFD700]">Lv.{entry.user.level}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-1">
+              <Upload className="w-2.5 h-2.5 text-[#00bcff]" />
+              <span className="text-[10px] font-semibold text-[#00bcff]">{entry.uploadsCount}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Heart className="w-2.5 h-2.5 text-[#ff2056] fill-[#ff2056]" />
+              <span className="text-[10px] font-semibold text-[#ff2056]">{entry.likesGivenCount}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <ZapIconSvg className="w-2.5 h-2.5" active={true} />
+              <span className="text-[10px] font-semibold text-[#ff6900]">{entry.firesGivenCount}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* League badge */}
+        <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
+          <span className="text-xs">{league.icon}</span>
+          <span className="text-[10px] font-semibold" style={{ color: league.color }}>{league.name}</span>
+        </div>
+
+        {/* XP */}
+        <div className="flex-shrink-0 text-right">
+          <div className="text-sm font-black text-white">{formatPoints(entry.totalPoints)}</div>
+          <div className="text-[10px] text-slate-500">XP</div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+// ─── Bar Chart ─────────────────────────────────────────────────────────────
+
+const BAR_RANK_COLORS: Record<number, { bar: string; glow: string; badge: string }> = {
+  1: { bar: "from-yellow-300 via-yellow-500 to-amber-600",   glow: "rgba(255,215,0,0.45)",  badge: "#FFD700" },
+  2: { bar: "from-slate-200 via-slate-400 to-slate-600",     glow: "rgba(192,192,192,0.35)", badge: "#C0C0C0" },
+  3: { bar: "from-amber-500 via-amber-700 to-amber-900",     glow: "rgba(205,127,50,0.35)",  badge: "#CD7F32" },
+};
+const BAR_ME_COLOR  = { bar: "from-[#B7FF1A] to-[#B7FF1A]",       glow: "rgba(183,255,26,0.55)" };
+const BAR_DEF_COLOR = { bar: "from-[#B7FF1A]/60 to-[#B7FF1A]/60", glow: "rgba(183,255,26,0.2)" };
+
+const MAX_BAR_H = 320; // px — taller bars
+
+function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?: number }) {
+  const maxPts = Math.max(...entries.map(e => e.totalPoints), 1);
+  const [isCompact, setIsCompact] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const dragging  = useRef(false);
+  const startX    = useRef(0);
+  const scrollLeft = useRef(0);
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    dragging.current  = true;
+    startX.current    = e.pageX - (scrollRef.current?.offsetLeft ?? 0);
+    scrollLeft.current = scrollRef.current?.scrollLeft ?? 0;
+    if (scrollRef.current) scrollRef.current.style.cursor = "grabbing";
+  };
+  const onMouseUp = () => {
+    dragging.current = false;
+    if (scrollRef.current) scrollRef.current.style.cursor = "grab";
+  };
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!dragging.current || !scrollRef.current) return;
+    e.preventDefault();
+    const x   = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX.current) * 1.5;
+    scrollRef.current.scrollLeft = scrollLeft.current - walk;
+  };
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 639px)");
+    const update = () => setIsCompact(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  const chartHeight = isCompact ? 220 : MAX_BAR_H;
+  const columnWidth = isCompact ? 68 : 76;
+
+  return (
+    <div
+      ref={scrollRef}
+      className="overflow-x-auto pb-4 select-none"
+      style={{ cursor: "grab" }}
+      onMouseDown={onMouseDown}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseUp}
+      onMouseMove={onMouseMove}
+    >
+      <div className="flex items-start gap-2 sm:gap-3 min-w-max px-4 pb-1" style={{ paddingTop: isCompact ? 20 : 32 }}>
+        {entries.map((entry, i) => {
+          const rank   = i + 1;
+          const isMe   = entry.userId === userId;
+          const isTop3 = rank <= 3;
+          const pct    = entry.totalPoints / maxPts;
+          const barH   = Math.max(Math.round(pct * MAX_BAR_H), 14);
+          const isTop10Chrome = rank >= 4 && rank <= 10;
+          const colors = isTop3 ? BAR_RANK_COLORS[rank] : isMe ? BAR_ME_COLOR : BAR_DEF_COLOR;
+          const rankBanners: Record<number, string> = { 1: goldBannerImg, 2: silverBannerImg, 3: bronzeBannerImg };
+
+          return (
+            <Link key={entry.userId} href={`/profile/${entry.user.username}`}>
+              <div className="flex flex-col items-center gap-1.5 group cursor-pointer select-none" style={{ width: columnWidth }}>
+                {/* XP label */}
+                <span className="text-[10px] font-bold text-slate-400 group-hover:text-white transition-colors leading-none">
+                  {formatPoints(entry.totalPoints)}
+                </span>
+
+                {/* Fixed-height bar area keeps every XP bar on the same baseline.
+                    The content below varies for podium banners, so aligning the
+                    whole columns would otherwise lift the top-three bars. */}
+                <div
+                  className="flex w-14 items-end"
+                  style={{ height: chartHeight }}
+                >
+                  <div
+                    className={`w-14 rounded-t-xl group-hover:brightness-110 transition-all relative ${isTop10Chrome ? '' : `bg-gradient-to-t ${colors.bar}`}`}
+                    style={{
+                      height: Math.max(Math.round(pct * chartHeight), 12),
+                      boxShadow: isTop10Chrome
+                        ? '0 0 18px rgba(183,254,27,0.28), 0 0 6px rgba(255,255,255,0.4)'
+                        : `0 0 16px ${colors.glow}`,
+                      ...(isTop10Chrome ? {
+                        background: 'linear-gradient(180deg, #b8d4a8 0%, #e8f8e0 10%, #ffffff 22%, #d8f2c8 34%, #ffffff 46%, #e4f8d8 58%, #f8fff4 72%, #ffffff 84%, #cce8bc 100%)',
+                      } : {}),
+                    }}
+                  >
+                  {/* Double diagonal shimmer sweeps for top-3 */}
+                  {isTop3 && (
+                    <div
+                      className="absolute inset-0 overflow-hidden rounded-t-xl pointer-events-none"
+                      style={{ mixBlendMode: "overlay" }}
+                    >
+                      <div
+                        className="absolute inset-0 animate-bar-shimmer"
+                        style={{
+                          background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 45%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.35) 55%, transparent 100%)",
+                          width: "60%",
+                        }}
+                      />
+                      <div
+                        className="absolute inset-0 animate-bar-shimmer"
+                        style={{
+                          background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0.25) 55%, transparent 100%)",
+                          width: "60%",
+                          animationDelay: "1.5s",
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Animated chrome shimmer sweeps for top-10 (ranks 4–10) — same keyframe as top-3 */}
+                  {isTop10Chrome && (
+                    <div
+                      className="absolute inset-0 overflow-hidden rounded-t-xl pointer-events-none"
+                      style={{ mixBlendMode: "overlay" }}
+                    >
+                      <div
+                        className="absolute inset-0 animate-bar-shimmer"
+                        style={{
+                          background: "linear-gradient(90deg, transparent 0%, rgba(183,254,27,0.2) 40%, rgba(255,255,255,0.55) 50%, rgba(183,254,27,0.2) 60%, transparent 100%)",
+                          width: "60%",
+                        }}
+                      />
+                      <div
+                        className="absolute inset-0 animate-bar-shimmer"
+                        style={{
+                          background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 45%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0.25) 55%, transparent 100%)",
+                          width: "60%",
+                          animationDelay: "1.5s",
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {/* YOU chip */}
+                  {isMe && (
+                    <div className={`absolute ${isTop3 ? "-bottom-5" : "-top-5"} left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-black bg-[#B7FF1A] text-black px-1.5 py-0.5 rounded-full`}>
+                      YOU
+                    </div>
+                  )}
+                  </div>
+                </div>
+
+                {/* Rank banner + avatar — banner forms a pedestal resting directly at the base of the bar, avatar sits on top of it */}
+                <div className="relative flex items-center justify-center" style={{ marginTop: isTop3 ? 0 : 0, width: 76 }}>
+                  {isTop3 && (
+                    <img
+                      src={rankBanners[rank]}
+                      alt=""
+                      className="absolute left-1/2 -translate-x-1/2 w-[317px] h-auto pointer-events-none select-none z-0 drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]"
+                      style={{ top: -36 }}
+                    />
+                  )}
+                  <div className="relative z-10 w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden ring-2 ring-white/10 group-hover:ring-[#B7FF1A]/50 transition-all flex-shrink-0" style={{ marginTop: isTop3 ? 6 : 0 }}>
+                    {entry.user.avatarUrl ? (
+                      <img src={entry.user.avatarUrl} alt={entry.user.displayName} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-slate-700 flex items-center justify-center">
+                        <span className="text-base font-black text-white">{entry.user.displayName[0]?.toUpperCase()}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Username */}
+                <span className="text-[10px] font-semibold text-slate-400 group-hover:text-white transition-colors text-center leading-tight w-full truncate">
+                  {entry.user.displayName.length > 8
+                    ? entry.user.displayName.slice(0, 7) + "…"
+                    : entry.user.displayName}
+                </span>
+
+                {/* Rank */}
+                <span
+                  className="text-[9px] font-black leading-none"
+                  style={{ color: isTop3 ? BAR_RANK_COLORS[rank].badge : "#B7FF1A" }}
+                >
+                  #{rank}
+                </span>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function LiveLeaderboard({ userId }: { userId?: number }) {
+  const [tab, setTab] = useState<TabType>("season");
+
+  const tabs: { key: TabType; label: string }[] = [
+    { key: "weekly",  label: "This Week"   },
+    { key: "season",  label: "This Season" },
+    { key: "alltime", label: "All Time"    },
+  ];
+
+  const MIN_PERIOD_ENTRIES = 3; // below this, fall back to previous period
+
+  const POLL_MS = 30_000;
+
+  const { data: weeklyData,    isLoading: wl,  dataUpdatedAt: wUpdated  } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard/weekly/current",  "chart"],
+    queryFn: () => fetch("/api/leaderboard/weekly/current?limit=100").then(r => r.json()),
+    refetchInterval: POLL_MS,
+  });
+  const { data: prevWeekData,  isLoading: pwl } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard/weekly/previous", "chart"],
+    queryFn: () => fetch("/api/leaderboard/weekly/previous?limit=100").then(r => r.json()),
+    enabled: !wl && Array.isArray(weeklyData) && weeklyData.length < MIN_PERIOD_ENTRIES,
+    refetchInterval: POLL_MS,
+  });
+  const { data: monthlyData,   isLoading: ml,  dataUpdatedAt: mUpdated  } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard/monthly/current", "chart"],
+    queryFn: () => fetch("/api/leaderboard/monthly/current?limit=100").then(r => r.json()),
+    refetchInterval: POLL_MS,
+  });
+  const { data: prevMonthData, isLoading: pml } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard/monthly/previous", "chart"],
+    queryFn: () => fetch("/api/leaderboard/monthly/previous?limit=100").then(r => r.json()),
+    enabled: !ml && Array.isArray(monthlyData) && monthlyData.length < MIN_PERIOD_ENTRIES,
+    refetchInterval: POLL_MS,
+  });
+  const { data: alltimeData,   isLoading: al,  dataUpdatedAt: aUpdated  } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard", "lb"],
+    queryFn: () => fetch("/api/leaderboard?limit=100").then(r => r.json()),
+    refetchInterval: POLL_MS,
+  });
+  const { data: seasonData,    isLoading: sl,  dataUpdatedAt: sUpdated  } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard/current-season/top", "chart"],
+    queryFn: () => fetch("/api/leaderboard/current-season/top?limit=500").then(r => r.json()),
+    refetchInterval: POLL_MS,
+  });
+
+  const lastUpdated =
+    tab === "weekly"  ? wUpdated :
+    tab === "monthly" ? mUpdated :
+    tab === "season"  ? sUpdated : aUpdated;
+
+  const [lastUpdatedLabel, setLastUpdatedLabel] = useState("just now");
+  useEffect(() => {
+    const update = () => {
+      if (!lastUpdated) return;
+      const secs = Math.floor((Date.now() - lastUpdated) / 1000);
+      setLastUpdatedLabel(secs < 10 ? "just now" : `${secs}s ago`);
+    };
+    update();
+    const id = setInterval(update, 5000);
+    return () => clearInterval(id);
+  }, [lastUpdated]);
+
+  const isLoading =
+    tab === "weekly"  ? (wl || (Array.isArray(weeklyData)  && weeklyData.length  < MIN_PERIOD_ENTRIES && pwl)) :
+    tab === "monthly" ? (ml || (Array.isArray(monthlyData) && monthlyData.length < MIN_PERIOD_ENTRIES && pml)) :
+    tab === "season"  ? sl : al;
+
+  const weeklySparse  = !wl  && Array.isArray(weeklyData)  && weeklyData.length  < MIN_PERIOD_ENTRIES;
+  const monthlySparse = !ml  && Array.isArray(monthlyData) && monthlyData.length < MIN_PERIOD_ENTRIES;
+
+  const usingPrevWeek  = tab === "weekly"  && weeklySparse;
+  const usingPrevMonth = tab === "monthly" && monthlySparse;
+  const usingFallback  = usingPrevWeek || usingPrevMonth;
+
+  const entries: LeaderboardEntry[] =
+    tab === "weekly"  ? (weeklySparse  ? (Array.isArray(prevWeekData)  ? prevWeekData  : []) : (Array.isArray(weeklyData)  ? weeklyData  : [])) :
+    tab === "monthly" ? (monthlySparse ? (Array.isArray(prevMonthData) ? prevMonthData : []) : (Array.isArray(monthlyData) ? monthlyData : [])) :
+    tab === "season"  ? (Array.isArray(seasonData)  ? seasonData  as LeaderboardEntry[] : []) :
+                        (Array.isArray(alltimeData) ? alltimeData : []);
+
+  const tabSubtitle: Record<TabType, string> = {
+    weekly:  "XP earned this week",
+    monthly: "XP earned this month",
+    season:  "Total season XP",
+    alltime: "All-time cumulative XP",
+  };
+
+  return (
+    <section
+      className="mb-0 relative pt-5 pb-2 overflow-hidden"
+      style={{ backgroundColor: "#05090d" }}
+    >
+      {/* ── Mesh background ── */}
+      <div
+        className="absolute -top-10 inset-x-0 bottom-0 pointer-events-none"
+        style={{
+          backgroundImage: [
+            "repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(255,255,255,0.05) 12px, rgba(255,255,255,0.05) 13px)",
+            "repeating-linear-gradient(-45deg, transparent, transparent 12px, rgba(255,255,255,0.05) 12px, rgba(255,255,255,0.05) 13px)",
+            "radial-gradient(ellipse 70% 60% at 8% 0%, rgba(183,255,26,0.32), transparent 60%)",
+            "radial-gradient(ellipse 65% 55% at 95% 10%, rgba(59,130,246,0.26), transparent 65%)",
+            "radial-gradient(ellipse 60% 55% at 50% 110%, rgba(183,255,26,0.22), transparent 70%)",
+            "linear-gradient(160deg, rgba(183,255,26,0.14), transparent 55%)",
+          ].join(", "),
+          maskImage: "radial-gradient(ellipse 65% 55% at 30% 15%, black 0%, transparent 75%)",
+          WebkitMaskImage: "radial-gradient(ellipse 65% 55% at 30% 15%, black 0%, transparent 75%)",
+        }}
+      />
+      {/* Header row — padded */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-5 gap-3 px-4 sm:px-6 lg:px-10">
+        <div className="flex items-center gap-2 flex-wrap">
+          <TrendingUp className="w-5 h-5 text-[#B7FF1A]" />
+          <h2 className="text-xl font-black text-white lb-mobile-heading">Live Leaderboard</h2>
+          <div className="flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: '#B7FF1A' }} />
+              <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: '#B7FF1A' }} />
+            </span>
+            <span className="text-[10px] text-white/30 font-mono">updated {lastUpdatedLabel}</span>
+          </div>
+          <span className="text-xs text-slate-500 mt-0.5 lb-mobile-subtitle">{tabSubtitle[tab]}</span>
+          {usingFallback && (
+            <span className="text-[10px] bg-[#B7FF1A]/10 text-[#B7FF1A]/70 border border-[#B7FF1A]/20 px-2 py-0.5 rounded-full">
+              {usingPrevWeek ? "showing last week" : "showing last month"}
+            </span>
+          )}
+        </div>
+
+        {/* Tabs */}
+        <div className="w-full sm:w-auto grid grid-cols-3 sm:flex gap-1 p-1 rounded-xl bg-white/5 border border-white/8">
+          {tabs.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`min-w-0 px-2 sm:px-3 py-2 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-semibold transition-all whitespace-nowrap ${
+                tab === t.key ? "bg-[#B7FF1A] text-black" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Chart area — full width, no side padding so scroll isn't clipped */}
+      {isLoading && !usingFallback ? (
+        <div className="overflow-x-auto pb-4 px-4">
+          <div className="flex items-end gap-3 min-w-max" style={{ height: MAX_BAR_H + 110, paddingTop: 32 }}>
+            {Array.from({ length: 20 }).map((_, i) => {
+              const h = Math.max(40, Math.round(MAX_BAR_H * Math.max(0.15, 1 - i * 0.045)));
+              return (
+                <div key={i} className="flex flex-col items-center gap-1.5" style={{ width: 76 }}>
+                  <Skeleton className="w-10 h-3 rounded bg-slate-800" />
+                  <Skeleton className="w-14 rounded-t-xl bg-slate-800" style={{ height: h }} />
+                  <Skeleton className="w-12 h-12 rounded-full bg-slate-800" />
+                  <Skeleton className="w-14 h-2.5 rounded bg-slate-800" />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : entries.length === 0 ? (
+        <div className="mx-4 text-center py-16 rounded-2xl border border-white/5 bg-white/2">
+          <Star className="w-10 h-10 mx-auto mb-3 text-slate-600" />
+          <p className="text-sm font-semibold text-slate-400">No activity yet for this period</p>
+          <p className="text-xs text-slate-600 mt-1">Earn XP by uploading content to appear here</p>
+        </div>
+      ) : (
+        <>
+          <div className="w-full h-px bg-white/8 mb-1" />
+          <XPBarChart entries={entries} userId={userId} />
+          <p className="text-[10px] text-slate-600 mt-1 text-center pb-2">
+            {entries.length} players · drag or scroll to explore · click a bar to visit profile
+          </p>
+        </>
+      )}
+    </section>
+  );
+}
+
+// ─── Section: Rival Section ────────────────────────────────────────────────
+
+function RivalSection({ leaderboard, userId }: { leaderboard: LeaderboardEntry[]; userId: number }) {
+  const rankedLeaderboard = [...leaderboard].sort((a, b) => a.rank - b.rank);
+  const myIndex = rankedLeaderboard.findIndex(e => e.userId === userId);
+  if (myIndex < 0) return null;
+
+  const me    = rankedLeaderboard[myIndex];
+  const above = myIndex > 0 ? rankedLeaderboard[myIndex - 1] : null;
+  const xpGap = above ? Math.max(0, Math.ceil(above.totalPoints - me.totalPoints)) : null;
+
+  // Show the signed-in player plus the closest ranked players around them.
+  // Keep the API-provided rank so gaps (for example #5 after #3) remain clear.
+  const startIdx = Math.max(0, myIndex - 2);
+  const endIdx   = Math.min(rankedLeaderboard.length - 1, myIndex + 3);
+  const visible  = rankedLeaderboard.slice(startIdx, endIdx + 1);
+
+  return (
+    <section className="px-4 mb-8">
+      <div className="flex items-center gap-2 mb-4">
+        <Target className="w-5 h-5 text-[#B7FF1A]" />
+        <h2 className="text-xl font-black text-white">Your Rivals</h2>
+      </div>
+      <div className="rounded-2xl border border-white/8 bg-[#0a1520]/80 p-3 space-y-1.5">
+        {visible.map(entry => {
+          const isMe = entry.userId === userId;
+          return (
+            <Link href={`/profile/${entry.user.username}`} key={entry.userId}>
+              <div className={`flex items-center gap-3 rounded-xl border p-3.5 transition-all hover:scale-[1.01] cursor-pointer ${
+                isMe
+                  ? "border-[#B7FF1A]/60 bg-[#B7FF1A]/[0.18]"
+                  : "border-white/8 bg-white/3"
+              }`}>
+                {/* Rank / YOU badge */}
+                <div className="w-10 flex-shrink-0 flex items-center justify-center">
+                  {isMe ? (
+                    <span className="text-[9px] font-black bg-[#B7FF1A] text-black px-1.5 py-0.5 rounded-full leading-none">YOU</span>
+                  ) : (
+                    <span className="text-[11px] font-bold text-slate-500">#{entry.rank}</span>
+                  )}
+                </div>
+                <UserAvatar user={entry.user} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <div className={`font-bold text-sm truncate ${isMe ? "text-[#B7FF1A]" : "text-white"}`}>
+                    {entry.user.displayName}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px] mt-0.5">
+                    <span className={isMe ? "text-[#B7FF1A]/60" : "text-slate-500"}>Rank #{entry.rank}</span>
+                    {entry.user.level != null && (
+                      <>
+                        <span className="text-slate-700">·</span>
+                        <span className={isMe ? "text-[#B7FF1A]/60" : "text-slate-500"}>Lv.{entry.user.level}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className={`text-sm font-black ${isMe ? "text-[#B7FF1A]" : "text-white"}`}>
+                    {formatPoints(entry.totalPoints)}
+                  </div>
+                  <div className="text-[10px] text-slate-500">XP</div>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+        {xpGap !== null && xpGap > 0 && above && (
+          <div className="mt-1 flex items-center gap-2 text-xs text-slate-400 bg-white/3 rounded-lg px-3 py-2.5">
+            <Flame className="w-3.5 h-3.5 text-[#ff6900] flex-shrink-0" />
+            <span>You need <strong className="text-white">{formatPoints(xpGap)} more XP</strong> to overtake <strong className="text-white">{above.user.displayName}</strong> and move to Rank #{above.rank}</span>
+          </div>
+        )}
+        {xpGap === 0 && (
+          <div className="mt-1 flex items-center gap-2 text-xs text-[#B7FF1A] bg-[#B7FF1A]/10 rounded-lg px-3 py-2.5">
+            <Crown className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>You are <strong>tied for position</strong> with the player above you!</span>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ─── Section: Season Rewards ───────────────────────────────────────────────
+
+
+function SeasonRewards() {
+  return (
+    <section className="px-4 mb-8">
+      <div className="flex items-center gap-2 mb-4">
+        <Medal className="w-5 h-5 text-[#B7FF1A]" />
+        <h2 className="text-xl font-black text-white">Season Rewards & Awards</h2>
+      </div>
+      <div className="relative rounded-2xl border border-white/10 bg-[#0d1520] overflow-hidden" style={{ minHeight: 180 }}>
+        {/* Background image — blurred */}
+        <img
+          src={imgLootboxBanner}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ filter: "blur(18px) brightness(0.45)", transform: "scale(1.1)" }}
+        />
+        {/* Darkening overlay */}
+        <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.35)" }} />
+        {/* Center text */}
+        <div className="relative z-10 flex flex-col items-center justify-center py-12 px-6">
+          <span className="text-lg font-black text-white/90 tracking-widest uppercase">Revealing soon</span>
+          <span className="text-xs text-slate-500 mt-1.5">Check back at the end of the season</span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Section: Hall of Champions (Season History) ───────────────────────────
+
+interface SeasonEntry {
+  num: number;
+  name: string;
+  icon: string;
+  dateRange: string;
+  months: string[];
+  top3: {
+    rank: number;
+    userId: number;
+    seasonPoints: number;
+    user: {
+      id: number;
+      username: string;
+      displayName: string;
+      avatarUrl?: string | null;
+      nftProfileTokenId?: string | null;
+      nftProfileImageUrl?: string | null;
+      activeProfilePicType?: string | null;
+    };
+  }[];
+}
+
+const SEASON_ICON_MAP: Record<string, JSX.Element> = {
+  sun:   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+  leaf:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>,
+  snow:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/><path d="m20 16-4-4 4-4"/><path d="m4 8 4 4-4 4"/><path d="m16 4-4 4-4-4"/><path d="m8 20 4-4 4 4"/></svg>,
+  flame: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>,
+};
+
+const RANK_TROPHY: Record<number, { img: string; color: string; bg: string; border: string }> = {
+  1: { img: "/podium-1st.png", color: "#FFD700", bg: "bg-[#FFD700]/10", border: "border-[#FFD700]/30" },
+  2: { img: "/podium-2nd.png", color: "#C0C0C0", bg: "bg-[#C0C0C0]/10", border: "border-[#C0C0C0]/30" },
+  3: { img: "/podium-3rd.png", color: "#CD7F32", bg: "bg-[#CD7F32]/10", border: "border-[#CD7F32]/30" },
+};
+
+function HallOfChampions() {
+  const { data: seasons, isLoading } = useQuery<SeasonEntry[]>({
+    queryKey: ["/api/leaderboard/season-history"],
+    queryFn: () => fetch("/api/leaderboard/season-history").then(r => r.json()),
+  });
+
+  return (
+    <section className="mb-8 px-4 sm:px-6 lg:px-10">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-5">
+        <Calendar className="w-5 h-5 text-[#FFD700]" />
+        <h2 className="text-xl font-black text-white tracking-wide uppercase">Season History</h2>
+      </div>
+
+      {isLoading ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-64 rounded-2xl bg-white/5 animate-pulse" />
+          ))}
+        </div>
+      ) : !Array.isArray(seasons) || seasons.length === 0 ? (
+        <div className="text-center py-12 text-slate-500">
+          <Trophy className="w-10 h-10 mx-auto mb-3 opacity-30" />
+          <p className="text-sm">No season history yet.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {seasons.map(season => {
+            const iconEl = SEASON_ICON_MAP[season.icon] ?? SEASON_ICON_MAP.sun;
+            const iconColor =
+              season.icon === "sun"   ? "#FFD700" :
+              season.icon === "leaf"  ? "#4ADE80" :
+              season.icon === "snow"  ? "#93C5FD" :
+              season.icon === "flame" ? "#F97316" : "#FFD700";
+
+            return (
+              <div
+                key={season.num}
+                className="rounded-2xl border border-white/10 bg-[#0d1520] flex flex-col overflow-hidden hover:border-white/20 transition-colors"
+              >
+                {/* Card header */}
+                <div className="px-5 pt-5 pb-4 border-b border-white/8">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span style={{ color: iconColor }} className="[&>svg]:w-5 [&>svg]:h-5">{iconEl}</span>
+                    <span className="text-xs font-black text-white/50 tracking-widest uppercase">
+                      Season {season.num}
+                    </span>
+                  </div>
+                  <div className="text-base font-bold text-white leading-tight">{season.name}</div>
+                  <div className="text-xs text-slate-500 mt-1">{season.dateRange}</div>
+                </div>
+
+                {/* Top 3 list */}
+                <div className="flex-1 px-4 py-5 space-y-5">
+                  {!season.top3 || season.top3.length === 0 ? (
+                    <div className="text-xs text-slate-600 text-center py-4">No data</div>
+                  ) : (
+                    season.top3.map(p => {
+                      const t = RANK_TROPHY[p.rank] ?? RANK_TROPHY[3];
+                      return (
+                        <Link key={p.userId} href={`/@${p.user.username}`}>
+                          <div className="flex items-center gap-3 cursor-pointer group py-2">
+                            <div className="relative flex-shrink-0">
+                              <UserAvatar user={p.user} size="md" />
+                              <img
+                                src={t.img}
+                                alt={`${p.rank} place`}
+                                className="absolute -bottom-1 -right-1.5 h-6 w-auto object-contain select-none"
+                                style={{ filter: `drop-shadow(0 1px 3px rgba(0,0,0,0.8))` }}
+                              />
+                            </div>
+                            <span className="text-sm font-semibold text-white/90 truncate group-hover:text-white transition-colors">
+                              {p.user.displayName || p.user.username}
+                            </span>
+                          </div>
+                        </Link>
+                      );
+                    })
+                  )}
+                </div>
+
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ─── Section: Season Categories ────────────────────────────────────────────
+
+const CATEGORIES = [
+  { icon: "🎥", title: "Clip Champion",         desc: "Most clips uploaded this season" },
+  { icon: "📱", title: "Reel Champion",          desc: "Most reels uploaded this season" },
+  { icon: "📸", title: "Screenshot Champion",    desc: "Most screenshots shared" },
+  { icon: "❤️", title: "Community Favourite",    desc: "Most likes received" },
+  { icon: "🔥", title: "Most Fire Reactions",    desc: "Most 🔥 reactions collected" },
+  { icon: "🎮", title: "Indie Game Champion",    desc: "Most content from indie titles" },
+  { icon: "🏅", title: "Rising Creator",         desc: "Biggest rank climb this season" },
+  { icon: "💬", title: "Most Helpful Member",    desc: "Most comments given" },
+];
+
+function SeasonCategories() {
+  return (
+    <section className="px-4 mb-8">
+      <div className="flex items-center gap-2 mb-2">
+        <Star className="w-5 h-5 text-[#B7FF1A]" />
+        <h2 className="text-xl font-black text-white">Season Awards</h2>
+        <span className="text-[10px] font-bold text-[#B7FF1A] bg-[#B7FF1A]/10 border border-[#B7FF1A]/20 px-2 py-0.5 rounded-full ml-1">
+          SEASON 01
+        </span>
+      </div>
+      <p className="text-slate-500 text-xs mb-4 ml-7">
+        Special recognition beyond the overall leaderboard.
+        <span className="text-[#B7FF1A]/70 ml-1">Winners revealed at season close.</span>
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {CATEGORIES.map((c, i) => (
+          <div
+            key={c.title}
+            className="relative rounded-xl border border-white/5 bg-gradient-to-b from-white/[0.04] to-white/[0.01] px-4 py-5 overflow-hidden group"
+          >
+            {/* Subtle animated shimmer on hover */}
+            <div className="absolute inset-0 bg-[#B7FF1A]/[0.02] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+            {/* Mystery card state */}
+            <div className="flex flex-col items-center text-center relative z-10">
+              {/* Rotating category icon with blur effect (teaser) */}
+              <div className="relative w-11 h-11 mb-3 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-lg bg-[#B7FF1A]/5 border border-[#B7FF1A]/10 group-hover:border-[#B7FF1A]/30 transition-colors" />
+                <span className="text-xl block blur-[1.5px] group-hover:blur-[1px] transition-all duration-300">{c.icon}</span>
+              </div>
+
+              {/* Title: blurred/teaser style */}
+              <div className="font-bold text-[11px] text-white/60 blur-[0.5px] group-hover:blur-0 group-hover:text-white/80 transition-all duration-300 mb-1">
+                {c.title}
+              </div>
+
+              {/* "Revealing Soon" pill replaces description */}
+              <div className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#B7FF1A]/70 bg-[#B7FF1A]/[0.06] border border-[#B7FF1A]/10 px-2.5 py-1 rounded-full">
+                <Sparkles className="w-3 h-3" />
+                Revealing Soon
+              </div>
+
+              {/* Lock icon overlay on mobile to reinforce mystery */}
+              <div className="absolute -top-1 -right-1 opacity-40 group-hover:opacity-70 transition-opacity">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 2a2.5 2.5 0 00-2.5 2.5V5h5v-.5A2.5 2.5 0 008 2z" fill="#64748b"/>
+                  <rect x="2" y="5" width="12" height="9" rx="1.5" fill="#64748b"/>
+                  <circle cx="8" cy="9.5" r="1" fill="#0B1218"/>
+                  <path d="M8 10.5v2" stroke="#0B1218" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+
+// ─── Main Page ─────────────────────────────────────────────────────────────
+
+const RS_STYLES = `
+@keyframes rs-float { 0%,100%{transform:translateY(0px);} 50%{transform:translateY(-6px);} }
+@keyframes rs-glow-pulse { 0%,100%{opacity:.6;} 50%{opacity:1;} }
+@keyframes rs-scroll-bounce { 0%,100%{transform:translateY(0);opacity:.65;} 50%{transform:translateY(6px);opacity:1;} }
+@keyframes lb-gold-breathe { 0%,100%{filter:drop-shadow(0 0 28px rgba(255,215,0,1.0)) drop-shadow(0 0 10px rgba(255,190,0,0.7)) drop-shadow(0 8px 18px rgba(220,160,0,0.5));} 50%{filter:drop-shadow(0 0 38px rgba(255,215,0,1.0)) drop-shadow(0 0 18px rgba(255,200,0,0.9)) drop-shadow(0 10px 24px rgba(220,160,0,0.65));} }
+/* ── Chrome shimmer for top-10 bars ── */
+@keyframes lb-chrome-sweep { 0%{transform:translateX(-120%);} 100%{transform:translateX(320%);} }
+.lb-bar-chrome { animation: lb-chrome-sweep 2.8s ease-in-out infinite; }
+.lb-bar-chrome-2 { animation: lb-chrome-sweep 2.8s ease-in-out 1.4s infinite; }
+/* ── Animated gold/white-gold spinning border for #1 card ── */
+@property --lb-border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes lb-border-spin {
+  to { --lb-border-angle: 360deg; }
+}
+.lb-card-1-border-wrap {
+  --lb-border-angle: 0deg;
+  display: inline-block;
+  padding: 3px;
+  border-radius: 20px;
+  background: conic-gradient(from var(--lb-border-angle),
+    #FFD700 0%, #FFFDE7 12%, #FFFFFF 24%, #FFF9C4 36%,
+    #FFD700 48%, #FFC200 62%, #FFFDE7 74%, #FFFFFF 84%, #FFD700 100%
+  );
+  animation: lb-border-spin 2.4s linear infinite;
+  box-shadow: 0 0 32px rgba(255,215,0,0.6), 0 0 64px rgba(255,200,0,0.25);
+}
+.lb-card-1-border-wrap .fire-card {
+  border-radius: 14px !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+.rs-hero-trophy { animation: rs-float 3.5s ease-in-out infinite; }
+.rs-scroll-arrow { animation: rs-scroll-bounce 1.5s ease-in-out infinite; }
+.lb-card-1-glow { animation: lb-gold-breathe 2.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .lb-card-1-border-wrap { animation: none !important; }
+}
+.rs-season-hero { height: calc(100dvh - 72px); min-height: 520px; }
+.lb-mobile-snap::-webkit-scrollbar { display: none; }
+/* Whole podium group — scale up vs the old .72 baseline */
+.lb-desktop-podium {
+  position: absolute;
+  top: 0;
+  right: auto;
+  bottom: 0;
+  left: 50%;
+  right: auto;
+  width: 700px;
+  gap: 2px;
+  transform: translateX(-50%) scale(1.067);
+  transform-origin: bottom center;
+}
+/* Per-rank scaling so #1 is visually larger than #2/#3 */
+.lb-card-1 { transform: scale(1.03) translateY(28px); transform-origin: bottom center; }
+.lb-card-2,
+.lb-card-3 { transform: scale(0.93); transform-origin: bottom center; }
+.lb-card-2 { margin-right: -120px; }
+.lb-card-3 { margin-left: -136px; }
+@media (min-width: 640px) {
+  .rs-season-hero { height: calc(100dvh - 144px); }
+}
+/* Keep the enlarged podium usable on short laptop/preview viewports. */
+@media (min-width: 1024px) and (max-height: 799px) {
+  .lb-desktop-podium { transform: translateX(-50%) scale(.856); }
+}
+@media (max-width: 639px) {
+  .rs-season-hero { height: auto; min-height: 0; padding-bottom: 10px; }
+  .lb-mobile-heading { font-size: 1.05rem; line-height: 1.2; }
+  .lb-mobile-subtitle { display: block; width: 100%; margin-top: 0.1rem; }
+}
+/* Tablet: slight scale down so all 3 fit */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .lb-desktop-podium {
+    left: 50%;
+    width: 660px;
+    transform: translateX(-50%) scale(.832);
+  }
+  .lb-card-1 { transform: scale(1.02) translateY(24px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lb-card-1-glow, .rs-hero-trophy, .rs-scroll-arrow { animation: none !important; }
+}
+.rs-section-divider { background: linear-gradient(90deg, transparent, rgba(183,255,26,0.2), transparent); height:1px; margin:0 1rem 2rem; }
+/* Mobile podium horizontal scroll */
+.mobile-podium-row::-webkit-scrollbar { display: none; }
+`;
+
+export default function LeaderboardPage() {
+  const { user } = useAuth();
+
+  // Top entries for the banner carousel (mobile shows up to 20, desktop uses first 3)
+  const { data: top3Data } = useQuery<TrendingEntry[]>({
+    queryKey: ["/api/trending-gamefolios/banner"],
+    queryFn: () => fetch("/api/trending-gamefolios?period=week&limit=20").then(r => r.json()),
+  });
+
+  // Weekly leaderboard (large limit) for rival + competitive overview
+  const { data: weeklyData } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard/weekly/current/full"],
+    queryFn: () => fetch("/api/leaderboard/weekly/current?limit=200").then(r => r.json()),
+  });
+
+  // Season leaderboard — used by CompetitiveOverview and RivalSection so rank
+  // shown here always matches the main season board (not a rolling weekly window).
+  const { data: pageSeasonData } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard/current-season/top", "page"],
+    queryFn: () => fetch("/api/leaderboard/current-season/top?limit=500").then(r => r.json()),
+  });
+
+  // All-time leaderboard (used by CompetitiveOverview)
+  const { data: alltimeData } = useQuery<LeaderboardEntry[]>({
+    queryKey: ["/api/leaderboard"],
+    queryFn: () => fetch("/api/leaderboard?limit=200").then(r => r.json()),
+  });
+
+  // Accurate season player count for the hero stat
+  const { data: playerCountData } = useQuery<{ count: number }>({
+    queryKey: ["/api/leaderboard/season-player-count"],
+    queryFn: () => fetch("/api/leaderboard/season-player-count").then(r => r.json()),
+  });
+
+  const { data: leagueConfigData } = useQuery<{ tiers: LeagueConfigTier[] }>({
+    queryKey: ["/api/leaderboard/league-config"],
+    queryFn: () => fetch("/api/leaderboard/league-config").then(r => r.json()),
+    staleTime: 60_000,
+  });
+
+  const top3 = top3Data ?? [];
+  const leaderboard = (Array.isArray(pageSeasonData) ? pageSeasonData : []) as LeaderboardEntry[];
+  const playerCount = playerCountData?.count ?? alltimeData?.length ?? weeklyData?.length ?? 0;
+  const leagueTiers = leagueConfigData?.tiers ?? [];
+
+  return (
+    <div
+      className="min-h-screen bg-[#0B1218] overflow-y-auto"
+      style={{ overscrollBehaviorX: "none" }}
+    >
+      <style>{RS_STYLES}{CREATOR_CARD_STYLES}</style>
+
+      {/* Banner — electrical bg + creator cards carousel */}
+      <SeasonHero entries={top3} />
+
+      {/* Season info bar — below the banner image */}
+      <SeasonInfoBar playerCount={playerCount} />
+
+      {/* ── Live Leaderboard — directly under Summer Showdown ── */}
+      <div id="current-season" className="w-full border-b border-white/5 pt-0 pb-6 scroll-mt-4">
+        <LiveLeaderboard userId={user?.id} />
+      </div>
+
+      {/* Narrow sections */}
+      <div className="max-w-3xl mx-auto pt-6">
+
+        {/* Competitive Overview — logged-in only */}
+        {user && leaderboard.length > 0 && (
+          <>
+            <CompetitiveOverview leaderboard={leaderboard} userId={user.id} tiers={leagueTiers} />
+            <div className="rs-section-divider" />
+          </>
+        )}
+        {!user && (
+          <div className="mx-4 mb-6 p-5 rounded-2xl border border-[#B7FF1A]/20 bg-[#B7FF1A]/5 text-center">
+            <Trophy className="w-7 h-7 text-[#B7FF1A] mx-auto mb-2 opacity-70" />
+            <p className="text-sm text-slate-300 font-medium mb-1">Join the competition</p>
+            <p className="text-xs text-slate-500">Sign in to see your rank, league, rivals, and how close you are to the next tier.</p>
+          </div>
+        )}
+
+      </div>
+
+      {/* Narrow sections continued */}
+      <div className="max-w-3xl mx-auto">
+        <div className="rs-section-divider mt-4" />
+
+        {/* Rival Section — logged-in only */}
+        {user && leaderboard.length > 0 && (
+          <>
+            <RivalSection leaderboard={leaderboard} userId={user.id} />
+            <div className="rs-section-divider" />
+          </>
+        )}
+      </div>
+
+      {/* Hall of Champions — full width */}
+      <div className="w-full py-2">
+        <HallOfChampions />
+      </div>
+
+      {/* Remaining narrow sections */}
+      <div className="max-w-3xl mx-auto pb-[calc(6rem+env(safe-area-inset-bottom,0px))] sm:pb-20">
+        <div className="rs-section-divider" />
+      </div>
+
+      {/* Season Rewards — full width */}
+      <div className="w-full">
+        <SeasonRewards />
+      </div>
+
+      <div className="w-full pb-20" />
+    </div>
+  );
+}

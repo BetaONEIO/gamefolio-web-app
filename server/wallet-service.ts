@@ -18,10 +18,11 @@ import {
 
 const GF_DECIMALS = 18;
 const DEFAULT_CHAIN = 'skale-nebula-testnet';
+const RPC_URL = SKALE_BASE_MAINNET.rpcUrls.default.http[0];
 
 const publicClient = createPublicClient({
   chain: SKALE_BASE_MAINNET,
-  transport: http(),
+  transport: http(RPC_URL),
 });
 
 // Throws on RPC failure. Use getOnChainGfBalanceSafe when a fallback to 0 is acceptable.
@@ -38,8 +39,8 @@ export async function getOnChainGfBalance(address: string): Promise<bigint> {
 export async function getOnChainGfBalanceSafe(address: string): Promise<bigint> {
   try {
     return await getOnChainGfBalance(address);
-  } catch (e) {
-    console.error('[WalletService] balanceOf failed for', address, e);
+  } catch (e: any) {
+    console.error('[WalletService] balanceOf RPC call failed for', address, '— returning 0. Cause:', e?.message ?? e);
     return 0n;
   }
 }

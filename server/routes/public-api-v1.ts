@@ -7,6 +7,8 @@ import { requireOAuthScope } from '../middleware/oauth-auth';
 import { oauthRateLimiter } from '../oauth-rate-limiter';
 import { upload } from './upload';
 import { processAndCreateClip, ClipProcessingError } from '../services/clip-processing';
+import { captureRouteError } from "../sentry";
+import { getRequestMeta } from "../lib/request-meta";
 
 const router = Router();
 
@@ -45,21 +47,40 @@ router.get('/me', requireOAuthScope('profile:read'), oauthRateLimiter, async (re
       bio: user.bio,
     });
   } catch (error) {
+    captureRouteError(error);
     console.error('[Public API v1] GET /me error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
 });
 
+const CLIPS_DEFAULT_PAGE_SIZE = 20;
+const CLIPS_MAX_PAGE_SIZE = 50;
+
 /**
  * GET /api/public/v1/clips — clips:read
  * Only the authorizing user's own clips — public catalog browsing doesn't need OAuth.
+ * Paginated (limit/pageSize + page) — an unpaginated fetch of a prolific
+ * streamer's full clip history is what was timing out integrations out at 20s.
  */
 router.get('/clips', requireOAuthScope('clips:read'), oauthRateLimiter, async (req: Request, res: Response) => {
   try {
-    const clips = await storage.getClipsByUserId(req.oauthContext!.userId);
+    const rawLimit = Number(req.query.limit ?? req.query.pageSize);
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0
+      ? Math.min(Math.floor(rawLimit), CLIPS_MAX_PAGE_SIZE)
+      : CLIPS_DEFAULT_PAGE_SIZE;
+
+    const rawPage = Number(req.query.page);
+    const page = Number.isFinite(rawPage) && rawPage > 0 ? Math.floor(rawPage) : 1;
+    const offset = (page - 1) * limit;
+
+    const { clips, total } = await storage.getClipsByUserIdPaginated(req.oauthContext!.userId, { limit, offset });
     const signedClips = await Promise.all(clips.map(signClipMediaUrls));
-    return res.json({ clips: signedClips });
+    return res.json({
+      clips: signedClips,
+      pagination: { page, pageSize: limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    });
   } catch (error) {
+    captureRouteError(error);
     console.error('[Public API v1] GET /clips error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -73,6 +94,7 @@ router.get('/clips/:id', requireOAuthScope('clips:read'), oauthRateLimiter, asyn
     }
     return res.json({ clip: await signClipMediaUrls(clip) });
   } catch (error) {
+    captureRouteError(error);
     console.error('[Public API v1] GET /clips/:id error:', error);
     return res.status(500).json({ error: 'server_error' });
   }
@@ -146,6 +168,7 @@ router.post('/clips', requireOAuthScope('clips:write'), oauthRateLimiter, upload
       throw new Error('Supabase upload failed - no URL returned');
     }
 
+    const { ip: uploadIp, deviceId: uploadDeviceId } = getRequestMeta(req);
     const responseData = await processAndCreateClip(userId, {
       uploadResult: { url: uploadResult.url, path: `users/${userId}/${fileName}` },
       title,
@@ -156,6 +179,8 @@ router.post('/clips', requireOAuthScope('clips:write'), oauthRateLimiter, upload
       ageRestricted,
       trimStart,
       trimEnd,
+      uploadIp,
+      uploadDeviceId,
     });
 
     return res.status(201).json({
@@ -163,6 +188,7 @@ router.post('/clips', requireOAuthScope('clips:write'), oauthRateLimiter, upload
       clip: await signClipMediaUrls(responseData.clip),
     });
   } catch (error) {
+    captureRouteError(error);
     if (req.file?.path) fs.unlink(req.file.path, () => {});
     if (error instanceof ClipProcessingError) {
       return res.status(error.status).json(error.body);

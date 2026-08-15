@@ -9,6 +9,7 @@ import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
+import { AmbassadorBadge } from "@/components/ui/ambassador-badge";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
@@ -707,6 +708,7 @@ const ClipPage = () => {
                             size="sm"
                           />
                           <ProBadge selectedVerificationBadgeId={(clip.user as any).selectedVerificationBadgeId} size="sm" />
+                          <AmbassadorBadge isAmbassador={(clip.user as any).isAmbassador} size="sm" />
                         </div>
                       </Link>
                     ) : (

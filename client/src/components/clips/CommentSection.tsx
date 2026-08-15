@@ -19,6 +19,7 @@ import { EmojiPickerButton } from "@/components/ui/EmojiPickerButton";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
 import { PartnerBadge } from "@/components/ui/partner-badge";
+import { AmbassadorBadge } from "@/components/ui/ambassador-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { useAuthModal } from "@/hooks/use-auth-modal";
 import { useSignedUrl } from "@/hooks/use-signed-url";
@@ -293,6 +294,7 @@ const CommentSection = ({ clipId, screenshotId, currentUserId = 1, onUsernameCli
                       <ModeratorBadge isModerator={((comment.user as any).role === "moderator" || (comment.user as any).role === "admin") && !(comment.user as any).selectedVerificationBadgeId} size="sm" />
                       <ProBadge selectedVerificationBadgeId={(comment.user as any).selectedVerificationBadgeId} size="sm" />
                       <PartnerBadge isPartner={(comment.user as any).isPartner} size="sm" />
+                      <AmbassadorBadge isAmbassador={(comment.user as any).isAmbassador} size="sm" />
                     </span>
                   </Link>
                   <MentionText text={comment.content} className="inline text-sm break-words" onLinkClick={onUsernameClick} />

@@ -2,10 +2,12 @@ import { Link, useLocation } from "wouter";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera, Clock, X as XIcon } from "lucide-react";
+import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera, Clock, Layers, X as XIcon, Rocket, Radio, KeyRound, Gamepad2, BarChart3, Megaphone } from "lucide-react";
+import { isPartnerType } from "@shared/partner-access";
 import {
   LevelTrackerIcon,
   ReferFriendIcon,
+  AmbassadorIcon,
   GoProIcon,
   ManageProIcon,
   AccountSettingsIcon,
@@ -39,6 +41,7 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { LootboxDialog, LootboxTrigger } from "@/components/lootbox/LootboxDialog";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
+import { AmbassadorBadge } from "@/components/ui/ambassador-badge";
 import { LevelTrackerModal } from "@/components/level/LevelTrackerModal";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useLevelTracker } from "@/hooks/use-level-tracker";
@@ -46,6 +49,7 @@ import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import ManageProDialog from "@/components/ManageProDialog";
 import { useAuthModal } from "@/hooks/use-auth-modal";
 import { resolveApiUrl } from "@/lib/platform";
+import { useIndieMode } from "@/hooks/use-indie-mode";
 
 const RECENT_SEARCHES_KEY = "gamefolio_recent_searches";
 const MAX_RECENT = 8;
@@ -164,6 +168,7 @@ const Header = () => {
     }
   }, [user?.id, (user as any)?.userType]);
   const { isPro } = useRevenueCat();
+  const { isIndieMode } = useIndieMode();
   const { state: levelTrackerState, hideLevelTracker } = useLevelTracker();
   
   const isLevelTrackerOpen = levelTrackerOpen || levelTrackerState.isOpen;
@@ -313,6 +318,9 @@ const Header = () => {
                 src={logoGreen}
                 alt="Gamefolio"
                 className="h-[45px] sm:h-[60px] md:h-[72px] xl:h-24 w-auto object-contain flex-shrink-0"
+                draggable={false}
+                onContextMenu={(e) => e.preventDefault()}
+                style={{ WebkitTouchCallout: "none", WebkitUserDrag: "none" } as React.CSSProperties}
               />
             </div>
           </Link>
@@ -408,10 +416,43 @@ const Header = () => {
                   </>
                 )}
 
+                {/* Users Section */}
+                {userResults && userResults.length > 0 && (
+                  <>
+                    {searchQuery.startsWith('#') && <div className="border-t border-border my-2"></div>}
+                    <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Users</div>
+                    {userResults.slice(0, 3).map((searchUser) => (
+                      <button
+                        key={searchUser.id}
+                        onClick={() => handleUserSelect(searchUser.username)}
+                        className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left"
+                      >
+                        <CustomAvatar 
+                          user={searchUser}
+                          size="sm"
+                          borderIntensity="subtle"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium text-foreground">{searchUser.displayName}</span>
+                            <ModeratorBadge 
+                              isModerator={(searchUser.role === "moderator" || searchUser.role === "admin") && !searchUser.selectedVerificationBadgeId} 
+                              size="sm" 
+                            />
+                            <ProBadge selectedVerificationBadgeId={searchUser.selectedVerificationBadgeId} size="sm" />
+                            <AmbassadorBadge isAmbassador={(searchUser as any).isAmbassador} size="sm" />
+                          </div>
+                          <div className="text-sm text-muted-foreground">@{searchUser.username}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </>
+                )}
+
                 {/* Games Section */}
                 {gameResults && gameResults.length > 0 && (
                   <>
-                    {searchQuery.startsWith('#') && <div className="border-t border-border my-2"></div>}
+                    {(userResults && userResults.length > 0 || searchQuery.startsWith('#')) && <div className="border-t border-border my-2"></div>}
                     <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Games</div>
                     {gameResults.slice(0, 3).map((game) => (
                       <button
@@ -435,38 +476,6 @@ const Header = () => {
                         <div className="flex-1 min-w-0">
                           <span className="font-medium text-foreground block truncate">{game.name}</span>
                           <div className="text-sm text-muted-foreground">Game</div>
-                        </div>
-                      </button>
-                    ))}
-                  </>
-                )}
-
-                {/* Users Section */}
-                {userResults && userResults.length > 0 && (
-                  <>
-                    {((gameResults && gameResults.length > 0) || searchQuery.startsWith('#')) && <div className="border-t border-border my-2"></div>}
-                    <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Users</div>
-                    {userResults.slice(0, 3).map((searchUser) => (
-                      <button
-                        key={searchUser.id}
-                        onClick={() => handleUserSelect(searchUser.username)}
-                        className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left"
-                      >
-                        <CustomAvatar 
-                          user={searchUser}
-                          size="sm"
-                          borderIntensity="subtle"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium text-foreground">{searchUser.displayName}</span>
-                            <ModeratorBadge 
-                              isModerator={(searchUser.role === "moderator" || searchUser.role === "admin") && !searchUser.selectedVerificationBadgeId} 
-                              size="sm" 
-                            />
-                            <ProBadge selectedVerificationBadgeId={searchUser.selectedVerificationBadgeId} size="sm" />
-                          </div>
-                          <div className="text-sm text-muted-foreground">@{searchUser.username}</div>
                         </div>
                       </button>
                     ))}
@@ -521,46 +530,91 @@ const Header = () => {
           />
           {user ? (
             <>
-              <LootboxTrigger onClick={() => setLootboxOpen(true)} />
+              {!isIndieMode && <LootboxTrigger onClick={() => setLootboxOpen(true)} />}
               <NotificationBell />
-              <LootboxDialog open={lootboxOpen} onOpenChange={setLootboxOpen} />
-              <LevelTrackerModal 
-                open={isLevelTrackerOpen} 
-                onOpenChange={handleLevelTrackerClose}
-                level={user?.level || 1}
-                totalXP={user?.totalXP || 0}
-                username={user?.username}
-                xpDelta={levelTrackerState.xpDelta}
-                previousXP={levelTrackerState.previousXP}
-              />
+              {!isIndieMode && <LootboxDialog open={lootboxOpen} onOpenChange={setLootboxOpen} />}
+              {!isIndieMode && (
+                <LevelTrackerModal 
+                  open={isLevelTrackerOpen} 
+                  onOpenChange={handleLevelTrackerClose}
+                  level={user?.level || 1}
+                  totalXP={user?.totalXP || 0}
+                  username={user?.username}
+                  xpDelta={levelTrackerState.xpDelta}
+                  previousXP={levelTrackerState.previousXP}
+                />
+              )}
               <ManageProDialog 
                 open={manageProOpen} 
                 onOpenChange={setManageProOpen}
               />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button 
-                    className="ml-2 sm:ml-4 flex items-center px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)]"
-                  >
-                    <Plus className="mr-1 sm:mr-3 h-4 w-4 sm:h-6 sm:w-6" />
-                    <span className="hidden sm:inline">Upload</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 mt-2">
-                  <DropdownMenuItem onClick={() => { window.dispatchEvent(new CustomEvent('upload-type-change', { detail: 'clips' })); setLocation('/upload?type=clips'); }} className="cursor-pointer">
-                    <Video className="h-4 w-4 mr-2" />
-                    Upload Clip
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { window.dispatchEvent(new CustomEvent('upload-type-change', { detail: 'reels' })); setLocation('/upload?type=reels'); }} className="cursor-pointer">
-                    <Film className="h-4 w-4 mr-2" />
-                    Upload Reel
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { window.dispatchEvent(new CustomEvent('upload-type-change', { detail: 'screenshots' })); setLocation('/upload?type=screenshots'); }} className="cursor-pointer">
-                    <Camera className="h-4 w-4 mr-2" />
-                    Upload Screenshot
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {isIndieMode ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="ml-2 sm:ml-4 flex items-center px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)]">
+                      <Plus className="mr-1 sm:mr-3 h-4 w-4 sm:h-6 sm:w-6" />
+                      <span className="hidden sm:inline">New</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52 mt-2">
+                    <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
+                      <Rocket className="h-4 w-4 mr-2" />
+                      New Campaign
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setLocation('/indie/dashboard')} className="cursor-pointer">
+                      <KeyRound className="h-4 w-4 mr-2" />
+                      Upload Keys
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
+                      <Gamepad2 className="h-4 w-4 mr-2" />
+                      Manage Game
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
+                      <Megaphone className="h-4 w-4 mr-2" />
+                      Publish Update
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      View Analytics
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      className="ml-2 sm:ml-4 flex items-center px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)]"
+                    >
+                      <Plus className="mr-1 sm:mr-3 h-4 w-4 sm:h-6 sm:w-6" />
+                      <span className="hidden sm:inline">Upload</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 mt-2">
+                    <DropdownMenuItem onClick={() => { window.dispatchEvent(new CustomEvent('upload-type-change', { detail: 'clips' })); setLocation('/upload?type=clips'); }} className="cursor-pointer">
+                      <Video className="h-4 w-4 mr-2" />
+                      Upload Clip
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { window.dispatchEvent(new CustomEvent('upload-type-change', { detail: 'reels' })); setLocation('/upload?type=reels'); }} className="cursor-pointer">
+                      <Film className="h-4 w-4 mr-2" />
+                      Upload Reel
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { window.dispatchEvent(new CustomEvent('upload-type-change', { detail: 'screenshots' })); setLocation('/upload?type=screenshots'); }} className="cursor-pointer">
+                      <Camera className="h-4 w-4 mr-2" />
+                      Upload Screenshot
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setLocation('/scheduled-posts')} className="cursor-pointer" data-testid="menu-scheduled-posts">
+                      <Clock className="h-4 w-4 mr-2" />
+                      Scheduled posts
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setLocation('/upload/bulk')} className="cursor-pointer">
+                      <Layers className="h-4 w-4 mr-2" />
+                      Bulk Upload
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
 
               <div className="relative">
                 <DropdownMenu>
@@ -591,7 +645,7 @@ const Header = () => {
                             <p className="text-sm text-muted-foreground">@{user.username}</p>
                           </div>
                         </div>
-                        {user.currentStreak && user.currentStreak > 0 && (
+                        {!isIndieMode && user.currentStreak && user.currentStreak > 0 && (
                           <div className="flex items-center gap-1 bg-orange-500/10 px-2 py-1 rounded-md" title="Daily login streak">
                             <Flame className="h-4 w-4 text-orange-500" />
                             <span className="text-sm font-semibold text-orange-500">{user.currentStreak}</span>
@@ -609,14 +663,16 @@ const Header = () => {
                       </span>
                       <span>My Gamefolio</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onClick={() => setLocation("/level-tracker")}
-                      data-testid="button-level-tracker"
-                    >
-                      <LevelTrackerIcon className="mr-2 h-4 w-4" />
-                      <span>Level Tracker</span>
-                    </DropdownMenuItem>
+                    {!isIndieMode && (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/level-tracker")}
+                        data-testid="button-level-tracker"
+                      >
+                        <LevelTrackerIcon className="mr-2 h-4 w-4" />
+                        <span>Level Tracker</span>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       className="cursor-pointer"
                       onClick={() => setLocation("/account/settings?tab=referral")}
@@ -625,7 +681,18 @@ const Header = () => {
                       <ReferFriendIcon className="mr-2 h-4 w-4" />
                       <span>Refer a Friend</span>
                     </DropdownMenuItem>
-                    
+
+                    {user?.isAmbassador && (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/ambassador-dashboard")}
+                        data-testid="button-ambassador-dashboard"
+                      >
+                        <AmbassadorIcon className="mr-2 h-4 w-4" />
+                        <span>Ambassador Dashboard</span>
+                      </DropdownMenuItem>
+                    )}
+
                     {!(isPro || user?.isPro || (user?.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date())) && (
                       <DropdownMenuItem
                         className="cursor-pointer text-white"
@@ -649,28 +716,50 @@ const Header = () => {
                       </DropdownMenuItem>
                     )}
 
-                    <DropdownMenuSeparator />
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel className="text-xs font-medium text-muted-foreground px-2 pt-0">
-                        Settings
-                      </DropdownMenuLabel>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => setLocation("/account/settings")}
-                      >
-                        <AccountSettingsIcon className="mr-2 h-4 w-4" />
-                        <span>Account Settings</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => setLocation("/settings/profile")}
-                      >
-                        <ProfileAppearanceIcon className="mr-2 h-4 w-4" />
-                        <span>Profile & Appearance</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
+                    {!isIndieMode && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel className="text-xs font-medium text-muted-foreground px-2 pt-0">
+                            Settings
+                          </DropdownMenuLabel>
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => setLocation("/account/settings")}
+                          >
+                            <AccountSettingsIcon className="mr-2 h-4 w-4" />
+                            <span>Account Settings</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => setLocation("/settings/profile")}
+                          >
+                            <ProfileAppearanceIcon className="mr-2 h-4 w-4" />
+                            <span>Profile & Appearance</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuGroup>
+                      </>
+                    )}
 
                     <DropdownMenuSeparator />
+                    {(user.userType?.split(",").includes("indie_developer") || isPartnerType(user, "indie") || user.role === "admin") && (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/indie/dashboard")}
+                      >
+                        <Rocket className="mr-2 h-4 w-4" />
+                        Game Dashboard
+                      </DropdownMenuItem>
+                    )}
+                    {(user.userType?.split(",").includes("streamer") || isPartnerType(user, "streamer") || user.role === "admin") && (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/streamer/dashboard")}
+                      >
+                        <Radio className="mr-2 h-4 w-4" />
+                        Streamer Dashboard
+                      </DropdownMenuItem>
+                    )}
                     {user.role === "admin" && (
                       <DropdownMenuItem
                         className="cursor-pointer"
@@ -848,10 +937,43 @@ const Header = () => {
                       </>
                     )}
 
+                    {/* Users Section */}
+                    {userResults && userResults.length > 0 && (
+                      <>
+                        {searchQuery.startsWith('#') && <div className="border-t border-border my-2"></div>}
+                        <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Users</div>
+                        {userResults.slice(0, 3).map((searchUser) => (
+                          <button
+                            key={searchUser.id}
+                            onClick={() => handleUserSelect(searchUser.username)}
+                            className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left touch-manipulation active:bg-secondary/50"
+                          >
+                            <CustomAvatar 
+                              user={searchUser}
+                              size="sm"
+                              borderIntensity="subtle"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium text-foreground">{searchUser.displayName}</span>
+                                <ModeratorBadge 
+                                  isModerator={(searchUser.role === "moderator" || searchUser.role === "admin") && !searchUser.selectedVerificationBadgeId} 
+                                  size="sm" 
+                                />
+                                <ProBadge selectedVerificationBadgeId={searchUser.selectedVerificationBadgeId} size="sm" />
+                                <AmbassadorBadge isAmbassador={(searchUser as any).isAmbassador} size="sm" />
+                              </div>
+                              <div className="text-sm text-muted-foreground">@{searchUser.username}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </>
+                    )}
+
                     {/* Games Section */}
                     {gameResults && gameResults.length > 0 && (
                       <>
-                        {searchQuery.startsWith('#') && <div className="border-t border-border my-2"></div>}
+                        {(userResults && userResults.length > 0 || searchQuery.startsWith('#')) && <div className="border-t border-border my-2"></div>}
                         <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Games</div>
                         {gameResults.slice(0, 3).map((game) => (
                           <button
@@ -875,38 +997,6 @@ const Header = () => {
                             <div className="flex-1 min-w-0">
                               <span className="font-medium text-foreground block truncate">{game.name}</span>
                               <div className="text-sm text-muted-foreground">Game</div>
-                            </div>
-                          </button>
-                        ))}
-                      </>
-                    )}
-
-                    {/* Users Section */}
-                    {userResults && userResults.length > 0 && (
-                      <>
-                        {((gameResults && gameResults.length > 0) || searchQuery.startsWith('#')) && <div className="border-t border-border my-2"></div>}
-                        <div className="text-xs text-muted-foreground px-3 py-2 font-medium">Users</div>
-                        {userResults.slice(0, 3).map((searchUser) => (
-                          <button
-                            key={searchUser.id}
-                            onClick={() => handleUserSelect(searchUser.username)}
-                            className="w-full flex items-center gap-3 px-3 py-3 rounded-md hover:bg-secondary transition-colors text-left touch-manipulation active:bg-secondary/50"
-                          >
-                            <CustomAvatar 
-                              user={searchUser}
-                              size="sm"
-                              borderIntensity="subtle"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1">
-                                <span className="font-medium text-foreground">{searchUser.displayName}</span>
-                                <ModeratorBadge 
-                                  isModerator={(searchUser.role === "moderator" || searchUser.role === "admin") && !searchUser.selectedVerificationBadgeId} 
-                                  size="sm" 
-                                />
-                                <ProBadge selectedVerificationBadgeId={searchUser.selectedVerificationBadgeId} size="sm" />
-                              </div>
-                              <div className="text-sm text-muted-foreground">@{searchUser.username}</div>
                             </div>
                           </button>
                         ))}

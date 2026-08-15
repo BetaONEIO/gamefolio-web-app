@@ -18,9 +18,11 @@ import ForzaGif from "@assets/video-720-ezgif.com-optimize_1756741905949.gif";
 import { useLocation, Link } from "wouter";
 import FeaturedUsersSection from "@/components/home/FeaturedUsersSection";
 import RecommendedForYou from "@/components/home/RecommendedForYou";
+import TrendingHeroSlide from "@/components/home/TrendingSlider";
 import { EcosystemActivityRail } from "@/components/home/EcosystemActivityRail";
 import { DailyXPChallenges } from "@/components/home/DailyXPChallenges";
 import { LiveStreamsSection } from "@/components/home/LiveStreamsSection";
+import FeaturedGamefolioBanner from "@/components/home/FeaturedGamefolioBanner";
 import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { useMobile } from "@/hooks/use-mobile";
@@ -38,16 +40,7 @@ const POPULAR_GAMES = [
   { id: 'minecraft', name: 'Minecraft' },
 ];
 
-interface HeroSlide {
-  id: number;
-  title: string;
-  subtitle: string | null;
-  buttonText: string | null;
-  buttonLink: string | null;
-  imageUrl: string;
-  displayOrder: number;
-  isActive: boolean;
-}
+type HeroSlideType = 'trending' | 'leaderboard' | 'gopro';
 
 const HomePage = () => {
   const [feedPeriod, setFeedPeriod] = useState<'day' | 'week' | 'month'>('day');
@@ -57,14 +50,18 @@ const HomePage = () => {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   
-  // Hero carousel state
+  // Hero carousel — 3 fixed slides: trending, leaderboard, go pro
+  const HERO_SLIDES: HeroSlideType[] = ['trending', 'leaderboard', 'gopro'];
   const [currentSlide, setCurrentSlide] = useState(0);
   const slideTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const heroScrollingRef = useRef(false);
+  const heroScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Refs for grab scroll behavior
   const trendingGamesRef = useRef<HTMLDivElement>(null);
   const reelsContainerRef = useRef<HTMLDivElement>(null);
-  
+
   // Get current user from auth context
   const { user } = useAuth();
   const userId = user?.id;
@@ -73,43 +70,22 @@ const HomePage = () => {
   const isMobile = useMobile();
   const { toast } = useToast();
 
-  const { data: heroSlides } = useQuery<HeroSlide[]>({
-    queryKey: ["/api/hero-slides"],
-    staleTime: 10000,
-    refetchOnWindowFocus: true,
-  });
-
-  const { data: heroSettings } = useQuery<{ intervalSeconds: number }>({
-    queryKey: ["/api/hero-slides/settings"],
-    staleTime: 30000,
-  });
-
-  const slideIntervalMs = (heroSettings?.intervalSeconds || 6) * 1000;
-
-  const activeSlides = useMemo(() => {
-    if (!heroSlides || heroSlides.length === 0) return null;
-    return heroSlides;
-  }, [heroSlides]);
+  const slideIntervalMs = 8000;
 
   const resetSlideTimer = useCallback(() => {
     if (slideTimerRef.current) clearInterval(slideTimerRef.current);
-    if (activeSlides && activeSlides.length > 1) {
-      slideTimerRef.current = setInterval(() => {
-        setCurrentSlide((prev) => (prev + 1) % activeSlides.length);
-      }, slideIntervalMs);
-    }
-  }, [activeSlides, slideIntervalMs]);
+    if (isVideoPlaying) return;
+    slideTimerRef.current = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, slideIntervalMs);
+  }, [isVideoPlaying]);
 
   useEffect(() => {
     resetSlideTimer();
     return () => { if (slideTimerRef.current) clearInterval(slideTimerRef.current); };
   }, [resetSlideTimer]);
 
-  useEffect(() => {
-    if (activeSlides && currentSlide >= activeSlides.length) {
-      setCurrentSlide(0);
-    }
-  }, [activeSlides, currentSlide]);
+  useEffect(() => { resetSlideTimer(); }, [isVideoPlaying]);
 
   const goToSlide = useCallback((idx: number) => {
     setCurrentSlide(idx);
@@ -117,14 +93,20 @@ const HomePage = () => {
   }, [resetSlideTimer]);
 
   const nextSlide = useCallback(() => {
-    if (!activeSlides) return;
-    goToSlide((currentSlide + 1) % activeSlides.length);
-  }, [activeSlides, currentSlide, goToSlide]);
+    goToSlide((currentSlide + 1) % HERO_SLIDES.length);
+  }, [currentSlide, goToSlide]);
 
   const prevSlide = useCallback(() => {
-    if (!activeSlides) return;
-    goToSlide((currentSlide - 1 + activeSlides.length) % activeSlides.length);
-  }, [activeSlides, currentSlide, goToSlide]);
+    goToSlide((currentSlide - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
+  }, [currentSlide, goToSlide]);
+
+  const handleHeroWheel = useCallback(() => {
+    heroScrollingRef.current = true;
+    if (heroScrollTimeoutRef.current) clearTimeout(heroScrollTimeoutRef.current);
+    heroScrollTimeoutRef.current = setTimeout(() => {
+      heroScrollingRef.current = false;
+    }, 300);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -327,6 +309,20 @@ const HomePage = () => {
     };
   }, []);
 
+  // Top 3 leaderboard entries for the hero slide — uses season endpoint for accurate season XP
+  const { data: leaderboardTop3 } = useQuery<Array<{
+    rank: number; totalPoints: number; userId: number;
+    user: { username: string; displayName?: string | null; avatarUrl?: string | null; level?: number | null; };
+  }>>({
+    queryKey: ['/api/leaderboard/current-season', 'top3'],
+    queryFn: async () => {
+      const res = await fetch('/api/leaderboard/current-season/top?limit=3', { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch leaderboard');
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+
   // Query all clips (used for popular clips section)
   const { data: userClips, isLoading: isLoadingUserClips } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/clips`, Date.now()], // Force new query every time
@@ -464,116 +460,156 @@ const HomePage = () => {
   return (
     <>
     <div className="space-y-16 max-w-none px-4 md:px-6 py-4 md:py-6">
-      {/* Hero Banner Carousel - Full width with negative margin to compensate for parent padding */}
+      {/* Hero Banner Carousel — 3 fixed slides: Trending, Leaderboard, Go Pro */}
       <section className="mb-10 -mx-4 md:-mx-6 -mt-4 md:-mt-6">
-        <div className="relative overflow-hidden">
-          <div className="w-full bg-black relative min-h-[350px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px] border-b-2 border-primary">
-            {activeSlides && activeSlides.length > 0 ? (
-              <div className="relative w-full h-full min-h-[350px] md:min-h-[450px] lg:min-h-[500px] xl:min-h-[550px]">
-                {activeSlides.map((slide, idx) => (
-                  <div
-                    key={slide.id}
-                    className="absolute inset-0 transition-opacity duration-700 ease-in-out"
-                    style={{ opacity: idx === currentSlide ? 1 : 0, zIndex: idx === currentSlide ? 1 : 0 }}
-                  >
-                    <img
-                      src={slide.imageUrl}
-                      alt={slide.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent">
-                      <div className="flex flex-col items-start justify-center h-full max-w-3xl p-8 md:p-12">
-                        <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight drop-shadow-md">
-                          {slide.title}
-                        </h1>
-                        {slide.subtitle && (
-                          <h2 className="text-2xl md:text-3xl font-semibold text-primary mb-6 leading-tight drop-shadow-lg">
-                            {slide.subtitle}
-                          </h2>
-                        )}
-                        {slide.buttonText && (
-                          <Button
-                            className="w-fit px-6 py-5 h-auto text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground mt-4"
-                            onClick={() => {
-                              if (!slide.buttonLink) return;
-                              const link = slide.buttonLink.toLowerCase();
-                              if (link === '#pro' || link === '/pro' || link.includes('pro')) {
-                                window.dispatchEvent(new CustomEvent('open-pro-upgrade'));
-                              } else {
-                                setLocation(slide.buttonLink);
-                              }
-                            }}
-                          >
-                            {slide.buttonText}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {activeSlides.length > 1 && (
-                  <>
-                    <button
-                      onClick={prevSlide}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
-                      aria-label="Previous slide"
-                    >
-                      <ChevronLeft className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={nextSlide}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
-                      aria-label="Next slide"
-                    >
-                      <ChevronRight className="h-5 w-5" />
-                    </button>
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2">
-                      {activeSlides.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => goToSlide(idx)}
-                          className={`w-2.5 h-2.5 rounded-full transition-all ${idx === currentSlide ? 'bg-primary w-6' : 'bg-white/50 hover:bg-white/80'}`}
-                          aria-label={`Go to slide ${idx + 1}`}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
+        <div
+          className="relative w-full min-h-[280px] md:min-h-[360px] lg:min-h-[400px] xl:min-h-[440px] bg-black overflow-hidden border-b-2 border-primary"
+          onWheel={handleHeroWheel}
+          style={{ touchAction: 'pan-y' }}
+        >
+          {/* Slide 0: Trending */}
+          <div
+            className="absolute inset-0 transition-opacity duration-700 ease-in-out"
+            style={{ opacity: currentSlide === 0 ? 1 : 0, zIndex: currentSlide === 0 ? 1 : 0 }}
+          >
+            <TrendingHeroSlide onPlayingChange={setIsVideoPlaying} />
+          </div>
+
+          {/* Slide 1: Leaderboard */}
+          <div
+            className="absolute inset-0 transition-opacity duration-700 ease-in-out"
+            style={{ opacity: currentSlide === 1 ? 1 : 0, zIndex: currentSlide === 1 ? 1 : 0 }}
+          >
+            <div className="absolute inset-0 overflow-hidden">
+              <img
+                src={BannerImage}
+                alt="Leaderboard"
+                className="absolute inset-0 w-full h-full object-cover opacity-40"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
+            </div>
+            <div className="absolute inset-0 flex flex-col items-start justify-center p-8 md:p-12">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full" style={{ background: '#B7FF18', color: '#03080A' }}>Live Rankings</span>
               </div>
-            ) : (
+              <h1 className="text-3xl md:text-5xl font-black text-white mb-4 leading-tight drop-shadow-md">
+                Leaderboard
+              </h1>
+
+              {/* Top 3 players */}
+              {leaderboardTop3 && leaderboardTop3.length > 0 ? (
+                <div className="flex flex-col gap-2 mb-6 w-full max-w-sm">
+                  {leaderboardTop3.map((entry) => {
+                    const medalColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
+                    const medal = ['🥇', '🥈', '🥉'][entry.rank - 1] ?? `#${entry.rank}`;
+                    return (
+                      <div
+                        key={entry.userId}
+                        className="flex items-center gap-3 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-2 cursor-pointer hover:bg-black/70 transition-colors"
+                        onClick={() => setLocation(`/gamefolio/${entry.user.username}`)}
+                      >
+                        <span className="text-lg w-6 text-center">{medal}</span>
+                        {entry.user.avatarUrl ? (
+                          <img
+                            src={entry.user.avatarUrl}
+                            alt={entry.user.username}
+                            className="w-8 h-8 rounded-full object-cover border-2"
+                            style={{ borderColor: medalColors[entry.rank - 1] ?? '#555' }}
+                          />
+                        ) : (
+                          <div
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-black text-xs font-bold border-2"
+                            style={{ background: medalColors[entry.rank - 1] ?? '#555', borderColor: medalColors[entry.rank - 1] ?? '#555' }}
+                          >
+                            {entry.user.username?.[0]?.toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white font-bold text-sm truncate leading-none mb-0.5">
+                            {entry.user.displayName || entry.user.username}
+                          </p>
+                          <p className="text-white/50 text-xs">@{entry.user.username}</p>
+                        </div>
+                        <span className="text-xs font-bold tabular-nums" style={{ color: '#B7FF18' }}>
+                          {formatNumber(entry.totalPoints)} XP
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-white/70 text-base md:text-lg mb-6 max-w-md">
+                  See who's dominating. Climb the ranks by uploading clips, getting likes, and building your following.
+                </p>
+              )}
+
+              <Button
+                className="px-6 py-5 h-auto text-base font-bold"
+                style={{ background: '#B7FF18', color: '#03080A' }}
+                onClick={() => setLocation('/leaderboard')}
+              >
+                View Leaderboard
+              </Button>
+            </div>
+          </div>
+
+          {/* Slide 2: Go Pro */}
+          <div
+            className="absolute inset-0 transition-opacity duration-700 ease-in-out"
+            style={{ opacity: currentSlide === 2 ? 1 : 0, zIndex: currentSlide === 2 ? 1 : 0 }}
+          >
+            <div className="absolute inset-0 overflow-hidden">
               <img
                 src={ForzaGif}
-                alt="Epic racing gameplay - Build your Gamefolio"
-                className="w-full h-full object-cover"
+                alt="Go Pro"
+                className="absolute inset-0 w-full h-full object-cover opacity-30"
               />
-            )}
-          </div>
-          {(!activeSlides || activeSlides.length === 0) && (
-            <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/50 to-transparent">
-              <div className="flex flex-col items-start justify-center h-full max-w-3xl p-8 md:p-12">
-                <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight drop-shadow-md">
-                  Build Your Gamefolio
-                </h1>
-                <h2 className="text-2xl md:text-3xl font-semibold text-primary mb-6 leading-tight drop-shadow-lg">
-                  With Your Best Gaming Clips
-                </h2>
-                <p className="text-gray-200 mb-8 max-w-lg text-base md:text-lg leading-relaxed">
-                  Showcase your most epic gaming moments, connect with other gamers, and build your personal gaming portfolio.
-                </p>
-                <Button
-                  className="w-fit px-6 py-5 h-auto text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
-                  onClick={() => setLocation('/upload')}
-                >
-                  Start Building Now
-                </Button>
-              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
             </div>
-          )}
+            <div className="absolute inset-0 flex flex-col items-start justify-center max-w-2xl p-8 md:p-12">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-yellow-400 text-black">Exclusive</span>
+              </div>
+              <h1 className="text-3xl md:text-5xl font-black text-white mb-3 leading-tight drop-shadow-md">
+                Go Pro
+              </h1>
+              <p className="text-white/70 text-base md:text-lg mb-6 max-w-md">
+                Unlock larger uploads, a Pro badge, GFT lootbox rewards, ad-free browsing, and priority support.
+              </p>
+              <Button
+                className="px-6 py-5 h-auto text-base font-bold bg-yellow-400 hover:bg-yellow-300 text-black"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-pro-upgrade'))}
+              >
+                Upgrade to Pro
+              </Button>
+            </div>
+          </div>
+
+          {/* Carousel nav */}
+          <button
+            onClick={() => { if (!heroScrollingRef.current) prevSlide(); }}
+            className="absolute left-3 top-1/2 -translate-y-1/2 z-30 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+            aria-label="Previous slide"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => { if (!heroScrollingRef.current) nextSlide(); }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 z-30 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+            aria-label="Next slide"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
         </div>
       </section>
 
+      {/* Featured Gamefolio — Official Profile */}
+      <section className="px-0">
+        <FeaturedGamefolioBanner />
+      </section>
+
       {/* Ecosystem Activity Rail */}
-      {/* <EcosystemActivityRail /> */}
+      <EcosystemActivityRail />
       
       {/* Latest Clips Section */}
       <section className="px-0">
@@ -888,9 +924,9 @@ const HomePage = () => {
       {user && <RecommendedForYou userId={user.id} />}
       
       {/* Trending Gamefolios Section */}
-      {/* <section className="mt-16 px-0">
+      <section className="mt-16 px-0">
         <FeaturedUsersSection />
-      </section> */}
+      </section>
 
       {/* Trending Games Section */}
       <section className="mt-16 px-0">

@@ -16,6 +16,7 @@ import { PixelHeartReaction } from "@/components/ui/PixelHeartReaction";
 import { EmojiPickerButton } from "@/components/ui/EmojiPickerButton";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
+import { AmbassadorBadge } from "@/components/ui/ambassador-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useSignedUrl } from "@/hooks/use-signed-url";
@@ -234,6 +235,7 @@ export function ScreenshotCommentSection({ screenshotId, onUsernameClick }: Scre
                       {comment.user.username}
                       <ModeratorBadge isModerator={((comment.user as any).role === "moderator" || (comment.user as any).role === "admin") && !(comment.user as any).selectedVerificationBadgeId} size="sm" />
                       <ProBadge selectedVerificationBadgeId={(comment.user as any).selectedVerificationBadgeId} size="sm" />
+                      <AmbassadorBadge isAmbassador={(comment.user as any).isAmbassador} size="sm" />
                     </span>
                   </Link>
                   <MentionText text={comment.content} className="inline text-sm break-words" onLinkClick={onUsernameClick} />

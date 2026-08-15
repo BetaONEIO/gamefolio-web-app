@@ -4,22 +4,27 @@ import path from "path";
 import fs from "fs";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-// Derive the Sentry "release" from the Android build version so every captured
-// error maps to the exact build QA installed, e.g. "gamefolio@1.3.3+39".
-function androidRelease(): string {
+// Derive the Sentry "release" so every captured error maps to the exact
+// build QA installed. On iOS, scripts/ios-testflight.sh exports
+// IOS_BUILD_NUMBER (the same UTC-timestamp value it stamps as
+// CFBundleVersion) - use that so consecutive iOS uploads under the same
+// marketing version get distinct release strings. Otherwise fall back to
+// the Android version fields, e.g. "gamefolio@1.3.3+39".
+function appRelease(): string {
   try {
     const gradle = fs.readFileSync(
       path.resolve(import.meta.dirname, "android/app/build.gradle"),
       "utf8",
     );
     const name = gradle.match(/versionName\s+"([^"]+)"/)?.[1] ?? "0.0.0";
-    const code = gradle.match(/versionCode\s+(\d+)/)?.[1] ?? "0";
+    const iosBuild = process.env.IOS_BUILD_NUMBER;
+    const code = iosBuild ?? gradle.match(/versionCode\s+(\d+)/)?.[1] ?? "0";
     return `gamefolio@${name}+${code}`;
   } catch {
     return "gamefolio@unknown";
   }
 }
-const APP_RELEASE = androidRelease();
+const APP_RELEASE = appRelease();
 
 // Sourcemap upload only runs when SENTRY_AUTH_TOKEN is present (release/CI
 // builds). Without it, builds are completely unaffected.
