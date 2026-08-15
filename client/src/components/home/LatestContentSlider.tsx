@@ -4,6 +4,7 @@ import { ClipWithUser } from "@shared/schema";
 import { Play, ChevronLeft, ChevronRight, Pause, Volume2, VolumeX, Upload, ImageIcon, Film, Video, Maximize2, Sword, Info, X } from "lucide-react";
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { Link, useLocation } from "wouter";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 
 const NEON = "#B7FF1A";
 
@@ -60,6 +61,10 @@ export default function LatestContentSlider() {
   const isLoading = mode === "clips" ? clipsLoading : reelsLoading;
   const current = items.length > 0 ? items[activeIndex] : null;
   const gameId = current?.gameId ?? current?.game?.id ?? null;
+
+  const { signedUrl: signedThumbnailUrl } = useSignedUrl(current?.thumbnailUrl);
+  const { signedUrl: signedVideoUrl } = useSignedUrl(current?.videoUrl);
+  const { signedUrl: signedAvatarUrl } = useSignedUrl(current?.user?.avatarUrl);
 
   const { data: contentCounts } = useQuery<ContentCounts>({
     queryKey: ["/api/games", gameId, "content-counts"],
@@ -174,7 +179,7 @@ export default function LatestContentSlider() {
 
   const gameImage = current.game?.imageUrl || current.gameImageUrl || null;
   const gameName = current.game?.name || current.gameName || "";
-  const avatarUrl = current.user?.avatarUrl || null;
+  const avatarUrl = signedAvatarUrl || current.user?.avatarUrl || null;
   const username = current.user?.username || "";
 
   return (
@@ -213,21 +218,21 @@ export default function LatestContentSlider() {
             onClick={handlePlayClick}
           >
             {/* Blurred bg */}
-            {current.thumbnailUrl && !playing && (
-              <img src={current.thumbnailUrl} alt="" className="absolute inset-0 w-full h-full object-cover"
+            {signedThumbnailUrl && !playing && (
+              <img src={signedThumbnailUrl} alt="" className="absolute inset-0 w-full h-full object-cover"
                 style={{ filter: "blur(18px)", opacity: 0.2, transform: "scale(1.08)" }} />
             )}
 
             {/* Thumbnail */}
             {!playing && (
-              <img src={current.thumbnailUrl || `/api/clips/${current.id}/thumbnail`}
+              <img src={signedThumbnailUrl || `/api/clips/${current.id}/thumbnail`}
                 alt={current.title}
                 className="absolute inset-0 w-full h-full z-10 object-contain" />
             )}
 
             {/* Video */}
-            {playing && current.videoUrl && (
-              <video ref={videoRef} src={current.videoUrl}
+            {playing && signedVideoUrl && (
+              <video ref={videoRef} src={signedVideoUrl}
                 className="absolute inset-0 w-full h-full z-10"
                 style={{ objectFit: "contain", background: "#000" }}
                 autoPlay muted={muted} playsInline
