@@ -439,6 +439,12 @@ class TwitchApiService {
    * broadcaster_id, no user token or extra OAuth scope. Each clip is enriched
    * with a derived MP4 URL and resolved game metadata; clips whose MP4 URL
    * cannot be derived are dropped (they aren't importable).
+   *
+   * Twitch's Get Clips endpoint, when called without started_at/ended_at,
+   * returns the broadcaster's all-time most-viewed clips rather than their
+   * most recent ones — a single old viral clip can then permanently crowd
+   * out anything new. Bounding to a rolling 30-day window keeps results
+   * actually recent and lets old clips age out as the window slides forward.
    */
   async getClipsForBroadcaster(broadcasterId: string, limit: number = 20): Promise<TwitchClip[]> {
     if (!this.isConfigured()) {
@@ -447,6 +453,11 @@ class TwitchApiService {
     if (!broadcasterId) return [];
 
     const token = await this.getAccessToken();
+    // Twitch defaults ended_at to started_at + 1 week when only started_at is
+    // given, not "through now" — both must be passed explicitly or the window
+    // ends up stuck in the past instead of covering recent activity.
+    const endedAt = new Date();
+    const startedAt = new Date(endedAt.getTime() - 30 * 24 * 60 * 60 * 1000);
     const response = await axios.get('https://api.twitch.tv/helix/clips', {
       headers: {
         'Client-ID': this.clientId,
@@ -455,6 +466,8 @@ class TwitchApiService {
       params: {
         broadcaster_id: broadcasterId,
         first: Math.min(Math.max(limit, 1), 100),
+        started_at: startedAt.toISOString(),
+        ended_at: endedAt.toISOString(),
       },
     });
 
