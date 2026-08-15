@@ -1523,11 +1523,14 @@ export const insertUserUploadUsageSchema = createInsertSchema(userUploadUsage).o
 });
 
 // Daily Twitch-clip import limit: counts clips fetched from Twitch and
-// successfully posted. Free users: 2/day, Pro users: 10/day. Reset is by UTC day.
+// successfully posted. Free users: 2/day, Pro users: 10/day. The allowance
+// is a rolling 24h window starting at the user's first import in it (see
+// getActiveImportWindow in database-storage.ts) — importDate just records
+// the UTC calendar date the window started, for auditing/uniqueness.
 export const userDailyImports = pgTable("user_daily_imports", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  importDate: text("import_date").notNull(), // YYYY-MM-DD format in UTC
+  importDate: text("import_date").notNull(), // UTC date (YYYY-MM-DD) the window started
   importsCount: integer("imports_count").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -1802,6 +1805,10 @@ export interface ImportLimits {
   maxImportsPerDay: number;
   importsUsedToday: number;
   canImport: boolean;
+  // ISO timestamp of when the rolling 24h window (from the user's first
+  // import in it) expires and the allowance becomes fully available again.
+  // null when the user has no active window (full allowance available).
+  resetsAt: string | null;
 }
 
 // Upload limits configuration type

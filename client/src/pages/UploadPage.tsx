@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import * as Sentry from "@sentry/capacitor";
 import { useLocation } from "wouter";
+import { formatDistanceToNow } from "date-fns";
 import { ScheduleControl, type ScheduleLimits } from "@/components/upload/ScheduleControl";
 import { queryClient, authedFetch, getQueryFn } from "@/lib/queryClient";
 import { getAccessToken, getAccessTokenSync } from "@/lib/auth-token";
@@ -3678,8 +3679,14 @@ const UploadPage = () => {
             >
               You've imported{" "}
               <span className="font-semibold">{importLimits.importsUsedToday}</span> of{" "}
-              <span className="font-semibold">{importLimits.maxImportsPerDay}</span> Twitch clips today —{" "}
-              {importLimits.canImport ? "this refreshes tomorrow." : "your limit refreshes tomorrow."}
+              <span className="font-semibold">{importLimits.maxImportsPerDay}</span> Twitch clips
+              {importLimits.resetsAt ? (
+                <>
+                  {" "}— resets 24 hours after your first import ({formatDistanceToNow(new Date(importLimits.resetsAt), { addSuffix: true })}).
+                </>
+              ) : (
+                <> — your full allowance is available.</>
+              )}
               {!importLimits.isPro && (
                 <> Pro members can import up to 10 a day.</>
               )}
