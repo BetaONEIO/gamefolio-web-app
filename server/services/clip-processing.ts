@@ -281,9 +281,42 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
         actualDuration = processedDuration;
         console.log(`✅ Clip re-encoded to H.264. Duration: ${actualDuration}s`);
       } else {
-        console.log('🖼️ Generating clip thumbnail (no trimming/re-encode needed)...');
-        thumbnailUrl = await VideoProcessor.generateAutoThumbnail(tempVideoPath, userId, `${videoType}_thumb`);
-        console.log(`✅ Clip thumbnail generated: ${thumbnailUrl ? thumbnailUrl.substring(0, 60) + '...' : 'NONE'}`);
+        // No trim and already browser-playable, but raw phone/console/OBS
+        // captures are frequently 20-50+ Mbps — far above what's needed for
+        // feed/mobile playback. Re-encoding at CRF 23 (same target reels
+        // always get) cuts storage + per-view egress with no visible quality
+        // loss, so only genuinely already-efficient clips skip it.
+        const sourceBitrateMbps = actualDuration > 0
+          ? (videoBuffer.byteLength * 8) / actualDuration / 1_000_000
+          : 0;
+        const MAX_CLIP_BITRATE_MBPS = 6;
+        if (sourceBitrateMbps > MAX_CLIP_BITRATE_MBPS) {
+          console.log(`📉 Compressing clip — source bitrate ~${sourceBitrateMbps.toFixed(1)} Mbps exceeds ${MAX_CLIP_BITRATE_MBPS} Mbps target`);
+          const { videoUrl: compressedUrl, thumbnailUrl: clipThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
+            tempVideoPath, tempClipId, 0, actualDuration, true, userId, 'clip'
+          );
+          processedVideoUrl = compressedUrl;
+          thumbnailUrl = clipThumbnailUrl || '';
+          actualDuration = processedDuration;
+          console.log(`✅ Clip compressed. Duration: ${actualDuration}s`);
+        } else {
+          console.log(`🖼️ Generating clip thumbnail (bitrate ~${sourceBitrateMbps.toFixed(1)} Mbps already efficient, no re-encode needed)...`);
+          thumbnailUrl = await VideoProcessor.generateAutoThumbnail(tempVideoPath, userId, `${videoType}_thumb`);
+          console.log(`✅ Clip thumbnail generated: ${thumbnailUrl ? thumbnailUrl.substring(0, 60) + '...' : 'NONE'}`);
+        }
+      }
+
+      // Re-encoding (reel crop, trim, or compression above) uploads a new
+      // processed file and the clip row stores processedVideoUrl — the raw
+      // upload this replaced is no longer referenced anywhere, so leaving it
+      // in Supabase storage is pure orphaned cost. Safe to delete: nothing
+      // still points at it.
+      if (processedVideoUrl !== uploadResult.url) {
+        try {
+          await supabaseStorage.deleteFile(uploadResult.path);
+        } catch (cleanupError) {
+          console.warn('Could not delete superseded raw upload:', cleanupError);
+        }
       }
 
       fs.unlink(tempVideoPath, (err) => {
