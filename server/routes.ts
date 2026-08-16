@@ -3827,7 +3827,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     period: unknown,
     limit: unknown,
     gameId: unknown,
-    currentUserId: number | undefined,
   ): string {
     const allowedPeriods = new Set(['all', 'recent', 'day', 'week', 'month', 'year']);
     const periodStr = typeof period === 'string' && allowedPeriods.has(period) ? period : 'all';
@@ -3835,7 +3834,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const parsedGameId = gameId !== undefined && gameId !== '' && !Number.isNaN(parseInt(String(gameId), 10))
       ? parseInt(String(gameId), 10)
       : '';
-    return `${route}:${periodStr}:${parsedLimit}:${parsedGameId}:${currentUserId ?? 'guest'}`;
+    // No per-user component — trending results are now identical for every
+    // requester (public accounts only, see getTrendingClips), so one cache
+    // entry serves everyone instead of fragmenting per logged-in user.
+    return `${route}:${periodStr}:${parsedLimit}:${parsedGameId}`;
   }
 
   // Evict all trending cache entries whose key starts with a given route prefix.
@@ -8397,20 +8399,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clips/trending", async (req, res) => {
     try {
       const { period = 'all', limit = 10, gameId } = req.query;
-      const currentUserId = (req.user as any)?.id;
 
       // Force no caching for privacy-sensitive content
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
 
-      const cacheKey = trendingCacheKey('clips', period, limit, gameId, currentUserId);
+      const cacheKey = trendingCacheKey('clips', period, limit, gameId);
       const signed = await getCachedTrending(cacheKey, async () => {
         const clips = await storage.getTrendingClips(
           period as string,
           parseInt(limit as string) || 10,
-          gameId ? parseInt(gameId as string) : undefined,
-          currentUserId
+          gameId ? parseInt(gameId as string) : undefined
         );
         return await signClipUrls(clips);
       });
@@ -8426,14 +8426,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clips/reels/trending", async (req, res) => {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
-      const currentUserId = (req.user as any)?.id;
-      const cacheKey = trendingCacheKey('reels-home', period, limit, gameId, currentUserId);
+      const cacheKey = trendingCacheKey('reels-home', period, limit, gameId);
       const reels = await getCachedTrending(cacheKey, async () => {
         const raw = await storage.getTrendingReels(
           period as string,
           parseInt(limit as string) || 10,
-          gameId ? parseInt(gameId as string) : undefined,
-          currentUserId
+          gameId ? parseInt(gameId as string) : undefined
         );
         return await signClipUrls(raw);
       });
@@ -8463,14 +8461,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reels/trending", async (req, res) => {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
-      const currentUserId = (req.user as any)?.id;
-      const cacheKey = trendingCacheKey('reels', period, limit, gameId, currentUserId);
+      const cacheKey = trendingCacheKey('reels', period, limit, gameId);
       const result = await getCachedTrending(cacheKey, async () => {
         const reels = await storage.getTrendingReels(
           period as string,
           parseInt(limit as string) || 10,
-          gameId ? parseInt(gameId as string) : undefined,
-          currentUserId
+          gameId ? parseInt(gameId as string) : undefined
         );
         return await Promise.all(
           reels.map(async (reel) => {

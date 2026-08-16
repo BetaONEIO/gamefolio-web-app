@@ -156,8 +156,8 @@ export interface IStorage {
   getClipsByGameId(gameId: number, limit?: number): Promise<ClipWithUser[]>;
   getClipsWithDuration(duration: number): Promise<Clip[]>;
   getFeedClips(period?: string, limit?: number): Promise<ClipWithUser[]>;
-  getTrendingClips(period: string, limit: number, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]>;
-  getTrendingReels(period: string, limit: number, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]>;
+  getTrendingClips(period: string, limit: number, gameId?: number): Promise<ClipWithUser[]>;
+  getTrendingReels(period: string, limit: number, gameId?: number): Promise<ClipWithUser[]>;
   getLatestReels(limit: number, currentUserId?: number): Promise<ClipWithUser[]>;
   getLatestScreenshots(limit: number, gameId?: number): Promise<any[]>;
   getClipById(id: number): Promise<ClipWithUser | null>;
