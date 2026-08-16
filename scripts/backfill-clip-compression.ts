@@ -69,6 +69,16 @@ async function backfillClip(id: number) {
       return;
     }
     const buf = Buffer.from(await resp.arrayBuffer());
+
+    // A silently-truncated download (connection dropped mid-stream without
+    // fetch throwing) would otherwise get re-encoded as if it were the
+    // whole clip, shortening it. Caught downstream by the duration check
+    // too, but verifying here avoids burning a full ffmpeg pass on a
+    // doomed input.
+    if (buf.length !== oldSize) {
+      console.log(`[${id}] download truncated (expected ${oldSize} bytes, got ${buf.length}), skipping`);
+      return;
+    }
     await fs.promises.writeFile(tempVideoPath, buf);
 
     const { videoUrl: newUrl, duration: newDuration } = await VideoProcessor.processVideo(
@@ -88,6 +98,17 @@ async function backfillClip(id: number) {
     const newSize = newSignedUrl ? await headContentLength(newSignedUrl) : null;
     if (!newSize) {
       console.log(`[${id}] new file not reachable after upload, leaving original in place`);
+      return;
+    }
+
+    // CRF is quality-targeted, not size-targeted — for some source content
+    // (already heavily/differently compressed, high-noise footage) a CRF 23
+    // re-encode can come out larger than the source. Whole point of this
+    // script is to shrink storage, so a result that doesn't must be
+    // discarded rather than swapped in.
+    if (newSize >= oldSize) {
+      console.log(`[${id}] re-encode was not smaller (${(oldSize / 1e6).toFixed(1)}MB -> ${(newSize / 1e6).toFixed(1)}MB), leaving original in place`);
+      try { await supabaseStorage.deleteFile(supabaseStorage.extractStoragePath(newUrl)!); } catch {}
       return;
     }
     const newMbps = (newSize * 8) / newDuration / 1_000_000;
