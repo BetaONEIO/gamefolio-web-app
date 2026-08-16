@@ -3776,7 +3776,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Short-lived in-memory cache for trending feeds (DB query + signed URLs).
   // Keyed by route+normalized-params+user. Bounded LRU so user-controlled
   // query params can't blow up memory.
-  const TRENDING_CACHE_TTL_MS = 30_000;
+  // Now that this cache is genuinely shared across every requester (no more
+  // per-user key), a longer TTL multiplies its payoff instead of just
+  // trading staleness for a marginal hit-rate bump on a handful of
+  // per-user entries.
+  const TRENDING_CACHE_TTL_MS = 90_000;
   const TRENDING_CACHE_MAX_ENTRIES = 500;
   // Map preserves insertion order — re-inserting on hit gives us LRU semantics.
   const trendingCache = new Map<string, { expires: number; data: any }>();
@@ -3828,7 +3832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     limit: unknown,
     gameId: unknown,
   ): string {
-    const allowedPeriods = new Set(['all', 'recent', 'day', 'week', 'month', 'year']);
+    const allowedPeriods = new Set(['all', 'recent', 'day', 'week', 'month', 'year', '1d', '1w', 'ever']);
     const periodStr = typeof period === 'string' && allowedPeriods.has(period) ? period : 'all';
     const parsedLimit = Math.max(1, Math.min(50, parseInt(String(limit ?? '10'), 10) || 10));
     const parsedGameId = gameId !== undefined && gameId !== '' && !Number.isNaN(parseInt(String(gameId), 10))
@@ -8081,7 +8085,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clips/latest", async (req, res) => {
     try {
       const { limit = '50', period, gameId } = req.query;
-      const currentUserId = (req.user as any)?.id;
 
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
@@ -8093,13 +8096,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       else if (period === '1w') since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       else if (period === 'ever') since = undefined;
 
-      const latestClips = await storage.getLatestClips(
-        parseInt(limit as string) || 50,
-        since,
-        gameId ? parseInt(gameId as string) : undefined,
-        currentUserId
-      );
-      const signed = await signClipUrls(latestClips);
+      const cacheKey = trendingCacheKey('clips-latest', period, limit, gameId);
+      const signed = await getCachedTrending(cacheKey, async () => {
+        const latestClips = await storage.getLatestClips(
+          parseInt(limit as string) || 50,
+          since,
+          gameId ? parseInt(gameId as string) : undefined
+        );
+        return await signClipUrls(latestClips);
+      });
       res.json(signed);
     } catch (err) {
       captureRouteError(err);
@@ -8447,9 +8452,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reels/latest", async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 6;
-      const currentUserId = (req.user as any)?.id;
-      const reels = await storage.getLatestReels(limit, currentUserId);
-      res.json(await signClipUrls(reels));
+      const cacheKey = trendingCacheKey('reels-latest', 'all', limit, undefined);
+      const reels = await getCachedTrending(cacheKey, async () => {
+        const raw = await storage.getLatestReels(limit);
+        return await signClipUrls(raw);
+      });
+      res.json(reels);
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching latest reels:", err);
