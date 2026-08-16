@@ -1179,7 +1179,7 @@ export class DatabaseStorage implements IStorage {
     return clipsWithDetails;
   }
 
-  async getTrendingClips(period: string = 'recent', limit: number = 10, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]> {
+  async getTrendingClips(period: string = 'recent', limit: number = 10, gameId?: number): Promise<ClipWithUser[]> {
     let dateFilter: Date | null;
     const now = new Date();
 
@@ -1221,12 +1221,16 @@ export class DatabaseStorage implements IStorage {
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'clip'),
           gameId ? eq(clips.gameId, gameId) : undefined,
-          // Only show clips from public accounts OR private accounts that current user follows OR user's own content
-          or(
-            eq(users.isPrivate, false), // Public accounts
-            currentUserId ? eq(users.id, currentUserId) : sql`false`, // User's own content
-            currentUserId ? sql`exists (select 1 from follows f where f.following_id = ${users.id} and f.follower_id = ${currentUserId})` : sql`false` // Current user follows this private account
-          ),
+          // Public accounts only. This used to also include the requester's
+          // own content and any private accounts they follow, but that made
+          // the result (and therefore the cache entry in getCachedTrending)
+          // different per user — every distinct logged-in user forced a
+          // cache miss for what should be one shared "trending" computation,
+          // multiplying DB load and signed-URL generation. Trending is a
+          // public discovery surface; a private account's content showing
+          // up there for its followers was a minor nicety, not a
+          // requirement — it still appears on that creator's own profile.
+          eq(users.isPrivate, false),
           // Only show content for approved games (or no game)
           or(
             sql`${clips.gameId} IS NULL`,
@@ -1282,7 +1286,7 @@ export class DatabaseStorage implements IStorage {
     return clipsWithDetails;
   }
 
-  async getTrendingReels(period: string = 'recent', limit: number = 10, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]> {
+  async getTrendingReels(period: string = 'recent', limit: number = 10, gameId?: number): Promise<ClipWithUser[]> {
     let dateFilter: Date | null;
     const now = new Date();
 
@@ -1338,24 +1342,16 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(likes, eq(clips.id, likes.clipId))
       .leftJoin(comments, eq(clips.id, comments.clipId))
       .leftJoin(clipReactions, eq(clips.id, clipReactions.clipId))
-      .leftJoin(follows, and(
-        eq(follows.followingId, users.id),
-        currentUserId ? eq(follows.followerId, currentUserId) : sql`false`
-      ))
       .where(
         and(
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'reel'),
           gameId ? eq(clips.gameId, gameId) : undefined,
-          // Only show reels from public accounts OR private accounts that current user follows OR user's own content
-          or(
-            eq(users.isPrivate, false), // Public accounts
-            currentUserId ? eq(users.id, currentUserId) : sql`false`, // User's own content
-            currentUserId ? and(
-              eq(users.isPrivate, true),
-              eq(follows.followerId, currentUserId) // Current user follows this private account
-            ) : sql`false` // If no current user, don't show any private content
-          ),
+          // Public accounts only — see getTrendingClips for why this no
+          // longer varies per requester (own content / followed private
+          // accounts): that made every logged-in user's trending result
+          // distinct, defeating the shared cache in getCachedTrending.
+          eq(users.isPrivate, false),
           // Only show content for approved games (or no game)
           sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`,
           // Exclude content from suspended/banned users
