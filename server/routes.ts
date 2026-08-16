@@ -9470,19 +9470,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only delete your own clips" });
       }
 
-      // Delete the clip from Supabase storage
-      if (clip.videoUrl) {
+      // Delete the clip from Supabase storage. deleteFile() takes a
+      // bucket-relative path, not the public URL stored on the row — must
+      // extract it first or Supabase silently no-ops (no matching object,
+      // no error), which is why deleted clips were never actually removed
+      // from storage.
+      const clipVideoPath = clip.videoUrl ? supabaseStorage.extractStoragePath(clip.videoUrl) : null;
+      if (clipVideoPath) {
         try {
-          await supabaseStorage.deleteFile(clip.videoUrl);
+          await supabaseStorage.deleteFile(clipVideoPath);
         } catch (error) {
           console.warn("Could not delete video file from Supabase:", error);
         }
       }
 
       // Delete the thumbnail from Supabase storage
-      if (clip.thumbnailUrl) {
+      const clipThumbnailPath = clip.thumbnailUrl ? supabaseStorage.extractStoragePath(clip.thumbnailUrl) : null;
+      if (clipThumbnailPath) {
         try {
-          await supabaseStorage.deleteFile(clip.thumbnailUrl);
+          await supabaseStorage.deleteFile(clipThumbnailPath);
         } catch (error) {
           console.warn("Could not delete thumbnail file from Supabase:", error);
         }
@@ -14093,14 +14099,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only delete your own screenshots" });
       }
 
-      // Delete screenshot files from Supabase storage
+      // Delete screenshot files from Supabase storage. deleteFile() takes a
+      // bucket-relative path, not the public URL stored on the row — must
+      // extract it first or Supabase silently no-ops (no matching object,
+      // no error), which is why deleted screenshots were never actually
+      // removed from storage.
       console.log(`🗑️ Deleting files from Supabase for screenshot ${screenshotId}`);
       try {
-        if (screenshot.imageUrl) {
-          await supabaseStorage.deleteFile(screenshot.imageUrl);
+        const imagePath = screenshot.imageUrl ? supabaseStorage.extractStoragePath(screenshot.imageUrl) : null;
+        if (imagePath) {
+          await supabaseStorage.deleteFile(imagePath);
         }
-        if (screenshot.thumbnailUrl) {
-          await supabaseStorage.deleteFile(screenshot.thumbnailUrl);
+        const thumbPath = screenshot.thumbnailUrl ? supabaseStorage.extractStoragePath(screenshot.thumbnailUrl) : null;
+        if (thumbPath) {
+          await supabaseStorage.deleteFile(thumbPath);
         }
         console.log(`✅ Files deleted from Supabase`);
       } catch (fileErr) {
