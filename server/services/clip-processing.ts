@@ -1,5 +1,3 @@
-import path from 'path';
-import fs from 'fs';
 import sharp from 'sharp';
 import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
@@ -9,11 +7,6 @@ import { insertClipSchema } from '@shared/schema';
 import { VideoProcessor } from '../video-processor';
 import { XPService } from '../xp-service';
 import { CreatorMilestoneService } from '../creator-milestone-service';
-
-const tempDir = path.join(process.cwd(), "temp");
-if (!fs.existsSync(tempDir)) {
-  fs.mkdirSync(tempDir, { recursive: true });
-}
 
 // Thrown for the "expected" failure cases (bad input, over limits) so both the
 // in-app upload route and the OAuth public API can map it back to the exact same
@@ -193,29 +186,32 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   const generateShareCode = () => nanoid(8);
 
   try {
-    const tempVideoPath = path.join(tempDir, `video-${Date.now()}.mp4`);
-
     let downloadUrl = uploadResult.url;
     try {
       const signedUrl = await supabaseStorage.convertToSignedUrl(uploadResult.url, 300);
       if (signedUrl) {
         downloadUrl = signedUrl;
-        console.log(`🔑 Using signed URL for video download`);
+        console.log(`🔑 Using signed URL for video processing`);
       }
     } catch (signError) {
       console.warn('Could not generate signed URL, falling back to public URL:', signError);
     }
-    console.log(`🎬 Downloading video for thumbnail generation from: ${downloadUrl.substring(0, 80)}...`);
-    const videoResponse = await fetch(downloadUrl);
-    console.log(`📥 Video download response: ${videoResponse.status} ${videoResponse.statusText}`);
 
-    if (videoResponse.ok) {
-      const videoBuffer = await videoResponse.arrayBuffer();
-      console.log(`📦 Video downloaded: ${(videoBuffer.byteLength / (1024 * 1024)).toFixed(2)} MB`);
-
-      if (videoBuffer.byteLength > maxSizeBytes) {
+    // Size and codec/duration checks used to require downloading the whole
+    // file first — for an oversized upload that gets rejected outright, or
+    // a clip that turns out not to need re-encoding, that download was pure
+    // wasted egress. ffprobe/ffmpeg both read directly from an http(s) URL
+    // via range requests, so probing (and, below, thumbnail generation for
+    // clips that don't need re-encoding) never has to pull the full file
+    // back from Supabase at all. Only the branches that actually re-encode
+    // still need the bytes, and they get them by pointing ffmpeg at
+    // downloadUrl directly rather than a local copy.
+    {
+      const headResp = await fetch(downloadUrl, { method: 'HEAD' });
+      const sizeBytes = parseInt(headResp.headers.get('content-length') || '0', 10);
+      if (sizeBytes > maxSizeBytes) {
         try { await supabaseStorage.deleteFile(uploadResult.path); } catch {}
-        const actualSizeMB = (videoBuffer.byteLength / (1024 * 1024)).toFixed(1);
+        const actualSizeMB = (sizeBytes / (1024 * 1024)).toFixed(1);
         throw new ClipProcessingError(403, {
           error: 'File size exceeds limit',
           message: `Maximum ${isReel ? 'reel' : 'clip'} size is ${maxSizeMB}MB (your file is ${actualSizeMB}MB).${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`,
@@ -223,23 +219,20 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
         });
       }
 
-      await fs.promises.writeFile(tempVideoPath, Buffer.from(videoBuffer));
-
       let sourceVideoCodec = '';
       let sourceAudioCodec: string | null = null;
       try {
-        const videoInfo = await VideoProcessor.getVideoInfo(tempVideoPath);
+        const videoInfo = await VideoProcessor.getVideoInfo(downloadUrl);
         actualDuration = Math.round(videoInfo.duration);
         sourceVideoCodec = videoInfo.videoCodec;
         sourceAudioCodec = videoInfo.audioCodec;
         console.log(`📹 Video actual duration: ${actualDuration}s, codec: ${sourceVideoCodec || 'unknown'}/${sourceAudioCodec || 'none'}`);
-      } catch (durationError) {
-        console.warn('Failed to extract video info, using fallback:', durationError);
+      } catch (probeError) {
+        console.warn('Failed to extract video info, using fallback:', probeError);
         actualDuration = 60;
       }
 
       if (actualDuration > maxDurationSeconds) {
-        fs.unlink(tempVideoPath, () => {});
         throw new ClipProcessingError(403, {
           error: 'Video duration exceeds limit',
           message: `Maximum ${isReel ? 'reel' : 'clip'} duration is ${maxDurationSeconds} seconds (your video is ${actualDuration}s).${limits.isPro ? '' : ' Upgrade to Pro for longer videos.'}`,
@@ -256,7 +249,7 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
       if (videoType === 'reel') {
         console.log(`🎬 Processing reel with 9:16 aspect ratio cropping (trim: ${requestedTrimStart}s - ${requestedTrimEnd}s)`);
         const { videoUrl: croppedVideoUrl, thumbnailUrl: reelThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
-          tempVideoPath, tempClipId, requestedTrimStart, requestedTrimEnd, true, userId, 'reel'
+          downloadUrl, tempClipId, requestedTrimStart, requestedTrimEnd, true, userId, 'reel'
         );
         processedVideoUrl = croppedVideoUrl;
         thumbnailUrl = reelThumbnailUrl || '';
@@ -265,7 +258,7 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
       } else if (hasTrimming) {
         console.log(`✂️ Trimming clip: ${requestedTrimStart}s - ${requestedTrimEnd}s`);
         const { videoUrl: trimmedVideoUrl, thumbnailUrl: clipThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
-          tempVideoPath, tempClipId, requestedTrimStart, requestedTrimEnd, true, userId, 'clip'
+          downloadUrl, tempClipId, requestedTrimStart, requestedTrimEnd, true, userId, 'clip'
         );
         processedVideoUrl = trimmedVideoUrl;
         thumbnailUrl = clipThumbnailUrl || '';
@@ -274,7 +267,7 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
       } else if (sourceVideoCodec && !VideoProcessor.isBrowserPlayable(sourceVideoCodec, sourceAudioCodec)) {
         console.log(`🔄 Re-encoding clip — source codec ${sourceVideoCodec}/${sourceAudioCodec || 'none'} is not browser-playable`);
         const { videoUrl: reencodedUrl, thumbnailUrl: clipThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
-          tempVideoPath, tempClipId, 0, actualDuration, true, userId, 'clip'
+          downloadUrl, tempClipId, 0, actualDuration, true, userId, 'clip'
         );
         processedVideoUrl = reencodedUrl;
         thumbnailUrl = clipThumbnailUrl || '';
@@ -287,21 +280,23 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
         // always get) cuts storage + per-view egress with no visible quality
         // loss, so only genuinely already-efficient clips skip it.
         const sourceBitrateMbps = actualDuration > 0
-          ? (videoBuffer.byteLength * 8) / actualDuration / 1_000_000
+          ? (sizeBytes * 8) / actualDuration / 1_000_000
           : 0;
         const MAX_CLIP_BITRATE_MBPS = 6;
         if (sourceBitrateMbps > MAX_CLIP_BITRATE_MBPS) {
           console.log(`📉 Compressing clip — source bitrate ~${sourceBitrateMbps.toFixed(1)} Mbps exceeds ${MAX_CLIP_BITRATE_MBPS} Mbps target`);
           const { videoUrl: compressedUrl, thumbnailUrl: clipThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
-            tempVideoPath, tempClipId, 0, actualDuration, true, userId, 'clip'
+            downloadUrl, tempClipId, 0, actualDuration, true, userId, 'clip'
           );
           processedVideoUrl = compressedUrl;
           thumbnailUrl = clipThumbnailUrl || '';
           actualDuration = processedDuration;
           console.log(`✅ Clip compressed. Duration: ${actualDuration}s`);
         } else {
+          // No download at all here — ffmpeg pulls only the header + the
+          // one seeked-to frame it needs via HTTP range requests.
           console.log(`🖼️ Generating clip thumbnail (bitrate ~${sourceBitrateMbps.toFixed(1)} Mbps already efficient, no re-encode needed)...`);
-          thumbnailUrl = await VideoProcessor.generateAutoThumbnail(tempVideoPath, userId, `${videoType}_thumb`);
+          thumbnailUrl = await VideoProcessor.generateAutoThumbnail(downloadUrl, userId, `${videoType}_thumb`);
           console.log(`✅ Clip thumbnail generated: ${thumbnailUrl ? thumbnailUrl.substring(0, 60) + '...' : 'NONE'}`);
         }
       }
@@ -318,51 +313,6 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
           console.warn('Could not delete superseded raw upload:', cleanupError);
         }
       }
-
-      fs.unlink(tempVideoPath, (err) => {
-        if (err) console.warn('Could not delete temp video file:', err);
-      });
-    } else {
-      console.warn('Could not download video for thumbnail generation, using fallback');
-      try {
-        console.log('Attempting alternative video download for duration extraction...');
-        const response = await fetch(downloadUrl);
-        if (response.ok) {
-          const videoBuffer = await response.arrayBuffer();
-          const retryTempPath = path.join(tempDir, `retry-video-${Date.now()}.mp4`);
-          await fs.promises.writeFile(retryTempPath, Buffer.from(videoBuffer));
-
-          try {
-            const videoInfo = await VideoProcessor.getVideoInfo(retryTempPath);
-            actualDuration = Math.round(videoInfo.duration);
-            console.log(`📹 Successfully extracted duration on retry: ${actualDuration} seconds`);
-            fs.unlink(retryTempPath, (err) => {
-              if (err) console.warn('Could not delete retry temp file:', err);
-            });
-          } catch (retryDurationError) {
-            console.warn('Retry duration extraction also failed, using conservative fallback');
-            actualDuration = 30;
-            fs.unlink(retryTempPath, (err) => {
-              if (err) console.warn('Could not delete retry temp file:', err);
-            });
-          }
-        } else {
-          throw new Error('Retry download failed');
-        }
-      } catch (retryError) {
-        console.warn('Could not extract duration with retry, using fallback');
-        actualDuration = 30;
-      }
-
-      const thumbnailBuffer = await sharp({
-        create: { width: 1280, height: 720, channels: 3, background: { r: 30, g: 30, b: 30 } }
-      }).jpeg({ quality: 80 }).toBuffer();
-
-      const thumbnailResult = await supabaseStorage.uploadBuffer(
-        thumbnailBuffer, `fallback_thumb_${Date.now()}.jpg`, 'image/jpeg', 'thumbnail', userId
-      );
-
-      thumbnailUrl = thumbnailResult.url;
     }
   } catch (thumbnailError) {
     if (thumbnailError instanceof ClipProcessingError) throw thumbnailError;
