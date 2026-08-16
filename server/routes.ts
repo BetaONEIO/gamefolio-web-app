@@ -3872,7 +3872,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const signed = await supabaseStorage.convertToSignedUrl(clip.user.avatarUrl, 3600);
           if (signed) user = { ...clip.user, avatarUrl: signed };
         }
-        return { ...clip, ...updates, user };
+        // Every caller of this helper is a public feed route (trending,
+        // latest, hashtag, etc.) — uploadIp/uploadDeviceId are spam-
+        // detection signals meant for internal use only and must never
+        // reach an anonymous client.
+        const { uploadIp, uploadDeviceId, ...rest } = clip as any;
+        return { ...rest, ...updates, user };
       })
     );
   }
