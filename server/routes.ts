@@ -4795,8 +4795,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const limit = parseInt(req.query.limit as string) || 50;
-      const xpHistory = await storage.getUserXPHistory(userId, limit);
-      res.json(xpHistory);
+      // Merge both ledgers that feed totalXP — user_xp_history (views, uploads,
+      // fires received, ...) and user_points_history (likes, comments, shares,
+      // daily login, streak bonuses, watch-5/watch-20, ...) — and drop zero/
+      // negative bookkeeping rows like watch_clip_counted, which are internal
+      // counters (not real XP) and would otherwise spam this list. Mirrors the
+      // merge already done for /api/dashboard's "Recent XP Activity" widget.
+      const [xpHistory, pointsHistory] = await Promise.all([
+        storage.getUserXPHistory(userId, 500),
+        storage.getUserPointsHistory(userId, 500),
+      ]);
+      const merged = [
+        ...xpHistory
+          .filter((h) => h.xpAmount > 0)
+          .map((h) => ({
+            id: h.id,
+            userId: h.userId,
+            clipId: h.clipId,
+            xpAmount: h.xpAmount,
+            viewCount: h.viewCount,
+            source: h.source,
+            description: h.description,
+            createdAt: h.createdAt,
+            clip: h.clip,
+          })),
+        ...pointsHistory
+          .filter((h) => h.points > 0)
+          .map((h) => ({
+            id: -h.id,
+            userId: h.userId,
+            clipId: null,
+            xpAmount: h.points,
+            viewCount: null,
+            source: h.action,
+            description: h.description,
+            createdAt: h.createdAt,
+            clip: null,
+          })),
+      ]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, limit);
+      res.json(merged);
     } catch (error) {
       captureRouteError(error);
       console.error("Error fetching user XP history:", error);
