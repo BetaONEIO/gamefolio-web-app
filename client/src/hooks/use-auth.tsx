@@ -22,6 +22,15 @@ import { setSentryUser } from "@/lib/sentry";
 type AuthContextType = {
   user: User | null;
   isLoading: boolean;
+  /**
+   * True once the /api/user query has actually run to completion.
+   *
+   * isLoading is NOT a substitute: the query is `enabled: firebaseAuthChecked`,
+   * and a disabled query reports isLoading:false with user:undefined before any
+   * fetch has happened. Route guards that read `!isLoading && !user` as "logged
+   * out" therefore bounced signed-in users off deep links during that window.
+   */
+  authResolved: boolean;
   error: Error | null;
   loginMutation: UseMutationResult<User, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
@@ -299,6 +308,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error,
     isLoading,
     isFetching,
+    isFetched,
   } = useQuery<User | undefined, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -517,6 +527,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user: user ?? null,
         isLoading,
+        // Both halves matter: the Firebase check gates the query, and isFetched
+        // confirms the query itself has settled (success or 401 -> null).
+        authResolved: firebaseAuthChecked && isFetched,
         error,
         loginMutation,
         logoutMutation,
