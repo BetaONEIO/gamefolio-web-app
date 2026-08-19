@@ -15,6 +15,22 @@ export const API_BASE: string = isNative
   ? (import.meta.env.VITE_API_URL as string | undefined) ?? 'https://app.gamefolio.com'
   : '';
 
+// Base for links meant to leave the app — shares, QR codes, anything a person
+// will open elsewhere. API_BASE is not a substitute: it is deliberately empty
+// on web so API calls stay relative, whereas a share link must always be
+// absolute. On native the webview origin is capacitor://localhost (iOS) or
+// https://localhost (Android), neither of which resolves for anyone else, so a
+// share built from window.location.origin is unusable.
+export const PUBLIC_WEB_BASE: string = isNative
+  ? (import.meta.env.VITE_API_URL as string | undefined) ?? 'https://app.gamefolio.com'
+  : (typeof window !== 'undefined' ? window.location.origin : 'https://app.gamefolio.com');
+
+/** Absolute, publicly-openable URL for a path such as "/@someone". */
+export function publicUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${PUBLIC_WEB_BASE}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
 export function resolveApiUrl(url: string): string {
   if (!isNative) return url;
   if (/^https?:\/\//i.test(url)) return url;

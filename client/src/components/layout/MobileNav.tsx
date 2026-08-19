@@ -39,7 +39,13 @@ const MobileNav = () => {
     update();
     const ro = new ResizeObserver(update);
     ro.observe(nav);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      // Clear on unmount: the nav is mobile-only, and layouts that subtract
+      // --mobile-nav-height would otherwise keep reserving space for a nav
+      // that is no longer on screen after a resize to desktop.
+      document.documentElement.style.removeProperty('--mobile-nav-height');
+    };
   }, []);
 
   // All hooks must be declared before any early return.
