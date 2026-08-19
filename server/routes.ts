@@ -8879,7 +8879,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const qrCode = await QRCode.toDataURL(profileUrl, {
         errorCorrectionLevel: "M",
         type: "image/png",
-        quality: 0.92,
+        // No `quality` here: it is only meaningful for lossy output, and the
+        // typings reject it for image/png.
         margin: 1,
         color: { dark: "#10b981", light: "#ffffff" },
         width: 256,
