@@ -108,7 +108,7 @@ export interface IStorage {
   getClipCount(): Promise<number>;
   getGameCount(): Promise<number>;
   getAllClips(limit?: number, offset?: number, currentUserId?: number): Promise<ClipWithUser[]>;
-  getLatestClips(limit?: number, since?: Date, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]>;
+  getLatestClips(limit?: number, since?: Date, gameId?: number): Promise<ClipWithUser[]>;
   getUserTypeDistribution(): Promise<{type: string, count: number}[]>;
   getAgeRangeDistribution(): Promise<{range: string, count: number}[]>;
   getTopGames(limit?: number): Promise<Game[]>;
@@ -156,9 +156,9 @@ export interface IStorage {
   getClipsByGameId(gameId: number, limit?: number): Promise<ClipWithUser[]>;
   getClipsWithDuration(duration: number): Promise<Clip[]>;
   getFeedClips(period?: string, limit?: number): Promise<ClipWithUser[]>;
-  getTrendingClips(period: string, limit: number, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]>;
-  getTrendingReels(period: string, limit: number, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]>;
-  getLatestReels(limit: number, currentUserId?: number): Promise<ClipWithUser[]>;
+  getTrendingClips(period: string, limit: number, gameId?: number): Promise<ClipWithUser[]>;
+  getTrendingReels(period: string, limit: number, gameId?: number): Promise<ClipWithUser[]>;
+  getLatestReels(limit: number): Promise<ClipWithUser[]>;
   getLatestScreenshots(limit: number, gameId?: number): Promise<any[]>;
   getClipById(id: number): Promise<ClipWithUser | null>;
 

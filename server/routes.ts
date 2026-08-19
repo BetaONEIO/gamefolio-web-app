@@ -3776,7 +3776,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Short-lived in-memory cache for trending feeds (DB query + signed URLs).
   // Keyed by route+normalized-params+user. Bounded LRU so user-controlled
   // query params can't blow up memory.
-  const TRENDING_CACHE_TTL_MS = 30_000;
+  // Now that this cache is genuinely shared across every requester (no more
+  // per-user key), a longer TTL multiplies its payoff instead of just
+  // trading staleness for a marginal hit-rate bump on a handful of
+  // per-user entries.
+  const TRENDING_CACHE_TTL_MS = 90_000;
   const TRENDING_CACHE_MAX_ENTRIES = 500;
   // Map preserves insertion order — re-inserting on hit gives us LRU semantics.
   const trendingCache = new Map<string, { expires: number; data: any }>();
@@ -3827,15 +3831,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     period: unknown,
     limit: unknown,
     gameId: unknown,
-    currentUserId: number | undefined,
   ): string {
-    const allowedPeriods = new Set(['all', 'recent', 'day', 'week', 'month', 'year']);
+    const allowedPeriods = new Set(['all', 'recent', 'day', 'week', 'month', 'year', '1d', '1w', 'ever']);
     const periodStr = typeof period === 'string' && allowedPeriods.has(period) ? period : 'all';
     const parsedLimit = Math.max(1, Math.min(50, parseInt(String(limit ?? '10'), 10) || 10));
     const parsedGameId = gameId !== undefined && gameId !== '' && !Number.isNaN(parseInt(String(gameId), 10))
       ? parseInt(String(gameId), 10)
       : '';
-    return `${route}:${periodStr}:${parsedLimit}:${parsedGameId}:${currentUserId ?? 'guest'}`;
+    // No per-user component — trending results are now identical for every
+    // requester (public accounts only, see getTrendingClips), so one cache
+    // entry serves everyone instead of fragmenting per logged-in user.
+    return `${route}:${periodStr}:${parsedLimit}:${parsedGameId}`;
   }
 
   // Evict all trending cache entries whose key starts with a given route prefix.
@@ -3872,7 +3878,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const signed = await supabaseStorage.convertToSignedUrl(clip.user.avatarUrl, 3600);
           if (signed) user = { ...clip.user, avatarUrl: signed };
         }
-        return { ...clip, ...updates, user };
+        // Every caller of this helper is a public feed route (trending,
+        // latest, hashtag, etc.) — uploadIp/uploadDeviceId are spam-
+        // detection signals meant for internal use only and must never
+        // reach an anonymous client.
+        const { uploadIp, uploadDeviceId, ...rest } = clip as any;
+        return { ...rest, ...updates, user };
       })
     );
   }
@@ -4784,8 +4795,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const limit = parseInt(req.query.limit as string) || 50;
-      const xpHistory = await storage.getUserXPHistory(userId, limit);
-      res.json(xpHistory);
+      // Merge both ledgers that feed totalXP — user_xp_history (views, uploads,
+      // fires received, ...) and user_points_history (likes, comments, shares,
+      // daily login, streak bonuses, watch-5/watch-20, ...) — and drop zero/
+      // negative bookkeeping rows like watch_clip_counted, which are internal
+      // counters (not real XP) and would otherwise spam this list. Mirrors the
+      // merge already done for /api/dashboard's "Recent XP Activity" widget.
+      const [xpHistory, pointsHistory] = await Promise.all([
+        storage.getUserXPHistory(userId, 500),
+        storage.getUserPointsHistory(userId, 500),
+      ]);
+      const merged = [
+        ...xpHistory
+          .filter((h) => h.xpAmount > 0)
+          .map((h) => ({
+            id: h.id,
+            userId: h.userId,
+            clipId: h.clipId,
+            xpAmount: h.xpAmount,
+            viewCount: h.viewCount,
+            source: h.source,
+            description: h.description,
+            createdAt: h.createdAt,
+            clip: h.clip,
+          })),
+        ...pointsHistory
+          .filter((h) => h.points > 0)
+          .map((h) => ({
+            id: -h.id,
+            userId: h.userId,
+            clipId: null,
+            xpAmount: h.points,
+            viewCount: null,
+            source: h.action,
+            description: h.description,
+            createdAt: h.createdAt,
+            clip: null,
+          })),
+      ]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, limit);
+      res.json(merged);
     } catch (error) {
       captureRouteError(error);
       console.error("Error fetching user XP history:", error);
@@ -8074,7 +8124,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clips/latest", async (req, res) => {
     try {
       const { limit = '50', period, gameId } = req.query;
-      const currentUserId = (req.user as any)?.id;
 
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
@@ -8086,13 +8135,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       else if (period === '1w') since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       else if (period === 'ever') since = undefined;
 
-      const latestClips = await storage.getLatestClips(
-        parseInt(limit as string) || 50,
-        since,
-        gameId ? parseInt(gameId as string) : undefined,
-        currentUserId
-      );
-      const signed = await signClipUrls(latestClips);
+      const cacheKey = trendingCacheKey('clips-latest', period, limit, gameId);
+      const signed = await getCachedTrending(cacheKey, async () => {
+        const latestClips = await storage.getLatestClips(
+          parseInt(limit as string) || 50,
+          since,
+          gameId ? parseInt(gameId as string) : undefined
+        );
+        return await signClipUrls(latestClips);
+      });
       res.json(signed);
     } catch (err) {
       captureRouteError(err);
@@ -8392,20 +8443,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clips/trending", async (req, res) => {
     try {
       const { period = 'all', limit = 10, gameId } = req.query;
-      const currentUserId = (req.user as any)?.id;
 
       // Force no caching for privacy-sensitive content
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
 
-      const cacheKey = trendingCacheKey('clips', period, limit, gameId, currentUserId);
+      const cacheKey = trendingCacheKey('clips', period, limit, gameId);
       const signed = await getCachedTrending(cacheKey, async () => {
         const clips = await storage.getTrendingClips(
           period as string,
           parseInt(limit as string) || 10,
-          gameId ? parseInt(gameId as string) : undefined,
-          currentUserId
+          gameId ? parseInt(gameId as string) : undefined
         );
         return await signClipUrls(clips);
       });
@@ -8421,14 +8470,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clips/reels/trending", async (req, res) => {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
-      const currentUserId = (req.user as any)?.id;
-      const cacheKey = trendingCacheKey('reels-home', period, limit, gameId, currentUserId);
+      const cacheKey = trendingCacheKey('reels-home', period, limit, gameId);
       const reels = await getCachedTrending(cacheKey, async () => {
         const raw = await storage.getTrendingReels(
           period as string,
           parseInt(limit as string) || 10,
-          gameId ? parseInt(gameId as string) : undefined,
-          currentUserId
+          gameId ? parseInt(gameId as string) : undefined
         );
         return await signClipUrls(raw);
       });
@@ -8444,9 +8491,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reels/latest", async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 6;
-      const currentUserId = (req.user as any)?.id;
-      const reels = await storage.getLatestReels(limit, currentUserId);
-      res.json(await signClipUrls(reels));
+      const cacheKey = trendingCacheKey('reels-latest', 'all', limit, undefined);
+      const reels = await getCachedTrending(cacheKey, async () => {
+        const raw = await storage.getLatestReels(limit);
+        return await signClipUrls(raw);
+      });
+      res.json(reels);
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching latest reels:", err);
@@ -8458,14 +8508,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reels/trending", async (req, res) => {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
-      const currentUserId = (req.user as any)?.id;
-      const cacheKey = trendingCacheKey('reels', period, limit, gameId, currentUserId);
+      const cacheKey = trendingCacheKey('reels', period, limit, gameId);
       const result = await getCachedTrending(cacheKey, async () => {
         const reels = await storage.getTrendingReels(
           period as string,
           parseInt(limit as string) || 10,
-          gameId ? parseInt(gameId as string) : undefined,
-          currentUserId
+          gameId ? parseInt(gameId as string) : undefined
         );
         return await Promise.all(
           reels.map(async (reel) => {
@@ -9470,19 +9518,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only delete your own clips" });
       }
 
-      // Delete the clip from Supabase storage
-      if (clip.videoUrl) {
+      // Delete the clip from Supabase storage. deleteFile() takes a
+      // bucket-relative path, not the public URL stored on the row — must
+      // extract it first or Supabase silently no-ops (no matching object,
+      // no error), which is why deleted clips were never actually removed
+      // from storage.
+      const clipVideoPath = clip.videoUrl ? supabaseStorage.extractStoragePath(clip.videoUrl) : null;
+      if (clipVideoPath) {
         try {
-          await supabaseStorage.deleteFile(clip.videoUrl);
+          await supabaseStorage.deleteFile(clipVideoPath);
         } catch (error) {
           console.warn("Could not delete video file from Supabase:", error);
         }
       }
 
       // Delete the thumbnail from Supabase storage
-      if (clip.thumbnailUrl) {
+      const clipThumbnailPath = clip.thumbnailUrl ? supabaseStorage.extractStoragePath(clip.thumbnailUrl) : null;
+      if (clipThumbnailPath) {
         try {
-          await supabaseStorage.deleteFile(clip.thumbnailUrl);
+          await supabaseStorage.deleteFile(clipThumbnailPath);
         } catch (error) {
           console.warn("Could not delete thumbnail file from Supabase:", error);
         }
@@ -14348,14 +14402,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only delete your own screenshots" });
       }
 
-      // Delete screenshot files from Supabase storage
+      // Delete screenshot files from Supabase storage. deleteFile() takes a
+      // bucket-relative path, not the public URL stored on the row — must
+      // extract it first or Supabase silently no-ops (no matching object,
+      // no error), which is why deleted screenshots were never actually
+      // removed from storage.
       console.log(`🗑️ Deleting files from Supabase for screenshot ${screenshotId}`);
       try {
-        if (screenshot.imageUrl) {
-          await supabaseStorage.deleteFile(screenshot.imageUrl);
+        const imagePath = screenshot.imageUrl ? supabaseStorage.extractStoragePath(screenshot.imageUrl) : null;
+        if (imagePath) {
+          await supabaseStorage.deleteFile(imagePath);
         }
-        if (screenshot.thumbnailUrl) {
-          await supabaseStorage.deleteFile(screenshot.thumbnailUrl);
+        const thumbPath = screenshot.thumbnailUrl ? supabaseStorage.extractStoragePath(screenshot.thumbnailUrl) : null;
+        if (thumbPath) {
+          await supabaseStorage.deleteFile(thumbPath);
         }
         console.log(`✅ Files deleted from Supabase`);
       } catch (fileErr) {
