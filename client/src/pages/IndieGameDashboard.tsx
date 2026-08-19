@@ -1651,11 +1651,18 @@ export default function IndieGameDashboard() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            {/* No preventDefault: suppressing Radix's own close leaves the
+                dialog stuck visible at data-state="closed". Close first, then
+                delete — matching how the rest of the app drives AlertDialog. */}
             <AlertDialogAction
               disabled={busy}
-              onClick={(e) => { e.preventDefault(); if (pendingDelete) void deleteGame(pendingDelete); }}
+              onClick={() => {
+                const target = pendingDelete;
+                setPendingDelete(null);
+                if (target) void deleteGame(target);
+              }}
             >
-              {busy ? "Deleting…" : "Delete game"}
+              Delete game
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

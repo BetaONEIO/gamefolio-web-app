@@ -11853,7 +11853,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // ?gameId= selects one of the developer's games; omitted means primary.
       const gameId = await _indieResolveGameId(req.user.id, req.query.gameId);
       if (req.query.gameId && !gameId) return res.status(404).json({ error: "Game not found" });
-      const profile = await _indieGetOrCreate(req.user.id, gameId);
+      // Read-only: do NOT create a profile here. Auto-creating was harmless when
+      // a user could only ever have one, but now it spends a slot from their
+      // quota on a nameless placeholder just for opening the dashboard — a free
+      // developer would lose one of their two games without doing anything.
+      // The write paths (PUT, uploads, onboarding) still create on demand.
+      const profile = (await storage.getIndieGameProfile(req.user.id, gameId)) ?? {};
       const fieldMeta = await _indieFieldMetaMap(req.user.id, gameId);
 
       // Apply useImported resolution: for each field that has useImported=true,
