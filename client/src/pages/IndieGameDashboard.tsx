@@ -10,7 +10,7 @@ import {
   Layers, Info, BookText, Store, Link2, ArrowLeft, Sparkles, Loader2,
   SlidersHorizontal, Camera, Film, Tag, Users, Calendar, DollarSign,
   Monitor, Smartphone, Cpu, Copy, Check, ShieldCheck, ShieldAlert,
-  KeyRound, LogOut, ExternalLink as ExtLink,
+  KeyRound, LogOut, ExternalLink as ExtLink, Trash2, Crown,
 } from "lucide-react";
 import { SiSteam, SiEpicgames, SiItchdotio } from "react-icons/si";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,11 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
 
 const NEON = "#B7FF18";
 const BG = "#0B1319";
@@ -154,7 +159,7 @@ export default function IndieGameDashboard() {
   // primary", which is what a single-game developer always gets.
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
 
-  const { data: gamesData } = useQuery<{ games: GameSummary[]; limit: number; canAddMore: boolean }>({
+  const { data: gamesData } = useQuery<{ games: GameSummary[]; limit: number; subscribed: boolean; canAddMore: boolean }>({
     queryKey: ["/api/indie/games"],
     enabled: !!user,
   });
@@ -184,6 +189,80 @@ export default function IndieGameDashboard() {
     setSelectedGameId(gameId);
     setInitialized(false);
     setForm({});
+  };
+
+  const gameLimit = gamesData?.limit ?? 2;
+  const isSubscriber = !!gamesData?.subscribed;
+  const canAddMore = !!gamesData?.canAddMore;
+  const activeGameId = selectedGameId ?? games.find(g => g.isPrimary)?.id ?? games[0]?.id ?? null;
+  const activeGame = games.find(g => g.id === activeGameId) ?? null;
+
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<GameSummary | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const refreshGames = () => {
+    qc.invalidateQueries({ queryKey: ["/api/indie/games"] });
+    qc.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+  };
+
+  // Add a game. The server owns the quota, so a 403 here is the authoritative
+  // answer rather than something the UI should try to predict.
+  const addGame = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await apiRequest("POST", "/api/indie/games", { gameName: "Untitled game" });
+      if (res.status === 403) {
+        const body = await res.json().catch(() => ({}));
+        if (body?.code === "GAME_LIMIT_REACHED" && !isSubscriber) setShowUpgrade(true);
+        else toast({ title: "Can't add another game", description: body?.error ?? "Limit reached.", variant: "destructive" });
+        return;
+      }
+      if (!res.ok) throw new Error("failed");
+      const { game } = await res.json();
+      refreshGames();
+      switchGame(game.id);
+      toast({ title: "Game added", description: "Give it a name and details, then save." });
+    } catch {
+      toast({ title: "Couldn't add the game", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const makePrimary = async (gameId: number) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await apiRequest("POST", `/api/indie/games/${gameId}/primary`, {});
+      if (!res.ok) throw new Error("failed");
+      refreshGames();
+      toast({ title: "Primary game updated", description: "This is the game shown on your profile." });
+    } catch {
+      toast({ title: "Couldn't set primary", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteGame = async (game: GameSummary) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await apiRequest("DELETE", `/api/indie/games/${game.id}`);
+      if (!res.ok) throw new Error("failed");
+      // The server promotes another game when the primary is removed, so drop
+      // back to "let the server choose" rather than guessing which one won.
+      switchGame(null);
+      refreshGames();
+      toast({ title: "Game deleted", description: `"${game.gameName || "Untitled game"}" has been removed.` });
+    } catch {
+      toast({ title: "Couldn't delete the game", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setBusy(false);
+      setPendingDelete(null);
+    }
   };
 
   const set = (key: string, value: any) => setForm(f => ({ ...f, [key]: value }));
@@ -487,12 +566,13 @@ export default function IndieGameDashboard() {
             <span className="font-bold text-white">Game Dashboard</span>
           </div>
 
-          {/* Game switcher — only meaningful once a developer has more than one.
-              The add button and its limit are governed by the server's quota. */}
-          {games.length > 1 && (
+          {/* Game switcher. Shown whenever the developer either has several
+              games or is allowed another — otherwise a single-game developer
+              would have no route to adding a second. */}
+          {(games.length > 1 || canAddMore) && (
             <div className="ml-auto flex items-center gap-2 overflow-x-auto">
               {games.map(g => {
-                const active = selectedGameId === g.id || (selectedGameId === null && g.isPrimary);
+                const active = g.id === activeGameId;
                 return (
                   <button
                     key={g.id}
@@ -506,11 +586,67 @@ export default function IndieGameDashboard() {
                       color: active ? "#fff" : "rgba(255,255,255,0.55)",
                     }}
                   >
-                    <span className="max-w-[9rem] truncate">{g.gameName?.trim() || `Untitled game`}</span>
-                    {g.isPrimary && <span className="text-[10px] uppercase tracking-wide opacity-60">primary</span>}
+                    {g.isPrimary && <Crown size={11} style={{ color: NEON }} />}
+                    <span className="max-w-[9rem] truncate">{g.gameName?.trim() || "Untitled game"}</span>
                   </button>
                 );
               })}
+
+              {canAddMore ? (
+                <button
+                  type="button"
+                  onClick={addGame}
+                  disabled={busy}
+                  title={`Add a game (${games.length} of ${gameLimit})`}
+                  className="flex items-center gap-1 rounded-full border border-dashed px-3 py-1 text-xs whitespace-nowrap transition-colors disabled:opacity-50"
+                  style={{ borderColor: "rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.6)" }}
+                >
+                  <Plus size={12} /> Add game
+                </button>
+              ) : !isSubscriber ? (
+                // At the free limit — adding more is the reason to subscribe.
+                <button
+                  type="button"
+                  onClick={() => setShowUpgrade(true)}
+                  className="flex items-center gap-1 rounded-full border border-dashed px-3 py-1 text-xs whitespace-nowrap transition-colors"
+                  style={{ borderColor: "rgba(183,255,24,0.4)", background: "rgba(183,255,24,0.06)", color: NEON }}
+                >
+                  <Plus size={12} /> Add game
+                  <span className="ml-0.5 rounded-full px-1.5 text-[9px] font-bold uppercase" style={{ background: "rgba(183,255,24,0.2)" }}>Pro</span>
+                </button>
+              ) : (
+                <span className="text-[11px] text-white/35 whitespace-nowrap">{gameLimit} of {gameLimit} games</span>
+              )}
+
+              {/* Actions for the selected game. Only meaningful with more than
+                  one — you cannot delete or re-primary your only game. */}
+              {games.length > 1 && activeGame && (
+                <>
+                  {!activeGame.isPrimary && (
+                    <button
+                      type="button"
+                      onClick={() => makePrimary(activeGame.id)}
+                      disabled={busy}
+                      title="Show this game on your profile"
+                      className="flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs text-white/50 hover:text-white transition-colors disabled:opacity-50"
+                      style={{ borderColor: "rgba(255,255,255,0.12)" }}
+                    >
+                      <Crown size={12} /> Make primary
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setPendingDelete(activeGame)}
+                    disabled={busy}
+                    title="Delete this game"
+                    aria-label="Delete this game"
+                    className="flex items-center rounded-full border px-2 py-1 text-white/40 hover:text-red-400 transition-colors disabled:opacity-50"
+                    style={{ borderColor: "rgba(255,255,255,0.12)" }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </>
+              )}
             </div>
           )}
           <div className="ml-auto flex items-center gap-2">
@@ -1500,6 +1636,40 @@ export default function IndieGameDashboard() {
         )}
 
       </div>
+
+      {/* Deleting a game removes its profile, imported artwork and field
+          overrides — worth a confirmation rather than a bare icon click. */}
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this game?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{pendingDelete?.gameName?.trim() || "Untitled game"}" and its details, artwork
+              and store links will be removed. This cannot be undone.
+              {pendingDelete?.isPrimary && " Another game will become your primary."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={busy}
+              onClick={(e) => { e.preventDefault(); if (pendingDelete) void deleteGame(pendingDelete); }}
+            >
+              {busy ? "Deleting…" : "Delete game"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <IndieDevUpgradeDialog
+        open={showUpgrade}
+        onOpenChange={(open) => {
+          setShowUpgrade(open);
+          // They may have just subscribed — re-read the quota so the add
+          // button unlocks without needing a reload.
+          if (!open) qc.invalidateQueries({ queryKey: ["/api/indie/games"] });
+        }}
+      />
     </div>
   );
 }
