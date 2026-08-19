@@ -64,7 +64,6 @@ import imgClip20 from "@assets/image_1781039848401.jpg";
 import imgHeadFF from "@assets/hat1_1781116412973.png";
 import imgHeadBubble from "@assets/bubblegum_(1)_1781116412966.png";
 import imgTwitch3D from "@assets/twitch_logo_1781121512398.png";
-import imgYoutube3D from "@assets/youtube-logo_1781121512394.png";
 import imgKick3D from "@assets/kick-logo_1781121512397.png";
 import imgRumble3D from "@assets/RUMBLE-LOGO_1781121512396.png";
 import Cropper from "react-easy-crop";
@@ -1029,9 +1028,8 @@ export default function OnboardingFlow({
                       {/* Orbiting platform logos */}
                       {([
                         { img: imgTwitch3D,  delay: '0s',  glow: 'rgba(145,71,255,0.80)' },
-                        { img: imgYoutube3D, delay: '-3s', glow: 'rgba(255,50,50,0.80)'  },
-                        { img: imgKick3D,    delay: '-6s', glow: 'rgba(83,252,26,0.80)'  },
-                        { img: imgRumble3D,  delay: '-9s', glow: 'rgba(140,230,0,0.80)'  },
+                        { img: imgKick3D,    delay: '-4s', glow: 'rgba(83,252,26,0.80)'  },
+                        { img: imgRumble3D,  delay: '-8s', glow: 'rgba(140,230,0,0.80)'  },
                       ] as const).map((item, idx) => (
                         <div
                           key={idx}
