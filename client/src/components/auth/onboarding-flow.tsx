@@ -392,8 +392,19 @@ export default function OnboardingFlow({
     epicLink: '',
     websiteLink: '',
     description: '',
+    // Everything else the store published — artwork, screenshots, platforms,
+    // tags, price. No inputs for these in onboarding; they are carried through
+    // to the profile so a new game arrives looking finished rather than bare.
+    storeImport: null as Record<string, any> | null,
   });
   type IndieGameForm = ReturnType<typeof blankIndieGame>;
+
+  // Store fields worth persisting that onboarding has no input for. Every one
+  // is a real indie_game_profiles column and passes INDIE_ALLOWED_FIELDS.
+  const STORE_EXTRA_FIELDS = [
+    "headerImageUrl", "capsuleImageUrl", "trailerUrl", "screenshotUrls",
+    "genres", "tags", "platforms", "releaseDate", "price", "isFree", "fullDescription",
+  ] as const;
 
   const [indieGames, setIndieGames] = useState<IndieGameForm[]>([blankIndieGame()]);
   const [activeGameIdx, setActiveGameIdx] = useState(0);
@@ -490,14 +501,33 @@ export default function OnboardingFlow({
       if (!next.genre.trim() && Array.isArray(f.genres) && f.genres.length > 0) { next.genre = f.genres.join(", "); filled.push("genre"); }
       if (!next.releaseStatus && f.releaseStatus) { next.releaseStatus = String(f.releaseStatus); filled.push("release status"); }
 
+      // Carry the rest of the store's data through to the saved profile even
+      // though onboarding shows no field for it.
+      const extras: Record<string, any> = {};
+      for (const key of STORE_EXTRA_FIELDS) {
+        const value = (f as any)[key];
+        if (value !== null && value !== undefined && !(Array.isArray(value) && value.length === 0)) {
+          extras[key] = value;
+        }
+      }
+      next.storeImport = Object.keys(extras).length > 0 ? extras : null;
+
+      setIndieGames(prev => prev.map((g, i) => (i === activeGameIdx ? next : g)));
+
+      const storeName = data.source === "epic" ? "Epic Games" : "Steam";
+      const extraBits: string[] = [];
+      if (extras.headerImageUrl) extraBits.push("cover art");
+      if (Array.isArray(extras.screenshotUrls)) extraBits.push(`${extras.screenshotUrls.length} screenshots`);
+      if (Array.isArray(extras.platforms)) extraBits.push("platforms");
+      const tail = extraBits.length > 0 ? ` Also imported ${extraBits.join(", ")}.` : "";
+
       if (filled.length === 0) {
-        setStoreLookup({ status: "filled", message: `Found on ${data.source === "epic" ? "Epic Games" : "Steam"} — your details are already filled in.` });
+        setStoreLookup({ status: "filled", message: `Found on ${storeName} — your details are already filled in.${tail}` });
         return;
       }
-      setIndieGames(prev => prev.map((g, i) => (i === activeGameIdx ? next : g)));
       setStoreLookup({
         status: "filled",
-        message: `Filled in ${filled.join(", ")} from ${data.source === "epic" ? "Epic Games" : "Steam"}. Edit anything you'd like to change.`,
+        message: `Filled in ${filled.join(", ")} from ${storeName}. Edit anything you'd like to change.${tail}`,
       });
     } catch {
       setStoreLookup({ status: "error", message: "Couldn't reach the store — fill the details in below." });
@@ -946,6 +976,7 @@ export default function OnboardingFlow({
       // a request beyond the developer's limit is rejected there, not here.
       if (selectedPath === "indie") {
         const toPayload = (g: IndieGameForm) => ({
+          ...(g.storeImport ?? {}),
           gameName: g.gameName.trim(),
           studioName: g.studioName.trim() || undefined,
           releaseStatus: g.releaseStatus || undefined,
@@ -1936,6 +1967,36 @@ export default function OnboardingFlow({
                 <p className={`text-xs mb-2 ${storeLookup.status === "error" ? "text-amber-400" : "text-primary"}`}>
                   {storeLookup.status === "loading" ? "Looking up your game…" : storeLookup.message}
                 </p>
+              )}
+
+              {/* Cover art pulled from the store — shown so it is obvious what
+                  was imported, and removable if they would rather upload their own. */}
+              {indieGameData.storeImport?.headerImageUrl && (
+                <div className="mb-3 flex items-center gap-3 rounded-lg border border-[#1B2A33] bg-[#0B1218] p-2">
+                  <img
+                    src={indieGameData.storeImport.headerImageUrl}
+                    alt=""
+                    className="h-12 w-24 flex-shrink-0 rounded object-cover"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-white">Cover art imported</p>
+                    <p className="text-xs text-gray-500">You can replace this later in your dashboard.</p>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Remove imported cover art"
+                    onClick={() => setIndieGameData(d => ({
+                      ...d,
+                      storeImport: d.storeImport
+                        ? Object.fromEntries(Object.entries(d.storeImport).filter(([k]) => k !== "headerImageUrl"))
+                        : null,
+                    }))}
+                    className="flex-shrink-0 text-gray-500 hover:text-red-400"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               )}
 
               {indieGames.length >= indieGameLimit && !indieSubscribed && (
