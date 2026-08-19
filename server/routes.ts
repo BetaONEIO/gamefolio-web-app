@@ -8857,6 +8857,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Generate QR code and social media links for existing clip
+  // GET /api/users/:username/share — share payload for a profile.
+  //
+  // This endpoint did not exist, so GamefolioShareDialog's fetch always 404'd
+  // and fell back to building the URL from window.location.origin. On native
+  // that is capacitor://localhost, which is how "capacitor://localhost/@user"
+  // ended up in shared links. Mirrors the clip/screenshot share endpoints:
+  // absolute production URLs and a server-rendered QR code.
+  app.get("/api/users/:username/share", async (req, res) => {
+    try {
+      const username = String(req.params.username || "").replace(/^@+/, "");
+      if (!username) return res.status(400).json({ message: "Username required" });
+
+      const user = await storage.getUserByUsername(username);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const baseUrl = "https://app.gamefolio.com";
+      const profileUrl = `${baseUrl}/@${user.username}`;
+      const displayName = user.displayName || user.username;
+
+      const qrCode = await QRCode.toDataURL(profileUrl, {
+        errorCorrectionLevel: "M",
+        type: "image/png",
+        quality: 0.92,
+        margin: 1,
+        color: { dark: "#10b981", light: "#ffffff" },
+        width: 256,
+      });
+
+      const caption = `Check out ${displayName}'s Gamefolio!`;
+      const socialMediaLinks = {
+        twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(caption)}&url=${encodeURIComponent(profileUrl)}`,
+        facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(profileUrl)}&quote=${encodeURIComponent(caption)}`,
+        reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(profileUrl)}&title=${encodeURIComponent(caption)}`,
+        linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(profileUrl)}&summary=${encodeURIComponent(caption)}`,
+        whatsapp: `https://wa.me/?text=${encodeURIComponent(`${caption} ${profileUrl}`)}`,
+        telegram: `https://t.me/share/url?url=${encodeURIComponent(profileUrl)}&text=${encodeURIComponent(caption)}`,
+        bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`${caption} ${profileUrl}`)}`,
+        threads: `https://www.threads.net/intent/post?text=${encodeURIComponent(`${caption} ${profileUrl}`)}`,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(profileUrl)}&description=${encodeURIComponent(caption)}`,
+        email: `mailto:?subject=${encodeURIComponent(caption)}&body=${encodeURIComponent(`${caption}\n\n${profileUrl}`)}`,
+        // Platforms with no web share intent — the dialog copies the link instead.
+        discord: profileUrl,
+        instagram: profileUrl,
+        tiktok: profileUrl,
+        snapchat: profileUrl,
+        youtube: profileUrl,
+      };
+
+      res.json({
+        profileUrl,
+        username: user.username,
+        displayName,
+        avatarUrl: user.avatarUrl ?? null,
+        qrCode,
+        socialMediaLinks,
+      });
+    } catch (err) {
+      console.error("GET /api/users/:username/share error:", err);
+      res.status(500).json({ message: "Failed to build share links" });
+    }
+  });
+
   app.get("/api/clips/:id/share", async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);

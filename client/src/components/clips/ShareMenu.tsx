@@ -11,7 +11,7 @@ import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { FaReddit, FaWhatsapp, FaTelegram, FaPinterest, FaYoutube } from "react-icons/fa";
 import { FaXTwitter, FaInstagram, FaTiktok, FaSnapchat, FaBluesky, FaThreads } from "react-icons/fa6";
 import { useToast } from "@/hooks/use-toast";
-import { openShareWindow, nativeShare, isNative } from "@/lib/platform";
+import { openShareWindow, nativeShare, isNative, publicUrl } from '@/lib/platform';
 
 interface ShareMenuProps {
   clipId: number;
@@ -45,7 +45,8 @@ const ShareMenu: React.FC<ShareMenuProps> = ({
       } catch (error) {
         console.error('Error fetching share data:', error);
         // Fallback to basic URL
-        const fallbackUrl = `${window.location.origin}/clips/${clipId}`;
+        // Absolute public URL — window.location.origin is capacitor://localhost on native.
+        const fallbackUrl = publicUrl(`/clips/${clipId}`);
         setShareData({
           shareUrl: fallbackUrl,
           socialMediaLinks: {
