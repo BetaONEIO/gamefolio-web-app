@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop, Zap, Star, Target, Gift, Tv, Globe, Swords, Users, Flame, ChevronLeft, ChevronRight, X, ExternalLink } from "lucide-react";
-import { SiSteam, SiItchdotio, SiEpicgames } from "react-icons/si";
+import { SiSteam, SiItchdotio, SiEpicgames, SiTwitch, SiKick } from "react-icons/si";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
@@ -70,6 +70,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/hooks/use-wallet";
 import { useAuth } from "@/hooks/use-auth";
+import { openExternal, isNative, API_BASE } from "@/lib/platform";
 import { useAutoWallet } from "@/hooks/use-auto-wallet";
 
 // Component to display trending games in a grid
@@ -215,6 +216,48 @@ const getCroppedImg = async (
 };
 
 // Phase indicator — shows 6 major milestones regardless of total steps
+// One row of the streamer "connect a platform" list. Shows the verified
+// channel once linked, so the state is obvious without leaving onboarding.
+function PlatformConnectRow({
+  label, connectedName, icon, brand, brandText = "#fff", onConnect,
+}: {
+  label: string;
+  connectedName?: string | null;
+  icon: React.ReactNode;
+  brand: string;
+  brandText?: string;
+  onConnect: () => void;
+}) {
+  const connected = !!connectedName;
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-[#1B2A33] bg-[#0B1218] px-3 py-2.5">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <span className="flex-shrink-0" style={{ color: connected ? brand : "rgba(255,255,255,0.45)" }}>{icon}</span>
+        <div className="min-w-0">
+          <p className="text-sm text-white leading-tight">{label}</p>
+          {connected && (
+            <p className="text-xs text-primary truncate">Connected as {connectedName}</p>
+          )}
+        </div>
+      </div>
+      {connected ? (
+        <span className="flex items-center gap-1 text-xs text-primary flex-shrink-0">
+          <Check className="w-3.5 h-3.5" /> Verified
+        </span>
+      ) : (
+        <button
+          type="button"
+          onClick={onConnect}
+          className="flex-shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold transition-opacity hover:opacity-90"
+          style={{ background: brand, color: brandText }}
+        >
+          Connect
+        </button>
+      )}
+    </div>
+  );
+}
+
 interface OnboardingStepIndicatorProps {
   currentStep: OnboardingStep;
   isGoogleUser: boolean;
@@ -324,10 +367,16 @@ export default function OnboardingFlow({
   const [streamerData, setStreamerData] = useState({
     kickUsername: '',
     twitchUsername: '',
-    youtubeUsername: '',
+    vpzoneUsername: '',
     mainPlatform: '',
     mainGame: '',
     streamFrequency: '',
+  });
+
+  // Which social OAuth providers the server has credentials for. Never offer a
+  // connect button we know will fail for want of a client id.
+  const [socialOAuth, setSocialOAuth] = useState<{ kick: boolean; twitch: boolean; vpzone: boolean }>({
+    kick: false, twitch: false, vpzone: false,
   });
   // A developer can register several games (migration 0020). How many is
   // governed server-side by their subscription — free accounts get one, indie
@@ -391,6 +440,74 @@ export default function OnboardingFlow({
     if (selectedPath !== 'indie') return;
     refreshIndieGameLimit();
   }, [selectedPath, refreshIndieGameLimit]);
+
+  // ---- Streamer platform connections -------------------------------------
+  // Twitch, Kick and VPZone already have working OAuth (server/routes/social-oauth.ts).
+  // Reuse it here rather than asking people to retype a channel name they can
+  // prove they own. The callbacks redirect to /settings/profile, which detects
+  // it is a popup and announces completion on the 'oauth_completion'
+  // BroadcastChannel before closing — so we listen on that channel and no
+  // server-side change is needed.
+  const { refreshUser } = useAuth();
+
+  useEffect(() => {
+    if (selectedPath !== 'streamer') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiRequest("GET", "/api/auth/social-oauth/config");
+        if (!res.ok) return;
+        const cfg = await res.json();
+        if (!cancelled) {
+          setSocialOAuth({ kick: !!cfg?.kick, twitch: !!cfg?.twitch, vpzone: !!cfg?.vpzone });
+        }
+      } catch {
+        // Leave every provider off — better no button than a broken one.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedPath]);
+
+  useEffect(() => {
+    if (selectedPath !== 'streamer') return;
+    const onConnected = (type?: string) => {
+      if (type === 'twitch_connected' || type === 'kick_connected' || type === 'vpzone_connected') {
+        refreshUser();
+      }
+    };
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('oauth_completion');
+      bc.onmessage = (event) => onConnected(event.data?.type);
+    } catch {}
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      onConnected(event.data?.type);
+    };
+    window.addEventListener('message', handler);
+    return () => {
+      bc?.close();
+      window.removeEventListener('message', handler);
+    };
+  }, [selectedPath, refreshUser]);
+
+  // Mirror whatever the OAuth callbacks wrote onto the account back into the
+  // form, so a connected channel fills the field instead of being typed twice.
+  useEffect(() => {
+    if (selectedPath !== 'streamer' || !user) return;
+    setStreamerData(d => ({
+      ...d,
+      twitchUsername: (user as any).twitchChannelName || d.twitchUsername,
+      kickUsername: (user as any).kickChannelName || d.kickUsername,
+      vpzoneUsername: (user as any).vpzoneChannelName || d.vpzoneUsername,
+      mainPlatform: d.mainPlatform || (user as any).streamPlatform || '',
+    }));
+  }, [selectedPath, user]);
+
+  const startSocialConnect = (path: string) => {
+    if (isNative) void openExternal(`${API_BASE}${path}`);
+    else window.open(path, '_blank');
+  };
   const [platformExpanded, setPlatformExpanded] = useState<{ steam: boolean; itch: boolean; epic: boolean }>({ steam: false, itch: false, epic: false });
 
   // Wallet state
@@ -984,7 +1101,7 @@ export default function OnboardingFlow({
       // ── STEP 4: PATH-SPECIFIC INTRO 3 ─────────────────────────────────────
       case OnboardingStep.Intro3: {
         const i3 = selectedPath === 'streamer'
-          ? { titleA: 'UNLOCK CREATOR', titleB: 'OPPORTUNITIES', sub: 'Earn rewards, join creator campaigns, get featured on the homepage and unlock future Twitch, Kick and YouTube integrations.' }
+          ? { titleA: 'UNLOCK CREATOR', titleB: 'OPPORTUNITIES', sub: 'Earn rewards, join creator campaigns, get featured on the homepage and connect your Twitch, Kick and VPZone channels.' }
           : selectedPath === 'indie'
           ? { titleA: 'LAUNCH', titleB: 'BOUNTIES', sub: 'Run creator campaigns, offer game keys, and reward players with bounty challenges.' }
           : { titleA: 'EARN', titleB: 'REWARDS', sub: 'Complete daily bounties, join creator challenges, and earn GFT to unlock exclusive legendary gear.' };
@@ -1501,8 +1618,44 @@ export default function OnboardingFlow({
               <div className="flex-1 overflow-y-auto space-y-4">
                 <div>
                   <h2 className="text-2xl font-bold text-white mb-1">Streamer Setup</h2>
-                  <p className="text-gray-400 mb-5">Connect your streaming platforms. All fields except main platform are optional.</p>
+                  <p className="text-gray-400 mb-4">Connect a platform to pull your channel in automatically, or fill it in by hand. All fields except main platform are optional.</p>
                 </div>
+
+                {/* Verified connections. Each opens the existing OAuth flow in a
+                    popup; on success the account is updated server-side and the
+                    fields below fill themselves in. */}
+                {(socialOAuth.twitch || socialOAuth.kick || socialOAuth.vpzone) && (
+                  <div className="space-y-2">
+                    {socialOAuth.twitch && (
+                      <PlatformConnectRow
+                        label="Twitch"
+                        connectedName={(user as any)?.twitchVerified ? (user as any)?.twitchChannelName : null}
+                        icon={<SiTwitch className="w-4 h-4" />}
+                        brand="#9146FF"
+                        onConnect={() => startSocialConnect("/api/auth/twitch-stream/connect")}
+                      />
+                    )}
+                    {socialOAuth.kick && (
+                      <PlatformConnectRow
+                        label="Kick"
+                        connectedName={(user as any)?.kickVerified ? (user as any)?.kickChannelName : null}
+                        icon={<SiKick className="w-4 h-4" />}
+                        brand="#53FC18"
+                        brandText="#071013"
+                        onConnect={() => startSocialConnect("/api/auth/kick/connect")}
+                      />
+                    )}
+                    {socialOAuth.vpzone && (
+                      <PlatformConnectRow
+                        label="VPZone"
+                        connectedName={(user as any)?.vpzoneVerified ? (user as any)?.vpzoneChannelName : null}
+                        icon={<Tv className="w-4 h-4" />}
+                        brand="#1F8FFF"
+                        onConnect={() => startSocialConnect("/api/auth/vpzone/connect")}
+                      />
+                    )}
+                  </div>
+                )}
 
                 <div className="space-y-3">
                   <div>
@@ -1514,7 +1667,7 @@ export default function OnboardingFlow({
                       <SelectContent className="bg-[#0B1218] border-[#1B2A33]">
                         <SelectItem value="kick">Kick</SelectItem>
                         <SelectItem value="twitch">Twitch</SelectItem>
-                        <SelectItem value="youtube">YouTube</SelectItem>
+                        <SelectItem value="vpzone">VPZone</SelectItem>
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1529,8 +1682,8 @@ export default function OnboardingFlow({
                     <Input value={streamerData.twitchUsername} onChange={(e) => setStreamerData({ ...streamerData, twitchUsername: e.target.value })} placeholder="@yourname" className="bg-[#0B1218] border-[#1B2A33] text-white" />
                   </div>
                   <div>
-                    <Label className="text-gray-400 text-sm mb-1.5 block">YouTube Username</Label>
-                    <Input value={streamerData.youtubeUsername} onChange={(e) => setStreamerData({ ...streamerData, youtubeUsername: e.target.value })} placeholder="@yourname" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                    <Label className="text-gray-400 text-sm mb-1.5 block">VPZone Username</Label>
+                    <Input value={streamerData.vpzoneUsername} onChange={(e) => setStreamerData({ ...streamerData, vpzoneUsername: e.target.value })} placeholder="@yourname" className="bg-[#0B1218] border-[#1B2A33] text-white" />
                   </div>
                   <div>
                     <Label className="text-gray-400 text-sm mb-1.5 block">Main Game / Category</Label>
