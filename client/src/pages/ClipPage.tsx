@@ -254,7 +254,7 @@ const ClipPage = () => {
             <span className="text-sm font-semibold text-white group-hover:text-[#B7FF1A] transition-colors">Trending Clips</span>
           </button>
         </div>
-        <div className="flex h-[calc(100vh-53px)]">
+        <div className="flex h-[calc(100dvh-53px-var(--mobile-nav-height,0px))]">
           <div className="flex-1 bg-black">
             <Skeleton className="w-full h-full rounded-none" />
           </div>
@@ -416,7 +416,7 @@ const ClipPage = () => {
       </div>
 
       {/* ── Main split layout ── */}
-      <div className="flex flex-col lg:flex-row h-[calc(100vh-53px)] overflow-hidden">
+      <div className="flex flex-col lg:flex-row h-[calc(100dvh-53px-var(--mobile-nav-height,0px))] overflow-hidden">
 
         {/* ════ VIDEO PANEL ════ */}
         <div
