@@ -78,7 +78,11 @@ export const users = pgTable("users", {
   // Streamer settings — additional fields only.
   // stream_platform, twitch/kick channel names, and twitch/kick verified flags
   // are declared once above; only the genuinely-new columns live here.
-  streamChannelName: text("stream_channel_name"), // Channel username on the platform (legacy, may be overwritten)
+  streamChannelName: text("stream_channel_name"),
+  // Answers from streamer onboarding (migration 0021). Self-reported: carrying
+  // no verification weight, unlike the OAuth-set *Verified flags.
+  streamMainGame: text("stream_main_game"),
+  streamFrequency: text("stream_frequency"), // Channel username on the platform (legacy, may be overwritten)
   kickId: text("kick_id"),                  // Kick user ID (set when OAuth-connected)
   twitchUserId: text("twitch_user_id"),     // Twitch user ID (set when OAuth-connected)
   rumbleChannelName: text("rumble_channel_name"), // Rumble channel slug/username

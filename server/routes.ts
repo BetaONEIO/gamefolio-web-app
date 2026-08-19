@@ -11829,6 +11829,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/streamer/onboarding-profile — persist the streamer setup step.
+  //
+  // Verification is emphatically NOT granted here: twitchVerified / kickVerified
+  // / vpzoneVerified are only ever set by the OAuth callbacks in
+  // server/routes/social-oauth.ts, which prove ownership. This endpoint writes
+  // self-reported names only, and refuses to overwrite a channel name that OAuth
+  // already verified — otherwise typing a name would silently displace a proven
+  // one and inherit its verified badge.
+  app.post("/api/streamer/onboarding-profile", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const { validateStreamerHandle, normalizeStreamerHandle } = await import("@shared/streamer-handles");
+      const { users } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+
+      const handles = {
+        twitch: req.body.twitchUsername,
+        kick: req.body.kickUsername,
+        vpzone: req.body.vpzoneUsername,
+      } as const;
+
+      const errors: string[] = [];
+      for (const [platform, value] of Object.entries(handles)) {
+        const err = validateStreamerHandle(platform as any, value);
+        if (err) errors.push(err);
+      }
+      if (errors.length > 0) {
+        return res.status(400).json({ error: errors[0], errors, code: "INVALID_STREAMER_HANDLE" });
+      }
+
+      const [existing] = await db.select({
+        twitchVerified: users.twitchVerified,
+        kickVerified: users.kickVerified,
+        vpzoneVerified: users.vpzoneVerified,
+        twitchChannelName: users.twitchChannelName,
+        kickChannelName: users.kickChannelName,
+        vpzoneChannelName: users.vpzoneChannelName,
+      }).from(users).where(eq(users.id, userId));
+
+      const patch: Record<string, any> = { isStreamer: true, updatedAt: new Date() };
+
+      const clean = (v: unknown) => {
+        const h = normalizeStreamerHandle(v as string);
+        return h === "" ? null : h;
+      };
+
+      // Only fill a channel name that OAuth has not already proven.
+      if (!existing?.twitchVerified && clean(handles.twitch)) patch.twitchChannelName = clean(handles.twitch);
+      if (!existing?.kickVerified && clean(handles.kick)) patch.kickChannelName = clean(handles.kick);
+      if (!existing?.vpzoneVerified && clean(handles.vpzone)) patch.vpzoneChannelName = clean(handles.vpzone);
+
+      const mainPlatform = typeof req.body.mainPlatform === "string" ? req.body.mainPlatform.trim() : "";
+      if (["twitch", "kick", "vpzone", "other"].includes(mainPlatform)) {
+        patch.streamPlatform = mainPlatform;
+        const named =
+          mainPlatform === "twitch" ? (existing?.twitchChannelName ?? clean(handles.twitch)) :
+          mainPlatform === "kick"   ? (existing?.kickChannelName   ?? clean(handles.kick)) :
+          mainPlatform === "vpzone" ? (existing?.vpzoneChannelName ?? clean(handles.vpzone)) : null;
+        if (named) patch.streamChannelName = named;
+      }
+
+      if (typeof req.body.mainGame === "string" && req.body.mainGame.trim()) {
+        patch.streamMainGame = req.body.mainGame.trim().slice(0, 200);
+      }
+      if (typeof req.body.streamFrequency === "string" && req.body.streamFrequency.trim()) {
+        patch.streamFrequency = req.body.streamFrequency.trim().slice(0, 50);
+      }
+
+      await db.update(users).set(patch).where(eq(users.id, userId));
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("POST /api/streamer/onboarding-profile error:", err);
+      res.status(500).json({ error: "Failed to save streamer profile" });
+    }
+  });
+
   // GET /api/indie/games — every game the developer owns, for the switcher.
   app.get("/api/indie/games", async (req, res) => {
     if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);

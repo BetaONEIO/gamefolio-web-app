@@ -881,6 +881,25 @@ export default function OnboardingFlow({
         userType,
       });
 
+      // Persist the streamer setup step. The OAuth buttons already wrote any
+      // verified channel straight to the account; this saves the hand-typed
+      // fields, and the server refuses to let them displace a verified name.
+      if (selectedPath === "streamer") {
+        try {
+          await apiRequest("POST", "/api/streamer/onboarding-profile", {
+            twitchUsername: streamerData.twitchUsername.trim() || undefined,
+            kickUsername: streamerData.kickUsername.trim() || undefined,
+            vpzoneUsername: streamerData.vpzoneUsername.trim() || undefined,
+            mainPlatform: streamerData.mainPlatform || undefined,
+            mainGame: streamerData.mainGame.trim() || undefined,
+            streamFrequency: streamerData.streamFrequency || undefined,
+          });
+        } catch (err) {
+          // Non-fatal: the account already exists, so never block completion.
+          console.error("Failed to save streamer profile during onboarding", err);
+        }
+      }
+
       // Persist the indie "Your Game" details. Without this the whole step is
       // discarded — previously only the derived bio string survived.
       // The first game goes through /onboarding-profile (which upserts the
