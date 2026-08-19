@@ -374,7 +374,7 @@ export default function OnboardingFlow({
   };
 
   // The quota is the server's call, not the client's — a new account is free
-  // (limit 1) until it subscribes, at which point the limit becomes 10.
+  // (limit 2) until it subscribes, at which point the limit becomes 10.
   const refreshIndieGameLimit = useCallback(async () => {
     try {
       const res = await apiRequest("GET", "/api/indie/games");
@@ -383,7 +383,7 @@ export default function OnboardingFlow({
       if (typeof data?.limit === 'number') setIndieGameLimit(data.limit);
       if (typeof data?.subscribed === 'boolean') setIndieSubscribed(data.subscribed);
     } catch {
-      // Leave the default of 1: never grant more slots than we can confirm.
+      // Leave the free default: never grant more slots than we can confirm.
     }
   }, []);
 
@@ -864,9 +864,6 @@ export default function OnboardingFlow({
               </h2>
               <p className="text-center mb-5" style={{ fontFamily:"'Outfit',sans-serif", fontWeight:400, fontSize:'14px', lineHeight:'20px', color:'#94A3B8', minHeight:'60px', display:'flex', alignItems:'center', justifyContent:'center' }}>{i1.sub}</p>
               <div className="flex items-center gap-3">
-                <button onClick={goToPrevStep} className="flex-none flex items-center justify-center rounded-[18px]" style={{ width:'56px', height:'56px', border:'1.5px solid rgba(255,255,255,0.15)', background:'rgba(255,255,255,0.06)', backdropFilter:'blur(8px)' }} aria-label="Go back">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </button>
                 <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 font-bold" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:'15px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
                   Continue
                 </button>
@@ -975,9 +972,6 @@ export default function OnboardingFlow({
               </h2>
               <p className="text-center mb-5" style={{ fontFamily:"'Outfit',sans-serif", fontWeight:400, fontSize:'14px', lineHeight:'20px', color:'#94A3B8', minHeight:'60px', display:'flex', alignItems:'center', justifyContent:'center' }}>{i2.sub}</p>
               <div className="flex items-center gap-3">
-                <button onClick={goToPrevStep} className="flex-none flex items-center justify-center rounded-[18px]" style={{ width:'56px', height:'56px', border:'1.5px solid rgba(255,255,255,0.15)', background:'rgba(255,255,255,0.06)', backdropFilter:'blur(8px)' }} aria-label="Go back">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </button>
                 <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 font-bold" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:'15px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
                   Continue
                 </button>
@@ -1011,9 +1005,6 @@ export default function OnboardingFlow({
               </h2>
               <p className="text-center mb-5" style={{ fontFamily:"'Outfit',sans-serif", fontWeight:400, fontSize:'14px', lineHeight:'20px', color:'#94A3B8', minHeight:'60px', display:'flex', alignItems:'center', justifyContent:'center' }}>{i3.sub}</p>
               <div className="flex items-center gap-3">
-                <button onClick={goToPrevStep} className="flex-none flex items-center justify-center rounded-[18px]" style={{ width:'56px', height:'56px', border:'1.5px solid rgba(255,255,255,0.15)', background:'rgba(255,255,255,0.06)', backdropFilter:'blur(8px)' }} aria-label="Go back">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </button>
                 <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 font-bold" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:'15px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
                   Continue
                 </button>
@@ -1058,7 +1049,6 @@ export default function OnboardingFlow({
               <p className="text-gray-400 text-sm mt-2">At least 3 characters — letters, numbers and underscores only</p>
             </div>
             <div className="flex gap-3 mt-auto">
-              <Button variant="outline" onClick={goToPrevStep}>Back</Button>
               <Button onClick={goToNextStep} disabled={!formUsername || formUsername.length < 4 || isCheckingUsername || !!usernameError} className="flex-1 bg-primary hover:bg-primary/90 text-white">
                 {isCheckingUsername ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Checking...</> : <>Next <ArrowRight className="h-4 w-4 ml-2" /></>}
               </Button>
@@ -1112,7 +1102,6 @@ export default function OnboardingFlow({
             </div>
             <div id="games-step-bottom" className="flex flex-col gap-3 mt-auto pt-4">
               <div className="flex gap-3">
-                <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">Back</Button>
                 <Button onClick={goToNextStep} disabled={selectedGames.length === 0} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
                   Next <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
@@ -1162,7 +1151,6 @@ export default function OnboardingFlow({
               </div>
             </div>
             <div className="flex gap-3 mt-auto">
-              <Button variant="outline" onClick={goToPrevStep}>Back</Button>
               <Button onClick={goToNextStep} disabled={isUploadingAvatar} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
                 {avatarUrl ? <>Next <ArrowRight className="h-4 w-4 ml-2" /></> : <span>Skip for now</span>}
               </Button>
@@ -1496,7 +1484,6 @@ export default function OnboardingFlow({
               </div>
               <div className="flex flex-col gap-3 mt-4">
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={goToPrevStep}>Back</Button>
                   <Button onClick={goToNextStep} disabled={gamerInterests.length === 0} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
                     Next <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -1568,7 +1555,6 @@ export default function OnboardingFlow({
 
               <div className="flex flex-col gap-3 mt-4">
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={goToPrevStep}>Back</Button>
                   <Button onClick={goToNextStep} disabled={!streamerData.mainPlatform} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
                     Next <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -1831,7 +1817,6 @@ export default function OnboardingFlow({
             </div>
 
             <div className="flex gap-3 mt-4">
-              <Button variant="outline" onClick={goToPrevStep}>Back</Button>
               <Button onClick={goToNextStep} disabled={!indieGameData.gameName.trim() || !indieGameData.releaseStatus} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
                 Next <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
@@ -1880,7 +1865,6 @@ export default function OnboardingFlow({
                   </CardContent>
                 </Card>
                 <div className="flex gap-3 mt-auto">
-                  <Button variant="outline" onClick={goToPrevStep}>Back</Button>
                   <Button onClick={goToNextStep} className="flex-1" data-testid="button-next-from-wallet">
                     Next <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -1899,7 +1883,6 @@ export default function OnboardingFlow({
                   </CardContent>
                 </Card>
                 <div className="flex gap-3 mt-auto">
-                  <Button variant="outline" onClick={goToPrevStep}>Back</Button>
                   <Button onClick={goToNextStep} variant="ghost" className="flex-1 text-gray-400 hover:text-white" data-testid="button-skip-wallet">Skip</Button>
                 </div>
               </>
@@ -1915,7 +1898,6 @@ export default function OnboardingFlow({
                   </CardContent>
                 </Card>
                 <div className="flex gap-3 mt-auto">
-                  <Button variant="outline" onClick={goToPrevStep}>Back</Button>
                 </div>
               </>
             ) : (
@@ -1942,7 +1924,6 @@ export default function OnboardingFlow({
                 </button>
                 <p className="text-xs text-gray-500 text-center mt-4 mb-5">100 GFT welcome bonus is only available during account setup.</p>
                 <div className="flex gap-3 mt-auto">
-                  <Button variant="outline" onClick={goToPrevStep}>Back</Button>
                   <Button onClick={goToNextStep} variant="ghost" className="flex-1 text-gray-400 hover:text-white" data-testid="button-skip-wallet">Skip</Button>
                 </div>
               </>
@@ -2012,9 +1993,6 @@ export default function OnboardingFlow({
               <Button variant="ghost" onClick={goToNextStep} className="w-full text-gray-400 hover:text-white py-3">
                 Continue Free <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
-              <Button variant="outline" onClick={goToPrevStep} className="w-full">
-                Back
-              </Button>
             </div>
             {selectedPath === 'indie' ? (
               <IndieDevUpgradeDialog open={showIndieDevUpgrade} onOpenChange={setShowIndieDevUpgrade} />
@@ -2063,6 +2041,23 @@ export default function OnboardingFlow({
       className={`w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 h-dvh sm:h-[700px] sm:overflow-hidden sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col bg-[#071013]`}
       style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)' }}
     >
+      {/* Persistent back control. Sits above the step indicator so every step
+          exposes it in the same place, rather than each step rolling its own.
+          Hidden on the first step (nothing to go back to) and on Complete,
+          where the account has already been written. */}
+      <div className="flex items-center mb-3 h-8">
+        {currentStep > OnboardingStep.Welcome && currentStep !== OnboardingStep.Complete && (
+          <button
+            type="button"
+            onClick={goToPrevStep}
+            aria-label="Go back"
+            className="flex items-center gap-1 -ml-2 px-2 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </button>
+        )}
+      </div>
       <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
       <div className={`flex-1 flex flex-col min-h-0 ${stepDirection === 'forward' ? 'ob-step-content-forward' : 'ob-step-content-back'}`} key={currentStep}>
         {renderStepContent()}
