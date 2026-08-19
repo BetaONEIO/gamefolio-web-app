@@ -573,10 +573,12 @@ export interface IStorage {
   upsertXpSetting(setting: InsertXpSetting): Promise<XpSetting>;
 
   // Indie game profile operations
-  getIndieGameProfile(userId: number): Promise<IndieGameProfile | null>;
-  upsertIndieGameProfile(userId: number, patch: Partial<InsertIndieGameProfile>): Promise<IndieGameProfile>;
-  getIndieFieldMeta(userId: number): Promise<Record<string, IndieGameFieldOverride>>;
-  upsertIndieFieldMeta(userId: number, fieldName: string, patch: Partial<Omit<IndieGameFieldOverride, "id" | "userId" | "fieldName" | "createdAt">>): Promise<void>;
+  // gameId is optional throughout: omitting it targets the user's primary game,
+  // which keeps every pre-multi-game caller working unchanged (migration 0020).
+  getIndieGameProfile(userId: number, gameId?: number | null): Promise<IndieGameProfile | null>;
+  upsertIndieGameProfile(userId: number, patch: Partial<InsertIndieGameProfile>, gameId?: number | null): Promise<IndieGameProfile>;
+  getIndieFieldMeta(userId: number, gameId?: number | null): Promise<Record<string, IndieGameFieldOverride>>;
+  upsertIndieFieldMeta(userId: number, fieldName: string, patch: Partial<Omit<IndieGameFieldOverride, "id" | "userId" | "fieldName" | "createdAt">>, gameId?: number | null): Promise<void>;
   getIndieGameProfileByUsername(username: string): Promise<{ profile: IndieGameProfile | null; user: User } | null>;
 }
 

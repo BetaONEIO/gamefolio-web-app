@@ -2207,7 +2207,12 @@ export const usedPaymentHashes = pgTable("used_payment_hashes", {
 // Canonical per-developer game profile — one row per indie developer user
 export const indieGameProfiles = pgTable("indie_game_profiles", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  // No longer unique: a developer can have several games (migration 0020).
+  // Exactly one of a user's games carries isPrimary, enforced by the partial
+  // unique index indie_game_profiles_one_primary_per_user.
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  isPrimary: boolean("is_primary").default(false).notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
 
   // Section 1: Basic Info
   gameName: text("game_name"),
@@ -2277,6 +2282,8 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
 export const indieGameFieldOverrides = pgTable("indie_game_field_overrides", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // Scopes an override to one game. Nullable for rows predating migration 0020.
+  gameId: integer("game_id").references(() => indieGameProfiles.id, { onDelete: "cascade" }),
   fieldName: text("field_name").notNull(),
   importedValue: text("imported_value"),   // JSON string of last imported value
   importSource: text("import_source"),     // "steam" | "epic" | "itch"

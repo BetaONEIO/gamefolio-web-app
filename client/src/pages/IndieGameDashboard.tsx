@@ -51,6 +51,7 @@ const PLATFORM_ICONS: Record<string, any> = {
 const RELEASE_STATUSES = ["coming_soon", "early_access", "released"];
 
 type IndieProfile = Record<string, any>;
+type GameSummary = { id: number; gameName: string | null; releaseStatus: string | null; isPrimary: boolean; capsuleImageUrl?: string | null; headerImageUrl?: string | null };
 type FieldMeta = Record<string, { isManualOverride: boolean; importedValue?: string; importSource?: string; lastEditedAt?: string }>;
 
 function SectionCard({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
@@ -148,8 +149,21 @@ export default function IndieGameDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [saving, setSaving] = useState(false);
 
+  // A developer may own several games (migration 0020). selectedGameId picks
+  // which one the dashboard is editing; null means "let the server pick the
+  // primary", which is what a single-game developer always gets.
+  const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
+
+  const { data: gamesData } = useQuery<{ games: GameSummary[]; limit: number; canAddMore: boolean }>({
+    queryKey: ["/api/indie/games"],
+    enabled: !!user,
+  });
+  const games = gamesData?.games ?? [];
+
   const { data, isLoading } = useQuery<{ profile: IndieProfile; fieldMeta: FieldMeta }>({
-    queryKey: ["/api/indie/profile"],
+    queryKey: selectedGameId
+      ? ["/api/indie/profile", { gameId: selectedGameId }]
+      : ["/api/indie/profile"],
     enabled: !!user,
   });
 
@@ -163,6 +177,15 @@ export default function IndieGameDashboard() {
     setInitialized(true);
   }
 
+  // Switching games must reload the editable form from the newly fetched
+  // profile, otherwise the previous game's unsaved values would leak across.
+  const switchGame = (gameId: number | null) => {
+    if (gameId === selectedGameId) return;
+    setSelectedGameId(gameId);
+    setInitialized(false);
+    setForm({});
+  };
+
   const set = (key: string, value: any) => setForm(f => ({ ...f, [key]: value }));
 
   // Save a section (only sends fields in the current form vs profile diff)
@@ -173,7 +196,7 @@ export default function IndieGameDashboard() {
     }
     setSaving(true);
     try {
-      await apiRequest("PUT", "/api/indie/profile", patch);
+      await apiRequest("PUT", "/api/indie/profile", { ...patch, gameId: selectedGameId ?? undefined });
       qc.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       toast({ title: "Saved!", description: "Your changes are live." });
     } catch {
@@ -377,7 +400,7 @@ export default function IndieGameDashboard() {
     if (steamPreviewData.appId) { fields.steamAppId = steamPreviewData.appId; fields.steamUrl = steamPreviewData.steamUrl; }
     setSaving(true);
     try {
-      await apiRequest("PUT", "/api/indie/profile", fields);
+      await apiRequest("PUT", "/api/indie/profile", { ...fields, gameId: selectedGameId ?? undefined });
       setForm(f => ({ ...f, ...fields }));
       qc.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       toast({ title: "Imported from Steam!", description: `${Object.keys(fields).length} fields updated.` });
@@ -418,7 +441,7 @@ export default function IndieGameDashboard() {
     }
     setSaving(true);
     try {
-      await apiRequest("PUT", "/api/indie/profile", fields);
+      await apiRequest("PUT", "/api/indie/profile", { ...fields, gameId: selectedGameId ?? undefined });
       setForm(f => ({ ...f, ...fields }));
       qc.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       toast({ title: "Imported from itch.io!", description: `${Object.keys(fields).length} fields updated.` });
@@ -463,6 +486,33 @@ export default function IndieGameDashboard() {
             <Gamepad2 size={18} style={{ color: NEON }} />
             <span className="font-bold text-white">Game Dashboard</span>
           </div>
+
+          {/* Game switcher — only meaningful once a developer has more than one.
+              The add button and its limit are governed by the server's quota. */}
+          {games.length > 1 && (
+            <div className="ml-auto flex items-center gap-2 overflow-x-auto">
+              {games.map(g => {
+                const active = selectedGameId === g.id || (selectedGameId === null && g.isPrimary);
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => switchGame(g.id)}
+                    title={g.gameName ?? `Game ${g.id}`}
+                    className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs whitespace-nowrap transition-colors"
+                    style={{
+                      borderColor: active ? NEON : "rgba(255,255,255,0.12)",
+                      background: active ? "rgba(198,255,0,0.10)" : "transparent",
+                      color: active ? "#fff" : "rgba(255,255,255,0.55)",
+                    }}
+                  >
+                    <span className="max-w-[9rem] truncate">{g.gameName?.trim() || `Untitled game`}</span>
+                    {g.isPrimary && <span className="text-[10px] uppercase tracking-wide opacity-60">primary</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="ml-auto flex items-center gap-2">
             <a href={`/studio/${user.username}`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-xs font-semibold text-white/40 hover:text-white transition-colors">

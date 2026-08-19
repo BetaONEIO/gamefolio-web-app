@@ -329,7 +329,10 @@ export default function OnboardingFlow({
     mainGame: '',
     streamFrequency: '',
   });
-  const [indieGameData, setIndieGameData] = useState({
+  // A developer can register several games (migration 0020). How many is
+  // governed server-side by their subscription — free accounts get one, indie
+  // dev subscribers get ten — and GET /api/indie/games reports the limit.
+  const blankIndieGame = () => ({
     gameName: '',
     studioName: '',
     genre: '',
@@ -340,6 +343,52 @@ export default function OnboardingFlow({
     websiteLink: '',
     description: '',
   });
+  type IndieGameForm = ReturnType<typeof blankIndieGame>;
+
+  const [indieGames, setIndieGames] = useState<IndieGameForm[]>([blankIndieGame()]);
+  const [activeGameIdx, setActiveGameIdx] = useState(0);
+  const [indieGameLimit, setIndieGameLimit] = useState(1);
+
+  // The form below edits whichever game is selected. Exposing the active game
+  // through the original indieGameData/setIndieGameData names keeps every field
+  // binding unchanged while the underlying state became a list.
+  const indieGameData = indieGames[activeGameIdx] ?? blankIndieGame();
+  const setIndieGameData = (
+    update: IndieGameForm | ((prev: IndieGameForm) => IndieGameForm),
+  ) => {
+    setIndieGames(prev => prev.map((g, i) =>
+      i === activeGameIdx ? (typeof update === 'function' ? update(g) : update) : g));
+  };
+
+  const addIndieGame = () => {
+    if (indieGames.length >= indieGameLimit) return;
+    setIndieGames(prev => [...prev, blankIndieGame()]);
+    setActiveGameIdx(indieGames.length);
+  };
+
+  const removeIndieGame = (idx: number) => {
+    if (indieGames.length <= 1) return;
+    setIndieGames(prev => prev.filter((_, i) => i !== idx));
+    setActiveGameIdx(i => (i >= idx && i > 0 ? i - 1 : i));
+  };
+
+  // The quota is the server's call, not the client's — a new account is free
+  // (limit 1) until it subscribes, at which point the limit becomes 10.
+  useEffect(() => {
+    if (selectedPath !== 'indie') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiRequest("GET", "/api/indie/games");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && typeof data?.limit === 'number') setIndieGameLimit(data.limit);
+      } catch {
+        // Leave the default of 1: never grant more slots than we can confirm.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedPath]);
   const [platformExpanded, setPlatformExpanded] = useState<{ steam: boolean; itch: boolean; epic: boolean }>({ steam: false, itch: false, epic: false });
 
   // Wallet state
@@ -446,13 +495,20 @@ export default function OnboardingFlow({
       toast({ title: "Choose your path", description: "Please select one of the options to continue.", variant: "default" });
       return;
     }
-    if (currentStep === OnboardingStep.PathSetup && selectedPath === 'indie' && !indieGameData.gameName.trim()) {
-      toast({ title: "Game name required", description: "Please enter your game's name to continue.", variant: "default" });
-      return;
-    }
-    if (currentStep === OnboardingStep.PathSetup && selectedPath === 'indie' && !indieGameData.releaseStatus) {
-      toast({ title: "Release status required", description: "Please select a release status to continue.", variant: "default" });
-      return;
+    if (currentStep === OnboardingStep.PathSetup && selectedPath === 'indie') {
+      // Every game the developer added must be complete, not just the visible one.
+      const missingName = indieGames.findIndex(g => !g.gameName.trim());
+      if (missingName !== -1) {
+        setActiveGameIdx(missingName);
+        toast({ title: "Game name required", description: indieGames.length > 1 ? `Please enter a name for game ${missingName + 1} to continue.` : "Please enter your game's name to continue.", variant: "default" });
+        return;
+      }
+      const missingStatus = indieGames.findIndex(g => !g.releaseStatus);
+      if (missingStatus !== -1) {
+        setActiveGameIdx(missingStatus);
+        toast({ title: "Release status required", description: indieGames.length > 1 ? `Please select a release status for "${indieGames[missingStatus].gameName}" to continue.` : "Please select a release status to continue.", variant: "default" });
+        return;
+      }
     }
 
     const next = getNextStep(currentStep);
@@ -624,8 +680,10 @@ export default function OnboardingFlow({
       let bio = "Just joined Gamefolio!";
       if (selectedPath === "streamer" && streamerData.mainPlatform) {
         bio = `Streaming on ${streamerData.mainPlatform}${streamerData.mainGame ? ` — ${streamerData.mainGame}` : ''}`;
-      } else if (selectedPath === "indie" && indieGameData.gameName) {
-        bio = `Indie developer — ${indieGameData.gameName}${indieGameData.studioName ? ` by ${indieGameData.studioName}` : ''}`;
+      } else if (selectedPath === "indie" && indieGames[0]?.gameName) {
+        const lead = indieGames[0];
+        const others = indieGames.length - 1;
+        bio = `Indie developer — ${lead.gameName}${lead.studioName ? ` by ${lead.studioName}` : ''}${others > 0 ? ` and ${others} more game${others > 1 ? 's' : ''}` : ''}`;
       }
 
       await apiRequest("PATCH", `/api/users/${userId}`, {
@@ -637,24 +695,34 @@ export default function OnboardingFlow({
 
       // Persist the indie "Your Game" details. Without this the whole step is
       // discarded — previously only the derived bio string survived.
-      if (selectedPath === "indie" && indieGameData.gameName.trim()) {
-        try {
-          await apiRequest("POST", "/api/indie/onboarding-profile", {
-            gameName: indieGameData.gameName.trim(),
-            studioName: indieGameData.studioName.trim() || undefined,
-            releaseStatus: indieGameData.releaseStatus || undefined,
-            shortDescription: indieGameData.description.trim() || undefined,
-            genres: indieGameData.genre.trim()
-              ? indieGameData.genre.split(",").map(g => g.trim()).filter(Boolean)
-              : undefined,
-            steamUrl: indieGameData.steamLink.trim() || undefined,
-            itchUrl: indieGameData.itchLink.trim() || undefined,
-            epicUrl: indieGameData.epicLink.trim() || undefined,
-            websiteUrl: indieGameData.websiteLink.trim() || undefined,
-          });
-        } catch (err) {
-          // Non-fatal: the account is already created, so don't block completion.
-          console.error("Failed to save indie game profile during onboarding", err);
+      // The first game goes through /onboarding-profile (which upserts the
+      // primary), any extras through /games. The server enforces the quota, so
+      // a request beyond the developer's limit is rejected there, not here.
+      if (selectedPath === "indie") {
+        const toPayload = (g: IndieGameForm) => ({
+          gameName: g.gameName.trim(),
+          studioName: g.studioName.trim() || undefined,
+          releaseStatus: g.releaseStatus || undefined,
+          shortDescription: g.description.trim() || undefined,
+          genres: g.genre.trim() ? g.genre.split(",").map(x => x.trim()).filter(Boolean) : undefined,
+          steamUrl: g.steamLink.trim() || undefined,
+          itchUrl: g.itchLink.trim() || undefined,
+          epicUrl: g.epicLink.trim() || undefined,
+          websiteUrl: g.websiteLink.trim() || undefined,
+        });
+
+        const named = indieGames.filter(g => g.gameName.trim());
+        for (let i = 0; i < named.length; i++) {
+          try {
+            await apiRequest(
+              "POST",
+              i === 0 ? "/api/indie/onboarding-profile" : "/api/indie/games",
+              toPayload(named[i]),
+            );
+          } catch (err) {
+            // Non-fatal: the account already exists, so never block completion.
+            console.error(`Failed to save indie game ${i + 1} during onboarding`, err);
+          }
         }
       }
 
@@ -1514,9 +1582,60 @@ export default function OnboardingFlow({
           <div className="flex flex-col flex-1 min-h-0">
             <div className="flex-1 overflow-y-auto space-y-3">
               <div>
-                <h2 className="text-2xl font-bold text-white mb-1">Your Game</h2>
-                <p className="text-gray-400 mb-4">Tell us about your indie game. Required fields are marked with <span className="text-primary">*</span></p>
+                <h2 className="text-2xl font-bold text-white mb-1">{indieGames.length > 1 ? "Your Games" : "Your Game"}</h2>
+                <p className="text-gray-400 mb-4">Tell us about your indie game{indieGames.length > 1 ? "s" : ""}. Required fields are marked with <span className="text-primary">*</span></p>
               </div>
+
+              {/* Game switcher. The limit comes from the server: free accounts
+                  get one game, indie dev subscribers get up to ten. */}
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                {indieGames.map((g, i) => (
+                  <div
+                    key={i}
+                    className={`group flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm cursor-pointer transition-colors ${
+                      i === activeGameIdx
+                        ? "border-primary bg-primary/10 text-white"
+                        : "border-[#1B2A33] bg-[#0B1218] text-gray-400 hover:text-white"
+                    }`}
+                    onClick={() => setActiveGameIdx(i)}
+                  >
+                    <Gamepad2 className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="max-w-[10rem] truncate">{g.gameName.trim() || `Game ${i + 1}`}</span>
+                    {indieGames.length > 1 && (
+                      <button
+                        type="button"
+                        aria-label={`Remove ${g.gameName.trim() || `game ${i + 1}`}`}
+                        onClick={(e) => { e.stopPropagation(); removeIndieGame(i); }}
+                        className="ml-0.5 text-gray-500 hover:text-red-400"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                {indieGames.length < indieGameLimit && (
+                  <button
+                    type="button"
+                    onClick={addIndieGame}
+                    className="flex items-center gap-1.5 rounded-full border border-dashed border-[#2A3A44] px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:border-primary transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add another game
+                  </button>
+                )}
+              </div>
+
+              {indieGames.length >= indieGameLimit && indieGameLimit === 1 && (
+                <p className="text-xs text-gray-500 mb-2">
+                  Free accounts include one game. Subscribe as an indie developer to add up to 10.
+                </p>
+              )}
+              {indieGames.length >= indieGameLimit && indieGameLimit > 1 && (
+                <p className="text-xs text-gray-500 mb-2">
+                  You've reached your limit of {indieGameLimit} games.
+                </p>
+              )}
 
               <div>
                 <Label className="text-white text-sm mb-1.5 block">Game Name <span className="text-primary">*</span></Label>

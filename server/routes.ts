@@ -11519,14 +11519,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { url: imageUrl } = await supabaseStorage.uploadBuffer(processedBuffer, fileName, "image/jpeg", "image", req.user.id);
       try { await fsPromises.unlink(req.file.path); } catch {}
       const { indieGameProfiles } = await import("@shared/schema");
-      const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
-      if (ex.length > 0) {
-        await db.update(indieGameProfiles).set({ [field]: imageUrl }).where(eq(indieGameProfiles.userId, req.user.id));
+      const uploadGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      let targetGameId = uploadGameId;
+      if (targetGameId) {
+        await db.update(indieGameProfiles).set({ [field]: imageUrl }).where(eq(indieGameProfiles.id, targetGameId));
       } else {
-        await db.insert(indieGameProfiles).values({ userId: req.user.id, [field]: imageUrl });
+        const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, [field]: imageUrl, isPrimary: true }).returning({ id: indieGameProfiles.id });
+        targetGameId = created?.id ?? null;
       }
       // Clear useImported so GET /api/indie/profile returns the uploaded URL, not a stale imported value
-      await _indieUpsertMeta(req.user.id, field, { isManualOverride: true, useImported: false, lastEditedAt: new Date() });
+      await _indieUpsertMeta(req.user.id, field, { isManualOverride: true, useImported: false, lastEditedAt: new Date() }, targetGameId);
       res.json({ url: imageUrl, field });
     } catch (err) {
       console.error("Error uploading indie profile image:", err);
@@ -11538,18 +11540,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Internal helpers for indie profile
   // Indie helpers delegate to storage layer for proper architecture separation
-  async function _indieGetOrCreate(userId: number) {
-    const existing = await storage.getIndieGameProfile(userId);
+  // gameId omitted => the user's primary game (migration 0020).
+  async function _indieGetOrCreate(userId: number, gameId?: number | null) {
+    const existing = await storage.getIndieGameProfile(userId, gameId);
     if (existing) return existing;
-    return storage.upsertIndieGameProfile(userId, {});
+    return storage.upsertIndieGameProfile(userId, {}, gameId);
   }
 
-  async function _indieFieldMetaMap(userId: number) {
-    return storage.getIndieFieldMeta(userId);
+  async function _indieFieldMetaMap(userId: number, gameId?: number | null) {
+    return storage.getIndieFieldMeta(userId, gameId);
   }
 
-  async function _indieUpsertMeta(userId: number, fieldName: string, patch: Partial<{ importedValue: string; importSource: string; isManualOverride: boolean; useImported: boolean; lastImportedAt: Date; lastEditedAt: Date }>) {
-    return storage.upsertIndieFieldMeta(userId, fieldName, patch);
+  async function _indieUpsertMeta(userId: number, fieldName: string, patch: Partial<{ importedValue: string; importSource: string; isManualOverride: boolean; useImported: boolean; lastImportedAt: Date; lastEditedAt: Date }>, gameId?: number | null) {
+    return storage.upsertIndieFieldMeta(userId, fieldName, patch, gameId);
   }
 
   function _stripHtml(html: string): string {
@@ -11599,6 +11602,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "websiteUrl","twitterUrl","discordUrl",
   ];
 
+  // Game quotas: a free developer gets one game; an indie-dev subscriber gets ten.
+  // Read the flag from the database rather than the session user, so a
+  // subscription that changed mid-session is reflected immediately.
+  const INDIE_FREE_GAME_LIMIT = 1;
+  const INDIE_SUBSCRIBER_GAME_LIMIT = 10;
+
+  async function _indieGameLimit(userId: number): Promise<number> {
+    const { users } = await import("@shared/schema");
+    const { db } = await import("./db");
+    const { eq } = await import("drizzle-orm");
+    const [row] = await db.select({ subscribed: users.isIndieDevSubscriber })
+      .from(users).where(eq(users.id, userId));
+    return row?.subscribed ? INDIE_SUBSCRIBER_GAME_LIMIT : INDIE_FREE_GAME_LIMIT;
+  }
+
+  // Resolves which game a request refers to. A developer may own several games
+  // (migration 0020); callers that predate multi-game send no gameId, so fall
+  // back to the primary game. Returns null when the id is not the caller's —
+  // never trust a client-supplied gameId without this ownership check.
+  async function _indieResolveGameId(userId: number, requested?: unknown): Promise<number | null> {
+    const { indieGameProfiles } = await import("@shared/schema");
+    const { db } = await import("./db");
+    const { eq, and, asc } = await import("drizzle-orm");
+
+    const wanted = Number(requested);
+    if (Number.isInteger(wanted) && wanted > 0) {
+      const [owned] = await db.select({ id: indieGameProfiles.id })
+        .from(indieGameProfiles)
+        .where(and(eq(indieGameProfiles.id, wanted), eq(indieGameProfiles.userId, userId)));
+      return owned?.id ?? null;
+    }
+
+    const [primary] = await db.select({ id: indieGameProfiles.id })
+      .from(indieGameProfiles)
+      .where(and(eq(indieGameProfiles.userId, userId), eq(indieGameProfiles.isPrimary, true)));
+    if (primary) return primary.id;
+
+    // No primary flagged (rows created before 0020's backfill, or primary deleted).
+    const [first] = await db.select({ id: indieGameProfiles.id })
+      .from(indieGameProfiles)
+      .where(eq(indieGameProfiles.userId, userId))
+      .orderBy(asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id))
+      .limit(1);
+    return first?.id ?? null;
+  }
+
   // GET /api/indie/profile — owner: full profile + field meta (partner access only)
   // Resolution model: when useImported is true for a field, the resolved profile value
   // should reflect the importedValue rather than the manually-edited value.
@@ -11606,8 +11655,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
     try {
-      const profile = await _indieGetOrCreate(req.user.id);
-      const fieldMeta = await _indieFieldMetaMap(req.user.id);
+      // ?gameId= selects one of the developer's games; omitted means primary.
+      const gameId = await _indieResolveGameId(req.user.id, req.query.gameId);
+      if (req.query.gameId && !gameId) return res.status(404).json({ error: "Game not found" });
+      const profile = await _indieGetOrCreate(req.user.id, gameId);
+      const fieldMeta = await _indieFieldMetaMap(req.user.id, gameId);
 
       // Apply useImported resolution: for each field that has useImported=true,
       // return the importedValue as the effective field value in a resolvedProfile.
@@ -11643,21 +11695,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       if (Object.keys(patch).length === 0) return res.status(400).json({ error: "No valid fields provided" });
       patch.updatedAt = new Date();
-      const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      // Resolve which game is being edited before writing. Updating by userId
+      // alone would rewrite every game the developer owns, now that migration
+      // 0020 has removed the UNIQUE(user_id) constraint.
+      const requestedGameId = req.body.gameId ?? req.query.gameId;
+      const gameId = await _indieResolveGameId(req.user.id, requestedGameId);
+      if (requestedGameId && !gameId) return res.status(404).json({ error: "Game not found" });
       let profile;
-      if (ex.length > 0) {
-        const up = await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.userId, req.user.id)).returning();
+      if (gameId) {
+        const up = await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, gameId)).returning();
         profile = up[0];
       } else {
-        const ins = await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch }).returning();
+        const ins = await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch, isPrimary: true }).returning();
         profile = ins[0];
       }
       const now = new Date();
       for (const key of Object.keys(patch)) {
         if (key === "updatedAt") continue;
-        await _indieUpsertMeta(req.user.id, key, { isManualOverride: true, useImported: false, lastEditedAt: now });
+        await _indieUpsertMeta(req.user.id, key, { isManualOverride: true, useImported: false, lastEditedAt: now }, profile?.id);
       }
-      const fieldMeta = await _indieFieldMetaMap(req.user.id);
+      const fieldMeta = await _indieFieldMetaMap(req.user.id, profile?.id);
       res.json({ profile, fieldMeta });
     } catch (err) {
       console.error("PUT /api/indie/profile error:", err);
@@ -11687,22 +11744,161 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
       patch.updatedAt = new Date();
 
-      const ex = await db.select({ id: indieGameProfiles.id })
-        .from(indieGameProfiles).where(eq(indieGameProfiles.userId, userId));
+      // Target the primary game so re-running onboarding overwrites it rather
+      // than editing every game a returning developer owns.
+      const primaryId = await _indieResolveGameId(userId, undefined);
       let profile;
-      if (ex.length > 0) {
+      if (primaryId) {
         const up = await db.update(indieGameProfiles).set(patch)
-          .where(eq(indieGameProfiles.userId, userId)).returning();
+          .where(eq(indieGameProfiles.id, primaryId)).returning();
         profile = up[0];
       } else {
+        // First game for this user — it becomes their primary, so later
+        // additions through POST /api/indie/games slot in behind it.
         const ins = await db.insert(indieGameProfiles)
-          .values({ userId: userId, ...patch }).returning();
+          .values({ userId: userId, ...patch, isPrimary: true }).returning();
         profile = ins[0];
       }
       res.json({ profile });
     } catch (err) {
       console.error("POST /api/indie/onboarding-profile error:", err);
       res.status(500).json({ error: "Failed to save game profile" });
+    }
+  });
+
+  // GET /api/indie/games — every game the developer owns, for the switcher.
+  app.get("/api/indie/games", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, asc, desc } = await import("drizzle-orm");
+      const games = await db.select({
+          id: indieGameProfiles.id,
+          gameName: indieGameProfiles.gameName,
+          releaseStatus: indieGameProfiles.releaseStatus,
+          headerImageUrl: indieGameProfiles.headerImageUrl,
+          capsuleImageUrl: indieGameProfiles.capsuleImageUrl,
+          isPrimary: indieGameProfiles.isPrimary,
+          sortOrder: indieGameProfiles.sortOrder,
+          updatedAt: indieGameProfiles.updatedAt,
+        })
+        .from(indieGameProfiles)
+        .where(eq(indieGameProfiles.userId, userId))
+        .orderBy(desc(indieGameProfiles.isPrimary), asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id));
+      const limit = await _indieGameLimit(userId);
+      res.json({ games, limit, canAddMore: games.length < limit });
+    } catch (err) {
+      console.error("GET /api/indie/games error:", err);
+      res.status(500).json({ error: "Failed to load games" });
+    }
+  });
+
+  // POST /api/indie/games — add another game. The first one a user creates
+  // becomes their primary automatically.
+  app.post("/api/indie/games", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+
+      const patch: Record<string, any> = {};
+      for (const key of INDIE_ALLOWED_FIELDS) {
+        if (key in req.body && req.body[key] !== "" && req.body[key] != null) patch[key] = req.body[key];
+      }
+      if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
+
+      const existing = await db.select({ id: indieGameProfiles.id })
+        .from(indieGameProfiles).where(eq(indieGameProfiles.userId, userId));
+
+      const limit = await _indieGameLimit(userId);
+      if (existing.length >= limit) {
+        return res.status(403).json({
+          error: limit === INDIE_FREE_GAME_LIMIT
+            ? "Free accounts can add one game. Subscribe to add up to 10."
+            : `You have reached the maximum of ${limit} games.`,
+          code: "GAME_LIMIT_REACHED",
+          limit,
+          current: existing.length,
+        });
+      }
+
+      const [game] = await db.insert(indieGameProfiles).values({
+        userId,
+        ...patch,
+        isPrimary: existing.length === 0,
+        sortOrder: existing.length,
+        updatedAt: new Date(),
+      }).returning();
+      res.status(201).json({ game });
+    } catch (err) {
+      console.error("POST /api/indie/games error:", err);
+      res.status(500).json({ error: "Failed to create game" });
+    }
+  });
+
+  // POST /api/indie/games/:gameId/primary — promote a game to primary.
+  // Demote-then-promote in a transaction: the partial unique index
+  // indie_game_profiles_one_primary_per_user rejects two primaries at once.
+  app.post("/api/indie/games/:gameId/primary", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const gameId = await _indieResolveGameId(userId, req.params.gameId);
+      if (!gameId) return res.status(404).json({ error: "Game not found" });
+
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and } = await import("drizzle-orm");
+
+      await db.transaction(async (tx) => {
+        await tx.update(indieGameProfiles).set({ isPrimary: false })
+          .where(and(eq(indieGameProfiles.userId, userId), eq(indieGameProfiles.isPrimary, true)));
+        await tx.update(indieGameProfiles).set({ isPrimary: true, updatedAt: new Date() })
+          .where(eq(indieGameProfiles.id, gameId));
+      });
+      res.json({ ok: true, primaryGameId: gameId });
+    } catch (err) {
+      console.error("POST /api/indie/games/:gameId/primary error:", err);
+      res.status(500).json({ error: "Failed to set primary game" });
+    }
+  });
+
+  // DELETE /api/indie/games/:gameId — remove a game. If it was the primary,
+  // promote the next one so the developer is never left without one.
+  app.delete("/api/indie/games/:gameId", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const gameId = await _indieResolveGameId(userId, req.params.gameId);
+      if (!gameId) return res.status(404).json({ error: "Game not found" });
+
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and, ne, asc } = await import("drizzle-orm");
+
+      await db.transaction(async (tx) => {
+        const [removed] = await tx.delete(indieGameProfiles)
+          .where(eq(indieGameProfiles.id, gameId)).returning({ isPrimary: indieGameProfiles.isPrimary });
+        if (removed?.isPrimary) {
+          const [next] = await tx.select({ id: indieGameProfiles.id })
+            .from(indieGameProfiles)
+            .where(eq(indieGameProfiles.userId, userId))
+            .orderBy(asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id))
+            .limit(1);
+          if (next) {
+            await tx.update(indieGameProfiles).set({ isPrimary: true })
+              .where(eq(indieGameProfiles.id, next.id));
+          }
+        }
+      });
+      res.json({ ok: true, deletedGameId: gameId });
+    } catch (err) {
+      console.error("DELETE /api/indie/games/:gameId error:", err);
+      res.status(500).json({ error: "Failed to delete game" });
     }
   });
 
@@ -11812,13 +12008,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
-      const existing = await db.select({ id: indieGameProfiles.id })
-        .from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      const itchGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
       const patch = { itchApiKey: apiKey, itchUsername, updatedAt: new Date() };
-      if (existing.length > 0) {
-        await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.userId, req.user.id));
+      if (itchGameId) {
+        await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, itchGameId));
       } else {
-        await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch });
+        await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch, isPrimary: true });
       }
 
       res.json({ connected: true, itchUsername, games });
@@ -11871,9 +12066,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
-      await db.update(indieGameProfiles)
-        .set({ itchApiKey: null, itchUsername: null, updatedAt: new Date() })
-        .where(eq(indieGameProfiles.userId, req.user.id));
+      // Disconnect only the selected game's itch credentials, not every game's.
+      const disconnectGameId = await _indieResolveGameId(req.user.id, req.body?.gameId ?? req.query.gameId);
+      if (disconnectGameId) {
+        await db.update(indieGameProfiles)
+          .set({ itchApiKey: null, itchUsername: null, updatedAt: new Date() })
+          .where(eq(indieGameProfiles.id, disconnectGameId));
+      }
       res.json({ connected: false });
     } catch (err) {
       console.error("DELETE /api/indie/itch/disconnect error:", err);
@@ -11989,13 +12188,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       patch.updatedAt = now;
 
-      const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      const importGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
       let profile;
-      if (ex.length > 0) {
-        const up = await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.userId, req.user.id)).returning();
+      if (importGameId) {
+        const up = await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, importGameId)).returning();
         profile = up[0];
       } else {
-        const ins = await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch }).returning();
+        const ins = await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch, isPrimary: true }).returning();
         profile = ins[0];
       }
 
@@ -12035,8 +12234,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
     try {
-      const profile = await _indieGetOrCreate(req.user.id);
-      const fieldMeta = await _indieFieldMetaMap(req.user.id);
+      const gameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      const profile = await _indieGetOrCreate(req.user.id, gameId);
+      const fieldMeta = await _indieFieldMetaMap(req.user.id, gameId);
       let storeData: Record<string, any> | null = null;
       let source = "";
       if (profile.steamAppId) {
@@ -12084,6 +12284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
+      const syncGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
       const patch: Record<string, any> = {};
       const applied: string[] = [];
       const now = new Date();
@@ -12094,9 +12295,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       if (Object.keys(patch).length > 0) {
         patch.updatedAt = now;
-        const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
-        if (ex.length > 0) { await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.userId, req.user.id)); }
-        else { await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch }); }
+        // Write by resolved row id — a userId-scoped update would apply the
+        // imported store data to every game the developer owns.
+        if (syncGameId) { await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, syncGameId)); }
+        else { await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch, isPrimary: true }); }
         // Clear isManualOverride for applied fields — they now track the store source
         for (const fieldName of applied) {
           await _indieUpsertMeta(req.user.id, fieldName, {
@@ -12107,8 +12309,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      const profile = await _indieGetOrCreate(req.user.id);
-      const fieldMetaNew = await _indieFieldMetaMap(req.user.id);
+      const profile = await _indieGetOrCreate(req.user.id, syncGameId);
+      const fieldMetaNew = await _indieFieldMetaMap(req.user.id, syncGameId);
       res.json({ profile, fieldMeta: fieldMetaNew, applied, skipped: [] });
     } catch (err) {
       console.error("POST /api/indie/sync-apply error:", err);
@@ -12130,7 +12332,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
-      const fieldMeta = await _indieFieldMetaMap(req.user.id);
+      const revertGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      const fieldMeta = await _indieFieldMetaMap(req.user.id, revertGameId);
       const meta = fieldMeta[fieldName];
       if (!meta?.importedValue) {
         return res.status(404).json({ error: `No imported value to revert to for field "${fieldName}"` });
@@ -12138,11 +12341,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const importedValue = JSON.parse(meta.importedValue);
       const now = new Date();
       const patch: Record<string, any> = { [fieldName]: importedValue, updatedAt: now };
-      const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
-      if (ex.length > 0) {
-        await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.userId, req.user.id));
+      if (revertGameId) {
+        await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, revertGameId));
       } else {
-        await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch });
+        await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch, isPrimary: true });
       }
       // Clear the manual override — field now uses the imported (store) value
       await _indieUpsertMeta(req.user.id, fieldName, {
@@ -12152,8 +12354,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastImportedAt: meta.lastImportedAt ? new Date(meta.lastImportedAt) : now,
         lastEditedAt: now,
       });
-      const profile = await _indieGetOrCreate(req.user.id);
-      const fieldMetaNew = await _indieFieldMetaMap(req.user.id);
+      const profile = await _indieGetOrCreate(req.user.id, revertGameId);
+      const fieldMetaNew = await _indieFieldMetaMap(req.user.id, revertGameId);
       res.json({ profile, fieldMeta: fieldMetaNew, reverted: fieldName, value: importedValue });
     } catch (err) {
       console.error("POST /api/indie/field-revert error:", err);
@@ -12182,13 +12384,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
-      const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
-      if (ex.length > 0) {
-        await db.update(indieGameProfiles).set({ [field]: imageUrl, updatedAt: new Date() }).where(eq(indieGameProfiles.userId, req.user.id));
+      const imgGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      let imgTargetId = imgGameId;
+      if (imgTargetId) {
+        await db.update(indieGameProfiles).set({ [field]: imageUrl, updatedAt: new Date() }).where(eq(indieGameProfiles.id, imgTargetId));
       } else {
-        await db.insert(indieGameProfiles).values({ userId: req.user.id, [field]: imageUrl });
+        const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, [field]: imageUrl, isPrimary: true }).returning({ id: indieGameProfiles.id });
+        imgTargetId = created?.id ?? null;
       }
-      await _indieUpsertMeta(req.user.id, field, { isManualOverride: true, lastEditedAt: new Date() });
+      await _indieUpsertMeta(req.user.id, field, { isManualOverride: true, lastEditedAt: new Date() }, imgTargetId);
       res.json({ url: imageUrl, field });
     } catch (err) {
       console.error("POST /api/indie/upload/image error:", err);
@@ -12214,15 +12418,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq, sql } = await import("drizzle-orm");
-      const ex = await db.select({ screenshotUrls: indieGameProfiles.screenshotUrls }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      const shotGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      const ex = shotGameId
+        ? await db.select({ screenshotUrls: indieGameProfiles.screenshotUrls }).from(indieGameProfiles).where(eq(indieGameProfiles.id, shotGameId))
+        : [];
       const existing = ex[0]?.screenshotUrls ?? [];
       const updated = [...existing, imageUrl].slice(0, 20);
-      if (ex.length > 0) {
-        await db.update(indieGameProfiles).set({ screenshotUrls: updated, updatedAt: new Date() }).where(eq(indieGameProfiles.userId, req.user.id));
+      let shotTargetId = shotGameId;
+      if (shotTargetId) {
+        await db.update(indieGameProfiles).set({ screenshotUrls: updated, updatedAt: new Date() }).where(eq(indieGameProfiles.id, shotTargetId));
       } else {
-        await db.insert(indieGameProfiles).values({ userId: req.user.id, screenshotUrls: updated });
+        const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, screenshotUrls: updated, isPrimary: true }).returning({ id: indieGameProfiles.id });
+        shotTargetId = created?.id ?? null;
       }
-      await _indieUpsertMeta(req.user.id, 'screenshotUrls', { isManualOverride: true, lastEditedAt: new Date() });
+      await _indieUpsertMeta(req.user.id, 'screenshotUrls', { isManualOverride: true, lastEditedAt: new Date() }, shotTargetId);
       res.json({ url: imageUrl, screenshotUrls: updated });
     } catch (err) {
       console.error("POST /api/indie/upload/screenshot error:", err);
@@ -12241,11 +12450,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
-      const ex = await db.select({ screenshotUrls: indieGameProfiles.screenshotUrls }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      const delShotGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      const ex = delShotGameId
+        ? await db.select({ screenshotUrls: indieGameProfiles.screenshotUrls }).from(indieGameProfiles).where(eq(indieGameProfiles.id, delShotGameId))
+        : [];
       const existing = ex[0]?.screenshotUrls ?? [];
       const updated = existing.filter((u: string) => u !== url);
-      if (ex.length > 0) {
-        await db.update(indieGameProfiles).set({ screenshotUrls: updated, updatedAt: new Date() }).where(eq(indieGameProfiles.userId, req.user.id));
+      if (delShotGameId) {
+        await db.update(indieGameProfiles).set({ screenshotUrls: updated, updatedAt: new Date() }).where(eq(indieGameProfiles.id, delShotGameId));
       }
       res.json({ screenshotUrls: updated });
     } catch (err) {
