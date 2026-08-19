@@ -464,6 +464,46 @@ export default function OnboardingFlow({
     if (cleaned !== current) setStreamerData(d => ({ ...d, [key]: cleaned }));
   };
 
+  // Pasting a Steam or Epic store URL fills in what the store already knows.
+  // Only ever fills blanks — anything the developer has typed wins, so this
+  // can never overwrite their own wording.
+  const [storeLookup, setStoreLookup] = useState<{ status: "idle" | "loading" | "filled" | "error"; message?: string }>({ status: "idle" });
+
+  const lookupStoreUrl = async (rawUrl: string) => {
+    const url = (rawUrl || "").trim();
+    if (!url) return;
+    setStoreLookup({ status: "loading" });
+    try {
+      const res = await apiRequest("GET", `/api/indie/store-lookup?url=${encodeURIComponent(url)}`);
+      if (!res.ok) {
+        setStoreLookup({ status: "error", message: "Couldn't read that store page — fill the details in below." });
+        return;
+      }
+      const data = await res.json();
+      const f = data?.fields || {};
+      const current = indieGames[activeGameIdx] ?? blankIndieGame();
+      const filled: string[] = [];
+      const next = { ...current };
+
+      if (!next.gameName.trim() && f.gameName) { next.gameName = String(f.gameName); filled.push("name"); }
+      if (!next.description.trim() && f.shortDescription) { next.description = String(f.shortDescription); filled.push("description"); }
+      if (!next.genre.trim() && Array.isArray(f.genres) && f.genres.length > 0) { next.genre = f.genres.join(", "); filled.push("genre"); }
+      if (!next.releaseStatus && f.releaseStatus) { next.releaseStatus = String(f.releaseStatus); filled.push("release status"); }
+
+      if (filled.length === 0) {
+        setStoreLookup({ status: "filled", message: `Found on ${data.source === "epic" ? "Epic Games" : "Steam"} — your details are already filled in.` });
+        return;
+      }
+      setIndieGames(prev => prev.map((g, i) => (i === activeGameIdx ? next : g)));
+      setStoreLookup({
+        status: "filled",
+        message: `Filled in ${filled.join(", ")} from ${data.source === "epic" ? "Epic Games" : "Steam"}. Edit anything you'd like to change.`,
+      });
+    } catch {
+      setStoreLookup({ status: "error", message: "Couldn't reach the store — fill the details in below." });
+    }
+  };
+
   const removeIndieGame = (idx: number) => {
     if (indieGames.length <= 1) return;
     setIndieGames(prev => prev.filter((_, i) => i !== idx));
@@ -1892,6 +1932,12 @@ export default function OnboardingFlow({
                 ) : null}
               </div>
 
+              {storeLookup.status !== "idle" && (
+                <p className={`text-xs mb-2 ${storeLookup.status === "error" ? "text-amber-400" : "text-primary"}`}>
+                  {storeLookup.status === "loading" ? "Looking up your game…" : storeLookup.message}
+                </p>
+              )}
+
               {indieGames.length >= indieGameLimit && !indieSubscribed && (
                 <button
                   type="button"
@@ -2015,6 +2061,7 @@ export default function OnboardingFlow({
                       autoFocus
                       value={indieGameData.steamLink}
                       onChange={(e) => setIndieGameData({ ...indieGameData, steamLink: e.target.value })}
+                      onBlur={() => { if (!indieLinkError("steamLink")) void lookupStoreUrl(indieGameData.steamLink); }}
                       placeholder="https://store.steampowered.com/app/..."
                       className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
                     />
@@ -2063,6 +2110,7 @@ export default function OnboardingFlow({
                       autoFocus
                       value={indieGameData.epicLink}
                       onChange={(e) => setIndieGameData({ ...indieGameData, epicLink: e.target.value })}
+                      onBlur={() => { if (!indieLinkError("epicLink")) void lookupStoreUrl(indieGameData.epicLink); }}
                       placeholder="https://store.epicgames.com/..."
                       className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
                     />

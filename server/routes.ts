@@ -11649,6 +11649,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // into the wrong field is rejected rather than silently breaking imports.
   const { validateStoreUrls } = await import("@shared/store-urls");
 
+  // Store lookups, factored out so the partner-only preview endpoints and the
+  // onboarding-time lookup below share one implementation.
+  async function _fetchSteamPreview(appId: string) {
+    const steamRes = await fetch(`https://store.steampowered.com/api/appdetails?appids=${appId}&l=english`, { signal: AbortSignal.timeout(10000) });
+    if (!steamRes.ok) return { ok: false as const, error: "Steam API unavailable", status: 502 };
+    const json = await steamRes.json() as any;
+    const appData = json[appId];
+    if (!appData?.success) return { ok: false as const, error: "Steam app not found — check the App ID", status: 404 };
+    return {
+      ok: true as const,
+      payload: {
+        source: "steam",
+        appId,
+        steamUrl: `https://store.steampowered.com/app/${appId}/`,
+        fields: _mapSteamData(appData.data),
+      },
+    };
+  }
+
+  async function _fetchEpicPreview(slug: string) {
+    const epicRes = await fetch(`https://store-content-ipv4.ak.epicgames.com/api/en-US/content/products/${encodeURIComponent(slug)}`, { signal: AbortSignal.timeout(10000) });
+    if (!epicRes.ok) return { ok: false as const, error: "Epic product not found — check the slug", status: 404 };
+    const json = await epicRes.json() as any;
+    const pages = json.pages || [];
+    const main = pages.find((p: any) => p.type === "productHome") || pages[0];
+    const data = main?.data?.about || {};
+    const media = main?.data?.gallery?.items || [];
+    const screenshotUrls = media.filter((m: any) => m.type === "image").slice(0, 8).map((m: any) => m.src).filter(Boolean);
+    const trailerItem = media.find((m: any) => m.type === "video");
+    return {
+      ok: true as const,
+      payload: {
+        source: "epic",
+        slug,
+        epicUrl: `https://store.epicgames.com/en-US/p/${slug}`,
+        fields: {
+          gameName: json.productName || main?.productName || null,
+          shortDescription: data.shortDescription || null,
+          fullDescription: data.description ? _stripHtml(data.description).slice(0, 5000) : null,
+          headerImageUrl: main?.data?.hero?.logoImage?.src || null,
+          screenshotUrls: screenshotUrls.length > 0 ? screenshotUrls : null,
+          trailerUrl: trailerItem?.src || null,
+        },
+      },
+    };
+  }
+
+  // Pulls the store identifier out of a pasted URL. Steam app pages carry a
+  // numeric id (/app/367520/...), Epic product pages a slug (/p/<slug>).
+  function _identifyStoreUrl(raw: string): { source: "steam"; appId: string } | { source: "epic"; slug: string } | null {
+    const value = String(raw || "").trim();
+    if (!value) return null;
+    let url: URL;
+    try {
+      url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+    } catch {
+      return null;
+    }
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    if (host === "store.steampowered.com") {
+      const m = url.pathname.match(/\/app\/(\d+)/);
+      if (m) return { source: "steam", appId: m[1] };
+      return null;
+    }
+    if (host === "store.epicgames.com" || host.endsWith(".epicgames.com")) {
+      // /p/<slug> and /<locale>/p/<slug> are both in the wild.
+      const m = url.pathname.match(/\/p\/([^/?#]+)/);
+      if (m) return { source: "epic", slug: decodeURIComponent(m[1]).toLowerCase() };
+      return null;
+    }
+    return null;
+  }
+
   const INDIE_ALLOWED_FIELDS = [
     "gameName","releaseStatus","releaseDate","price","isFree",
     "studioName","studioFoundedYear","studioTeamSize","studioWebsite","studioCountry",
@@ -11907,6 +11980,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/indie/store-lookup?url= — resolve a pasted Steam or Epic store URL
+  // into the fields we can prefill from. Authentication only, deliberately no
+  // isPartner gate: this runs during onboarding, before any entitlement exists.
+  // Read-only and nothing is saved — the client decides what to apply.
+  //
+  // itch.io is not supported here: its API requires the developer's own key as
+  // proof of ownership (see /api/indie/itch/connect), so there is nothing to
+  // look up from a bare URL.
+  app.get("/api/indie/store-lookup", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const identified = _identifyStoreUrl(String(req.query.url || ""));
+    if (!identified) {
+      return res.status(400).json({
+        error: "Paste a Steam app URL or an Epic Games product URL.",
+        code: "UNSUPPORTED_STORE_URL",
+      });
+    }
+    try {
+      const result = identified.source === "steam"
+        ? await _fetchSteamPreview(identified.appId)
+        : await _fetchEpicPreview(identified.slug);
+      if (!result.ok) return res.status(result.status).json({ error: result.error });
+      res.json(result.payload);
+    } catch (err) {
+      console.error("GET /api/indie/store-lookup error:", err);
+      res.status(502).json({ error: "Could not reach the store. Try again, or fill the details in yourself." });
+    }
+  });
+
   // GET /api/indie/games — every game the developer owns, for the switcher.
   app.get("/api/indie/games", async (req, res) => {
     if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
@@ -12053,12 +12155,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const appId = (req.query.appId as string || "").replace(/\D/g, "");
     if (!appId) return res.status(400).json({ error: "Valid numeric appId required" });
     try {
-      const steamRes = await fetch(`https://store.steampowered.com/api/appdetails?appids=${appId}&l=english`, { signal: AbortSignal.timeout(10000) });
-      if (!steamRes.ok) return res.status(502).json({ error: "Steam API unavailable" });
-      const json = await steamRes.json() as any;
-      const appData = json[appId];
-      if (!appData?.success) return res.status(404).json({ error: "Steam app not found — check the App ID" });
-      res.json({ source: "steam", appId, steamUrl: `https://store.steampowered.com/app/${appId}/`, fields: _mapSteamData(appData.data) });
+      const result = await _fetchSteamPreview(appId);
+      if (!result.ok) return res.status(result.status).json({ error: result.error });
+      res.json(result.payload);
     } catch (err) {
       console.error("GET /api/indie/steam/preview error:", err);
       res.status(502).json({ error: "Failed to fetch from Steam" });
@@ -12072,28 +12171,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const slug = (req.query.slug as string || "").trim().toLowerCase();
     if (!slug) return res.status(400).json({ error: "slug required (from Epic store URL)" });
     try {
-      const epicRes = await fetch(`https://store-content-ipv4.ak.epicgames.com/api/en-US/content/products/${encodeURIComponent(slug)}`, { signal: AbortSignal.timeout(10000) });
-      if (!epicRes.ok) return res.status(404).json({ error: "Epic product not found — check the slug" });
-      const json = await epicRes.json() as any;
-      const pages = json.pages || [];
-      const main = pages.find((p: any) => p.type === "productHome") || pages[0];
-      const data = main?.data?.about || {};
-      const media = main?.data?.gallery?.items || [];
-      const screenshotUrls = media.filter((m: any) => m.type === "image").slice(0, 8).map((m: any) => m.src).filter(Boolean);
-      const trailerItem = media.find((m: any) => m.type === "video");
-      res.json({
-        source: "epic",
-        slug,
-        epicUrl: `https://store.epicgames.com/en-US/p/${slug}`,
-        fields: {
-          gameName: json.productName || main?.productName || null,
-          shortDescription: data.shortDescription || null,
-          fullDescription: data.description ? _stripHtml(data.description).slice(0, 5000) : null,
-          headerImageUrl: main?.data?.hero?.logoImage?.src || null,
-          screenshotUrls: screenshotUrls.length > 0 ? screenshotUrls : null,
-          trailerUrl: trailerItem?.src || null,
-        },
-      });
+      const result = await _fetchEpicPreview(slug);
+      if (!result.ok) return res.status(result.status).json({ error: result.error });
+      res.json(result.payload);
     } catch (err) {
       console.error("GET /api/indie/epic/preview error:", err);
       res.status(502).json({ error: "Failed to fetch from Epic Games" });
