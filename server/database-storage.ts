@@ -3946,9 +3946,11 @@ export class DatabaseStorage implements IStorage {
     return limit ? combined.slice(0, limit) : combined;
   }
 
-  async hasReceivedXPSourceToday(userId: number, source: string): Promise<boolean> {
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+  // Rolling window rather than a calendar day: the streak itself is governed by
+  // hours since the last claim, so anchoring this to server-local midnight made
+  // the two bonuses drift apart, and reset at a time of day that depended on
+  // where the SERVER is rather than where the user is.
+  async hasReceivedXPSourceSince(userId: number, source: string, since: Date): Promise<boolean> {
     // Reads user_points_history, because that is where LeaderboardService
     // .awardCustomPoints writes. It previously read user_xp_history, which the
     // award never touches, so the guard could never match and was inert.
@@ -3963,7 +3965,7 @@ export class DatabaseStorage implements IStorage {
         // throws ERR_INVALID_ARG_TYPE on every call. The one caller wraps this
         // in try/catch, so the failure was silent and the mobile app daily
         // bonus was never awarded.
-        gte(userPointsHistory.createdAt, startOfDay)
+        gte(userPointsHistory.createdAt, since)
       ))
       .limit(1);
     return !!row;
