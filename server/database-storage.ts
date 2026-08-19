@@ -126,7 +126,7 @@ import {
   ambassadorConversions
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, like, ilike, asc, or, lt, lte, gt, sql, arrayContains, ne, inArray, notInArray, isNotNull, isNull, getTableColumns } from "drizzle-orm";
+import { eq, and, desc, like, ilike, asc, or, lt, lte, gt, gte, sql, arrayContains, ne, inArray, notInArray, isNotNull, isNull, getTableColumns } from "drizzle-orm";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { IStorage } from "./storage";
@@ -3949,13 +3949,21 @@ export class DatabaseStorage implements IStorage {
   async hasReceivedXPSourceToday(userId: number, source: string): Promise<boolean> {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
+    // Reads user_points_history, because that is where LeaderboardService
+    // .awardCustomPoints writes. It previously read user_xp_history, which the
+    // award never touches, so the guard could never match and was inert.
     const [row] = await db
-      .select({ id: userXPHistory.id })
-      .from(userXPHistory)
+      .select({ id: userPointsHistory.id })
+      .from(userPointsHistory)
       .where(and(
-        eq(userXPHistory.userId, userId),
-        eq(userXPHistory.source, source),
-        sql`${userXPHistory.createdAt} >= ${startOfDay}`
+        eq(userPointsHistory.userId, userId),
+        eq(userPointsHistory.action, source),
+        // gte(), not a raw sql template: interpolating a JS Date straight into
+        // sql`` hands postgres.js a Date where it expects a string, which
+        // throws ERR_INVALID_ARG_TYPE on every call. The one caller wraps this
+        // in try/catch, so the failure was silent and the mobile app daily
+        // bonus was never awarded.
+        gte(userPointsHistory.createdAt, startOfDay)
       ))
       .limit(1);
     return !!row;
