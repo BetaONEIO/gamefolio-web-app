@@ -11645,6 +11645,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
   }
 
+  // Store links are validated against their platform's host so a link pasted
+  // into the wrong field is rejected rather than silently breaking imports.
+  const { validateStoreUrls } = await import("@shared/store-urls");
+
   const INDIE_ALLOWED_FIELDS = [
     "gameName","releaseStatus","releaseDate","price","isFree",
     "studioName","studioFoundedYear","studioTeamSize","studioWebsite","studioCountry",
@@ -11749,6 +11753,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (key in req.body) patch[key] = req.body[key];
       }
       if (Object.keys(patch).length === 0) return res.status(400).json({ error: "No valid fields provided" });
+      const urlErrors = validateStoreUrls(patch);
+      if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
       patch.updatedAt = new Date();
       // Resolve which game is being edited before writing. Updating by userId
       // alone would rewrite every game the developer owns, now that migration
@@ -11797,6 +11803,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
+      const urlErrors = validateStoreUrls(patch);
+      if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
       patch.updatedAt = new Date();
 
       // Target the primary game so re-running onboarding overwrites it rather
@@ -11865,6 +11873,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (key in req.body && req.body[key] !== "" && req.body[key] != null) patch[key] = req.body[key];
       }
       if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
+      const urlErrors = validateStoreUrls(patch);
+      if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
 
       const existing = await db.select({ id: indieGameProfiles.id })
         .from(indieGameProfiles).where(eq(indieGameProfiles.userId, userId));

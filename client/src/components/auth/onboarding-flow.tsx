@@ -13,6 +13,7 @@ import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import { Game } from "@shared/schema";
+import { validateStoreUrl, type StoreField } from "@shared/store-urls";
 import { Card, CardContent } from "@/components/ui/card";
 import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
@@ -416,6 +417,28 @@ export default function OnboardingFlow({
     setActiveGameIdx(indieGames.length);
   };
 
+  // The onboarding form names these steamLink/itchLink/..., the profile columns
+  // are steamUrl/itchUrl/...; map across so one validator governs both.
+  const LINK_FIELD_MAP: Record<string, StoreField> = {
+    steamLink: "steamUrl",
+    itchLink: "itchUrl",
+    epicLink: "epicUrl",
+    websiteLink: "websiteUrl",
+  };
+
+  const indieLinkError = (key: keyof typeof LINK_FIELD_MAP): string | null =>
+    validateStoreUrl(LINK_FIELD_MAP[key], (indieGameData as any)[key]);
+
+  // Every link error across every game the developer has added.
+  const allIndieLinkErrors = (): string[] =>
+    indieGames.flatMap((g, i) =>
+      (Object.keys(LINK_FIELD_MAP) as (keyof typeof LINK_FIELD_MAP)[])
+        .map(k => {
+          const err = validateStoreUrl(LINK_FIELD_MAP[k], (g as any)[k]);
+          return err ? (indieGames.length > 1 ? `Game ${i + 1}: ${err}` : err) : null;
+        })
+        .filter((e): e is string => e !== null));
+
   const removeIndieGame = (idx: number) => {
     if (indieGames.length <= 1) return;
     setIndieGames(prev => prev.filter((_, i) => i !== idx));
@@ -626,6 +649,17 @@ export default function OnboardingFlow({
       if (missingStatus !== -1) {
         setActiveGameIdx(missingStatus);
         toast({ title: "Release status required", description: indieGames.length > 1 ? `Please select a release status for "${indieGames[missingStatus].gameName}" to continue.` : "Please select a release status to continue.", variant: "default" });
+        return;
+      }
+      // Store links must match their platform — the server rejects mismatches
+      // too, so catching it here saves a round trip and keeps the message local.
+      const linkErrors = allIndieLinkErrors();
+      if (linkErrors.length > 0) {
+        const firstBadGame = indieGames.findIndex(g =>
+          (Object.keys(LINK_FIELD_MAP) as (keyof typeof LINK_FIELD_MAP)[])
+            .some(k => validateStoreUrl(LINK_FIELD_MAP[k], (g as any)[k])));
+        if (firstBadGame !== -1) setActiveGameIdx(firstBadGame);
+        toast({ title: "Check your store links", description: linkErrors[0], variant: "default" });
         return;
       }
     }
@@ -1915,6 +1949,9 @@ export default function OnboardingFlow({
                     </button>
                   </div>
                 )}
+                {indieLinkError("steamLink") && (
+                  <p className="text-xs text-red-400 mb-2 -mt-1">{indieLinkError("steamLink")}</p>
+                )}
 
                 {/* Itch.io URL input (expanded) */}
                 {platformExpanded.itch && (
@@ -1935,6 +1972,9 @@ export default function OnboardingFlow({
                       <Check className="w-3.5 h-3.5" />
                     </button>
                   </div>
+                )}
+                {indieLinkError("itchLink") && (
+                  <p className="text-xs text-red-400 mb-2 -mt-1">{indieLinkError("itchLink")}</p>
                 )}
 
                 {/* Epic Games URL input (expanded) */}
@@ -1957,11 +1997,17 @@ export default function OnboardingFlow({
                     </button>
                   </div>
                 )}
+                {indieLinkError("epicLink") && (
+                  <p className="text-xs text-red-400 mb-2 -mt-1">{indieLinkError("epicLink")}</p>
+                )}
               </div>
 
               <div>
                 <Label className="text-gray-400 text-sm mb-1.5 block">Website</Label>
                 <Input value={indieGameData.websiteLink} onChange={(e) => setIndieGameData({ ...indieGameData, websiteLink: e.target.value })} placeholder="https://yourgame.com" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                {indieLinkError("websiteLink") && (
+                  <p className="text-xs text-red-400 mt-1">{indieLinkError("websiteLink")}</p>
+                )}
               </div>
               <div>
                 <Label className="text-gray-400 text-sm mb-1.5 block">Short Description</Label>
