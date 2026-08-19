@@ -11602,19 +11602,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "websiteUrl","twitterUrl","discordUrl",
   ];
 
-  // Game quotas: a free developer gets one game; an indie-dev subscriber gets ten.
+  // Game quotas: a free developer gets two games; an indie-dev subscriber gets ten.
   // Read the flag from the database rather than the session user, so a
   // subscription that changed mid-session is reflected immediately.
-  const INDIE_FREE_GAME_LIMIT = 1;
+  const INDIE_FREE_GAME_LIMIT = 2;
   const INDIE_SUBSCRIBER_GAME_LIMIT = 10;
 
-  async function _indieGameLimit(userId: number): Promise<number> {
+  async function _indieGameQuota(userId: number): Promise<{ limit: number; subscribed: boolean }> {
     const { users } = await import("@shared/schema");
     const { db } = await import("./db");
     const { eq } = await import("drizzle-orm");
     const [row] = await db.select({ subscribed: users.isIndieDevSubscriber })
       .from(users).where(eq(users.id, userId));
-    return row?.subscribed ? INDIE_SUBSCRIBER_GAME_LIMIT : INDIE_FREE_GAME_LIMIT;
+    const subscribed = !!row?.subscribed;
+    return { subscribed, limit: subscribed ? INDIE_SUBSCRIBER_GAME_LIMIT : INDIE_FREE_GAME_LIMIT };
   }
 
   // Resolves which game a request refers to. A developer may own several games
@@ -11787,8 +11788,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(indieGameProfiles)
         .where(eq(indieGameProfiles.userId, userId))
         .orderBy(desc(indieGameProfiles.isPrimary), asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id));
-      const limit = await _indieGameLimit(userId);
-      res.json({ games, limit, canAddMore: games.length < limit });
+      const { limit, subscribed } = await _indieGameQuota(userId);
+      res.json({ games, limit, subscribed, canAddMore: games.length < limit });
     } catch (err) {
       console.error("GET /api/indie/games error:", err);
       res.status(500).json({ error: "Failed to load games" });
@@ -11814,14 +11815,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existing = await db.select({ id: indieGameProfiles.id })
         .from(indieGameProfiles).where(eq(indieGameProfiles.userId, userId));
 
-      const limit = await _indieGameLimit(userId);
+      const { limit, subscribed } = await _indieGameQuota(userId);
       if (existing.length >= limit) {
         return res.status(403).json({
-          error: limit === INDIE_FREE_GAME_LIMIT
-            ? "Free accounts can add one game. Subscribe to add up to 10."
-            : `You have reached the maximum of ${limit} games.`,
+          error: subscribed
+            ? `You have reached the maximum of ${limit} games.`
+            : `Free accounts can add ${INDIE_FREE_GAME_LIMIT} games. Subscribe to add up to ${INDIE_SUBSCRIBER_GAME_LIMIT}.`,
           code: "GAME_LIMIT_REACHED",
           limit,
+          subscribed,
           current: existing.length,
         });
       }

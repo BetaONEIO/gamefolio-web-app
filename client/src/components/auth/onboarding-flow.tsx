@@ -347,7 +347,8 @@ export default function OnboardingFlow({
 
   const [indieGames, setIndieGames] = useState<IndieGameForm[]>([blankIndieGame()]);
   const [activeGameIdx, setActiveGameIdx] = useState(0);
-  const [indieGameLimit, setIndieGameLimit] = useState(1);
+  const [indieGameLimit, setIndieGameLimit] = useState(2);
+  const [indieSubscribed, setIndieSubscribed] = useState(false);
 
   // The form below edits whichever game is selected. Exposing the active game
   // through the original indieGameData/setIndieGameData names keeps every field
@@ -374,21 +375,22 @@ export default function OnboardingFlow({
 
   // The quota is the server's call, not the client's — a new account is free
   // (limit 1) until it subscribes, at which point the limit becomes 10.
+  const refreshIndieGameLimit = useCallback(async () => {
+    try {
+      const res = await apiRequest("GET", "/api/indie/games");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (typeof data?.limit === 'number') setIndieGameLimit(data.limit);
+      if (typeof data?.subscribed === 'boolean') setIndieSubscribed(data.subscribed);
+    } catch {
+      // Leave the default of 1: never grant more slots than we can confirm.
+    }
+  }, []);
+
   useEffect(() => {
     if (selectedPath !== 'indie') return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await apiRequest("GET", "/api/indie/games");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && typeof data?.limit === 'number') setIndieGameLimit(data.limit);
-      } catch {
-        // Leave the default of 1: never grant more slots than we can confirm.
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [selectedPath]);
+    refreshIndieGameLimit();
+  }, [selectedPath, refreshIndieGameLimit]);
   const [platformExpanded, setPlatformExpanded] = useState<{ steam: boolean; itch: boolean; epic: boolean }>({ steam: false, itch: false, epic: false });
 
   // Wallet state
@@ -1614,7 +1616,7 @@ export default function OnboardingFlow({
                   </div>
                 ))}
 
-                {indieGames.length < indieGameLimit && (
+                {indieGames.length < indieGameLimit ? (
                   <button
                     type="button"
                     onClick={addIndieGame}
@@ -1623,15 +1625,38 @@ export default function OnboardingFlow({
                     <Plus className="w-3.5 h-3.5" />
                     Add another game
                   </button>
-                )}
+                ) : !indieSubscribed ? (
+                  // Free account at its limit — adding more games is the
+                  // headline reason to subscribe, so route the click to the upsell.
+                  <button
+                    type="button"
+                    onClick={() => setShowIndieDevUpgrade(true)}
+                    className="flex items-center gap-1.5 rounded-full border border-dashed border-primary/40 bg-primary/5 px-3 py-1.5 text-sm text-primary hover:bg-primary/10 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add another game
+                    <span className="ml-0.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Pro</span>
+                  </button>
+                ) : null}
               </div>
 
-              {indieGames.length >= indieGameLimit && indieGameLimit === 1 && (
-                <p className="text-xs text-gray-500 mb-2">
-                  Free accounts include one game. Subscribe as an indie developer to add up to 10.
-                </p>
+              {indieGames.length >= indieGameLimit && !indieSubscribed && (
+                <button
+                  type="button"
+                  onClick={() => setShowIndieDevUpgrade(true)}
+                  className="w-full text-left rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5 mb-2 hover:bg-primary/10 transition-colors"
+                >
+                  <p className="text-sm text-white font-medium flex items-center gap-1.5">
+                    <Code className="w-3.5 h-3.5 text-primary" />
+                    Got more than one game?
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Free accounts include {indieGameLimit} games. The Indie Developer subscription
+                    lets you showcase up to 10 — <span className="text-primary underline">see what's included</span>.
+                  </p>
+                </button>
               )}
-              {indieGames.length >= indieGameLimit && indieGameLimit > 1 && (
+              {indieGames.length >= indieGameLimit && indieSubscribed && (
                 <p className="text-xs text-gray-500 mb-2">
                   You've reached your limit of {indieGameLimit} games.
                 </p>
@@ -1811,7 +1836,18 @@ export default function OnboardingFlow({
                 Next <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
-          </div>
+          
+            {/* Mounted here so the "add another game" upsell has a dialog to
+                open — the copy on the later subscribe step renders separately.
+                Re-check the quota on close: they may have just subscribed. */}
+            <IndieDevUpgradeDialog
+              open={showIndieDevUpgrade}
+              onOpenChange={(open) => {
+                setShowIndieDevUpgrade(open);
+                if (!open) refreshIndieGameLimit();
+              }}
+            />
+</div>
         );
 
       // ── STEP 10: WALLET / 100 GFT ──────────────────────────────────────────
