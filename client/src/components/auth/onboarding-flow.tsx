@@ -14,6 +14,7 @@ import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboar
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import { Game } from "@shared/schema";
 import { validateStoreUrl, type StoreField } from "@shared/store-urls";
+import { validateStreamerHandle, normalizeStreamerHandle, type StreamerPlatform } from "@shared/streamer-handles";
 import { Card, CardContent } from "@/components/ui/card";
 import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
@@ -439,6 +440,31 @@ export default function OnboardingFlow({
         })
         .filter((e): e is string => e !== null));
 
+  // Streamer channel-name validation. Same shape as the indie link checks:
+  // a pasted URL for the wrong platform is named rather than rejected blankly.
+  const STREAM_FIELD_MAP: Record<string, StreamerPlatform> = {
+    twitchUsername: "twitch",
+    kickUsername: "kick",
+    vpzoneUsername: "vpzone",
+  };
+
+  const streamerHandleError = (key: keyof typeof STREAM_FIELD_MAP): string | null =>
+    validateStreamerHandle(STREAM_FIELD_MAP[key], (streamerData as any)[key]);
+
+  const allStreamerHandleErrors = (): string[] =>
+    (Object.keys(STREAM_FIELD_MAP) as (keyof typeof STREAM_FIELD_MAP)[])
+      .map(k => streamerHandleError(k))
+      .filter((e): e is string => e !== null);
+
+  // Tidy "@name" and pasted URLs down to a bare handle once the field loses
+  // focus, rather than fighting the user mid-keystroke.
+  const normalizeStreamerField = (key: keyof typeof STREAM_FIELD_MAP) => {
+    const current = (streamerData as any)[key] as string;
+    if (!current) return;
+    const cleaned = normalizeStreamerHandle(current);
+    if (cleaned !== current) setStreamerData(d => ({ ...d, [key]: cleaned }));
+  };
+
   const removeIndieGame = (idx: number) => {
     if (indieGames.length <= 1) return;
     setIndieGames(prev => prev.filter((_, i) => i !== idx));
@@ -636,6 +662,15 @@ export default function OnboardingFlow({
     if (currentStep === OnboardingStep.ChoosePath && !selectedPath) {
       toast({ title: "Choose your path", description: "Please select one of the options to continue.", variant: "default" });
       return;
+    }
+    if (currentStep === OnboardingStep.PathSetup && selectedPath === 'streamer') {
+      // Channel names must look like channel names — the OAuth buttons above
+      // fill these in verified, but they stay hand-editable.
+      const handleErrors = allStreamerHandleErrors();
+      if (handleErrors.length > 0) {
+        toast({ title: "Check your channel names", description: handleErrors[0], variant: "default" });
+        return;
+      }
     }
     if (currentStep === OnboardingStep.PathSetup && selectedPath === 'indie') {
       // Every game the developer added must be complete, not just the visible one.
@@ -1709,15 +1744,42 @@ export default function OnboardingFlow({
 
                   <div>
                     <Label className="text-gray-400 text-sm mb-1.5 block">Kick Username</Label>
-                    <Input value={streamerData.kickUsername} onChange={(e) => setStreamerData({ ...streamerData, kickUsername: e.target.value })} placeholder="@yourname" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                    <Input
+                      value={streamerData.kickUsername}
+                      onChange={(e) => setStreamerData({ ...streamerData, kickUsername: e.target.value })}
+                      onBlur={() => normalizeStreamerField("kickUsername")}
+                      placeholder="@yourname"
+                      className="bg-[#0B1218] border-[#1B2A33] text-white"
+                    />
+                    {streamerHandleError("kickUsername") && (
+                      <p className="text-xs text-red-400 mt-1">{streamerHandleError("kickUsername")}</p>
+                    )}
                   </div>
                   <div>
                     <Label className="text-gray-400 text-sm mb-1.5 block">Twitch Username</Label>
-                    <Input value={streamerData.twitchUsername} onChange={(e) => setStreamerData({ ...streamerData, twitchUsername: e.target.value })} placeholder="@yourname" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                    <Input
+                      value={streamerData.twitchUsername}
+                      onChange={(e) => setStreamerData({ ...streamerData, twitchUsername: e.target.value })}
+                      onBlur={() => normalizeStreamerField("twitchUsername")}
+                      placeholder="@yourname"
+                      className="bg-[#0B1218] border-[#1B2A33] text-white"
+                    />
+                    {streamerHandleError("twitchUsername") && (
+                      <p className="text-xs text-red-400 mt-1">{streamerHandleError("twitchUsername")}</p>
+                    )}
                   </div>
                   <div>
                     <Label className="text-gray-400 text-sm mb-1.5 block">VPZone Username</Label>
-                    <Input value={streamerData.vpzoneUsername} onChange={(e) => setStreamerData({ ...streamerData, vpzoneUsername: e.target.value })} placeholder="@yourname" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                    <Input
+                      value={streamerData.vpzoneUsername}
+                      onChange={(e) => setStreamerData({ ...streamerData, vpzoneUsername: e.target.value })}
+                      onBlur={() => normalizeStreamerField("vpzoneUsername")}
+                      placeholder="@yourname"
+                      className="bg-[#0B1218] border-[#1B2A33] text-white"
+                    />
+                    {streamerHandleError("vpzoneUsername") && (
+                      <p className="text-xs text-red-400 mt-1">{streamerHandleError("vpzoneUsername")}</p>
+                    )}
                   </div>
                   <div>
                     <Label className="text-gray-400 text-sm mb-1.5 block">Main Game / Category</Label>
