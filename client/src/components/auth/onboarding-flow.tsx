@@ -635,6 +635,29 @@ export default function OnboardingFlow({
         userType,
       });
 
+      // Persist the indie "Your Game" details. Without this the whole step is
+      // discarded — previously only the derived bio string survived.
+      if (selectedPath === "indie" && indieGameData.gameName.trim()) {
+        try {
+          await apiRequest("POST", "/api/indie/onboarding-profile", {
+            gameName: indieGameData.gameName.trim(),
+            studioName: indieGameData.studioName.trim() || undefined,
+            releaseStatus: indieGameData.releaseStatus || undefined,
+            shortDescription: indieGameData.description.trim() || undefined,
+            genres: indieGameData.genre.trim()
+              ? indieGameData.genre.split(",").map(g => g.trim()).filter(Boolean)
+              : undefined,
+            steamUrl: indieGameData.steamLink.trim() || undefined,
+            itchUrl: indieGameData.itchLink.trim() || undefined,
+            epicUrl: indieGameData.epicLink.trim() || undefined,
+            websiteUrl: indieGameData.websiteLink.trim() || undefined,
+          });
+        } catch (err) {
+          // Non-fatal: the account is already created, so don't block completion.
+          console.error("Failed to save indie game profile during onboarding", err);
+        }
+      }
+
       if (selectedGames.length > 0) {
         for (const selectedGame of selectedGames) {
           try {

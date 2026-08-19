@@ -11665,6 +11665,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/indie/onboarding-profile — seed the game profile from the onboarding flow.
+  // Deliberately does NOT require isPartner: this runs while a brand-new user is still
+  // completing onboarding, before any partner/subscriber entitlement exists. Always scoped
+  // to req.user.id, and fields are whitelisted through INDIE_ALLOWED_FIELDS exactly as
+  // PUT /api/indie/profile does. Upserts so re-running onboarding overwrites cleanly.
+  app.post("/api/indie/onboarding-profile", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+
+      const patch: Record<string, any> = {};
+      for (const key of INDIE_ALLOWED_FIELDS) {
+        if (key in req.body && req.body[key] !== "" && req.body[key] != null) {
+          patch[key] = req.body[key];
+        }
+      }
+      if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
+      patch.updatedAt = new Date();
+
+      const ex = await db.select({ id: indieGameProfiles.id })
+        .from(indieGameProfiles).where(eq(indieGameProfiles.userId, userId));
+      let profile;
+      if (ex.length > 0) {
+        const up = await db.update(indieGameProfiles).set(patch)
+          .where(eq(indieGameProfiles.userId, userId)).returning();
+        profile = up[0];
+      } else {
+        const ins = await db.insert(indieGameProfiles)
+          .values({ userId: userId, ...patch }).returning();
+        profile = ins[0];
+      }
+      res.json({ profile });
+    } catch (err) {
+      console.error("POST /api/indie/onboarding-profile error:", err);
+      res.status(500).json({ error: "Failed to save game profile" });
+    }
+  });
+
   // GET /api/indie/steam/preview?appId= — preview Steam data without saving
   app.get("/api/indie/steam/preview", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
