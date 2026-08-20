@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
+import { isPartnerType } from "@shared/partner-access";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,10 +17,9 @@ export default function StreamerDashboardPage() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Only allow users who selected streamer in onboarding OR hold the paid Streamer Partner entitlement
+  // Only paid Streamer Partners and admins can access this dashboard.
   const hasAccess =
-    user?.userType?.split(",").includes("streamer") ||
-    user?.partnerType === "streamer" ||
+    isPartnerType(user, "streamer") ||
     user?.role === "admin";
 
   useEffect(() => {

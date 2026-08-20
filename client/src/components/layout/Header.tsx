@@ -751,7 +751,7 @@ const Header = () => {
                         Game Dashboard
                       </DropdownMenuItem>
                     )}
-                    {(user.userType?.split(",").includes("streamer") || isPartnerType(user, "streamer") || user.role === "admin") && (
+                    {(isPartnerType(user, "streamer") || user.role === "admin") && (
                       <DropdownMenuItem
                         className="cursor-pointer"
                         onClick={() => setLocation("/streamer/dashboard")}

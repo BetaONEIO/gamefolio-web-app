@@ -1946,16 +1946,6 @@ export default function DashboardPage() {
     enabled: !!user?.id,
   });
 
-  // Redirect users to their profile-type dashboard based on onboarding selection
-  useEffect(() => {
-    const types = user?.userType?.split(",") ?? [];
-    if (types.includes("indie_developer")) {
-      setLocation("/studio-dashboard");
-    } else if (types.includes("streamer")) {
-      setLocation("/streamer/dashboard");
-    }
-  }, [user, setLocation]);
-
   // Redirect unauthenticated users
   useEffect(() => {
     if (!user && !isLoading) {
