@@ -8008,10 +8008,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Search for additional clips with hashtags
         const hashtagClips = await storage.searchClips(gameHashtag);
 
-        // Merge clips and remove duplicates
+        // Merge clips and remove duplicates.
+        // Only include hashtag-matched clips that have no game tag or are
+        // explicitly tagged to this game — clips tagged to a different game
+        // are unrelated content and must not appear on this game's page.
         const clipIds = new Set(clips.map(c => c.id));
         for (const hashtagClip of hashtagClips) {
-          if (!clipIds.has(hashtagClip.id)) {
+          if (!clipIds.has(hashtagClip.id) && (hashtagClip.gameId === null || hashtagClip.gameId === gameId)) {
             clips.push(hashtagClip);
             clipIds.add(hashtagClip.id);
           }
