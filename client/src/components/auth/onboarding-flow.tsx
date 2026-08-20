@@ -7,12 +7,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop, Zap, Star, Target, Gift, Tv, Globe, Swords, Users, Flame, ChevronLeft, ChevronRight, X, ExternalLink } from "lucide-react";
-import { SiSteam, SiItchdotio, SiEpicgames } from "react-icons/si";
+import { SiSteam, SiItchdotio, SiEpicgames, SiTwitch, SiKick } from "react-icons/si";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import { Game } from "@shared/schema";
+import { validateStoreUrl, type StoreField } from "@shared/store-urls";
+import { validateStreamerHandle, normalizeStreamerHandle, type StreamerPlatform } from "@shared/streamer-handles";
 import { Card, CardContent } from "@/components/ui/card";
 import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
@@ -62,7 +64,6 @@ import imgClip20 from "@assets/image_1781039848401.jpg";
 import imgHeadFF from "@assets/hat1_1781116412973.png";
 import imgHeadBubble from "@assets/bubblegum_(1)_1781116412966.png";
 import imgTwitch3D from "@assets/twitch_logo_1781121512398.png";
-import imgYoutube3D from "@assets/youtube-logo_1781121512394.png";
 import imgKick3D from "@assets/kick-logo_1781121512397.png";
 import imgRumble3D from "@assets/RUMBLE-LOGO_1781121512396.png";
 import Cropper from "react-easy-crop";
@@ -70,6 +71,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/hooks/use-wallet";
 import { useAuth } from "@/hooks/use-auth";
+import { openExternal, isNative, API_BASE } from "@/lib/platform";
 import { useAutoWallet } from "@/hooks/use-auto-wallet";
 
 // Component to display trending games in a grid
@@ -215,6 +217,48 @@ const getCroppedImg = async (
 };
 
 // Phase indicator — shows 6 major milestones regardless of total steps
+// One row of the streamer "connect a platform" list. Shows the verified
+// channel once linked, so the state is obvious without leaving onboarding.
+function PlatformConnectRow({
+  label, connectedName, icon, brand, brandText = "#fff", onConnect,
+}: {
+  label: string;
+  connectedName?: string | null;
+  icon: React.ReactNode;
+  brand: string;
+  brandText?: string;
+  onConnect: () => void;
+}) {
+  const connected = !!connectedName;
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-[#1B2A33] bg-[#0B1218] px-3 py-2.5">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <span className="flex-shrink-0" style={{ color: connected ? brand : "rgba(255,255,255,0.45)" }}>{icon}</span>
+        <div className="min-w-0">
+          <p className="text-sm text-white leading-tight">{label}</p>
+          {connected && (
+            <p className="text-xs text-primary truncate">Connected as {connectedName}</p>
+          )}
+        </div>
+      </div>
+      {connected ? (
+        <span className="flex items-center gap-1 text-xs text-primary flex-shrink-0">
+          <Check className="w-3.5 h-3.5" /> Verified
+        </span>
+      ) : (
+        <button
+          type="button"
+          onClick={onConnect}
+          className="flex-shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold transition-opacity hover:opacity-90"
+          style={{ background: brand, color: brandText }}
+        >
+          Connect
+        </button>
+      )}
+    </div>
+  );
+}
+
 interface OnboardingStepIndicatorProps {
   currentStep: OnboardingStep;
   isGoogleUser: boolean;
@@ -278,37 +322,6 @@ interface OnboardingFlowProps {
   onComplete: () => void;
 }
 
-type StorePlatform = "steam" | "itch" | "epic";
-
-function validateStoreUrl(value: string, platform: StorePlatform): string | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  let url: URL;
-  try {
-    url = new URL(trimmed);
-  } catch {
-    return "Enter a complete URL starting with https://";
-  }
-
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    return "Use an http:// or https:// URL";
-  }
-
-  const hostname = url.hostname.toLowerCase();
-  const matches =
-    platform === "steam"
-      ? hostname === "store.steampowered.com" || hostname === "steamcommunity.com"
-      : platform === "itch"
-        ? hostname === "itch.io" || hostname.endsWith(".itch.io")
-        : hostname === "store.epicgames.com" || hostname.endsWith(".epicgames.com");
-
-  if (matches) return null;
-
-  const platformName = platform === "steam" ? "Steam" : platform === "itch" ? "itch.io" : "Epic Games";
-  return `Enter a valid ${platformName} URL in this field`;
-}
-
 export default function OnboardingFlow({
   userId,
   username,
@@ -355,12 +368,21 @@ export default function OnboardingFlow({
   const [streamerData, setStreamerData] = useState({
     kickUsername: '',
     twitchUsername: '',
-    youtubeUsername: '',
+    vpzoneUsername: '',
     mainPlatform: '',
     mainGame: '',
     streamFrequency: '',
   });
-  const [indieGameData, setIndieGameData] = useState({
+
+  // Which social OAuth providers the server has credentials for. Never offer a
+  // connect button we know will fail for want of a client id.
+  const [socialOAuth, setSocialOAuth] = useState<{ kick: boolean; twitch: boolean; vpzone: boolean }>({
+    kick: false, twitch: false, vpzone: false,
+  });
+  // A developer can register several games (migration 0020). How many is
+  // governed server-side by their subscription — free accounts get one, indie
+  // dev subscribers get ten — and GET /api/indie/games reports the limit.
+  const blankIndieGame = () => ({
     gameName: '',
     studioName: '',
     genre: '',
@@ -370,8 +392,240 @@ export default function OnboardingFlow({
     epicLink: '',
     websiteLink: '',
     description: '',
+    // Everything else the store published — artwork, screenshots, platforms,
+    // tags, price. No inputs for these in onboarding; they are carried through
+    // to the profile so a new game arrives looking finished rather than bare.
+    storeImport: null as Record<string, any> | null,
   });
-  const [platformErrors, setPlatformErrors] = useState<Partial<Record<StorePlatform, string>>>({});
+  type IndieGameForm = ReturnType<typeof blankIndieGame>;
+
+  // Store fields worth persisting that onboarding has no input for. Every one
+  // is a real indie_game_profiles column and passes INDIE_ALLOWED_FIELDS.
+  const STORE_EXTRA_FIELDS = [
+    "headerImageUrl", "capsuleImageUrl", "trailerUrl", "screenshotUrls",
+    "genres", "tags", "platforms", "releaseDate", "price", "isFree", "fullDescription",
+  ] as const;
+
+  const [indieGames, setIndieGames] = useState<IndieGameForm[]>([blankIndieGame()]);
+  const [activeGameIdx, setActiveGameIdx] = useState(0);
+  const [indieGameLimit, setIndieGameLimit] = useState(2);
+  const [indieSubscribed, setIndieSubscribed] = useState(false);
+
+  // The form below edits whichever game is selected. Exposing the active game
+  // through the original indieGameData/setIndieGameData names keeps every field
+  // binding unchanged while the underlying state became a list.
+  const indieGameData = indieGames[activeGameIdx] ?? blankIndieGame();
+  const setIndieGameData = (
+    update: IndieGameForm | ((prev: IndieGameForm) => IndieGameForm),
+  ) => {
+    setIndieGames(prev => prev.map((g, i) =>
+      i === activeGameIdx ? (typeof update === 'function' ? update(g) : update) : g));
+  };
+
+  const addIndieGame = () => {
+    if (indieGames.length >= indieGameLimit) return;
+    setIndieGames(prev => [...prev, blankIndieGame()]);
+    setActiveGameIdx(indieGames.length);
+  };
+
+  // The onboarding form names these steamLink/itchLink/..., the profile columns
+  // are steamUrl/itchUrl/...; map across so one validator governs both.
+  const LINK_FIELD_MAP: Record<string, StoreField> = {
+    steamLink: "steamUrl",
+    itchLink: "itchUrl",
+    epicLink: "epicUrl",
+    websiteLink: "websiteUrl",
+  };
+
+  const indieLinkError = (key: keyof typeof LINK_FIELD_MAP): string | null =>
+    validateStoreUrl(LINK_FIELD_MAP[key], (indieGameData as any)[key]);
+
+  // Every link error across every game the developer has added.
+  const allIndieLinkErrors = (): string[] =>
+    indieGames.flatMap((g, i) =>
+      (Object.keys(LINK_FIELD_MAP) as (keyof typeof LINK_FIELD_MAP)[])
+        .map(k => {
+          const err = validateStoreUrl(LINK_FIELD_MAP[k], (g as any)[k]);
+          return err ? (indieGames.length > 1 ? `Game ${i + 1}: ${err}` : err) : null;
+        })
+        .filter((e): e is string => e !== null));
+
+  // Streamer channel-name validation. Same shape as the indie link checks:
+  // a pasted URL for the wrong platform is named rather than rejected blankly.
+  const STREAM_FIELD_MAP: Record<string, StreamerPlatform> = {
+    twitchUsername: "twitch",
+    kickUsername: "kick",
+    vpzoneUsername: "vpzone",
+  };
+
+  const streamerHandleError = (key: keyof typeof STREAM_FIELD_MAP): string | null =>
+    validateStreamerHandle(STREAM_FIELD_MAP[key], (streamerData as any)[key]);
+
+  const allStreamerHandleErrors = (): string[] =>
+    (Object.keys(STREAM_FIELD_MAP) as (keyof typeof STREAM_FIELD_MAP)[])
+      .map(k => streamerHandleError(k))
+      .filter((e): e is string => e !== null);
+
+  // Tidy "@name" and pasted URLs down to a bare handle once the field loses
+  // focus, rather than fighting the user mid-keystroke.
+  const normalizeStreamerField = (key: keyof typeof STREAM_FIELD_MAP) => {
+    const current = (streamerData as any)[key] as string;
+    if (!current) return;
+    const cleaned = normalizeStreamerHandle(current);
+    if (cleaned !== current) setStreamerData(d => ({ ...d, [key]: cleaned }));
+  };
+
+  // Pasting a Steam or Epic store URL fills in what the store already knows.
+  // Only ever fills blanks — anything the developer has typed wins, so this
+  // can never overwrite their own wording.
+  const [storeLookup, setStoreLookup] = useState<{ status: "idle" | "loading" | "filled" | "error"; message?: string }>({ status: "idle" });
+
+  const lookupStoreUrl = async (rawUrl: string) => {
+    const url = (rawUrl || "").trim();
+    if (!url) return;
+    setStoreLookup({ status: "loading" });
+    try {
+      const res = await apiRequest("GET", `/api/indie/store-lookup?url=${encodeURIComponent(url)}`);
+      if (!res.ok) {
+        setStoreLookup({ status: "error", message: "Couldn't read that store page — fill the details in below." });
+        return;
+      }
+      const data = await res.json();
+      const f = data?.fields || {};
+      const current = indieGames[activeGameIdx] ?? blankIndieGame();
+      const filled: string[] = [];
+      const next = { ...current };
+
+      if (!next.gameName.trim() && f.gameName) { next.gameName = String(f.gameName); filled.push("name"); }
+      if (!next.description.trim() && f.shortDescription) { next.description = String(f.shortDescription); filled.push("description"); }
+      if (!next.genre.trim() && Array.isArray(f.genres) && f.genres.length > 0) { next.genre = f.genres.join(", "); filled.push("genre"); }
+      if (!next.releaseStatus && f.releaseStatus) { next.releaseStatus = String(f.releaseStatus); filled.push("release status"); }
+
+      // Carry the rest of the store's data through to the saved profile even
+      // though onboarding shows no field for it.
+      const extras: Record<string, any> = {};
+      for (const key of STORE_EXTRA_FIELDS) {
+        const value = (f as any)[key];
+        if (value !== null && value !== undefined && !(Array.isArray(value) && value.length === 0)) {
+          extras[key] = value;
+        }
+      }
+      next.storeImport = Object.keys(extras).length > 0 ? extras : null;
+
+      setIndieGames(prev => prev.map((g, i) => (i === activeGameIdx ? next : g)));
+
+      const storeName = data.source === "epic" ? "Epic Games" : "Steam";
+      const extraBits: string[] = [];
+      if (extras.headerImageUrl) extraBits.push("cover art");
+      if (Array.isArray(extras.screenshotUrls)) extraBits.push(`${extras.screenshotUrls.length} screenshots`);
+      if (Array.isArray(extras.platforms)) extraBits.push("platforms");
+      const tail = extraBits.length > 0 ? ` Also imported ${extraBits.join(", ")}.` : "";
+
+      if (filled.length === 0) {
+        setStoreLookup({ status: "filled", message: `Found on ${storeName} — your details are already filled in.${tail}` });
+        return;
+      }
+      setStoreLookup({
+        status: "filled",
+        message: `Filled in ${filled.join(", ")} from ${storeName}. Edit anything you'd like to change.${tail}`,
+      });
+    } catch {
+      setStoreLookup({ status: "error", message: "Couldn't reach the store — fill the details in below." });
+    }
+  };
+
+  const removeIndieGame = (idx: number) => {
+    if (indieGames.length <= 1) return;
+    setIndieGames(prev => prev.filter((_, i) => i !== idx));
+    setActiveGameIdx(i => (i >= idx && i > 0 ? i - 1 : i));
+  };
+
+  // The quota is the server's call, not the client's — a new account is free
+  // (limit 2) until it subscribes, at which point the limit becomes 10.
+  const refreshIndieGameLimit = useCallback(async () => {
+    try {
+      const res = await apiRequest("GET", "/api/indie/games");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (typeof data?.limit === 'number') setIndieGameLimit(data.limit);
+      if (typeof data?.subscribed === 'boolean') setIndieSubscribed(data.subscribed);
+    } catch {
+      // Leave the free default: never grant more slots than we can confirm.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedPath !== 'indie') return;
+    refreshIndieGameLimit();
+  }, [selectedPath, refreshIndieGameLimit]);
+
+  // ---- Streamer platform connections -------------------------------------
+  // Twitch, Kick and VPZone already have working OAuth (server/routes/social-oauth.ts).
+  // Reuse it here rather than asking people to retype a channel name they can
+  // prove they own. The callbacks redirect to /settings/profile, which detects
+  // it is a popup and announces completion on the 'oauth_completion'
+  // BroadcastChannel before closing — so we listen on that channel and no
+  // server-side change is needed.
+  const { refreshUser } = useAuth();
+
+  useEffect(() => {
+    if (selectedPath !== 'streamer') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiRequest("GET", "/api/auth/social-oauth/config");
+        if (!res.ok) return;
+        const cfg = await res.json();
+        if (!cancelled) {
+          setSocialOAuth({ kick: !!cfg?.kick, twitch: !!cfg?.twitch, vpzone: !!cfg?.vpzone });
+        }
+      } catch {
+        // Leave every provider off — better no button than a broken one.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedPath]);
+
+  useEffect(() => {
+    if (selectedPath !== 'streamer') return;
+    const onConnected = (type?: string) => {
+      if (type === 'twitch_connected' || type === 'kick_connected' || type === 'vpzone_connected') {
+        refreshUser();
+      }
+    };
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel('oauth_completion');
+      bc.onmessage = (event) => onConnected(event.data?.type);
+    } catch {}
+    const handler = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      onConnected(event.data?.type);
+    };
+    window.addEventListener('message', handler);
+    return () => {
+      bc?.close();
+      window.removeEventListener('message', handler);
+    };
+  }, [selectedPath, refreshUser]);
+
+  // Mirror whatever the OAuth callbacks wrote onto the account back into the
+  // form, so a connected channel fills the field instead of being typed twice.
+  useEffect(() => {
+    if (selectedPath !== 'streamer' || !user) return;
+    setStreamerData(d => ({
+      ...d,
+      twitchUsername: (user as any).twitchChannelName || d.twitchUsername,
+      kickUsername: (user as any).kickChannelName || d.kickUsername,
+      vpzoneUsername: (user as any).vpzoneChannelName || d.vpzoneUsername,
+      mainPlatform: d.mainPlatform || (user as any).streamPlatform || '',
+    }));
+  }, [selectedPath, user]);
+
+  const startSocialConnect = (path: string) => {
+    if (isNative) void openExternal(`${API_BASE}${path}`);
+    else window.open(path, '_blank');
+  };
   const [platformExpanded, setPlatformExpanded] = useState<{ steam: boolean; itch: boolean; epic: boolean }>({ steam: false, itch: false, epic: false });
 
   // Wallet state
@@ -478,24 +732,38 @@ export default function OnboardingFlow({
       toast({ title: "Choose your path", description: "Please select one of the options to continue.", variant: "default" });
       return;
     }
-    if (currentStep === OnboardingStep.PathSetup && selectedPath === 'indie' && !indieGameData.gameName.trim()) {
-      toast({ title: "Game name required", description: "Please enter your game's name to continue.", variant: "default" });
-      return;
-    }
-    if (currentStep === OnboardingStep.PathSetup && selectedPath === 'indie' && !indieGameData.releaseStatus) {
-      toast({ title: "Release status required", description: "Please select a release status to continue.", variant: "default" });
-      return;
+    if (currentStep === OnboardingStep.PathSetup && selectedPath === 'streamer') {
+      // Channel names must look like channel names — the OAuth buttons above
+      // fill these in verified, but they stay hand-editable.
+      const handleErrors = allStreamerHandleErrors();
+      if (handleErrors.length > 0) {
+        toast({ title: "Check your channel names", description: handleErrors[0], variant: "default" });
+        return;
+      }
     }
     if (currentStep === OnboardingStep.PathSetup && selectedPath === 'indie') {
-      const nextErrors: Partial<Record<StorePlatform, string>> = {};
-      for (const platform of ["steam", "itch", "epic"] as const) {
-        const value = indieGameData[`${platform}Link`];
-        const error = validateStoreUrl(value, platform);
-        if (error) nextErrors[platform] = error;
+      // Every game the developer added must be complete, not just the visible one.
+      const missingName = indieGames.findIndex(g => !g.gameName.trim());
+      if (missingName !== -1) {
+        setActiveGameIdx(missingName);
+        toast({ title: "Game name required", description: indieGames.length > 1 ? `Please enter a name for game ${missingName + 1} to continue.` : "Please enter your game's name to continue.", variant: "default" });
+        return;
       }
-      setPlatformErrors(nextErrors);
-      if (Object.keys(nextErrors).length > 0) {
-        toast({ title: "Check your store links", description: "Each link must belong to its matching platform.", variant: "default" });
+      const missingStatus = indieGames.findIndex(g => !g.releaseStatus);
+      if (missingStatus !== -1) {
+        setActiveGameIdx(missingStatus);
+        toast({ title: "Release status required", description: indieGames.length > 1 ? `Please select a release status for "${indieGames[missingStatus].gameName}" to continue.` : "Please select a release status to continue.", variant: "default" });
+        return;
+      }
+      // Store links must match their platform — the server rejects mismatches
+      // too, so catching it here saves a round trip and keeps the message local.
+      const linkErrors = allIndieLinkErrors();
+      if (linkErrors.length > 0) {
+        const firstBadGame = indieGames.findIndex(g =>
+          (Object.keys(LINK_FIELD_MAP) as (keyof typeof LINK_FIELD_MAP)[])
+            .some(k => validateStoreUrl(LINK_FIELD_MAP[k], (g as any)[k])));
+        if (firstBadGame !== -1) setActiveGameIdx(firstBadGame);
+        toast({ title: "Check your store links", description: linkErrors[0], variant: "default" });
         return;
       }
     }
@@ -669,8 +937,10 @@ export default function OnboardingFlow({
       let bio = "Just joined Gamefolio!";
       if (selectedPath === "streamer" && streamerData.mainPlatform) {
         bio = `Streaming on ${streamerData.mainPlatform}${streamerData.mainGame ? ` — ${streamerData.mainGame}` : ''}`;
-      } else if (selectedPath === "indie" && indieGameData.gameName) {
-        bio = `Indie developer — ${indieGameData.gameName}${indieGameData.studioName ? ` by ${indieGameData.studioName}` : ''}`;
+      } else if (selectedPath === "indie" && indieGames[0]?.gameName) {
+        const lead = indieGames[0];
+        const others = indieGames.length - 1;
+        bio = `Indie developer — ${lead.gameName}${lead.studioName ? ` by ${lead.studioName}` : ''}${others > 0 ? ` and ${others} more game${others > 1 ? 's' : ''}` : ''}`;
       }
 
       await apiRequest("PATCH", `/api/users/${userId}`, {
@@ -679,6 +949,59 @@ export default function OnboardingFlow({
         bio,
         userType,
       });
+
+      // Persist the streamer setup step. The OAuth buttons already wrote any
+      // verified channel straight to the account; this saves the hand-typed
+      // fields, and the server refuses to let them displace a verified name.
+      if (selectedPath === "streamer") {
+        try {
+          await apiRequest("POST", "/api/streamer/onboarding-profile", {
+            twitchUsername: streamerData.twitchUsername.trim() || undefined,
+            kickUsername: streamerData.kickUsername.trim() || undefined,
+            vpzoneUsername: streamerData.vpzoneUsername.trim() || undefined,
+            mainPlatform: streamerData.mainPlatform || undefined,
+            mainGame: streamerData.mainGame.trim() || undefined,
+            streamFrequency: streamerData.streamFrequency || undefined,
+          });
+        } catch (err) {
+          // Non-fatal: the account already exists, so never block completion.
+          console.error("Failed to save streamer profile during onboarding", err);
+        }
+      }
+
+      // Persist the indie "Your Game" details. Without this the whole step is
+      // discarded — previously only the derived bio string survived.
+      // The first game goes through /onboarding-profile (which upserts the
+      // primary), any extras through /games. The server enforces the quota, so
+      // a request beyond the developer's limit is rejected there, not here.
+      if (selectedPath === "indie") {
+        const toPayload = (g: IndieGameForm) => ({
+          ...(g.storeImport ?? {}),
+          gameName: g.gameName.trim(),
+          studioName: g.studioName.trim() || undefined,
+          releaseStatus: g.releaseStatus || undefined,
+          shortDescription: g.description.trim() || undefined,
+          genres: g.genre.trim() ? g.genre.split(",").map(x => x.trim()).filter(Boolean) : undefined,
+          steamUrl: g.steamLink.trim() || undefined,
+          itchUrl: g.itchLink.trim() || undefined,
+          epicUrl: g.epicLink.trim() || undefined,
+          websiteUrl: g.websiteLink.trim() || undefined,
+        });
+
+        const named = indieGames.filter(g => g.gameName.trim());
+        for (let i = 0; i < named.length; i++) {
+          try {
+            await apiRequest(
+              "POST",
+              i === 0 ? "/api/indie/onboarding-profile" : "/api/indie/games",
+              toPayload(named[i]),
+            );
+          } catch (err) {
+            // Non-fatal: the account already exists, so never block completion.
+            console.error(`Failed to save indie game ${i + 1} during onboarding`, err);
+          }
+        }
+      }
 
       if (selectedGames.length > 0) {
         for (const selectedGame of selectedGames) {
@@ -776,9 +1099,8 @@ export default function OnboardingFlow({
                       {/* Orbiting platform logos */}
                       {([
                         { img: imgTwitch3D,  delay: '0s',  glow: 'rgba(145,71,255,0.80)' },
-                        { img: imgYoutube3D, delay: '-3s', glow: 'rgba(255,50,50,0.80)'  },
-                        { img: imgKick3D,    delay: '-6s', glow: 'rgba(83,252,26,0.80)'  },
-                        { img: imgRumble3D,  delay: '-9s', glow: 'rgba(140,230,0,0.80)'  },
+                        { img: imgKick3D,    delay: '-4s', glow: 'rgba(83,252,26,0.80)'  },
+                        { img: imgRumble3D,  delay: '-8s', glow: 'rgba(140,230,0,0.80)'  },
                       ] as const).map((item, idx) => (
                         <div
                           key={idx}
@@ -816,9 +1138,6 @@ export default function OnboardingFlow({
               </h2>
               <p className="text-center mb-5" style={{ fontFamily:"'Outfit',sans-serif", fontWeight:400, fontSize:'14px', lineHeight:'20px', color:'#94A3B8', minHeight:'60px', display:'flex', alignItems:'center', justifyContent:'center' }}>{i1.sub}</p>
               <div className="flex items-center gap-3">
-                <button onClick={goToPrevStep} className="flex-none flex items-center justify-center rounded-[18px]" style={{ width:'56px', height:'56px', border:'1.5px solid rgba(255,255,255,0.15)', background:'rgba(255,255,255,0.06)', backdropFilter:'blur(8px)' }} aria-label="Go back">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </button>
                 <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 font-bold" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:'15px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
                   Continue
                 </button>
@@ -927,9 +1246,6 @@ export default function OnboardingFlow({
               </h2>
               <p className="text-center mb-5" style={{ fontFamily:"'Outfit',sans-serif", fontWeight:400, fontSize:'14px', lineHeight:'20px', color:'#94A3B8', minHeight:'60px', display:'flex', alignItems:'center', justifyContent:'center' }}>{i2.sub}</p>
               <div className="flex items-center gap-3">
-                <button onClick={goToPrevStep} className="flex-none flex items-center justify-center rounded-[18px]" style={{ width:'56px', height:'56px', border:'1.5px solid rgba(255,255,255,0.15)', background:'rgba(255,255,255,0.06)', backdropFilter:'blur(8px)' }} aria-label="Go back">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </button>
                 <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 font-bold" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:'15px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
                   Continue
                 </button>
@@ -942,7 +1258,7 @@ export default function OnboardingFlow({
       // ── STEP 4: PATH-SPECIFIC INTRO 3 ─────────────────────────────────────
       case OnboardingStep.Intro3: {
         const i3 = selectedPath === 'streamer'
-          ? { titleA: 'UNLOCK CREATOR', titleB: 'OPPORTUNITIES', sub: 'Earn rewards, join creator campaigns, get featured on the homepage and unlock future Twitch, Kick and YouTube integrations.' }
+          ? { titleA: 'UNLOCK CREATOR', titleB: 'OPPORTUNITIES', sub: 'Earn rewards, join creator campaigns, get featured on the homepage and connect your Twitch, Kick and VPZone channels.' }
           : selectedPath === 'indie'
           ? { titleA: 'LAUNCH', titleB: 'BOUNTIES', sub: 'Run creator campaigns, offer game keys, and reward players with bounty challenges.' }
           : { titleA: 'EARN', titleB: 'REWARDS', sub: 'Complete daily bounties, join creator challenges, and earn GFT to unlock exclusive legendary gear.' };
@@ -963,9 +1279,6 @@ export default function OnboardingFlow({
               </h2>
               <p className="text-center mb-5" style={{ fontFamily:"'Outfit',sans-serif", fontWeight:400, fontSize:'14px', lineHeight:'20px', color:'#94A3B8', minHeight:'60px', display:'flex', alignItems:'center', justifyContent:'center' }}>{i3.sub}</p>
               <div className="flex items-center gap-3">
-                <button onClick={goToPrevStep} className="flex-none flex items-center justify-center rounded-[18px]" style={{ width:'56px', height:'56px', border:'1.5px solid rgba(255,255,255,0.15)', background:'rgba(255,255,255,0.06)', backdropFilter:'blur(8px)' }} aria-label="Go back">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </button>
                 <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 font-bold" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:'15px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
                   Continue
                 </button>
@@ -1010,7 +1323,6 @@ export default function OnboardingFlow({
               <p className="text-gray-400 text-sm mt-2">At least 3 characters — letters, numbers and underscores only</p>
             </div>
             <div className="flex gap-3 mt-auto">
-              <Button variant="outline" onClick={goToPrevStep}>Back</Button>
               <Button onClick={goToNextStep} disabled={!formUsername || formUsername.length < 4 || isCheckingUsername || !!usernameError} className="flex-1 bg-primary hover:bg-primary/90 text-white">
                 {isCheckingUsername ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Checking...</> : <>Next <ArrowRight className="h-4 w-4 ml-2" /></>}
               </Button>
@@ -1064,7 +1376,6 @@ export default function OnboardingFlow({
             </div>
             <div id="games-step-bottom" className="flex flex-col gap-3 mt-auto pt-4">
               <div className="flex gap-3">
-                <Button variant="outline" onClick={goToPrevStep} className="border-border hover:bg-secondary">Back</Button>
                 <Button onClick={goToNextStep} disabled={selectedGames.length === 0} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
                   Next <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
@@ -1114,7 +1425,6 @@ export default function OnboardingFlow({
               </div>
             </div>
             <div className="flex gap-3 mt-auto">
-              <Button variant="outline" onClick={goToPrevStep}>Back</Button>
               <Button onClick={goToNextStep} disabled={isUploadingAvatar} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
                 {avatarUrl ? <>Next <ArrowRight className="h-4 w-4 ml-2" /></> : <span>Skip for now</span>}
               </Button>
@@ -1448,7 +1758,6 @@ export default function OnboardingFlow({
               </div>
               <div className="flex flex-col gap-3 mt-4">
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={goToPrevStep}>Back</Button>
                   <Button onClick={goToNextStep} disabled={gamerInterests.length === 0} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
                     Next <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -1466,8 +1775,44 @@ export default function OnboardingFlow({
               <div className="flex-1 overflow-y-auto space-y-4">
                 <div>
                   <h2 className="text-2xl font-bold text-white mb-1">Streamer Setup</h2>
-                  <p className="text-gray-400 mb-5">Connect your streaming platforms. All fields except main platform are optional.</p>
+                  <p className="text-gray-400 mb-4">Connect a platform to pull your channel in automatically, or fill it in by hand. All fields except main platform are optional.</p>
                 </div>
+
+                {/* Verified connections. Each opens the existing OAuth flow in a
+                    popup; on success the account is updated server-side and the
+                    fields below fill themselves in. */}
+                {(socialOAuth.twitch || socialOAuth.kick || socialOAuth.vpzone) && (
+                  <div className="space-y-2">
+                    {socialOAuth.twitch && (
+                      <PlatformConnectRow
+                        label="Twitch"
+                        connectedName={(user as any)?.twitchVerified ? (user as any)?.twitchChannelName : null}
+                        icon={<SiTwitch className="w-4 h-4" />}
+                        brand="#9146FF"
+                        onConnect={() => startSocialConnect("/api/auth/twitch-stream/connect")}
+                      />
+                    )}
+                    {socialOAuth.kick && (
+                      <PlatformConnectRow
+                        label="Kick"
+                        connectedName={(user as any)?.kickVerified ? (user as any)?.kickChannelName : null}
+                        icon={<SiKick className="w-4 h-4" />}
+                        brand="#53FC18"
+                        brandText="#071013"
+                        onConnect={() => startSocialConnect("/api/auth/kick/connect")}
+                      />
+                    )}
+                    {socialOAuth.vpzone && (
+                      <PlatformConnectRow
+                        label="VPZone"
+                        connectedName={(user as any)?.vpzoneVerified ? (user as any)?.vpzoneChannelName : null}
+                        icon={<Tv className="w-4 h-4" />}
+                        brand="#1F8FFF"
+                        onConnect={() => startSocialConnect("/api/auth/vpzone/connect")}
+                      />
+                    )}
+                  </div>
+                )}
 
                 <div className="space-y-3">
                   <div>
@@ -1479,7 +1824,7 @@ export default function OnboardingFlow({
                       <SelectContent className="bg-[#0B1218] border-[#1B2A33]">
                         <SelectItem value="kick">Kick</SelectItem>
                         <SelectItem value="twitch">Twitch</SelectItem>
-                        <SelectItem value="youtube">YouTube</SelectItem>
+                        <SelectItem value="vpzone">VPZone</SelectItem>
                         <SelectItem value="other">Other</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1487,15 +1832,42 @@ export default function OnboardingFlow({
 
                   <div>
                     <Label className="text-gray-400 text-sm mb-1.5 block">Kick Username</Label>
-                    <Input value={streamerData.kickUsername} onChange={(e) => setStreamerData({ ...streamerData, kickUsername: e.target.value })} placeholder="@yourname" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                    <Input
+                      value={streamerData.kickUsername}
+                      onChange={(e) => setStreamerData({ ...streamerData, kickUsername: e.target.value })}
+                      onBlur={() => normalizeStreamerField("kickUsername")}
+                      placeholder="@yourname"
+                      className="bg-[#0B1218] border-[#1B2A33] text-white"
+                    />
+                    {streamerHandleError("kickUsername") && (
+                      <p className="text-xs text-red-400 mt-1">{streamerHandleError("kickUsername")}</p>
+                    )}
                   </div>
                   <div>
                     <Label className="text-gray-400 text-sm mb-1.5 block">Twitch Username</Label>
-                    <Input value={streamerData.twitchUsername} onChange={(e) => setStreamerData({ ...streamerData, twitchUsername: e.target.value })} placeholder="@yourname" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                    <Input
+                      value={streamerData.twitchUsername}
+                      onChange={(e) => setStreamerData({ ...streamerData, twitchUsername: e.target.value })}
+                      onBlur={() => normalizeStreamerField("twitchUsername")}
+                      placeholder="@yourname"
+                      className="bg-[#0B1218] border-[#1B2A33] text-white"
+                    />
+                    {streamerHandleError("twitchUsername") && (
+                      <p className="text-xs text-red-400 mt-1">{streamerHandleError("twitchUsername")}</p>
+                    )}
                   </div>
                   <div>
-                    <Label className="text-gray-400 text-sm mb-1.5 block">YouTube Username</Label>
-                    <Input value={streamerData.youtubeUsername} onChange={(e) => setStreamerData({ ...streamerData, youtubeUsername: e.target.value })} placeholder="@yourname" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                    <Label className="text-gray-400 text-sm mb-1.5 block">VPZone Username</Label>
+                    <Input
+                      value={streamerData.vpzoneUsername}
+                      onChange={(e) => setStreamerData({ ...streamerData, vpzoneUsername: e.target.value })}
+                      onBlur={() => normalizeStreamerField("vpzoneUsername")}
+                      placeholder="@yourname"
+                      className="bg-[#0B1218] border-[#1B2A33] text-white"
+                    />
+                    {streamerHandleError("vpzoneUsername") && (
+                      <p className="text-xs text-red-400 mt-1">{streamerHandleError("vpzoneUsername")}</p>
+                    )}
                   </div>
                   <div>
                     <Label className="text-gray-400 text-sm mb-1.5 block">Main Game / Category</Label>
@@ -1520,7 +1892,6 @@ export default function OnboardingFlow({
 
               <div className="flex flex-col gap-3 mt-4">
                 <div className="flex gap-3">
-                  <Button variant="outline" onClick={goToPrevStep}>Back</Button>
                   <Button onClick={goToNextStep} disabled={!streamerData.mainPlatform} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
                     Next <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -1536,9 +1907,119 @@ export default function OnboardingFlow({
           <div className="flex flex-col flex-1 min-h-0">
             <div className="flex-1 overflow-y-auto space-y-3">
               <div>
-                <h2 className="text-2xl font-bold text-white mb-1">Your Game</h2>
-                <p className="text-gray-400 mb-4">Tell us about your indie game. Required fields are marked with <span className="text-primary">*</span></p>
+                <h2 className="text-2xl font-bold text-white mb-1">{indieGames.length > 1 ? "Your Games" : "Your Game"}</h2>
+                <p className="text-gray-400 mb-4">Tell us about your indie game{indieGames.length > 1 ? "s" : ""}. Required fields are marked with <span className="text-primary">*</span></p>
               </div>
+
+              {/* Game switcher. The limit comes from the server: free accounts
+                  get one game, indie dev subscribers get up to ten. */}
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                {indieGames.map((g, i) => (
+                  <div
+                    key={i}
+                    className={`group flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm cursor-pointer transition-colors ${
+                      i === activeGameIdx
+                        ? "border-primary bg-primary/10 text-white"
+                        : "border-[#1B2A33] bg-[#0B1218] text-gray-400 hover:text-white"
+                    }`}
+                    onClick={() => setActiveGameIdx(i)}
+                  >
+                    <Gamepad2 className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="max-w-[10rem] truncate">{g.gameName.trim() || `Game ${i + 1}`}</span>
+                    {indieGames.length > 1 && (
+                      <button
+                        type="button"
+                        aria-label={`Remove ${g.gameName.trim() || `game ${i + 1}`}`}
+                        onClick={(e) => { e.stopPropagation(); removeIndieGame(i); }}
+                        className="ml-0.5 text-gray-500 hover:text-red-400"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                {indieGames.length < indieGameLimit ? (
+                  <button
+                    type="button"
+                    onClick={addIndieGame}
+                    className="flex items-center gap-1.5 rounded-full border border-dashed border-[#2A3A44] px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:border-primary transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add another game
+                  </button>
+                ) : !indieSubscribed ? (
+                  // Free account at its limit — adding more games is the
+                  // headline reason to subscribe, so route the click to the upsell.
+                  <button
+                    type="button"
+                    onClick={() => setShowIndieDevUpgrade(true)}
+                    className="flex items-center gap-1.5 rounded-full border border-dashed border-primary/40 bg-primary/5 px-3 py-1.5 text-sm text-primary hover:bg-primary/10 transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add another game
+                    <span className="ml-0.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Pro</span>
+                  </button>
+                ) : null}
+              </div>
+
+              {storeLookup.status !== "idle" && (
+                <p className={`text-xs mb-2 ${storeLookup.status === "error" ? "text-amber-400" : "text-primary"}`}>
+                  {storeLookup.status === "loading" ? "Looking up your game…" : storeLookup.message}
+                </p>
+              )}
+
+              {/* Cover art pulled from the store — shown so it is obvious what
+                  was imported, and removable if they would rather upload their own. */}
+              {indieGameData.storeImport?.headerImageUrl && (
+                <div className="mb-3 flex items-center gap-3 rounded-lg border border-[#1B2A33] bg-[#0B1218] p-2">
+                  <img
+                    src={indieGameData.storeImport.headerImageUrl}
+                    alt=""
+                    className="h-12 w-24 flex-shrink-0 rounded object-cover"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-white">Cover art imported</p>
+                    <p className="text-xs text-gray-500">You can replace this later in your dashboard.</p>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Remove imported cover art"
+                    onClick={() => setIndieGameData(d => ({
+                      ...d,
+                      storeImport: d.storeImport
+                        ? Object.fromEntries(Object.entries(d.storeImport).filter(([k]) => k !== "headerImageUrl"))
+                        : null,
+                    }))}
+                    className="flex-shrink-0 text-gray-500 hover:text-red-400"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+
+              {indieGames.length >= indieGameLimit && !indieSubscribed && (
+                <button
+                  type="button"
+                  onClick={() => setShowIndieDevUpgrade(true)}
+                  className="w-full text-left rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5 mb-2 hover:bg-primary/10 transition-colors"
+                >
+                  <p className="text-sm text-white font-medium flex items-center gap-1.5">
+                    <Code className="w-3.5 h-3.5 text-primary" />
+                    Got more than one game?
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Free accounts include {indieGameLimit} games. The Indie Developer subscription
+                    lets you showcase up to 10 — <span className="text-primary underline">see what's included</span>.
+                  </p>
+                </button>
+              )}
+              {indieGames.length >= indieGameLimit && indieSubscribed && (
+                <p className="text-xs text-gray-500 mb-2">
+                  You've reached your limit of {indieGameLimit} games.
+                </p>
+              )}
 
               <div>
                 <Label className="text-white text-sm mb-1.5 block">Game Name <span className="text-primary">*</span></Label>
@@ -1636,95 +2117,85 @@ export default function OnboardingFlow({
 
                 {/* Steam URL input (expanded) */}
                 {platformExpanded.steam && (
-                  <div className="mb-2">
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        autoFocus
-                        value={indieGameData.steamLink}
-                        onChange={(e) => {
-                          setIndieGameData({ ...indieGameData, steamLink: e.target.value });
-                          setPlatformErrors((errors) => ({ ...errors, steam: undefined }));
-                        }}
-                        onBlur={(e) => setPlatformErrors((errors) => ({ ...errors, steam: validateStoreUrl(e.target.value, "steam") ?? undefined }))}
-                        placeholder="https://store.steampowered.com/app/..."
-                        aria-invalid={Boolean(platformErrors.steam)}
-                        className={`bg-[#0B1218] text-white text-xs flex-1 ${platformErrors.steam ? "border-red-500" : "border-[#1B2A33]"}`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setPlatformExpanded(p => ({ ...p, steam: false }))}
-                        className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
-                        style={{ background: "rgba(255,255,255,0.06)" }}
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    {platformErrors.steam && <p className="mt-1 text-xs text-red-400">{platformErrors.steam}</p>}
+                  <div className="mb-2 flex gap-2 items-center">
+                    <Input
+                      autoFocus
+                      value={indieGameData.steamLink}
+                      onChange={(e) => setIndieGameData({ ...indieGameData, steamLink: e.target.value })}
+                      onBlur={() => { if (!indieLinkError("steamLink")) void lookupStoreUrl(indieGameData.steamLink); }}
+                      placeholder="https://store.steampowered.com/app/..."
+                      className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPlatformExpanded(p => ({ ...p, steam: false }))}
+                      className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
+                      style={{ background: "rgba(255,255,255,0.06)" }}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
                   </div>
+                )}
+                {indieLinkError("steamLink") && (
+                  <p className="text-xs text-red-400 mb-2 -mt-1">{indieLinkError("steamLink")}</p>
                 )}
 
                 {/* Itch.io URL input (expanded) */}
                 {platformExpanded.itch && (
-                  <div className="mb-2">
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        autoFocus
-                        value={indieGameData.itchLink}
-                        onChange={(e) => {
-                          setIndieGameData({ ...indieGameData, itchLink: e.target.value });
-                          setPlatformErrors((errors) => ({ ...errors, itch: undefined }));
-                        }}
-                        onBlur={(e) => setPlatformErrors((errors) => ({ ...errors, itch: validateStoreUrl(e.target.value, "itch") ?? undefined }))}
-                        placeholder="https://yourname.itch.io/your-game"
-                        aria-invalid={Boolean(platformErrors.itch)}
-                        className={`bg-[#0B1218] text-white text-xs flex-1 ${platformErrors.itch ? "border-red-500" : "border-[#1B2A33]"}`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setPlatformExpanded(p => ({ ...p, itch: false }))}
-                        className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
-                        style={{ background: "rgba(255,255,255,0.06)" }}
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    {platformErrors.itch && <p className="mt-1 text-xs text-red-400">{platformErrors.itch}</p>}
+                  <div className="mb-2 flex gap-2 items-center">
+                    <Input
+                      autoFocus
+                      value={indieGameData.itchLink}
+                      onChange={(e) => setIndieGameData({ ...indieGameData, itchLink: e.target.value })}
+                      placeholder="https://yourname.itch.io/your-game"
+                      className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPlatformExpanded(p => ({ ...p, itch: false }))}
+                      className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
+                      style={{ background: "rgba(255,255,255,0.06)" }}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
                   </div>
+                )}
+                {indieLinkError("itchLink") && (
+                  <p className="text-xs text-red-400 mb-2 -mt-1">{indieLinkError("itchLink")}</p>
                 )}
 
                 {/* Epic Games URL input (expanded) */}
                 {platformExpanded.epic && (
-                  <div className="mb-2">
-                    <div className="flex gap-2 items-center">
-                      <Input
-                        autoFocus
-                        value={indieGameData.epicLink}
-                        onChange={(e) => {
-                          setIndieGameData({ ...indieGameData, epicLink: e.target.value });
-                          setPlatformErrors((errors) => ({ ...errors, epic: undefined }));
-                        }}
-                        onBlur={(e) => setPlatformErrors((errors) => ({ ...errors, epic: validateStoreUrl(e.target.value, "epic") ?? undefined }))}
-                        placeholder="https://store.epicgames.com/..."
-                        aria-invalid={Boolean(platformErrors.epic)}
-                        className={`bg-[#0B1218] text-white text-xs flex-1 ${platformErrors.epic ? "border-red-500" : "border-[#1B2A33]"}`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setPlatformExpanded(p => ({ ...p, epic: false }))}
-                        className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
-                        style={{ background: "rgba(255,255,255,0.06)" }}
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                    {platformErrors.epic && <p className="mt-1 text-xs text-red-400">{platformErrors.epic}</p>}
+                  <div className="mb-2 flex gap-2 items-center">
+                    <Input
+                      autoFocus
+                      value={indieGameData.epicLink}
+                      onChange={(e) => setIndieGameData({ ...indieGameData, epicLink: e.target.value })}
+                      onBlur={() => { if (!indieLinkError("epicLink")) void lookupStoreUrl(indieGameData.epicLink); }}
+                      placeholder="https://store.epicgames.com/..."
+                      className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPlatformExpanded(p => ({ ...p, epic: false }))}
+                      className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
+                      style={{ background: "rgba(255,255,255,0.06)" }}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
                   </div>
+                )}
+                {indieLinkError("epicLink") && (
+                  <p className="text-xs text-red-400 mb-2 -mt-1">{indieLinkError("epicLink")}</p>
                 )}
               </div>
 
               <div>
                 <Label className="text-gray-400 text-sm mb-1.5 block">Website</Label>
                 <Input value={indieGameData.websiteLink} onChange={(e) => setIndieGameData({ ...indieGameData, websiteLink: e.target.value })} placeholder="https://yourgame.com" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                {indieLinkError("websiteLink") && (
+                  <p className="text-xs text-red-400 mt-1">{indieLinkError("websiteLink")}</p>
+                )}
               </div>
               <div>
                 <Label className="text-gray-400 text-sm mb-1.5 block">Short Description</Label>
@@ -1733,12 +2204,22 @@ export default function OnboardingFlow({
             </div>
 
             <div className="flex gap-3 mt-4">
-              <Button variant="outline" onClick={goToPrevStep}>Back</Button>
               <Button onClick={goToNextStep} disabled={!indieGameData.gameName.trim() || !indieGameData.releaseStatus} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
                 Next <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
-          </div>
+          
+            {/* Mounted here so the "add another game" upsell has a dialog to
+                open — the copy on the later subscribe step renders separately.
+                Re-check the quota on close: they may have just subscribed. */}
+            <IndieDevUpgradeDialog
+              open={showIndieDevUpgrade}
+              onOpenChange={(open) => {
+                setShowIndieDevUpgrade(open);
+                if (!open) refreshIndieGameLimit();
+              }}
+            />
+</div>
         );
 
       // ── STEP 10: WALLET / 100 GFT ──────────────────────────────────────────
@@ -1771,7 +2252,6 @@ export default function OnboardingFlow({
                   </CardContent>
                 </Card>
                 <div className="flex gap-3 mt-auto">
-                  <Button variant="outline" onClick={goToPrevStep}>Back</Button>
                   <Button onClick={goToNextStep} className="flex-1" data-testid="button-next-from-wallet">
                     Next <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -1790,7 +2270,6 @@ export default function OnboardingFlow({
                   </CardContent>
                 </Card>
                 <div className="flex gap-3 mt-auto">
-                  <Button variant="outline" onClick={goToPrevStep}>Back</Button>
                   <Button onClick={goToNextStep} variant="ghost" className="flex-1 text-gray-400 hover:text-white" data-testid="button-skip-wallet">Skip</Button>
                 </div>
               </>
@@ -1806,7 +2285,6 @@ export default function OnboardingFlow({
                   </CardContent>
                 </Card>
                 <div className="flex gap-3 mt-auto">
-                  <Button variant="outline" onClick={goToPrevStep}>Back</Button>
                 </div>
               </>
             ) : (
@@ -1833,7 +2311,6 @@ export default function OnboardingFlow({
                 </button>
                 <p className="text-xs text-gray-500 text-center mt-4 mb-5">100 GFT welcome bonus is only available during account setup.</p>
                 <div className="flex gap-3 mt-auto">
-                  <Button variant="outline" onClick={goToPrevStep}>Back</Button>
                   <Button onClick={goToNextStep} variant="ghost" className="flex-1 text-gray-400 hover:text-white" data-testid="button-skip-wallet">Skip</Button>
                 </div>
               </>
@@ -1903,9 +2380,6 @@ export default function OnboardingFlow({
               <Button variant="ghost" onClick={goToNextStep} className="w-full text-gray-400 hover:text-white py-3">
                 Continue Free <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
-              <Button variant="outline" onClick={goToPrevStep} className="w-full">
-                Back
-              </Button>
             </div>
             {selectedPath === 'indie' ? (
               <IndieDevUpgradeDialog open={showIndieDevUpgrade} onOpenChange={setShowIndieDevUpgrade} />
@@ -1954,6 +2428,23 @@ export default function OnboardingFlow({
       className={`w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 h-dvh sm:h-[700px] sm:overflow-hidden sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col bg-[#071013]`}
       style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)' }}
     >
+      {/* Persistent back control. Sits above the step indicator so every step
+          exposes it in the same place, rather than each step rolling its own.
+          Hidden on the first step (nothing to go back to) and on Complete,
+          where the account has already been written. */}
+      <div className="flex items-center mb-3 h-8">
+        {currentStep > OnboardingStep.Welcome && currentStep !== OnboardingStep.Complete && (
+          <button
+            type="button"
+            onClick={goToPrevStep}
+            aria-label="Go back"
+            className="flex items-center gap-1 -ml-2 px-2 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </button>
+        )}
+      </div>
       <OnboardingStepIndicator currentStep={currentStep} isGoogleUser={isGoogleUser} selectedPath={selectedPath} />
       <div className={`flex-1 flex flex-col min-h-0 ${stepDirection === 'forward' ? 'ob-step-content-forward' : 'ob-step-content-back'}`} key={currentStep}>
         {renderStepContent()}

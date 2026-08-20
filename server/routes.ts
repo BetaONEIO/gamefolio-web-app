@@ -3797,7 +3797,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Short-lived in-memory cache for trending feeds (DB query + signed URLs).
   // Keyed by route+normalized-params+user. Bounded LRU so user-controlled
   // query params can't blow up memory.
-  const TRENDING_CACHE_TTL_MS = 30_000;
+  // Now that this cache is genuinely shared across every requester (no more
+  // per-user key), a longer TTL multiplies its payoff instead of just
+  // trading staleness for a marginal hit-rate bump on a handful of
+  // per-user entries.
+  const TRENDING_CACHE_TTL_MS = 90_000;
   const TRENDING_CACHE_MAX_ENTRIES = 500;
   // Map preserves insertion order — re-inserting on hit gives us LRU semantics.
   const trendingCache = new Map<string, { expires: number; data: any }>();
@@ -3848,15 +3852,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     period: unknown,
     limit: unknown,
     gameId: unknown,
-    currentUserId: number | undefined,
   ): string {
-    const allowedPeriods = new Set(['all', 'recent', 'day', 'week', 'month', 'year']);
+    const allowedPeriods = new Set(['all', 'recent', 'day', 'week', 'month', 'year', '1d', '1w', 'ever']);
     const periodStr = typeof period === 'string' && allowedPeriods.has(period) ? period : 'all';
     const parsedLimit = Math.max(1, Math.min(50, parseInt(String(limit ?? '10'), 10) || 10));
     const parsedGameId = gameId !== undefined && gameId !== '' && !Number.isNaN(parseInt(String(gameId), 10))
       ? parseInt(String(gameId), 10)
       : '';
-    return `${route}:${periodStr}:${parsedLimit}:${parsedGameId}:${currentUserId ?? 'guest'}`;
+    // No per-user component — trending results are now identical for every
+    // requester (public accounts only, see getTrendingClips), so one cache
+    // entry serves everyone instead of fragmenting per logged-in user.
+    return `${route}:${periodStr}:${parsedLimit}:${parsedGameId}`;
   }
 
   // Evict all trending cache entries whose key starts with a given route prefix.
@@ -3893,7 +3899,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const signed = await supabaseStorage.convertToSignedUrl(clip.user.avatarUrl, 3600);
           if (signed) user = { ...clip.user, avatarUrl: signed };
         }
-        return { ...clip, ...updates, user };
+        // Every caller of this helper is a public feed route (trending,
+        // latest, hashtag, etc.) — uploadIp/uploadDeviceId are spam-
+        // detection signals meant for internal use only and must never
+        // reach an anonymous client.
+        const { uploadIp, uploadDeviceId, ...rest } = clip as any;
+        return { ...rest, ...updates, user };
       })
     );
   }
@@ -4805,8 +4816,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const limit = parseInt(req.query.limit as string) || 50;
-      const xpHistory = await storage.getUserXPHistory(userId, limit);
-      res.json(xpHistory);
+      // Merge both ledgers that feed totalXP — user_xp_history (views, uploads,
+      // fires received, ...) and user_points_history (likes, comments, shares,
+      // daily login, streak bonuses, watch-5/watch-20, ...) — and drop zero/
+      // negative bookkeeping rows like watch_clip_counted, which are internal
+      // counters (not real XP) and would otherwise spam this list. Mirrors the
+      // merge already done for /api/dashboard's "Recent XP Activity" widget.
+      const [xpHistory, pointsHistory] = await Promise.all([
+        storage.getUserXPHistory(userId, 500),
+        storage.getUserPointsHistory(userId, 500),
+      ]);
+      const merged = [
+        ...xpHistory
+          .filter((h) => h.xpAmount > 0)
+          .map((h) => ({
+            id: h.id,
+            userId: h.userId,
+            clipId: h.clipId,
+            xpAmount: h.xpAmount,
+            viewCount: h.viewCount,
+            source: h.source,
+            description: h.description,
+            createdAt: h.createdAt,
+            clip: h.clip,
+          })),
+        ...pointsHistory
+          .filter((h) => h.points > 0)
+          .map((h) => ({
+            id: -h.id,
+            userId: h.userId,
+            clipId: null,
+            xpAmount: h.points,
+            viewCount: null,
+            source: h.action,
+            description: h.description,
+            createdAt: h.createdAt,
+            clip: null,
+          })),
+      ]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, limit);
+      res.json(merged);
     } catch (error) {
       captureRouteError(error);
       console.error("Error fetching user XP history:", error);
@@ -8103,7 +8153,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clips/latest", async (req, res) => {
     try {
       const { limit = '50', period, gameId } = req.query;
-      const currentUserId = (req.user as any)?.id;
 
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
@@ -8115,13 +8164,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       else if (period === '1w') since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       else if (period === 'ever') since = undefined;
 
-      const latestClips = await storage.getLatestClips(
-        parseInt(limit as string) || 50,
-        since,
-        gameId ? parseInt(gameId as string) : undefined,
-        currentUserId
-      );
-      const signed = await signClipUrls(latestClips);
+      const cacheKey = trendingCacheKey('clips-latest', period, limit, gameId);
+      const signed = await getCachedTrending(cacheKey, async () => {
+        const latestClips = await storage.getLatestClips(
+          parseInt(limit as string) || 50,
+          since,
+          gameId ? parseInt(gameId as string) : undefined
+        );
+        return await signClipUrls(latestClips);
+      });
       res.json(signed);
     } catch (err) {
       captureRouteError(err);
@@ -8421,20 +8472,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clips/trending", async (req, res) => {
     try {
       const { period = 'all', limit = 10, gameId } = req.query;
-      const currentUserId = (req.user as any)?.id;
 
       // Force no caching for privacy-sensitive content
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
 
-      const cacheKey = trendingCacheKey('clips', period, limit, gameId, currentUserId);
+      const cacheKey = trendingCacheKey('clips', period, limit, gameId);
       const signed = await getCachedTrending(cacheKey, async () => {
         const clips = await storage.getTrendingClips(
           period as string,
           parseInt(limit as string) || 10,
-          gameId ? parseInt(gameId as string) : undefined,
-          currentUserId
+          gameId ? parseInt(gameId as string) : undefined
         );
         return await signClipUrls(clips);
       });
@@ -8450,14 +8499,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clips/reels/trending", async (req, res) => {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
-      const currentUserId = (req.user as any)?.id;
-      const cacheKey = trendingCacheKey('reels-home', period, limit, gameId, currentUserId);
+      const cacheKey = trendingCacheKey('reels-home', period, limit, gameId);
       const reels = await getCachedTrending(cacheKey, async () => {
         const raw = await storage.getTrendingReels(
           period as string,
           parseInt(limit as string) || 10,
-          gameId ? parseInt(gameId as string) : undefined,
-          currentUserId
+          gameId ? parseInt(gameId as string) : undefined
         );
         return await signClipUrls(raw);
       });
@@ -8473,9 +8520,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reels/latest", async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 6;
-      const currentUserId = (req.user as any)?.id;
-      const reels = await storage.getLatestReels(limit, currentUserId);
-      res.json(await signClipUrls(reels));
+      const cacheKey = trendingCacheKey('reels-latest', 'all', limit, undefined);
+      const reels = await getCachedTrending(cacheKey, async () => {
+        const raw = await storage.getLatestReels(limit);
+        return await signClipUrls(raw);
+      });
+      res.json(reels);
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching latest reels:", err);
@@ -8487,14 +8537,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reels/trending", async (req, res) => {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
-      const currentUserId = (req.user as any)?.id;
-      const cacheKey = trendingCacheKey('reels', period, limit, gameId, currentUserId);
+      const cacheKey = trendingCacheKey('reels', period, limit, gameId);
       const result = await getCachedTrending(cacheKey, async () => {
         const reels = await storage.getTrendingReels(
           period as string,
           parseInt(limit as string) || 10,
-          gameId ? parseInt(gameId as string) : undefined,
-          currentUserId
+          gameId ? parseInt(gameId as string) : undefined
         );
         return await Promise.all(
           reels.map(async (reel) => {
@@ -8838,6 +8886,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Generate QR code and social media links for existing clip
+  // GET /api/users/:username/share — share payload for a profile.
+  //
+  // This endpoint did not exist, so GamefolioShareDialog's fetch always 404'd
+  // and fell back to building the URL from window.location.origin. On native
+  // that is capacitor://localhost, which is how "capacitor://localhost/@user"
+  // ended up in shared links. Mirrors the clip/screenshot share endpoints:
+  // absolute production URLs and a server-rendered QR code.
+  app.get("/api/users/:username/share", async (req, res) => {
+    try {
+      const username = String(req.params.username || "").replace(/^@+/, "");
+      if (!username) return res.status(400).json({ message: "Username required" });
+
+      const user = await storage.getUserByUsername(username);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const baseUrl = "https://app.gamefolio.com";
+      const profileUrl = `${baseUrl}/@${user.username}`;
+      const displayName = user.displayName || user.username;
+
+      const qrCode = await QRCode.toDataURL(profileUrl, {
+        errorCorrectionLevel: "M",
+        type: "image/png",
+        // No `quality` here: it is only meaningful for lossy output, and the
+        // typings reject it for image/png.
+        margin: 1,
+        color: { dark: "#10b981", light: "#ffffff" },
+        width: 256,
+      });
+
+      const caption = `Check out ${displayName}'s Gamefolio!`;
+      const socialMediaLinks = {
+        twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(caption)}&url=${encodeURIComponent(profileUrl)}`,
+        facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(profileUrl)}&quote=${encodeURIComponent(caption)}`,
+        reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(profileUrl)}&title=${encodeURIComponent(caption)}`,
+        linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(profileUrl)}&summary=${encodeURIComponent(caption)}`,
+        whatsapp: `https://wa.me/?text=${encodeURIComponent(`${caption} ${profileUrl}`)}`,
+        telegram: `https://t.me/share/url?url=${encodeURIComponent(profileUrl)}&text=${encodeURIComponent(caption)}`,
+        bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`${caption} ${profileUrl}`)}`,
+        threads: `https://www.threads.net/intent/post?text=${encodeURIComponent(`${caption} ${profileUrl}`)}`,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(profileUrl)}&description=${encodeURIComponent(caption)}`,
+        email: `mailto:?subject=${encodeURIComponent(caption)}&body=${encodeURIComponent(`${caption}\n\n${profileUrl}`)}`,
+        // Platforms with no web share intent — the dialog copies the link instead.
+        discord: profileUrl,
+        instagram: profileUrl,
+        tiktok: profileUrl,
+        snapchat: profileUrl,
+        youtube: profileUrl,
+      };
+
+      res.json({
+        profileUrl,
+        username: user.username,
+        displayName,
+        avatarUrl: user.avatarUrl ?? null,
+        qrCode,
+        socialMediaLinks,
+      });
+    } catch (err) {
+      console.error("GET /api/users/:username/share error:", err);
+      res.status(500).json({ message: "Failed to build share links" });
+    }
+  });
+
   app.get("/api/clips/:id/share", async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
@@ -9499,19 +9610,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only delete your own clips" });
       }
 
-      // Delete the clip from Supabase storage
-      if (clip.videoUrl) {
+      // Delete the clip from Supabase storage. deleteFile() takes a
+      // bucket-relative path, not the public URL stored on the row — must
+      // extract it first or Supabase silently no-ops (no matching object,
+      // no error), which is why deleted clips were never actually removed
+      // from storage.
+      const clipVideoPath = clip.videoUrl ? supabaseStorage.extractStoragePath(clip.videoUrl) : null;
+      if (clipVideoPath) {
         try {
-          await supabaseStorage.deleteFile(clip.videoUrl);
+          await supabaseStorage.deleteFile(clipVideoPath);
         } catch (error) {
           console.warn("Could not delete video file from Supabase:", error);
         }
       }
 
       // Delete the thumbnail from Supabase storage
-      if (clip.thumbnailUrl) {
+      const clipThumbnailPath = clip.thumbnailUrl ? supabaseStorage.extractStoragePath(clip.thumbnailUrl) : null;
+      if (clipThumbnailPath) {
         try {
-          await supabaseStorage.deleteFile(clip.thumbnailUrl);
+          await supabaseStorage.deleteFile(clipThumbnailPath);
         } catch (error) {
           console.warn("Could not delete thumbnail file from Supabase:", error);
         }
@@ -11548,14 +11665,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { url: imageUrl } = await supabaseStorage.uploadBuffer(processedBuffer, fileName, "image/jpeg", "image", req.user.id);
       try { await fsPromises.unlink(req.file.path); } catch {}
       const { indieGameProfiles } = await import("@shared/schema");
-      const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
-      if (ex.length > 0) {
-        await db.update(indieGameProfiles).set({ [field]: imageUrl }).where(eq(indieGameProfiles.userId, req.user.id));
+      const uploadGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      let targetGameId = uploadGameId;
+      if (targetGameId) {
+        await db.update(indieGameProfiles).set({ [field]: imageUrl }).where(eq(indieGameProfiles.id, targetGameId));
       } else {
-        await db.insert(indieGameProfiles).values({ userId: req.user.id, [field]: imageUrl });
+        const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, [field]: imageUrl, isPrimary: true }).returning({ id: indieGameProfiles.id });
+        targetGameId = created?.id ?? null;
       }
       // Clear useImported so GET /api/indie/profile returns the uploaded URL, not a stale imported value
-      await _indieUpsertMeta(req.user.id, field, { isManualOverride: true, useImported: false, lastEditedAt: new Date() });
+      await _indieUpsertMeta(req.user.id, field, { isManualOverride: true, useImported: false, lastEditedAt: new Date() }, targetGameId);
       res.json({ url: imageUrl, field });
     } catch (err) {
       console.error("Error uploading indie profile image:", err);
@@ -11567,18 +11686,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Internal helpers for indie profile
   // Indie helpers delegate to storage layer for proper architecture separation
-  async function _indieGetOrCreate(userId: number) {
-    const existing = await storage.getIndieGameProfile(userId);
+  // gameId omitted => the user's primary game (migration 0020).
+  async function _indieGetOrCreate(userId: number, gameId?: number | null) {
+    const existing = await storage.getIndieGameProfile(userId, gameId);
     if (existing) return existing;
-    return storage.upsertIndieGameProfile(userId, {});
+    return storage.upsertIndieGameProfile(userId, {}, gameId);
   }
 
-  async function _indieFieldMetaMap(userId: number) {
-    return storage.getIndieFieldMeta(userId);
+  async function _indieFieldMetaMap(userId: number, gameId?: number | null) {
+    return storage.getIndieFieldMeta(userId, gameId);
   }
 
-  async function _indieUpsertMeta(userId: number, fieldName: string, patch: Partial<{ importedValue: string; importSource: string; isManualOverride: boolean; useImported: boolean; lastImportedAt: Date; lastEditedAt: Date }>) {
-    return storage.upsertIndieFieldMeta(userId, fieldName, patch);
+  async function _indieUpsertMeta(userId: number, fieldName: string, patch: Partial<{ importedValue: string; importSource: string; isManualOverride: boolean; useImported: boolean; lastImportedAt: Date; lastEditedAt: Date }>, gameId?: number | null) {
+    return storage.upsertIndieFieldMeta(userId, fieldName, patch, gameId);
   }
 
   function _stripHtml(html: string): string {
@@ -11617,6 +11737,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
   }
 
+  // Store links are validated against their platform's host so a link pasted
+  // into the wrong field is rejected rather than silently breaking imports.
+  const { validateStoreUrls } = await import("@shared/store-urls");
+
+  // Store lookups, factored out so the partner-only preview endpoints and the
+  // onboarding-time lookup below share one implementation.
+  async function _fetchSteamPreview(appId: string) {
+    const steamRes = await fetch(`https://store.steampowered.com/api/appdetails?appids=${appId}&l=english`, { signal: AbortSignal.timeout(10000) });
+    if (!steamRes.ok) return { ok: false as const, error: "Steam API unavailable", status: 502 };
+    const json = await steamRes.json() as any;
+    const appData = json[appId];
+    if (!appData?.success) return { ok: false as const, error: "Steam app not found — check the App ID", status: 404 };
+    return {
+      ok: true as const,
+      payload: {
+        source: "steam",
+        appId,
+        steamUrl: `https://store.steampowered.com/app/${appId}/`,
+        fields: _mapSteamData(appData.data),
+      },
+    };
+  }
+
+  async function _fetchEpicPreview(slug: string) {
+    const epicRes = await fetch(`https://store-content-ipv4.ak.epicgames.com/api/en-US/content/products/${encodeURIComponent(slug)}`, { signal: AbortSignal.timeout(10000) });
+    if (!epicRes.ok) return { ok: false as const, error: "Epic product not found — check the slug", status: 404 };
+    const json = await epicRes.json() as any;
+    const pages = json.pages || [];
+    const main = pages.find((p: any) => p.type === "productHome") || pages[0];
+    const data = main?.data?.about || {};
+    const media = main?.data?.gallery?.items || [];
+    const screenshotUrls = media.filter((m: any) => m.type === "image").slice(0, 8).map((m: any) => m.src).filter(Boolean);
+    const trailerItem = media.find((m: any) => m.type === "video");
+    return {
+      ok: true as const,
+      payload: {
+        source: "epic",
+        slug,
+        epicUrl: `https://store.epicgames.com/en-US/p/${slug}`,
+        fields: {
+          gameName: json.productName || main?.productName || null,
+          shortDescription: data.shortDescription || null,
+          fullDescription: data.description ? _stripHtml(data.description).slice(0, 5000) : null,
+          headerImageUrl: main?.data?.hero?.logoImage?.src || null,
+          screenshotUrls: screenshotUrls.length > 0 ? screenshotUrls : null,
+          trailerUrl: trailerItem?.src || null,
+        },
+      },
+    };
+  }
+
+  // Pulls the store identifier out of a pasted URL. Steam app pages carry a
+  // numeric id (/app/367520/...), Epic product pages a slug (/p/<slug>).
+  function _identifyStoreUrl(raw: string): { source: "steam"; appId: string } | { source: "epic"; slug: string } | null {
+    const value = String(raw || "").trim();
+    if (!value) return null;
+    let url: URL;
+    try {
+      url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+    } catch {
+      return null;
+    }
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    if (host === "store.steampowered.com") {
+      const m = url.pathname.match(/\/app\/(\d+)/);
+      if (m) return { source: "steam", appId: m[1] };
+      return null;
+    }
+    if (host === "store.epicgames.com" || host.endsWith(".epicgames.com")) {
+      // /p/<slug> and /<locale>/p/<slug> are both in the wild.
+      const m = url.pathname.match(/\/p\/([^/?#]+)/);
+      if (m) return { source: "epic", slug: decodeURIComponent(m[1]).toLowerCase() };
+      return null;
+    }
+    return null;
+  }
+
   const INDIE_ALLOWED_FIELDS = [
     "gameName","releaseStatus","releaseDate","price","isFree",
     "studioName","studioFoundedYear","studioTeamSize","studioWebsite","studioCountry",
@@ -11628,6 +11825,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "websiteUrl","twitterUrl","discordUrl",
   ];
 
+  // Game quotas: a free developer gets two games; an indie-dev subscriber gets ten.
+  // Read the flag from the database rather than the session user, so a
+  // subscription that changed mid-session is reflected immediately.
+  const INDIE_FREE_GAME_LIMIT = 2;
+  const INDIE_SUBSCRIBER_GAME_LIMIT = 10;
+
+  async function _indieGameQuota(userId: number): Promise<{ limit: number; subscribed: boolean }> {
+    const { users } = await import("@shared/schema");
+    const { db } = await import("./db");
+    const { eq } = await import("drizzle-orm");
+    const [row] = await db.select({ subscribed: users.isIndieDevSubscriber })
+      .from(users).where(eq(users.id, userId));
+    const subscribed = !!row?.subscribed;
+    return { subscribed, limit: subscribed ? INDIE_SUBSCRIBER_GAME_LIMIT : INDIE_FREE_GAME_LIMIT };
+  }
+
+  // Resolves which game a request refers to. A developer may own several games
+  // (migration 0020); callers that predate multi-game send no gameId, so fall
+  // back to the primary game. Returns null when the id is not the caller's —
+  // never trust a client-supplied gameId without this ownership check.
+  async function _indieResolveGameId(userId: number, requested?: unknown): Promise<number | null> {
+    const { indieGameProfiles } = await import("@shared/schema");
+    const { db } = await import("./db");
+    const { eq, and, asc } = await import("drizzle-orm");
+
+    const wanted = Number(requested);
+    if (Number.isInteger(wanted) && wanted > 0) {
+      const [owned] = await db.select({ id: indieGameProfiles.id })
+        .from(indieGameProfiles)
+        .where(and(eq(indieGameProfiles.id, wanted), eq(indieGameProfiles.userId, userId)));
+      return owned?.id ?? null;
+    }
+
+    const [primary] = await db.select({ id: indieGameProfiles.id })
+      .from(indieGameProfiles)
+      .where(and(eq(indieGameProfiles.userId, userId), eq(indieGameProfiles.isPrimary, true)));
+    if (primary) return primary.id;
+
+    // No primary flagged (rows created before 0020's backfill, or primary deleted).
+    const [first] = await db.select({ id: indieGameProfiles.id })
+      .from(indieGameProfiles)
+      .where(eq(indieGameProfiles.userId, userId))
+      .orderBy(asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id))
+      .limit(1);
+    return first?.id ?? null;
+  }
+
   // GET /api/indie/profile — owner: full profile + field meta (partner access only)
   // Resolution model: when useImported is true for a field, the resolved profile value
   // should reflect the importedValue rather than the manually-edited value.
@@ -11635,8 +11879,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
     try {
-      const profile = await _indieGetOrCreate(req.user.id);
-      const fieldMeta = await _indieFieldMetaMap(req.user.id);
+      // ?gameId= selects one of the developer's games; omitted means primary.
+      const gameId = await _indieResolveGameId(req.user.id, req.query.gameId);
+      if (req.query.gameId && !gameId) return res.status(404).json({ error: "Game not found" });
+      // Read-only: do NOT create a profile here. Auto-creating was harmless when
+      // a user could only ever have one, but now it spends a slot from their
+      // quota on a nameless placeholder just for opening the dashboard — a free
+      // developer would lose one of their two games without doing anything.
+      // The write paths (PUT, uploads, onboarding) still create on demand.
+      const profile = (await storage.getIndieGameProfile(req.user.id, gameId)) ?? {};
+      const fieldMeta = await _indieFieldMetaMap(req.user.id, gameId);
 
       // Apply useImported resolution: for each field that has useImported=true,
       // return the importedValue as the effective field value in a resolvedProfile.
@@ -11671,26 +11923,325 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (key in req.body) patch[key] = req.body[key];
       }
       if (Object.keys(patch).length === 0) return res.status(400).json({ error: "No valid fields provided" });
+      const urlErrors = validateStoreUrls(patch);
+      if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
       patch.updatedAt = new Date();
-      const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      // Resolve which game is being edited before writing. Updating by userId
+      // alone would rewrite every game the developer owns, now that migration
+      // 0020 has removed the UNIQUE(user_id) constraint.
+      const requestedGameId = req.body.gameId ?? req.query.gameId;
+      const gameId = await _indieResolveGameId(req.user.id, requestedGameId);
+      if (requestedGameId && !gameId) return res.status(404).json({ error: "Game not found" });
       let profile;
-      if (ex.length > 0) {
-        const up = await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.userId, req.user.id)).returning();
+      if (gameId) {
+        const up = await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, gameId)).returning();
         profile = up[0];
       } else {
-        const ins = await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch }).returning();
+        const ins = await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch, isPrimary: true }).returning();
         profile = ins[0];
       }
       const now = new Date();
       for (const key of Object.keys(patch)) {
         if (key === "updatedAt") continue;
-        await _indieUpsertMeta(req.user.id, key, { isManualOverride: true, useImported: false, lastEditedAt: now });
+        await _indieUpsertMeta(req.user.id, key, { isManualOverride: true, useImported: false, lastEditedAt: now }, profile?.id);
       }
-      const fieldMeta = await _indieFieldMetaMap(req.user.id);
+      const fieldMeta = await _indieFieldMetaMap(req.user.id, profile?.id);
       res.json({ profile, fieldMeta });
     } catch (err) {
       console.error("PUT /api/indie/profile error:", err);
       res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
+  // POST /api/indie/onboarding-profile — seed the game profile from the onboarding flow.
+  // Deliberately does NOT require isPartner: this runs while a brand-new user is still
+  // completing onboarding, before any partner/subscriber entitlement exists. Always scoped
+  // to req.user.id, and fields are whitelisted through INDIE_ALLOWED_FIELDS exactly as
+  // PUT /api/indie/profile does. Upserts so re-running onboarding overwrites cleanly.
+  app.post("/api/indie/onboarding-profile", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+
+      const patch: Record<string, any> = {};
+      for (const key of INDIE_ALLOWED_FIELDS) {
+        if (key in req.body && req.body[key] !== "" && req.body[key] != null) {
+          patch[key] = req.body[key];
+        }
+      }
+      if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
+      const urlErrors = validateStoreUrls(patch);
+      if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
+      patch.updatedAt = new Date();
+
+      // Target the primary game so re-running onboarding overwrites it rather
+      // than editing every game a returning developer owns.
+      const primaryId = await _indieResolveGameId(userId, undefined);
+      let profile;
+      if (primaryId) {
+        const up = await db.update(indieGameProfiles).set(patch)
+          .where(eq(indieGameProfiles.id, primaryId)).returning();
+        profile = up[0];
+      } else {
+        // First game for this user — it becomes their primary, so later
+        // additions through POST /api/indie/games slot in behind it.
+        const ins = await db.insert(indieGameProfiles)
+          .values({ userId: userId, ...patch, isPrimary: true }).returning();
+        profile = ins[0];
+      }
+      res.json({ profile });
+    } catch (err) {
+      console.error("POST /api/indie/onboarding-profile error:", err);
+      res.status(500).json({ error: "Failed to save game profile" });
+    }
+  });
+
+  // POST /api/streamer/onboarding-profile — persist the streamer setup step.
+  //
+  // Verification is emphatically NOT granted here: twitchVerified / kickVerified
+  // / vpzoneVerified are only ever set by the OAuth callbacks in
+  // server/routes/social-oauth.ts, which prove ownership. This endpoint writes
+  // self-reported names only, and refuses to overwrite a channel name that OAuth
+  // already verified — otherwise typing a name would silently displace a proven
+  // one and inherit its verified badge.
+  app.post("/api/streamer/onboarding-profile", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const { validateStreamerHandle, normalizeStreamerHandle } = await import("@shared/streamer-handles");
+      const { users } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+
+      const handles = {
+        twitch: req.body.twitchUsername,
+        kick: req.body.kickUsername,
+        vpzone: req.body.vpzoneUsername,
+      } as const;
+
+      const errors: string[] = [];
+      for (const [platform, value] of Object.entries(handles)) {
+        const err = validateStreamerHandle(platform as any, value);
+        if (err) errors.push(err);
+      }
+      if (errors.length > 0) {
+        return res.status(400).json({ error: errors[0], errors, code: "INVALID_STREAMER_HANDLE" });
+      }
+
+      const [existing] = await db.select({
+        twitchVerified: users.twitchVerified,
+        kickVerified: users.kickVerified,
+        vpzoneVerified: users.vpzoneVerified,
+        twitchChannelName: users.twitchChannelName,
+        kickChannelName: users.kickChannelName,
+        vpzoneChannelName: users.vpzoneChannelName,
+      }).from(users).where(eq(users.id, userId));
+
+      const patch: Record<string, any> = { isStreamer: true, updatedAt: new Date() };
+
+      const clean = (v: unknown) => {
+        const h = normalizeStreamerHandle(v as string);
+        return h === "" ? null : h;
+      };
+
+      // Only fill a channel name that OAuth has not already proven.
+      if (!existing?.twitchVerified && clean(handles.twitch)) patch.twitchChannelName = clean(handles.twitch);
+      if (!existing?.kickVerified && clean(handles.kick)) patch.kickChannelName = clean(handles.kick);
+      if (!existing?.vpzoneVerified && clean(handles.vpzone)) patch.vpzoneChannelName = clean(handles.vpzone);
+
+      const mainPlatform = typeof req.body.mainPlatform === "string" ? req.body.mainPlatform.trim() : "";
+      if (["twitch", "kick", "vpzone", "other"].includes(mainPlatform)) {
+        patch.streamPlatform = mainPlatform;
+        const named =
+          mainPlatform === "twitch" ? (existing?.twitchChannelName ?? clean(handles.twitch)) :
+          mainPlatform === "kick"   ? (existing?.kickChannelName   ?? clean(handles.kick)) :
+          mainPlatform === "vpzone" ? (existing?.vpzoneChannelName ?? clean(handles.vpzone)) : null;
+        if (named) patch.streamChannelName = named;
+      }
+
+      if (typeof req.body.mainGame === "string" && req.body.mainGame.trim()) {
+        patch.streamMainGame = req.body.mainGame.trim().slice(0, 200);
+      }
+      if (typeof req.body.streamFrequency === "string" && req.body.streamFrequency.trim()) {
+        patch.streamFrequency = req.body.streamFrequency.trim().slice(0, 50);
+      }
+
+      await db.update(users).set(patch).where(eq(users.id, userId));
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("POST /api/streamer/onboarding-profile error:", err);
+      res.status(500).json({ error: "Failed to save streamer profile" });
+    }
+  });
+
+  // GET /api/indie/store-lookup?url= — resolve a pasted Steam or Epic store URL
+  // into the fields we can prefill from. Authentication only, deliberately no
+  // isPartner gate: this runs during onboarding, before any entitlement exists.
+  // Read-only and nothing is saved — the client decides what to apply.
+  //
+  // itch.io is not supported here: its API requires the developer's own key as
+  // proof of ownership (see /api/indie/itch/connect), so there is nothing to
+  // look up from a bare URL.
+  app.get("/api/indie/store-lookup", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const identified = _identifyStoreUrl(String(req.query.url || ""));
+    if (!identified) {
+      return res.status(400).json({
+        error: "Paste a Steam app URL or an Epic Games product URL.",
+        code: "UNSUPPORTED_STORE_URL",
+      });
+    }
+    try {
+      const result = identified.source === "steam"
+        ? await _fetchSteamPreview(identified.appId)
+        : await _fetchEpicPreview(identified.slug);
+      if (!result.ok) return res.status(result.status).json({ error: result.error });
+      res.json(result.payload);
+    } catch (err) {
+      console.error("GET /api/indie/store-lookup error:", err);
+      res.status(502).json({ error: "Could not reach the store. Try again, or fill the details in yourself." });
+    }
+  });
+
+  // GET /api/indie/games — every game the developer owns, for the switcher.
+  app.get("/api/indie/games", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, asc, desc } = await import("drizzle-orm");
+      const games = await db.select({
+          id: indieGameProfiles.id,
+          gameName: indieGameProfiles.gameName,
+          releaseStatus: indieGameProfiles.releaseStatus,
+          headerImageUrl: indieGameProfiles.headerImageUrl,
+          capsuleImageUrl: indieGameProfiles.capsuleImageUrl,
+          isPrimary: indieGameProfiles.isPrimary,
+          sortOrder: indieGameProfiles.sortOrder,
+          updatedAt: indieGameProfiles.updatedAt,
+        })
+        .from(indieGameProfiles)
+        .where(eq(indieGameProfiles.userId, userId))
+        .orderBy(desc(indieGameProfiles.isPrimary), asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id));
+      const { limit, subscribed } = await _indieGameQuota(userId);
+      res.json({ games, limit, subscribed, canAddMore: games.length < limit });
+    } catch (err) {
+      console.error("GET /api/indie/games error:", err);
+      res.status(500).json({ error: "Failed to load games" });
+    }
+  });
+
+  // POST /api/indie/games — add another game. The first one a user creates
+  // becomes their primary automatically.
+  app.post("/api/indie/games", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+
+      const patch: Record<string, any> = {};
+      for (const key of INDIE_ALLOWED_FIELDS) {
+        if (key in req.body && req.body[key] !== "" && req.body[key] != null) patch[key] = req.body[key];
+      }
+      if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
+      const urlErrors = validateStoreUrls(patch);
+      if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
+
+      const existing = await db.select({ id: indieGameProfiles.id })
+        .from(indieGameProfiles).where(eq(indieGameProfiles.userId, userId));
+
+      const { limit, subscribed } = await _indieGameQuota(userId);
+      if (existing.length >= limit) {
+        return res.status(403).json({
+          error: subscribed
+            ? `You have reached the maximum of ${limit} games.`
+            : `Free accounts can add ${INDIE_FREE_GAME_LIMIT} games. Subscribe to add up to ${INDIE_SUBSCRIBER_GAME_LIMIT}.`,
+          code: "GAME_LIMIT_REACHED",
+          limit,
+          subscribed,
+          current: existing.length,
+        });
+      }
+
+      const [game] = await db.insert(indieGameProfiles).values({
+        userId,
+        ...patch,
+        isPrimary: existing.length === 0,
+        sortOrder: existing.length,
+        updatedAt: new Date(),
+      }).returning();
+      res.status(201).json({ game });
+    } catch (err) {
+      console.error("POST /api/indie/games error:", err);
+      res.status(500).json({ error: "Failed to create game" });
+    }
+  });
+
+  // POST /api/indie/games/:gameId/primary — promote a game to primary.
+  // Demote-then-promote in a transaction: the partial unique index
+  // indie_game_profiles_one_primary_per_user rejects two primaries at once.
+  app.post("/api/indie/games/:gameId/primary", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const gameId = await _indieResolveGameId(userId, req.params.gameId);
+      if (!gameId) return res.status(404).json({ error: "Game not found" });
+
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and } = await import("drizzle-orm");
+
+      await db.transaction(async (tx) => {
+        await tx.update(indieGameProfiles).set({ isPrimary: false })
+          .where(and(eq(indieGameProfiles.userId, userId), eq(indieGameProfiles.isPrimary, true)));
+        await tx.update(indieGameProfiles).set({ isPrimary: true, updatedAt: new Date() })
+          .where(eq(indieGameProfiles.id, gameId));
+      });
+      res.json({ ok: true, primaryGameId: gameId });
+    } catch (err) {
+      console.error("POST /api/indie/games/:gameId/primary error:", err);
+      res.status(500).json({ error: "Failed to set primary game" });
+    }
+  });
+
+  // DELETE /api/indie/games/:gameId — remove a game. If it was the primary,
+  // promote the next one so the developer is never left without one.
+  app.delete("/api/indie/games/:gameId", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const gameId = await _indieResolveGameId(userId, req.params.gameId);
+      if (!gameId) return res.status(404).json({ error: "Game not found" });
+
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and, ne, asc } = await import("drizzle-orm");
+
+      await db.transaction(async (tx) => {
+        const [removed] = await tx.delete(indieGameProfiles)
+          .where(eq(indieGameProfiles.id, gameId)).returning({ isPrimary: indieGameProfiles.isPrimary });
+        if (removed?.isPrimary) {
+          const [next] = await tx.select({ id: indieGameProfiles.id })
+            .from(indieGameProfiles)
+            .where(eq(indieGameProfiles.userId, userId))
+            .orderBy(asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id))
+            .limit(1);
+          if (next) {
+            await tx.update(indieGameProfiles).set({ isPrimary: true })
+              .where(eq(indieGameProfiles.id, next.id));
+          }
+        }
+      });
+      res.json({ ok: true, deletedGameId: gameId });
+    } catch (err) {
+      console.error("DELETE /api/indie/games/:gameId error:", err);
+      res.status(500).json({ error: "Failed to delete game" });
     }
   });
 
@@ -11701,12 +12252,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const appId = (req.query.appId as string || "").replace(/\D/g, "");
     if (!appId) return res.status(400).json({ error: "Valid numeric appId required" });
     try {
-      const steamRes = await fetch(`https://store.steampowered.com/api/appdetails?appids=${appId}&l=english`, { signal: AbortSignal.timeout(10000) });
-      if (!steamRes.ok) return res.status(502).json({ error: "Steam API unavailable" });
-      const json = await steamRes.json() as any;
-      const appData = json[appId];
-      if (!appData?.success) return res.status(404).json({ error: "Steam app not found — check the App ID" });
-      res.json({ source: "steam", appId, steamUrl: `https://store.steampowered.com/app/${appId}/`, fields: _mapSteamData(appData.data) });
+      const result = await _fetchSteamPreview(appId);
+      if (!result.ok) return res.status(result.status).json({ error: result.error });
+      res.json(result.payload);
     } catch (err) {
       console.error("GET /api/indie/steam/preview error:", err);
       res.status(502).json({ error: "Failed to fetch from Steam" });
@@ -11720,28 +12268,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const slug = (req.query.slug as string || "").trim().toLowerCase();
     if (!slug) return res.status(400).json({ error: "slug required (from Epic store URL)" });
     try {
-      const epicRes = await fetch(`https://store-content-ipv4.ak.epicgames.com/api/en-US/content/products/${encodeURIComponent(slug)}`, { signal: AbortSignal.timeout(10000) });
-      if (!epicRes.ok) return res.status(404).json({ error: "Epic product not found — check the slug" });
-      const json = await epicRes.json() as any;
-      const pages = json.pages || [];
-      const main = pages.find((p: any) => p.type === "productHome") || pages[0];
-      const data = main?.data?.about || {};
-      const media = main?.data?.gallery?.items || [];
-      const screenshotUrls = media.filter((m: any) => m.type === "image").slice(0, 8).map((m: any) => m.src).filter(Boolean);
-      const trailerItem = media.find((m: any) => m.type === "video");
-      res.json({
-        source: "epic",
-        slug,
-        epicUrl: `https://store.epicgames.com/en-US/p/${slug}`,
-        fields: {
-          gameName: json.productName || main?.productName || null,
-          shortDescription: data.shortDescription || null,
-          fullDescription: data.description ? _stripHtml(data.description).slice(0, 5000) : null,
-          headerImageUrl: main?.data?.hero?.logoImage?.src || null,
-          screenshotUrls: screenshotUrls.length > 0 ? screenshotUrls : null,
-          trailerUrl: trailerItem?.src || null,
-        },
-      });
+      const result = await _fetchEpicPreview(slug);
+      if (!result.ok) return res.status(result.status).json({ error: result.error });
+      res.json(result.payload);
     } catch (err) {
       console.error("GET /api/indie/epic/preview error:", err);
       res.status(502).json({ error: "Failed to fetch from Epic Games" });
@@ -11800,13 +12329,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
-      const existing = await db.select({ id: indieGameProfiles.id })
-        .from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      const itchGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
       const patch = { itchApiKey: apiKey, itchUsername, updatedAt: new Date() };
-      if (existing.length > 0) {
-        await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.userId, req.user.id));
+      if (itchGameId) {
+        await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, itchGameId));
       } else {
-        await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch });
+        await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch, isPrimary: true });
       }
 
       res.json({ connected: true, itchUsername, games });
@@ -11859,9 +12387,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
-      await db.update(indieGameProfiles)
-        .set({ itchApiKey: null, itchUsername: null, updatedAt: new Date() })
-        .where(eq(indieGameProfiles.userId, req.user.id));
+      // Disconnect only the selected game's itch credentials, not every game's.
+      const disconnectGameId = await _indieResolveGameId(req.user.id, req.body?.gameId ?? req.query.gameId);
+      if (disconnectGameId) {
+        await db.update(indieGameProfiles)
+          .set({ itchApiKey: null, itchUsername: null, updatedAt: new Date() })
+          .where(eq(indieGameProfiles.id, disconnectGameId));
+      }
       res.json({ connected: false });
     } catch (err) {
       console.error("DELETE /api/indie/itch/disconnect error:", err);
@@ -11977,13 +12509,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       patch.updatedAt = now;
 
-      const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      const importGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
       let profile;
-      if (ex.length > 0) {
-        const up = await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.userId, req.user.id)).returning();
+      if (importGameId) {
+        const up = await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, importGameId)).returning();
         profile = up[0];
       } else {
-        const ins = await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch }).returning();
+        const ins = await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch, isPrimary: true }).returning();
         profile = ins[0];
       }
 
@@ -12023,8 +12555,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
     try {
-      const profile = await _indieGetOrCreate(req.user.id);
-      const fieldMeta = await _indieFieldMetaMap(req.user.id);
+      const gameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      const profile = await _indieGetOrCreate(req.user.id, gameId);
+      const fieldMeta = await _indieFieldMetaMap(req.user.id, gameId);
       let storeData: Record<string, any> | null = null;
       let source = "";
       if (profile.steamAppId) {
@@ -12072,6 +12605,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
+      const syncGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
       const patch: Record<string, any> = {};
       const applied: string[] = [];
       const now = new Date();
@@ -12082,9 +12616,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       if (Object.keys(patch).length > 0) {
         patch.updatedAt = now;
-        const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
-        if (ex.length > 0) { await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.userId, req.user.id)); }
-        else { await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch }); }
+        // Write by resolved row id — a userId-scoped update would apply the
+        // imported store data to every game the developer owns.
+        if (syncGameId) { await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, syncGameId)); }
+        else { await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch, isPrimary: true }); }
         // Clear isManualOverride for applied fields — they now track the store source
         for (const fieldName of applied) {
           await _indieUpsertMeta(req.user.id, fieldName, {
@@ -12095,8 +12630,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      const profile = await _indieGetOrCreate(req.user.id);
-      const fieldMetaNew = await _indieFieldMetaMap(req.user.id);
+      const profile = await _indieGetOrCreate(req.user.id, syncGameId);
+      const fieldMetaNew = await _indieFieldMetaMap(req.user.id, syncGameId);
       res.json({ profile, fieldMeta: fieldMetaNew, applied, skipped: [] });
     } catch (err) {
       console.error("POST /api/indie/sync-apply error:", err);
@@ -12118,7 +12653,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
-      const fieldMeta = await _indieFieldMetaMap(req.user.id);
+      const revertGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      const fieldMeta = await _indieFieldMetaMap(req.user.id, revertGameId);
       const meta = fieldMeta[fieldName];
       if (!meta?.importedValue) {
         return res.status(404).json({ error: `No imported value to revert to for field "${fieldName}"` });
@@ -12126,11 +12662,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const importedValue = JSON.parse(meta.importedValue);
       const now = new Date();
       const patch: Record<string, any> = { [fieldName]: importedValue, updatedAt: now };
-      const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
-      if (ex.length > 0) {
-        await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.userId, req.user.id));
+      if (revertGameId) {
+        await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, revertGameId));
       } else {
-        await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch });
+        await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch, isPrimary: true });
       }
       // Clear the manual override — field now uses the imported (store) value
       await _indieUpsertMeta(req.user.id, fieldName, {
@@ -12140,8 +12675,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastImportedAt: meta.lastImportedAt ? new Date(meta.lastImportedAt) : now,
         lastEditedAt: now,
       });
-      const profile = await _indieGetOrCreate(req.user.id);
-      const fieldMetaNew = await _indieFieldMetaMap(req.user.id);
+      const profile = await _indieGetOrCreate(req.user.id, revertGameId);
+      const fieldMetaNew = await _indieFieldMetaMap(req.user.id, revertGameId);
       res.json({ profile, fieldMeta: fieldMetaNew, reverted: fieldName, value: importedValue });
     } catch (err) {
       console.error("POST /api/indie/field-revert error:", err);
@@ -12170,13 +12705,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
-      const ex = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
-      if (ex.length > 0) {
-        await db.update(indieGameProfiles).set({ [field]: imageUrl, updatedAt: new Date() }).where(eq(indieGameProfiles.userId, req.user.id));
+      const imgGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      let imgTargetId = imgGameId;
+      if (imgTargetId) {
+        await db.update(indieGameProfiles).set({ [field]: imageUrl, updatedAt: new Date() }).where(eq(indieGameProfiles.id, imgTargetId));
       } else {
-        await db.insert(indieGameProfiles).values({ userId: req.user.id, [field]: imageUrl });
+        const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, [field]: imageUrl, isPrimary: true }).returning({ id: indieGameProfiles.id });
+        imgTargetId = created?.id ?? null;
       }
-      await _indieUpsertMeta(req.user.id, field, { isManualOverride: true, lastEditedAt: new Date() });
+      await _indieUpsertMeta(req.user.id, field, { isManualOverride: true, lastEditedAt: new Date() }, imgTargetId);
       res.json({ url: imageUrl, field });
     } catch (err) {
       console.error("POST /api/indie/upload/image error:", err);
@@ -12202,15 +12739,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq, sql } = await import("drizzle-orm");
-      const ex = await db.select({ screenshotUrls: indieGameProfiles.screenshotUrls }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      const shotGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      const ex = shotGameId
+        ? await db.select({ screenshotUrls: indieGameProfiles.screenshotUrls }).from(indieGameProfiles).where(eq(indieGameProfiles.id, shotGameId))
+        : [];
       const existing = ex[0]?.screenshotUrls ?? [];
       const updated = [...existing, imageUrl].slice(0, 20);
-      if (ex.length > 0) {
-        await db.update(indieGameProfiles).set({ screenshotUrls: updated, updatedAt: new Date() }).where(eq(indieGameProfiles.userId, req.user.id));
+      let shotTargetId = shotGameId;
+      if (shotTargetId) {
+        await db.update(indieGameProfiles).set({ screenshotUrls: updated, updatedAt: new Date() }).where(eq(indieGameProfiles.id, shotTargetId));
       } else {
-        await db.insert(indieGameProfiles).values({ userId: req.user.id, screenshotUrls: updated });
+        const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, screenshotUrls: updated, isPrimary: true }).returning({ id: indieGameProfiles.id });
+        shotTargetId = created?.id ?? null;
       }
-      await _indieUpsertMeta(req.user.id, 'screenshotUrls', { isManualOverride: true, lastEditedAt: new Date() });
+      await _indieUpsertMeta(req.user.id, 'screenshotUrls', { isManualOverride: true, lastEditedAt: new Date() }, shotTargetId);
       res.json({ url: imageUrl, screenshotUrls: updated });
     } catch (err) {
       console.error("POST /api/indie/upload/screenshot error:", err);
@@ -12229,11 +12771,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
-      const ex = await db.select({ screenshotUrls: indieGameProfiles.screenshotUrls }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      const delShotGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      const ex = delShotGameId
+        ? await db.select({ screenshotUrls: indieGameProfiles.screenshotUrls }).from(indieGameProfiles).where(eq(indieGameProfiles.id, delShotGameId))
+        : [];
       const existing = ex[0]?.screenshotUrls ?? [];
       const updated = existing.filter((u: string) => u !== url);
-      if (ex.length > 0) {
-        await db.update(indieGameProfiles).set({ screenshotUrls: updated, updatedAt: new Date() }).where(eq(indieGameProfiles.userId, req.user.id));
+      if (delShotGameId) {
+        await db.update(indieGameProfiles).set({ screenshotUrls: updated, updatedAt: new Date() }).where(eq(indieGameProfiles.id, delShotGameId));
       }
       res.json({ screenshotUrls: updated });
     } catch (err) {
@@ -14122,14 +14667,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only delete your own screenshots" });
       }
 
-      // Delete screenshot files from Supabase storage
+      // Delete screenshot files from Supabase storage. deleteFile() takes a
+      // bucket-relative path, not the public URL stored on the row — must
+      // extract it first or Supabase silently no-ops (no matching object,
+      // no error), which is why deleted screenshots were never actually
+      // removed from storage.
       console.log(`🗑️ Deleting files from Supabase for screenshot ${screenshotId}`);
       try {
-        if (screenshot.imageUrl) {
-          await supabaseStorage.deleteFile(screenshot.imageUrl);
+        const imagePath = screenshot.imageUrl ? supabaseStorage.extractStoragePath(screenshot.imageUrl) : null;
+        if (imagePath) {
+          await supabaseStorage.deleteFile(imagePath);
         }
-        if (screenshot.thumbnailUrl) {
-          await supabaseStorage.deleteFile(screenshot.thumbnailUrl);
+        const thumbPath = screenshot.thumbnailUrl ? supabaseStorage.extractStoragePath(screenshot.thumbnailUrl) : null;
+        if (thumbPath) {
+          await supabaseStorage.deleteFile(thumbPath);
         }
         console.log(`✅ Files deleted from Supabase`);
       } catch (fileErr) {

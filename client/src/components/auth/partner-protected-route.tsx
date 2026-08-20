@@ -26,9 +26,14 @@ export function PartnerProtectedRoute({
   partnerType: PartnerType;
   component: React.ComponentType<any>;
 }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, authResolved } = useAuth();
 
-  if (isLoading) {
+  // Wait for auth to genuinely resolve, not merely for isLoading to drop.
+  // Before the Firebase check completes the /api/user query is disabled, which
+  // reports isLoading:false with no user — treating that as "logged out" sent
+  // signed-in users to /auth, whose AuthRedirect rewrites the URL to "/", so
+  // every deep link into a guarded route bounced to the home page.
+  if (isLoading || !authResolved) {
     return (
       <Route path={path}>{() => <FullScreenLoader isLoading={true} />}</Route>
     );
