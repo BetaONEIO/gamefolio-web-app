@@ -5085,7 +5085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         my_entry AS (
           SELECT rank AS my_rank FROM season_board WHERE "userId" = ${userId}
         )
-        SELECT sb."userId", sb."seasonXP" AS "weekXP", sb.username, sb."displayName", sb."avatarUrl", sb.rank
+        SELECT sb."userId", sb."seasonXP", sb.username, sb."displayName", sb."avatarUrl", sb.rank
         FROM season_board sb, my_entry me
         WHERE sb.rank BETWEEN GREATEST(1, me.my_rank - 2) AND me.my_rank + 2
         ORDER BY sb.rank ASC
@@ -5164,7 +5164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           username: typeof e.username === "string" ? e.username.trim() : "",
           displayName: e.displayName ?? null,
           avatarUrl: e.avatarUrl ?? null,
-          totalXP: Math.round(Number(e.weekXP ?? 0)),
+          totalXP: Math.round(Number(e.seasonXP ?? 0)),
           isMe: Number(e.userId) === userId,
         }))
         .filter((r: any) => r.userId > 0 && r.rank > 0 && r.username.length > 0);
