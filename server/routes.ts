@@ -159,6 +159,27 @@ async function comparePasswords(password: string, hashedPassword: string | null 
   }
 }
 
+function validatePlatformUrl(value: unknown, platform: "steam" | "epic"): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  let url: URL;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    return `Invalid ${platform} URL`;
+  }
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return `Invalid ${platform} URL protocol`;
+  }
+
+  const hostname = url.hostname.toLowerCase();
+  const valid = platform === "steam"
+    ? hostname === "store.steampowered.com" || hostname === "steamcommunity.com"
+    : hostname === "store.epicgames.com" || hostname.endsWith(".epicgames.com");
+
+  return valid ? null : `URL must belong to ${platform === "steam" ? "Steam" : "Epic Games"}`;
+}
+
 // QR Code and social media utilities
 async function generateContentQRCode(contentUrl: string): Promise<string> {
   try {

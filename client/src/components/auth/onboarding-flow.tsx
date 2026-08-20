@@ -278,6 +278,37 @@ interface OnboardingFlowProps {
   onComplete: () => void;
 }
 
+type StorePlatform = "steam" | "itch" | "epic";
+
+function validateStoreUrl(value: string, platform: StorePlatform): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    return "Enter a complete URL starting with https://";
+  }
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return "Use an http:// or https:// URL";
+  }
+
+  const hostname = url.hostname.toLowerCase();
+  const matches =
+    platform === "steam"
+      ? hostname === "store.steampowered.com" || hostname === "steamcommunity.com"
+      : platform === "itch"
+        ? hostname === "itch.io" || hostname.endsWith(".itch.io")
+        : hostname === "store.epicgames.com" || hostname.endsWith(".epicgames.com");
+
+  if (matches) return null;
+
+  const platformName = platform === "steam" ? "Steam" : platform === "itch" ? "itch.io" : "Epic Games";
+  return `Enter a valid ${platformName} URL in this field`;
+}
+
 export default function OnboardingFlow({
   userId,
   username,
@@ -340,6 +371,7 @@ export default function OnboardingFlow({
     websiteLink: '',
     description: '',
   });
+  const [platformErrors, setPlatformErrors] = useState<Partial<Record<StorePlatform, string>>>({});
   const [platformExpanded, setPlatformExpanded] = useState<{ steam: boolean; itch: boolean; epic: boolean }>({ steam: false, itch: false, epic: false });
 
   // Wallet state
@@ -453,6 +485,19 @@ export default function OnboardingFlow({
     if (currentStep === OnboardingStep.PathSetup && selectedPath === 'indie' && !indieGameData.releaseStatus) {
       toast({ title: "Release status required", description: "Please select a release status to continue.", variant: "default" });
       return;
+    }
+    if (currentStep === OnboardingStep.PathSetup && selectedPath === 'indie') {
+      const nextErrors: Partial<Record<StorePlatform, string>> = {};
+      for (const platform of ["steam", "itch", "epic"] as const) {
+        const value = indieGameData[`${platform}Link`];
+        const error = validateStoreUrl(value, platform);
+        if (error) nextErrors[platform] = error;
+      }
+      setPlatformErrors(nextErrors);
+      if (Object.keys(nextErrors).length > 0) {
+        toast({ title: "Check your store links", description: "Each link must belong to its matching platform.", variant: "default" });
+        return;
+      }
     }
 
     const next = getNextStep(currentStep);
@@ -1595,9 +1640,12 @@ export default function OnboardingFlow({
                     <Input
                       autoFocus
                       value={indieGameData.steamLink}
-                      onChange={(e) => setIndieGameData({ ...indieGameData, steamLink: e.target.value })}
+                       onChange={(e) => {
+                         setIndieGameData({ ...indieGameData, steamLink: e.target.value });
+                         setPlatformErrors((errors) => ({ ...errors, steam: undefined }));
+                       }}
                       placeholder="https://store.steampowered.com/app/..."
-                      className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
+                       className={`bg-[#0B1218] text-white text-xs flex-1 ${platformErrors.steam ? "border-red-500" : "border-[#1B2A33]"}`}
                     />
                     <button
                       type="button"
