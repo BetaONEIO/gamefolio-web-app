@@ -7179,9 +7179,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      const steamUrlError = validatePlatformUrl(req.body.gameSteamUrl, "steam");
+      if (steamUrlError) validationErrors.push(`Steam: ${steamUrlError}`);
+      const epicUrlError = validatePlatformUrl(req.body.gameEpicUrl, "epic");
+      if (epicUrlError) validationErrors.push(`Epic Games: ${epicUrlError}`);
+
       if (validationErrors.length > 0) {
         return res.status(400).json({
-          message: "Profile contains inappropriate content",
+          message: "Profile contains invalid content or links",
           errors: validationErrors
         });
       }

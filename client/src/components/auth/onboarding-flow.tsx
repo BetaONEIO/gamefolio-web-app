@@ -1636,67 +1636,88 @@ export default function OnboardingFlow({
 
                 {/* Steam URL input (expanded) */}
                 {platformExpanded.steam && (
-                  <div className="mb-2 flex gap-2 items-center">
-                    <Input
-                      autoFocus
-                      value={indieGameData.steamLink}
-                       onChange={(e) => {
-                         setIndieGameData({ ...indieGameData, steamLink: e.target.value });
-                         setPlatformErrors((errors) => ({ ...errors, steam: undefined }));
-                       }}
-                      placeholder="https://store.steampowered.com/app/..."
-                       className={`bg-[#0B1218] text-white text-xs flex-1 ${platformErrors.steam ? "border-red-500" : "border-[#1B2A33]"}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setPlatformExpanded(p => ({ ...p, steam: false }))}
-                      className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
-                      style={{ background: "rgba(255,255,255,0.06)" }}
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
+                  <div className="mb-2">
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        autoFocus
+                        value={indieGameData.steamLink}
+                        onChange={(e) => {
+                          setIndieGameData({ ...indieGameData, steamLink: e.target.value });
+                          setPlatformErrors((errors) => ({ ...errors, steam: undefined }));
+                        }}
+                        onBlur={(e) => setPlatformErrors((errors) => ({ ...errors, steam: validateStoreUrl(e.target.value, "steam") ?? undefined }))}
+                        placeholder="https://store.steampowered.com/app/..."
+                        aria-invalid={Boolean(platformErrors.steam)}
+                        className={`bg-[#0B1218] text-white text-xs flex-1 ${platformErrors.steam ? "border-red-500" : "border-[#1B2A33]"}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setPlatformExpanded(p => ({ ...p, steam: false }))}
+                        className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
+                        style={{ background: "rgba(255,255,255,0.06)" }}
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    {platformErrors.steam && <p className="mt-1 text-xs text-red-400">{platformErrors.steam}</p>}
                   </div>
                 )}
 
                 {/* Itch.io URL input (expanded) */}
                 {platformExpanded.itch && (
-                  <div className="mb-2 flex gap-2 items-center">
-                    <Input
-                      autoFocus
-                      value={indieGameData.itchLink}
-                      onChange={(e) => setIndieGameData({ ...indieGameData, itchLink: e.target.value })}
-                      placeholder="https://yourname.itch.io/your-game"
-                      className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setPlatformExpanded(p => ({ ...p, itch: false }))}
-                      className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
-                      style={{ background: "rgba(255,255,255,0.06)" }}
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
+                  <div className="mb-2">
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        autoFocus
+                        value={indieGameData.itchLink}
+                        onChange={(e) => {
+                          setIndieGameData({ ...indieGameData, itchLink: e.target.value });
+                          setPlatformErrors((errors) => ({ ...errors, itch: undefined }));
+                        }}
+                        onBlur={(e) => setPlatformErrors((errors) => ({ ...errors, itch: validateStoreUrl(e.target.value, "itch") ?? undefined }))}
+                        placeholder="https://yourname.itch.io/your-game"
+                        aria-invalid={Boolean(platformErrors.itch)}
+                        className={`bg-[#0B1218] text-white text-xs flex-1 ${platformErrors.itch ? "border-red-500" : "border-[#1B2A33]"}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setPlatformExpanded(p => ({ ...p, itch: false }))}
+                        className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
+                        style={{ background: "rgba(255,255,255,0.06)" }}
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    {platformErrors.itch && <p className="mt-1 text-xs text-red-400">{platformErrors.itch}</p>}
                   </div>
                 )}
 
                 {/* Epic Games URL input (expanded) */}
                 {platformExpanded.epic && (
-                  <div className="mb-2 flex gap-2 items-center">
-                    <Input
-                      autoFocus
-                      value={indieGameData.epicLink}
-                      onChange={(e) => setIndieGameData({ ...indieGameData, epicLink: e.target.value })}
-                      placeholder="https://store.epicgames.com/..."
-                      className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setPlatformExpanded(p => ({ ...p, epic: false }))}
-                      className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
-                      style={{ background: "rgba(255,255,255,0.06)" }}
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
+                  <div className="mb-2">
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        autoFocus
+                        value={indieGameData.epicLink}
+                        onChange={(e) => {
+                          setIndieGameData({ ...indieGameData, epicLink: e.target.value });
+                          setPlatformErrors((errors) => ({ ...errors, epic: undefined }));
+                        }}
+                        onBlur={(e) => setPlatformErrors((errors) => ({ ...errors, epic: validateStoreUrl(e.target.value, "epic") ?? undefined }))}
+                        placeholder="https://store.epicgames.com/..."
+                        aria-invalid={Boolean(platformErrors.epic)}
+                        className={`bg-[#0B1218] text-white text-xs flex-1 ${platformErrors.epic ? "border-red-500" : "border-[#1B2A33]"}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setPlatformExpanded(p => ({ ...p, epic: false }))}
+                        className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
+                        style={{ background: "rgba(255,255,255,0.06)" }}
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    {platformErrors.epic && <p className="mt-1 text-xs text-red-400">{platformErrors.epic}</p>}
                   </div>
                 )}
               </div>
