@@ -27,6 +27,7 @@ import { eq, sql, desc, inArray, and } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
 import { captureRouteError } from "./sentry";
+import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
 import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog } from "@shared/schema";
 
 // Helper function to generate unique share code
@@ -11701,6 +11702,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return storage.upsertIndieFieldMeta(userId, fieldName, patch, gameId);
   }
 
+  async function _readStoredItchApiKey(profileId: number, storedValue: string | null): Promise<string | null> {
+    if (!storedValue) return null;
+    const credential = decryptItchApiKey(storedValue);
+    if (credential.isLegacyPlaintext) {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      await db.update(indieGameProfiles)
+        .set({ itchApiKey: encryptItchApiKey(credential.apiKey), updatedAt: new Date() })
+        .where(eq(indieGameProfiles.id, profileId));
+    }
+    return credential.apiKey;
+  }
+
   function _stripHtml(html: string): string {
     return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
   }
@@ -11722,9 +11737,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (g.price_overview?.final_formatted) price = g.price_overview.final_formatted;
     return {
       gameName: g.name || null,
+      studioName: (g.developers || []).filter(Boolean).join(", ") || null,
+      studioWebsite: g.website || null,
+      websiteUrl: g.website || null,
       shortDescription: g.short_description || null,
       fullDescription: g.detailed_description ? _stripHtml(g.detailed_description).slice(0, 5000) : null,
       headerImageUrl: g.header_image || null,
+      capsuleImageUrl: g.capsule_image || null,
       trailerUrl,
       screenshotUrls: screenshotUrls.length > 0 ? screenshotUrls : null,
       genres: genres.length > 0 ? genres : null,
@@ -11735,6 +11754,149 @@ export async function registerRoutes(app: Express): Promise<Server> {
       price,
       isFree: !!g.is_free,
     };
+  }
+
+  function _mapItchData(g: any): Record<string, any> {
+    const platforms: string[] = [];
+    if (g.p_windows) platforms.push("windows");
+    if (g.p_osx) platforms.push("mac");
+    if (g.p_linux) platforms.push("linux");
+    if (g.p_android) platforms.push("android");
+
+    const fields: Record<string, any> = {
+      gameName: g.title || null,
+      shortDescription: g.short_text || null,
+      fullDescription: g.description ? _stripHtml(String(g.description)).slice(0, 5000) : null,
+      headerImageUrl: g.cover_url || null,
+      capsuleImageUrl: g.cover_url || null,
+      itchUrl: g.url || null,
+      releaseDate: g.published_at || null,
+      releaseStatus: g.published ? "released" : "coming_soon",
+      platforms: platforms.length > 0 ? platforms : null,
+    };
+
+    if (g.classification && g.classification !== "game") fields.genres = [g.classification];
+    if (g.min_price !== undefined && g.min_price !== null) {
+      const cents = Number(g.min_price);
+      if (Number.isFinite(cents) && cents === 0) {
+        fields.price = "Free";
+        fields.isFree = true;
+      } else if (Number.isFinite(cents)) {
+        fields.price = `$${(cents / 100).toFixed(2)}`;
+        fields.isFree = false;
+      }
+    }
+    return fields;
+  }
+
+  function _asStringList(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+    return value.flatMap((item: any) => {
+      if (typeof item === "string") return [item];
+      if (typeof item?.name === "string") return [item.name];
+      if (typeof item?.title === "string") return [item.title];
+      if (typeof item?.displayName === "string") return [item.displayName];
+      return [];
+    }).map(value => value.trim()).filter(Boolean);
+  }
+
+  function _asText(value: unknown, maxLength = 5000): string | null {
+    if (typeof value !== "string") return null;
+    const text = value.trim();
+    return text ? text.slice(0, maxLength) : null;
+  }
+
+  function _mapEpicPlatform(value: string): string | null {
+    const platform = value.toLowerCase();
+    if (platform.includes("windows") || platform === "pc") return "windows";
+    if (platform.includes("mac") || platform.includes("osx")) return "mac";
+    if (platform.includes("linux")) return "linux";
+    if (platform.includes("android")) return "android";
+    if (platform.includes("ios")) return "ios";
+    if (platform.includes("playstation") || platform.includes("ps5") || platform.includes("ps4")) return "ps5";
+    if (platform.includes("xbox")) return "xbox";
+    if (platform.includes("switch")) return "switch";
+    return null;
+  }
+
+  function _mapEpicData(json: any, main: any): Record<string, any> {
+    const data = main?.data || {};
+    const about = data.about || {};
+    const hero = data.hero || {};
+    const requirements = data.requirements || {};
+    const galleryItems = data.gallery?.items || [];
+    const screenshots = galleryItems
+      .filter((item: any) => item?.type === "image")
+      .map((item: any) => item.src)
+      .filter(Boolean)
+      .slice(0, 8);
+    const trailer = _asText(galleryItems.find((item: any) => item?.type === "video")?.src, 2000)
+      || _asText(hero.video?.src, 2000);
+    const genreCandidates = [
+      ..._asStringList(about.genres),
+      ..._asStringList(data.genres),
+      ..._asStringList(json.genres),
+    ];
+    const tagCandidates = [
+      ..._asStringList(about.tags),
+      ..._asStringList(data.tags),
+      ..._asStringList(json.tags),
+    ];
+    const platformCandidates = [
+      ..._asStringList(about.platforms),
+      ..._asStringList(data.platforms),
+      ..._asStringList(json.platforms),
+      ..._asStringList(
+        Array.isArray(requirements.systems)
+          ? requirements.systems.map((system: any) => system.systemType)
+          : [],
+      ),
+    ];
+    const platforms = [...new Set(platformCandidates
+      .map(_mapEpicPlatform)
+      .filter((platform): platform is string => !!platform))];
+    const rawPrice = about.price ?? data.price ?? json.price ?? json.totalPrice;
+    const price = _asText(rawPrice, 100)
+      || _asText(rawPrice?.fmtPrice?.totalPrice, 100)
+      || _asText(rawPrice?.totalPrice, 100)
+      || _asText(rawPrice?.originalPrice, 100);
+    const isFree = about.isFree ?? data.isFree ?? json.isFree ?? (typeof price === "string" && /^(free|\$?0(?:\.00)?)$/i.test(price));
+    const releaseDate = _asText(about.releaseDate ?? data.releaseDate ?? json.releaseDate ?? main?.releaseDate, 100);
+    const fullDescription = _asText(about.description, 10000);
+    const releaseStatus = about.comingSoon || data.comingSoon || json.comingSoon
+      ? "coming_soon"
+      : releaseDate ? "released" : null;
+
+    return {
+      gameName: _asText(json.productName || main?.productName || about.title, 300),
+      studioName: _asText(about.developerAttribution || data.developerAttribution || json.developer, 300),
+      studioWebsite: _asText(about.developerWebsite || data.developerWebsite, 2000),
+      websiteUrl: _asText(about.website || data.website || json.website, 2000),
+      shortDescription: _asText(about.shortDescription, 1000),
+      fullDescription: fullDescription ? _stripHtml(fullDescription).slice(0, 5000) : null,
+      headerImageUrl: _asText(hero.backgroundImageUrl || about.image?.src || hero.logoImage?.src, 2000),
+      capsuleImageUrl: _asText(about.image?.src || hero.portraitBackgroundImageUrl || hero.logoImage?.src, 2000),
+      trailerUrl: trailer,
+      screenshotUrls: screenshots.length > 0 ? screenshots : null,
+      genres: genreCandidates.length > 0 ? [...new Set(genreCandidates)] : null,
+      tags: tagCandidates.length > 0 ? [...new Set(tagCandidates)].slice(0, 10) : null,
+      platforms: platforms.length > 0 ? platforms : null,
+      releaseDate,
+      releaseStatus,
+      price,
+      isFree: typeof isFree === "boolean" ? isFree : null,
+    };
+  }
+
+  function _canonicalStoreUrl(value: string): string | null {
+    try {
+      const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+      url.hash = "";
+      url.search = "";
+      return url.toString().replace(/\/$/, "").toLowerCase();
+    } catch {
+      return null;
+    }
   }
 
   // Store links are validated against their platform's host so a link pasted
@@ -11766,31 +11928,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const json = await epicRes.json() as any;
     const pages = json.pages || [];
     const main = pages.find((p: any) => p.type === "productHome") || pages[0];
-    const data = main?.data?.about || {};
-    const media = main?.data?.gallery?.items || [];
-    const screenshotUrls = media.filter((m: any) => m.type === "image").slice(0, 8).map((m: any) => m.src).filter(Boolean);
-    const trailerItem = media.find((m: any) => m.type === "video");
     return {
       ok: true as const,
       payload: {
         source: "epic",
         slug,
         epicUrl: `https://store.epicgames.com/en-US/p/${slug}`,
-        fields: {
-          gameName: json.productName || main?.productName || null,
-          shortDescription: data.shortDescription || null,
-          fullDescription: data.description ? _stripHtml(data.description).slice(0, 5000) : null,
-          headerImageUrl: main?.data?.hero?.logoImage?.src || null,
-          screenshotUrls: screenshotUrls.length > 0 ? screenshotUrls : null,
-          trailerUrl: trailerItem?.src || null,
-        },
+        fields: _mapEpicData(json, main),
+      },
+    };
+  }
+
+  async function _fetchItchPreview(apiKey: string, requestedUrl: string) {
+    const gamesRes = await fetch("https://api.itch.io/profile/games", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!gamesRes.ok) {
+      return {
+        ok: false as const,
+        error: gamesRes.status === 401 || gamesRes.status === 403
+          ? "Reconnect your itch.io account before importing."
+          : "itch.io API unavailable",
+        status: gamesRes.status === 401 || gamesRes.status === 403 ? 403 : 502,
+      };
+    }
+
+    const gamesJson = await gamesRes.json() as any;
+    const requested = _canonicalStoreUrl(requestedUrl);
+    const game = (gamesJson.games || []).find((candidate: any) =>
+      requested && candidate?.url && _canonicalStoreUrl(candidate.url) === requested);
+    if (!game?.id) {
+      return {
+        ok: false as const,
+        error: "That itch.io game was not found in your connected account.",
+        status: 404,
+      };
+    }
+
+    const gameRes = await fetch(`https://api.itch.io/games/${game.id}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!gameRes.ok) {
+      return {
+        ok: false as const,
+        error: gameRes.status === 404 ? "itch.io game not found" : "itch.io API unavailable",
+        status: gameRes.status === 404 ? 404 : 502,
+      };
+    }
+    const json = await gameRes.json() as any;
+    const fullGame = json.game || json;
+    return {
+      ok: true as const,
+      payload: {
+        source: "itch",
+        gameId: fullGame.id || game.id,
+        itchUrl: fullGame.url || game.url || requestedUrl,
+        fields: _mapItchData(fullGame),
       },
     };
   }
 
   // Pulls the store identifier out of a pasted URL. Steam app pages carry a
   // numeric id (/app/367520/...), Epic product pages a slug (/p/<slug>).
-  function _identifyStoreUrl(raw: string): { source: "steam"; appId: string } | { source: "epic"; slug: string } | null {
+  function _identifyStoreUrl(raw: string): { source: "steam"; appId: string } | { source: "epic"; slug: string } | { source: "itch"; url: string } | null {
     const value = String(raw || "").trim();
     if (!value) return null;
     let url: URL;
@@ -11810,6 +12012,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const m = url.pathname.match(/\/p\/([^/?#]+)/);
       if (m) return { source: "epic", slug: decodeURIComponent(m[1]).toLowerCase() };
       return null;
+    }
+    if (host === "itch.io" || host.endsWith(".itch.io")) {
+      return { source: "itch", url: url.toString() };
     }
     return null;
   }
@@ -12077,27 +12282,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/indie/store-lookup?url= — resolve a pasted Steam or Epic store URL
+  // GET /api/indie/store-lookup?url= — resolve a pasted Steam, Epic, or an
+  // authenticated itch.io store URL into fields that onboarding can prefill.
   // into the fields we can prefill from. Authentication only, deliberately no
   // isPartner gate: this runs during onboarding, before any entitlement exists.
   // Read-only and nothing is saved — the client decides what to apply.
   //
-  // itch.io is not supported here: its API requires the developer's own key as
-  // proof of ownership (see /api/indie/itch/connect), so there is nothing to
-  // look up from a bare URL.
+  // itch.io is only resolved through an already connected account. The API key
+  // stays server-side, and a URL for another developer's game is rejected.
   app.get("/api/indie/store-lookup", async (req, res) => {
     if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
     const identified = _identifyStoreUrl(String(req.query.url || ""));
     if (!identified) {
       return res.status(400).json({
-        error: "Paste a Steam app URL or an Epic Games product URL.",
+        error: "Paste a Steam, Epic Games, or connected itch.io game URL.",
         code: "UNSUPPORTED_STORE_URL",
       });
     }
     try {
-      const result = identified.source === "steam"
-        ? await _fetchSteamPreview(identified.appId)
-        : await _fetchEpicPreview(identified.slug);
+      let result;
+      if (identified.source === "steam") {
+        result = await _fetchSteamPreview(identified.appId);
+      } else if (identified.source === "epic") {
+        result = await _fetchEpicPreview(identified.slug);
+      } else {
+        const { indieGameProfiles } = await import("@shared/schema");
+        const { db } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        const profiles = await db.select({ id: indieGameProfiles.id, itchApiKey: indieGameProfiles.itchApiKey })
+          .from(indieGameProfiles)
+          .where(eq(indieGameProfiles.userId, req.user.id));
+        const keyProfile = profiles.find(profile => !!profile.itchApiKey);
+        const apiKey = keyProfile
+          ? await _readStoredItchApiKey(keyProfile.id, keyProfile.itchApiKey)
+          : null;
+        if (!apiKey) {
+          return res.status(403).json({
+            error: "Connect your itch.io account in your game dashboard before importing its game details.",
+            code: "ITCH_NOT_CONNECTED",
+          });
+        }
+        result = await _fetchItchPreview(apiKey, identified.url);
+      }
       if (!result.ok) return res.status(result.status).json({ error: result.error });
       res.json(result.payload);
     } catch (err) {
@@ -12330,7 +12556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
       const itchGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
-      const patch = { itchApiKey: apiKey, itchUsername, updatedAt: new Date() };
+      const patch = { itchApiKey: encryptItchApiKey(apiKey), itchUsername, updatedAt: new Date() };
       if (itchGameId) {
         await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, itchGameId));
       } else {
@@ -12351,9 +12577,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
-      const [profile] = await db.select({ itchApiKey: indieGameProfiles.itchApiKey, itchUsername: indieGameProfiles.itchUsername, itchUrl: indieGameProfiles.itchUrl })
+      const [profile] = await db.select({ id: indieGameProfiles.id, itchApiKey: indieGameProfiles.itchApiKey, itchUsername: indieGameProfiles.itchUsername, itchUrl: indieGameProfiles.itchUrl })
         .from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
-      const connected = !!(profile?.itchApiKey);
+      const apiKey = profile ? await _readStoredItchApiKey(profile.id, profile.itchApiKey) : null;
+      const connected = !!apiKey;
 
       if (!connected) return res.json({ connected: false });
 
@@ -12361,7 +12588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let games: any[] = [];
       try {
         const gamesRes = await fetch("https://api.itch.io/profile/games", {
-          headers: { Authorization: `Bearer ${profile.itchApiKey}` },
+          headers: { Authorization: `Bearer ${apiKey}` },
           signal: AbortSignal.timeout(8000),
         });
         if (gamesRes.ok) {
@@ -12412,12 +12639,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
-      const [profile] = await db.select({ itchApiKey: indieGameProfiles.itchApiKey })
+      const [profile] = await db.select({ id: indieGameProfiles.id, itchApiKey: indieGameProfiles.itchApiKey })
         .from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
-      if (!profile?.itchApiKey) return res.status(403).json({ error: "Connect your itch.io account first" });
+      const apiKey = profile ? await _readStoredItchApiKey(profile.id, profile.itchApiKey) : null;
+      if (!apiKey) return res.status(403).json({ error: "Connect your itch.io account first" });
 
       const gameRes = await fetch(`https://api.itch.io/games/${gameId}`, {
-        headers: { Authorization: `Bearer ${profile.itchApiKey}` },
+        headers: { Authorization: `Bearer ${apiKey}` },
         signal: AbortSignal.timeout(10000),
       });
       if (!gameRes.ok) {
@@ -12427,29 +12655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const json = await gameRes.json() as any;
       const g = json.game || json;
 
-      // Map itch.io game fields → indie profile fields (matching the same schema as steam preview)
-      const fields: Record<string, any> = {};
-      if (g.title) fields.gameName = g.title;
-      if (g.short_text) fields.shortDescription = g.short_text;
-      if (g.description) fields.fullDescription = String(g.description).replace(/<[^>]*>/g, '').trim();
-      if (g.cover_url) { fields.headerImageUrl = g.cover_url; fields.capsuleImageUrl = g.cover_url; }
-      if (g.url) fields.itchUrl = g.url;
-      // Genre/classification → genres array
-      if (g.classification && g.classification !== 'game') fields.genres = [g.classification];
-      // Release state
-      if (g.published) fields.releaseStatus = 'released';
-      // Platforms from itch.io traits
-      const platforms: string[] = [];
-      if (g.p_windows) platforms.push('windows');
-      if (g.p_osx) platforms.push('mac');
-      if (g.p_linux) platforms.push('linux');
-      if (g.p_android) platforms.push('android');
-      if (platforms.length > 0) fields.platforms = platforms;
-      // Pricing
-      if (g.min_price !== undefined) {
-        if (g.min_price === 0) fields.isFree = true;
-        else fields.price = (g.min_price / 100).toFixed(2);
-      }
+      const fields = _mapItchData(g);
 
       res.json({
         source: "itch",
@@ -12479,9 +12685,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
       const now = new Date();
+      const importGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) && !importGameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
 
-      // Fetch current override state BEFORE building patch — manual overrides must not be overwritten
-      const existingMeta = await _indieFieldMetaMap(req.user.id);
+      // Fetch override state for the selected game before building the patch.
+      // A developer can own more than one game, and one game's manual choices
+      // must never suppress or replace another game's store import.
+      const existingMeta = await _indieFieldMetaMap(req.user.id, importGameId);
 
       const patch: Record<string, any> = {};
       const protected_fields: string[] = [];  // fields skipped due to manual override
@@ -12498,18 +12710,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Always update source-specific IDs + timestamps regardless of field protection
       if (source === "steam") {
-        if (reqAppId) { patch.steamAppId = reqAppId; patch.steamUrl = `https://store.steampowered.com/app/${reqAppId}/`; }
+        if (reqAppId) {
+          if (!existingMeta.steamAppId?.isManualOverride) patch.steamAppId = reqAppId;
+          if (!existingMeta.steamUrl?.isManualOverride) patch.steamUrl = `https://store.steampowered.com/app/${reqAppId}/`;
+        }
         patch.steamLastImportedAt = now;
       } else if (source === "epic") {
-        if (reqSlug) { patch.epicSlug = reqSlug; patch.epicUrl = `https://store.epicgames.com/en-US/p/${reqSlug}`; }
+        if (reqSlug) {
+          if (!existingMeta.epicSlug?.isManualOverride) patch.epicSlug = reqSlug;
+          if (!existingMeta.epicUrl?.isManualOverride) patch.epicUrl = `https://store.epicgames.com/en-US/p/${reqSlug}`;
+        }
         patch.epicLastImportedAt = now;
       } else if (source === "itch") {
-        if (itchGameUrl) patch.itchUrl = itchGameUrl;
+        if (itchGameUrl && !existingMeta.itchUrl?.isManualOverride) patch.itchUrl = itchGameUrl;
         patch.itchLastImportedAt = now;
       }
       patch.updatedAt = now;
 
-      const importGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
       let profile;
       if (importGameId) {
         const up = await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, importGameId)).returning();
@@ -12521,6 +12738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update metadata for ALL incoming fields (including protected ones) so the user can see
       // the latest importedValue and choose to revert to it if they wish.
+      const metaGameId = importGameId ?? profile?.id;
       for (const key of Object.keys(fields)) {
         if (!INDIE_ALLOWED_FIELDS.includes(key) || key === "updatedAt") continue;
         const wasProtected = protected_fields.includes(key);
@@ -12531,10 +12749,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           importSource: source,
           isManualOverride: wasProtected ? true : false,  // preserve override flag for protected fields
           lastImportedAt: now,
-        });
+        }, metaGameId);
       }
 
-      const fieldMeta = await _indieFieldMetaMap(req.user.id);
+      const fieldMeta = await _indieFieldMetaMap(req.user.id, metaGameId);
       res.json({
         profile,
         fieldMeta,

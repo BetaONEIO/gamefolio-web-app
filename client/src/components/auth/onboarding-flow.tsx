@@ -396,6 +396,9 @@ export default function OnboardingFlow({
     // tags, price. No inputs for these in onboarding; they are carried through
     // to the profile so a new game arrives looking finished rather than bare.
     storeImport: null as Record<string, any> | null,
+    // Removing imported artwork is an intentional onboarding edit. Keep that
+    // decision locally so a lookup from a second store cannot add it back.
+    ignoredStoreImportFields: [] as string[],
   });
   type IndieGameForm = ReturnType<typeof blankIndieGame>;
 
@@ -404,7 +407,49 @@ export default function OnboardingFlow({
   const STORE_EXTRA_FIELDS = [
     "headerImageUrl", "capsuleImageUrl", "trailerUrl", "screenshotUrls",
     "genres", "tags", "platforms", "releaseDate", "price", "isFree", "fullDescription",
+    "studioWebsite",
   ] as const;
+
+  const mergeUniqueStrings = (current: unknown, incoming: unknown) => {
+    const values = [
+      ...(Array.isArray(current) ? current : []),
+      ...(Array.isArray(incoming) ? incoming : []),
+    ].filter((value): value is string => typeof value === "string" && value.trim().length > 0);
+    return [...new Set(values)];
+  };
+
+  // Store pages complement each other: one can provide a trailer while another
+  // provides screenshots or platforms. Preserve existing media, join list data,
+  // and prefer the fuller long description rather than allowing a later lookup
+  // to erase useful imported metadata.
+  const mergeStoreImports = (
+    current: Record<string, any> | null,
+    incoming: Record<string, any>,
+    ignoredFields: string[],
+  ): Record<string, any> | null => {
+    const merged: Record<string, any> = { ...(current ?? {}) };
+    const arrayFields = new Set(["screenshotUrls", "genres", "tags", "platforms", "keyFeatures"]);
+    for (const [key, value] of Object.entries(incoming)) {
+      if (ignoredFields.includes(key) || value === null || value === undefined) continue;
+      if (arrayFields.has(key)) {
+        const values = mergeUniqueStrings(merged[key], value);
+        if (values.length > 0) merged[key] = key === "screenshotUrls" ? values.slice(0, 16) : values;
+        continue;
+      }
+      if (key === "fullDescription") {
+        const existing = typeof merged[key] === "string" ? merged[key] : "";
+        const candidate = typeof value === "string" ? value : "";
+        merged[key] = candidate.length > existing.length ? candidate : existing || value;
+        continue;
+      }
+      if (key === "isFree") {
+        merged[key] = Boolean(merged[key]) || value === true;
+        continue;
+      }
+      if (merged[key] === null || merged[key] === undefined || merged[key] === "") merged[key] = value;
+    }
+    return Object.keys(merged).length > 0 ? merged : null;
+  };
 
   const [indieGames, setIndieGames] = useState<IndieGameForm[]>([blankIndieGame()]);
   const [activeGameIdx, setActiveGameIdx] = useState(0);
@@ -475,7 +520,7 @@ export default function OnboardingFlow({
     if (cleaned !== current) setStreamerData(d => ({ ...d, [key]: cleaned }));
   };
 
-  // Pasting a Steam or Epic store URL fills in what the store already knows.
+  // Pasting a supported store URL fills in what the store already knows.
   // Only ever fills blanks — anything the developer has typed wins, so this
   // can never overwrite their own wording.
   const [storeLookup, setStoreLookup] = useState<{ status: "idle" | "loading" | "filled" | "error"; message?: string }>({ status: "idle" });
@@ -487,7 +532,11 @@ export default function OnboardingFlow({
     try {
       const res = await apiRequest("GET", `/api/indie/store-lookup?url=${encodeURIComponent(url)}`);
       if (!res.ok) {
-        setStoreLookup({ status: "error", message: "Couldn't read that store page — fill the details in below." });
+        const detail = await res.json().catch(() => null);
+        setStoreLookup({
+          status: "error",
+          message: detail?.error || "Couldn't read that store page — fill the details in below.",
+        });
         return;
       }
       const data = await res.json();
@@ -497,9 +546,14 @@ export default function OnboardingFlow({
       const next = { ...current };
 
       if (!next.gameName.trim() && f.gameName) { next.gameName = String(f.gameName); filled.push("name"); }
+      if (!next.studioName.trim() && f.studioName) { next.studioName = String(f.studioName); filled.push("studio"); }
       if (!next.description.trim() && f.shortDescription) { next.description = String(f.shortDescription); filled.push("description"); }
       if (!next.genre.trim() && Array.isArray(f.genres) && f.genres.length > 0) { next.genre = f.genres.join(", "); filled.push("genre"); }
       if (!next.releaseStatus && f.releaseStatus) { next.releaseStatus = String(f.releaseStatus); filled.push("release status"); }
+      if (!next.websiteLink.trim() && (f.websiteUrl || f.studioWebsite)) {
+        next.websiteLink = String(f.websiteUrl || f.studioWebsite);
+        filled.push("website");
+      }
 
       // Carry the rest of the store's data through to the saved profile even
       // though onboarding shows no field for it.
@@ -510,13 +564,17 @@ export default function OnboardingFlow({
           extras[key] = value;
         }
       }
-      next.storeImport = Object.keys(extras).length > 0 ? extras : null;
+      next.storeImport = mergeStoreImports(
+        current.storeImport,
+        extras,
+        current.ignoredStoreImportFields,
+      );
 
       setIndieGames(prev => prev.map((g, i) => (i === activeGameIdx ? next : g)));
 
-      const storeName = data.source === "epic" ? "Epic Games" : "Steam";
+      const storeName = data.source === "epic" ? "Epic Games" : data.source === "itch" ? "itch.io" : "Steam";
       const extraBits: string[] = [];
-      if (extras.headerImageUrl) extraBits.push("cover art");
+      if (extras.headerImageUrl || extras.capsuleImageUrl) extraBits.push("artwork");
       if (Array.isArray(extras.screenshotUrls)) extraBits.push(`${extras.screenshotUrls.length} screenshots`);
       if (Array.isArray(extras.platforms)) extraBits.push("platforms");
       const tail = extraBits.length > 0 ? ` Also imported ${extraBits.join(", ")}.` : "";
@@ -1991,6 +2049,7 @@ export default function OnboardingFlow({
                       storeImport: d.storeImport
                         ? Object.fromEntries(Object.entries(d.storeImport).filter(([k]) => k !== "headerImageUrl"))
                         : null,
+                      ignoredStoreImportFields: [...new Set([...d.ignoredStoreImportFields, "headerImageUrl"])],
                     }))}
                     className="flex-shrink-0 text-gray-500 hover:text-red-400"
                   >
@@ -2147,6 +2206,7 @@ export default function OnboardingFlow({
                       autoFocus
                       value={indieGameData.itchLink}
                       onChange={(e) => setIndieGameData({ ...indieGameData, itchLink: e.target.value })}
+                      onBlur={() => { if (!indieLinkError("itchLink")) void lookupStoreUrl(indieGameData.itchLink); }}
                       placeholder="https://yourname.itch.io/your-game"
                       className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
                     />
