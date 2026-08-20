@@ -54,7 +54,14 @@ const hostMatches = (host: string, pattern: string): boolean =>
  */
 export function validateStoreUrl(field: StoreField, value: string | null | undefined): string | null {
   if (value == null) return null;
-  const raw = String(value).trim();
+  // Links copied from chat clients and rich-text editors can carry invisible
+  // zero-width characters or be wrapped as <https://...>. Normalize those
+  // presentation-only characters before checking the real destination.
+  const raw = String(value)
+    .trim()
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/^<(.+)>$/, "$1")
+    .trim();
   if (raw === "") return null;
 
   const rule = RULES[field];
