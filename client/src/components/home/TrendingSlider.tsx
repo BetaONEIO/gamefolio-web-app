@@ -468,11 +468,11 @@ export default function TrendingHeroSlide({
 
   const { data: clips = [] } = useQuery<Clip[]>({
     queryKey: contentType === "reels"
-      ? ["/api/clips/reels/trending", "ever"]
+      ? ["/api/reels/trending", "recent"]
       : ["/api/clips/trending", "all"],
     queryFn: async () => {
       if (contentType === "reels") {
-        const res = await fetch(`/api/clips/reels/trending?limit=8&period=week`, { credentials: "include" });
+        const res = await fetch(`/api/reels/trending?limit=8&period=recent`, { credentials: "include" });
         if (!res.ok) return [];
         const data = await res.json();
         return Array.isArray(data) ? data.filter((item: Clip) => item.videoType === "reel") : [];
