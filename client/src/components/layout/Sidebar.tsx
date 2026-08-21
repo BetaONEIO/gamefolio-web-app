@@ -11,7 +11,6 @@ import {
   Users,
   Rocket,
   Radio,
-  Target,
   Bookmark,
 } from "lucide-react";
 import { isPartnerType } from "@shared/partner-access";
@@ -271,8 +270,6 @@ const Sidebar = () => {
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
-
-    ...(canAccessIndieGame ? [{ icon: Target, label: "Bounty Hub", href: "/bounties" }] : []),
 
     // Store stays on native but renders a crypto-free cosmetics catalogue.
     { icon: GamefolioStoreIcon, label: "Store", href: "/store" },
