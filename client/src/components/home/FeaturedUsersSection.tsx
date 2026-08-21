@@ -249,9 +249,9 @@ const FeaturedUsersSection = () => {
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: 'rgba(3,8,12,0.88)',
-              backdropFilter: 'blur(6px)',
-              WebkitBackdropFilter: 'blur(6px)',
+              background: 'rgba(14,16,25,0.84)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
             }}
           />
 
@@ -334,6 +334,17 @@ const FeaturedUsersSection = () => {
         className="hidden sm:block relative overflow-hidden rounded-2xl trending-bg-pattern"
         style={{ padding: '20px 0' }}
       >
+        {/* Navy veil keeps the lightning pattern atmospheric without competing with cards. */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'rgba(14,16,25,0.68)',
+            backdropFilter: 'blur(2px)',
+            WebkitBackdropFilter: 'blur(2px)',
+            zIndex: 1,
+          }}
+        />
+
         {/* Edge fade overlays */}
         <div className="absolute left-0 top-0 bottom-0 w-16 pointer-events-none"
           style={{ background: 'linear-gradient(to right, #0B1319, transparent)', zIndex: 10 }} />
