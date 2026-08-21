@@ -3970,10 +3970,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
 
-      // Rolling 7-day window ending now — gives meaningful XP totals even mid-week
-      const now = new Date();
-      const weekEnd   = now;
-      const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      // Calendar week: Monday 00:00 through the next Monday 00:00.
+      // This must match the weekly award/cache key so XP resets on Mondays.
+      const weekStart = LeaderboardService.getWeekStart();
+      const weekEnd = LeaderboardService.getWeekEnd();
 
       // Query real creator XP (user_xp_history) for this week.
       // LEFT JOIN from users so every member appears even at 0 XP.
@@ -4001,6 +4001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ON xh.user_id = u.id
           AND xh.created_at >= ${weekStart.toISOString()}
           AND xh.created_at < ${weekEnd.toISOString()}
+          AND xh.xp_amount > 0
         WHERE u.role NOT IN ('admin', 'moderator', 'system')
           AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
           AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
@@ -4164,19 +4165,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           effectivePeriod = 'alltime';
         }
       } else if (period === 'week') {
-        // Last 7 days of XP
-        const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        // Monday-to-Monday XP window
+        const weekStart = LeaderboardService.getWeekStart(now).toISOString();
         leaderboardData = await fetchXpWindow(weekStart, limit);
-        // Fall back to last 30 days, then all-time if too sparse
-        if (leaderboardData.length < MIN_PODIUM) {
-          const monthStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-          leaderboardData = await fetchXpWindow(monthStart, limit);
-          effectivePeriod = 'month';
-        }
-        if (leaderboardData.length < MIN_PODIUM) {
-          leaderboardData = await fetchXpWindow(null, limit);
-          effectivePeriod = 'alltime';
-        }
       } else {
         // All-time XP
         leaderboardData = await fetchXpWindow(null, limit);

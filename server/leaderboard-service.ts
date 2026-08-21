@@ -122,17 +122,30 @@ export function updatePointValue(key: string, value: number): void {
 }
 
 export class LeaderboardService {
+  // Weekly XP windows are calendar weeks: Monday 00:00 through the next
+  // Monday 00:00 in the server's configured timezone.
+  static getWeekStart(date: Date = new Date()): Date {
+    const start = new Date(date);
+    const dayOfWeek = start.getDay();
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    start.setDate(start.getDate() - daysFromMonday);
+    start.setHours(0, 0, 0, 0);
+    return start;
+  }
+
+  static getWeekEnd(date: Date = new Date()): Date {
+    const end = this.getWeekStart(date);
+    end.setDate(end.getDate() + 7);
+    return end;
+  }
+
   // Get current week in ISO format (e.g., "2024-W01")
   // Week starts on Monday per ISO 8601 standard
   static getCurrentWeek(date?: Date): { week: string; year: number } {
     const now = date || new Date();
     
     // Calculate start of week (Monday)
-    const dayOfWeek = now.getDay();
-    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - daysFromMonday);
-    startOfWeek.setHours(0, 0, 0, 0);
+    const startOfWeek = this.getWeekStart(now);
     
     // Calculate week number using ISO 8601 (Monday start)
     const startOfYear = new Date(now.getFullYear(), 0, 1);
@@ -385,13 +398,9 @@ export class LeaderboardService {
 
   // Get previous week leaderboard
   static async getPreviousWeekLeaderboard(limit: number = 10) {
-    const now = new Date();
-    const prevWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const startOfYear = new Date(prevWeek.getFullYear(), 0, 1);
-    const days = Math.floor((prevWeek.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
-    const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
-    const week = `${prevWeek.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
-    const year = prevWeek.getFullYear();
+    const previousWeek = new Date(this.getWeekStart());
+    previousWeek.setDate(previousWeek.getDate() - 7);
+    const { week, year } = this.getCurrentWeek(previousWeek);
 
     return await storage.getWeeklyLeaderboard(week, year, limit);
   }

@@ -1313,7 +1313,7 @@ function FriendsRivals({ data, isLoading }: { data: DashboardData["social"] | un
             <Swords className="w-8 h-8 mx-auto opacity-20" style={{ color: ACCENT }} />
             <p className="text-sm font-medium" style={{ color: TEXT_MUTED }}>No rivals yet</p>
             <p className="text-xs" style={{ color: `${TEXT_MUTED}80` }}>
-              Earn XP this week to appear on the leaderboard
+              Earn XP this season to appear on the leaderboard
             </p>
             <Link href="/leaderboard">
               <span className="inline-block mt-2 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors hover:opacity-80" style={{ background: `${ACCENT}12`, color: ACCENT, border: `1px solid ${ACCENT}25` }}>
