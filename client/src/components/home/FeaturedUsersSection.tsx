@@ -123,7 +123,12 @@ const FeaturedUsersSection = () => {
     if (!el || validEntries.length === 0) return;
 
     const setup = setTimeout(() => {
-      const oneCopyWidth = el.scrollWidth / 3;
+      const track = el.firstElementChild as HTMLElement | null;
+      const firstCard = track?.firstElementChild as HTMLElement | null;
+      const renderedCardWidth = firstCard?.getBoundingClientRect().width ?? 0;
+      const oneCopyWidth = renderedCardWidth > 0
+        ? renderedCardWidth * validEntries.length
+        : el.scrollWidth / 3;
       scrollPosition.current = oneCopyWidth;
       el.scrollLeft = scrollPosition.current;
 
@@ -132,7 +137,7 @@ const FeaturedUsersSection = () => {
           scrollPosition.current += SCROLL_SPEED;
           el.scrollLeft = scrollPosition.current;
 
-          const w = el.scrollWidth / 3;
+          const w = oneCopyWidth;
           if (scrollPosition.current >= w * 2) {
             scrollPosition.current -= w;
             el.scrollLeft = scrollPosition.current;
@@ -170,7 +175,12 @@ const FeaturedUsersSection = () => {
     if (!el) return;
     const dx = e.clientX - dragData.current.startX;
     scrollPosition.current = dragData.current.startScrollLeft - dx;
-    const w = el.scrollWidth / 3;
+    const track = el.firstElementChild as HTMLElement | null;
+    const firstCard = track?.firstElementChild as HTMLElement | null;
+    const renderedCardWidth = firstCard?.getBoundingClientRect().width ?? 0;
+    const w = renderedCardWidth > 0
+      ? renderedCardWidth * validEntries.length
+      : el.scrollWidth / 3;
     if (scrollPosition.current >= w * 2) {
       scrollPosition.current -= w;
       dragData.current.startScrollLeft -= w;
