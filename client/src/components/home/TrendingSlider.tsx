@@ -22,6 +22,7 @@ function formatNumber(n: number): string {
 interface Clip {
   id: number;
   title: string;
+  videoType?: string;
   thumbnailUrl: string | null;
   videoUrl: string | null;
   views: number;
@@ -471,9 +472,10 @@ export default function TrendingHeroSlide({
       : ["/api/clips/trending", "all"],
     queryFn: async () => {
       if (contentType === "reels") {
-        const res = await fetch(`/api/clips/reels/trending?limit=8&period=ever`, { credentials: "include" });
+        const res = await fetch(`/api/clips/reels/trending?limit=8&period=week`, { credentials: "include" });
         if (!res.ok) return [];
-        return res.json();
+        const data = await res.json();
+        return Array.isArray(data) ? data.filter((item: Clip) => item.videoType === "reel") : [];
       }
       const res = await fetch(`/api/clips/trending?limit=8&period=all`, { credentials: "include" });
       if (!res.ok) return [];
