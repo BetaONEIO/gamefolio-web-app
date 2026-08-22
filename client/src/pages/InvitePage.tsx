@@ -168,7 +168,6 @@ function UsernameChecker() {
 }
 
 export default function InvitePage() {
-  const [, setLocation] = useLocation();
   const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
   const { openModal } = useAuthModal();
 
@@ -184,7 +183,7 @@ export default function InvitePage() {
           ))}
         </div>
         <button
-          onClick={() => setLocation("/register")}
+          onClick={() => openModal("register")}
           className="rounded-xl px-4 py-2 text-sm font-bold transition-all hover:brightness-110"
           style={{ background: PRIMARY, color: "#080e17" }}
         >
@@ -245,14 +244,14 @@ export default function InvitePage() {
 
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto mt-2">
               <button
-                onClick={() => setLocation("/register")}
+                onClick={() => openModal("register")}
                 className="rounded-2xl px-8 py-4 font-bold text-base transition-all hover:brightness-110 active:scale-95"
                 style={{ background: PRIMARY, color: "#080e17" }}
               >
                 Join Gamefolio
               </button>
               <button
-              onClick={() => setLocation("/register")}
+              onClick={() => openModal("register")}
                 className="rounded-2xl px-8 py-4 font-bold text-base border transition-all hover:bg-white/5"
                 style={{ borderColor: CARD_BORDER, color: "white" }}
               >
@@ -329,7 +328,7 @@ export default function InvitePage() {
             <span className="text-gray-600">→ your Gamefolio profile</span>
           </div>
           <button
-            onClick={() => setLocation("/register")}
+                  onClick={() => openModal("register")}
             className="rounded-2xl px-8 py-4 font-bold text-base transition-all hover:brightness-110 active:scale-95 mt-2"
             style={{ background: PRIMARY, color: "#080e17" }}
           >
@@ -502,7 +501,7 @@ export default function InvitePage() {
             Connect your stream. Share your best moments. Give your content more places to be discovered.
           </p>
           <button
-            onClick={() => setLocation("/register")}
+            onClick={() => openModal("register")}
             className="rounded-2xl px-10 py-4 font-bold text-lg transition-all hover:brightness-110 active:scale-95"
             style={{ background: PRIMARY, color: "#080e17" }}
           >
