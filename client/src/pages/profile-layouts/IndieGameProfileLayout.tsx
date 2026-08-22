@@ -12,7 +12,6 @@ import { BOUNTIES_ENABLED } from '@/lib/feature-flags';
 import { SiSteam, SiEpicgames, SiItchdotio } from 'react-icons/si';
 import {
   Users,
-  Eye,
   Flame,
   MessageCircle,
   UserPlus,
@@ -39,7 +38,6 @@ import {
   Pencil,
   X,
   Save,
-  ChevronDown,
 } from 'lucide-react';
 
 const MessageDialog = React.lazy(() =>
@@ -397,10 +395,6 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
               aria-label="Choose a game"
             >
               <div className="flex max-w-full items-center gap-1 overflow-x-auto">
-                <span className="flex shrink-0 items-center gap-1.5 px-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/45">
-                  <Gamepad2 size={13} />
-                  Games
-                </span>
                 {gameList.map((game) => {
                   const activeGameId = selectedGameId ?? gameList.find((item) => item.isPrimary)?.id ?? gameList[0]?.id;
                   const isActive = activeGameId === game.id;
@@ -433,7 +427,6 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
                         </span>
                       )}
                       <span className="max-w-[9rem] truncate">{game.gameName?.trim() || 'Untitled game'}</span>
-                      {isActive && <ChevronDown size={13} className="rotate-180 text-primary" />}
                     </button>
                   );
                 })}
@@ -547,23 +540,6 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
               </button>
             </div>
           )}
-
-          <div className="flex flex-wrap items-center justify-center gap-4 w-full sm:w-auto">
-            {[
-              { label: 'Followers', value: profile._count?.followers ?? 0, icon: Users },
-              { label: 'Total Views', value: profile._count?.clipViews ?? 0, icon: Eye },
-            ].map((stat, i) => (
-              <div key={i} className="flex items-center gap-3 px-6 py-4 rounded-lg" style={cardStyle}>
-                <stat.icon size={22} color={brand.accent} className="opacity-90" />
-                <div className="text-left">
-                  <div className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: brand.textMuted }}>
-                    {stat.label}
-                  </div>
-                  <div className="text-xl font-bold">{stat.value.toLocaleString()}</div>
-                </div>
-              </div>
-            ))}
-          </div>
 
           <PlatformConnections
             profile={profile}
