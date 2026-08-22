@@ -6805,10 +6805,19 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getIndieGameProfileByUsername(username: string): Promise<{ profile: IndieGameProfile | null; user: User } | null> {
+  async getIndieGameProfileByUsername(username: string, gameId?: number | null): Promise<{ profile: IndieGameProfile | null; user: User } | null> {
     const user = await this.getUserByUsername(username);
     if (!user || user.partnerType !== "indie") return null;
-    const profile = await this.getIndieGameProfile(user.id);
+    const profile = await this.getIndieGameProfile(user.id, gameId);
     return { user, profile };
+  }
+
+  async getIndieGameProfilesByUsername(username: string): Promise<{ profiles: IndieGameProfile[]; user: User } | null> {
+    const user = await this.getUserByUsername(username);
+    if (!user || user.partnerType !== "indie") return null;
+    const profiles = await db.select().from(indieGameProfiles)
+      .where(eq(indieGameProfiles.userId, user.id))
+      .orderBy(desc(indieGameProfiles.isPrimary), asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id));
+    return { user, profiles };
   }
 }

@@ -67,6 +67,9 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState('OVERVIEW');
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+  // Which of this developer's games is being viewed. null means "their primary
+  // game" — keeps single-game developers (the common case) working unchanged.
+  const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
 
   // ── Inline edit panel state ──
   const [showEditPanel, setShowEditPanel] = useState(false);
@@ -111,8 +114,18 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
     queryKey: [`/api/users/${profile.username}/bounties`],
   });
 
+  // All of this developer's games, for the switcher row. Only ever more than
+  // one entry for indie devs with multiple games (migration 0020).
+  const { data: gamesListData } = useQuery<{ games: { id: number; gameName: string | null; headerImageUrl: string | null; capsuleImageUrl: string | null; isPrimary: boolean }[] }>({
+    queryKey: [`/api/games/indie/${profile.username}/list`],
+    retry: false,
+  });
+  const gameList = gamesListData?.games ?? [];
+
   const { data: indieGameData } = useQuery<{ profile: IndieGameProfile } | null>({
-    queryKey: [`/api/games/indie/${profile.username}`],
+    queryKey: selectedGameId
+      ? [`/api/games/indie/${profile.username}`, { gameId: selectedGameId }]
+      : [`/api/games/indie/${profile.username}`],
     retry: false,
   });
   const ig = (indieGameData?.profile ?? null) as IndieGameProfile | null;
@@ -525,6 +538,35 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
           ))}
         </div>
       </nav>
+
+      {gameList.length > 1 && (
+        <div className="border-b border-[var(--gf-border)] bg-[var(--gf-surface-1)]/60 px-6">
+          <div className="max-w-6xl mx-auto flex items-center gap-2 overflow-x-auto py-3">
+            <span className="text-xs font-semibold uppercase tracking-widest text-white/40 mr-1 whitespace-nowrap">
+              Games
+            </span>
+            {gameList.map((g) => {
+              const isActive = (selectedGameId ?? gameList.find(x => x.isPrimary)?.id ?? gameList[0]?.id) === g.id;
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => setSelectedGameId(g.id)}
+                  title={g.gameName ?? `Game ${g.id}`}
+                  className="rounded-full border px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors"
+                  style={{
+                    borderColor: isActive ? brand.accent : 'rgba(255,255,255,0.12)',
+                    background: isActive ? 'rgba(183,255,24,0.10)' : 'transparent',
+                    color: isActive ? '#fff' : 'rgba(255,255,255,0.55)',
+                  }}
+                >
+                  {g.gameName?.trim() || 'Untitled game'}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {activeTab === 'OVERVIEW' && (
         <section className="py-16 px-6 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10">

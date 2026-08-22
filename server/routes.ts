@@ -13010,9 +13010,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/games/indie/:username — public enriched indie profile (no auth required)
+  // ?gameId= selects a specific game; omitted means the developer's primary game.
   app.get("/api/games/indie/:username", async (req, res) => {
     try {
-      const result = await storage.getIndieGameProfileByUsername(req.params.username);
+      const gameId = req.query.gameId ? parseInt(req.query.gameId as string, 10) : null;
+      const result = await storage.getIndieGameProfileByUsername(req.params.username, gameId);
       if (!result) return res.status(404).json({ error: "Indie game profile not found" });
       const { user, profile } = result;
       res.json({
@@ -13022,6 +13024,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("GET /api/games/indie/:username error:", err);
       res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
+  // GET /api/games/indie/:username/list — public list of a developer's games,
+  // for the profile-page game switcher (no auth required).
+  app.get("/api/games/indie/:username/list", async (req, res) => {
+    try {
+      const result = await storage.getIndieGameProfilesByUsername(req.params.username);
+      if (!result) return res.status(404).json({ error: "Indie game profile not found" });
+      res.json({
+        games: result.profiles.map(p => ({
+          id: p.id,
+          gameName: p.gameName,
+          headerImageUrl: p.headerImageUrl,
+          capsuleImageUrl: p.capsuleImageUrl,
+          isPrimary: p.isPrimary,
+        })),
+      });
+    } catch (err) {
+      console.error("GET /api/games/indie/:username/list error:", err);
+      res.status(500).json({ error: "Failed to fetch games" });
     }
   });
 
