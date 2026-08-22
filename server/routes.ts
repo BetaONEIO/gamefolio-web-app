@@ -4017,7 +4017,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WHERE u.role NOT IN ('admin', 'moderator', 'system')
           AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
           AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
-          AND (COALESCE(xh.xp, 0) + COALESCE(ph.points, 0)) > 0
         ORDER BY "weekXP" DESC, u.id ASC
         LIMIT ${limit}
       `);
