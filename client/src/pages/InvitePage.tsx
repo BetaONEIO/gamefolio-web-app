@@ -268,9 +268,15 @@ export default function InvitePage() {
             <video
               autoPlay
               preload="auto"
-              loop
               muted
               playsInline
+              onEnded={(event) => {
+                const video = event.currentTarget;
+                video.pause();
+                if (Number.isFinite(video.duration) && video.duration > 0) {
+                  video.currentTime = Math.max(0, video.duration - 0.05);
+                }
+              }}
               className="relative z-10 flex-shrink-0 h-[480px] sm:h-[560px] lg:h-[640px] w-auto max-w-full lg:w-[360px] lg:max-w-none object-contain"
               style={{
                 display: "block",
