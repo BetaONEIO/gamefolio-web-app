@@ -188,20 +188,20 @@ export default function InvitePage() {
       </nav>
 
       {/* Hero */}
-      <section className="relative px-6 pt-40 pb-28 overflow-hidden">
+      <section className="relative px-6 pt-40 pb-28 overflow-hidden" style={{ background: "#000" }}>
         <GlowDot top="30%" left="50%" size={600} opacity={0.07} />
         <GlowDot top="10%" left="20%" size={300} opacity={0.05} />
         <GlowDot top="60%" left="80%" size={250} opacity={0.05} />
         <div
-          className="pointer-events-none absolute inset-0 z-[1] hidden lg:block"
+          className="pointer-events-none absolute inset-y-0 left-0 z-[1] hidden w-full lg:block"
           style={{
-            background: "radial-gradient(circle at 30% 35%, rgba(185, 255, 26, 0.035) 0%, rgba(185, 255, 26, 0.012) 25%, transparent 48%), linear-gradient(90deg, #071019 0%, #071018 30%, #061016 42%, #040b0c 52%, #020605 62%, #010201 72%, #000000 82%, #000000 100%)",
+            background: "radial-gradient(circle at 30% 35%, rgba(185, 255, 26, 0.035) 0%, rgba(185, 255, 26, 0.012) 25%, transparent 48%), linear-gradient(90deg, #071019 0%, #071018 30%, #061016 42%, #040b0c 52%, rgba(0,0,0,0.45) 64%, rgba(0,0,0,0) 78%)",
           }}
         />
         <div
           className="pointer-events-none absolute inset-0 z-[1] lg:hidden"
           style={{
-            background: "linear-gradient(180deg, #080e17 0%, #080e17 38%, #050a0e 54%, #020405 68%, #000 82%, #000 100%)",
+            background: "linear-gradient(180deg, #071019 0%, #071018 38%, #050a0e 54%, #020405 68%, #000 82%, #000 100%)",
           }}
         />
 
@@ -242,7 +242,10 @@ export default function InvitePage() {
             </p>
           </div>
 
-          <div className="relative flex min-h-[480px] w-full items-center justify-center overflow-visible sm:min-h-[560px] lg:min-h-[620px] lg:-translate-x-10">
+          <div
+            className="relative flex min-h-[480px] w-full items-center justify-center overflow-visible sm:min-h-[560px] lg:min-h-[620px] lg:-translate-x-10"
+            style={{ background: "#000", border: 0, boxShadow: "none" }}
+          >
             <div
               className="pointer-events-none absolute left-1/2 top-[58%] z-0 h-72 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]"
               style={{
@@ -259,7 +262,8 @@ export default function InvitePage() {
               playsInline
               className="relative z-10 h-[480px] sm:h-[560px] lg:h-[640px] w-auto max-w-full object-contain"
               style={{
-                mixBlendMode: "lighten",
+                display: "block",
+                background: "#000",
                 maskImage: "linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)",
                 WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)",
               }}
