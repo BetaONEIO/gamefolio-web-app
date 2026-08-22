@@ -92,6 +92,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login", initi
   const handleSuccess = () => triggerClose();
   const handleForgotPassword = () => setShowForgotPassword(true);
   const handleBackToLogin = () => setShowForgotPassword(false);
+  const showLoginTab = defaultTab !== "register";
 
   // ── Touch handlers ────────────────────────────────────────────────────────
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -234,19 +235,21 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login", initi
             className="w-full"
           >
             <TabsList
-              className={isDeveloperSubdomain ? "grid w-full grid-cols-1 p-1.5 rounded-xl" : "grid w-full grid-cols-2 gap-2 p-1.5 rounded-xl"}
+              className={isDeveloperSubdomain || !showLoginTab ? "grid w-full grid-cols-1 p-1.5 rounded-xl" : "grid w-full grid-cols-2 gap-2 p-1.5 rounded-xl"}
               style={{ background: '#0B1218', marginBottom: keyboardOpen ? '1rem' : '1.5rem' }}
             >
-              <TabsTrigger
-                value="login"
-                className="rounded-lg font-semibold transition-all duration-150 data-[state=active]:shadow-none"
-                style={activeTab === "login"
-                  ? { backgroundColor: '#B7FF1A', color: '#000' }
-                  : { backgroundColor: '#0B1218', color: '#B8C0AE' }}
-                data-testid="tab-login"
-              >
-                {isDeveloperSubdomain ? "Developer Sign In" : "Login"}
-              </TabsTrigger>
+              {showLoginTab && (
+                <TabsTrigger
+                  value="login"
+                  className="rounded-lg font-semibold transition-all duration-150 data-[state=active]:shadow-none"
+                  style={activeTab === "login"
+                    ? { backgroundColor: '#B7FF1A', color: '#000' }
+                    : { backgroundColor: '#0B1218', color: '#B8C0AE' }}
+                  data-testid="tab-login"
+                >
+                  {isDeveloperSubdomain ? "Developer Sign In" : "Login"}
+                </TabsTrigger>
+              )}
               {!isDeveloperSubdomain && (
                 <TabsTrigger
                   value="register"
