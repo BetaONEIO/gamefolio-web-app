@@ -2101,7 +2101,7 @@ export default function OnboardingFlow({
                     Got more than one game?
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    Free accounts include {indieGameLimit} games. The Indie Developer subscription
+                    Free accounts include {indieGameLimit} games. The Game Developer subscription
                     lets you showcase up to 10 — <span className="text-primary underline">see what's included</span>.
                   </p>
                 </button>
@@ -2428,11 +2428,11 @@ export default function OnboardingFlow({
             proLabel: 'View Gamefolio Pro',
           },
           indie: {
-            titleA: 'INDIE',  titleB: 'DEVELOPER',
+            titleA: 'GAME',  titleB: 'DEVELOPER',
             sub: 'Run up to 5 active bounties at once, plus get featured across Gamefolio.',
             emoji: '🚀',
-            benefits: ['Run up to 5 active bounties at once (free: 1)', 'Featured promotion on gamefolio.com/games', 'Included in Gamefolio\'s social media promotion', '£4.99/mo or £49.99/yr'],
-            proLabel: 'Upgrade to Indie Developer',
+            benefits: ['Run up to 5 active bounties at once (free: 1)', 'Featured promotion on gamefolio.com/games', 'Included in Gamefolio\'s social media promotion', '£3.99/mo or £42.00/yr'],
+            proLabel: 'Upgrade to Game Developer',
           },
         };
         const upsell = upsellConfig[selectedPath || 'gamer'];

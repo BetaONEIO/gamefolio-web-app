@@ -213,7 +213,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#B7FF1A] to-[#6FA800] mb-6">
               <Rocket className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">You're already an Indie Developer subscriber!</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">You're already a Game Developer subscriber!</h2>
             <p className="text-[#B8C0AE] mb-6">You can run up to 5 active bounties at once. Thanks for your support!</p>
             <button
               onClick={() => onOpenChange(false)}
@@ -238,7 +238,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-[#B7FF1A] to-[#6FA800] mb-4">
           <Rocket className="w-8 h-8 text-white" />
         </div>
-        <h2 className="text-2xl font-bold text-white mb-1">Indie Developer</h2>
+        <h2 className="text-2xl font-bold text-white mb-1">Game Developer</h2>
         <p className="text-[#B8C0AE] text-sm">Run more bounties and get promoted across Gamefolio</p>
       </div>
 
@@ -304,7 +304,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
           className="w-full py-4 bg-[#B7FF1A] hover:bg-[#A2F000] disabled:opacity-50 text-[#071013] font-bold text-lg rounded-2xl transition-colors flex items-center justify-center gap-2"
         >
           {(purchasing || checkoutLoading) && <Loader2 className="w-5 h-5 animate-spin" />}
-          Upgrade to Indie Developer
+          Upgrade to Game Developer
         </button>
       ) : (
         <button

@@ -146,7 +146,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Same server-verified activation as Pro, but for the Indie Developer
+  // Same server-verified activation as Pro, but for the Game Developer
   // entitlement — see /api/indie-dev/activate in server/routes/revenuecat.ts.
   const activateIndieDevOnBackend = useCallback(async (appUserId: string) => {
     try {
@@ -158,7 +158,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     } catch (error) {
-      console.error("Failed to activate Indie Developer subscription on backend:", error);
+      console.error("Failed to activate Game Developer subscription on backend:", error);
     }
   }, []);
 
@@ -392,7 +392,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
           await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
         }
         toast({
-          title: "Welcome to Indie Developer!",
+          title: "Welcome to Game Developer!",
           description: "You can now run up to 5 active bounties at once.",
           variant: "gamefolioSuccess",
         });
@@ -403,7 +403,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       if (error?.userCancelled || error?.errorCode === "UserCancelledError" || /cancel/i.test(error?.message || "")) {
         return false;
       }
-      console.error("Indie Developer purchase failed:", error);
+      console.error("Game Developer purchase failed:", error);
       toast({
         title: "Purchase failed",
         description: error?.message || "There was an error processing your purchase. Please try again.",
