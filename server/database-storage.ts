@@ -1347,6 +1347,9 @@ export class DatabaseStorage implements IStorage {
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'reel'),
           gameId ? eq(clips.gameId, gameId) : undefined,
+          // Wattsy is a removed test account; its orphaned reels must not
+          // appear in public trending results.
+          sql`lower(${users.username}) <> 'wattsy'`,
           // Public accounts only — see getTrendingClips for why this no
           // longer varies per requester (own content / followed private
           // accounts): that made every logged-in user's trending result
