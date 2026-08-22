@@ -492,7 +492,6 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
             {[
               { label: 'Followers', value: profile._count?.followers ?? 0, icon: Users },
               { label: 'Total Views', value: profile._count?.clipViews ?? 0, icon: Eye },
-              { label: 'Fires', value: profile._count?.firesReceived ?? 0, icon: Flame },
             ].map((stat, i) => (
               <div key={i} className="flex items-center gap-3 px-6 py-4 rounded-lg" style={cardStyle}>
                 <stat.icon size={22} color={brand.accent} className="opacity-90" />
