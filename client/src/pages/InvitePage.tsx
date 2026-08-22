@@ -19,7 +19,6 @@ import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import gameplayVideo from "@assets/gamer.mp4";
 import gameplayPoster from "@assets/gamer-poster.jpg";
 import phoneGamefolioVideo from "@assets/phone-gamefolio.mp4";
-import phoneHeroVideo from "@assets/phone-hero.webm";
 
 const PRIMARY = "#B9FF1A";
 const PRIMARY_DIM = "rgba(185,255,26,0.12)";
@@ -277,7 +276,6 @@ export default function InvitePage() {
                 display: "block",
               }}
             >
-              <source src={phoneHeroVideo} type="video/webm" />
               <source src={phoneGamefolioVideo} type="video/mp4" />
             </video>
           </div>
