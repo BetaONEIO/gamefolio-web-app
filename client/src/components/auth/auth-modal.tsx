@@ -192,11 +192,12 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
         </button>
 
         {/* Full-bleed promo artwork beside the form on desktop. */}
-        <div className="hidden md:flex md:w-[44%] relative overflow-hidden rounded-l-2xl flex-col flex-shrink-0">
-          <img
-            src={proHeroImage}
-            alt="Gamefolio gaming profile"
-            className="absolute inset-0 w-full h-full object-cover object-center"
+        <div className="hidden md:flex md:w-[44%] relative overflow-hidden rounded-l-2xl flex-col flex-shrink-0 p-0">
+          <div
+            role="img"
+            aria-label="Gamefolio gaming profile"
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${proHeroImage})` }}
           />
         </div>
 
