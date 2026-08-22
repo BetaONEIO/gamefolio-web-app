@@ -716,30 +716,26 @@ const Header = () => {
                       </DropdownMenuItem>
                     )}
 
-                    {!isIndieMode && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuGroup>
-                          <DropdownMenuLabel className="text-xs font-medium text-muted-foreground px-2 pt-0">
-                            Settings
-                          </DropdownMenuLabel>
-                          <DropdownMenuItem
-                            className="cursor-pointer"
-                            onClick={() => setLocation("/account/settings")}
-                          >
-                            <AccountSettingsIcon className="mr-2 h-4 w-4" />
-                            <span>Account Settings</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="cursor-pointer"
-                            onClick={() => setLocation("/settings/profile")}
-                          >
-                            <ProfileAppearanceIcon className="mr-2 h-4 w-4" />
-                            <span>Profile & Appearance</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuGroup>
-                      </>
-                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel className="text-xs font-medium text-muted-foreground px-2 pt-0">
+                        Settings
+                      </DropdownMenuLabel>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/account/settings")}
+                      >
+                        <AccountSettingsIcon className="mr-2 h-4 w-4" />
+                        <span>Account Settings</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/settings/profile")}
+                      >
+                        <ProfileAppearanceIcon className="mr-2 h-4 w-4" />
+                        <span>Profile & Appearance</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
 
                     <DropdownMenuSeparator />
                     {(user.userType?.split(",").includes("indie_developer") || isPartnerType(user, "indie") || user.role === "admin") && (
