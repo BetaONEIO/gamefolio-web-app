@@ -575,6 +575,7 @@ export default function OnboardingFlow({
       const storeName = data.source === "epic" ? "Epic Games" : data.source === "itch" ? "itch.io" : "Steam";
       const extraBits: string[] = [];
       if (extras.headerImageUrl || extras.capsuleImageUrl) extraBits.push("artwork");
+      if (extras.trailerUrl) extraBits.push("a trailer");
       if (Array.isArray(extras.screenshotUrls)) extraBits.push(`${extras.screenshotUrls.length} screenshots`);
       if (Array.isArray(extras.platforms)) extraBits.push("platforms");
       const tail = extraBits.length > 0 ? ` Also imported ${extraBits.join(", ")}.` : "";
@@ -2050,6 +2051,37 @@ export default function OnboardingFlow({
                         ? Object.fromEntries(Object.entries(d.storeImport).filter(([k]) => k !== "headerImageUrl"))
                         : null,
                       ignoredStoreImportFields: [...new Set([...d.ignoredStoreImportFields, "headerImageUrl"])],
+                    }))}
+                    className="flex-shrink-0 text-gray-500 hover:text-red-400"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Trailer pulled from the store — same pattern as the cover art
+                  card above: visible and removable rather than saved silently. */}
+              {indieGameData.storeImport?.trailerUrl && (
+                <div className="mb-3 flex items-center gap-3 rounded-lg border border-[#1B2A33] bg-[#0B1218] p-2">
+                  <video
+                    src={indieGameData.storeImport.trailerUrl}
+                    muted
+                    preload="metadata"
+                    className="h-12 w-24 flex-shrink-0 rounded object-cover bg-black"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-white">Trailer imported</p>
+                    <p className="text-xs text-gray-500">You can replace this later in your dashboard.</p>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Remove imported trailer"
+                    onClick={() => setIndieGameData(d => ({
+                      ...d,
+                      storeImport: d.storeImport
+                        ? Object.fromEntries(Object.entries(d.storeImport).filter(([k]) => k !== "trailerUrl"))
+                        : null,
+                      ignoredStoreImportFields: [...new Set([...d.ignoredStoreImportFields, "trailerUrl"])],
                     }))}
                     className="flex-shrink-0 text-gray-500 hover:text-red-400"
                   >

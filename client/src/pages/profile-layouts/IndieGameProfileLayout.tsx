@@ -571,10 +571,11 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
       {activeTab === 'OVERVIEW' && (
         <section className="py-16 px-6 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2 space-y-10">
-            {/* Trailer */}
-            <div className="aspect-video rounded-lg overflow-hidden" style={cardStyle}>
-              {igTrailerUrl ? (
-                getVideoEmbedUrl(igTrailerUrl) ? (
+            {/* Trailer — hidden entirely until the developer adds one, rather
+                than showing an empty placeholder card. */}
+            {igTrailerUrl && (
+              <div className="aspect-video rounded-lg overflow-hidden" style={cardStyle}>
+                {getVideoEmbedUrl(igTrailerUrl) ? (
                   <iframe
                     src={getVideoEmbedUrl(igTrailerUrl)!}
                     title={`${profile.displayName} trailer`}
@@ -584,14 +585,9 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
                   />
                 ) : (
                   <video src={igTrailerUrl} controls className="w-full h-full object-cover" />
-                )
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-2" style={{ color: brand.textMuted }}>
-                  <Play size={32} color={brand.accent} />
-                  <span className="text-sm">No trailer added yet</span>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* Description */}
             <div>

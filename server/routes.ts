@@ -300,6 +300,22 @@ const videoUpload = multer({
   }
 });
 
+// Indie game trailer upload configuration — memory storage, straight to
+// supabaseStorage.uploadBuffer, mirroring the bounty trailer upload pattern.
+const indieTrailerUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 250 * 1024 * 1024, // 250MB max for trailers
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only video files are allowed for trailers'));
+    }
+  }
+});
+
 // Extend Express Request with user property
 declare global {
   namespace Express {
@@ -12940,6 +12956,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("POST /api/indie/upload/image error:", err);
       try { if (req.file?.path) await fsPromises.unlink(req.file.path); } catch {}
+      res.status(500).json({ error: "Upload failed" });
+    }
+  });
+
+  // POST /api/indie/upload/trailer — upload a trailer video for an indie game
+  app.post("/api/indie/upload/trailer", indieTrailerUpload.single('video'), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    try {
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+      const ext = (req.file.originalname.split('.').pop() || 'mp4').toLowerCase();
+      const fileName = `indie-trailer-${req.user.id}-${Date.now()}.${ext}`;
+      const { url: trailerUrl } = await supabaseStorage.uploadBuffer(req.file.buffer, fileName, req.file.mimetype, 'video', req.user.id);
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const trailerGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      let trailerTargetId = trailerGameId;
+      if (trailerTargetId) {
+        await db.update(indieGameProfiles).set({ trailerUrl, updatedAt: new Date() }).where(eq(indieGameProfiles.id, trailerTargetId));
+      } else {
+        const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, trailerUrl, isPrimary: true }).returning({ id: indieGameProfiles.id });
+        trailerTargetId = created?.id ?? null;
+      }
+      await _indieUpsertMeta(req.user.id, "trailerUrl", { isManualOverride: true, lastEditedAt: new Date() }, trailerTargetId);
+      res.json({ url: trailerUrl, field: "trailerUrl" });
+    } catch (err) {
+      console.error("POST /api/indie/upload/trailer error:", err);
       res.status(500).json({ error: "Upload failed" });
     }
   });
