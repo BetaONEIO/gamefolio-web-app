@@ -16,10 +16,6 @@ import {
   X,
 } from "lucide-react";
 import { SiTwitch, SiKick } from "react-icons/si";
-import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
-import heroVid1 from "@assets/gamer.mp4";
-import gamerPoster from "@assets/gamer-poster.jpg";
-import promoHeroPoster from "@assets/promo-hero-poster.jpg";
 import phoneGamefolioVideo from "@assets/phone-gamefolio.mp4";
 
 const PRIMARY = "#b5f23d";
@@ -170,7 +166,6 @@ function UsernameChecker() {
 
 export default function InvitePage() {
   const [, setLocation] = useLocation();
-  const heroVideo = useLazyVideo();
   const promoVideo = useLazyVideo();
 
   return (
@@ -195,27 +190,6 @@ export default function InvitePage() {
 
       {/* Hero */}
       <section className="relative px-6 pt-40 pb-28 overflow-hidden">
-        {/* Video background */}
-        <div className="absolute inset-0 z-0 overflow-hidden">
-          <video
-            ref={heroVideo.ref}
-            src={heroVid1}
-            poster={gamerPoster}
-            preload="none"
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-cover"
-            style={{
-              opacity: heroVideo.visible ? 1 : 0,
-              filter: heroVideo.isPlaying ? "blur(0px) brightness(1)" : "blur(6px) brightness(0.65)",
-              transition: "opacity 700ms, filter 700ms",
-            }}
-          />
-        </div>
-        {/* Dark overlay */}
-        <div className="absolute inset-0 z-[1]" style={{ background: "rgba(8,14,23,0.82)" }} />
-
         <GlowDot top="30%" left="50%" size={600} opacity={0.07} />
         <GlowDot top="10%" left="20%" size={300} opacity={0.05} />
         <GlowDot top="60%" left="80%" size={250} opacity={0.05} />
@@ -257,54 +231,26 @@ export default function InvitePage() {
             </p>
           </div>
 
-          <div className="relative w-full">
-            {/* Abstract green background shape — off-centre for depth */}
-            <div
-              className="absolute rounded-3xl"
-              style={{
-                background: "#B7FF1A",
-                width: "88%",
-                height: "92%",
-                bottom: "-18px",
-                right: "-22px",
-                zIndex: 0,
-                opacity: 0.92,
-              }}
-            />
-            {/* Secondary smaller accent shard */}
-            <div
-              className="absolute rounded-2xl"
-              style={{
-                background: "#B7FF1A",
-                width: "40%",
-                height: "30%",
-                top: "-12px",
-                right: "-14px",
-                zIndex: 0,
-                opacity: 0.18,
-                filter: "blur(2px)",
-              }}
-            />
+          <div className="relative w-full flex justify-center lg:justify-end">
+            <div className="absolute left-1/2 top-1/2 z-0 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#B7FF1A]/10 blur-3xl" />
             <div className="absolute left-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-[#B7FF1A]/40 bg-[#0B1218]/80 shadow-[0_0_18px_rgba(183,255,26,0.35)]">
               <Sparkles className="h-5 w-5 text-[#B7FF1A]" />
             </div>
-            <div className="relative rounded-3xl overflow-hidden border shadow-2xl" style={{ borderColor: "rgba(183,255,26,0.25)", background: CARD_BG, zIndex: 1 }}>
-              <video
-                ref={promoVideo.ref}
-                src={phoneGamefolioVideo}
-                poster={promoHeroPoster}
-                preload="none"
-                loop
-                muted
-                playsInline
-                className="w-full h-[380px] md:h-[500px] object-cover"
-                style={{
-                  opacity: promoVideo.visible ? 1 : 0,
-                  filter: promoVideo.isPlaying ? "blur(0px) brightness(1)" : "blur(6px) brightness(0.65)",
-                  transition: "opacity 700ms, filter 700ms",
-                }}
-              />
-            </div>
+            <video
+              ref={promoVideo.ref}
+              src={phoneGamefolioVideo}
+              preload="none"
+              loop
+              muted
+              playsInline
+              className="relative z-10 w-full max-w-[280px] sm:max-w-[320px] lg:max-w-[340px] h-auto object-contain"
+              style={{
+                opacity: promoVideo.visible ? 1 : 0,
+                filter: promoVideo.isPlaying ? "blur(0px) brightness(1)" : "blur(6px) brightness(0.65)",
+                mixBlendMode: "screen",
+                transition: "opacity 700ms, filter 700ms",
+              }}
+            />
           </div>
         </div>
       </section>
