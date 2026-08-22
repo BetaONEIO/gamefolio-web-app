@@ -14,12 +14,12 @@ import {
 } from "lucide-react";
 import { SiTwitch, SiKick } from "react-icons/si";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
+import AuthModal from "@/components/auth/auth-modal";
 import { useAuthModal } from "@/hooks/use-auth-modal";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import gameplayVideo from "@assets/gamer.mp4";
 import gameplayPoster from "@assets/gamer-poster.jpg";
 import phoneGamefolioVideo from "@assets/phone-gamefolio.mp4";
-import phoneGamefolioPoster from "@assets/phone-gamefolio-poster.jpg";
 import phoneHeroVideo from "@assets/phone-hero.webm";
 
 const PRIMARY = "#B9FF1A";
@@ -169,7 +169,7 @@ function UsernameChecker() {
 
 export default function InvitePage() {
   const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
-  const { openModal } = useAuthModal();
+  const { openModal, isOpen, closeModal, defaultTab } = useAuthModal();
 
   return (
     <div className="min-h-screen" style={{ background: BG, color: "white", fontFamily: "inherit" }}>
@@ -259,7 +259,7 @@ export default function InvitePage() {
 
           <div
             className="relative flex min-h-[480px] w-full items-center justify-center overflow-visible sm:min-h-[560px] lg:min-h-[620px] lg:-translate-x-10"
-            style={{ background: "#000", border: 0, boxShadow: "none" }}
+            style={{ border: 0, boxShadow: "none" }}
           >
             <div
               className="pointer-events-none absolute left-1/2 top-[58%] z-0 h-72 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]"
@@ -268,7 +268,6 @@ export default function InvitePage() {
               }}
             />
             <video
-              poster={phoneGamefolioPoster}
               autoPlay
               preload="auto"
               loop
@@ -516,6 +515,11 @@ export default function InvitePage() {
           setProUpgradeOpen(false);
           openModal("register");
         }}
+      />
+      <AuthModal
+        isOpen={isOpen}
+        onClose={closeModal}
+        defaultTab={defaultTab}
       />
     </div>
   );
