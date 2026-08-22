@@ -11751,8 +11751,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const genres = (g.genres || []).map((gr: any) => gr.description).filter(Boolean);
     const tags = (g.categories || []).map((c: any) => c.description).filter(Boolean).slice(0, 10);
     const screenshotUrls = (g.screenshots || []).slice(0, 8).map((s: any) => s.path_full).filter(Boolean);
+    // Steam retired the flat webm/mp4 movie URLs; appdetails now only returns
+    // streaming manifests (hls_h264 plays broadly via hls.js + natively in
+    // Safari). Keep the old fields as a harmless fallback in case Valve ever
+    // serves them again for some titles.
     let trailerUrl: string | null = null;
-    if (g.movies?.length > 0) trailerUrl = g.movies[0].webm?.max || g.movies[0].mp4?.max || null;
+    if (g.movies?.length > 0) {
+      trailerUrl = g.movies[0].webm?.max || g.movies[0].mp4?.max || g.movies[0].hls_h264 || null;
+    }
     let price = g.is_free ? "Free" : null;
     if (g.price_overview?.final_formatted) price = g.price_overview.final_formatted;
     return {

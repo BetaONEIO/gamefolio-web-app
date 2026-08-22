@@ -28,6 +28,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
+import HlsVideo from "@/components/media/HlsVideo";
 
 const NEON = "#B7FF18";
 const BG = "#0B1319";
@@ -1023,7 +1024,7 @@ export default function IndieGameDashboard() {
               </FieldRow>
               {form.trailerUrl && (
                 <div className="mt-3 aspect-video rounded-lg overflow-hidden bg-black/40">
-                  <video src={form.trailerUrl} controls className="w-full h-full" style={{ display: form.trailerUrl.includes("youtube") || form.trailerUrl.includes("vimeo") ? "none" : "block" }} />
+                  <HlsVideo src={form.trailerUrl} controls className="w-full h-full" style={{ display: form.trailerUrl.includes("youtube") || form.trailerUrl.includes("vimeo") ? "none" : "block" }} />
                   {(form.trailerUrl.includes("youtube") || form.trailerUrl.includes("vimeo")) && (
                     <div className="flex items-center justify-center h-full text-white/40 text-sm gap-2">
                       <Film size={20} />

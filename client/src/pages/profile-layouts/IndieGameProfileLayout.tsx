@@ -6,6 +6,7 @@ import { UserWithStats, ClipWithUser, Screenshot, GameBounty, IndieGameProfile }
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import PlatformConnections from '@/components/profile/PlatformConnections';
+import HlsVideo from '@/components/media/HlsVideo';
 import { SiSteam, SiEpicgames, SiItchdotio } from 'react-icons/si';
 import {
   Users,
@@ -584,7 +585,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
                     className="w-full h-full"
                   />
                 ) : (
-                  <video src={igTrailerUrl} controls className="w-full h-full object-cover" />
+                  <HlsVideo src={igTrailerUrl} controls className="w-full h-full object-cover" />
                 )}
               </div>
             )}
