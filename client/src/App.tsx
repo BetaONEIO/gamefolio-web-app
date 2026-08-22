@@ -392,7 +392,18 @@ function MainLayout({ children }: { children: React.ReactNode }) {
                            location === "/impersonate-session";
 
   if (isAuthOrOnboarding) {
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        {location === "/invite" && (
+          <AuthModal
+            isOpen={isOpen}
+            onClose={closeModal}
+            defaultTab={defaultTab}
+          />
+        )}
+      </>
+    );
   }
 
   return (

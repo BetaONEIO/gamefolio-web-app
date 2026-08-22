@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { SiTwitch, SiKick } from "react-icons/si";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
-import AuthModal from "@/components/auth/auth-modal";
 import { useAuthModal } from "@/hooks/use-auth-modal";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import gameplayVideo from "@assets/gamer.mp4";
@@ -169,7 +168,7 @@ function UsernameChecker() {
 
 export default function InvitePage() {
   const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
-  const { openModal, isOpen, closeModal, defaultTab } = useAuthModal();
+  const { openModal } = useAuthModal();
 
   return (
     <div className="min-h-screen" style={{ background: BG, color: "white", fontFamily: "inherit" }}>
@@ -515,11 +514,6 @@ export default function InvitePage() {
           setProUpgradeOpen(false);
           openModal("register");
         }}
-      />
-      <AuthModal
-        isOpen={isOpen}
-        onClose={closeModal}
-        defaultTab={defaultTab}
       />
     </div>
   );
