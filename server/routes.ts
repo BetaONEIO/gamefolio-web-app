@@ -4168,6 +4168,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Monday-to-Monday XP window
         const weekStart = LeaderboardService.getWeekStart(now).toISOString();
         leaderboardData = await fetchXpWindow(weekStart, limit);
+        // Keep the homepage populated when a new weekly window has not
+        // accumulated enough activity for a meaningful podium.
+        if (leaderboardData.length < MIN_PODIUM) {
+          leaderboardData = await fetchXpWindow(null, limit);
+          effectivePeriod = 'alltime';
+        }
       } else {
         // All-time XP
         leaderboardData = await fetchXpWindow(null, limit);
