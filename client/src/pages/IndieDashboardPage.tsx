@@ -3,6 +3,7 @@ import { useSearch } from "wouter";
 import {
   Target, BarChart3, KeyRound, Film, Settings, LayoutDashboard,
 } from "lucide-react";
+import { CAMPAIGNS_ENABLED } from "@/lib/feature-flags";
 import CreateCampaignFlow from "./indie-dashboard/CreateCampaignFlow";
 import MyCampaignsTab from "./indie-dashboard/MyCampaignsTab";
 import CreatorContentTab from "./indie-dashboard/CreatorContentTab";
@@ -20,9 +21,13 @@ type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "analyti
 type CampaignSubTab = "create" | "my";
 
 
+// "Campaigns" tab hidden while CAMPAIGNS_ENABLED is false — bounty campaigns
+// are shipping in a later build. Filtered out of this array (not just
+// unlisted) so it also can't be reached via the ?tab= deep-link guard below,
+// which validates against these ids.
 const TOP_TABS: { id: TopTabId; label: string; icon: any }[] = [
   { id: "overview",        label: "Overview",       icon: LayoutDashboard },
-  { id: "campaigns",       label: "Campaigns",      icon: Target },
+  ...(CAMPAIGNS_ENABLED ? [{ id: "campaigns" as const, label: "Campaigns", icon: Target }] : []),
   { id: "creator-content", label: "Creator Content", icon: Film },
   { id: "keys",            label: "Keys",           icon: KeyRound },
   { id: "analytics",       label: "Analytics",      icon: BarChart3 },
@@ -92,7 +97,7 @@ export default function IndieDashboardPage() {
         )}
 
         {/* ── CAMPAIGNS ── */}
-        {tab === "campaigns" && (
+        {CAMPAIGNS_ENABLED && tab === "campaigns" && (
           <>
             {campaignSub === "my" && (
               <MyCampaignsTab onCreateCampaign={() => setCampaignSub("create")} />

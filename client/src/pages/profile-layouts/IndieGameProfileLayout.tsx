@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import PlatformConnections from '@/components/profile/PlatformConnections';
 import HlsVideo from '@/components/media/HlsVideo';
 import { getVideoEmbedUrl } from '@/lib/video-embed';
+import { BOUNTIES_ENABLED } from '@/lib/feature-flags';
 import { SiSteam, SiEpicgames, SiItchdotio } from 'react-icons/si';
 import {
   Users,
@@ -45,6 +46,10 @@ const MessageDialog = React.lazy(() =>
 );
 
 const TABS = ['OVERVIEW', 'CLIPS', 'REELS', 'SCREENSHOTS', 'BOUNTIES'];
+// BOUNTIES hidden while BOUNTIES_ENABLED is false — filtered at render time
+// rather than removed from TABS, since activeTab compares against the raw
+// string values elsewhere in this file.
+const VISIBLE_TABS = TABS.filter((t) => BOUNTIES_ENABLED || t !== 'BOUNTIES');
 
 type BountyWithMeta = GameBounty & { participantCount?: number; gameName?: string; gameImageUrl?: string };
 
@@ -514,7 +519,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
 
       <nav className="sticky top-0 z-40 border-b border-[var(--gf-border)] bg-[var(--gf-surface-1)] px-6">
         <div className="max-w-6xl mx-auto flex overflow-x-auto">
-          {TABS.map((tab) => (
+          {VISIBLE_TABS.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -869,7 +874,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
         </section>
       )}
 
-      {activeTab === 'BOUNTIES' && (
+      {BOUNTIES_ENABLED && activeTab === 'BOUNTIES' && (
         <section className="py-16 px-6 max-w-6xl mx-auto">
           <h2 className="text-2xl font-bold mb-6">Bounty Campaigns</h2>
           {(bounties || []).length === 0 ? (

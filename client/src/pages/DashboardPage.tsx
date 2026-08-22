@@ -22,6 +22,7 @@ import platinumMedal from "@assets/Platinum-league-medal_1783092079650.png";
 import onyxMedal from "@assets/Onyx-league-medal_1783092079650.png";
 import diamondMedal from "@assets/Rainbow-league-medal_1783093739515.png";
 import championMedal from "@assets/Gg-league-medal_1783092079650.png";
+import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
 
 /* ─── Types ─── */
 
@@ -2053,7 +2054,7 @@ export default function DashboardPage() {
             style={isMobile ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 5rem)" } : { paddingBottom: "2rem" }}
           >
             <Goals goals={data?.goals} isLoading={isLoading} />
-            {(data?.bounties ?? []).length > 0 && (
+            {BOUNTIES_ENABLED && (data?.bounties ?? []).length > 0 && (
               <ActiveBounties bounties={data?.bounties} isLoading={isLoading} />
             )}
           </div>

@@ -16,6 +16,7 @@ import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverla
 import { openExternal } from "@/lib/platform";
 import { getVideoEmbedUrl } from "@/lib/video-embed";
 import HlsVideo from "@/components/media/HlsVideo";
+import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
 import { CreatorDashboard } from "@/components/indie-bounty/CreatorDashboard";
 import { DeveloperDashboard } from "@/components/indie-bounty/DeveloperDashboard";
 import {
@@ -40,6 +41,10 @@ const TABS = [
   { id: "screenshots", label: "Screenshots",  icon: Camera },
   { id: "bounties",    label: "Bounties",     icon: Sword },
 ] as const;
+
+// Bounties hidden while BOUNTIES_ENABLED is false — filtered at render time
+// rather than removed from TABS, so TabId (and activeTab's type) is unaffected.
+const VISIBLE_TABS = TABS.filter((t) => BOUNTIES_ENABLED || t.id !== "bounties");
 
 type TabId = typeof TABS[number]["id"];
 
@@ -1640,7 +1645,7 @@ const IndieGamePage = () => {
       {/* ── STICKY TAB NAV ── */}
       <nav className="sticky top-0 z-40 border-b border-[var(--gf-border)] bg-[var(--gf-surface-1)]">
         <div className="flex overflow-x-auto scrollbar-none px-2">
-          {TABS.map(tab => {
+          {VISIBLE_TABS.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
@@ -2134,7 +2139,7 @@ const IndieGamePage = () => {
         )}
 
         {/* ──── BOUNTIES ──── */}
-        {activeTab === "bounties" && (
+        {BOUNTIES_ENABLED && activeTab === "bounties" && (
           <div className="py-5 space-y-5">
             <div className="flex items-center justify-between">
               <div>

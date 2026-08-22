@@ -11,6 +11,7 @@ import {
   Upload, Clapperboard, Camera,
 } from "lucide-react";
 import { openExternal } from "@/lib/platform";
+import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
 
 interface TrendingClip {
   id: number;
@@ -179,7 +180,7 @@ function TrendingClipSlide({
     { icon: Clapperboard, label: "Clips", value: gameStats?.clips ?? "—" },
     { icon: Video, label: "Reels", value: gameStats?.reels ?? "—" },
     { icon: Camera, label: "Shots", value: gameStats?.screenshots ?? "—" },
-    { icon: null, label: "Bounties", value: gameStats?.bounties ?? "—" },
+    ...(BOUNTIES_ENABLED ? [{ icon: null, label: "Bounties", value: gameStats?.bounties ?? "—" }] : []),
   ];
 
   return (
@@ -378,7 +379,7 @@ function TrendingClipSlide({
 
         {/* Stats row */}
         <div className="px-2 py-2 border-t border-white/[0.06]">
-          <div className="grid grid-cols-4 gap-0.5">
+          <div className={BOUNTIES_ENABLED ? "grid grid-cols-4 gap-0.5" : "grid grid-cols-3 gap-0.5"}>
             {statItems.map(({ icon: Icon, label, value }, i) => (
               <div key={i} className="flex flex-col items-center py-1">
                 <span className="text-white font-black text-xs leading-none mb-0.5">

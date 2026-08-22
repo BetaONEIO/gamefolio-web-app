@@ -10,6 +10,7 @@ import {
   Volume2, VolumeX, Upload, Clapperboard, Video, Camera, Info, X,
 } from "lucide-react";
 import { useMobile } from "@/hooks/use-mobile";
+import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
 
 const NEON = "#B7FF18";
 const AUTO_ADVANCE_MS = 7000;
@@ -59,7 +60,7 @@ function GameInfoOverlay({ clip, onClose }: { clip: Clip; onClose: () => void })
     { icon: Clapperboard, label: "Clips",    value: counts?.clips       ?? "—" },
     { icon: Video,        label: "Reels",    value: counts?.reels       ?? "—" },
     { icon: Camera,       label: "Shots",    value: counts?.screenshots ?? "—" },
-    { icon: null,         label: "Bounties", value: counts?.bounties    ?? "—" },
+    ...(BOUNTIES_ENABLED ? [{ icon: null, label: "Bounties", value: counts?.bounties ?? "—" }] : []),
   ];
 
   return (

@@ -50,6 +50,7 @@ import ManageProDialog from "@/components/ManageProDialog";
 import { useAuthModal } from "@/hooks/use-auth-modal";
 import { resolveApiUrl } from "@/lib/platform";
 import { useIndieMode } from "@/hooks/use-indie-mode";
+import { CAMPAIGNS_ENABLED } from "@/lib/feature-flags";
 
 const RECENT_SEARCHES_KEY = "gamefolio_recent_searches";
 const MAX_RECENT = 8;
@@ -557,10 +558,12 @@ const Header = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-52 mt-2">
-                    <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
-                      <Rocket className="h-4 w-4 mr-2" />
-                      New Campaign
-                    </DropdownMenuItem>
+                    {CAMPAIGNS_ENABLED && (
+                      <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
+                        <Rocket className="h-4 w-4 mr-2" />
+                        New Campaign
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem onClick={() => setLocation('/indie/dashboard?tab=keys')} className="cursor-pointer">
                       <KeyRound className="h-4 w-4 mr-2" />
                       Upload Keys
