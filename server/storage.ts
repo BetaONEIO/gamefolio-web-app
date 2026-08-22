@@ -147,6 +147,9 @@ export interface IStorage {
   getClipByShareCode(shareCode: string): Promise<Clip | null>;
   createClip(clipData: InsertClip): Promise<Clip>;
   updateClip(id: number, clip: Partial<Clip>): Promise<Clip | null>;
+  // Rows stuck in background video processing (status "processing", not
+  // touched since `before`) for the periodic reconciler to retry.
+  getStuckProcessingClips(before: Date, limit?: number): Promise<Clip[]>;
   updateClipDuration(id: number, duration: number): Promise<boolean>;
   deleteClip(id: number): Promise<boolean>;
   incrementClipViews(id: number): Promise<void>;
@@ -579,7 +582,8 @@ export interface IStorage {
   upsertIndieGameProfile(userId: number, patch: Partial<InsertIndieGameProfile>, gameId?: number | null): Promise<IndieGameProfile>;
   getIndieFieldMeta(userId: number, gameId?: number | null): Promise<Record<string, IndieGameFieldOverride>>;
   upsertIndieFieldMeta(userId: number, fieldName: string, patch: Partial<Omit<IndieGameFieldOverride, "id" | "userId" | "fieldName" | "createdAt">>, gameId?: number | null): Promise<void>;
-  getIndieGameProfileByUsername(username: string): Promise<{ profile: IndieGameProfile | null; user: User } | null>;
+  getIndieGameProfileByUsername(username: string, gameId?: number | null): Promise<{ profile: IndieGameProfile | null; user: User } | null>;
+  getIndieGameProfilesByUsername(username: string): Promise<{ profiles: IndieGameProfile[]; user: User } | null>;
 }
 
 // Use DatabaseStorage with Supabase - no fallback to in-memory storage

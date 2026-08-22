@@ -300,6 +300,22 @@ const videoUpload = multer({
   }
 });
 
+// Indie game trailer upload configuration — memory storage, straight to
+// supabaseStorage.uploadBuffer, mirroring the bounty trailer upload pattern.
+const indieTrailerUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 250 * 1024 * 1024, // 250MB max for trailers
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only video files are allowed for trailers'));
+    }
+  }
+});
+
 // Extend Express Request with user property
 declare global {
   namespace Express {
@@ -3992,17 +4008,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
 
-      // Rolling 7-day window ending now — gives meaningful XP totals even mid-week
-      const now = new Date();
-      const weekEnd   = now;
-      const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      // Calendar week: Monday 00:00 through the next Monday 00:00.
+      // This must match the weekly award/cache key so XP resets on Mondays.
+      const weekStart = LeaderboardService.getWeekStart();
+      const weekEnd = LeaderboardService.getWeekEnd();
 
-      // Query real creator XP (user_xp_history) for this week.
-      // LEFT JOIN from users so every member appears even at 0 XP.
+      // Weekly XP is split across the modern XP ledger and the legacy points
+      // ledger. Aggregate them independently before joining so a user with
+      // events in both tables is not multiplied by a cross join.
       const rows = await db.execute(sql`
         SELECT
           u.id                                    AS "userId",
-          COALESCE(SUM(xh.xp_amount), 0)         AS "weekXP",
+          COALESCE(xh.xp, 0) + COALESCE(ph.points, 0) AS "weekXP",
           u.username,
           u.display_name                          AS "displayName",
           u.avatar_url                            AS "avatarUrl",
@@ -4019,18 +4036,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           u.nft_profile_image_url                 AS "nftProfileImageUrl",
           u.active_profile_pic_type               AS "activeProfilePicType"
         FROM users u
-        LEFT JOIN user_xp_history xh
-          ON xh.user_id = u.id
-          AND xh.created_at >= ${weekStart.toISOString()}
-          AND xh.created_at < ${weekEnd.toISOString()}
+        LEFT JOIN (
+          SELECT user_id, SUM(xp_amount) AS xp
+          FROM user_xp_history
+          WHERE created_at >= ${weekStart.toISOString()}
+            AND created_at < ${weekEnd.toISOString()}
+            AND xp_amount > 0
+          GROUP BY user_id
+        ) xh ON xh.user_id = u.id
+        LEFT JOIN (
+          SELECT user_id, SUM(points) AS points
+          FROM user_points_history
+          WHERE created_at >= ${weekStart.toISOString()}
+            AND created_at < ${weekEnd.toISOString()}
+            AND points > 0
+          GROUP BY user_id
+        ) ph ON ph.user_id = u.id
         WHERE u.role NOT IN ('admin', 'moderator', 'system')
           AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
           AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
-        GROUP BY u.id, u.username, u.display_name, u.avatar_url,
-                 u.banner_url, u.hide_banner, u.accent_color, u.level, u.background_color,
-                 u.primary_color, u.profile_background_gradient, u.profile_background_gradient_css,
-                 u.profile_background_image_url, u.nft_profile_token_id, u.nft_profile_image_url,
-                 u.active_profile_pic_type
         ORDER BY "weekXP" DESC, u.id ASC
         LIMIT ${limit}
       `);
@@ -4186,15 +4210,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           effectivePeriod = 'alltime';
         }
       } else if (period === 'week') {
-        // Last 7 days of XP
-        const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        // Monday-to-Monday XP window
+        const weekStart = LeaderboardService.getWeekStart(now).toISOString();
         leaderboardData = await fetchXpWindow(weekStart, limit);
-        // Fall back to last 30 days, then all-time if too sparse
-        if (leaderboardData.length < MIN_PODIUM) {
-          const monthStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-          leaderboardData = await fetchXpWindow(monthStart, limit);
-          effectivePeriod = 'month';
-        }
+        // Keep the homepage populated when a new weekly window has not
+        // accumulated enough activity for a meaningful podium.
         if (leaderboardData.length < MIN_PODIUM) {
           leaderboardData = await fetchXpWindow(null, limit);
           effectivePeriod = 'alltime';
@@ -7566,9 +7586,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get actual clips from database for all users including demo
       let clips = await storage.getClipsByUserId(user.id);
 
-      // For non-owners, hide clips associated with unapproved custom games
+      // For non-owners, hide clips associated with unapproved custom games,
+      // plus anything not fully processed yet (or that failed processing) —
+      // only the uploader sees the "processing"/"failed" state on their own
+      // profile; other visitors just won't see it until it's ready.
       if (!isOwnProfile) {
-        clips = clips.filter((c) => !c.game || c.game.isApproved !== false);
+        clips = clips.filter((c) => (!c.game || c.game.isApproved !== false) && c.status === 'ready');
       }
 
       // For demo user, also include the demo clips if no real clips exist
@@ -11683,6 +11706,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/indie/profile/upload-trailer — upload a trailer video for the
+  // GameProfileTab.tsx dashboard (mirrors POST /api/indie/upload/trailer,
+  // used by IndieGameDashboard.tsx — two separate dashboard implementations
+  // share the same underlying indie_game_profiles data).
+  app.post("/api/indie/profile/upload-trailer", indieTrailerUpload.single('video'), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file provided" });
+      const ext = (req.file.originalname.split('.').pop() || 'mp4').toLowerCase();
+      const fileName = `indie-trailer-${req.user.id}-${Date.now()}.${ext}`;
+      const { url: trailerUrl } = await supabaseStorage.uploadBuffer(req.file.buffer, fileName, req.file.mimetype, 'video', req.user.id);
+      const { indieGameProfiles } = await import("@shared/schema");
+      const uploadGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      let targetGameId = uploadGameId;
+      if (targetGameId) {
+        await db.update(indieGameProfiles).set({ trailerUrl, updatedAt: new Date() }).where(eq(indieGameProfiles.id, targetGameId));
+      } else {
+        const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, trailerUrl, isPrimary: true }).returning({ id: indieGameProfiles.id });
+        targetGameId = created?.id ?? null;
+      }
+      await _indieUpsertMeta(req.user.id, "trailerUrl", { isManualOverride: true, useImported: false, lastEditedAt: new Date() }, targetGameId);
+      res.json({ url: trailerUrl, field: "trailerUrl" });
+    } catch (err) {
+      console.error("Error uploading indie profile trailer:", err);
+      res.status(500).json({ message: "Upload failed" });
+    }
+  });
+
   // ─── Indie Game Profile API ──────────────────────────────────────────────────
 
   // Internal helpers for indie profile
@@ -11731,8 +11782,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const genres = (g.genres || []).map((gr: any) => gr.description).filter(Boolean);
     const tags = (g.categories || []).map((c: any) => c.description).filter(Boolean).slice(0, 10);
     const screenshotUrls = (g.screenshots || []).slice(0, 8).map((s: any) => s.path_full).filter(Boolean);
+    // Steam retired the flat webm/mp4 movie URLs; appdetails now only returns
+    // streaming manifests (hls_h264 plays broadly via hls.js + natively in
+    // Safari). Keep the old fields as a harmless fallback in case Valve ever
+    // serves them again for some titles.
     let trailerUrl: string | null = null;
-    if (g.movies?.length > 0) trailerUrl = g.movies[0].webm?.max || g.movies[0].mp4?.max || null;
+    if (g.movies?.length > 0) {
+      trailerUrl = g.movies[0].webm?.max || g.movies[0].mp4?.max || g.movies[0].hls_h264 || null;
+    }
     let price = g.is_free ? "Free" : null;
     if (g.price_overview?.final_formatted) price = g.price_overview.final_formatted;
     return {
@@ -12940,6 +12997,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/indie/upload/trailer — upload a trailer video for an indie game
+  app.post("/api/indie/upload/trailer", indieTrailerUpload.single('video'), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    try {
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+      const ext = (req.file.originalname.split('.').pop() || 'mp4').toLowerCase();
+      const fileName = `indie-trailer-${req.user.id}-${Date.now()}.${ext}`;
+      const { url: trailerUrl } = await supabaseStorage.uploadBuffer(req.file.buffer, fileName, req.file.mimetype, 'video', req.user.id);
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const trailerGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      let trailerTargetId = trailerGameId;
+      if (trailerTargetId) {
+        await db.update(indieGameProfiles).set({ trailerUrl, updatedAt: new Date() }).where(eq(indieGameProfiles.id, trailerTargetId));
+      } else {
+        const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, trailerUrl, isPrimary: true }).returning({ id: indieGameProfiles.id });
+        trailerTargetId = created?.id ?? null;
+      }
+      await _indieUpsertMeta(req.user.id, "trailerUrl", { isManualOverride: true, lastEditedAt: new Date() }, trailerTargetId);
+      res.json({ url: trailerUrl, field: "trailerUrl" });
+    } catch (err) {
+      console.error("POST /api/indie/upload/trailer error:", err);
+      res.status(500).json({ error: "Upload failed" });
+    }
+  });
+
   // POST /api/indie/upload/screenshot — upload and append a screenshot
   app.post("/api/indie/upload/screenshot", upload.single('screenshot'), async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
@@ -13006,9 +13091,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // GET /api/games/indie/:username — public enriched indie profile (no auth required)
+  // ?gameId= selects a specific game; omitted means the developer's primary game.
   app.get("/api/games/indie/:username", async (req, res) => {
     try {
-      const result = await storage.getIndieGameProfileByUsername(req.params.username);
+      const gameId = req.query.gameId ? parseInt(req.query.gameId as string, 10) : null;
+      const result = await storage.getIndieGameProfileByUsername(req.params.username, gameId);
       if (!result) return res.status(404).json({ error: "Indie game profile not found" });
       const { user, profile } = result;
       res.json({
@@ -13018,6 +13105,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("GET /api/games/indie/:username error:", err);
       res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
+  // GET /api/games/indie/:username/list — public list of a developer's games,
+  // for the profile-page game switcher (no auth required).
+  app.get("/api/games/indie/:username/list", async (req, res) => {
+    try {
+      const result = await storage.getIndieGameProfilesByUsername(req.params.username);
+      if (!result) return res.status(404).json({ error: "Indie game profile not found" });
+      res.json({
+        games: result.profiles.map(p => ({
+          id: p.id,
+          gameName: p.gameName,
+          headerImageUrl: p.headerImageUrl,
+          capsuleImageUrl: p.capsuleImageUrl,
+          isPrimary: p.isPrimary,
+        })),
+      });
+    } catch (err) {
+      console.error("GET /api/games/indie/:username/list error:", err);
+      res.status(500).json({ error: "Failed to fetch games" });
     }
   });
 

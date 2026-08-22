@@ -50,6 +50,7 @@ import ManageProDialog from "@/components/ManageProDialog";
 import { useAuthModal } from "@/hooks/use-auth-modal";
 import { resolveApiUrl } from "@/lib/platform";
 import { useIndieMode } from "@/hooks/use-indie-mode";
+import { CAMPAIGNS_ENABLED } from "@/lib/feature-flags";
 
 const RECENT_SEARCHES_KEY = "gamefolio_recent_searches";
 const MAX_RECENT = 8;
@@ -557,11 +558,13 @@ const Header = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-52 mt-2">
-                    <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
-                      <Rocket className="h-4 w-4 mr-2" />
-                      New Campaign
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setLocation('/indie/dashboard')} className="cursor-pointer">
+                    {CAMPAIGNS_ENABLED && (
+                      <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
+                        <Rocket className="h-4 w-4 mr-2" />
+                        New Campaign
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => setLocation('/indie/dashboard?tab=keys')} className="cursor-pointer">
                       <KeyRound className="h-4 w-4 mr-2" />
                       Upload Keys
                     </DropdownMenuItem>
@@ -716,30 +719,26 @@ const Header = () => {
                       </DropdownMenuItem>
                     )}
 
-                    {!isIndieMode && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuGroup>
-                          <DropdownMenuLabel className="text-xs font-medium text-muted-foreground px-2 pt-0">
-                            Settings
-                          </DropdownMenuLabel>
-                          <DropdownMenuItem
-                            className="cursor-pointer"
-                            onClick={() => setLocation("/account/settings")}
-                          >
-                            <AccountSettingsIcon className="mr-2 h-4 w-4" />
-                            <span>Account Settings</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="cursor-pointer"
-                            onClick={() => setLocation("/settings/profile")}
-                          >
-                            <ProfileAppearanceIcon className="mr-2 h-4 w-4" />
-                            <span>Profile & Appearance</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuGroup>
-                      </>
-                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel className="text-xs font-medium text-muted-foreground px-2 pt-0">
+                        Settings
+                      </DropdownMenuLabel>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/account/settings")}
+                      >
+                        <AccountSettingsIcon className="mr-2 h-4 w-4" />
+                        <span>Account Settings</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/settings/profile")}
+                      >
+                        <ProfileAppearanceIcon className="mr-2 h-4 w-4" />
+                        <span>Profile & Appearance</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
 
                     <DropdownMenuSeparator />
                     {(user.userType?.split(",").includes("indie_developer") || isPartnerType(user, "indie") || user.role === "admin") && (

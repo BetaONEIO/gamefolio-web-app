@@ -81,6 +81,26 @@ function useUploadImage() {
   });
 }
 
+function useUploadTrailer() {
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const fd = new FormData();
+      fd.append("video", file);
+      const res = await fetch("/api/indie/profile/upload-trailer", {
+        method: "POST", body: fd, credentials: "include",
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json() as Promise<{ url: string; field: string }>;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+      toast({ description: "Trailer uploaded" });
+    },
+    onError: () => toast({ description: "Upload failed", variant: "gamefolioError" }),
+  });
+}
+
 // ─── EditModal ─────────────────────────────────────────────────────────────────
 function EditModal({
   title, onClose, children, onSave, isSaving, saveLabel = "Save changes",
@@ -459,6 +479,8 @@ function MediaCard({ profile }: { profile: Profile | null }) {
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [newShot, setNewShot] = useState("");
   const save = useSaveProfile(() => setOpen(false));
+  const uploadTrailer = useUploadTrailer();
+  const trailerFileRef = useRef<HTMLInputElement>(null);
 
   const openModal = () => {
     setTrailer(profile?.trailerUrl ?? "");
@@ -509,7 +531,25 @@ function MediaCard({ profile }: { profile: Profile | null }) {
 
           {/* Trailer */}
           <div>
-            <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">Trailer</p>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] text-white/30 uppercase tracking-wider font-medium">Trailer</p>
+              <input
+                ref={trailerFileRef}
+                type="file"
+                accept="video/*"
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) uploadTrailer.mutate(f); e.target.value = ""; }}
+              />
+              <button
+                type="button"
+                onClick={() => trailerFileRef.current?.click()}
+                disabled={uploadTrailer.isPending}
+                className="flex items-center gap-1 text-[11px] text-white/30 hover:text-white transition-colors disabled:opacity-50"
+              >
+                {uploadTrailer.isPending ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />}
+                {uploadTrailer.isPending ? "Uploading…" : "Upload video"}
+              </button>
+            </div>
             {profile?.trailerUrl ? (
               <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl group cursor-pointer hover:bg-white/5 transition-all"
                 style={{ border: `1px solid ${CARD_BORDER}` }}>

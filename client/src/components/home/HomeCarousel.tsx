@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
 
 const NEON = "#B7FF18";
 
@@ -324,7 +325,7 @@ function TrendingClipSlide({
                     { icon: Clapperboard, label: "Clips",    value: clip.views ? Math.max(1, Math.floor(clip.views / 120)) : 5 },
                     { icon: Video,        label: "Reels",    value: clip.likes ? Math.max(1, Math.floor(clip.likes / 40))  : 3 },
                     { icon: Camera,       label: "Shots",    value: clip.views ? Math.max(1, Math.floor(clip.views / 200)) : 5 },
-                    { icon: null,         label: "Bounties", value: 3 },
+                    ...(BOUNTIES_ENABLED ? [{ icon: null, label: "Bounties", value: 3 }] : []),
                   ].map(({ icon: Icon, label, value }, i) => (
                     <div key={i} className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">

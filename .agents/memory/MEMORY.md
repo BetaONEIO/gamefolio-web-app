@@ -19,3 +19,4 @@
 - [Auth modal portal z-index](auth-modal-portal-zindex.md) — portals (Popover, Select, etc.) inside the auth modal need z-[200002] to appear above the modal's z-[200000].
 - [Dark video hero blending](dark-video-hero-blending.md) — black-background hero video blends cleanly when the hero owns the navy-to-black transition; local black media panels create visible boundaries.
 - [Phone video alpha masking](phone-video-alpha-masking.md) — black-screen phone footage needs a silhouette alpha mask, not chroma keying, to preserve dark hardware and UI.
+- [Weekly XP multi-ledger](weekly-xp-multi-ledger.md) — weekly scores must combine both XP ledgers through independent per-user aggregates, never a raw join.

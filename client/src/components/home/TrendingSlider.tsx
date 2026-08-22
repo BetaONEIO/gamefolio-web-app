@@ -3,12 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 // useLocation no longer needed — clip opens via ClipDialog, not navigation
 import { useClipDialog } from "@/hooks/use-clip-dialog";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 import type { ClipWithUser } from "@shared/schema";
 import {
   Flame, ChevronLeft, ChevronRight, Play, Pause,
   Volume2, VolumeX, Upload, Clapperboard, Video, Camera, Info, X,
 } from "lucide-react";
 import { useMobile } from "@/hooks/use-mobile";
+import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
 
 const NEON = "#B7FF18";
 const AUTO_ADVANCE_MS = 7000;
@@ -22,6 +24,7 @@ function formatNumber(n: number): string {
 interface Clip {
   id: number;
   title: string;
+  videoType?: string;
   thumbnailUrl: string | null;
   videoUrl: string | null;
   views: number;
@@ -57,7 +60,7 @@ function GameInfoOverlay({ clip, onClose }: { clip: Clip; onClose: () => void })
     { icon: Clapperboard, label: "Clips",    value: counts?.clips       ?? "—" },
     { icon: Video,        label: "Reels",    value: counts?.reels       ?? "—" },
     { icon: Camera,       label: "Shots",    value: counts?.screenshots ?? "—" },
-    { icon: null,         label: "Bounties", value: counts?.bounties    ?? "—" },
+    ...(BOUNTIES_ENABLED ? [{ icon: null, label: "Bounties", value: counts?.bounties ?? "—" }] : []),
   ];
 
   return (
@@ -160,6 +163,8 @@ function MobileTrendingCarousel({
 
   const total = clips.length;
   const clip = clips[currentIndex] ?? null;
+  const { signedUrl: signedVideoUrl } = useSignedUrl(clip?.videoUrl);
+  const { signedUrl: signedThumbnailUrl } = useSignedUrl(clip?.thumbnailUrl);
 
   /* Reset carousel when content type switches */
   useEffect(() => {
@@ -460,6 +465,7 @@ export default function TrendingHeroSlide({
   const [showInfo, setShowInfo] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const endedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInteracting = useRef(false);
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -467,13 +473,14 @@ export default function TrendingHeroSlide({
 
   const { data: clips = [] } = useQuery<Clip[]>({
     queryKey: contentType === "reels"
-      ? ["/api/clips/reels/trending", "ever"]
+      ? ["/api/reels/trending", "recent"]
       : ["/api/clips/trending", "all"],
     queryFn: async () => {
       if (contentType === "reels") {
-        const res = await fetch(`/api/clips/reels/trending?limit=8&period=ever`, { credentials: "include" });
+        const res = await fetch(`/api/reels/trending?limit=8&period=recent`, { credentials: "include" });
         if (!res.ok) return [];
-        return res.json();
+        const data = await res.json();
+        return Array.isArray(data) ? data.filter((item: Clip) => item.videoType === "reel") : [];
       }
       const res = await fetch(`/api/clips/trending?limit=8&period=all`, { credentials: "include" });
       if (!res.ok) return [];
@@ -490,25 +497,49 @@ export default function TrendingHeroSlide({
     setIsPlaying(false);
     setProgress(0);
     setShowInfo(false);
+    if (endedTimeoutRef.current) {
+      clearTimeout(endedTimeoutRef.current);
+      endedTimeoutRef.current = null;
+    }
   }, [contentType]);
 
-  useEffect(() => { setShowInfo(false); }, [currentIndex]);
+  useEffect(() => {
+    setShowInfo(false);
+    if (endedTimeoutRef.current) {
+      clearTimeout(endedTimeoutRef.current);
+      endedTimeoutRef.current = null;
+    }
+  }, [currentIndex]);
 
   const startTimer = useCallback(() => {
     if (isMobile) return; // No auto-advance on mobile
     if (timerRef.current) clearInterval(timerRef.current);
-    if (total <= 1) return;
+    // Video slides advance when playback ends; only image-only slides need
+    // the fallback timer.
+    if (total <= 1 || clip?.videoUrl) return;
     timerRef.current = setInterval(() => {
       if (isInteracting.current) return;
       setCurrentIndex((prev) => (prev + 1) % total);
       setProgress(0);
     }, AUTO_ADVANCE_MS);
-  }, [total, isMobile]);
+  }, [total, isMobile, clip?.videoUrl]);
 
   useEffect(() => {
     startTimer();
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [startTimer, currentIndex]);
+
+  const advanceAfter = useCallback((delay: number) => {
+    if (endedTimeoutRef.current) clearTimeout(endedTimeoutRef.current);
+    if (total <= 1) return;
+
+    endedTimeoutRef.current = setTimeout(() => {
+      endedTimeoutRef.current = null;
+      setCurrentIndex((prev) => (prev + 1) % total);
+      setProgress(0);
+      startTimer();
+    }, delay);
+  }, [total, startTimer]);
 
   useEffect(() => {
     setProgress(0);
@@ -519,7 +550,7 @@ export default function TrendingHeroSlide({
     setVideoReady(false);
 
     const v = videoRef.current;
-    if (!v || !clip?.videoUrl) return;
+    if (!v || !signedVideoUrl) return;
 
     v.muted = true;
     v.play()
@@ -536,7 +567,7 @@ export default function TrendingHeroSlide({
     }, 500);
 
     return () => clearTimeout(retry);
-  }, [clip?.id]);
+  }, [clip?.id, signedVideoUrl, onPlayingChange]);
 
   const goTo = useCallback((idx: number) => {
     setCurrentIndex(idx); startTimer();
@@ -597,11 +628,7 @@ export default function TrendingHeroSlide({
     setProgress(100);
     isInteracting.current = false;
     onPlayingChange?.(false);
-    setTimeout(() => {
-      setCurrentIndex((prev) => (prev + 1) % total);
-      setProgress(0);
-      startTimer();
-    }, 800);
+    advanceAfter(800);
   };
 
   const handleTimeUpdate = () => {
@@ -657,9 +684,9 @@ export default function TrendingHeroSlide({
         {clip ? (
           clip.videoUrl ? (
             <div className="absolute inset-0">
-              {clip.thumbnailUrl && (
+              {signedThumbnailUrl && (
                 <img
-                  src={clip.thumbnailUrl}
+                  src={signedThumbnailUrl}
                   alt=""
                   aria-hidden
                   className="absolute inset-0 w-full h-full object-cover"
@@ -668,8 +695,8 @@ export default function TrendingHeroSlide({
               <video
                 ref={videoRef}
                 key={clip.id}
-                src={clip.videoUrl}
-                poster={clip.thumbnailUrl ?? undefined}
+                src={signedVideoUrl ?? undefined}
+                poster={signedThumbnailUrl ?? undefined}
                 preload="auto"
                 className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300"
                 style={{ opacity: videoReady ? 1 : 0 }}
@@ -696,6 +723,9 @@ export default function TrendingHeroSlide({
                   setVideoReady(false);
                   setIsPlaying(false);
                   onPlayingChange?.(false);
+                  // Older records can point to media removed during storage
+                  // migrations. Move on instead of leaving the hero black.
+                  advanceAfter(500);
                 }}
               />
             </div>

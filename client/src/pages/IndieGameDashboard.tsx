@@ -28,6 +28,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
+import HlsVideo from "@/components/media/HlsVideo";
 
 const NEON = "#B7FF18";
 const BG = "#0B1319";
@@ -291,6 +292,7 @@ export default function IndieGameDashboard() {
       const fd = new FormData();
       fd.append("image", file);
       fd.append("field", field);
+      if (selectedGameId) fd.append("gameId", String(selectedGameId));
       const res = await fetch("/api/indie/upload/image", { method: "POST", body: fd, credentials: "include" });
       if (!res.ok) throw new Error("Upload failed");
       return res.json();
@@ -302,6 +304,24 @@ export default function IndieGameDashboard() {
     },
     onError: () => toast({ title: "Upload failed", variant: "destructive" }),
   });
+
+  const uploadTrailer = useMutation({
+    mutationFn: async (file: File) => {
+      const fd = new FormData();
+      fd.append("video", file);
+      if (selectedGameId) fd.append("gameId", String(selectedGameId));
+      const res = await fetch("/api/indie/upload/trailer", { method: "POST", body: fd, credentials: "include" });
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      set("trailerUrl", data.url);
+      qc.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+      toast({ title: "Trailer uploaded!" });
+    },
+    onError: () => toast({ title: "Upload failed", variant: "destructive" }),
+  });
+  const trailerFileRef = useRef<HTMLInputElement>(null);
 
   const uploadScreenshot = useMutation({
     mutationFn: async (file: File) => {
@@ -974,8 +994,26 @@ export default function IndieGameDashboard() {
             </SectionCard>
 
             <SectionCard title="Trailer / Video" icon={Film}>
-              <p className="text-xs text-white/40 mb-3">Paste a direct MP4 URL or a YouTube/Vimeo embed URL. Shown prominently on your studio profile.</p>
-              <FieldRow label="Trailer URL">
+              <p className="text-xs text-white/40 mb-3">Upload a trailer video, or paste a direct MP4 URL or a YouTube/Vimeo embed URL. Shown prominently on your studio profile.</p>
+              <div className="mb-3">
+                <input
+                  ref={trailerFileRef}
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadTrailer.mutate(f); }}
+                />
+                <button
+                  type="button"
+                  onClick={() => trailerFileRef.current?.click()}
+                  disabled={uploadTrailer.isPending}
+                  className="w-full rounded-lg p-4 flex items-center justify-center gap-2 border border-dashed border-white/15 text-white/60 hover:text-white hover:border-white/30 transition-colors disabled:opacity-50"
+                >
+                  {uploadTrailer.isPending ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                  <span className="text-xs font-semibold">{uploadTrailer.isPending ? "Uploading…" : "Upload a trailer video"}</span>
+                </button>
+              </div>
+              <FieldRow label="Or paste a URL">
                 <div className="flex gap-2">
                   <Input value={form.trailerUrl ?? ""} onChange={e => set("trailerUrl", e.target.value)}
                     placeholder="https://youtube.com/watch?v=… or direct .mp4 URL"
@@ -986,7 +1024,7 @@ export default function IndieGameDashboard() {
               </FieldRow>
               {form.trailerUrl && (
                 <div className="mt-3 aspect-video rounded-lg overflow-hidden bg-black/40">
-                  <video src={form.trailerUrl} controls className="w-full h-full" style={{ display: form.trailerUrl.includes("youtube") || form.trailerUrl.includes("vimeo") ? "none" : "block" }} />
+                  <HlsVideo src={form.trailerUrl} controls className="w-full h-full" style={{ display: form.trailerUrl.includes("youtube") || form.trailerUrl.includes("vimeo") ? "none" : "block" }} />
                   {(form.trailerUrl.includes("youtube") || form.trailerUrl.includes("vimeo")) && (
                     <div className="flex items-center justify-center h-full text-white/40 text-sm gap-2">
                       <Film size={20} />

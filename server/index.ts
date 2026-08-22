@@ -526,6 +526,21 @@ app.use((req, res, next) => {
         setTimeout(tick, 30 * 1000);
         setInterval(tick, SCHEDULE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule scheduled-posts worker:', err));
+
+      // Safety net for clips left stuck in "processing" — normally
+      // finishClipProcessing runs immediately in-process right after upload
+      // and this never finds anything; it only matters if the server
+      // restarted mid-job. Grace period (10 min, in the worker itself) keeps
+      // this from racing a legitimately still-running in-process attempt.
+      import('./clip-processing-worker').then(({ reconcileStuckClipProcessing }) => {
+        const RECONCILE_INTERVAL_MS = 5 * 60 * 1000;
+        const tick = () => {
+          reconcileStuckClipProcessing()
+            .catch((err) => console.error('clip-processing-reconcile failed:', err));
+        };
+        setTimeout(tick, 2 * 60 * 1000);
+        setInterval(tick, RECONCILE_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule clip-processing reconciler:', err));
     });
 
     // Reserved VM deploys stop the old process before the new one boots —
