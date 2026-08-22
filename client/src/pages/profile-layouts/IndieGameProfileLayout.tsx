@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation, Link } from 'wouter';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { apiRequest, getQueryFn, queryClient } from '@/lib/queryClient';
 import { UserWithStats, ClipWithUser, Screenshot, GameBounty, IndieGameProfile } from '@shared/schema';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -116,6 +116,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
   // one entry for indie devs with multiple games (migration 0020).
   const { data: gamesListData } = useQuery<{ games: { id: number; gameName: string | null; headerImageUrl: string | null; capsuleImageUrl: string | null; isPrimary: boolean }[] }>({
     queryKey: [`/api/games/indie/${profile.username}/list`],
+    queryFn: getQueryFn({ on401: 'throw' }),
     retry: false,
   });
   const gameList = gamesListData?.games ?? [];
@@ -124,6 +125,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
     queryKey: selectedGameId
       ? [`/api/games/indie/${profile.username}`, { gameId: selectedGameId }]
       : [`/api/games/indie/${profile.username}`],
+    queryFn: getQueryFn({ on401: 'throw' }),
     retry: false,
   });
   const ig = (indieGameData?.profile ?? null) as IndieGameProfile | null;
@@ -269,10 +271,10 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
             <img
               src={igHeaderImageUrl}
               alt=""
-              className="w-full h-full object-cover object-center opacity-20"
-              style={{ filter: 'blur(2px) saturate(1.4)', transform: 'scale(1.05)' }}
+              className="w-full h-full object-cover object-center opacity-55 transition-opacity duration-300"
+              style={{ filter: 'blur(1px) saturate(1.3)', transform: 'scale(1.04)' }}
             />
-            <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(11,19,25,0.85) 0%, rgba(26,11,48,0.80) 50%, rgba(13,31,45,0.85) 100%)' }} />
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(11,19,25,0.68) 0%, rgba(26,11,48,0.64) 50%, rgba(13,31,45,0.70) 100%)' }} />
           </div>
         )}
         {!igHeaderImageUrl && (
@@ -388,6 +390,57 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
         )}
 
         <div className="relative z-20 max-w-5xl w-full mx-auto flex flex-col items-center text-center">
+          {gameList.length > 1 && (
+            <div
+              className="mb-6 max-w-full rounded-2xl border border-white/15 bg-white/[0.08] p-1.5 shadow-[0_12px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl"
+              role="group"
+              aria-label="Choose a game"
+            >
+              <div className="flex max-w-full items-center gap-1 overflow-x-auto">
+                <span className="flex shrink-0 items-center gap-1.5 px-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/45">
+                  <Gamepad2 size={13} />
+                  Games
+                </span>
+                {gameList.map((game) => {
+                  const activeGameId = selectedGameId ?? gameList.find((item) => item.isPrimary)?.id ?? gameList[0]?.id;
+                  const isActive = activeGameId === game.id;
+                  const artwork = game.capsuleImageUrl || game.headerImageUrl;
+                  return (
+                    <button
+                      key={game.id}
+                      type="button"
+                      onClick={() => {
+                        if (game.id === activeGameId) return;
+                        setSelectedGameId(game.id);
+                        setActiveTab('OVERVIEW');
+                      }}
+                      aria-pressed={isActive}
+                      className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold transition-all duration-200 ${
+                        isActive
+                          ? 'bg-white/15 text-white shadow-[0_4px_18px_rgba(0,0,0,0.25)]'
+                          : 'text-white/55 hover:bg-white/[0.08] hover:text-white/85'
+                      }`}
+                    >
+                      {artwork ? (
+                        <img
+                          src={artwork}
+                          alt=""
+                          className="h-7 w-10 rounded-md object-cover ring-1 ring-white/15"
+                        />
+                      ) : (
+                        <span className="flex h-7 w-10 items-center justify-center rounded-md bg-black/25 ring-1 ring-white/10">
+                          <Gamepad2 size={14} className="text-white/45" />
+                        </span>
+                      )}
+                      <span className="max-w-[9rem] truncate">{game.gameName?.trim() || 'Untitled game'}</span>
+                      {isActive && <ChevronDown size={13} className="rotate-180 text-primary" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {profile.avatarUrl && (
             <img
               src={profile.avatarUrl}
@@ -397,9 +450,9 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
             />
           )}
 
-          {genreTags.length > 0 && (
+          {gameGenreTags.length > 0 && (
             <div className="flex gap-3 mb-6 flex-wrap justify-center">
-              {genreTags.map((tag) => (
+              {gameGenreTags.map((tag) => (
                 <span
                   key={tag}
                   className="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full"
@@ -453,12 +506,12 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
           ) : (
             <>
               <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-3 text-transparent bg-clip-text bg-gradient-to-br from-white to-gray-400 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-                {profile.displayName}
+                {selectedGameName}
               </h1>
               <p className="text-white/50 mb-8">@{profile.username}</p>
 
-              {profile.bio && (
-                <p className="max-w-2xl text-white/70 mb-8">{profile.bio}</p>
+              {(igDescription || profile.bio) && (
+                <p className="max-w-2xl text-white/70 mb-8">{igDescription || profile.bio}</p>
               )}
             </>
           )}
@@ -536,35 +589,6 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
           ))}
         </div>
       </nav>
-
-      {gameList.length > 1 && (
-        <div className="border-b border-[var(--gf-border)] bg-[var(--gf-surface-1)]/60 px-6">
-          <div className="max-w-6xl mx-auto flex items-center gap-2 overflow-x-auto py-3">
-            <span className="text-xs font-semibold uppercase tracking-widest text-white/40 mr-1 whitespace-nowrap">
-              Games
-            </span>
-            {gameList.map((g) => {
-              const isActive = (selectedGameId ?? gameList.find(x => x.isPrimary)?.id ?? gameList[0]?.id) === g.id;
-              return (
-                <button
-                  key={g.id}
-                  type="button"
-                  onClick={() => setSelectedGameId(g.id)}
-                  title={g.gameName ?? `Game ${g.id}`}
-                  className="rounded-full border px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors"
-                  style={{
-                    borderColor: isActive ? brand.accent : 'rgba(255,255,255,0.12)',
-                    background: isActive ? 'rgba(183,255,24,0.10)' : 'transparent',
-                    color: isActive ? '#fff' : 'rgba(255,255,255,0.55)',
-                  }}
-                >
-                  {g.gameName?.trim() || 'Untitled game'}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {activeTab === 'OVERVIEW' && (
         <section className="py-16 px-6 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10">

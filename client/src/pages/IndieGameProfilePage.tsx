@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
 import { UserWithStats } from "@shared/schema";
 import IndieGameProfileLayout from "@/pages/profile-layouts/IndieGameProfileLayout";
+import { getQueryFn } from "@/lib/queryClient";
 
 export default function IndieGameProfilePage() {
   const [, params] = useRoute("/studio/:username");
@@ -13,6 +14,7 @@ export default function IndieGameProfilePage() {
 
   const { data: profile, isLoading, error } = useQuery<UserWithStats>({
     queryKey: [`/api/users/${username}`],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!username,
   });
 
