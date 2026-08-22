@@ -272,7 +272,7 @@ export default function InvitePage() {
               loop
               muted
               playsInline
-              className="relative z-10 h-[480px] sm:h-[560px] lg:h-[640px] w-auto max-w-full object-contain"
+              className="relative z-10 flex-shrink-0 h-[480px] sm:h-[560px] lg:h-[640px] w-auto max-w-full lg:w-[360px] lg:max-w-none object-contain"
               style={{
                 display: "block",
                 maskImage: "linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)",
