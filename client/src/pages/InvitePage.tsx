@@ -259,6 +259,24 @@ export default function InvitePage() {
                 WebkitMaskComposite: "source-in",
               }}
             />
+            <div className="pointer-events-none absolute inset-0 z-20">
+              <div
+                className="absolute inset-x-0 top-0 h-24"
+                style={{ background: `linear-gradient(to bottom, ${BG} 0%, rgba(8,14,23,0.82) 42%, transparent 100%)` }}
+              />
+              <div
+                className="absolute inset-x-0 bottom-0 h-24"
+                style={{ background: `linear-gradient(to top, ${BG} 0%, rgba(8,14,23,0.82) 42%, transparent 100%)` }}
+              />
+              <div
+                className="absolute inset-y-0 left-0 w-20"
+                style={{ background: `linear-gradient(to right, ${BG} 0%, rgba(8,14,23,0.72) 42%, transparent 100%)` }}
+              />
+              <div
+                className="absolute inset-y-0 right-0 w-24"
+                style={{ background: `linear-gradient(to left, ${BG} 0%, rgba(8,14,23,0.78) 42%, transparent 100%)` }}
+              />
+            </div>
           </div>
         </div>
       </section>
