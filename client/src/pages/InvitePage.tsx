@@ -1,5 +1,4 @@
 import { useState, useRef } from "react";
-import { useLocation } from "wouter";
 import {
   Upload,
   Tv2,
@@ -84,7 +83,7 @@ function BenefitCard({ icon, title, text }: { icon: React.ReactNode; title: stri
 
 
 function UsernameChecker() {
-  const [, setLocation] = useLocation();
+  const { openModal } = useAuthModal();
   const [value, setValue] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "available" | "taken">("idle");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -111,8 +110,7 @@ function UsernameChecker() {
   };
 
   const handleClaim = () => {
-    const target = value.trim() ? `/register?username=${encodeURIComponent(value.trim())}` : "/register";
-    setLocation(target);
+    openModal("register", value.trim());
   };
 
   return (

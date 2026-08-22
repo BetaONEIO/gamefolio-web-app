@@ -90,9 +90,10 @@ function InlineSelect({ value, onChange, options, className }: {
 
 interface RegisterFormProps {
   onSuccess: () => void;
+  initialUsername?: string;
 }
 
-export default function RegisterForm({ onSuccess }: RegisterFormProps) {
+export default function RegisterForm({ onSuccess, initialUsername = "" }: RegisterFormProps) {
   const initialReferralCode = (() => {
     try {
       return new URLSearchParams(window.location.search).get('ref') || '';
@@ -102,7 +103,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   })();
 
   const [formData, setFormData] = useState({
-    username: "",
+    username: initialUsername,
     email: "",
     password: "",
     confirmPassword: "",

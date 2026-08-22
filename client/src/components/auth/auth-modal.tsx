@@ -13,12 +13,13 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultTab?: "login" | "register";
+  initialUsername?: string;
 }
 
 const CLOSE_MS = 550;
 const DISMISS_THRESHOLD = 80;
 
-export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, defaultTab = "login", initialUsername = "" }: AuthModalProps) {
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { user, isLoading } = useAuth();
@@ -270,7 +271,11 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
 
             {!isDeveloperSubdomain && (
               <TabsContent value="register" forceMount className={activeTab === "register" ? "block" : "hidden"}>
-                <RegisterForm onSuccess={() => setActiveTab("login")} />
+                <RegisterForm
+                  key={initialUsername}
+                  initialUsername={initialUsername}
+                  onSuccess={() => setActiveTab("login")}
+                />
               </TabsContent>
             )}
           </Tabs>

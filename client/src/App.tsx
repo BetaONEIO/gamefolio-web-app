@@ -205,7 +205,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   const isMobile = useMobile();
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
-  const { isOpen, closeModal, defaultTab } = useAuthModal();
+  const { isOpen, closeModal, defaultTab, initialUsername } = useAuthModal();
   const mainScrollRef = React.useRef<HTMLElement>(null);
 
   // Version checking for cache busting
@@ -400,6 +400,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
             isOpen={isOpen}
             onClose={closeModal}
             defaultTab={defaultTab}
+            initialUsername={initialUsername}
           />
         )}
       </>
@@ -491,6 +492,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
         isOpen={isOpen} 
         onClose={closeModal} 
         defaultTab={defaultTab} 
+        initialUsername={initialUsername}
       />
     </div>
   );

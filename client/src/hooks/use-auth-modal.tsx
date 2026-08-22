@@ -2,9 +2,10 @@ import { createContext, useContext, useState, ReactNode } from "react";
 
 interface AuthModalContextType {
   isOpen: boolean;
-  openModal: (defaultTab?: "login" | "register") => void;
+  openModal: (defaultTab?: "login" | "register", initialUsername?: string) => void;
   closeModal: () => void;
   defaultTab: "login" | "register";
+  initialUsername: string;
 }
 
 const AuthModalContext = createContext<AuthModalContextType | undefined>(undefined);
@@ -12,9 +13,11 @@ const AuthModalContext = createContext<AuthModalContextType | undefined>(undefin
 export function AuthModalProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [defaultTab, setDefaultTab] = useState<"login" | "register">("login");
+  const [initialUsername, setInitialUsername] = useState("");
 
-  const openModal = (tab: "login" | "register" = "login") => {
+  const openModal = (tab: "login" | "register" = "login", username = "") => {
     setDefaultTab(tab);
+    setInitialUsername(username.trim());
     setIsOpen(true);
   };
 
@@ -23,7 +26,7 @@ export function AuthModalProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthModalContext.Provider value={{ isOpen, openModal, closeModal, defaultTab }}>
+    <AuthModalContext.Provider value={{ isOpen, openModal, closeModal, defaultTab, initialUsername }}>
       {children}
     </AuthModalContext.Provider>
   );
