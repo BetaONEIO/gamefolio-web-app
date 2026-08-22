@@ -105,7 +105,7 @@ export default function LatestContentSlider() {
 
 
   useEffect(() => {
-    if (!current?.videoUrl) return;
+    if (!signedVideoUrl) return;
     const outer = setTimeout(() => {
       setPlaying(true);
       const inner = setTimeout(() => {
@@ -114,7 +114,7 @@ export default function LatestContentSlider() {
       return () => clearTimeout(inner);
     }, 150);
     return () => clearTimeout(outer);
-  }, [current?.id]);
+  }, [current?.id, signedVideoUrl]);
 
   const handlePlayClick = () => {
     if (!playing) {
@@ -240,7 +240,16 @@ export default function LatestContentSlider() {
                   const v = e.currentTarget;
                   if (v.duration) setProgress((v.currentTime / v.duration) * 100);
                 }}
-                onEnded={() => { setProgress(0); goNext(); }} />
+                onCanPlay={(e) => {
+                  e.currentTarget.muted = muted;
+                  e.currentTarget.play().catch(() => setPlaying(false));
+                }}
+                onEnded={() => { setProgress(0); goNext(); }}
+                onError={() => {
+                  setPlaying(false);
+                  setProgress(0);
+                  setTimeout(goNext, 500);
+                }} />
             )}
 
             {/* Play overlay */}
