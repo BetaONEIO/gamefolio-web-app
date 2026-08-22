@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { useLazyVideo } from "@/hooks/use-lazy-video";
 import {
   Upload,
   Tv2,
@@ -9,14 +8,14 @@ import {
   CheckCircle2,
   ArrowRight,
   Zap,
-  Sparkles,
   AtSign,
   Loader2,
   Check,
   X,
 } from "lucide-react";
 import { SiTwitch, SiKick } from "react-icons/si";
-import phoneGamefolioVideo from "@assets/phone-gamefolio.mp4";
+import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
+import phoneGamefolioPoster from "@assets/phone-gamefolio-poster.jpg";
 
 const PRIMARY = "#b5f23d";
 const PRIMARY_DIM = "rgba(181,242,61,0.12)";
@@ -166,7 +165,6 @@ function UsernameChecker() {
 
 export default function InvitePage() {
   const [, setLocation] = useLocation();
-  const promoVideo = useLazyVideo();
 
   return (
     <div className="min-h-screen" style={{ background: BG, color: "white", fontFamily: "inherit" }}>
@@ -231,24 +229,19 @@ export default function InvitePage() {
             </p>
           </div>
 
-          <div className="relative w-full flex justify-center lg:justify-end">
+          <div className="relative w-full flex justify-center">
             <div className="absolute left-1/2 top-1/2 z-0 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#B7FF1A]/10 blur-3xl" />
-            <div className="absolute left-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-[#B7FF1A]/40 bg-[#0B1218]/80 shadow-[0_0_18px_rgba(183,255,26,0.35)]">
-              <Sparkles className="h-5 w-5 text-[#B7FF1A]" />
-            </div>
             <video
-              ref={promoVideo.ref}
-              src={phoneGamefolioVideo}
-              preload="none"
+              src="/attached_assets/phone-gamefolio-cropped.mp4"
+              poster={phoneGamefolioPoster}
+              autoPlay
+              preload="auto"
               loop
               muted
               playsInline
-              className="relative z-10 w-full max-w-[280px] sm:max-w-[320px] lg:max-w-[340px] h-auto object-contain"
+              className="relative z-10 h-[480px] sm:h-[560px] lg:h-[620px] w-auto max-w-full object-contain"
               style={{
-                opacity: promoVideo.visible ? 1 : 0,
-                filter: promoVideo.isPlaying ? "blur(0px) brightness(1)" : "blur(6px) brightness(0.65)",
                 mixBlendMode: "screen",
-                transition: "opacity 700ms, filter 700ms",
               }}
             />
           </div>
