@@ -7543,9 +7543,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get actual clips from database for all users including demo
       let clips = await storage.getClipsByUserId(user.id);
 
-      // For non-owners, hide clips associated with unapproved custom games
+      // For non-owners, hide clips associated with unapproved custom games,
+      // plus anything not fully processed yet (or that failed processing) —
+      // only the uploader sees the "processing"/"failed" state on their own
+      // profile; other visitors just won't see it until it's ready.
       if (!isOwnProfile) {
-        clips = clips.filter((c) => !c.game || c.game.isApproved !== false);
+        clips = clips.filter((c) => (!c.game || c.game.isApproved !== false) && c.status === 'ready');
       }
 
       // For demo user, also include the demo clips if no real clips exist

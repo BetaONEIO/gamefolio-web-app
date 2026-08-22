@@ -147,6 +147,9 @@ export interface IStorage {
   getClipByShareCode(shareCode: string): Promise<Clip | null>;
   createClip(clipData: InsertClip): Promise<Clip>;
   updateClip(id: number, clip: Partial<Clip>): Promise<Clip | null>;
+  // Rows stuck in background video processing (status "processing", not
+  // touched since `before`) for the periodic reconciler to retry.
+  getStuckProcessingClips(before: Date, limit?: number): Promise<Clip[]>;
   updateClipDuration(id: number, duration: number): Promise<boolean>;
   deleteClip(id: number): Promise<boolean>;
   incrementClipViews(id: number): Promise<void>;

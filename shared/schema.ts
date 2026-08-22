@@ -233,6 +233,15 @@ export const clips = pgTable("clips", {
   // Spam/multi-account detection signals — captured server-side at upload time.
   uploadIp: text("upload_ip"),
   uploadDeviceId: text("upload_device_id"),
+  // Background processing state. A clip row is created immediately after the
+  // raw upload finishes (status "processing", videoUrl still pointing at the
+  // unprocessed raw file) rather than waiting for ffmpeg trim/transcode to
+  // finish, so the upload UI can show 100% right away and the profile page
+  // can render a thumbnail + processing badge instead of blocking on it.
+  status: text("status").default("ready").notNull(), // "processing" | "ready" | "failed"
+  processingError: text("processing_error"),
+  rawUploadPath: text("raw_upload_path"),
+  processingAttempts: integer("processing_attempts").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

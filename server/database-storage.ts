@@ -883,6 +883,15 @@ export class DatabaseStorage implements IStorage {
     return updatedClip || null;
   }
 
+  async getStuckProcessingClips(before: Date, limit: number = 20): Promise<Clip[]> {
+    return db
+      .select()
+      .from(clips)
+      .where(and(eq(clips.status, 'processing'), lt(clips.updatedAt, before)))
+      .orderBy(asc(clips.updatedAt))
+      .limit(limit);
+  }
+
   async updateClipDuration(id: number, duration: number): Promise<boolean> {
     try {
       await db
@@ -1220,6 +1229,7 @@ export class DatabaseStorage implements IStorage {
         and(
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'clip'),
+          eq(clips.status, 'ready'),
           gameId ? eq(clips.gameId, gameId) : undefined,
           // Public accounts only. This used to also include the requester's
           // own content and any private accounts they follow, but that made
@@ -1415,6 +1425,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(clips.videoType, 'reel'),
+          eq(clips.status, 'ready'),
           // Public accounts only — see getTrendingClips for why this doesn't
           // vary per requester anymore (this result is now cached and
           // shared across users, same fix).
@@ -2215,6 +2226,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(clips.userId, users.id))
       .where(and(
         eq(clips.videoType, 'clip'),
+        eq(clips.status, 'ready'),
         since ? gt(clips.createdAt, since) : undefined,
         gameId ? eq(clips.gameId, gameId) : undefined,
         // Public accounts only — see getTrendingClips for why this doesn't
@@ -2260,6 +2272,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(games, eq(clips.gameId, games.id))
       .where(and(
         eq(clips.videoType, 'clip'),
+        eq(clips.status, 'ready'),
         sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`,
         sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
       ))
@@ -3180,6 +3193,7 @@ export class DatabaseStorage implements IStorage {
         and(
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'clip'),
+          eq(clips.status, 'ready'),
           gameId ? eq(clips.gameId, gameId) : undefined,
           sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
@@ -3237,6 +3251,7 @@ export class DatabaseStorage implements IStorage {
         and(
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'clip'),
+          eq(clips.status, 'ready'),
           gameId ? eq(clips.gameId, gameId) : undefined,
           sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )

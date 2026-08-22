@@ -1372,7 +1372,13 @@ const UploadPage = () => {
                     extra: diagnostics,
                   });
                 }
-                setUploadProgress(85);
+                // The raw bytes are fully up — everything left (limits/game
+                // resolution, then the actual ffmpeg trim/transcode/thumbnail
+                // work) now runs server-side in the background rather than
+                // blocking this request, so there's nothing left for the
+                // user to wait on. Show 100% now rather than freezing at an
+                // intermediate value while the finalize call below completes.
+                setUploadProgress(100);
                 resolveUpload(result);
               },
             });
@@ -1408,16 +1414,14 @@ const UploadPage = () => {
             fullProcessData: processData
           });
           
-          // process-video isn't just a network call — server-side it
-          // synchronously downloads the uploaded video, runs it through
-          // ffmpeg (trim/re-encode/thumbnail), and re-uploads the result,
-          // all within this one request (see clip-processing.ts). For a
-          // ~90MB clip that can legitimately take minutes, which is why the
-          // "stuck at 85%" screen recording eventually completed on its own.
-          // A short client timeout was the wrong read on that — it doesn't
-          // hang, it's just slow. This one is a generous last-resort safety
-          // net against a *true* stall (e.g. CapacitorHttp's own bridge, if
-          // still in play), not a normal-latency budget.
+          // process-video creates the clip row and kicks off ffmpeg
+          // trim/re-encode/thumbnail work in the background (see
+          // clip-processing.ts) — the request itself only does fast
+          // validation/limit checks before responding, so this should
+          // resolve in a couple of seconds. The generous timeout below is
+          // just a last-resort safety net against a *true* stall (e.g.
+          // CapacitorHttp's own bridge, if still in play), not a
+          // normal-latency budget.
           class ProcessVideoTimeoutError extends Error {}
           const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
             new Promise<T>((resolve, reject) => {
@@ -3547,7 +3551,7 @@ const UploadPage = () => {
               </div>
 
               <span className="text-[#B7FF1A] text-xs font-bold tracking-[5px] uppercase">
-                {uploadProgress < 100 ? "Upload in progress" : "Processing"}
+                {uploadProgress < 100 ? "Upload in progress" : "Upload complete"}
               </span>
 
               <div className="w-full space-y-3 px-2 sm:px-4">
@@ -3559,19 +3563,6 @@ const UploadPage = () => {
                       boxShadow: '0 0 20px rgba(183, 255, 26, 0.6)',
                     }}
                   />
-                  {/* The 85→100 stretch is a single long-running server request (ffmpeg
-                      re-encode + thumbnail + re-upload) with no intermediate progress to
-                      report, so the bar itself sits frozen at 85% for a while. Without some
-                      motion there it reads as hung rather than working — this shimmer sweeps
-                      across just that segment so it still looks alive. */}
-                  {uploadProgress >= 85 && uploadProgress < 100 && (
-                    <div
-                      className="absolute inset-y-0 left-0 w-1/3 animate-[upload-processing-shimmer_1.4s_ease-in-out_infinite]"
-                      style={{
-                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
-                      }}
-                    />
-                  )}
                 </div>
                 <div className="flex justify-between text-[10px] font-bold tracking-[1px] uppercase text-[#4a6a7a]">
                   <span className={uploadProgress >= 25 ? "text-[#B7FF1A]/60" : ""}>25%</span>
@@ -3583,21 +3574,19 @@ const UploadPage = () => {
 
               <div className="text-center space-y-1.5">
                 <h3 className="text-white font-bold text-lg uppercase tracking-tight">
-                  {uploadProgress < 85 ? "Uploading your content..." : uploadProgress < 100 ? "Processing..." : "Complete!"}
+                  {uploadProgress < 100 ? "Uploading your content..." : "Complete!"}
                 </h3>
                 <p className="text-[#8fa8b8] text-sm">
-                  {uploadProgress < 85
+                  {uploadProgress < 100
                     ? `Uploading ${file?.name || 'video'} (${(file?.size ? file.size / (1024 * 1024) : 0).toFixed(1)} MB)`
-                    : uploadProgress < 100
-                      ? "Encoding and generating a thumbnail — large clips can take a couple of minutes here."
-                      : "All done!"}
+                    : "Finishing up in the background — it'll appear on your profile as \"processing\" until it's ready."}
                 </p>
               </div>
 
               <div className="flex items-center gap-3 bg-[#B7FF1A]/5 border border-[#B7FF1A]/10 rounded-full px-6 py-2.5">
                 <div className="w-2 h-2 bg-[#B7FF1A] rounded-full" style={{ boxShadow: '0 0 10px #B7FF1A' }} />
                 <span className="text-[#B7FF1A] text-[10px] font-bold tracking-[2px] uppercase">
-                  {uploadProgress < 85
+                  {uploadProgress < 100
                     ? "Please keep this tab open while uploading"
                     : "You can safely leave this page now"}
                 </span>
@@ -3605,7 +3594,7 @@ const UploadPage = () => {
               </div>
             </div>
 
-            {uploadProgress >= 85 && uploadProgress < 100 ? (
+            {uploadProgress >= 100 ? (
               <div className="flex items-center justify-center px-8 py-6 bg-[#0b1820]/80 backdrop-blur-xl border-t border-[#1e3a4a]/10">
                 <button
                   type="button"
