@@ -3975,12 +3975,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const weekStart = LeaderboardService.getWeekStart();
       const weekEnd = LeaderboardService.getWeekEnd();
 
-      // Query real creator XP (user_xp_history) for this week.
-      // LEFT JOIN from users so every member appears even at 0 XP.
+      // Weekly XP is split across the modern XP ledger and the legacy points
+      // ledger. Aggregate them independently before joining so a user with
+      // events in both tables is not multiplied by a cross join.
       const rows = await db.execute(sql`
         SELECT
           u.id                                    AS "userId",
-          COALESCE(SUM(xh.xp_amount), 0)         AS "weekXP",
+          COALESCE(xh.xp, 0) + COALESCE(ph.points, 0) AS "weekXP",
           u.username,
           u.display_name                          AS "displayName",
           u.avatar_url                            AS "avatarUrl",
@@ -3997,19 +3998,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           u.nft_profile_image_url                 AS "nftProfileImageUrl",
           u.active_profile_pic_type               AS "activeProfilePicType"
         FROM users u
-        LEFT JOIN user_xp_history xh
-          ON xh.user_id = u.id
-          AND xh.created_at >= ${weekStart.toISOString()}
-          AND xh.created_at < ${weekEnd.toISOString()}
-          AND xh.xp_amount > 0
+        LEFT JOIN (
+          SELECT user_id, SUM(xp_amount) AS xp
+          FROM user_xp_history
+          WHERE created_at >= ${weekStart.toISOString()}
+            AND created_at < ${weekEnd.toISOString()}
+            AND xp_amount > 0
+          GROUP BY user_id
+        ) xh ON xh.user_id = u.id
+        LEFT JOIN (
+          SELECT user_id, SUM(points) AS points
+          FROM user_points_history
+          WHERE created_at >= ${weekStart.toISOString()}
+            AND created_at < ${weekEnd.toISOString()}
+            AND points > 0
+          GROUP BY user_id
+        ) ph ON ph.user_id = u.id
         WHERE u.role NOT IN ('admin', 'moderator', 'system')
           AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
           AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
-        GROUP BY u.id, u.username, u.display_name, u.avatar_url,
-                 u.banner_url, u.hide_banner, u.accent_color, u.level, u.background_color,
-                 u.primary_color, u.profile_background_gradient, u.profile_background_gradient_css,
-                 u.profile_background_image_url, u.nft_profile_token_id, u.nft_profile_image_url,
-                 u.active_profile_pic_type
+          AND (COALESCE(xh.xp, 0) + COALESCE(ph.points, 0)) > 0
         ORDER BY "weekXP" DESC, u.id ASC
         LIMIT ${limit}
       `);
