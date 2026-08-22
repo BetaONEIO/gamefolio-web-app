@@ -11703,6 +11703,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/indie/profile/upload-trailer — upload a trailer video for the
+  // GameProfileTab.tsx dashboard (mirrors POST /api/indie/upload/trailer,
+  // used by IndieGameDashboard.tsx — two separate dashboard implementations
+  // share the same underlying indie_game_profiles data).
+  app.post("/api/indie/profile/upload-trailer", indieTrailerUpload.single('video'), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file provided" });
+      const ext = (req.file.originalname.split('.').pop() || 'mp4').toLowerCase();
+      const fileName = `indie-trailer-${req.user.id}-${Date.now()}.${ext}`;
+      const { url: trailerUrl } = await supabaseStorage.uploadBuffer(req.file.buffer, fileName, req.file.mimetype, 'video', req.user.id);
+      const { indieGameProfiles } = await import("@shared/schema");
+      const uploadGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      let targetGameId = uploadGameId;
+      if (targetGameId) {
+        await db.update(indieGameProfiles).set({ trailerUrl, updatedAt: new Date() }).where(eq(indieGameProfiles.id, targetGameId));
+      } else {
+        const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, trailerUrl, isPrimary: true }).returning({ id: indieGameProfiles.id });
+        targetGameId = created?.id ?? null;
+      }
+      await _indieUpsertMeta(req.user.id, "trailerUrl", { isManualOverride: true, useImported: false, lastEditedAt: new Date() }, targetGameId);
+      res.json({ url: trailerUrl, field: "trailerUrl" });
+    } catch (err) {
+      console.error("Error uploading indie profile trailer:", err);
+      res.status(500).json({ message: "Upload failed" });
+    }
+  });
+
   // ─── Indie Game Profile API ──────────────────────────────────────────────────
 
   // Internal helpers for indie profile
