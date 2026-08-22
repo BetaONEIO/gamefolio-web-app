@@ -13,13 +13,12 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultTab?: "login" | "register";
-  initialUsername?: string;
 }
 
 const CLOSE_MS = 550;
 const DISMISS_THRESHOLD = 80;
 
-export default function AuthModal({ isOpen, onClose, defaultTab = "login", initialUsername = "" }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: AuthModalProps) {
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { user, isLoading } = useAuth();
@@ -92,8 +91,6 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login", initi
   const handleSuccess = () => triggerClose();
   const handleForgotPassword = () => setShowForgotPassword(true);
   const handleBackToLogin = () => setShowForgotPassword(false);
-  const showLoginTab = defaultTab !== "register";
-
   // ── Touch handlers ────────────────────────────────────────────────────────
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
@@ -235,21 +232,19 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login", initi
             className="w-full"
           >
             <TabsList
-              className={isDeveloperSubdomain || !showLoginTab ? "grid w-full grid-cols-1 p-1.5 rounded-xl" : "grid w-full grid-cols-2 gap-2 p-1.5 rounded-xl"}
+              className={isDeveloperSubdomain ? "grid w-full grid-cols-1 p-1.5 rounded-xl" : "grid w-full grid-cols-2 gap-2 p-1.5 rounded-xl"}
               style={{ background: '#0B1218', marginBottom: keyboardOpen ? '1rem' : '1.5rem' }}
             >
-              {showLoginTab && (
-                <TabsTrigger
-                  value="login"
-                  className="rounded-lg font-semibold transition-all duration-150 data-[state=active]:shadow-none"
-                  style={activeTab === "login"
-                    ? { backgroundColor: '#B7FF1A', color: '#000' }
-                    : { backgroundColor: '#0B1218', color: '#B8C0AE' }}
-                  data-testid="tab-login"
-                >
-                  {isDeveloperSubdomain ? "Developer Sign In" : "Login"}
-                </TabsTrigger>
-              )}
+              <TabsTrigger
+                value="login"
+                className="rounded-lg font-semibold transition-all duration-150 data-[state=active]:shadow-none"
+                style={activeTab === "login"
+                  ? { backgroundColor: '#B7FF1A', color: '#000' }
+                  : { backgroundColor: '#0B1218', color: '#B8C0AE' }}
+                data-testid="tab-login"
+              >
+                {isDeveloperSubdomain ? "Developer Sign In" : "Login"}
+              </TabsTrigger>
               {!isDeveloperSubdomain && (
                 <TabsTrigger
                   value="register"
@@ -274,11 +269,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login", initi
 
             {!isDeveloperSubdomain && (
               <TabsContent value="register" forceMount className={activeTab === "register" ? "block" : "hidden"}>
-                <RegisterForm
-                  key={initialUsername}
-                  initialUsername={initialUsername}
-                  onSuccess={() => setActiveTab("login")}
-                />
+                <RegisterForm onSuccess={() => setActiveTab("login")} />
               </TabsContent>
             )}
           </Tabs>

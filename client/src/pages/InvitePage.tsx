@@ -110,7 +110,7 @@ function UsernameChecker() {
   };
 
   const handleClaim = () => {
-    openModal("register", value.trim());
+    openModal("register");
   };
 
   return (
