@@ -52,7 +52,8 @@ export function isLightHex(hex: string): boolean {
 }
 
 export function getCardTheme(user: TrendingEntry['user']): { style: React.CSSProperties; isLight: boolean; hasCustomBg: boolean } {
-  const bg = (user.backgroundColor || '#0B1319').toLowerCase();
+  const rawBg = (user.backgroundColor || '').toLowerCase();
+  const bg = /^#[0-9a-f]{6}$/i.test(rawBg) ? rawBg : '#0b1319';
   const accent = (user.accentColor || '#B7FF1A').toLowerCase();
   const primary = user.primaryColor || '#071013';
   const isLight = isLightHex(bg);
@@ -73,6 +74,7 @@ export function getCardTheme(user: TrendingEntry['user']): { style: React.CSSPro
   if (user.profileBackgroundImageUrl) {
     return {
       style: {
+        backgroundColor: '#0B1319',
         backgroundImage: `url(${user.profileBackgroundImageUrl})`,
         backgroundSize: 'cover',
         backgroundPosition: '50% 30%',

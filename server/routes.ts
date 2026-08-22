@@ -3992,17 +3992,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
 
-      // Rolling 7-day window ending now — gives meaningful XP totals even mid-week
-      const now = new Date();
-      const weekEnd   = now;
-      const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      // Calendar week: Monday 00:00 through the next Monday 00:00.
+      // This must match the weekly award/cache key so XP resets on Mondays.
+      const weekStart = LeaderboardService.getWeekStart();
+      const weekEnd = LeaderboardService.getWeekEnd();
 
-      // Query real creator XP (user_xp_history) for this week.
-      // LEFT JOIN from users so every member appears even at 0 XP.
+      // Weekly XP is split across the modern XP ledger and the legacy points
+      // ledger. Aggregate them independently before joining so a user with
+      // events in both tables is not multiplied by a cross join.
       const rows = await db.execute(sql`
         SELECT
           u.id                                    AS "userId",
-          COALESCE(SUM(xh.xp_amount), 0)         AS "weekXP",
+          COALESCE(xh.xp, 0) + COALESCE(ph.points, 0) AS "weekXP",
           u.username,
           u.display_name                          AS "displayName",
           u.avatar_url                            AS "avatarUrl",
@@ -4019,18 +4020,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           u.nft_profile_image_url                 AS "nftProfileImageUrl",
           u.active_profile_pic_type               AS "activeProfilePicType"
         FROM users u
-        LEFT JOIN user_xp_history xh
-          ON xh.user_id = u.id
-          AND xh.created_at >= ${weekStart.toISOString()}
-          AND xh.created_at < ${weekEnd.toISOString()}
+        LEFT JOIN (
+          SELECT user_id, SUM(xp_amount) AS xp
+          FROM user_xp_history
+          WHERE created_at >= ${weekStart.toISOString()}
+            AND created_at < ${weekEnd.toISOString()}
+            AND xp_amount > 0
+          GROUP BY user_id
+        ) xh ON xh.user_id = u.id
+        LEFT JOIN (
+          SELECT user_id, SUM(points) AS points
+          FROM user_points_history
+          WHERE created_at >= ${weekStart.toISOString()}
+            AND created_at < ${weekEnd.toISOString()}
+            AND points > 0
+          GROUP BY user_id
+        ) ph ON ph.user_id = u.id
         WHERE u.role NOT IN ('admin', 'moderator', 'system')
           AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
           AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
-        GROUP BY u.id, u.username, u.display_name, u.avatar_url,
-                 u.banner_url, u.hide_banner, u.accent_color, u.level, u.background_color,
-                 u.primary_color, u.profile_background_gradient, u.profile_background_gradient_css,
-                 u.profile_background_image_url, u.nft_profile_token_id, u.nft_profile_image_url,
-                 u.active_profile_pic_type
         ORDER BY "weekXP" DESC, u.id ASC
         LIMIT ${limit}
       `);
@@ -4186,15 +4194,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           effectivePeriod = 'alltime';
         }
       } else if (period === 'week') {
-        // Last 7 days of XP
-        const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        // Monday-to-Monday XP window
+        const weekStart = LeaderboardService.getWeekStart(now).toISOString();
         leaderboardData = await fetchXpWindow(weekStart, limit);
-        // Fall back to last 30 days, then all-time if too sparse
-        if (leaderboardData.length < MIN_PODIUM) {
-          const monthStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
-          leaderboardData = await fetchXpWindow(monthStart, limit);
-          effectivePeriod = 'month';
-        }
+        // Keep the homepage populated when a new weekly window has not
+        // accumulated enough activity for a meaningful podium.
         if (leaderboardData.length < MIN_PODIUM) {
           leaderboardData = await fetchXpWindow(null, limit);
           effectivePeriod = 'alltime';

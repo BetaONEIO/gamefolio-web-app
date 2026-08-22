@@ -970,19 +970,11 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
     { key: "alltime", label: "All Time"    },
   ];
 
-  const MIN_PERIOD_ENTRIES = 3; // below this, fall back to previous period
-
   const POLL_MS = 30_000;
 
   const { data: weeklyData,    isLoading: wl,  dataUpdatedAt: wUpdated  } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard/weekly/current",  "chart"],
     queryFn: () => fetch("/api/leaderboard/weekly/current?limit=100").then(r => r.json()),
-    refetchInterval: POLL_MS,
-  });
-  const { data: prevWeekData,  isLoading: pwl } = useQuery<LeaderboardEntry[]>({
-    queryKey: ["/api/leaderboard/weekly/previous", "chart"],
-    queryFn: () => fetch("/api/leaderboard/weekly/previous?limit=100").then(r => r.json()),
-    enabled: !wl && Array.isArray(weeklyData) && weeklyData.length < MIN_PERIOD_ENTRIES,
     refetchInterval: POLL_MS,
   });
   const { data: monthlyData,   isLoading: ml,  dataUpdatedAt: mUpdated  } = useQuery<LeaderboardEntry[]>({
@@ -993,7 +985,7 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
   const { data: prevMonthData, isLoading: pml } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard/monthly/previous", "chart"],
     queryFn: () => fetch("/api/leaderboard/monthly/previous?limit=100").then(r => r.json()),
-    enabled: !ml && Array.isArray(monthlyData) && monthlyData.length < MIN_PERIOD_ENTRIES,
+    enabled: !ml && Array.isArray(monthlyData) && monthlyData.length < 3,
     refetchInterval: POLL_MS,
   });
   const { data: alltimeData,   isLoading: al,  dataUpdatedAt: aUpdated  } = useQuery<LeaderboardEntry[]>({
@@ -1025,19 +1017,17 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
   }, [lastUpdated]);
 
   const isLoading =
-    tab === "weekly"  ? (wl || (Array.isArray(weeklyData)  && weeklyData.length  < MIN_PERIOD_ENTRIES && pwl)) :
-    tab === "monthly" ? (ml || (Array.isArray(monthlyData) && monthlyData.length < MIN_PERIOD_ENTRIES && pml)) :
+    tab === "weekly"  ? wl :
+    tab === "monthly" ? (ml || (Array.isArray(monthlyData) && monthlyData.length < 3 && pml)) :
     tab === "season"  ? sl : al;
 
-  const weeklySparse  = !wl  && Array.isArray(weeklyData)  && weeklyData.length  < MIN_PERIOD_ENTRIES;
-  const monthlySparse = !ml  && Array.isArray(monthlyData) && monthlyData.length < MIN_PERIOD_ENTRIES;
+  const monthlySparse = !ml && Array.isArray(monthlyData) && monthlyData.length < 3;
 
-  const usingPrevWeek  = tab === "weekly"  && weeklySparse;
   const usingPrevMonth = tab === "monthly" && monthlySparse;
-  const usingFallback  = usingPrevWeek || usingPrevMonth;
+  const usingFallback  = usingPrevMonth;
 
   const entries: LeaderboardEntry[] =
-    tab === "weekly"  ? (weeklySparse  ? (Array.isArray(prevWeekData)  ? prevWeekData  : []) : (Array.isArray(weeklyData)  ? weeklyData  : [])) :
+    tab === "weekly"  ? (Array.isArray(weeklyData) ? weeklyData : []) :
     tab === "monthly" ? (monthlySparse ? (Array.isArray(prevMonthData) ? prevMonthData : []) : (Array.isArray(monthlyData) ? monthlyData : [])) :
     tab === "season"  ? (Array.isArray(seasonData)  ? seasonData  as LeaderboardEntry[] : []) :
                         (Array.isArray(alltimeData) ? alltimeData : []);
@@ -1085,7 +1075,7 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
           <span className="text-xs text-slate-500 mt-0.5 lb-mobile-subtitle">{tabSubtitle[tab]}</span>
           {usingFallback && (
             <span className="text-[10px] bg-[#B7FF1A]/10 text-[#B7FF1A]/70 border border-[#B7FF1A]/20 px-2 py-0.5 rounded-full">
-              {usingPrevWeek ? "showing last week" : "showing last month"}
+              showing last month
             </span>
           )}
         </div>

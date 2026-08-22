@@ -123,7 +123,12 @@ const FeaturedUsersSection = () => {
     if (!el || validEntries.length === 0) return;
 
     const setup = setTimeout(() => {
-      const oneCopyWidth = el.scrollWidth / 3;
+      const track = el.firstElementChild as HTMLElement | null;
+      const firstCard = track?.firstElementChild as HTMLElement | null;
+      const renderedCardWidth = firstCard?.getBoundingClientRect().width ?? 0;
+      const oneCopyWidth = renderedCardWidth > 0
+        ? renderedCardWidth * validEntries.length
+        : el.scrollWidth / 3;
       scrollPosition.current = oneCopyWidth;
       el.scrollLeft = scrollPosition.current;
 
@@ -132,7 +137,7 @@ const FeaturedUsersSection = () => {
           scrollPosition.current += SCROLL_SPEED;
           el.scrollLeft = scrollPosition.current;
 
-          const w = el.scrollWidth / 3;
+          const w = oneCopyWidth;
           if (scrollPosition.current >= w * 2) {
             scrollPosition.current -= w;
             el.scrollLeft = scrollPosition.current;
@@ -170,7 +175,12 @@ const FeaturedUsersSection = () => {
     if (!el) return;
     const dx = e.clientX - dragData.current.startX;
     scrollPosition.current = dragData.current.startScrollLeft - dx;
-    const w = el.scrollWidth / 3;
+    const track = el.firstElementChild as HTMLElement | null;
+    const firstCard = track?.firstElementChild as HTMLElement | null;
+    const renderedCardWidth = firstCard?.getBoundingClientRect().width ?? 0;
+    const w = renderedCardWidth > 0
+      ? renderedCardWidth * validEntries.length
+      : el.scrollWidth / 3;
     if (scrollPosition.current >= w * 2) {
       scrollPosition.current -= w;
       dragData.current.startScrollLeft -= w;
@@ -239,9 +249,9 @@ const FeaturedUsersSection = () => {
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: 'rgba(3,8,12,0.88)',
-              backdropFilter: 'blur(6px)',
-              WebkitBackdropFilter: 'blur(6px)',
+              background: 'rgba(14,16,25,0.84)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
             }}
           />
 
@@ -324,6 +334,17 @@ const FeaturedUsersSection = () => {
         className="hidden sm:block relative overflow-hidden rounded-2xl trending-bg-pattern"
         style={{ padding: '20px 0' }}
       >
+        {/* Navy veil keeps the lightning pattern atmospheric without competing with cards. */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'rgba(14,16,25,0.68)',
+            backdropFilter: 'blur(2px)',
+            WebkitBackdropFilter: 'blur(2px)',
+            zIndex: 1,
+          }}
+        />
+
         {/* Edge fade overlays */}
         <div className="absolute left-0 top-0 bottom-0 w-16 pointer-events-none"
           style={{ background: 'linear-gradient(to right, #0B1319, transparent)', zIndex: 10 }} />
