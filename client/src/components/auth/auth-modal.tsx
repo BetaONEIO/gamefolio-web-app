@@ -5,7 +5,6 @@ import RegisterForm from "@/components/auth/register-form";
 import ForgotPasswordForm from "@/components/auth/ForgotPasswordForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X } from "lucide-react";
-import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 
 const isDeveloperSubdomain = typeof window !== "undefined" && window.location.hostname === 'developer.gamefolio.com';
 
@@ -159,7 +158,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
       {/* Sheet */}
       <div
         ref={sheetRef}
-        className="relative w-full rounded-t-[20px] md:max-w-4xl md:rounded-2xl md:mb-8 md:flex"
+        className="relative w-full rounded-t-[20px] md:max-w-md md:rounded-2xl md:mb-8"
         style={{
           background: '#101923',
           transform: sheetTransform,
@@ -191,18 +190,8 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
           <X className="h-4 w-4" />
         </button>
 
-        {/* Full-bleed promo artwork beside the form on desktop. */}
-        <div className="hidden md:flex md:w-[44%] relative overflow-hidden rounded-l-2xl flex-col flex-shrink-0 p-0">
-          <div
-            role="img"
-            aria-label="Gamefolio gaming profile"
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${proHeroImage})` }}
-          />
-        </div>
-
         <div
-          className="flex-1 min-w-0 px-6 pb-8 text-white"
+          className="px-6 pb-8 text-white"
           style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}
         >
           {/* Logo — shrinks while the keyboard is open so the form fits above it */}
