@@ -91,6 +91,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
   const handleSuccess = () => triggerClose();
   const handleForgotPassword = () => setShowForgotPassword(true);
   const handleBackToLogin = () => setShowForgotPassword(false);
+
   // ── Touch handlers ────────────────────────────────────────────────────────
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
