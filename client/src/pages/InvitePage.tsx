@@ -20,9 +20,9 @@ import phoneGamefolioVideo from "@assets/phone-gamefolio.mp4";
 import phoneGamefolioPoster from "@assets/phone-gamefolio-poster.jpg";
 import phoneHeroVideo from "@assets/phone-hero.webm";
 
-const PRIMARY = "#b5f23d";
-const PRIMARY_DIM = "rgba(181,242,61,0.12)";
-const PRIMARY_GLOW = "rgba(181,242,61,0.25)";
+const PRIMARY = "#B9FF1A";
+const PRIMARY_DIM = "rgba(185,255,26,0.12)";
+const PRIMARY_GLOW = "rgba(185,255,26,0.25)";
 const BG = "#080e17";
 const CARD_BG = "#0d1520";
 const CARD_BORDER = "#1c2a3a";
@@ -299,11 +299,12 @@ export default function InvitePage() {
           <p className="text-gray-400 text-base max-w-lg mx-auto">Give your content another place to be discovered by gamers.</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <BenefitCard icon={<Tv2 className="h-5 w-5" />} title="Connect your stream" text="Connect Twitch or Kick and showcase when you're live." />
           <BenefitCard icon={<Eye className="h-5 w-5" />} title="Get free exposure" text="Give your stream another place to be discovered by gamers." />
           <BenefitCard icon={<User className="h-5 w-5" />} title="Build your Gamefolio" text="Bring your clips, reels, screenshots and gaming identity together." />
           <BenefitCard icon={<Upload className="h-5 w-5" />} title="Share your best moments" text="Upload your gaming highlights and give your content a life beyond the stream." />
+          <BenefitCard icon={<Eye className="h-5 w-5" />} title="Grow your audience" text="Give gamers another way to discover, follow and engage with you." />
         </div>
       </section>
 
