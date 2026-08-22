@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import PlatformConnections from '@/components/profile/PlatformConnections';
 import HlsVideo from '@/components/media/HlsVideo';
+import { getVideoEmbedUrl } from '@/lib/video-embed';
 import { SiSteam, SiEpicgames, SiItchdotio } from 'react-icons/si';
 import {
   Users,
@@ -44,16 +45,6 @@ const MessageDialog = React.lazy(() =>
 );
 
 const TABS = ['OVERVIEW', 'CLIPS', 'REELS', 'SCREENSHOTS', 'BOUNTIES'];
-
-function getVideoEmbedUrl(url: string): string | null {
-  const youtubeMatch = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
-  );
-  if (youtubeMatch) {
-    return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
-  }
-  return null;
-}
 
 type BountyWithMeta = GameBounty & { participantCount?: number; gameName?: string; gameImageUrl?: string };
 

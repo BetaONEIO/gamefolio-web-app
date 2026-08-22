@@ -14,6 +14,8 @@ import VideoClipGridItem from "@/components/clips/VideoClipGridItem";
 import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
 import MobileClipsViewerOverlay from "@/components/clips/MobileClipsViewerOverlay";
 import { openExternal } from "@/lib/platform";
+import { getVideoEmbedUrl } from "@/lib/video-embed";
+import HlsVideo from "@/components/media/HlsVideo";
 import { CreatorDashboard } from "@/components/indie-bounty/CreatorDashboard";
 import { DeveloperDashboard } from "@/components/indie-bounty/DeveloperDashboard";
 import {
@@ -1685,7 +1687,16 @@ const IndieGamePage = () => {
                     style={{ border: `1px solid ${CARD_BORDER}`, boxShadow: "0 0 40px rgba(0,0,0,0.3)" }}
                     onClick={() => setSelectedScreenshot({ id: 0, imageUrl: game.imageUrl || "https://placehold.co/1280x720/0B1218/333?text=Game+Artwork", title: `${game.name} Artwork` })}>
                     {meta.trailerUrl ? (
-                      <iframe src={meta.trailerUrl} className="w-full h-full" allowFullScreen title={`${game.name} Trailer`} />
+                      getVideoEmbedUrl(meta.trailerUrl) ? (
+                        <iframe src={getVideoEmbedUrl(meta.trailerUrl)!} className="w-full h-full" allowFullScreen title={`${game.name} Trailer`} />
+                      ) : (
+                        <HlsVideo
+                          src={meta.trailerUrl}
+                          controls
+                          className="w-full h-full object-cover"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      )
                     ) : (
                       <>
                         <img
