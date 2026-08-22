@@ -6756,23 +6756,48 @@ export class DatabaseStorage implements IStorage {
 
   // ─── Indie Game Profile Operations ────────────────────────────────────────────
 
-  async getIndieGameProfile(userId: number): Promise<IndieGameProfile | null> {
-    const rows = await db.select().from(indieGameProfiles).where(eq(indieGameProfiles.userId, userId));
+  // A user may own several games (migration 0020). Passing gameId selects one;
+  // omitting it means "the primary game", which is what every pre-multi-game
+  // caller wants. gameId is always constrained by userId so one developer can
+  // never read another's game by guessing an id.
+  async getIndieGameProfile(userId: number, gameId?: number | null): Promise<IndieGameProfile | null> {
+    if (gameId) {
+      const rows = await db.select().from(indieGameProfiles)
+        .where(and(eq(indieGameProfiles.id, gameId), eq(indieGameProfiles.userId, userId)));
+      return rows[0] ?? null;
+    }
+    const rows = await db.select().from(indieGameProfiles)
+      .where(eq(indieGameProfiles.userId, userId))
+      .orderBy(desc(indieGameProfiles.isPrimary), asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id))
+      .limit(1);
     return rows[0] ?? null;
   }
 
-  async upsertIndieGameProfile(userId: number, patch: Partial<InsertIndieGameProfile>): Promise<IndieGameProfile> {
-    const existing = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, userId));
-    if (existing.length > 0) {
-      const [updated] = await db.update(indieGameProfiles).set({ ...patch, updatedAt: new Date() }).where(eq(indieGameProfiles.userId, userId)).returning();
+  // NOTE: updates are keyed on the resolved row id, never on userId alone —
+  // a userId-scoped UPDATE would rewrite every game the developer owns.
+  async upsertIndieGameProfile(userId: number, patch: Partial<InsertIndieGameProfile>, gameId?: number | null): Promise<IndieGameProfile> {
+    const target = await this.getIndieGameProfile(userId, gameId);
+    if (target) {
+      const [updated] = await db.update(indieGameProfiles)
+        .set({ ...patch, updatedAt: new Date() })
+        .where(eq(indieGameProfiles.id, target.id)).returning();
       return updated;
     }
-    const [inserted] = await db.insert(indieGameProfiles).values({ userId, ...patch }).returning();
+    // First game for this user becomes their primary.
+    const [inserted] = await db.insert(indieGameProfiles)
+      .values({ userId, ...patch, isPrimary: true }).returning();
     return inserted;
   }
 
-  async getIndieFieldMeta(userId: number): Promise<Record<string, IndieGameFieldOverride>> {
-    const rows = await db.select().from(indieGameFieldOverrides).where(eq(indieGameFieldOverrides.userId, userId));
+  // Import/override metadata is per-game. When gameId is omitted the rows are
+  // matched on userId alone, preserving pre-0020 behaviour for legacy rows
+  // whose game_id was never backfilled.
+  async getIndieFieldMeta(userId: number, gameId?: number | null): Promise<Record<string, IndieGameFieldOverride>> {
+    const rows = gameId
+      ? await db.select().from(indieGameFieldOverrides)
+          .where(and(eq(indieGameFieldOverrides.userId, userId), eq(indieGameFieldOverrides.gameId, gameId)))
+      : await db.select().from(indieGameFieldOverrides)
+          .where(eq(indieGameFieldOverrides.userId, userId));
     const map: Record<string, IndieGameFieldOverride> = {};
     for (const row of rows) map[row.fieldName] = row;
     return map;
@@ -6781,21 +6806,33 @@ export class DatabaseStorage implements IStorage {
   async upsertIndieFieldMeta(
     userId: number,
     fieldName: string,
-    patch: Partial<Omit<IndieGameFieldOverride, "id" | "userId" | "fieldName" | "createdAt">>
+    patch: Partial<Omit<IndieGameFieldOverride, "id" | "userId" | "fieldName" | "createdAt">>,
+    gameId?: number | null
   ): Promise<void> {
     const existing = await db.select({ id: indieGameFieldOverrides.id }).from(indieGameFieldOverrides)
-      .where(and(eq(indieGameFieldOverrides.userId, userId), eq(indieGameFieldOverrides.fieldName, fieldName)));
+      .where(gameId
+        ? and(eq(indieGameFieldOverrides.userId, userId), eq(indieGameFieldOverrides.fieldName, fieldName), eq(indieGameFieldOverrides.gameId, gameId))
+        : and(eq(indieGameFieldOverrides.userId, userId), eq(indieGameFieldOverrides.fieldName, fieldName)));
     if (existing.length > 0) {
       await db.update(indieGameFieldOverrides).set(patch as any).where(eq(indieGameFieldOverrides.id, existing[0].id));
     } else {
-      await db.insert(indieGameFieldOverrides).values({ userId, fieldName, ...patch } as any);
+      await db.insert(indieGameFieldOverrides).values({ userId, fieldName, gameId: gameId ?? null, ...patch } as any);
     }
   }
 
-  async getIndieGameProfileByUsername(username: string): Promise<{ profile: IndieGameProfile | null; user: User } | null> {
+  async getIndieGameProfileByUsername(username: string, gameId?: number | null): Promise<{ profile: IndieGameProfile | null; user: User } | null> {
     const user = await this.getUserByUsername(username);
     if (!user || user.partnerType !== "indie") return null;
-    const profile = await this.getIndieGameProfile(user.id);
+    const profile = await this.getIndieGameProfile(user.id, gameId);
     return { user, profile };
+  }
+
+  async getIndieGameProfilesByUsername(username: string): Promise<{ profiles: IndieGameProfile[]; user: User } | null> {
+    const user = await this.getUserByUsername(username);
+    if (!user || user.partnerType !== "indie") return null;
+    const profiles = await db.select().from(indieGameProfiles)
+      .where(eq(indieGameProfiles.userId, user.id))
+      .orderBy(desc(indieGameProfiles.isPrimary), asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id));
+    return { user, profiles };
   }
 }

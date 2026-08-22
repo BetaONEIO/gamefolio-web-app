@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { FaSteam, FaDiscord, FaTwitter, FaYoutube, FaGlobe } from "react-icons/fa";
 import { SiEpicgames, SiItchdotio, SiGogdotcom } from "react-icons/si";
+import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
 
 const GREEN = "#B8FF1B";
 
@@ -346,7 +347,7 @@ export default function ManageGameSettings() {
               { id: "game-profile", label: "Game Profile", icon: Gamepad2 },
               { id: "media", label: "Media & Artwork", icon: ImageIcon },
               { id: "store", label: "Store & Platforms", icon: Store },
-              { id: "bounty", label: "Bounty Programme", icon: Trophy },
+              ...(BOUNTIES_ENABLED ? [{ id: "bounty", label: "Bounty Programme", icon: Trophy }] : []),
               { id: "content", label: "Creator Content", icon: Users },
               { id: "updates", label: "Updates", icon: Megaphone },
               { id: "analytics", label: "Analytics", icon: BarChart3 },
@@ -368,7 +369,7 @@ export default function ManageGameSettings() {
           {activeTab === "game-profile" && <GameProfileTab profile={profile} fieldMeta={fieldMeta} saveMut={saveProfileMut} />}
           {activeTab === "media" && <MediaTab profile={profile} saveMut={saveProfileMut} />}
           {activeTab === "store" && <StoreTab profile={profile} fieldMeta={fieldMeta} saveMut={saveProfileMut} />}
-          {activeTab === "bounty" && <BountyTab user={user} />}
+          {BOUNTIES_ENABLED && activeTab === "bounty" && <BountyTab user={user} />}
           {activeTab === "content" && <CreatorContentTab user={user} />}
           {activeTab === "updates" && <UpdatesTab user={user} />}
           {activeTab === "analytics" && <AnalyticsTab user={user} profile={profile} />}

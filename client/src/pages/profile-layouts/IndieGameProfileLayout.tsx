@@ -6,6 +6,9 @@ import { UserWithStats, ClipWithUser, Screenshot, GameBounty, IndieGameProfile }
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import PlatformConnections from '@/components/profile/PlatformConnections';
+import HlsVideo from '@/components/media/HlsVideo';
+import { getVideoEmbedUrl } from '@/lib/video-embed';
+import { BOUNTIES_ENABLED } from '@/lib/feature-flags';
 import { SiSteam, SiEpicgames, SiItchdotio } from 'react-icons/si';
 import {
   Users,
@@ -43,16 +46,10 @@ const MessageDialog = React.lazy(() =>
 );
 
 const TABS = ['OVERVIEW', 'CLIPS', 'REELS', 'SCREENSHOTS', 'BOUNTIES'];
-
-function getVideoEmbedUrl(url: string): string | null {
-  const youtubeMatch = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
-  );
-  if (youtubeMatch) {
-    return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
-  }
-  return null;
-}
+// BOUNTIES hidden while BOUNTIES_ENABLED is false — filtered at render time
+// rather than removed from TABS, since activeTab compares against the raw
+// string values elsewhere in this file.
+const VISIBLE_TABS = TABS.filter((t) => BOUNTIES_ENABLED || t !== 'BOUNTIES');
 
 type BountyWithMeta = GameBounty & { participantCount?: number; gameName?: string; gameImageUrl?: string };
 
@@ -67,6 +64,9 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState('OVERVIEW');
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+  // Which of this developer's games is being viewed. null means "their primary
+  // game" — keeps single-game developers (the common case) working unchanged.
+  const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
 
   // ── Inline edit panel state ──
   const [showEditPanel, setShowEditPanel] = useState(false);
@@ -111,8 +111,18 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
     queryKey: [`/api/users/${profile.username}/bounties`],
   });
 
+  // All of this developer's games, for the switcher row. Only ever more than
+  // one entry for indie devs with multiple games (migration 0020).
+  const { data: gamesListData } = useQuery<{ games: { id: number; gameName: string | null; headerImageUrl: string | null; capsuleImageUrl: string | null; isPrimary: boolean }[] }>({
+    queryKey: [`/api/games/indie/${profile.username}/list`],
+    retry: false,
+  });
+  const gameList = gamesListData?.games ?? [];
+
   const { data: indieGameData } = useQuery<{ profile: IndieGameProfile } | null>({
-    queryKey: [`/api/games/indie/${profile.username}`],
+    queryKey: selectedGameId
+      ? [`/api/games/indie/${profile.username}`, { gameId: selectedGameId }]
+      : [`/api/games/indie/${profile.username}`],
     retry: false,
   });
   const ig = (indieGameData?.profile ?? null) as IndieGameProfile | null;
@@ -487,7 +497,6 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
             {[
               { label: 'Followers', value: profile._count?.followers ?? 0, icon: Users },
               { label: 'Total Views', value: profile._count?.clipViews ?? 0, icon: Eye },
-              { label: 'Fires', value: profile._count?.firesReceived ?? 0, icon: Flame },
             ].map((stat, i) => (
               <div key={i} className="flex items-center gap-3 px-6 py-4 rounded-lg" style={cardStyle}>
                 <stat.icon size={22} color={brand.accent} className="opacity-90" />
@@ -510,7 +519,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
 
       <nav className="sticky top-0 z-40 border-b border-[var(--gf-border)] bg-[var(--gf-surface-1)] px-6">
         <div className="max-w-6xl mx-auto flex overflow-x-auto">
-          {TABS.map((tab) => (
+          {VISIBLE_TABS.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -526,13 +535,43 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
         </div>
       </nav>
 
+      {gameList.length > 1 && (
+        <div className="border-b border-[var(--gf-border)] bg-[var(--gf-surface-1)]/60 px-6">
+          <div className="max-w-6xl mx-auto flex items-center gap-2 overflow-x-auto py-3">
+            <span className="text-xs font-semibold uppercase tracking-widest text-white/40 mr-1 whitespace-nowrap">
+              Games
+            </span>
+            {gameList.map((g) => {
+              const isActive = (selectedGameId ?? gameList.find(x => x.isPrimary)?.id ?? gameList[0]?.id) === g.id;
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => setSelectedGameId(g.id)}
+                  title={g.gameName ?? `Game ${g.id}`}
+                  className="rounded-full border px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors"
+                  style={{
+                    borderColor: isActive ? brand.accent : 'rgba(255,255,255,0.12)',
+                    background: isActive ? 'rgba(183,255,24,0.10)' : 'transparent',
+                    color: isActive ? '#fff' : 'rgba(255,255,255,0.55)',
+                  }}
+                >
+                  {g.gameName?.trim() || 'Untitled game'}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {activeTab === 'OVERVIEW' && (
         <section className="py-16 px-6 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2 space-y-10">
-            {/* Trailer */}
-            <div className="aspect-video rounded-lg overflow-hidden" style={cardStyle}>
-              {igTrailerUrl ? (
-                getVideoEmbedUrl(igTrailerUrl) ? (
+            {/* Trailer — hidden entirely until the developer adds one, rather
+                than showing an empty placeholder card. */}
+            {igTrailerUrl && (
+              <div className="aspect-video rounded-lg overflow-hidden" style={cardStyle}>
+                {getVideoEmbedUrl(igTrailerUrl) ? (
                   <iframe
                     src={getVideoEmbedUrl(igTrailerUrl)!}
                     title={`${profile.displayName} trailer`}
@@ -541,15 +580,10 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
                     className="w-full h-full"
                   />
                 ) : (
-                  <video src={igTrailerUrl} controls className="w-full h-full object-cover" />
-                )
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-2" style={{ color: brand.textMuted }}>
-                  <Play size={32} color={brand.accent} />
-                  <span className="text-sm">No trailer added yet</span>
-                </div>
-              )}
-            </div>
+                  <HlsVideo src={igTrailerUrl} controls className="w-full h-full object-cover" />
+                )}
+              </div>
+            )}
 
             {/* Description */}
             <div>
@@ -840,7 +874,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
         </section>
       )}
 
-      {activeTab === 'BOUNTIES' && (
+      {BOUNTIES_ENABLED && activeTab === 'BOUNTIES' && (
         <section className="py-16 px-6 max-w-6xl mx-auto">
           <h2 className="text-2xl font-bold mb-6">Bounty Campaigns</h2>
           {(bounties || []).length === 0 ? (

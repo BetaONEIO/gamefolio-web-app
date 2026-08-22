@@ -5,6 +5,7 @@ import { Play, ChevronLeft, ChevronRight, Pause, Volume2, VolumeX, Upload, Image
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { Link, useLocation } from "wouter";
 import { useSignedUrl } from "@/hooks/use-signed-url";
+import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
 
 const NEON = "#B7FF1A";
 
@@ -378,13 +379,15 @@ export default function LatestContentSlider() {
                   </div>
                   {/* Actions */}
                   <div className="px-3 pb-3 flex flex-col gap-1.5">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleBounties(); }}
-                      className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-black transition-all hover:opacity-90 active:scale-95"
-                      style={{ background: "#071013", color: NEON, border: `1px solid ${NEON}40` }}>
-                      <Sword className="w-3.5 h-3.5" />
-                      Bounties
-                    </button>
+                    {BOUNTIES_ENABLED && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleBounties(); }}
+                        className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-black transition-all hover:opacity-90 active:scale-95"
+                        style={{ background: "#071013", color: NEON, border: `1px solid ${NEON}40` }}>
+                        <Sword className="w-3.5 h-3.5" />
+                        Bounties
+                      </button>
+                    )}
                     <button
                       onClick={(e) => { e.stopPropagation(); handleUpload(); }}
                       className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-black transition-all hover:opacity-90 active:scale-95"

@@ -10,7 +10,7 @@ import {
   Layers, Info, BookText, Store, Link2, ArrowLeft, Sparkles, Loader2,
   SlidersHorizontal, Camera, Film, Tag, Users, Calendar, DollarSign,
   Monitor, Smartphone, Cpu, Copy, Check, ShieldCheck, ShieldAlert,
-  KeyRound, LogOut, ExternalLink as ExtLink,
+  KeyRound, LogOut, ExternalLink as ExtLink, Trash2, Crown,
 } from "lucide-react";
 import { SiSteam, SiEpicgames, SiItchdotio } from "react-icons/si";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,12 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
+import HlsVideo from "@/components/media/HlsVideo";
 
 const NEON = "#B7FF18";
 const BG = "#0B1319";
@@ -51,6 +57,7 @@ const PLATFORM_ICONS: Record<string, any> = {
 const RELEASE_STATUSES = ["coming_soon", "early_access", "released"];
 
 type IndieProfile = Record<string, any>;
+type GameSummary = { id: number; gameName: string | null; releaseStatus: string | null; isPrimary: boolean; capsuleImageUrl?: string | null; headerImageUrl?: string | null };
 type FieldMeta = Record<string, { isManualOverride: boolean; importedValue?: string; importSource?: string; lastEditedAt?: string }>;
 
 function SectionCard({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
@@ -148,8 +155,21 @@ export default function IndieGameDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [saving, setSaving] = useState(false);
 
+  // A developer may own several games (migration 0020). selectedGameId picks
+  // which one the dashboard is editing; null means "let the server pick the
+  // primary", which is what a single-game developer always gets.
+  const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
+
+  const { data: gamesData } = useQuery<{ games: GameSummary[]; limit: number; subscribed: boolean; canAddMore: boolean }>({
+    queryKey: ["/api/indie/games"],
+    enabled: !!user,
+  });
+  const games = gamesData?.games ?? [];
+
   const { data, isLoading } = useQuery<{ profile: IndieProfile; fieldMeta: FieldMeta }>({
-    queryKey: ["/api/indie/profile"],
+    queryKey: selectedGameId
+      ? ["/api/indie/profile", { gameId: selectedGameId }]
+      : ["/api/indie/profile"],
     enabled: !!user,
   });
 
@@ -163,6 +183,89 @@ export default function IndieGameDashboard() {
     setInitialized(true);
   }
 
+  // Switching games must reload the editable form from the newly fetched
+  // profile, otherwise the previous game's unsaved values would leak across.
+  const switchGame = (gameId: number | null) => {
+    if (gameId === selectedGameId) return;
+    setSelectedGameId(gameId);
+    setInitialized(false);
+    setForm({});
+  };
+
+  const gameLimit = gamesData?.limit ?? 2;
+  const isSubscriber = !!gamesData?.subscribed;
+  const canAddMore = !!gamesData?.canAddMore;
+  const activeGameId = selectedGameId ?? games.find(g => g.isPrimary)?.id ?? games[0]?.id ?? null;
+  const activeGame = games.find(g => g.id === activeGameId) ?? null;
+
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<GameSummary | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const refreshGames = () => {
+    qc.invalidateQueries({ queryKey: ["/api/indie/games"] });
+    qc.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+  };
+
+  // Add a game. The server owns the quota, so a 403 here is the authoritative
+  // answer rather than something the UI should try to predict.
+  const addGame = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await apiRequest("POST", "/api/indie/games", { gameName: "Untitled game" });
+      if (res.status === 403) {
+        const body = await res.json().catch(() => ({}));
+        if (body?.code === "GAME_LIMIT_REACHED" && !isSubscriber) setShowUpgrade(true);
+        else toast({ title: "Can't add another game", description: body?.error ?? "Limit reached.", variant: "destructive" });
+        return;
+      }
+      if (!res.ok) throw new Error("failed");
+      const { game } = await res.json();
+      refreshGames();
+      switchGame(game.id);
+      toast({ title: "Game added", description: "Give it a name and details, then save." });
+    } catch {
+      toast({ title: "Couldn't add the game", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const makePrimary = async (gameId: number) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await apiRequest("POST", `/api/indie/games/${gameId}/primary`, {});
+      if (!res.ok) throw new Error("failed");
+      refreshGames();
+      toast({ title: "Primary game updated", description: "This is the game shown on your profile." });
+    } catch {
+      toast({ title: "Couldn't set primary", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteGame = async (game: GameSummary) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const res = await apiRequest("DELETE", `/api/indie/games/${game.id}`);
+      if (!res.ok) throw new Error("failed");
+      // The server promotes another game when the primary is removed, so drop
+      // back to "let the server choose" rather than guessing which one won.
+      switchGame(null);
+      refreshGames();
+      toast({ title: "Game deleted", description: `"${game.gameName || "Untitled game"}" has been removed.` });
+    } catch {
+      toast({ title: "Couldn't delete the game", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setBusy(false);
+      setPendingDelete(null);
+    }
+  };
+
   const set = (key: string, value: any) => setForm(f => ({ ...f, [key]: value }));
 
   // Save a section (only sends fields in the current form vs profile diff)
@@ -173,7 +276,7 @@ export default function IndieGameDashboard() {
     }
     setSaving(true);
     try {
-      await apiRequest("PUT", "/api/indie/profile", patch);
+      await apiRequest("PUT", "/api/indie/profile", { ...patch, gameId: selectedGameId ?? undefined });
       qc.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       toast({ title: "Saved!", description: "Your changes are live." });
     } catch {
@@ -189,6 +292,7 @@ export default function IndieGameDashboard() {
       const fd = new FormData();
       fd.append("image", file);
       fd.append("field", field);
+      if (selectedGameId) fd.append("gameId", String(selectedGameId));
       const res = await fetch("/api/indie/upload/image", { method: "POST", body: fd, credentials: "include" });
       if (!res.ok) throw new Error("Upload failed");
       return res.json();
@@ -200,6 +304,24 @@ export default function IndieGameDashboard() {
     },
     onError: () => toast({ title: "Upload failed", variant: "destructive" }),
   });
+
+  const uploadTrailer = useMutation({
+    mutationFn: async (file: File) => {
+      const fd = new FormData();
+      fd.append("video", file);
+      if (selectedGameId) fd.append("gameId", String(selectedGameId));
+      const res = await fetch("/api/indie/upload/trailer", { method: "POST", body: fd, credentials: "include" });
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      set("trailerUrl", data.url);
+      qc.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+      toast({ title: "Trailer uploaded!" });
+    },
+    onError: () => toast({ title: "Upload failed", variant: "destructive" }),
+  });
+  const trailerFileRef = useRef<HTMLInputElement>(null);
 
   const uploadScreenshot = useMutation({
     mutationFn: async (file: File) => {
@@ -377,7 +499,7 @@ export default function IndieGameDashboard() {
     if (steamPreviewData.appId) { fields.steamAppId = steamPreviewData.appId; fields.steamUrl = steamPreviewData.steamUrl; }
     setSaving(true);
     try {
-      await apiRequest("PUT", "/api/indie/profile", fields);
+      await apiRequest("PUT", "/api/indie/profile", { ...fields, gameId: selectedGameId ?? undefined });
       setForm(f => ({ ...f, ...fields }));
       qc.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       toast({ title: "Imported from Steam!", description: `${Object.keys(fields).length} fields updated.` });
@@ -418,7 +540,7 @@ export default function IndieGameDashboard() {
     }
     setSaving(true);
     try {
-      await apiRequest("PUT", "/api/indie/profile", fields);
+      await apiRequest("PUT", "/api/indie/profile", { ...fields, gameId: selectedGameId ?? undefined });
       setForm(f => ({ ...f, ...fields }));
       qc.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       toast({ title: "Imported from itch.io!", description: `${Object.keys(fields).length} fields updated.` });
@@ -463,6 +585,90 @@ export default function IndieGameDashboard() {
             <Gamepad2 size={18} style={{ color: NEON }} />
             <span className="font-bold text-white">Game Dashboard</span>
           </div>
+
+          {/* Game switcher. Shown whenever the developer either has several
+              games or is allowed another — otherwise a single-game developer
+              would have no route to adding a second. */}
+          {(games.length > 1 || canAddMore) && (
+            <div className="ml-auto flex items-center gap-2 overflow-x-auto">
+              {games.map(g => {
+                const active = g.id === activeGameId;
+                return (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => switchGame(g.id)}
+                    title={g.gameName ?? `Game ${g.id}`}
+                    className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs whitespace-nowrap transition-colors"
+                    style={{
+                      borderColor: active ? NEON : "rgba(255,255,255,0.12)",
+                      background: active ? "rgba(198,255,0,0.10)" : "transparent",
+                      color: active ? "#fff" : "rgba(255,255,255,0.55)",
+                    }}
+                  >
+                    {g.isPrimary && <Crown size={11} style={{ color: NEON }} />}
+                    <span className="max-w-[9rem] truncate">{g.gameName?.trim() || "Untitled game"}</span>
+                  </button>
+                );
+              })}
+
+              {canAddMore ? (
+                <button
+                  type="button"
+                  onClick={addGame}
+                  disabled={busy}
+                  title={`Add a game (${games.length} of ${gameLimit})`}
+                  className="flex items-center gap-1 rounded-full border border-dashed px-3 py-1 text-xs whitespace-nowrap transition-colors disabled:opacity-50"
+                  style={{ borderColor: "rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.6)" }}
+                >
+                  <Plus size={12} /> Add game
+                </button>
+              ) : !isSubscriber ? (
+                // At the free limit — adding more is the reason to subscribe.
+                <button
+                  type="button"
+                  onClick={() => setShowUpgrade(true)}
+                  className="flex items-center gap-1 rounded-full border border-dashed px-3 py-1 text-xs whitespace-nowrap transition-colors"
+                  style={{ borderColor: "rgba(183,255,24,0.4)", background: "rgba(183,255,24,0.06)", color: NEON }}
+                >
+                  <Plus size={12} /> Add game
+                  <span className="ml-0.5 rounded-full px-1.5 text-[9px] font-bold uppercase" style={{ background: "rgba(183,255,24,0.2)" }}>Pro</span>
+                </button>
+              ) : (
+                <span className="text-[11px] text-white/35 whitespace-nowrap">{gameLimit} of {gameLimit} games</span>
+              )}
+
+              {/* Actions for the selected game. Only meaningful with more than
+                  one — you cannot delete or re-primary your only game. */}
+              {games.length > 1 && activeGame && (
+                <>
+                  {!activeGame.isPrimary && (
+                    <button
+                      type="button"
+                      onClick={() => makePrimary(activeGame.id)}
+                      disabled={busy}
+                      title="Show this game on your profile"
+                      className="flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs text-white/50 hover:text-white transition-colors disabled:opacity-50"
+                      style={{ borderColor: "rgba(255,255,255,0.12)" }}
+                    >
+                      <Crown size={12} /> Make primary
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setPendingDelete(activeGame)}
+                    disabled={busy}
+                    title="Delete this game"
+                    aria-label="Delete this game"
+                    className="flex items-center rounded-full border px-2 py-1 text-white/40 hover:text-red-400 transition-colors disabled:opacity-50"
+                    style={{ borderColor: "rgba(255,255,255,0.12)" }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </>
+              )}
+            </div>
+          )}
           <div className="ml-auto flex items-center gap-2">
             <a href={`/studio/${user.username}`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-xs font-semibold text-white/40 hover:text-white transition-colors">
@@ -788,8 +994,26 @@ export default function IndieGameDashboard() {
             </SectionCard>
 
             <SectionCard title="Trailer / Video" icon={Film}>
-              <p className="text-xs text-white/40 mb-3">Paste a direct MP4 URL or a YouTube/Vimeo embed URL. Shown prominently on your studio profile.</p>
-              <FieldRow label="Trailer URL">
+              <p className="text-xs text-white/40 mb-3">Upload a trailer video, or paste a direct MP4 URL or a YouTube/Vimeo embed URL. Shown prominently on your studio profile.</p>
+              <div className="mb-3">
+                <input
+                  ref={trailerFileRef}
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadTrailer.mutate(f); }}
+                />
+                <button
+                  type="button"
+                  onClick={() => trailerFileRef.current?.click()}
+                  disabled={uploadTrailer.isPending}
+                  className="w-full rounded-lg p-4 flex items-center justify-center gap-2 border border-dashed border-white/15 text-white/60 hover:text-white hover:border-white/30 transition-colors disabled:opacity-50"
+                >
+                  {uploadTrailer.isPending ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                  <span className="text-xs font-semibold">{uploadTrailer.isPending ? "Uploading…" : "Upload a trailer video"}</span>
+                </button>
+              </div>
+              <FieldRow label="Or paste a URL">
                 <div className="flex gap-2">
                   <Input value={form.trailerUrl ?? ""} onChange={e => set("trailerUrl", e.target.value)}
                     placeholder="https://youtube.com/watch?v=… or direct .mp4 URL"
@@ -800,7 +1024,7 @@ export default function IndieGameDashboard() {
               </FieldRow>
               {form.trailerUrl && (
                 <div className="mt-3 aspect-video rounded-lg overflow-hidden bg-black/40">
-                  <video src={form.trailerUrl} controls className="w-full h-full" style={{ display: form.trailerUrl.includes("youtube") || form.trailerUrl.includes("vimeo") ? "none" : "block" }} />
+                  <HlsVideo src={form.trailerUrl} controls className="w-full h-full" style={{ display: form.trailerUrl.includes("youtube") || form.trailerUrl.includes("vimeo") ? "none" : "block" }} />
                   {(form.trailerUrl.includes("youtube") || form.trailerUrl.includes("vimeo")) && (
                     <div className="flex items-center justify-center h-full text-white/40 text-sm gap-2">
                       <Film size={20} />
@@ -1450,6 +1674,47 @@ export default function IndieGameDashboard() {
         )}
 
       </div>
+
+      {/* Deleting a game removes its profile, imported artwork and field
+          overrides — worth a confirmation rather than a bare icon click. */}
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => { if (!open) setPendingDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this game?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{pendingDelete?.gameName?.trim() || "Untitled game"}" and its details, artwork
+              and store links will be removed. This cannot be undone.
+              {pendingDelete?.isPrimary && " Another game will become your primary."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+            {/* No preventDefault: suppressing Radix's own close leaves the
+                dialog stuck visible at data-state="closed". Close first, then
+                delete — matching how the rest of the app drives AlertDialog. */}
+            <AlertDialogAction
+              disabled={busy}
+              onClick={() => {
+                const target = pendingDelete;
+                setPendingDelete(null);
+                if (target) void deleteGame(target);
+              }}
+            >
+              Delete game
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <IndieDevUpgradeDialog
+        open={showUpgrade}
+        onOpenChange={(open) => {
+          setShowUpgrade(open);
+          // They may have just subscribed — re-read the quota so the add
+          // button unlocks without needing a reload.
+          if (!open) qc.invalidateQueries({ queryKey: ["/api/indie/games"] });
+        }}
+      />
     </div>
   );
 }
