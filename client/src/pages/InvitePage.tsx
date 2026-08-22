@@ -195,7 +195,7 @@ export default function InvitePage() {
         <div
           className="pointer-events-none absolute inset-0 z-[1] hidden lg:block"
           style={{
-            background: "linear-gradient(90deg, #080e17 0%, #080e17 30%, #060b10 46%, #030608 58%, #000 70%, #000 100%)",
+            background: "linear-gradient(90deg, #080e17 0%, #080e17 30%, #060b10 40%, #030608 50%, #000 59%, #000 100%)",
           }}
         />
         <div
@@ -206,17 +206,17 @@ export default function InvitePage() {
         />
 
         <div className="relative z-10 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-center">
-          <div className="flex flex-col items-start gap-6 text-left max-w-2xl">
+          <div className="flex flex-col items-start gap-6 text-left max-w-[560px]">
             <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold" style={{ background: PRIMARY_DIM, color: PRIMARY, border: `1px solid rgba(181,242,61,0.3)` }}>
               <Zap className="h-3 w-3" /> Just launched — early users get first pick of usernames
             </div>
 
-            <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold leading-[1.05] tracking-tight">
+            <h1 className="max-w-[540px] text-5xl sm:text-6xl md:text-7xl font-extrabold leading-[1.05] tracking-tight">
               Build your gaming<br />
               <span style={{ color: PRIMARY }}>profile.</span> Get seen.
             </h1>
 
-            <p className="text-gray-400 text-lg md:text-xl max-w-xl leading-relaxed">
+            <p className="text-gray-400 text-lg md:text-xl max-w-md leading-relaxed">
               Gamefolio is a new web app for gamers and streamers to upload clips, connect their Twitch or Kick stream, and grow their audience.
             </p>
 
@@ -242,13 +242,7 @@ export default function InvitePage() {
             </p>
           </div>
 
-          <div className="relative flex min-h-[480px] w-full items-center justify-center overflow-visible sm:min-h-[560px] lg:min-h-[620px] lg:-translate-x-8">
-            <div
-              className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[780px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full"
-              style={{
-                background: "radial-gradient(ellipse at center, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.16) 48%, rgba(0,0,0,0) 100%)",
-              }}
-            />
+          <div className="relative flex min-h-[480px] w-full items-center justify-center overflow-visible sm:min-h-[560px] lg:min-h-[620px] lg:-translate-x-10">
             <div
               className="pointer-events-none absolute left-1/2 top-[58%] z-0 h-72 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]"
               style={{
@@ -263,7 +257,7 @@ export default function InvitePage() {
               loop
               muted
               playsInline
-              className="relative z-10 h-[480px] sm:h-[560px] lg:h-[620px] w-auto max-w-full object-contain"
+              className="relative z-10 h-[480px] sm:h-[560px] lg:h-[640px] w-auto max-w-full object-contain"
               style={{
                 mixBlendMode: "lighten",
                 maskImage: "linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)",
