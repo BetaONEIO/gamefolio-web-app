@@ -248,7 +248,7 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   let previewThumbnailUrl = '';
   try {
     previewThumbnailUrl = await Promise.race([
-      VideoProcessor.generateAutoThumbnail(downloadUrl, userId, `${videoType}_thumb_preview`),
+      VideoProcessor.generateAutoThumbnail(downloadUrl, userId, `${videoType}_thumb_preview`, videoType),
       new Promise<string>((_, reject) => setTimeout(() => reject(new Error('preview thumbnail timed out')), 15000)),
     ]);
   } catch (previewError) {
