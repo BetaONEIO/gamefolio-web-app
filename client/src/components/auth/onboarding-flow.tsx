@@ -329,6 +329,11 @@ export default function OnboardingFlow({
 }: OnboardingFlowProps) {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(OnboardingStep.Welcome);
   const [stepDirection, setStepDirection] = useState<'forward' | 'back'>('forward');
+  // This is the canonical path through onboarding. It contains only screens
+  // that were actually shown, unlike the numeric enum (which also contains
+  // conditional screens).
+  const visitedStepsRef = useRef<OnboardingStep[]>([OnboardingStep.Welcome]);
+  const completionStartedRef = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showIndieDevUpgrade, setShowIndieDevUpgrade] = useState(false);
   const [showProUpgrade, setShowProUpgrade] = useState(false);
@@ -716,34 +721,76 @@ export default function OnboardingFlow({
     }
   };
 
-  const getPrevStep = (step: OnboardingStep): OnboardingStep => {
-    switch (step) {
-      case OnboardingStep.ChoosePath: return OnboardingStep.Welcome;
-      case OnboardingStep.Intro1:     return OnboardingStep.ChoosePath;
-      case OnboardingStep.Intro2:     return OnboardingStep.Intro1;
-      case OnboardingStep.Intro3:     return OnboardingStep.Intro2;
-      case OnboardingStep.Username:   return OnboardingStep.Intro3;
-      case OnboardingStep.Games:      return isGoogleUser ? OnboardingStep.Username : OnboardingStep.Intro3;
-      case OnboardingStep.Avatar:     return selectedPath === 'gamer' ? OnboardingStep.Games : (isGoogleUser ? OnboardingStep.Username : OnboardingStep.Intro3);
-      case OnboardingStep.PathSetup:  return OnboardingStep.Avatar;
-      case OnboardingStep.Wallet:     return OnboardingStep.PathSetup;
-      case OnboardingStep.ProUpsell:  return OnboardingStep.Wallet;
-      case OnboardingStep.Complete:   return OnboardingStep.ProUpsell;
-      default: return OnboardingStep.Welcome;
-    }
+  const setStepInHistory = (step: OnboardingStep, direction: 'forward' | 'back') => {
+    setStepDirection(direction);
+    setCurrentStep(step);
   };
+
+  const navigateForward = (step: OnboardingStep) => {
+    const nextIndex = visitedStepsRef.current.length;
+    visitedStepsRef.current = [...visitedStepsRef.current, step];
+    window.history.pushState(
+      { onboarding: true, onboardingIndex: nextIndex },
+      '',
+      '/onboarding',
+    );
+    setStepInHistory(step, 'forward');
+  };
+
+  // Conditional screens are skipped without adding a progress/history entry.
+  const skipToStep = (step: OnboardingStep) => {
+    visitedStepsRef.current[visitedStepsRef.current.length - 1] = step;
+    window.history.replaceState(
+      { ...(window.history.state || {}), onboarding: true, onboardingIndex: visitedStepsRef.current.length - 1 },
+      '',
+      '/onboarding',
+    );
+    setStepInHistory(step, 'forward');
+  };
+
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state?.onboarding && Number.isInteger(event.state.onboardingIndex)) {
+        const index = Math.max(0, Math.min(
+          event.state.onboardingIndex,
+          visitedStepsRef.current.length - 1,
+        ));
+        const step = visitedStepsRef.current[index] ?? OnboardingStep.Welcome;
+        visitedStepsRef.current = visitedStepsRef.current.slice(0, index + 1);
+        setStepInHistory(step, 'back');
+        return;
+      }
+
+      // Do not allow an unfinished onboarding session to accidentally leave
+      // through a stale/non-onboarding history entry.
+      window.history.pushState(
+        { onboarding: true, onboardingIndex: visitedStepsRef.current.length - 1 },
+        '',
+        '/onboarding',
+      );
+    };
+
+    // Normalize the entry created by the page without adding another one.
+    window.history.replaceState(
+      { ...(window.history.state || {}), onboarding: true, onboardingIndex: 0 },
+      '',
+      '/onboarding',
+    );
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Auto-skip username for non-Google users
   useEffect(() => {
     if (currentStep === OnboardingStep.Username && !isGoogleUser) {
-      setCurrentStep(selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar);
+      skipToStep(selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar);
     }
   }, [currentStep, isGoogleUser, selectedPath]);
 
   // Auto-skip Games for non-gamer paths
   useEffect(() => {
     if (currentStep === OnboardingStep.Games && selectedPath !== 'gamer') {
-      setCurrentStep(OnboardingStep.Avatar);
+      skipToStep(OnboardingStep.Avatar);
     }
   }, [currentStep, selectedPath]);
 
@@ -829,15 +876,12 @@ export default function OnboardingFlow({
 
     const next = getNextStep(currentStep);
     setStepDirection('forward');
-    setCurrentStep(next);
+    navigateForward(next);
     if (next === OnboardingStep.Games) loadGames();
   };
 
   const goToPrevStep = () => {
-    if (currentStep > OnboardingStep.Welcome) {
-      setStepDirection('back');
-      setCurrentStep(getPrevStep(currentStep));
-    }
+    if (visitedStepsRef.current.length > 1) window.history.back();
   };
 
   // Games logic
@@ -984,6 +1028,8 @@ export default function OnboardingFlow({
   };
 
   const completeOnboarding = async () => {
+    if (completionStartedRef.current || currentStep !== OnboardingStep.Complete) return;
+    completionStartedRef.current = true;
     setIsLoading(true);
     try {
       // Build user type from path
@@ -1085,6 +1131,7 @@ export default function OnboardingFlow({
       const destination = selectedPath === "streamer" ? "/" : selectedPath === "indie" ? "/" : "/";
       setTimeout(() => setLocation(destination), 300);
     } catch (error) {
+      completionStartedRef.current = false;
       toast({ title: "Error", description: "We couldn't complete your profile setup. Please try again.", variant: "gamefolioError" });
     } finally { setIsLoading(false); }
   };
@@ -1608,7 +1655,7 @@ export default function OnboardingFlow({
         };
         const selectAndContinue = (pathId: UserPath) => {
           setSelectedPath(pathId);
-          setCurrentStep(OnboardingStep.Intro1);
+          navigateForward(OnboardingStep.Intro1);
         };
 
         const currentCard = pathCards[pathCardIndex];
