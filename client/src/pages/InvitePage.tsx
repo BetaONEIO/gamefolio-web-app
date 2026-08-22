@@ -193,9 +193,15 @@ export default function InvitePage() {
         <GlowDot top="10%" left="20%" size={300} opacity={0.05} />
         <GlowDot top="60%" left="80%" size={250} opacity={0.05} />
         <div
-          className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-full lg:w-[72%]"
+          className="pointer-events-none absolute inset-0 z-[1] hidden lg:block"
           style={{
-            background: "radial-gradient(ellipse 62% 76% at 78% 50%, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.82) 37%, rgba(5,9,15,0.48) 58%, rgba(8,14,23,0) 100%)",
+            background: "linear-gradient(90deg, #080e17 0%, #080e17 38%, #050a0e 52%, #020405 63%, #000 74%, #000 100%)",
+          }}
+        />
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] lg:hidden"
+          style={{
+            background: "linear-gradient(180deg, #080e17 0%, #080e17 38%, #050a0e 54%, #020405 68%, #000 82%, #000 100%)",
           }}
         />
 
@@ -236,11 +242,17 @@ export default function InvitePage() {
             </p>
           </div>
 
-          <div className="relative flex min-h-[480px] w-full items-center justify-center overflow-visible sm:min-h-[560px] lg:min-h-[620px]">
+          <div className="relative flex min-h-[480px] w-full items-center justify-center overflow-visible sm:min-h-[560px] lg:min-h-[620px] lg:-translate-x-8">
             <div
-              className="pointer-events-none absolute left-1/2 top-[58%] z-0 h-72 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[90px]"
+              className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[780px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full"
               style={{
-                background: "radial-gradient(ellipse, rgba(185,255,26,0.11) 0%, rgba(185,255,26,0.04) 42%, transparent 75%)",
+                background: "radial-gradient(ellipse at center, #000 0%, #000 45%, rgba(0,0,0,0.95) 65%, rgba(0,0,0,0) 100%)",
+              }}
+            />
+            <div
+              className="pointer-events-none absolute left-1/2 top-[58%] z-0 h-72 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]"
+              style={{
+                background: "radial-gradient(ellipse, rgba(185,255,26,0.08) 0%, rgba(185,255,26,0.025) 42%, transparent 75%)",
               }}
             />
             <video
@@ -254,26 +266,10 @@ export default function InvitePage() {
               className="relative z-10 h-[480px] sm:h-[560px] lg:h-[620px] w-auto max-w-full object-contain"
               style={{
                 mixBlendMode: "lighten",
-                maskImage: "linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%), linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)",
-                WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%), linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)",
-                maskComposite: "intersect",
-                WebkitMaskComposite: "source-in",
+                maskImage: "linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)",
+                WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)",
               }}
             />
-            <div className="pointer-events-none absolute inset-0 z-20">
-              <div
-                className="absolute inset-x-0 top-0 h-24"
-                style={{ background: `linear-gradient(to bottom, ${BG} 0%, rgba(8,14,23,0.82) 42%, transparent 100%)` }}
-              />
-              <div
-                className="absolute inset-x-0 bottom-0 h-24"
-                style={{ background: `linear-gradient(to top, ${BG} 0%, rgba(8,14,23,0.82) 42%, transparent 100%)` }}
-              />
-              <div
-                className="absolute inset-y-0 right-0 w-24"
-                style={{ background: `linear-gradient(to left, ${BG} 0%, rgba(8,14,23,0.78) 42%, transparent 100%)` }}
-              />
-            </div>
           </div>
         </div>
       </section>
