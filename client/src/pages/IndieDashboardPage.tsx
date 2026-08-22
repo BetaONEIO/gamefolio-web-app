@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearch } from "wouter";
 import {
   Target, BarChart3, KeyRound, Film, Settings, LayoutDashboard,
 } from "lucide-react";
@@ -28,10 +29,26 @@ const TOP_TABS: { id: TopTabId; label: string; icon: any }[] = [
   { id: "game-profile",    label: "Game Profile",   icon: Settings },
 ];
 
+const TOP_TAB_IDS = TOP_TABS.map((t) => t.id);
+
 export default function IndieDashboardPage() {
   const [tab, setTab] = useState<TopTabId>("overview");
   const [campaignSub, setCampaignSub] = useState<CampaignSubTab>("my");
   const [runWizardTemplate, setRunWizardTemplate] = useState<any>(null);
+
+  // Lets links like the "Upload Keys" header menu item deep-link straight to
+  // a tab (e.g. /indie/dashboard?tab=keys). Reading window.location.search
+  // once as initial state wouldn't work here: wouter keeps this component
+  // mounted across a query-only navigation (the path doesn't change), so a
+  // useState initializer never re-runs on a second "Upload Keys" click —
+  // useSearch() is reactive to that and re-triggers this effect instead.
+  const search = useSearch();
+  useEffect(() => {
+    const tabParam = new URLSearchParams(search).get("tab");
+    if (tabParam && (TOP_TAB_IDS as string[]).includes(tabParam)) {
+      setTab(tabParam as TopTabId);
+    }
+  }, [search]);
 
   const goTo = (toTab: TopTabId, sub?: string) => {
     setTab(toTab);
