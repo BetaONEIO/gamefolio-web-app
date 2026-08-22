@@ -461,6 +461,7 @@ export default function TrendingHeroSlide({
   const [showInfo, setShowInfo] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const endedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInteracting = useRef(false);
   const isScrollingRef = useRef(false);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -492,20 +493,32 @@ export default function TrendingHeroSlide({
     setIsPlaying(false);
     setProgress(0);
     setShowInfo(false);
+    if (endedTimeoutRef.current) {
+      clearTimeout(endedTimeoutRef.current);
+      endedTimeoutRef.current = null;
+    }
   }, [contentType]);
 
-  useEffect(() => { setShowInfo(false); }, [currentIndex]);
+  useEffect(() => {
+    setShowInfo(false);
+    if (endedTimeoutRef.current) {
+      clearTimeout(endedTimeoutRef.current);
+      endedTimeoutRef.current = null;
+    }
+  }, [currentIndex]);
 
   const startTimer = useCallback(() => {
     if (isMobile) return; // No auto-advance on mobile
     if (timerRef.current) clearInterval(timerRef.current);
-    if (total <= 1) return;
+    // Video slides advance when playback ends; only image-only slides need
+    // the fallback timer.
+    if (total <= 1 || clip?.videoUrl) return;
     timerRef.current = setInterval(() => {
       if (isInteracting.current) return;
       setCurrentIndex((prev) => (prev + 1) % total);
       setProgress(0);
     }, AUTO_ADVANCE_MS);
-  }, [total, isMobile]);
+  }, [total, isMobile, clip?.videoUrl]);
 
   useEffect(() => {
     startTimer();
@@ -599,7 +612,9 @@ export default function TrendingHeroSlide({
     setProgress(100);
     isInteracting.current = false;
     onPlayingChange?.(false);
-    setTimeout(() => {
+    if (endedTimeoutRef.current) clearTimeout(endedTimeoutRef.current);
+    endedTimeoutRef.current = setTimeout(() => {
+      endedTimeoutRef.current = null;
       setCurrentIndex((prev) => (prev + 1) % total);
       setProgress(0);
       startTimer();
