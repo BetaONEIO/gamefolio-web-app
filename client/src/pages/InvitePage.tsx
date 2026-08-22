@@ -192,6 +192,12 @@ export default function InvitePage() {
         <GlowDot top="30%" left="50%" size={600} opacity={0.07} />
         <GlowDot top="10%" left="20%" size={300} opacity={0.05} />
         <GlowDot top="60%" left="80%" size={250} opacity={0.05} />
+        <div
+          className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-full lg:w-[72%]"
+          style={{
+            background: "radial-gradient(ellipse 62% 76% at 78% 50%, rgba(0,0,0,0.96) 0%, rgba(0,0,0,0.82) 37%, rgba(5,9,15,0.48) 58%, rgba(8,14,23,0) 100%)",
+          }}
+        />
 
         <div className="relative z-10 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-center">
           <div className="flex flex-col items-start gap-6 text-left max-w-2xl">
@@ -230,12 +236,7 @@ export default function InvitePage() {
             </p>
           </div>
 
-          <div
-            className="relative flex min-h-[480px] w-full items-center justify-center overflow-visible sm:min-h-[560px] lg:min-h-[620px]"
-            style={{
-              background: "radial-gradient(ellipse 58% 58% at 50% 48%, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.82) 43%, rgba(7,13,22,0.42) 72%, rgba(7,13,22,0) 100%)",
-            }}
-          >
+          <div className="relative flex min-h-[480px] w-full items-center justify-center overflow-visible sm:min-h-[560px] lg:min-h-[620px]">
             <div
               className="pointer-events-none absolute left-1/2 top-[58%] z-0 h-72 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[90px]"
               style={{
@@ -252,7 +253,7 @@ export default function InvitePage() {
               playsInline
               className="relative z-10 h-[480px] sm:h-[560px] lg:h-[620px] w-auto max-w-full object-contain"
               style={{
-                mixBlendMode: "screen",
+                mixBlendMode: "lighten",
                 maskImage: "linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%), linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)",
                 WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 7%, black 93%, transparent 100%), linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)",
                 maskComposite: "intersect",
@@ -267,10 +268,6 @@ export default function InvitePage() {
               <div
                 className="absolute inset-x-0 bottom-0 h-24"
                 style={{ background: `linear-gradient(to top, ${BG} 0%, rgba(8,14,23,0.82) 42%, transparent 100%)` }}
-              />
-              <div
-                className="absolute inset-y-0 left-0 w-20"
-                style={{ background: `linear-gradient(to right, ${BG} 0%, rgba(8,14,23,0.72) 42%, transparent 100%)` }}
               />
               <div
                 className="absolute inset-y-0 right-0 w-24"
