@@ -215,7 +215,7 @@ export default function InvitePage() {
         <div
           className="pointer-events-none absolute inset-0 z-[2] hidden lg:block"
           style={{
-            background: "linear-gradient(90deg, transparent 28%, rgba(0,0,0,0.18) 40%, rgba(0,0,0,0.62) 52%, rgba(0,0,0,0.92) 64%, #000 74%, #000 100%)",
+            background: "linear-gradient(90deg, transparent 28%, rgba(0,0,0,0.24) 40%, rgba(0,0,0,0.70) 52%, rgba(0,0,0,0.96) 64%, #000 72%, #000 100%)",
           }}
         />
         <div
