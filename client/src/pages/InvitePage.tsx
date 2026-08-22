@@ -275,8 +275,6 @@ export default function InvitePage() {
               className="relative z-10 flex-shrink-0 h-[480px] sm:h-[560px] lg:h-[640px] w-auto max-w-full lg:w-[360px] lg:max-w-none object-contain"
               style={{
                 display: "block",
-                maskImage: "linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)",
-                WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%)",
               }}
             >
               <source src={phoneHeroVideo} type="video/webm" />
