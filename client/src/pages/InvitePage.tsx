@@ -195,7 +195,7 @@ export default function InvitePage() {
         <div
           className="pointer-events-none absolute inset-0 z-[1] hidden lg:block"
           style={{
-            background: "linear-gradient(90deg, #080e17 0%, #080e17 38%, #050a0e 52%, #020405 63%, #000 74%, #000 100%)",
+            background: "linear-gradient(90deg, #080e17 0%, #080e17 30%, #060b10 46%, #030608 58%, #000 70%, #000 100%)",
           }}
         />
         <div
@@ -246,7 +246,7 @@ export default function InvitePage() {
             <div
               className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[780px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full"
               style={{
-                background: "radial-gradient(ellipse at center, #000 0%, #000 45%, rgba(0,0,0,0.95) 65%, rgba(0,0,0,0) 100%)",
+                background: "radial-gradient(ellipse at center, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.16) 48%, rgba(0,0,0,0) 100%)",
               }}
             />
             <div
