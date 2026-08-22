@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { SiTwitch, SiKick } from "react-icons/si";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
+import gameplayVideo from "@assets/gamer.mp4";
+import gameplayPoster from "@assets/gamer-poster.jpg";
 import phoneGamefolioVideo from "@assets/phone-gamefolio.mp4";
 import phoneGamefolioPoster from "@assets/phone-gamefolio-poster.jpg";
 
@@ -189,19 +191,31 @@ export default function InvitePage() {
 
       {/* Hero */}
       <section className="relative px-6 pt-40 pb-28 overflow-hidden" style={{ background: "#000" }}>
+        <video
+          src={gameplayVideo}
+          poster={gameplayPoster}
+          autoPlay
+          preload="auto"
+          loop
+          muted
+          playsInline
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover object-left"
+          style={{ opacity: 0.42, filter: "saturate(0.75) contrast(1.05)" }}
+        />
         <GlowDot top="30%" left="50%" size={600} opacity={0.07} />
         <GlowDot top="10%" left="20%" size={300} opacity={0.05} />
         <GlowDot top="60%" left="80%" size={250} opacity={0.05} />
         <div
           className="pointer-events-none absolute inset-y-0 left-0 z-[1] hidden w-full lg:block"
           style={{
-            background: "radial-gradient(circle at 30% 35%, rgba(185, 255, 26, 0.035) 0%, rgba(185, 255, 26, 0.012) 25%, transparent 48%), linear-gradient(90deg, #071019 0%, #071018 30%, #061016 42%, #040b0c 52%, rgba(0,0,0,0.45) 64%, rgba(0,0,0,0) 78%)",
+            background: "radial-gradient(circle at 30% 35%, rgba(185, 255, 26, 0.035) 0%, rgba(185, 255, 26, 0.012) 25%, transparent 48%), linear-gradient(90deg, rgba(7,16,25,0.76) 0%, rgba(7,16,24,0.78) 30%, rgba(6,14,18,0.82) 42%, rgba(3,8,10,0.9) 56%, rgba(0,0,0,0.97) 69%, #000 78%, #000 100%)",
           }}
         />
         <div
           className="pointer-events-none absolute inset-0 z-[1] lg:hidden"
           style={{
-            background: "linear-gradient(180deg, #071019 0%, #071018 38%, #050a0e 54%, #020405 68%, #000 82%, #000 100%)",
+            background: "linear-gradient(180deg, rgba(7,16,25,0.76) 0%, rgba(7,16,24,0.82) 36%, rgba(4,10,13,0.9) 58%, rgba(0,0,0,0.97) 78%, #000 100%)",
           }}
         />
 
