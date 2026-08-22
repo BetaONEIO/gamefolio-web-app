@@ -5,6 +5,7 @@ import RegisterForm from "@/components/auth/register-form";
 import ForgotPasswordForm from "@/components/auth/ForgotPasswordForm";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X } from "lucide-react";
+import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 
 const isDeveloperSubdomain = typeof window !== "undefined" && window.location.hostname === 'developer.gamefolio.com';
 
@@ -158,7 +159,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
       {/* Sheet */}
       <div
         ref={sheetRef}
-        className="relative w-full rounded-t-[20px] md:max-w-md md:rounded-2xl md:mb-8"
+        className="relative w-full rounded-t-[20px] md:max-w-4xl md:rounded-2xl md:mb-8 md:flex"
         style={{
           background: '#101923',
           transform: sheetTransform,
@@ -189,8 +190,37 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
           <X className="h-4 w-4" />
         </button>
 
+        {/* The original registration treatment: promo artwork beside the form on desktop. */}
+        <div className="hidden md:flex md:w-[44%] relative overflow-hidden rounded-l-2xl flex-col flex-shrink-0">
+          <div
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(135deg, #081017 0%, #0a1a0a 45%, #071a07 100%)" }}
+          />
+          <div
+            className="absolute bottom-0 right-0 w-3/4 h-3/4 rounded-full pointer-events-none"
+            style={{ background: "radial-gradient(circle, rgba(185,255,26,0.14) 0%, transparent 70%)" }}
+          />
+          <div className="relative z-10 p-7">
+            <span className="text-xl font-extrabold tracking-tight" style={{ color: "#B9FF1A" }}>
+              Gamefolio
+            </span>
+          </div>
+          <div className="relative z-10 flex-1 overflow-hidden -mt-[8%]">
+            <img
+              src={proHeroImage}
+              alt="Gamefolio gaming profile"
+              className="absolute inset-0 w-full h-[108%] object-cover object-top"
+            />
+            <div className="absolute inset-x-0 bottom-0 p-7 bg-gradient-to-t from-black/80 to-transparent">
+              <p className="text-white/80 text-sm leading-relaxed">
+                Upload clips, connect your stream, build your profile — all in one place.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div
-          className="px-6 pb-8 text-white"
+          className="flex-1 min-w-0 px-6 pb-8 text-white"
           style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom, 0px))' }}
         >
           {/* Logo — shrinks while the keyboard is open so the form fits above it */}
