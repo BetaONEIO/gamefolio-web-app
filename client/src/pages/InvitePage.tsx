@@ -13,6 +13,8 @@ import {
   X,
 } from "lucide-react";
 import { SiTwitch, SiKick } from "react-icons/si";
+import ProUpgradeDialog from "@/components/ProUpgradeDialog";
+import { useAuthModal } from "@/hooks/use-auth-modal";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import gameplayVideo from "@assets/gamer.mp4";
 import gameplayPoster from "@assets/gamer-poster.jpg";
@@ -167,6 +169,8 @@ function UsernameChecker() {
 
 export default function InvitePage() {
   const [, setLocation] = useLocation();
+  const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
+  const { openModal } = useAuthModal();
 
   return (
     <div className="min-h-screen" style={{ background: BG, color: "white", fontFamily: "inherit" }}>
@@ -474,7 +478,7 @@ export default function InvitePage() {
                   <span className="text-gray-400 text-sm">optional paid plan</span>
                 </div>
                 <button
-                  onClick={() => setLocation("/register")}
+                  onClick={() => setProUpgradeOpen(true)}
                   className="w-full rounded-2xl h-14 font-bold text-base transition-all hover:brightness-110 active:scale-95 flex items-center justify-center gap-2"
                   style={{ background: PRIMARY, color: "#080e17", boxShadow: "0 10px 30px -8px rgba(181,242,61,0.5)" }}
                 >
@@ -511,6 +515,16 @@ export default function InvitePage() {
       <footer className="px-6 py-10 text-center" style={{ borderTop: `1px solid ${CARD_BORDER}` }}>
         <p className="text-gray-500 text-sm">Gamefolio helps gamers, streamers, and creators get seen.</p>
       </footer>
+
+      <ProUpgradeDialog
+        open={proUpgradeOpen}
+        onOpenChange={setProUpgradeOpen}
+        subtitle="Take your Gamefolio further with premium creator tools."
+        onAuthRequired={() => {
+          setProUpgradeOpen(false);
+          openModal("register");
+        }}
+      />
     </div>
   );
 }
