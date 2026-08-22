@@ -250,13 +250,6 @@ export default function InvitePage() {
               >
                 Join Gamefolio
               </button>
-              <button
-              onClick={() => openModal("register")}
-                className="rounded-2xl px-8 py-4 font-bold text-base border transition-all hover:bg-white/5"
-                style={{ borderColor: CARD_BORDER, color: "white" }}
-              >
-                Connect your stream
-              </button>
             </div>
 
             <p className="text-gray-500 text-sm max-w-sm">
