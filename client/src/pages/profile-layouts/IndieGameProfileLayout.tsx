@@ -39,6 +39,7 @@ import {
   Pencil,
   X,
   Save,
+  ChevronDown,
 } from 'lucide-react';
 
 const MessageDialog = React.lazy(() =>
@@ -179,7 +180,13 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
   const igPlatforms: string[] = ig?.platforms?.length ? ig.platforms : (st?.platforms ?? []);
   const igPrice = ig?.price || st?.price || null;
   const igReleaseStatus = ig?.releaseStatus || st?.releaseStatus || null;
-  const igHeaderImageUrl = ig?.headerImageUrl || steamLive?.headerImageUrl || null;
+  // Prefer the selected game's own header art, with capsule art as a fallback
+  // for games that do not have a dedicated wide banner yet.
+  const igHeaderImageUrl = ig?.headerImageUrl || ig?.capsuleImageUrl || steamLive?.headerImageUrl || steamLive?.capsuleImageUrl || null;
+  const gameGenreTags: string[] = igGenres.length
+    ? igGenres
+    : (profile.userType || '').split(',').map((t) => t.trim()).filter(Boolean);
+  const selectedGameName = ig?.gameName?.trim() || profile.displayName;
 
   const isFollowing = followStatus?.status === 'following';
   const isRequested = followStatus?.status === 'requested';
@@ -210,11 +217,6 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieG
     }
     followMutation.mutate();
   };
-
-  const genreTags = (profile.userType || '')
-    .split(',')
-    .map((t) => t.trim())
-    .filter(Boolean);
 
   const gameClips = (clips || []).filter((c) => c.videoType !== 'reel');
   const reels = (clips || []).filter((c) => c.videoType === 'reel');
