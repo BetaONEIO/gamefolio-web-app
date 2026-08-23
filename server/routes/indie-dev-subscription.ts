@@ -18,7 +18,7 @@ const router = Router();
 const BASE_CURRENCY = 'gbp';
 const BASE_PRICE: Record<'monthly' | 'yearly', number> = {
   monthly: 399,  // £3.99 / month
-  yearly: 4200,  // £42.00 / year
+  yearly: 3600,  // £36.00 / year
 };
 
 const cachedPriceIds: { monthly: string | null; yearly: string | null } = {
