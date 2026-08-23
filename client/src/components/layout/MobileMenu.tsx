@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { X, Plus, Gift, Users, Bookmark, ChevronDown } from "lucide-react";
+import { X, Plus, Gift, Users, Bookmark, ChevronDown, Radio } from "lucide-react";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioDashboardIcon } from "@/components/icons/GamefolioDashboardIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
@@ -24,6 +24,7 @@ import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Game } from "@shared/schema";
+import { isPartnerType } from "@shared/partner-access";
 import { GiftProSearchDialog } from "@/components/profile/GiftProSearchDialog";
 
 const LEVEL_THRESHOLDS = [
@@ -140,13 +141,7 @@ const MobileMenu = () => {
   });
   const followerCount = (ownProfileData as any)?._count?.followers ?? 0;
   const followingCount = (ownProfileData as any)?._count?.following ?? 0;
-  const isIndieDev = user?.userType?.split(",").includes("indie_developer");
-  const isStreamerType = user?.userType?.split(",").includes("streamer");
-  const dashboardHref = isIndieDev
-    ? "/studio-dashboard"
-    : isStreamerType
-      ? "/streamer/dashboard"
-      : "/dashboard";
+  const isStreamerPartner = isPartnerType(user, "streamer");
 
   const { data: favoriteGames } = useQuery<Game[]>({
     queryKey: [`/api/users/${user?.id}/favorites`],
@@ -289,12 +284,24 @@ const MobileMenu = () => {
               {user && (
                 <li>
                   <Link
-                    href={dashboardHref}
+                    href="/dashboard"
                     onClick={handleClose}
                     className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                   >
                     <GamefolioDashboardIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
                     <span className="font-medium">Dashboard</span>
+                  </Link>
+                </li>
+              )}
+              {user && (isStreamerPartner || user.role === "admin") && (
+                <li>
+                  <Link
+                    href="/streamer/dashboard"
+                    onClick={handleClose}
+                    className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
+                  >
+                    <Radio className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                    <span className="font-medium">Streamer Dashboard</span>
                   </Link>
                 </li>
               )}

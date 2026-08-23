@@ -163,7 +163,8 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
           background: '#101923',
           transform: sheetTransform,
           transition: sheetTransition,
-          maxHeight: '92dvh',
+          maxHeight: 'min(820px, 82dvh)',
+          height: 'min(820px, 82dvh)',
           overflowY: 'auto',
           scrollbarWidth: 'none',
         }}

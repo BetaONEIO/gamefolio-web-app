@@ -10,6 +10,7 @@ import {
   TrendingUp, Play, ImagePlus,
 } from "lucide-react";
 import { NEON } from "./constants";
+import { CAMPAIGNS_ENABLED } from "@/lib/feature-flags";
 
 type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "analytics" | "game-profile";
 
@@ -102,14 +103,17 @@ export default function DashboardTab({
   const contentTotal = clipsTotal + screenshotsTotal + reelsTotal;
   const activeCampaigns = (campaigns ?? []).filter((c: any) => c.status === "live" || c.status === "approved");
 
-  const hasCampaign = activeCampaigns.length > 0;
+  // Forced off (not just hidden from the checklist/stats below) while
+  // CAMPAIGNS_ENABLED is false, so the "Active Campaign Overview" section
+  // never renders even if the account has old campaign data.
+  const hasCampaign = CAMPAIGNS_ENABLED && activeCampaigns.length > 0;
   const hasContent = content.length > 0;
   const hasKeys = demoKeys.available > 0 || fullKeys.available > 0;
   const profileReady = missingEssential.length === 0;
 
   /* ── 1. STATS STRIP ── */
   const stats = [
-    { label: "Active Campaigns", value: String(activeCampaigns.length), icon: Target, color: activeCampaigns.length > 0 ? NEON : "#475569" },
+    ...(CAMPAIGNS_ENABLED ? [{ label: "Active Campaigns", value: String(activeCampaigns.length), icon: Target, color: activeCampaigns.length > 0 ? NEON : "#475569" }] : []),
     { label: "Active Creators", value: String(d.totalParticipants), icon: Users, color: d.totalParticipants > 0 ? NEON : "#475569" },
     { label: "Demo Keys", value: String(demoKeys.available), icon: KeyRound, color: demoKeys.available < 5 ? "#f87171" : demoKeys.available < 15 ? "#f59e0b" : NEON },
     { label: "Content", value: String(contentTotal), icon: Film, color: contentTotal > 0 ? "#a78bfa" : "#475569" },
@@ -121,7 +125,7 @@ export default function DashboardTab({
   const checklist = [
     { label: "Complete your game profile", done: profileReady, action: () => onGoTo("game-profile"), pct: profilePct },
     { label: "Upload demo / full keys", done: hasKeys, action: () => onGoTo("keys"), pct: null },
-    { label: "Create your first campaign", done: hasCampaign, action: () => onGoTo("campaigns", "create"), pct: null },
+    ...(CAMPAIGNS_ENABLED ? [{ label: "Create your first campaign", done: hasCampaign, action: () => onGoTo("campaigns", "create"), pct: null }] : []),
   ];
 
   const doneCount = checklist.filter((c) => c.done).length;
@@ -182,7 +186,7 @@ export default function DashboardTab({
               </button>
             ))}
           </div>
-          {doneCount === checklist.length && (
+          {CAMPAIGNS_ENABLED && doneCount === checklist.length && (
             <div className="px-6 pb-5">
               <button onClick={() => onGoTo("campaigns", "create")}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.01]"

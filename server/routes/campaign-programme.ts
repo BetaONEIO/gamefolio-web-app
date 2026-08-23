@@ -732,7 +732,7 @@ router.post('/instances', requireAuth, async (req, res) => {
       return res.status(403).json({
         error: isIndieDevSubscriber
           ? `You've reached your active campaign limit (${campaignLimit}).`
-          : `Free accounts can run 1 active campaign at a time. Upgrade to Indie Developer to run up to 5.`,
+          : `Free accounts can run 1 active campaign at a time. Upgrade to Game Developer to run up to 5.`,
       });
     }
 

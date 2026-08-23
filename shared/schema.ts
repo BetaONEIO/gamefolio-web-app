@@ -78,7 +78,11 @@ export const users = pgTable("users", {
   // Streamer settings — additional fields only.
   // stream_platform, twitch/kick channel names, and twitch/kick verified flags
   // are declared once above; only the genuinely-new columns live here.
-  streamChannelName: text("stream_channel_name"), // Channel username on the platform (legacy, may be overwritten)
+  streamChannelName: text("stream_channel_name"),
+  // Answers from streamer onboarding (migration 0021). Self-reported: carrying
+  // no verification weight, unlike the OAuth-set *Verified flags.
+  streamMainGame: text("stream_main_game"),
+  streamFrequency: text("stream_frequency"), // Channel username on the platform (legacy, may be overwritten)
   kickId: text("kick_id"),                  // Kick user ID (set when OAuth-connected)
   twitchUserId: text("twitch_user_id"),     // Twitch user ID (set when OAuth-connected)
   rumbleChannelName: text("rumble_channel_name"), // Rumble channel slug/username
@@ -240,6 +244,15 @@ export const clips = pgTable("clips", {
   // Spam/multi-account detection signals — captured server-side at upload time.
   uploadIp: text("upload_ip"),
   uploadDeviceId: text("upload_device_id"),
+  // Background processing state. A clip row is created immediately after the
+  // raw upload finishes (status "processing", videoUrl still pointing at the
+  // unprocessed raw file) rather than waiting for ffmpeg trim/transcode to
+  // finish, so the upload UI can show 100% right away and the profile page
+  // can render a thumbnail + processing badge instead of blocking on it.
+  status: text("status").default("ready").notNull(), // "processing" | "ready" | "failed"
+  processingError: text("processing_error"),
+  rawUploadPath: text("raw_upload_path"),
+  processingAttempts: integer("processing_attempts").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -2310,7 +2323,12 @@ export const usedPaymentHashes = pgTable("used_payment_hashes", {
 // Canonical per-developer game profile — one row per indie developer user
 export const indieGameProfiles = pgTable("indie_game_profiles", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  // No longer unique: a developer can have several games (migration 0020).
+  // Exactly one of a user's games carries isPrimary, enforced by the partial
+  // unique index indie_game_profiles_one_primary_per_user.
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  isPrimary: boolean("is_primary").default(false).notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
 
   // Section 1: Basic Info
   gameName: text("game_name"),
@@ -2380,6 +2398,8 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
 export const indieGameFieldOverrides = pgTable("indie_game_field_overrides", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // Scopes an override to one game. Nullable for rows predating migration 0020.
+  gameId: integer("game_id").references(() => indieGameProfiles.id, { onDelete: "cascade" }),
   fieldName: text("field_name").notNull(),
   importedValue: text("imported_value"),   // JSON string of last imported value
   importSource: text("import_source"),     // "steam" | "epic" | "itch"

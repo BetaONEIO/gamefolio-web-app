@@ -216,7 +216,7 @@ router.post('/api/stripe/webhook',
         }
       }
 
-      // Indie Developer subscription checkout — backstop for the client-side
+      // Game Developer subscription checkout — backstop for the client-side
       // confirm call. Idempotent: safe even if the client already provisioned
       // this session.
       if (session.metadata?.type === 'indie_dev_subscription' && session.metadata?.userId) {
@@ -232,12 +232,12 @@ router.post('/api/stripe/webhook',
 
           if (userId && subscriptionId && customerId) {
             await provisionIndieDevSubscription({ userId, plan, customerId, subscriptionId });
-            console.log(`[GF Webhook] Provisioned Indie Developer subscription for user ${userId} via checkout.session.completed`);
+            console.log(`[GF Webhook] Provisioned Game Developer subscription for user ${userId} via checkout.session.completed`);
           } else {
             console.warn('[GF Webhook] indie_dev_subscription session missing user/subscription/customer ids');
           }
         } catch (error) {
-          console.error('[GF Webhook] Error provisioning Indie Developer subscription:', error);
+          console.error('[GF Webhook] Error provisioning Game Developer subscription:', error);
         }
       }
     }

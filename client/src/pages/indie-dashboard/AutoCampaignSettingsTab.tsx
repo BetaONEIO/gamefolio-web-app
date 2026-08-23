@@ -124,7 +124,7 @@ export default function AutoCampaignSettingsTab() {
             <h3 className="text-lg font-black text-white">Auto Campaigns</h3>
           </div>
           <p className="text-sm text-white/50 mb-4">
-            Auto Campaigns are an Indie Developer Pro feature. Enable this to let Gamefolio
+            Auto Campaigns are a Game Developer feature. Enable this to let Gamefolio
             continuously promote your game — creating campaigns, recruiting creators, and
             distributing keys automatically.
           </p>
@@ -132,7 +132,7 @@ export default function AutoCampaignSettingsTab() {
             onClick={() => toast({ title: "Upgrade coming soon", description: "Please visit the Subscription tab to upgrade." })}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all hover:brightness-110"
             style={{ background: NEON, color: "#070b10" }}>
-            Upgrade to Indie Developer Pro <ChevronRight className="w-4 h-4" />
+            Upgrade to Game Developer <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>

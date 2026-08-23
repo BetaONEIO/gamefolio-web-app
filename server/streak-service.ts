@@ -164,7 +164,11 @@ export class StreakService {
         const tokens = await storage.getPushTokensByUserIds([userId]);
         const hasMobile = tokens.some(t => t.platform === 'ios' || t.platform === 'android');
         if (hasMobile) {
-          const alreadyAwarded = await storage.hasReceivedXPSourceToday(userId, 'mobile_app_daily');
+          // Same 20-hour rolling window as the streak claim above, so the two
+          // bonuses stay in step and reset relative to the user's own last
+          // claim rather than midnight in the server's timezone.
+          const since = new Date(now.getTime() - MIN_HOURS_BETWEEN_CLAIMS * 60 * 60 * 1000);
+          const alreadyAwarded = await storage.hasReceivedXPSourceSince(userId, 'mobile_app_daily', since);
           if (!alreadyAwarded) {
             await LeaderboardService.awardCustomPoints(
               userId,

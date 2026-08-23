@@ -109,7 +109,7 @@ export interface IStorage {
   getClipCount(): Promise<number>;
   getGameCount(): Promise<number>;
   getAllClips(limit?: number, offset?: number, currentUserId?: number): Promise<ClipWithUser[]>;
-  getLatestClips(limit?: number, since?: Date, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]>;
+  getLatestClips(limit?: number, since?: Date, gameId?: number): Promise<ClipWithUser[]>;
   getUserTypeDistribution(): Promise<{type: string, count: number}[]>;
   getAgeRangeDistribution(): Promise<{range: string, count: number}[]>;
   getTopGames(limit?: number): Promise<Game[]>;
@@ -148,6 +148,9 @@ export interface IStorage {
   getClipByShareCode(shareCode: string): Promise<Clip | null>;
   createClip(clipData: InsertClip): Promise<Clip>;
   updateClip(id: number, clip: Partial<Clip>): Promise<Clip | null>;
+  // Rows stuck in background video processing (status "processing", not
+  // touched since `before`) for the periodic reconciler to retry.
+  getStuckProcessingClips(before: Date, limit?: number): Promise<Clip[]>;
   updateClipDuration(id: number, duration: number): Promise<boolean>;
   deleteClip(id: number): Promise<boolean>;
   incrementClipViews(id: number): Promise<void>;
@@ -157,9 +160,9 @@ export interface IStorage {
   getClipsByGameId(gameId: number, limit?: number): Promise<ClipWithUser[]>;
   getClipsWithDuration(duration: number): Promise<Clip[]>;
   getFeedClips(period?: string, limit?: number): Promise<ClipWithUser[]>;
-  getTrendingClips(period: string, limit: number, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]>;
-  getTrendingReels(period: string, limit: number, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]>;
-  getLatestReels(limit: number, currentUserId?: number): Promise<ClipWithUser[]>;
+  getTrendingClips(period: string, limit: number, gameId?: number): Promise<ClipWithUser[]>;
+  getTrendingReels(period: string, limit: number, gameId?: number): Promise<ClipWithUser[]>;
+  getLatestReels(limit: number): Promise<ClipWithUser[]>;
   getLatestScreenshots(limit: number, gameId?: number): Promise<any[]>;
   getClipById(id: number): Promise<ClipWithUser | null>;
 
@@ -322,7 +325,7 @@ export interface IStorage {
   deletePushToken(token: string): Promise<boolean>;
   deletePushTokensByUser(userId: number): Promise<number>;
   getPushTokensByUserIds(userIds: number[]): Promise<PushToken[]>;
-  hasReceivedXPSourceToday(userId: number, source: string): Promise<boolean>;
+  hasReceivedXPSourceSince(userId: number, source: string, since: Date): Promise<boolean>;
   getAllPushTokens(): Promise<PushToken[]>;
   getPushTokensByRole(role: string): Promise<PushToken[]>;
   getPushTokensForProUsers(): Promise<PushToken[]>;
@@ -583,11 +586,14 @@ export interface IStorage {
   upsertXpSetting(setting: InsertXpSetting): Promise<XpSetting>;
 
   // Indie game profile operations
-  getIndieGameProfile(userId: number): Promise<IndieGameProfile | null>;
-  upsertIndieGameProfile(userId: number, patch: Partial<InsertIndieGameProfile>): Promise<IndieGameProfile>;
-  getIndieFieldMeta(userId: number): Promise<Record<string, IndieGameFieldOverride>>;
-  upsertIndieFieldMeta(userId: number, fieldName: string, patch: Partial<Omit<IndieGameFieldOverride, "id" | "userId" | "fieldName" | "createdAt">>): Promise<void>;
-  getIndieGameProfileByUsername(username: string): Promise<{ profile: IndieGameProfile | null; user: User } | null>;
+  // gameId is optional throughout: omitting it targets the user's primary game,
+  // which keeps every pre-multi-game caller working unchanged (migration 0020).
+  getIndieGameProfile(userId: number, gameId?: number | null): Promise<IndieGameProfile | null>;
+  upsertIndieGameProfile(userId: number, patch: Partial<InsertIndieGameProfile>, gameId?: number | null): Promise<IndieGameProfile>;
+  getIndieFieldMeta(userId: number, gameId?: number | null): Promise<Record<string, IndieGameFieldOverride>>;
+  upsertIndieFieldMeta(userId: number, fieldName: string, patch: Partial<Omit<IndieGameFieldOverride, "id" | "userId" | "fieldName" | "createdAt">>, gameId?: number | null): Promise<void>;
+  getIndieGameProfileByUsername(username: string, gameId?: number | null): Promise<{ profile: IndieGameProfile | null; user: User } | null>;
+  getIndieGameProfilesByUsername(username: string): Promise<{ profiles: IndieGameProfile[]; user: User } | null>;
 }
 
 // Use DatabaseStorage with Supabase - no fallback to in-memory storage

@@ -5,8 +5,19 @@ const signedUrlCache = new Map<string, { url: string; expires: number }>();
 const CACHE_BUFFER = 5 * 60 * 1000; // Refresh 5 minutes before expiry
 const URL_EXPIRY = 60 * 60 * 1000; // 1 hour
 
+// A URL the server has already signed. The feed endpoints hand back signed
+// URLs, and signing one again returns a DIFFERENT url for the same object —
+// which defeats the browser cache, so the identical image is downloaded twice
+// and the player shows black while the second copy arrives.
+function isAlreadySignedUrl(url: string): boolean {
+  return url.includes('/object/sign/') && url.includes('token=');
+}
+
 function isSupabaseStorageUrl(url: string): boolean {
   if (!url) return false;
+  // Already signed: nothing to do. Note a signed URL still contains the bucket
+  // name, so this check must come first or it would match below and re-sign.
+  if (isAlreadySignedUrl(url)) return false;
   return url.includes('gamefolio-media') || url.includes('gamefolio-assets') || url.includes('gamefolio-name-tags');
 }
 

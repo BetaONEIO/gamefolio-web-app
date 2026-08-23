@@ -55,3 +55,8 @@ android/app/src/main/assets/public/
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Local data snapshots — pre-reset XP records and similar one-off exports.
+# Kept out of git (they contain per-user data) but do not delete: these are
+# often the only surviving record of state that was overwritten in prod.
+xp-pre-reset-snapshot-*.json

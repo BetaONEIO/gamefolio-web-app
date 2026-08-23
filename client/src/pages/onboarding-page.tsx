@@ -18,28 +18,21 @@ export default function OnboardingPage() {
       }
     };
 
-    const handlePopState = (event: PopStateEvent) => {
-      if (user && !user.userType) {
-        window.history.pushState(null, '', '/onboarding');
-        toast({
-          title: "Complete your profile",
-          description: "Please finish setting up your profile before continuing",
-          variant: "gamefolioError",
-        });
-      }
-    };
-
     if (user && !user.userType) {
       window.addEventListener('beforeunload', handleBeforeUnload);
-      window.addEventListener('popstate', handlePopState);
-      window.history.pushState(null, '', '/onboarding');
+      // Keep one sentinel entry behind the first onboarding screen. The flow
+      // owns all subsequent entries, so browser/device Back can retrace the
+      // actual path instead of being pushed into a loop.
+      if (!window.history.state?.onboarding) {
+        window.history.replaceState({ onboarding: true, onboardingIndex: 0 }, '', '/onboarding');
+        window.history.pushState({ onboarding: true, onboardingIndex: 0, onboardingRoot: true }, '', '/onboarding');
+      }
     }
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('popstate', handlePopState);
     };
-  }, [user, toast]);
+  }, [user]);
 
   useEffect(() => {
     if (!isLoading && !user) {

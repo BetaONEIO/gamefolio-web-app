@@ -10,15 +10,15 @@ import { captureRouteError } from '../sentry';
 const router = Router();
 
 // ---------------------------------------------------------------------------
-// Gamefolio Indie Developer — web pricing. Same Adaptive Pricing / embedded
+// Game Developer — web pricing. Same Adaptive Pricing / embedded
 // Checkout Session approach as Gamefolio Pro (see pro-subscription.ts) — one
 // base GBP price, Stripe converts + charges each customer in their own local
 // currency at checkout. Amounts are in MINOR units (pence).
 // ---------------------------------------------------------------------------
 const BASE_CURRENCY = 'gbp';
 const BASE_PRICE: Record<'monthly' | 'yearly', number> = {
-  monthly: 499,  // £4.99 / month
-  yearly: 4999,  // £49.99 / year
+  monthly: 399,  // £3.99 / month
+  yearly: 4200,  // £42.00 / year
 };
 
 const cachedPriceIds: { monthly: string | null; yearly: string | null } = {
@@ -37,32 +37,47 @@ async function getOrCreatePriceId(
     ? process.env.STRIPE_INDIE_DEV_MONTHLY_PRICE_ID
     : process.env.STRIPE_INDIE_DEV_YEARLY_PRICE_ID;
 
+  const targetAmount = BASE_PRICE[plan];
+  const targetInterval = plan === 'monthly' ? 'month' : 'year';
+
   if (envPriceId) {
     try {
-      await stripe.prices.retrieve(envPriceId);
-      cachedPriceIds[plan] = envPriceId;
-      return envPriceId;
+      const configuredPrice = await stripe.prices.retrieve(envPriceId);
+      if (
+        configuredPrice.active &&
+        configuredPrice.unit_amount === targetAmount &&
+        configuredPrice.currency === BASE_CURRENCY &&
+        configuredPrice.recurring?.interval === targetInterval
+      ) {
+        cachedPriceIds[plan] = envPriceId;
+        return envPriceId;
+      }
+      console.warn(`Configured indie-dev ${plan} price does not match the current Game Developer pricing. Auto-provisioning...`);
     } catch {
       console.warn(`Configured price ID ${envPriceId} not found in Stripe. Auto-provisioning...`);
     }
   }
 
   const existingProducts = await stripe.products.list({ limit: 100 });
-  let product = existingProducts.data.find((p: any) => p.name === 'Gamefolio Indie Developer' && p.active);
+  let product = existingProducts.data.find((p: any) =>
+    (p.name === 'Game Developer' || p.name === 'Gamefolio Indie Developer') && p.active
+  );
 
   if (!product) {
     product = await stripe.products.create({
-      name: 'Gamefolio Indie Developer',
-      description: 'Indie Developer subscription for Gamefolio — run more bounties at once, plus promotional perks',
+      name: 'Game Developer',
+      description: 'Game Developer subscription for Gamefolio — run more bounties at once, plus promotional perks',
       metadata: { app: 'gamefolio' },
     });
     console.log(`✅ Created Stripe product: ${product.id}`);
+  } else if (product.name !== 'Game Developer') {
+    product = await stripe.products.update(product.id, {
+      name: 'Game Developer',
+      description: 'Game Developer subscription for Gamefolio — run more bounties at once, plus promotional perks',
+    });
   }
 
   const existingPrices = await stripe.prices.list({ product: product.id, active: true, limit: 100 });
-
-  const targetAmount = BASE_PRICE[plan];
-  const targetInterval = plan === 'monthly' ? 'month' : 'year';
 
   let price = existingPrices.data.find((p: any) =>
     p.unit_amount === targetAmount &&
@@ -79,14 +94,14 @@ async function getOrCreatePriceId(
       recurring: { interval: targetInterval },
       metadata: { plan, app: 'gamefolio', currency: BASE_CURRENCY },
     });
-    console.log(`✅ Created Stripe price for indie-dev ${plan}/${BASE_CURRENCY}: ${price.id}`);
+    console.log(`✅ Created Stripe price for Game Developer ${plan}/${BASE_CURRENCY}: ${price.id}`);
   }
 
   cachedPriceIds[plan] = price.id;
   return price.id;
 }
 
-// Shared, idempotent Indie Developer provisioning. Called by the client-side
+// Shared, idempotent Game Developer provisioning. Called by the client-side
 // confirm endpoint and by the Stripe/RevenueCat webhooks as a backstop.
 export async function provisionIndieDevSubscription(opts: {
   userId: number;
@@ -163,8 +178,8 @@ router.post('/api/stripe/create-indie-dev-subscription', hybridAuth, async (req:
       try {
         const existing = await stripe.subscriptions.retrieve(user.indieDevStripeSubscriptionId);
         if (existing.status === 'active' || existing.status === 'trialing') {
-          console.warn(`⚠️ User ${userId} already has active Indie Dev subscription ${user.indieDevStripeSubscriptionId} — blocking new checkout`);
-          return res.status(409).json({ error: 'You already have an active Indie Developer subscription.' });
+          console.warn(`⚠️ User ${userId} already has active Game Developer subscription ${user.indieDevStripeSubscriptionId} — blocking new checkout`);
+          return res.status(409).json({ error: 'You already have an active Game Developer subscription.' });
         }
       } catch {
         // Subscription not found in Stripe — allow proceeding

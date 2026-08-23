@@ -480,16 +480,19 @@ const GamePage = () => {
 
   const allClips = useMemo(() => clips ?? [], [clips]);
   const clipData = useMemo(() => {
-    const src = (trendingClips?.length ? trendingClips : allClips).filter((c: any) => !c.videoType || c.videoType === "clip");
+    // Use only the game-scoped trending result — never fall back to allClips so
+    // a game with zero uploads shows the empty state instead of unrelated content.
+    const src = (trendingClips ?? []).filter((c: any) => !c.videoType || c.videoType === "clip");
     if (selectedUserId === "all") return src;
     return src.filter((c: any) => c.user?.id === parseInt(selectedUserId));
-  }, [trendingClips, allClips, selectedUserId]);
+  }, [trendingClips, selectedUserId]);
 
   const reelData = useMemo(() => {
-    const src = (trendingReels?.length ? trendingReels : allClips).filter((c: any) => c.videoType === "reel");
+    // Same: strict game-scoped result, no allClips fallback.
+    const src = (trendingReels ?? []).filter((c: any) => c.videoType === "reel");
     if (selectedUserId === "all") return src;
     return src.filter((c: any) => c.user?.id === parseInt(selectedUserId));
-  }, [trendingReels, allClips, selectedUserId]);
+  }, [trendingReels, selectedUserId]);
 
   const uniqueCreators = useMemo(() => {
     const map = new Map<number, any>();
@@ -510,6 +513,17 @@ const GamePage = () => {
       queryClient.invalidateQueries({ queryKey: ["/api/games", game.id, "clips"] });
       queryClient.invalidateQueries({ queryKey: ["/api/clips/trending", timePeriod, game.id] });
     }
+  };
+
+  /** Pre-seed the upload dialog with the current game (and optional content type) then open it. */
+  const openUploadFor = (type?: "clips" | "reels" | "screenshots") => {
+    if (game) {
+      sessionStorage.setItem("uploadGameId", game.id.toString());
+      sessionStorage.setItem("uploadGameName", game.name);
+      if (game.imageUrl) sessionStorage.setItem("uploadGameImage", game.imageUrl);
+      if (type) sessionStorage.setItem("uploadContentType", type);
+    }
+    setShowUploadDialog(true);
   };
 
   if (!match || !gameSlug) return <div className="p-8 text-center text-gray-400">Game not found</div>;
@@ -600,7 +614,7 @@ const GamePage = () => {
               <p className="text-[11px] text-gray-500 mt-3">
                 {allClips.length} {allClips.length === 1 ? "upload" : "uploads"}
               </p>
-              <Button size="sm" onClick={() => setShowUploadDialog(true)}
+              <Button size="sm" onClick={() => openUploadFor(contentMode)}
                 className="font-bold text-[11px] mt-2"
                 style={{ background: NEON, color: "#071013", boxShadow: "0 4px 14px rgba(193,255,0,0.18)" }}>
                 <Upload className="w-3.5 h-3.5 mr-1.5" />Upload content
@@ -810,12 +824,19 @@ const GamePage = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16">
-                <Play className="w-12 h-12 mx-auto mb-3 text-gray-600" />
-                <h3 className="text-lg font-semibold mb-1">No clips found</h3>
-                <p className="text-gray-400 text-sm mb-4">Be the first to upload a clip for {game.name}</p>
-                <Button onClick={() => setShowUploadDialog(true)} style={{ background: NEON, color: "#0a0f1c", fontWeight: 700 }}>
-                  <Upload className="w-4 h-4 mr-2" />Upload Clip
+              <div className="text-center py-16 rounded-2xl"
+                style={{ background: "rgba(193,255,0,0.03)", border: "1px dashed rgba(193,255,0,0.15)" }}>
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                  style={{ background: "rgba(193,255,0,0.08)", border: "1px solid rgba(193,255,0,0.15)" }}>
+                  <Play className="w-8 h-8" style={{ color: NEON }} />
+                </div>
+                <h3 className="text-lg font-black text-white mb-2">No Clips for {game.name} Yet</h3>
+                <p className="text-sm text-gray-400 mb-5 max-w-xs mx-auto">
+                  Be the first to upload a clip and start the {game.name} community here!
+                </p>
+                <Button onClick={() => openUploadFor("clips")}
+                  style={{ background: NEON, color: "#0a0f1c", fontWeight: 700, boxShadow: "0 8px 24px rgba(193,255,0,0.25)" }}>
+                  <Upload className="w-4 h-4 mr-2" />Upload First Clip
                 </Button>
               </div>
             )}
@@ -836,12 +857,19 @@ const GamePage = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16">
-                <Video className="w-12 h-12 mx-auto mb-3 text-gray-600" />
-                <h3 className="text-lg font-semibold mb-1">No reels found</h3>
-                <p className="text-gray-400 text-sm mb-4">Upload vertical reels for {game.name}</p>
-                <Button onClick={() => setShowUploadDialog(true)} style={{ background: NEON, color: "#0a0f1c", fontWeight: 700 }}>
-                  <Upload className="w-4 h-4 mr-2" />Upload Reel
+              <div className="text-center py-16 rounded-2xl"
+                style={{ background: "rgba(193,255,0,0.03)", border: "1px dashed rgba(193,255,0,0.15)" }}>
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                  style={{ background: "rgba(193,255,0,0.08)", border: "1px solid rgba(193,255,0,0.15)" }}>
+                  <Video className="w-8 h-8" style={{ color: NEON }} />
+                </div>
+                <h3 className="text-lg font-black text-white mb-2">No Reels for {game.name} Yet</h3>
+                <p className="text-sm text-gray-400 mb-5 max-w-xs mx-auto">
+                  Be the first to upload a short-form reel and kick off the {game.name} community!
+                </p>
+                <Button onClick={() => openUploadFor("reels")}
+                  style={{ background: NEON, color: "#0a0f1c", fontWeight: 700, boxShadow: "0 8px 24px rgba(193,255,0,0.25)" }}>
+                  <Upload className="w-4 h-4 mr-2" />Upload First Reel
                 </Button>
               </div>
             )}
@@ -868,12 +896,19 @@ const GamePage = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16">
-                <Camera className="w-12 h-12 mx-auto mb-3 text-gray-600" />
-                <h3 className="text-lg font-semibold mb-1">No screenshots found</h3>
-                <p className="text-gray-400 text-sm mb-4">Upload screenshots for {game.name}</p>
-                <Button onClick={() => setShowUploadDialog(true)} style={{ background: NEON, color: "#0a0f1c", fontWeight: 700 }}>
-                  <Upload className="w-4 h-4 mr-2" />Upload Screenshot
+              <div className="text-center py-16 rounded-2xl"
+                style={{ background: "rgba(193,255,0,0.03)", border: "1px dashed rgba(193,255,0,0.15)" }}>
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                  style={{ background: "rgba(193,255,0,0.08)", border: "1px solid rgba(193,255,0,0.15)" }}>
+                  <Camera className="w-8 h-8" style={{ color: NEON }} />
+                </div>
+                <h3 className="text-lg font-black text-white mb-2">No Screenshots for {game.name} Yet</h3>
+                <p className="text-sm text-gray-400 mb-5 max-w-xs mx-auto">
+                  Share your best in-game moments — be the first to post a screenshot!
+                </p>
+                <Button onClick={() => openUploadFor("screenshots")}
+                  style={{ background: NEON, color: "#0a0f1c", fontWeight: 700, boxShadow: "0 8px 24px rgba(193,255,0,0.25)" }}>
+                  <Upload className="w-4 h-4 mr-2" />Upload First Screenshot
                 </Button>
               </div>
             )}

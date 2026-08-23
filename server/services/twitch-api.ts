@@ -571,17 +571,24 @@ class TwitchApiService {
   }
 
   /**
-   * Get a broadcaster's recent clips. Uses the app access token (client
-   * credentials) — listing a channel's public clips needs only the
+   * Get a broadcaster's recent clips, newest first. Uses the app access token
+   * (client credentials) — listing a channel's public clips needs only the
    * broadcaster_id, no user token or extra OAuth scope. Each clip is enriched
    * with a derived MP4 URL and resolved game metadata; clips whose MP4 URL
    * cannot be derived are dropped (they aren't importable).
    *
-   * Twitch's Get Clips endpoint, when called without started_at/ended_at,
-   * returns the broadcaster's all-time most-viewed clips rather than their
-   * most recent ones — a single old viral clip can then permanently crowd
-   * out anything new. Bounding to a rolling 30-day window keeps results
-   * actually recent and lets old clips age out as the window slides forward.
+   * Twitch's Get Clips endpoint has no sort/order param and, within whatever
+   * date range you give it, returns clips most-viewed-first — not most
+   * recent. Without a date range at all it's the broadcaster's all-time
+   * most-viewed clips, where a single old viral clip can permanently crowd
+   * out anything new. Bounding to a rolling 30-day window keeps that view
+   * from reaching back forever, but doesn't fix the ordering: within that
+   * window we still only get back a "top N by views" page, and sorting that
+   * page by date would just reorder an already-popularity-filtered subset,
+   * not surface the actual newest clips. So this fetches a full max-size
+   * page (100, Twitch's per-request cap) and only then sorts by createdAt
+   * descending and trims to `limit` — a real latest-first result from a
+   * much larger sample, not a re-sort of an already-narrow one.
    */
   async getClipsForBroadcaster(broadcasterId: string, limit: number = 20): Promise<TwitchClip[]> {
     if (!this.isConfigured()) {
@@ -602,18 +609,23 @@ class TwitchApiService {
       },
       params: {
         broadcaster_id: broadcasterId,
-        first: Math.min(Math.max(limit, 1), 100),
+        first: 100,
         started_at: startedAt.toISOString(),
         ended_at: endedAt.toISOString(),
       },
     });
 
     const rawClips: any[] = response.data.data || [];
-    const gameMap = await this.getGamesByIds(rawClips.map((c) => c.game_id));
+    // Newest first. Twitch's created_at is an ISO string, so a plain string
+    // comparison sorts correctly without needing to parse to a Date first.
+    rawClips.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+    const trimmedClips = rawClips.slice(0, Math.min(Math.max(limit, 1), 100));
+
+    const gameMap = await this.getGamesByIds(trimmedClips.map((c) => c.game_id));
 
     // All clips are importable — the MP4 is resolved on demand via GraphQL when
     // the user actually picks one (getClipDownloadUrl), so nothing is filtered here.
-    return rawClips.map((c): TwitchClip => {
+    return trimmedClips.map((c): TwitchClip => {
       const game = gameMap.get(c.game_id);
       return {
         id: c.id,

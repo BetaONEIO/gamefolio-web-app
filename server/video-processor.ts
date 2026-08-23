@@ -211,12 +211,12 @@ export class VideoProcessor {
     videoType: 'clip' | 'reel' = 'clip'
   ): Promise<string> {
     await this.ensureDirectories();
-    
+
     const thumbnailFilename = `${filePrefix}_${Date.now()}.jpg`;
     const thumbnailPath = path.join(this.TEMP_DIR, thumbnailFilename);
-    
+
     return new Promise((resolve, reject) => {
-      // First get video duration
+      // First get video duration (and, for reels, dimensions to crop by)
       ffmpeg.ffprobe(videoPath, async (err: any, metadata: any) => {
         if (err) {
           reject(new Error(`Failed to get video metadata: ${err.message}`));
@@ -234,15 +234,34 @@ export class VideoProcessor {
         const maxTime = Math.min(duration - 1, duration * 0.9);
         const randomTime = Math.random() * (maxTime - minTime) + minTime;
 
-        // Use appropriate size based on video type
-        // Reels: 9:16 (1080x1920), Clips: 16:9 (1920x1080)
-        const thumbnailSize = videoType === 'reel' ? '1080x1920' : '1920x1080';
+        const command = ffmpeg(videoPath).seekInput(randomTime).frames(1);
 
-        // Generate thumbnail at random timestamp
-        ffmpeg(videoPath)
-          .seekInput(randomTime)
-          .frames(1)
-          .size(thumbnailSize)
+        if (videoType === 'reel') {
+          // Match the real 9:16 center-crop reels get in trimAndCropVideoForReel
+          // (see computeReelCropFilter) rather than just squashing a landscape
+          // frame into a portrait canvas — this runs on a source that hasn't
+          // been cropped yet (the preview thumbnail is generated before the
+          // background pipeline's own crop/trim), so without this it would be
+          // visibly distorted.
+          const videoStream = metadata.streams?.find((s: any) => s.codec_type === 'video');
+          if (videoStream?.width && videoStream?.height) {
+            try {
+              const { cropFilter } = this.computeReelCropFilter(videoStream.width, videoStream.height);
+              command.videoFilter(`${cropFilter},scale=1080:1920`);
+            } catch {
+              // Fall back to a plain scale if the crop math rejects this
+              // source's dimensions — better a slightly-off thumbnail than
+              // none at all.
+              command.size('1080x1920');
+            }
+          } else {
+            command.size('1080x1920');
+          }
+        } else {
+          command.size('1920x1080');
+        }
+
+        command
           .outputOptions(['-q:v 1']) // Highest quality JPEG
           .output(thumbnailPath)
           .on('end', async () => {
@@ -407,6 +426,53 @@ export class VideoProcessor {
   }
 
   /**
+   * Centered 9:16 crop math shared by trimAndCropVideoForReel (crops the
+   * whole clip) and generateAutoThumbnail (crops a single preview frame, so
+   * a reel's "processing" thumbnail matches what the finished reel will
+   * actually look like instead of a squashed landscape frame). Throws for
+   * degenerate input dimensions rather than silently producing an invalid
+   * ffmpeg crop filter.
+   */
+  private static computeReelCropFilter(
+    inputWidth: number,
+    inputHeight: number
+  ): { cropFilter: string; outputWidth: number; outputHeight: number } {
+    const inputAspectRatio = inputWidth / inputHeight;
+    const targetAspectRatio = 9 / 16; // 9:16 for reels
+
+    let cropFilter: string;
+    let outputWidth: number;
+    let outputHeight: number;
+
+    if (inputAspectRatio > targetAspectRatio) {
+      // Video is too wide, crop width but maintain reasonable scale
+      outputHeight = inputHeight;
+      outputWidth = Math.floor(inputHeight * targetAspectRatio);
+      // Ensure outputWidth doesn't exceed inputWidth
+      outputWidth = Math.min(outputWidth, inputWidth);
+      const cropX = Math.floor((inputWidth - outputWidth) / 2);
+      cropFilter = `crop=${outputWidth}:${outputHeight}:${cropX}:0`;
+    } else {
+      // Video is too tall, crop height but maintain reasonable scale
+      outputWidth = inputWidth;
+      outputHeight = Math.floor(inputWidth / targetAspectRatio);
+      // Ensure outputHeight doesn't exceed inputHeight
+      outputHeight = Math.min(outputHeight, inputHeight);
+      const cropY = Math.floor((inputHeight - outputHeight) / 2);
+      cropFilter = `crop=${outputWidth}:${outputHeight}:0:${cropY}`;
+    }
+
+    if (outputWidth <= 0 || outputHeight <= 0) {
+      throw new Error(`Invalid crop dimensions: ${outputWidth}x${outputHeight}`);
+    }
+    if (outputWidth > inputWidth || outputHeight > inputHeight) {
+      throw new Error(`Crop dimensions ${outputWidth}x${outputHeight} exceed input dimensions ${inputWidth}x${inputHeight}`);
+    }
+
+    return { cropFilter, outputWidth, outputHeight };
+  }
+
+  /**
    * Trim and crop video to 9:16 aspect ratio for reels
    * This will crop the video to fit a 9:16 (vertical) aspect ratio
    */
@@ -417,10 +483,10 @@ export class VideoProcessor {
     endTime: number
   ): Promise<void> {
     const duration = endTime - startTime;
-    
+
     return new Promise((resolve, reject) => {
       console.log(`Trimming and cropping reel from ${startTime}s to ${endTime}s (duration: ${duration}s) to 9:16 aspect ratio`);
-      
+
       // Get video dimensions first to calculate crop parameters
       ffmpeg.ffprobe(inputPath, (err: any, metadata: any) => {
         if (err) {
@@ -436,35 +502,21 @@ export class VideoProcessor {
 
         const inputWidth = videoStream.width;
         const inputHeight = videoStream.height;
-        const inputAspectRatio = inputWidth / inputHeight;
-        const targetAspectRatio = 9 / 16; // 9:16 for reels
 
         let cropFilter: string;
         let outputWidth: number;
         let outputHeight: number;
-
-        if (inputAspectRatio > targetAspectRatio) {
-          // Video is too wide, crop width but maintain reasonable scale
-          outputHeight = inputHeight;
-          outputWidth = Math.floor(inputHeight * targetAspectRatio);
-          // Ensure outputWidth doesn't exceed inputWidth
-          outputWidth = Math.min(outputWidth, inputWidth);
-          const cropX = Math.floor((inputWidth - outputWidth) / 2);
-          cropFilter = `crop=${outputWidth}:${outputHeight}:${cropX}:0`;
-        } else {
-          // Video is too tall, crop height but maintain reasonable scale
-          outputWidth = inputWidth;
-          outputHeight = Math.floor(inputWidth / targetAspectRatio);
-          // Ensure outputHeight doesn't exceed inputHeight
-          outputHeight = Math.min(outputHeight, inputHeight);
-          const cropY = Math.floor((inputHeight - outputHeight) / 2);
-          cropFilter = `crop=${outputWidth}:${outputHeight}:0:${cropY}`;
+        try {
+          ({ cropFilter, outputWidth, outputHeight } = this.computeReelCropFilter(inputWidth, inputHeight));
+        } catch (cropError: any) {
+          reject(cropError instanceof Error ? cropError : new Error(String(cropError)));
+          return;
         }
-        
+
         // Add scaling to ensure reasonable output dimensions (max 1080p height for reels)
         const maxReelHeight = 1920; // 1080 * (16/9) = 1920 for 9:16
         const maxReelWidth = 1080;
-        
+
         if (outputHeight > maxReelHeight || outputWidth > maxReelWidth) {
           const scale = Math.min(maxReelWidth / outputWidth, maxReelHeight / outputHeight);
           const finalWidth = Math.floor(outputWidth * scale);
@@ -474,17 +526,6 @@ export class VideoProcessor {
         }
 
         console.log(`Cropping ${inputWidth}x${inputHeight} to ${outputWidth}x${outputHeight} for 9:16 aspect ratio`);
-
-        // Validate crop parameters to prevent FFmpeg errors
-        if (outputWidth <= 0 || outputHeight <= 0) {
-          reject(new Error(`Invalid crop dimensions: ${outputWidth}x${outputHeight}`));
-          return;
-        }
-
-        if (outputWidth > inputWidth || outputHeight > inputHeight) {
-          reject(new Error(`Crop dimensions ${outputWidth}x${outputHeight} exceed input dimensions ${inputWidth}x${inputHeight}`));
-          return;
-        }
 
         ffmpeg(inputPath)
           .seekInput(startTime)

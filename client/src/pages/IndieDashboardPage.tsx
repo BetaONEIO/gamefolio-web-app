@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearch } from "wouter";
 import {
   Target, BarChart3, KeyRound, Film, Settings, LayoutDashboard,
 } from "lucide-react";
+import { CAMPAIGNS_ENABLED } from "@/lib/feature-flags";
 import CreateCampaignFlow from "./indie-dashboard/CreateCampaignFlow";
 import MyCampaignsTab from "./indie-dashboard/MyCampaignsTab";
 import CreatorContentTab from "./indie-dashboard/CreatorContentTab";
@@ -19,19 +21,39 @@ type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "analyti
 type CampaignSubTab = "create" | "my";
 
 
+// "Campaigns" tab hidden while CAMPAIGNS_ENABLED is false — bounty campaigns
+// are shipping in a later build. Filtered out of this array (not just
+// unlisted) so it also can't be reached via the ?tab= deep-link guard below,
+// which validates against these ids.
 const TOP_TABS: { id: TopTabId; label: string; icon: any }[] = [
   { id: "overview",        label: "Overview",       icon: LayoutDashboard },
-  { id: "campaigns",       label: "Campaigns",      icon: Target },
+  ...(CAMPAIGNS_ENABLED ? [{ id: "campaigns" as const, label: "Campaigns", icon: Target }] : []),
   { id: "creator-content", label: "Creator Content", icon: Film },
   { id: "keys",            label: "Keys",           icon: KeyRound },
   { id: "analytics",       label: "Analytics",      icon: BarChart3 },
   { id: "game-profile",    label: "Game Profile",   icon: Settings },
 ];
 
+const TOP_TAB_IDS = TOP_TABS.map((t) => t.id);
+
 export default function IndieDashboardPage() {
   const [tab, setTab] = useState<TopTabId>("overview");
   const [campaignSub, setCampaignSub] = useState<CampaignSubTab>("my");
   const [runWizardTemplate, setRunWizardTemplate] = useState<any>(null);
+
+  // Lets links like the "Upload Keys" header menu item deep-link straight to
+  // a tab (e.g. /indie/dashboard?tab=keys). Reading window.location.search
+  // once as initial state wouldn't work here: wouter keeps this component
+  // mounted across a query-only navigation (the path doesn't change), so a
+  // useState initializer never re-runs on a second "Upload Keys" click —
+  // useSearch() is reactive to that and re-triggers this effect instead.
+  const search = useSearch();
+  useEffect(() => {
+    const tabParam = new URLSearchParams(search).get("tab");
+    if (tabParam && (TOP_TAB_IDS as string[]).includes(tabParam)) {
+      setTab(tabParam as TopTabId);
+    }
+  }, [search]);
 
   const goTo = (toTab: TopTabId, sub?: string) => {
     setTab(toTab);
@@ -75,7 +97,7 @@ export default function IndieDashboardPage() {
         )}
 
         {/* ── CAMPAIGNS ── */}
-        {tab === "campaigns" && (
+        {CAMPAIGNS_ENABLED && tab === "campaigns" && (
           <>
             {campaignSub === "my" && (
               <MyCampaignsTab onCreateCampaign={() => setCampaignSub("create")} />

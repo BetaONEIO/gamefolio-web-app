@@ -195,7 +195,7 @@ router.post('/api/indie-dev/activate', hybridAuth, async (req: Request, res: Res
   } catch (error: any) {
     captureRouteError(error);
     console.error('[RevenueCat] indie-dev activate error:', error);
-    return res.status(500).json({ error: 'Failed to activate Indie Developer subscription', message: error.message });
+    return res.status(500).json({ error: 'Failed to activate Game Developer subscription', message: error.message });
   }
 });
 

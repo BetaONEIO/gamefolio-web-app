@@ -81,6 +81,46 @@ function useUploadImage() {
   });
 }
 
+function useUploadTrailer() {
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const fd = new FormData();
+      fd.append("video", file);
+      const res = await fetch("/api/indie/profile/upload-trailer", {
+        method: "POST", body: fd, credentials: "include",
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json() as Promise<{ url: string; field: string }>;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+      toast({ description: "Trailer uploaded" });
+    },
+    onError: () => toast({ description: "Upload failed", variant: "gamefolioError" }),
+  });
+}
+
+function useUploadScreenshot() {
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: async (files: File[]) => {
+      const fd = new FormData();
+      files.forEach(file => fd.append("screenshot", file));
+      const res = await fetch("/api/indie/upload/screenshot", {
+        method: "POST", body: fd, credentials: "include",
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      return res.json() as Promise<{ urls: string[]; screenshotUrls: string[] }>;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+      toast({ description: "Screenshots uploaded" });
+    },
+    onError: () => toast({ description: "Upload failed", variant: "gamefolioError" }),
+  });
+}
+
 // ─── EditModal ─────────────────────────────────────────────────────────────────
 function EditModal({
   title, onClose, children, onSave, isSaving, saveLabel = "Save changes",
@@ -95,9 +135,9 @@ function EditModal({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-4 pt-20"
       style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)" }}>
-      <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden"
+      <div className="relative w-full max-w-2xl max-h-[calc(100vh-6rem)] flex flex-col rounded-2xl overflow-hidden"
         style={{ background: "#0e1419", border: `1px solid ${CARD_BORDER}`, boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0"
@@ -454,16 +494,31 @@ function AboutCard({ profile }: { profile: Profile | null }) {
 
 // ─── Media Card ────────────────────────────────────────────────────────────────
 function MediaCard({ profile }: { profile: Profile | null }) {
-  const [open, setOpen] = useState(false);
+  // Trailer modal state
+  const [trailerOpen, setTrailerOpen] = useState(false);
   const [trailer, setTrailer] = useState("");
+  const trailerFileRef = useRef<HTMLInputElement>(null);
+
+  // Screenshots modal state
+  const [shotsOpen, setShotsOpen] = useState(false);
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [newShot, setNewShot] = useState("");
-  const save = useSaveProfile(() => setOpen(false));
+  const shotFileRef = useRef<HTMLInputElement>(null);
 
-  const openModal = () => {
+  const saveTrailer = useSaveProfile(() => setTrailerOpen(false));
+  const saveShots = useSaveProfile(() => setShotsOpen(false));
+  const uploadTrailer = useUploadTrailer();
+  const uploadScreenshot = useUploadScreenshot();
+
+  const openTrailerModal = () => {
     setTrailer(profile?.trailerUrl ?? "");
+    setTrailerOpen(true);
+  };
+
+  const openShotsModal = () => {
     setScreenshots((profile?.screenshotUrls as string[] | null) ?? []);
-    setOpen(true);
+    setNewShot("");
+    setShotsOpen(true);
   };
 
   const addShot = () => {
@@ -478,20 +533,15 @@ function MediaCard({ profile }: { profile: Profile | null }) {
   return (
     <>
       <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
-        <div className="flex items-center justify-between px-5 py-4"
+        <div className="flex items-center px-5 py-4"
           style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
           <div className="flex items-center gap-2.5">
             <ImageIcon size={16} style={{ color: NEON }} />
             <span className="text-sm font-bold text-white">Media & Artwork</span>
           </div>
-          <button onClick={openModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/10"
-            style={{ border: `1px solid ${CARD_BORDER}`, color: "white" }}>
-            <Pencil size={11} /> Edit
-          </button>
         </div>
         <div className="p-5 space-y-4">
-          {/* Banner + Capsule row */}
+          {/* Banner + Capsule row — direct drag-and-drop, no modal needed */}
           <div className="grid grid-cols-[1fr_160px] gap-3">
             <div>
               <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">Banner · 16:9</p>
@@ -509,35 +559,53 @@ function MediaCard({ profile }: { profile: Profile | null }) {
 
           {/* Trailer */}
           <div>
-            <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">Trailer</p>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] text-white/30 uppercase tracking-wider font-medium">Trailer</p>
+              <button
+                type="button"
+                onClick={openTrailerModal}
+                className="flex items-center gap-1 text-[11px] text-white/30 hover:text-white transition-colors"
+              >
+                <Pencil size={11} /> Edit
+              </button>
+            </div>
             {profile?.trailerUrl ? (
-              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl group cursor-pointer hover:bg-white/5 transition-all"
+              <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl"
                 style={{ border: `1px solid ${CARD_BORDER}` }}>
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                   style={{ background: "rgba(239,68,68,0.15)" }}>
                   <Play size={14} className="text-red-400 ml-0.5" />
                 </div>
                 <span className="text-sm text-white/60 truncate flex-1">{profile.trailerUrl}</span>
-                <button onClick={openModal}
+                <button onClick={openTrailerModal}
                   className="text-[11px] text-white/30 hover:text-white transition-colors shrink-0">
                   <Pencil size={12} />
                 </button>
               </div>
             ) : (
-              <button onClick={openModal}
+              <button onClick={openTrailerModal}
                 className="w-full flex items-center justify-center gap-2 py-4 rounded-xl transition-all hover:bg-white/5"
                 style={{ border: `1px dashed ${CARD_BORDER}` }}>
                 <Video size={16} className="text-white/20" />
-                <span className="text-sm text-white/30">Add trailer URL</span>
+                <span className="text-sm text-white/30">Add trailer URL or upload</span>
               </button>
             )}
           </div>
 
           {/* Screenshots */}
           <div>
-            <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">
-              Screenshots ({shotList.length})
-            </p>
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] text-white/30 uppercase tracking-wider font-medium">
+                Screenshots ({shotList.length})
+              </p>
+              <button
+                type="button"
+                onClick={openShotsModal}
+                className="flex items-center gap-1 text-[11px] text-white/30 hover:text-white transition-colors"
+              >
+                <Pencil size={11} /> Edit
+              </button>
+            </div>
             {shotList.length > 0 ? (
               <div className="grid grid-cols-3 gap-2">
                 {shotList.slice(0, 5).map((url, i) => (
@@ -552,41 +620,140 @@ function MediaCard({ profile }: { profile: Profile | null }) {
                 )}
               </div>
             ) : (
-              <button onClick={openModal}
+              <button onClick={openShotsModal}
                 className="w-full flex items-center justify-center gap-2 py-4 rounded-xl transition-all hover:bg-white/5"
                 style={{ border: `1px dashed ${CARD_BORDER}` }}>
                 <ImageIcon size={16} className="text-white/20" />
-                <span className="text-sm text-white/30">Add screenshot URLs</span>
+                <span className="text-sm text-white/30">Add screenshots</span>
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {open && (
-        <EditModal title="Media & Artwork" onClose={() => setOpen(false)}
-          onSave={() => save.mutate({ trailerUrl: trailer, screenshotUrls: screenshots })}
-          isSaving={save.isPending}>
+      {/* ── Trailer modal ─────────────────────────────────────────────────────── */}
+      {trailerOpen && (
+        <EditModal title="Trailer" onClose={() => setTrailerOpen(false)}
+          onSave={() => saveTrailer.mutate({ trailerUrl: trailer })}
+          isSaving={saveTrailer.isPending}>
+          {/* URL input */}
           <FieldInput label="Trailer URL (YouTube / Vimeo)" value={trailer} onChange={setTrailer}
             type="url" placeholder="https://youtu.be/…" />
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px" style={{ background: CARD_BORDER }} />
+            <span className="text-xs text-white/25 font-medium">or upload a file</span>
+            <div className="flex-1 h-px" style={{ background: CARD_BORDER }} />
+          </div>
+
+          {/* File upload area */}
+          <input
+            ref={trailerFileRef}
+            type="file"
+            accept="video/*"
+            className="hidden"
+            onChange={e => {
+              const f = e.target.files?.[0];
+              if (f) {
+                uploadTrailer.mutate(f, { onSuccess: () => setTrailerOpen(false) });
+              }
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => trailerFileRef.current?.click()}
+            disabled={uploadTrailer.isPending}
+            className="w-full flex flex-col items-center justify-center gap-2 py-6 rounded-xl transition-all hover:bg-white/5 disabled:opacity-50"
+            style={{ border: `2px dashed ${CARD_BORDER}` }}
+          >
+            {uploadTrailer.isPending
+              ? <Loader2 size={22} className="animate-spin" style={{ color: NEON }} />
+              : <Upload size={22} className="text-white/20" />}
+            <span className="text-sm text-white/30">
+              {uploadTrailer.isPending ? "Uploading video…" : "Click to upload video file"}
+            </span>
+            <span className="text-xs text-white/15">MP4, MOV, WebM — max 500 MB</span>
+          </button>
+
+          {/* Currently set URL reminder if filled */}
+          {profile?.trailerUrl && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${CARD_BORDER}` }}>
+              <Play size={12} className="text-red-400 shrink-0" />
+              <span className="text-xs text-white/40 truncate flex-1">Current: {profile.trailerUrl}</span>
+            </div>
+          )}
+        </EditModal>
+      )}
+
+      {/* ── Screenshots modal ──────────────────────────────────────────────────── */}
+      {shotsOpen && (
+        <EditModal title="Screenshots" onClose={() => setShotsOpen(false)}
+          onSave={() => saveShots.mutate({ screenshotUrls: screenshots })}
+          isSaving={saveShots.isPending}>
+
+          {/* Upload a file */}
+          <div>
+            <label className="text-xs font-medium text-white/50 uppercase tracking-wider block mb-2">
+              Upload screenshot
+            </label>
+            <input
+              ref={shotFileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={e => {
+                const files = Array.from(e.target.files ?? []);
+                if (files.length > 0) uploadScreenshot.mutate(files);
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => shotFileRef.current?.click()}
+              disabled={uploadScreenshot.isPending}
+              className="w-full flex items-center justify-center gap-2 py-4 rounded-xl transition-all hover:bg-white/5 disabled:opacity-50"
+              style={{ border: `2px dashed ${CARD_BORDER}` }}
+            >
+              {uploadScreenshot.isPending
+                ? <Loader2 size={18} className="animate-spin" style={{ color: NEON }} />
+                : <Upload size={18} className="text-white/20" />}
+              <span className="text-sm text-white/30">
+                {uploadScreenshot.isPending ? "Uploading…" : "Click to upload one or more images"}
+              </span>
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px" style={{ background: CARD_BORDER }} />
+            <span className="text-xs text-white/25 font-medium">or add a URL</span>
+            <div className="flex-1 h-px" style={{ background: CARD_BORDER }} />
+          </div>
+
+          {/* URL list */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-white/50 uppercase tracking-wider block">
-              Screenshots ({screenshots.length})
+              Screenshot URLs ({screenshots.length})
             </label>
-            <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
-              {screenshots.map((url, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input value={url}
-                    onChange={e => setScreenshots(screenshots.map((s, j) => j === i ? e.target.value : s))}
-                    className="flex-1 bg-transparent border rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/30"
-                    style={{ borderColor: CARD_BORDER }} />
-                  <button onClick={() => setScreenshots(screenshots.filter((_, j) => j !== i))}
-                    className="text-white/30 hover:text-red-400 transition-colors">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
+            {screenshots.length > 0 && (
+              <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
+                {screenshots.map((url, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input value={url}
+                      onChange={e => setScreenshots(screenshots.map((s, j) => j === i ? e.target.value : s))}
+                      className="flex-1 bg-transparent border rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/30"
+                      style={{ borderColor: CARD_BORDER }} />
+                    <button onClick={() => setScreenshots(screenshots.filter((_, j) => j !== i))}
+                      className="text-white/30 hover:text-red-400 transition-colors">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex gap-2 mt-1">
               <input value={newShot} onChange={e => setNewShot(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addShot(); } }}
@@ -598,12 +765,6 @@ function MediaCard({ profile }: { profile: Profile | null }) {
                 <Plus size={14} />
               </button>
             </div>
-          </div>
-          <div className="rounded-xl p-4 space-y-1" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${CARD_BORDER}` }}>
-            <p className="text-xs font-bold text-white/50">Upload Banner & Capsule</p>
-            <p className="text-xs text-white/30">
-              Drag and drop images directly onto the banner and capsule zones on the card below this modal. Uploads save immediately.
-            </p>
           </div>
         </EditModal>
       )}

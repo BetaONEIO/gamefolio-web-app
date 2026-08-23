@@ -551,7 +551,45 @@ app.use((req, res, next) => {
         setTimeout(tick, 30 * 1000);
         setInterval(tick, SCHEDULE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule scheduled-posts worker:', err));
+
+      // Safety net for clips left stuck in "processing" — normally
+      // finishClipProcessing runs immediately in-process right after upload
+      // and this never finds anything; it only matters if the server
+      // restarted mid-job. Grace period (10 min, in the worker itself) keeps
+      // this from racing a legitimately still-running in-process attempt.
+      import('./clip-processing-worker').then(({ reconcileStuckClipProcessing }) => {
+        const RECONCILE_INTERVAL_MS = 5 * 60 * 1000;
+        const tick = () => {
+          reconcileStuckClipProcessing()
+            .catch((err) => console.error('clip-processing-reconcile failed:', err));
+        };
+        setTimeout(tick, 2 * 60 * 1000);
+        setInterval(tick, RECONCILE_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule clip-processing reconciler:', err));
     });
+
+    // Reserved VM deploys stop the old process before the new one boots —
+    // there's no second instance to keep serving traffic in the meantime —
+    // so without this, the SIGTERM Replit sends kills every in-flight
+    // request immediately. A request that had already written its result
+    // (e.g. a clip finishing processing) but hadn't sent its response yet
+    // would leave the client seeing a hard failure for work the server
+    // actually completed, with no way to tell the two apart. Draining lets
+    // in-flight requests finish and respond normally; the timeout is a
+    // safety net so one stuck request can't block a deploy forever.
+    const gracefulShutdown = (signal: string) => {
+      log(`${signal} received, draining in-flight requests before exit`);
+      server.close(() => {
+        log('all connections drained, exiting');
+        process.exit(0);
+      });
+      setTimeout(() => {
+        console.warn('Graceful shutdown timed out after 25s, forcing exit');
+        process.exit(1);
+      }, 25_000);
+    };
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   } catch (error) {
     console.error("Fatal server error:", error);
     process.exit(1);

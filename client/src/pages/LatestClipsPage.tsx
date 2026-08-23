@@ -56,7 +56,9 @@ const LatestClipsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background px-3 py-4 sm:px-4 sm:py-6 md:container md:mx-auto md:px-4 md:py-6">
+    // pb reserves room for the fixed MobileNav (and the iOS home indicator),
+    // which otherwise overlays the last row of clips. Matches HomePageSimple.
+    <div className="min-h-screen bg-background px-3 py-4 sm:px-4 sm:py-6 md:container md:mx-auto md:px-4 md:py-6 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-8">
       {mobileViewerOpen && filteredClips.length > 0 && (
         <MobileClipsViewer
           clips={filteredClips}

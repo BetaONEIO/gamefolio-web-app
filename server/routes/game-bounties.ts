@@ -253,7 +253,7 @@ router.post('/:gameId/bounties', async (req, res) => {
         return res.status(403).json({
           message: isIndieDevSubscriber
             ? `You've reached your active bounty limit (${limit}).`
-            : `Free accounts can run 1 active bounty at a time. Upgrade to Indie Developer to run up to 5.`,
+            : `Free accounts can run 1 active bounty at a time. Upgrade to Game Developer to run up to 5.`,
         });
       }
     }

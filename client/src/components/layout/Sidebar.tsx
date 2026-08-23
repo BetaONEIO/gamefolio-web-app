@@ -11,7 +11,6 @@ import {
   Users,
   Rocket,
   Radio,
-  Target,
   Bookmark,
 } from "lucide-react";
 import { isPartnerType } from "@shared/partner-access";
@@ -260,21 +259,17 @@ const Sidebar = () => {
   };
 
   const isIndieDev = user?.userType?.split(",").includes("indie_developer");
-  const isStreamerType = user?.userType?.split(",").includes("streamer");
   const canAccessIndieGame = !!user && (
     user.role === "admin" ||
     isPartnerType(user, "indie") ||
     isIndieDev
   );
-  const dashboardHref = isIndieDev ? "/studio-dashboard" : isStreamerType ? "/streamer/dashboard" : "/dashboard";
   const menuItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
-    ...(user ? [{ icon: GamefolioDashboardIcon, label: "Dashboard", href: dashboardHref }] : []),
+    ...(user ? [{ icon: GamefolioDashboardIcon, label: "Dashboard", href: "/dashboard" }] : []),
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
-
-    ...(canAccessIndieGame ? [{ icon: Target, label: "Bounty Hub", href: "/bounties" }] : []),
 
     // Store stays on native but renders a crypto-free cosmetics catalogue.
     { icon: GamefolioStoreIcon, label: "Store", href: "/store" },

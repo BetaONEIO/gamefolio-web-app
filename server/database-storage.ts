@@ -129,7 +129,7 @@ import {
   ambassadorConversions
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, like, ilike, asc, or, lt, lte, gt, sql, arrayContains, ne, inArray, notInArray, isNotNull, isNull, getTableColumns } from "drizzle-orm";
+import { eq, and, desc, like, ilike, asc, or, lt, lte, gt, gte, sql, arrayContains, ne, inArray, notInArray, isNotNull, isNull, getTableColumns } from "drizzle-orm";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { IStorage } from "./storage";
@@ -886,6 +886,15 @@ export class DatabaseStorage implements IStorage {
     return updatedClip || null;
   }
 
+  async getStuckProcessingClips(before: Date, limit: number = 20): Promise<Clip[]> {
+    return db
+      .select()
+      .from(clips)
+      .where(and(eq(clips.status, 'processing'), lt(clips.updatedAt, before)))
+      .orderBy(asc(clips.updatedAt))
+      .limit(limit);
+  }
+
   async updateClipDuration(id: number, duration: number): Promise<boolean> {
     try {
       await db
@@ -1182,7 +1191,7 @@ export class DatabaseStorage implements IStorage {
     return clipsWithDetails;
   }
 
-  async getTrendingClips(period: string = 'recent', limit: number = 10, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]> {
+  async getTrendingClips(period: string = 'recent', limit: number = 10, gameId?: number): Promise<ClipWithUser[]> {
     let dateFilter: Date | null;
     const now = new Date();
 
@@ -1223,13 +1232,18 @@ export class DatabaseStorage implements IStorage {
         and(
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'clip'),
+          eq(clips.status, 'ready'),
           gameId ? eq(clips.gameId, gameId) : undefined,
-          // Only show clips from public accounts OR private accounts that current user follows OR user's own content
-          or(
-            eq(users.isPrivate, false), // Public accounts
-            currentUserId ? eq(users.id, currentUserId) : sql`false`, // User's own content
-            currentUserId ? sql`exists (select 1 from follows f where f.following_id = ${users.id} and f.follower_id = ${currentUserId})` : sql`false` // Current user follows this private account
-          ),
+          // Public accounts only. This used to also include the requester's
+          // own content and any private accounts they follow, but that made
+          // the result (and therefore the cache entry in getCachedTrending)
+          // different per user — every distinct logged-in user forced a
+          // cache miss for what should be one shared "trending" computation,
+          // multiplying DB load and signed-URL generation. Trending is a
+          // public discovery surface; a private account's content showing
+          // up there for its followers was a minor nicety, not a
+          // requirement — it still appears on that creator's own profile.
+          eq(users.isPrivate, false),
           // Only show content for approved games (or no game)
           or(
             sql`${clips.gameId} IS NULL`,
@@ -1285,7 +1299,7 @@ export class DatabaseStorage implements IStorage {
     return clipsWithDetails;
   }
 
-  async getTrendingReels(period: string = 'recent', limit: number = 10, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]> {
+  async getTrendingReels(period: string = 'recent', limit: number = 10, gameId?: number): Promise<ClipWithUser[]> {
     let dateFilter: Date | null;
     const now = new Date();
 
@@ -1341,24 +1355,19 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(likes, eq(clips.id, likes.clipId))
       .leftJoin(comments, eq(clips.id, comments.clipId))
       .leftJoin(clipReactions, eq(clips.id, clipReactions.clipId))
-      .leftJoin(follows, and(
-        eq(follows.followingId, users.id),
-        currentUserId ? eq(follows.followerId, currentUserId) : sql`false`
-      ))
       .where(
         and(
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'reel'),
           gameId ? eq(clips.gameId, gameId) : undefined,
-          // Only show reels from public accounts OR private accounts that current user follows OR user's own content
-          or(
-            eq(users.isPrivate, false), // Public accounts
-            currentUserId ? eq(users.id, currentUserId) : sql`false`, // User's own content
-            currentUserId ? and(
-              eq(users.isPrivate, true),
-              eq(follows.followerId, currentUserId) // Current user follows this private account
-            ) : sql`false` // If no current user, don't show any private content
-          ),
+          // Wattsy is a removed test account; its orphaned reels must not
+          // appear in public trending results.
+          sql`lower(${users.username}) <> 'wattsy'`,
+          // Public accounts only — see getTrendingClips for why this no
+          // longer varies per requester (own content / followed private
+          // accounts): that made every logged-in user's trending result
+          // distinct, defeating the shared cache in getCachedTrending.
+          eq(users.isPrivate, false),
           // Only show content for approved games (or no game)
           sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`,
           // Exclude content from suspended/banned users
@@ -1387,7 +1396,7 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getLatestReels(limit: number, currentUserId?: number): Promise<ClipWithUser[]> {
+  async getLatestReels(limit: number): Promise<ClipWithUser[]> {
     // Get latest reels by creation date (newest first) with engagement counts
     const latestReelsQuery = db
       .select({
@@ -1416,22 +1425,14 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(likes, eq(clips.id, likes.clipId))
       .leftJoin(comments, eq(clips.id, comments.clipId))
       .leftJoin(clipReactions, eq(clips.id, clipReactions.clipId))
-      .leftJoin(follows, and(
-        eq(follows.followingId, users.id),
-        currentUserId ? eq(follows.followerId, currentUserId) : sql`false`
-      ))
       .where(
         and(
           eq(clips.videoType, 'reel'),
-          // Only show reels from public accounts OR private accounts that current user follows OR user's own content
-          or(
-            eq(users.isPrivate, false), // Public accounts
-            currentUserId ? eq(users.id, currentUserId) : sql`false`, // User's own content
-            currentUserId ? and(
-              eq(users.isPrivate, true),
-              eq(follows.followerId, currentUserId) // Current user follows this private account
-            ) : sql`false` // If no current user, don't show any private content
-          ),
+          eq(clips.status, 'ready'),
+          // Public accounts only — see getTrendingClips for why this doesn't
+          // vary per requester anymore (this result is now cached and
+          // shared across users, same fix).
+          eq(users.isPrivate, false),
           // Only show content for approved games (or no game)
           sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`,
           // Exclude content from suspended/banned users
@@ -2221,20 +2222,20 @@ export class DatabaseStorage implements IStorage {
     return Number(result.count);
   }
 
-  async getLatestClips(limit: number = 20, since?: Date, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]> {
+  async getLatestClips(limit: number = 20, since?: Date, gameId?: number): Promise<ClipWithUser[]> {
     const result = await db
       .select({ clipId: clips.id })
       .from(clips)
       .leftJoin(users, eq(clips.userId, users.id))
       .where(and(
         eq(clips.videoType, 'clip'),
+        eq(clips.status, 'ready'),
         since ? gt(clips.createdAt, since) : undefined,
         gameId ? eq(clips.gameId, gameId) : undefined,
-        or(
-          eq(users.isPrivate, false),
-          currentUserId ? eq(users.id, currentUserId) : sql`false`,
-          currentUserId ? sql`exists (select 1 from follows f where f.following_id = ${users.id} and f.follower_id = ${currentUserId})` : sql`false`
-        ),
+        // Public accounts only — see getTrendingClips for why this doesn't
+        // vary per requester anymore (this result is now cached and shared
+        // across users, same fix).
+        eq(users.isPrivate, false),
         or(
           sql`${clips.gameId} IS NULL`,
           sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`
@@ -2274,6 +2275,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(games, eq(clips.gameId, games.id))
       .where(and(
         eq(clips.videoType, 'clip'),
+        eq(clips.status, 'ready'),
         sql`NOT EXISTS (SELECT 1 FROM games g WHERE g.id = ${clips.gameId} AND g.is_approved = false)`,
         sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
       ))
@@ -3194,6 +3196,7 @@ export class DatabaseStorage implements IStorage {
         and(
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'clip'),
+          eq(clips.status, 'ready'),
           gameId ? eq(clips.gameId, gameId) : undefined,
           sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
@@ -3251,6 +3254,7 @@ export class DatabaseStorage implements IStorage {
         and(
           dateFilter ? gt(clips.createdAt, dateFilter) : undefined,
           eq(clips.videoType, 'clip'),
+          eq(clips.status, 'ready'),
           gameId ? eq(clips.gameId, gameId) : undefined,
           sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${clips.userId} AND u.status IN ('suspended', 'banned'))`
         )
@@ -3963,16 +3967,26 @@ export class DatabaseStorage implements IStorage {
     return limit ? combined.slice(0, limit) : combined;
   }
 
-  async hasReceivedXPSourceToday(userId: number, source: string): Promise<boolean> {
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+  // Rolling window rather than a calendar day: the streak itself is governed by
+  // hours since the last claim, so anchoring this to server-local midnight made
+  // the two bonuses drift apart, and reset at a time of day that depended on
+  // where the SERVER is rather than where the user is.
+  async hasReceivedXPSourceSince(userId: number, source: string, since: Date): Promise<boolean> {
+    // Reads user_points_history, because that is where LeaderboardService
+    // .awardCustomPoints writes. It previously read user_xp_history, which the
+    // award never touches, so the guard could never match and was inert.
     const [row] = await db
-      .select({ id: userXPHistory.id })
-      .from(userXPHistory)
+      .select({ id: userPointsHistory.id })
+      .from(userPointsHistory)
       .where(and(
-        eq(userXPHistory.userId, userId),
-        eq(userXPHistory.source, source),
-        sql`${userXPHistory.createdAt} >= ${startOfDay}`
+        eq(userPointsHistory.userId, userId),
+        eq(userPointsHistory.action, source),
+        // gte(), not a raw sql template: interpolating a JS Date straight into
+        // sql`` hands postgres.js a Date where it expects a string, which
+        // throws ERR_INVALID_ARG_TYPE on every call. The one caller wraps this
+        // in try/catch, so the failure was silent and the mobile app daily
+        // bonus was never awarded.
+        gte(userPointsHistory.createdAt, since)
       ))
       .limit(1);
     return !!row;
@@ -6810,23 +6824,48 @@ export class DatabaseStorage implements IStorage {
 
   // ─── Indie Game Profile Operations ────────────────────────────────────────────
 
-  async getIndieGameProfile(userId: number): Promise<IndieGameProfile | null> {
-    const rows = await db.select().from(indieGameProfiles).where(eq(indieGameProfiles.userId, userId));
+  // A user may own several games (migration 0020). Passing gameId selects one;
+  // omitting it means "the primary game", which is what every pre-multi-game
+  // caller wants. gameId is always constrained by userId so one developer can
+  // never read another's game by guessing an id.
+  async getIndieGameProfile(userId: number, gameId?: number | null): Promise<IndieGameProfile | null> {
+    if (gameId) {
+      const rows = await db.select().from(indieGameProfiles)
+        .where(and(eq(indieGameProfiles.id, gameId), eq(indieGameProfiles.userId, userId)));
+      return rows[0] ?? null;
+    }
+    const rows = await db.select().from(indieGameProfiles)
+      .where(eq(indieGameProfiles.userId, userId))
+      .orderBy(desc(indieGameProfiles.isPrimary), asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id))
+      .limit(1);
     return rows[0] ?? null;
   }
 
-  async upsertIndieGameProfile(userId: number, patch: Partial<InsertIndieGameProfile>): Promise<IndieGameProfile> {
-    const existing = await db.select({ id: indieGameProfiles.id }).from(indieGameProfiles).where(eq(indieGameProfiles.userId, userId));
-    if (existing.length > 0) {
-      const [updated] = await db.update(indieGameProfiles).set({ ...patch, updatedAt: new Date() }).where(eq(indieGameProfiles.userId, userId)).returning();
+  // NOTE: updates are keyed on the resolved row id, never on userId alone —
+  // a userId-scoped UPDATE would rewrite every game the developer owns.
+  async upsertIndieGameProfile(userId: number, patch: Partial<InsertIndieGameProfile>, gameId?: number | null): Promise<IndieGameProfile> {
+    const target = await this.getIndieGameProfile(userId, gameId);
+    if (target) {
+      const [updated] = await db.update(indieGameProfiles)
+        .set({ ...patch, updatedAt: new Date() })
+        .where(eq(indieGameProfiles.id, target.id)).returning();
       return updated;
     }
-    const [inserted] = await db.insert(indieGameProfiles).values({ userId, ...patch }).returning();
+    // First game for this user becomes their primary.
+    const [inserted] = await db.insert(indieGameProfiles)
+      .values({ userId, ...patch, isPrimary: true }).returning();
     return inserted;
   }
 
-  async getIndieFieldMeta(userId: number): Promise<Record<string, IndieGameFieldOverride>> {
-    const rows = await db.select().from(indieGameFieldOverrides).where(eq(indieGameFieldOverrides.userId, userId));
+  // Import/override metadata is per-game. When gameId is omitted the rows are
+  // matched on userId alone, preserving pre-0020 behaviour for legacy rows
+  // whose game_id was never backfilled.
+  async getIndieFieldMeta(userId: number, gameId?: number | null): Promise<Record<string, IndieGameFieldOverride>> {
+    const rows = gameId
+      ? await db.select().from(indieGameFieldOverrides)
+          .where(and(eq(indieGameFieldOverrides.userId, userId), eq(indieGameFieldOverrides.gameId, gameId)))
+      : await db.select().from(indieGameFieldOverrides)
+          .where(eq(indieGameFieldOverrides.userId, userId));
     const map: Record<string, IndieGameFieldOverride> = {};
     for (const row of rows) map[row.fieldName] = row;
     return map;
@@ -6835,21 +6874,33 @@ export class DatabaseStorage implements IStorage {
   async upsertIndieFieldMeta(
     userId: number,
     fieldName: string,
-    patch: Partial<Omit<IndieGameFieldOverride, "id" | "userId" | "fieldName" | "createdAt">>
+    patch: Partial<Omit<IndieGameFieldOverride, "id" | "userId" | "fieldName" | "createdAt">>,
+    gameId?: number | null
   ): Promise<void> {
     const existing = await db.select({ id: indieGameFieldOverrides.id }).from(indieGameFieldOverrides)
-      .where(and(eq(indieGameFieldOverrides.userId, userId), eq(indieGameFieldOverrides.fieldName, fieldName)));
+      .where(gameId
+        ? and(eq(indieGameFieldOverrides.userId, userId), eq(indieGameFieldOverrides.fieldName, fieldName), eq(indieGameFieldOverrides.gameId, gameId))
+        : and(eq(indieGameFieldOverrides.userId, userId), eq(indieGameFieldOverrides.fieldName, fieldName)));
     if (existing.length > 0) {
       await db.update(indieGameFieldOverrides).set(patch as any).where(eq(indieGameFieldOverrides.id, existing[0].id));
     } else {
-      await db.insert(indieGameFieldOverrides).values({ userId, fieldName, ...patch } as any);
+      await db.insert(indieGameFieldOverrides).values({ userId, fieldName, gameId: gameId ?? null, ...patch } as any);
     }
   }
 
-  async getIndieGameProfileByUsername(username: string): Promise<{ profile: IndieGameProfile | null; user: User } | null> {
+  async getIndieGameProfileByUsername(username: string, gameId?: number | null): Promise<{ profile: IndieGameProfile | null; user: User } | null> {
     const user = await this.getUserByUsername(username);
     if (!user || user.partnerType !== "indie") return null;
-    const profile = await this.getIndieGameProfile(user.id);
+    const profile = await this.getIndieGameProfile(user.id, gameId);
     return { user, profile };
+  }
+
+  async getIndieGameProfilesByUsername(username: string): Promise<{ profiles: IndieGameProfile[]; user: User } | null> {
+    const user = await this.getUserByUsername(username);
+    if (!user || user.partnerType !== "indie") return null;
+    const profiles = await db.select().from(indieGameProfiles)
+      .where(eq(indieGameProfiles.userId, user.id))
+      .orderBy(desc(indieGameProfiles.isPrimary), asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id));
+    return { user, profiles };
   }
 }

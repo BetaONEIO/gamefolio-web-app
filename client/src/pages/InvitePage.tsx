@@ -1,37 +1,34 @@
 import { useState, useRef } from "react";
-import { useLocation } from "wouter";
-import { useLazyVideo } from "@/hooks/use-lazy-video";
 import {
   Upload,
   Tv2,
   Eye,
   User,
-  CheckCircle2,
   ArrowRight,
   Zap,
-  Sparkles,
   AtSign,
   Loader2,
   Check,
   X,
 } from "lucide-react";
 import { SiTwitch, SiKick } from "react-icons/si";
+import ProUpgradeDialog from "@/components/ProUpgradeDialog";
+import { useAuthModal } from "@/hooks/use-auth-modal";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
-import heroVid1 from "@assets/gamer.mp4";
-import gamerPoster from "@assets/gamer-poster.jpg";
-import promoHeroPoster from "@assets/promo-hero-poster.jpg";
+import gameplayVideo from "@assets/gamer.mp4";
+import gameplayPoster from "@assets/gamer-poster.jpg";
+import phoneGamefolioVideo from "@assets/phone-gamefolio.mp4";
 
-const PRIMARY = "#b5f23d";
-const PRIMARY_DIM = "rgba(181,242,61,0.12)";
-const PRIMARY_GLOW = "rgba(181,242,61,0.25)";
+const PRIMARY = "#B9FF1A";
+const PRIMARY_DIM = "rgba(185,255,26,0.12)";
+const PRIMARY_GLOW = "rgba(185,255,26,0.25)";
 const BG = "#080e17";
 const CARD_BG = "#0d1520";
 const CARD_BORDER = "#1c2a3a";
 
 const NAV_LINKS = [
   { label: "Features", href: "#features" },
-  { label: "Early Access", href: "#early-access" },
-  { label: "Pro", href: "#pro" },
+  { label: "Why Gamefolio", href: "#why-gamefolio" },
 ];
 
 function smoothScroll(id: string) {
@@ -86,7 +83,7 @@ function BenefitCard({ icon, title, text }: { icon: React.ReactNode; title: stri
 
 
 function UsernameChecker() {
-  const [, setLocation] = useLocation();
+  const { openModal } = useAuthModal();
   const [value, setValue] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "available" | "taken">("idle");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -113,8 +110,7 @@ function UsernameChecker() {
   };
 
   const handleClaim = () => {
-    const target = value.trim() ? `/register?username=${encodeURIComponent(value.trim())}` : "/register";
-    setLocation(target);
+    openModal("register");
   };
 
   return (
@@ -168,9 +164,8 @@ function UsernameChecker() {
 }
 
 export default function InvitePage() {
-  const [, setLocation] = useLocation();
-  const heroVideo = useLazyVideo();
-  const promoVideo = useLazyVideo();
+  const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
+  const { openModal } = useAuthModal();
 
   return (
     <div className="min-h-screen" style={{ background: BG, color: "white", fontFamily: "inherit" }}>
@@ -184,7 +179,7 @@ export default function InvitePage() {
           ))}
         </div>
         <button
-          onClick={() => setLocation("/register")}
+          onClick={() => openModal("register")}
           className="rounded-xl px-4 py-2 text-sm font-bold transition-all hover:brightness-110"
           style={{ background: PRIMARY, color: "#080e17" }}
         >
@@ -193,117 +188,100 @@ export default function InvitePage() {
       </nav>
 
       {/* Hero */}
-      <section className="relative px-6 pt-40 pb-28 overflow-hidden">
-        {/* Video background */}
-        <div className="absolute inset-0 z-0 overflow-hidden">
-          <video
-            ref={heroVideo.ref}
-            src={heroVid1}
-            poster={gamerPoster}
-            preload="none"
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-cover"
-            style={{
-              opacity: heroVideo.visible ? 1 : 0,
-              filter: heroVideo.isPlaying ? "blur(0px) brightness(1)" : "blur(6px) brightness(0.65)",
-              transition: "opacity 700ms, filter 700ms",
-            }}
-          />
-        </div>
-        {/* Dark overlay */}
-        <div className="absolute inset-0 z-[1]" style={{ background: "rgba(8,14,23,0.82)" }} />
-
+      <section className="relative px-6 pt-40 pb-28 overflow-hidden" style={{ background: "#000" }}>
+        <video
+          src={gameplayVideo}
+          poster={gameplayPoster}
+          autoPlay
+          preload="auto"
+          loop
+          muted
+          playsInline
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover object-left"
+          style={{ opacity: 0.42, filter: "saturate(0.75) contrast(1.05)" }}
+        />
         <GlowDot top="30%" left="50%" size={600} opacity={0.07} />
         <GlowDot top="10%" left="20%" size={300} opacity={0.05} />
         <GlowDot top="60%" left="80%" size={250} opacity={0.05} />
+        <div
+          className="pointer-events-none absolute inset-y-0 left-0 z-[1] hidden w-full lg:block"
+          style={{
+            background: "radial-gradient(circle at 30% 35%, rgba(185, 255, 26, 0.035) 0%, rgba(185, 255, 26, 0.012) 25%, transparent 48%), linear-gradient(90deg, rgba(7,16,25,0.76) 0%, rgba(7,16,24,0.78) 30%, rgba(6,14,18,0.82) 42%, rgba(3,8,10,0.9) 56%, rgba(0,0,0,0.97) 69%, #000 78%, #000 100%)",
+          }}
+        />
+        <div
+          className="pointer-events-none absolute inset-0 z-[2] hidden lg:block"
+          style={{
+            background: "linear-gradient(90deg, transparent 28%, rgba(0,0,0,0.24) 40%, rgba(0,0,0,0.70) 52%, rgba(0,0,0,0.96) 64%, #000 72%, #000 100%)",
+          }}
+        />
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] lg:hidden"
+          style={{
+            background: "linear-gradient(180deg, rgba(7,16,25,0.76) 0%, rgba(7,16,24,0.82) 36%, rgba(4,10,13,0.9) 58%, rgba(0,0,0,0.97) 78%, #000 100%)",
+          }}
+        />
 
-        <div className="relative z-10 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div className="flex flex-col items-start gap-6 text-left max-w-2xl">
+        <div className="relative z-10 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-center">
+          <div className="flex flex-col items-start gap-6 text-left max-w-[560px]">
             <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold" style={{ background: PRIMARY_DIM, color: PRIMARY, border: `1px solid rgba(181,242,61,0.3)` }}>
-              <Zap className="h-3 w-3" /> Just launched — early users get first pick of usernames
+              <Zap className="h-3 w-3" /> Your stream deserves more eyes
             </div>
 
-            <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold leading-[1.05] tracking-tight">
-              Build your gaming<br />
-              <span style={{ color: PRIMARY }}>profile.</span> Get seen.
+            <h1 className="max-w-[540px] text-5xl sm:text-6xl md:text-7xl font-extrabold leading-[1.05] tracking-tight">
+              Go live.<br />
+              <span style={{ color: PRIMARY }}>Get seen.</span>
             </h1>
 
-            <p className="text-gray-400 text-lg md:text-xl max-w-xl leading-relaxed">
-              Gamefolio is a new web app for gamers and streamers to upload clips, connect their Twitch or Kick stream, and grow their audience.
+            <p className="text-gray-400 text-lg md:text-xl max-w-md leading-relaxed">
+              Connect your Twitch or Kick stream to Gamefolio and put your content in front of more gamers. Build your gaming profile, share your best moments and give your stream another place to be discovered.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto mt-2">
               <button
-                onClick={() => smoothScroll("username-checker")}
+                onClick={() => openModal("register")}
                 className="rounded-2xl px-8 py-4 font-bold text-base transition-all hover:brightness-110 active:scale-95"
                 style={{ background: PRIMARY, color: "#080e17" }}
               >
-                Secure your username
-              </button>
-              <button
-              onClick={() => setLocation("/register")}
-                className="rounded-2xl px-8 py-4 font-bold text-base border transition-all hover:bg-white/5"
-                style={{ borderColor: CARD_BORDER, color: "white" }}
-              >
-                Upload your first clip
+                Join Gamefolio
               </button>
             </div>
 
             <p className="text-gray-500 text-sm max-w-sm">
-              We just launched. Early users get first pick of usernames and more visibility while the platform grows.
+              Free to join. Built for gamers and streamers.
             </p>
           </div>
 
-          <div className="relative w-full">
-            {/* Abstract green background shape — off-centre for depth */}
+          <div
+            className="relative flex min-h-[480px] w-full items-center justify-center overflow-visible sm:min-h-[560px] lg:min-h-[620px] lg:-translate-x-10"
+            style={{ border: 0, boxShadow: "none" }}
+          >
             <div
-              className="absolute rounded-3xl"
+              className="pointer-events-none absolute left-1/2 top-[58%] z-0 h-72 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full blur-[100px]"
               style={{
-                background: "#B7FF1A",
-                width: "88%",
-                height: "92%",
-                bottom: "-18px",
-                right: "-22px",
-                zIndex: 0,
-                opacity: 0.92,
+                background: "radial-gradient(ellipse, rgba(185,255,26,0.08) 0%, rgba(185,255,26,0.025) 42%, transparent 75%)",
               }}
             />
-            {/* Secondary smaller accent shard */}
-            <div
-              className="absolute rounded-2xl"
-              style={{
-                background: "#B7FF1A",
-                width: "40%",
-                height: "30%",
-                top: "-12px",
-                right: "-14px",
-                zIndex: 0,
-                opacity: 0.18,
-                filter: "blur(2px)",
+            <video
+              autoPlay
+              preload="auto"
+              muted
+              playsInline
+              onEnded={(event) => {
+                const video = event.currentTarget;
+                video.pause();
+                if (Number.isFinite(video.duration) && video.duration > 0) {
+                  video.currentTime = Math.max(0, video.duration - 0.05);
+                }
               }}
-            />
-            <div className="absolute left-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-[#B7FF1A]/40 bg-[#0B1218]/80 shadow-[0_0_18px_rgba(183,255,26,0.35)]">
-              <Sparkles className="h-5 w-5 text-[#B7FF1A]" />
-            </div>
-            <div className="relative rounded-3xl overflow-hidden border shadow-2xl" style={{ borderColor: "rgba(183,255,26,0.25)", background: CARD_BG, zIndex: 1 }}>
-              <video
-                ref={promoVideo.ref}
-                src="/promo-hero.mp4"
-                poster={promoHeroPoster}
-                preload="none"
-                loop
-                muted
-                playsInline
-                className="w-full h-[380px] md:h-[500px] object-cover"
-                style={{
-                  opacity: promoVideo.visible ? 1 : 0,
-                  filter: promoVideo.isPlaying ? "blur(0px) brightness(1)" : "blur(6px) brightness(0.65)",
-                  transition: "opacity 700ms, filter 700ms",
-                }}
-              />
-            </div>
+              className="relative z-10 flex-shrink-0 h-[480px] sm:h-[560px] lg:h-[640px] w-auto max-w-full lg:w-[360px] lg:max-w-none object-contain"
+              style={{
+                display: "block",
+              }}
+            >
+              <source src={phoneGamefolioVideo} type="video/mp4" />
+            </video>
           </div>
         </div>
       </section>
@@ -311,27 +289,28 @@ export default function InvitePage() {
       {/* Benefits */}
       <section id="features" className="px-6 py-20 max-w-6xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-3">What you can do on Gamefolio</h2>
-          <p className="text-gray-400 text-base max-w-lg mx-auto">Everything you need to build your presence as a gamer or streamer — in one place.</p>
+          <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-3">Your stream. Your clips. Your Gamefolio.</h2>
+          <p className="text-gray-400 text-base max-w-lg mx-auto">Give your content another place to be discovered by gamers.</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <BenefitCard icon={<Upload className="h-5 w-5" />} title="Upload your clips" text="Keep your best gaming moments in one place and never lose them in group chats again." />
-          <BenefitCard icon={<Tv2 className="h-5 w-5" />} title="Connect your stream" text="Connect Twitch or Kick so your live stream can appear on your Gamefolio profile." />
-          <BenefitCard icon={<Eye className="h-5 w-5" />} title="Get exposure" text="Share your content with us and we may feature your clips on our social channels." />
-          <BenefitCard icon={<User className="h-5 w-5" />} title="Own your profile" text="Create a profile that shows who you are as a gamer, streamer, or creator." />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <BenefitCard icon={<Tv2 className="h-5 w-5" />} title="Connect your stream" text="Connect Twitch or Kick and showcase when you're live." />
+          <BenefitCard icon={<Eye className="h-5 w-5" />} title="Get free exposure" text="Give your stream another place to be discovered by gamers." />
+          <BenefitCard icon={<User className="h-5 w-5" />} title="Build your Gamefolio" text="Bring your clips, reels, screenshots and gaming identity together." />
+          <BenefitCard icon={<Upload className="h-5 w-5" />} title="Share your best moments" text="Upload your gaming highlights and give your content a life beyond the stream." />
+          <BenefitCard icon={<Eye className="h-5 w-5" />} title="Grow your audience" text="Give gamers another way to discover, follow and engage with you." />
         </div>
       </section>
 
       {/* Problem section */}
-      <section className="px-6 py-20 relative overflow-hidden">
+      <section id="why-gamefolio" className="px-6 py-20 relative overflow-hidden">
         <GlowDot top="50%" left="50%" size={500} opacity={0.06} />
         <div className="relative z-10 max-w-2xl mx-auto text-center flex flex-col items-center gap-6">
           <h2 className="text-4xl md:text-5xl font-extrabold leading-tight">
-            Streaming to <span style={{ color: PRIMARY }}>1 or 2 viewers?</span>
+            Give your stream <span style={{ color: PRIMARY }}>more places to be discovered.</span>
           </h2>
           <p className="text-gray-400 text-lg leading-relaxed">
-            You're not the problem. Discovery is. Gamefolio is being built to help smaller streamers and gamers get seen.
+            Gamefolio gives streamers another way to connect with gamers, share their content and turn viewers into followers.
           </p>
           <div className="flex items-center gap-3 text-gray-400 text-sm flex-wrap justify-center">
             <span className="flex items-center gap-1.5"><SiTwitch className="h-4 w-4 text-[#9146FF]" /> Twitch</span>
@@ -340,42 +319,12 @@ export default function InvitePage() {
             <span className="text-gray-600">→ your Gamefolio profile</span>
           </div>
           <button
-            onClick={() => setLocation("/register")}
+                  onClick={() => openModal("register")}
             className="rounded-2xl px-8 py-4 font-bold text-base transition-all hover:brightness-110 active:scale-95 mt-2"
             style={{ background: PRIMARY, color: "#080e17" }}
           >
-            Create your free account
+            Connect your stream
           </button>
-        </div>
-      </section>
-
-      {/* Early access */}
-      <section id="early-access" className="px-6 py-20 max-w-5xl mx-auto">
-        <div
-          className="rounded-3xl p-8 md:p-12 flex flex-col md:flex-row gap-10 items-start"
-          style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}
-        >
-          <div className="flex flex-col gap-4 flex-1">
-            <p className="text-xs font-bold tracking-widest uppercase" style={{ color: PRIMARY }}>Early Access</p>
-            <h2 className="text-3xl md:text-4xl font-extrabold text-white leading-tight">Join Gamefolio Early Access</h2>
-            <p className="text-gray-400 text-base leading-relaxed">
-              Secure your username, upload your clips, and grow with Gamefolio from the beginning.
-            </p>
-          </div>
-          <div className="flex flex-col gap-4 flex-1">
-            {[
-              "Priority username access",
-              "Increased visibility as Gamefolio grows",
-              "Direct influence on future features",
-            ].map(point => (
-              <div key={point} className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: PRIMARY_DIM }}>
-                  <CheckCircle2 className="h-3 w-3" style={{ color: PRIMARY }} />
-                </div>
-                <span className="text-gray-300 text-sm">{point}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -409,7 +358,7 @@ export default function InvitePage() {
           <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-3">
             Unlock <span style={{ color: PRIMARY }}>Gamefolio Pro</span>
           </h2>
-          <p className="text-gray-400 text-base max-w-lg mx-auto">Premium features designed for elite creators who want to stand out and grow.</p>
+            <p className="text-gray-400 text-base max-w-lg mx-auto">Optional premium tools for creators who want to take their Gamefolio further.</p>
         </div>
 
         <div
@@ -434,7 +383,7 @@ export default function InvitePage() {
 
               <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
                 <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 mb-3 text-xs font-bold uppercase tracking-wider" style={{ background: "rgba(181,242,61,0.15)", border: "1px solid rgba(181,242,61,0.3)", color: PRIMARY }}>
-                  Exclusive Offer
+                  Optional upgrade
                 </div>
                 <h3 className="text-2xl font-extrabold text-white leading-tight mb-1">
                   Elite gaming<br />identity
@@ -515,17 +464,17 @@ export default function InvitePage() {
 
               <div className="flex flex-col gap-3 pt-2">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-extrabold" style={{ color: PRIMARY }}>Free</span>
-                  <span className="text-gray-400 text-sm">during early access</span>
+                  <span className="text-3xl font-extrabold" style={{ color: PRIMARY }}>Gamefolio Pro</span>
+                  <span className="text-gray-400 text-sm">optional paid plan</span>
                 </div>
                 <button
-                  onClick={() => setLocation("/register")}
+                  onClick={() => setProUpgradeOpen(true)}
                   className="w-full rounded-2xl h-14 font-bold text-base transition-all hover:brightness-110 active:scale-95 flex items-center justify-center gap-2"
                   style={{ background: PRIMARY, color: "#080e17", boxShadow: "0 10px 30px -8px rgba(181,242,61,0.5)" }}
                 >
-                  Unlock Pro — Start free <ArrowRight className="h-5 w-5" />
+                  Explore Gamefolio Pro <ArrowRight className="h-5 w-5" />
                 </button>
-                <p className="text-gray-500 text-xs text-center">No credit card required. Upgrade anytime.</p>
+                <p className="text-gray-500 text-xs text-center">Join Gamefolio for free. Upgrade whenever it suits you.</p>
               </div>
             </div>
           </div>
@@ -540,14 +489,14 @@ export default function InvitePage() {
             Start building your<br /><span style={{ color: PRIMARY }}>Gamefolio</span> today
           </h2>
           <p className="text-gray-400 text-lg">
-            Upload your clips. Connect your stream. Secure your username before someone else does.
+            Connect your stream. Share your best moments. Give your content more places to be discovered.
           </p>
           <button
-            onClick={() => setLocation("/register")}
+            onClick={() => openModal("register")}
             className="rounded-2xl px-10 py-4 font-bold text-lg transition-all hover:brightness-110 active:scale-95"
             style={{ background: PRIMARY, color: "#080e17" }}
           >
-            Create your free account
+            Join Gamefolio
           </button>
         </div>
       </section>
@@ -556,6 +505,16 @@ export default function InvitePage() {
       <footer className="px-6 py-10 text-center" style={{ borderTop: `1px solid ${CARD_BORDER}` }}>
         <p className="text-gray-500 text-sm">Gamefolio helps gamers, streamers, and creators get seen.</p>
       </footer>
+
+      <ProUpgradeDialog
+        open={proUpgradeOpen}
+        onOpenChange={setProUpgradeOpen}
+        subtitle="Take your Gamefolio further with premium creator tools."
+        onAuthRequired={() => {
+          setProUpgradeOpen(false);
+          openModal("register");
+        }}
+      />
     </div>
   );
 }

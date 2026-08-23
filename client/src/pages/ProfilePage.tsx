@@ -553,11 +553,17 @@ const ProfilePage = () => {
   const isPrivateProfile = profile?.isPrivate && !isOwnProfile;
   const canViewContent = !isPrivateProfile || isFollowing;
 
-  // Fetch user clips (only if allowed to view content)
+  // Fetch user clips (only if allowed to view content). While any clip/reel
+  // is still background-processing, poll so the "processing" badge clears
+  // and the real thumbnail/playback appears without a manual refresh.
   const { data: clips, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/users/${username}/clips`],
     queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!username && canViewContent,
+    refetchInterval: (query) => {
+      const data = query.state.data as ClipWithUser[] | undefined;
+      return data?.some((c) => c.status === "processing") ? 5000 : false;
+    },
   });
 
   // Fetch user favorite games (only if allowed to view content)
