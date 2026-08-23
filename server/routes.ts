@@ -322,7 +322,23 @@ const videoUpload = multer({
 const indieTrailerUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 500 * 1024 * 1024, // 500MB max for trailers
+    fileSize: 250 * 1024 * 1024, // 250MB max for legacy trailer uploads
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only video files are allowed for trailers'));
+    }
+  }
+});
+
+// The game dashboard has its own profile trailer route and can accept the
+// larger files advertised by that page without changing the legacy route.
+const indieProfileTrailerUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 500 * 1024 * 1024, // 500MB max for dashboard trailers
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('video/')) {
@@ -11727,7 +11743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GameProfileTab.tsx dashboard (mirrors POST /api/indie/upload/trailer,
   // used by IndieGameDashboard.tsx — two separate dashboard implementations
   // share the same underlying indie_game_profiles data).
-  app.post("/api/indie/profile/upload-trailer", indieTrailerUpload.single('video'), async (req, res) => {
+  app.post("/api/indie/profile/upload-trailer", indieProfileTrailerUpload.single('video'), async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       if (!req.file) return res.status(400).json({ message: "No file provided" });
