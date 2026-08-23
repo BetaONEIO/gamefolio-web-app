@@ -454,7 +454,7 @@ function AboutCard({ profile }: { profile: Profile | null }) {
 
       {open && (
         <EditModal title="About Your Game" onClose={() => setOpen(false)}
-          onSave={() => save.mutate({ gameName: name, shortDescription: short, fullDescription: full, genres, keyFeatures: features, releaseStatus: status, price })}
+          onSave={() => save.mutate({ gameId: profile?.id, gameName: name, shortDescription: short, fullDescription: full, genres, keyFeatures: features, releaseStatus: status, price })}
           isSaving={save.isPending}>
           <FieldInput label="Game Name" value={name} onChange={setName} placeholder="My Awesome Game" />
           <div>
