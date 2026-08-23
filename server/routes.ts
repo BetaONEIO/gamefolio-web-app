@@ -13098,9 +13098,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await storage.getIndieGameProfileByUsername(req.params.username, gameId);
       if (!result) return res.status(404).json({ error: "Indie game profile not found" });
       const { user, profile } = result;
+      if (!profile) return res.status(404).json({ error: "Indie game profile not found" });
+      // Indie profile records pre-date the canonical games table. Resolve the
+      // existing game by its name without creating a record, so community
+      // content is only shown when it is genuinely associated with this game.
+      const canonicalGame = profile.gameName?.trim()
+        ? await storage.getGameByName(profile.gameName.trim())
+        : null;
       res.json({
         user: { id: user.id, username: user.username, displayName: user.displayName, avatarUrl: user.avatarUrl, bio: user.bio, level: user.level, totalXP: user.totalXP, currentStreak: user.currentStreak },
         profile,
+        game: canonicalGame
+          ? { id: canonicalGame.id, name: canonicalGame.name, imageUrl: canonicalGame.imageUrl }
+          : null,
       });
     } catch (err) {
       console.error("GET /api/games/indie/:username error:", err);

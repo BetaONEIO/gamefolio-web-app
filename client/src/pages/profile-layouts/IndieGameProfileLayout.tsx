@@ -1,970 +1,364 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { useLocation, Link } from 'wouter';
+import React, { useMemo, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Link, useLocation } from 'wouter';
 import { apiRequest, getQueryFn, queryClient } from '@/lib/queryClient';
-import { UserWithStats, ClipWithUser, Screenshot, GameBounty, IndieGameProfile } from '@shared/schema';
+import { ClipWithUser, IndieGameProfile, UserWithStats } from '@shared/schema';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import PlatformConnections from '@/components/profile/PlatformConnections';
+import VideoClipGridItem from '@/components/clips/VideoClipGridItem';
+import { ScreenshotCard } from '@/components/screenshots/ScreenshotCard';
 import HlsVideo from '@/components/media/HlsVideo';
 import { getVideoEmbedUrl } from '@/lib/video-embed';
-import { BOUNTIES_ENABLED } from '@/lib/feature-flags';
-import { SiSteam, SiEpicgames, SiItchdotio } from 'react-icons/si';
+import { SiEpicgames, SiItchdotio, SiSteam } from 'react-icons/si';
 import {
-  Users,
-  Flame,
-  MessageCircle,
-  UserPlus,
-  UserCheck,
-  Video,
-  Play,
-  Camera,
-  Star,
   Award,
+  Camera,
   CheckCircle2,
-  Terminal,
-  Sword,
-  Key,
+  ChevronRight,
   Clock,
-  Globe,
-  Twitter,
-  Monitor,
-  Gamepad2,
-  Smartphone,
   ExternalLink,
-  Tag,
-  SlidersHorizontal,
-  Settings,
+  Gamepad2,
+  Globe,
+  Key,
+  MessageCircle,
+  Monitor,
   Pencil,
+  Play,
+  Settings,
+  Share2,
+  Smartphone,
+  Sword,
+  Tag,
+  UserCheck,
+  UserPlus,
+  Users,
+  Video,
   X,
-  Save,
 } from 'lucide-react';
 
 const MessageDialog = React.lazy(() =>
-  import('@/components/messages/MessageDialog').then((m) => ({ default: m.MessageDialog }))
+  import('@/components/messages/MessageDialog').then((m) => ({ default: m.MessageDialog })),
 );
 
-const TABS = ['OVERVIEW', 'CLIPS', 'REELS', 'SCREENSHOTS', 'BOUNTIES'];
-// BOUNTIES hidden while BOUNTIES_ENABLED is false — filtered at render time
-// rather than removed from TABS, since activeTab compares against the raw
-// string values elsewhere in this file.
-const VISIBLE_TABS = TABS.filter((t) => BOUNTIES_ENABLED || t !== 'BOUNTIES');
+const TABS = ['OVERVIEW', 'CLIPS', 'REELS', 'SCREENSHOTS', 'BOUNTIES'] as const;
+type Tab = typeof TABS[number];
 
-type BountyWithMeta = GameBounty & { participantCount?: number; gameName?: string; gameImageUrl?: string };
+type Bounty = {
+  id: number;
+  title: string;
+  campaignTitle?: string | null;
+  description?: string | null;
+  status?: string | null;
+  participantCount?: number | null;
+  maxParticipants?: number | null;
+  totalXpAvailable?: number | null;
+  fullKeysRemaining?: number | null;
+  endDate?: string | null;
+};
 
-interface IndieGameProfileLayoutProps {
+type GameContentCounts = { clips: number; reels: number; screenshots: number };
+type CanonicalGame = { id: number; name: string; imageUrl?: string | null };
+type IndieResponse = { profile: IndieGameProfile; game: CanonicalGame | null };
+
+interface Props {
   profile: UserWithStats;
   isOwnProfile: boolean;
 }
 
-export default function IndieGameProfileLayout({ profile, isOwnProfile }: IndieGameProfileLayoutProps) {
+const accent = '#B7FF18';
+const surfaceStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.035)',
+  border: '1px solid rgba(255,255,255,0.09)',
+  borderRadius: 16,
+};
+
+function formatPlatform(value: string) {
+  const normalized = value.toLowerCase();
+  if (normalized === 'windows') return 'Windows';
+  if (normalized === 'mac') return 'macOS';
+  if (normalized === 'ios') return 'iOS';
+  if (normalized === 'ps5') return 'PlayStation';
+  return value;
+}
+
+function PlatformIcon({ value }: { value: string }) {
+  const normalized = value.toLowerCase();
+  const Icon = ['windows', 'mac', 'linux'].includes(normalized)
+    ? Monitor
+    : ['ios', 'android'].includes(normalized)
+      ? Smartphone
+      : Gamepad2;
+  return <Icon size={13} />;
+}
+
+function EmptyCommunityState({ title, body, icon: Icon }: { title: string; body: string; icon: React.ElementType }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-6 py-14 text-center">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.05] text-[#B7FF18]">
+        <Icon size={27} />
+      </div>
+      <h3 className="text-lg font-black text-white">{title}</h3>
+      <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-white/55">{body}</p>
+    </div>
+  );
+}
+
+function BountyCard({ bounty, gameId }: { bounty: Bounty; gameId: number }) {
+  const active = bounty.status === 'active';
+  return (
+    <Link
+      href={`/games/${gameId}?tab=bounties`}
+      className="block p-5 transition-transform hover:-translate-y-1"
+      style={surfaceStyle}
+    >
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2 text-[#B7FF18]">
+          <Sword size={18} />
+          <span className="text-[11px] font-black uppercase tracking-[0.16em]">{active ? 'Open bounty' : bounty.status || 'Campaign'}</span>
+        </div>
+        {bounty.endDate && (
+          <span className="flex items-center gap-1 text-xs text-white/45"><Clock size={12} />{new Date(bounty.endDate).toLocaleDateString()}</span>
+        )}
+      </div>
+      <h3 className="text-lg font-black text-white">{bounty.campaignTitle || bounty.title}</h3>
+      {bounty.description && <p className="mt-2 line-clamp-2 text-sm text-white/55">{bounty.description}</p>}
+      <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-xs text-white/50">
+        <span className="flex items-center gap-1.5"><Users size={13} />{bounty.participantCount ?? 0}/{bounty.maxParticipants ?? 10} joined</span>
+        {(bounty.totalXpAvailable ?? 0) > 0 && <span className="flex items-center gap-1.5"><Award size={13} />{(bounty.totalXpAvailable ?? 0).toLocaleString()} XP</span>}
+        {(bounty.fullKeysRemaining ?? 0) > 0 && <span className="flex items-center gap-1.5"><Key size={13} />{bounty.fullKeysRemaining} keys</span>}
+      </div>
+    </Link>
+  );
+}
+
+export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props) {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState('OVERVIEW');
-  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
-  // Which of this developer's games is being viewed. null means "their primary
-  // game" — keeps single-game developers (the common case) working unchanged.
+  const [activeTab, setActiveTab] = useState<Tab>('OVERVIEW');
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
+  const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(profile.displayName ?? '');
+  const [editBio, setEditBio] = useState(profile.bio ?? '');
+  const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
 
-  // ── Inline edit panel state ──
-  const [showEditPanel, setShowEditPanel] = useState(false);
-  const [editDisplayName, setEditDisplayName] = useState(profile.displayName ?? '');
-  const [editDescription, setEditDescription] = useState((profile as any).bio ?? '');
-  const [bannerUploading, setBannerUploading] = useState(false);
-
-  const brand = {
-    bg: '#0B1319',
-    accent: '#B7FF18',
-    cardBg: 'rgba(255, 255, 255, 0.04)',
-    cardBorder: 'rgba(183, 255, 24, 0.15)',
-    textMuted: 'rgba(255, 255, 255, 0.7)',
-  };
-
-  const cardStyle: React.CSSProperties = {
-    background: brand.cardBg,
-    border: `1px solid ${brand.cardBorder}`,
-    borderRadius: '12px',
-    boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
-    backdropFilter: 'blur(10px)',
-  };
-
-  const glowStyle: React.CSSProperties = {
-    boxShadow: `0 0 20px rgba(183, 255, 24, 0.2)`,
-  };
-
-  const { data: followStatus } = useQuery<{ status: 'following' | 'requested' | 'not_following' }>({
-    queryKey: [`/api/users/${profile.username}/follow-status`],
-    enabled: !!currentUser && !isOwnProfile,
-  });
-
-  const { data: clips } = useQuery<ClipWithUser[]>({
-    queryKey: [`/api/users/${profile.username}/clips`],
-  });
-
-  const { data: screenshots } = useQuery<Screenshot[]>({
-    queryKey: [`/api/users/${profile.id}/screenshots`],
-  });
-
-  const { data: bounties } = useQuery<BountyWithMeta[]>({
-    queryKey: [`/api/users/${profile.username}/bounties`],
-  });
-
-  // All of this developer's games, for the switcher row. Only ever more than
-  // one entry for indie devs with multiple games (migration 0020).
-  const { data: gamesListData } = useQuery<{ games: { id: number; gameName: string | null; headerImageUrl: string | null; capsuleImageUrl: string | null; isPrimary: boolean }[] }>({
+  const { data: gameListData } = useQuery<{ games: { id: number; gameName: string | null; headerImageUrl: string | null; capsuleImageUrl: string | null; isPrimary: boolean }[] }>({
     queryKey: [`/api/games/indie/${profile.username}/list`],
     queryFn: getQueryFn({ on401: 'throw' }),
     retry: false,
   });
-  const gameList = gamesListData?.games ?? [];
+  const gameList = gameListData?.games ?? [];
 
-  const { data: indieGameData } = useQuery<{ profile: IndieGameProfile } | null>({
-    queryKey: selectedGameId
-      ? [`/api/games/indie/${profile.username}`, { gameId: selectedGameId }]
-      : [`/api/games/indie/${profile.username}`],
+  const gameProfileQueryKey = selectedGameId
+    ? [`/api/games/indie/${profile.username}`, { gameId: selectedGameId }]
+    : [`/api/games/indie/${profile.username}`];
+  const { data: indieData } = useQuery<IndieResponse | null>({
+    queryKey: gameProfileQueryKey,
     queryFn: getQueryFn({ on401: 'throw' }),
     retry: false,
   });
-  const ig = (indieGameData?.profile ?? null) as IndieGameProfile | null;
+  const gameProfile = indieData?.profile ?? null;
+  const canonicalGame = indieData?.game ?? null;
+  const canonicalGameId = canonicalGame?.id;
 
-  // Resolve the Steam App ID from any available source
-  const steamAppId: string | null =
-    ig?.steamAppId ||
-    (profile as any).steamVerifiedAppId ||
-    (() => {
-      const url: string | null = ig?.steamUrl || (profile as any).gameSteamUrl || null;
-      if (!url) return null;
-      const m = url.match(/store\.steampowered\.com\/app\/(\d+)/);
-      return m ? m[1] : null;
-    })();
-
-  // Live Steam data — fetched automatically when a Steam App ID is linked.
-  // Profile DB data always takes precedence; Steam fills in any empty fields.
-  const { data: steamLive } = useQuery<{
-    appId: string;
-    steamUrl: string;
-    name: string | null;
-    headerImageUrl: string | null;
-    capsuleImageUrl: string | null;
-    developerName: string | null;
-    publisherName: string | null;
-    website: string | null;
-    fields: Record<string, any>;
-  } | null>({
-    queryKey: ['/api/steam/app-info', steamAppId],
-    enabled: !!steamAppId,
-    staleTime: 10 * 60 * 1000,
-    retry: false,
+  const { data: gameContent = [] } = useQuery<ClipWithUser[]>({
+    queryKey: ['/api/games', canonicalGameId, 'clips'],
+    queryFn: () => fetch(`/api/games/${canonicalGameId}/clips?limit=100`, { credentials: 'include' }).then(async (res) => {
+      if (!res.ok) throw new Error('Failed to fetch community clips');
+      return res.json();
+    }),
+    enabled: !!canonicalGameId,
   });
-  const st = steamLive?.fields ?? null;
+  const { data: communityScreenshots = [] } = useQuery<any[]>({
+    queryKey: ['/api/games', canonicalGameId, 'screenshots'],
+    queryFn: () => fetch(`/api/games/${canonicalGameId}/screenshots?limit=100`, { credentials: 'include' }).then(async (res) => {
+      if (!res.ok) throw new Error('Failed to fetch community screenshots');
+      return res.json();
+    }),
+    enabled: !!canonicalGameId,
+  });
+  const { data: counts } = useQuery<GameContentCounts>({
+    queryKey: ['/api/games', canonicalGameId, 'content-counts'],
+    queryFn: () => fetch(`/api/games/${canonicalGameId}/content-counts`, { credentials: 'include' }).then(async (res) => {
+      if (!res.ok) throw new Error('Failed to fetch game content counts');
+      return res.json();
+    }),
+    enabled: !!canonicalGameId,
+  });
+  const { data: bounties = [] } = useQuery<Bounty[]>({
+    queryKey: ['/api/games', canonicalGameId, 'bounties'],
+    queryFn: () => fetch(`/api/games/${canonicalGameId}/bounties`, { credentials: 'include' }).then(async (res) => {
+      if (!res.ok) throw new Error('Failed to fetch game bounties');
+      return res.json();
+    }),
+    enabled: !!canonicalGameId,
+  });
+  const { data: followStatus } = useQuery<{ status: 'following' | 'requested' | 'not_following' }>({
+    queryKey: [`/api/users/${profile.username}/follow-status`],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!currentUser && !isOwnProfile,
+  });
 
-  // Enriched fields: prefer indie_game_profiles table data, fall back to live Steam, then legacy user columns
-  const igTrailerUrl = ig?.trailerUrl || st?.trailerUrl || (profile as any).gameTrailerUrl || null;
-  const igDescription = ig?.fullDescription || ig?.shortDescription || st?.fullDescription || st?.shortDescription || (profile as any).gameDescription || null;
-  const igScreenshots: string[] = (ig?.screenshotUrls?.length ? ig.screenshotUrls : (st?.screenshotUrls?.length ? st.screenshotUrls : (profile as any).gameScreenshotUrls)) ?? [];
-  const igKeyFeatures: string[] = (ig?.keyFeatures?.length ? ig.keyFeatures : (profile as any).gameKeyFeatures) ?? [];
-  const igSteamUrl = ig?.steamUrl || steamLive?.steamUrl || (profile as any).gameSteamUrl || null;
-  const igEpicUrl = ig?.epicUrl || (profile as any).gameEpicUrl || null;
-  const igItchUrl = ig?.itchUrl || null;
-  const igReleaseDate = ig?.releaseDate || st?.releaseDate || (profile as any).gameReleaseDate || null;
-  const igStudioName = ig?.studioName || steamLive?.developerName || null;
-  const igStudioFounded = ig?.studioFoundedYear || (profile as any).studioFoundedYear || null;
-  const igStudioSize = ig?.studioTeamSize || (profile as any).studioTeamSize || null;
-  const igStudioWebsite = ig?.studioWebsite || steamLive?.website || null;
-  const igStudioCountry = ig?.studioCountry || null;
-  const igWebsiteUrl = ig?.websiteUrl || steamLive?.website || null;
-  const igTwitterUrl = ig?.twitterUrl || null;
-  const igDiscordUrl = ig?.discordUrl || null;
-  const igGenres: string[] = ig?.genres?.length ? ig.genres : (st?.genres ?? []);
-  const igPlatforms: string[] = ig?.platforms?.length ? ig.platforms : (st?.platforms ?? []);
-  const igPrice = ig?.price || st?.price || null;
-  const igReleaseStatus = ig?.releaseStatus || st?.releaseStatus || null;
-  // Prefer the selected game's own header art, with capsule art as a fallback
-  // for games that do not have a dedicated wide banner yet.
-  const igHeaderImageUrl = ig?.headerImageUrl || ig?.capsuleImageUrl || steamLive?.headerImageUrl || steamLive?.capsuleImageUrl || null;
-  const gameGenreTags: string[] = igGenres.length
-    ? igGenres
-    : (profile.userType || '').split(',').map((t) => t.trim()).filter(Boolean);
-  const selectedGameName = ig?.gameName?.trim() || profile.displayName;
-
+  const clips = useMemo(() => gameContent.filter((clip) => clip.videoType !== 'reel'), [gameContent]);
+  const reels = useMemo(() => gameContent.filter((clip) => clip.videoType === 'reel'), [gameContent]);
+  const activeBounties = bounties.filter((bounty) => bounty.status === 'active');
   const isFollowing = followStatus?.status === 'following';
   const isRequested = followStatus?.status === 'requested';
+  const gameName = gameProfile?.gameName?.trim() || canonicalGame?.name || profile.displayName;
+  const description = gameProfile?.fullDescription || gameProfile?.shortDescription || profile.bio;
+  const header = gameProfile?.headerImageUrl || gameProfile?.capsuleImageUrl || canonicalGame?.imageUrl || null;
+  const trailer = gameProfile?.trailerUrl || null;
+  const genres = gameProfile?.genres ?? [];
+  const platforms = gameProfile?.platforms ?? [];
+  const storeLinks = [
+    gameProfile?.steamUrl ? { name: 'Steam', url: gameProfile.steamUrl, icon: SiSteam } : null,
+    gameProfile?.epicUrl ? { name: 'Epic Games', url: gameProfile.epicUrl, icon: SiEpicgames } : null,
+    gameProfile?.itchUrl ? { name: 'itch.io', url: gameProfile.itchUrl, icon: SiItchdotio } : null,
+  ].filter(Boolean) as { name: string; url: string; icon: React.ElementType }[];
+  const primaryStore = storeLinks[0];
 
   const followMutation = useMutation({
     mutationFn: async () => {
-      const method = isFollowing || isRequested ? 'DELETE' : 'POST';
       const response = await fetch(`/api/users/${profile.username}/follow`, {
-        method,
+        method: isFollowing || isRequested ? 'DELETE' : 'POST',
         credentials: 'include',
       });
       if (!response.ok) throw new Error('Failed to update follow status');
-      return response.json().catch(() => ({}));
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${profile.username}/follow-status`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${profile.username}`] });
-    },
-    onError: (err: Error) => {
-      toast({ description: err.message || 'Something went wrong.', variant: 'gamefolioError' });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [`/api/users/${profile.username}/follow-status`] }),
+    onError: (error: Error) => toast({ description: error.message, variant: 'gamefolioError' }),
   });
-
-  const handleFollowClick = () => {
-    if (!currentUser) {
-      setLocation('/auth');
-      return;
-    }
-    followMutation.mutate();
-  };
-
-  const gameClips = (clips || []).filter((c) => c.videoType !== 'reel');
-  const reels = (clips || []).filter((c) => c.videoType === 'reel');
-
-  // ── Save mutations ──
-  const saveProfileMutation = useMutation({
-    mutationFn: async (payload: { displayName?: string; bio?: string; fullDescription?: string; shortDescription?: string }) => {
-      const res = await apiRequest("PATCH", `/api/users/${profile.id}`, payload);
-      return res.json();
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('PATCH', `/api/users/${profile.id}`, { displayName: editName.trim(), bio: editBio.trim() });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/users/${profile.username}`] });
-      toast({ description: "Profile updated.", variant: "default" });
-      setShowEditPanel(false);
+      setEditing(false);
+      toast({ description: 'Studio profile updated.' });
     },
-    onError: (err: Error) => {
-      toast({ description: err.message || "Failed to save.", variant: "gamefolioError" });
-    },
+    onError: (error: Error) => toast({ description: error.message || 'Could not save changes.', variant: 'gamefolioError' }),
   });
 
-  const handleSaveEdit = () => {
-    const payload: any = {};
-    if (editDisplayName.trim() && editDisplayName.trim() !== profile.displayName) {
-      payload.displayName = editDisplayName.trim();
+  const shareGame = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) await navigator.share({ title: gameName, text: `Check out ${gameName} on Gamefolio`, url });
+      else {
+        await navigator.clipboard.writeText(url);
+        toast({ description: 'Game link copied to your clipboard.' });
+      }
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') toast({ description: 'Could not share this game.', variant: 'gamefolioError' });
     }
-    const desc = editDescription.trim();
-    if (desc) {
-      payload.fullDescription = desc;
-      payload.shortDescription = desc.slice(0, 280);
-    } else {
-      payload.bio = "";
-      payload.fullDescription = "";
-      payload.shortDescription = "";
-    }
-    if (Object.keys(payload).length === 0) {
-      setShowEditPanel(false);
-      return;
-    }
-    saveProfileMutation.mutate(payload);
   };
+
+  const jumpTo = (tab: Tab) => setActiveTab(tab);
+  const visibleGameId = selectedGameId ?? gameList.find((game) => game.isPrimary)?.id ?? gameList[0]?.id;
 
   return (
-    <div style={{ background: brand.bg, minHeight: '100vh', fontFamily: 'Inter, sans-serif', color: 'white' }}>
-      <section
-        className="relative w-full pt-32 pb-16 px-6 md:px-12 flex flex-col items-center justify-center border-b border-white/5"
-        style={{ background: 'linear-gradient(135deg, #0B1319 0%, #1a0b30 50%, #0d1f2d 100%)' }}
-      >
-        {igHeaderImageUrl && (
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <img
-              src={igHeaderImageUrl}
-              alt=""
-              className="w-full h-full object-cover object-center opacity-55 transition-opacity duration-300"
-              style={{ filter: 'blur(1px) saturate(1.3)', transform: 'scale(1.04)' }}
-            />
-            <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(11,19,25,0.68) 0%, rgba(26,11,48,0.64) 50%, rgba(13,31,45,0.70) 100%)' }} />
-          </div>
-        )}
-        {!igHeaderImageUrl && (
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.15)_0%,transparent_50%)] pointer-events-none"></div>
-        )}
-
-        {/* Settings cog — top-right: opens unified edit panel */}
-        {isOwnProfile && (
-          <div className="absolute top-6 right-6 z-50">
-            {showEditPanel ? (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowEditPanel(false)}
-                  className="p-2.5 rounded-full border border-white/15 bg-black/40 backdrop-blur-md hover:bg-white/10 transition-colors"
-                  aria-label="Close edit panel"
-                >
-                  <X size={18} />
-                </button>
-                <button
-                  onClick={handleSaveEdit}
-                  disabled={saveProfileMutation.isPending || bannerUploading}
-                  className="p-2.5 rounded-full border border-white/15 bg-black/40 backdrop-blur-md hover:bg-white/10 transition-colors disabled:opacity-50"
-                  aria-label="Save changes"
-                >
-                  {saveProfileMutation.isPending || bannerUploading ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                  ) : (
-                    <Save size={18} />
-                  )}
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => {
-                  setEditDisplayName(profile.displayName ?? '');
-                  setEditDescription((profile as any).bio ?? '');
-                  setShowEditPanel(true);
-                }}
-                className="p-2.5 rounded-full border border-white/15 bg-black/40 backdrop-blur-md hover:bg-white/10 transition-colors"
-                aria-label="Edit profile"
-              >
-                <Settings size={18} />
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Hidden banner file picker — direct upload + crop */}
-        {isOwnProfile && (
-          <input
-            id="ig-profile-banner-input"
-            type="file"
-            accept={profile.isPro ? 'image/jpeg,image/png,image/webp,image/gif' : 'image/jpeg,image/png,image/webp'}
-            className="hidden"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              e.currentTarget.value = '';
-
-              // Basic validation
-              const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
-              if (isGif && !profile.isPro) {
-                toast({ title: 'Pro feature', description: 'Animated GIF banners are a Pro perk.', variant: 'destructive' });
-                return;
-              }
-              const maxSize = isGif ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
-              if (file.size > maxSize) {
-                toast({ title: 'File too large', description: isGif ? 'GIF must be under 10MB.' : 'Image must be under 5MB.', variant: 'destructive' });
-                return;
-              }
-
-              setBannerUploading(true);
-              try {
-                // Simple canvas resize to 1600x457 (banner ratio)
-                const blob = await new Promise<Blob>((resolve, reject) => {
-                  const img = new Image();
-                  img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 1600;
-                    canvas.height = 457;
-                    const ctx = canvas.getContext('2d');
-                    if (!ctx) { reject(new Error('No canvas')); return; }
-                    // Cover-crop to fill the canvas
-                    const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
-                    const sw = canvas.width / scale;
-                    const sh = canvas.height / scale;
-                    const sx = (img.width - sw) / 2;
-                    const sy = (img.height - sh) / 2;
-                    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-                    canvas.toBlob(b => b ? resolve(b) : reject(new Error('Canvas to blob failed')), 'image/jpeg', 0.92);
-                  };
-                  img.onerror = () => reject(new Error('Failed to load image'));
-                  img.src = URL.createObjectURL(file);
-                });
-
-                const formData = new FormData();
-                formData.append('banner', blob, 'banner.jpg');
-
-                const res = await fetch('/api/upload/banner', { method: 'POST', body: formData });
-                const data = await res.json();
-                if (!res.ok || !data.url) throw new Error(data.message || 'Upload failed');
-
-                await apiRequest("PATCH", `/api/users/${profile.id}`, { bannerUrl: data.url });
-                queryClient.invalidateQueries({ queryKey: [`/api/users/${profile.username}`] });
-                toast({ description: "Banner updated.", variant: "default" });
-              } catch (err: any) {
-                toast({ title: 'Upload failed', description: err?.message || 'Please try again.', variant: 'destructive' });
-              } finally {
-                setBannerUploading(false);
-              }
-            }}
-          />
-        )}
-
-        <div className="relative z-20 max-w-5xl w-full mx-auto flex flex-col items-center text-center">
+    <div className="min-h-screen bg-[#080d11] pb-20 text-white">
+      <section className="relative isolate overflow-hidden border-b border-white/10">
+        {header ? (
+          <img src={header} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-50" />
+        ) : null}
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(8,13,17,.98)_0%,rgba(8,13,17,.78)_47%,rgba(8,13,17,.92)_100%)]" />
+        <div className="absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-gradient-to-t from-[#080d11] to-transparent" />
+        <div className="mx-auto max-w-7xl px-5 pb-10 pt-28 sm:px-8 lg:pt-36">
           {gameList.length > 1 && (
-            <div
-              className="mb-6 max-w-full rounded-2xl border border-white/15 bg-white/[0.08] p-1.5 shadow-[0_12px_45px_rgba(0,0,0,0.28)] backdrop-blur-xl"
-              role="group"
-              aria-label="Choose a game"
-            >
-              <div className="flex max-w-full items-center gap-1 overflow-x-auto">
-                {gameList.map((game) => {
-                  const activeGameId = selectedGameId ?? gameList.find((item) => item.isPrimary)?.id ?? gameList[0]?.id;
-                  const isActive = activeGameId === game.id;
-                  const artwork = game.capsuleImageUrl || game.headerImageUrl;
-                  return (
-                    <button
-                      key={game.id}
-                      type="button"
-                      onClick={() => {
-                        if (game.id === activeGameId) return;
-                        setSelectedGameId(game.id);
-                        setActiveTab('OVERVIEW');
-                      }}
-                      aria-pressed={isActive}
-                      className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold transition-all duration-200 ${
-                        isActive
-                          ? 'bg-white/15 text-white shadow-[0_4px_18px_rgba(0,0,0,0.25)]'
-                          : 'text-white/55 hover:bg-white/[0.08] hover:text-white/85'
-                      }`}
-                    >
-                      {artwork ? (
-                        <img
-                          src={artwork}
-                          alt=""
-                          className="h-7 w-10 rounded-md object-cover ring-1 ring-white/15"
-                        />
-                      ) : (
-                        <span className="flex h-7 w-10 items-center justify-center rounded-md bg-black/25 ring-1 ring-white/10">
-                          <Gamepad2 size={14} className="text-white/45" />
-                        </span>
-                      )}
-                      <span className="max-w-[9rem] truncate">{game.gameName?.trim() || 'Untitled game'}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {profile.avatarUrl && (
-            <img
-              src={profile.avatarUrl}
-              alt={profile.displayName}
-              className="w-24 h-24 rounded-full object-cover mb-6 border-2"
-              style={{ borderColor: brand.accent }}
-            />
-          )}
-
-          {gameGenreTags.length > 0 && (
-            <div className="flex gap-3 mb-6 flex-wrap justify-center">
-              {gameGenreTags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full"
-                  style={{ background: brand.accent, color: '#0B1319' }}
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Inline edit panel */}
-          {isOwnProfile && showEditPanel ? (
-            <div className="w-full max-w-2xl mb-8 space-y-4">
-              <input
-                value={editDisplayName}
-                onChange={(e) => setEditDisplayName(e.target.value)}
-                className="w-full bg-black/30 border border-white/15 rounded-lg px-4 py-3 text-4xl md:text-6xl font-black tracking-tighter text-white placeholder-white/30 outline-none focus:border-[#B7FF18]/50 transition-colors text-center"
-                placeholder="Game name"
-                maxLength={60}
-              />
-              <textarea
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                className="w-full bg-black/30 border border-white/15 rounded-lg px-4 py-3 text-base text-white/80 placeholder-white/30 outline-none focus:border-[#B7FF18]/50 transition-colors resize-none"
-                placeholder="Add a short description"
-                rows={3}
-                maxLength={500}
-              />
-              <button
-                onClick={() => {
-                  const picker = document.getElementById('ig-profile-banner-input') as HTMLInputElement | null;
-                  picker?.click();
-                }}
-                disabled={bannerUploading}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/15 bg-black/30 hover:bg-white/5 transition-colors text-sm font-medium text-white/70 disabled:opacity-50 mx-auto"
-              >
-                {bannerUploading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
-                    Uploading banner…
-                  </>
-                ) : (
-                  <>
-                    <Pencil size={14} />
-                    Upload banner image
-                  </>
-                )}
-              </button>
-            </div>
-          ) : (
-            <>
-              <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-3 text-transparent bg-clip-text bg-gradient-to-br from-white to-gray-400 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-                {selectedGameName}
-              </h1>
-              <p className="text-white/50 mb-8">@{profile.username}</p>
-
-              {(igDescription || profile.bio) && (
-                <p className="max-w-2xl text-white/70 mb-8">{igDescription || profile.bio}</p>
-              )}
-            </>
-          )}
-
-          {isOwnProfile ? (
-            <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
-              <a
-                href="/indie/dashboard"
-                className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-lg font-bold text-black transition-all hover:scale-105"
-                style={{ background: brand.accent }}
-              >
-                <SlidersHorizontal size={18} />
-                Game Dashboard
-              </a>
-            </div>
-          ) : (
-            <div className="flex flex-wrap items-center justify-center gap-4 mb-8 w-full sm:w-auto">
-              <button
-                onClick={handleFollowClick}
-                disabled={followMutation.isPending}
-                className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-lg font-bold text-black transition-all hover:scale-105 disabled:opacity-60"
-                style={{ background: brand.accent, ...glowStyle }}
-              >
-                {isFollowing ? <UserCheck size={18} /> : <UserPlus size={18} />}
-                {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
-              </button>
-              <button
-                onClick={() => (currentUser ? setMessageDialogOpen(true) : setLocation('/auth'))}
-                className="flex items-center justify-center gap-2 px-8 py-3.5 rounded-lg font-bold text-white transition-all hover:bg-white/5 border border-white/20"
-              >
-                <MessageCircle size={18} />
-                Message
-              </button>
-            </div>
-          )}
-
-          <PlatformConnections
-            profile={profile}
-            className="!border-t-0 mt-6 pt-6 border-t border-white/10 w-full justify-center flex-wrap"
-          />
-        </div>
-      </section>
-
-      <nav className="sticky top-0 z-40 border-b border-[var(--gf-border)] bg-[var(--gf-surface-1)] px-6">
-        <div className="max-w-6xl mx-auto flex overflow-x-auto">
-          {VISIBLE_TABS.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-6 py-5 text-sm font-bold tracking-widest whitespace-nowrap transition-colors relative
-                ${tab === activeTab ? 'text-white' : 'text-white/50 hover:text-white/80'}`}
-            >
-              {tab}
-              {tab === activeTab && (
-                <div className="absolute bottom-0 left-0 w-full h-1" style={{ background: brand.accent, ...glowStyle }}></div>
-              )}
-            </button>
-          ))}
-        </div>
-      </nav>
-
-      {activeTab === 'OVERVIEW' && (
-        <section className="py-16 px-6 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-10">
-          <div className="lg:col-span-2 space-y-10">
-            {/* Trailer — hidden entirely until the developer adds one, rather
-                than showing an empty placeholder card. */}
-            {igTrailerUrl && (
-              <div className="aspect-video rounded-lg overflow-hidden" style={cardStyle}>
-                {getVideoEmbedUrl(igTrailerUrl) ? (
-                  <iframe
-                    src={getVideoEmbedUrl(igTrailerUrl)!}
-                    title={`${profile.displayName} trailer`}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    className="w-full h-full"
-                  />
-                ) : (
-                  <HlsVideo src={igTrailerUrl} controls className="w-full h-full object-cover" />
-                )}
-              </div>
-            )}
-
-            {/* Description */}
-            <div>
-              <h2 className="text-2xl font-bold mb-4">Overview</h2>
-              <p className="text-lg leading-relaxed" style={{ color: brand.textMuted }}>
-                {igDescription || (profile as any).bio || `${profile.displayName} hasn't added a game description yet.`}
-              </p>
-            </div>
-
-            {/* Genres + Platforms */}
-            {(igGenres.length > 0 || igPlatforms.length > 0) && (
-              <div className="flex flex-wrap gap-2">
-                {igGenres.map((g, i) => (
-                  <span key={`genre-${i}`} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
-                    style={{ background: `rgba(183,255,24,0.1)`, border: `1px solid rgba(183,255,24,0.25)`, color: brand.accent }}>
-                    <Tag size={11} />{g}
-                  </span>
-                ))}
-                {igPlatforms.map((p, i) => {
-                  const Icon = p === 'windows' || p === 'mac' || p === 'linux' ? Monitor
-                    : p === 'ios' || p === 'android' ? Smartphone : Gamepad2;
-                  const label = p === 'windows' ? 'Windows' : p === 'mac' ? 'macOS' : p === 'linux' ? 'Linux'
-                    : p === 'ps5' ? 'PlayStation' : p === 'xbox' ? 'Xbox' : p === 'switch' ? 'Switch'
-                    : p === 'ios' ? 'iOS' : p === 'android' ? 'Android' : p;
-                  return (
-                    <span key={`plat-${i}`} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
-                      style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)' }}>
-                      <Icon size={11} />{label}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Screenshots */}
-            {igScreenshots.length > 0 && (
-              <div>
-                <h2 className="text-2xl font-bold mb-4">Screenshots</h2>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  {igScreenshots.map((url, i) => (
-                    <a key={i} href={url} target="_blank" rel="noopener noreferrer"
-                      className="aspect-video rounded-lg overflow-hidden block" style={cardStyle}>
-                      <img src={url} alt={`${profile.displayName} screenshot ${i + 1}`}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Key Features */}
-            {igKeyFeatures.length > 0 && (
-              <div>
-                <h2 className="text-2xl font-bold mb-4">Key Features</h2>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  {igKeyFeatures.map((feature, i) => (
-                    <div key={i} className="flex items-start gap-3 p-4 rounded-lg" style={cardStyle}>
-                      <CheckCircle2 color={brand.accent} size={20} className="shrink-0 mt-0.5" />
-                      <span className="text-sm font-medium">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {[
-                { label: 'Level', value: profile.level ?? 1, icon: Star },
-                { label: 'Total XP', value: (profile.totalXP ?? 0).toLocaleString(), icon: Award },
-                { label: 'Streak', value: `${profile.currentStreak ?? 0}d`, icon: Flame },
-                { label: 'Clips', value: profile._count?.clips ?? 0, icon: Video },
-              ].map((stat, i) => (
-                <div key={i} className="p-4 rounded-lg flex flex-col items-center gap-2 text-center" style={cardStyle}>
-                  <stat.icon size={20} color={brand.accent} />
-                  <div className="text-lg font-bold">{stat.value}</div>
-                  <div className="text-[10px] uppercase tracking-wider" style={{ color: brand.textMuted }}>{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Studio / Game Info Card */}
-            <div className="p-6 space-y-5" style={{ ...cardStyle, boxShadow: `0 0 20px rgba(183, 255, 24, 0.15)` }}>
-              <div>
-                <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Developer</div>
-                <div className="text-xl font-bold text-white flex items-center gap-2">
-                  <Terminal size={18} color={brand.accent} />
-                  {igStudioName || profile.displayName}
-                </div>
-              </div>
-
-              {(igStudioFounded || igStudioSize || igStudioCountry) && (
-                <div className="grid grid-cols-2 gap-4">
-                  {igStudioFounded && (
-                    <div>
-                      <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Founded</div>
-                      <div className="font-medium">{igStudioFounded}</div>
-                    </div>
-                  )}
-                  {igStudioSize && (
-                    <div>
-                      <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Team Size</div>
-                      <div className="font-medium">{igStudioSize}</div>
-                    </div>
-                  )}
-                  {igStudioCountry && (
-                    <div className="col-span-2">
-                      <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Country</div>
-                      <div className="font-medium">{igStudioCountry}</div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {(igReleaseDate || igReleaseStatus || igPrice) && (
-                <div className="pt-4 border-t border-white/10 space-y-2">
-                  {igReleaseStatus && (
-                    <div>
-                      <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Status</div>
-                      <span className="text-xs font-bold px-2 py-1 rounded-full"
-                        style={{ background: `rgba(183,255,24,0.12)`, color: brand.accent, border: `1px solid rgba(183,255,24,0.25)` }}>
-                        {igReleaseStatus === 'coming_soon' ? 'Coming Soon' : igReleaseStatus === 'early_access' ? 'Early Access' : 'Released'}
-                      </span>
-                    </div>
-                  )}
-                  {igReleaseDate && (
-                    <div>
-                      <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Release Date</div>
-                      <div className="text-lg font-bold text-white">{igReleaseDate}</div>
-                    </div>
-                  )}
-                  {igPrice && (
-                    <div>
-                      <div className="text-xs uppercase tracking-wider mb-1" style={{ color: brand.textMuted }}>Price</div>
-                      <div className="font-bold text-white">{igPrice}</div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Store Links */}
-            {(igSteamUrl || igEpicUrl || igItchUrl) && (
-              <div className="p-6 space-y-3" style={cardStyle}>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-white/50 mb-3">Get the Game</h3>
-                {igSteamUrl && (
-                  <a href={igSteamUrl} target="_blank" rel="noopener noreferrer"
-                    className="w-full flex items-center gap-3 p-3 rounded-md bg-[#171a21] hover:bg-[#2a303c] transition-colors border border-white/5">
-                    <SiSteam size={24} className="text-[#66c0f4]" />
-                    <span className="font-semibold text-[#c7d5e0]">Steam</span>
-                    {profile.steamVerifiedAt ? (
-                      <span className="ml-auto flex items-center gap-1 text-xs font-semibold text-[#66c0f4]">
-                        <CheckCircle2 size={14} />
-                        Verified
-                      </span>
-                    ) : (
-                      <ExternalLink size={12} className="ml-auto opacity-40" />
-                    )}
-                  </a>
-                )}
-                {igEpicUrl && (
-                  <a href={igEpicUrl} target="_blank" rel="noopener noreferrer"
-                    className="w-full flex items-center gap-3 p-3 rounded-md bg-[#121212] hover:bg-[#2a2a2a] transition-colors border border-white/5">
-                    <SiEpicgames size={24} className="text-white" />
-                    <span className="font-semibold text-white">Epic Games</span>
-                    <ExternalLink size={12} className="ml-auto opacity-40" />
-                  </a>
-                )}
-                {igItchUrl && (
-                  <a href={igItchUrl} target="_blank" rel="noopener noreferrer"
-                    className="w-full flex items-center gap-3 p-3 rounded-md hover:bg-white/5 transition-colors border border-white/5"
-                    style={{ background: 'rgba(250,92,92,0.08)' }}>
-                    <SiItchdotio size={24} className="text-[#fa5c5c]" />
-                    <span className="font-semibold text-white">itch.io</span>
-                    <ExternalLink size={12} className="ml-auto opacity-40" />
-                  </a>
-                )}
-              </div>
-            )}
-
-            {/* Game Community page link */}
-            <div className="pt-4 border-t border-white/10">
-              <a
-                href={`/indie-games/${profile.username}`}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-bold transition-colors"
-                style={{ background: 'rgba(183,255,24,0.08)', border: '1px solid rgba(183,255,24,0.2)', color: brand.accent }}
-              >
-                <Video size={15} />
-                View Game Community
-              </a>
-            </div>
-
-            {/* Social / Links */}
-            {(igWebsiteUrl || igTwitterUrl || igDiscordUrl || igStudioWebsite) && (
-              <div className="p-6 space-y-3" style={cardStyle}>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-white/50 mb-3">Links</h3>
-                {(igWebsiteUrl || igStudioWebsite) && (
-                  <a href={igWebsiteUrl ?? igStudioWebsite!} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm hover:underline" style={{ color: brand.accent }}>
-                    <Globe size={15} /> Website
-                  </a>
-                )}
-                {igTwitterUrl && (
-                  <a href={igTwitterUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-white/70 hover:text-white hover:underline">
-                    <Twitter size={15} /> Twitter / X
-                  </a>
-                )}
-                {igDiscordUrl && (
-                  <a href={igDiscordUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-white/70 hover:text-white hover:underline">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" className="text-[#5865F2]"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.059.102 18.061.104 18.063a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
-                    Discord
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
-      {activeTab === 'CLIPS' && (
-        <section className="py-16 px-6 max-w-6xl mx-auto">
-          <h2 className="text-2xl font-bold mb-6">Clips</h2>
-          {gameClips.length === 0 ? (
-            <p style={{ color: brand.textMuted }}>No clips yet.</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {gameClips.map((clip) => (
-                <div key={clip.id} className="aspect-video rounded-lg flex items-center justify-center relative overflow-hidden" style={cardStyle}>
-                  {clip.thumbnailUrl ? (
-                    <img src={clip.thumbnailUrl} alt={clip.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <Video size={28} className="text-white/30" />
-                  )}
-                  <span className="absolute bottom-2 left-2 right-2 text-xs font-semibold bg-black/60 px-2 py-1 rounded truncate">
-                    {clip.title}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {activeTab === 'REELS' && (
-        <section className="py-16 px-6 max-w-6xl mx-auto">
-          <h2 className="text-2xl font-bold mb-6">Reels</h2>
-          {reels.length === 0 ? (
-            <p style={{ color: brand.textMuted }}>No reels yet.</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {reels.map((reel) => (
-                <div key={reel.id} className="aspect-[9/16] rounded-lg flex items-center justify-center relative overflow-hidden" style={cardStyle}>
-                  {reel.thumbnailUrl ? (
-                    <img src={reel.thumbnailUrl} alt={reel.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <Play size={28} className="text-white/30" />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {activeTab === 'SCREENSHOTS' && (
-        <section className="py-16 px-6 max-w-6xl mx-auto">
-          <h2 className="text-2xl font-bold mb-6">Screenshots</h2>
-          {(screenshots || []).length === 0 ? (
-            <p style={{ color: brand.textMuted }}>No screenshots yet.</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {(screenshots || []).map((shot) => (
-                <div key={shot.id} className="aspect-video rounded-lg flex items-center justify-center relative overflow-hidden" style={cardStyle}>
-                  {shot.imageUrl ? (
-                    <img src={shot.imageUrl} alt={shot.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <Camera size={28} className="text-white/30" />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {BOUNTIES_ENABLED && activeTab === 'BOUNTIES' && (
-        <section className="py-16 px-6 max-w-6xl mx-auto">
-          <h2 className="text-2xl font-bold mb-6">Bounty Campaigns</h2>
-          {(bounties || []).length === 0 ? (
-            <p style={{ color: brand.textMuted }}>
-              {isOwnProfile
-                ? "You haven't launched any bounty campaigns yet."
-                : `${profile.displayName} hasn't launched any bounty campaigns yet.`}
-            </p>
-          ) : (
-            <div className="grid sm:grid-cols-2 gap-5">
-              {(bounties || []).map((bounty) => {
-                const isActive = bounty.status === 'active';
+            <div className="mb-8 flex max-w-full gap-2 overflow-x-auto pb-1" aria-label="Choose a game">
+              {gameList.map((game) => {
+                const active = visibleGameId === game.id;
                 return (
-                  <Link
-                    key={bounty.id}
-                    href={`/games/${bounty.gameId}?tab=bounties`}
-                    className="block p-6 rounded-lg transition-transform hover:scale-[1.02]"
-                    style={cardStyle}
+                  <button
+                    type="button"
+                    key={game.id}
+                    onClick={() => { setSelectedGameId(game.id); setActiveTab('OVERVIEW'); }}
+                    className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-bold transition ${active ? 'border-[#B7FF18]/50 bg-[#B7FF18]/10 text-white' : 'border-white/10 bg-black/20 text-white/55 hover:bg-white/5'}`}
                   >
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="flex items-center gap-2">
-                        <Sword size={18} color={brand.accent} />
-                        <span
-                          className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-full"
-                          style={{
-                            background: isActive ? 'rgba(183, 255, 24, 0.15)' : 'rgba(255,255,255,0.08)',
-                            color: isActive ? brand.accent : brand.textMuted,
-                          }}
-                        >
-                          {bounty.status}
-                        </span>
-                      </div>
-                      {bounty.gameName && (
-                        <span className="text-xs font-semibold text-white/50 truncate max-w-[45%]">{bounty.gameName}</span>
-                      )}
-                    </div>
-
-                    <h3 className="text-lg font-bold text-white mb-1">{bounty.campaignTitle || bounty.title}</h3>
-                    {bounty.description && (
-                      <p className="text-sm mb-4 line-clamp-2" style={{ color: brand.textMuted }}>
-                        {bounty.description}
-                      </p>
-                    )}
-
-                    <div className="flex flex-wrap items-center gap-4 text-xs" style={{ color: brand.textMuted }}>
-                      <div className="flex items-center gap-1.5">
-                        <Users size={14} />
-                        {bounty.participantCount ?? 0}/{bounty.maxParticipants ?? 10} joined
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Award size={14} />
-                        {(bounty.totalXpAvailable ?? 0).toLocaleString()} XP
-                      </div>
-                      {(bounty.fullKeysRemaining ?? 0) > 0 && (
-                        <div className="flex items-center gap-1.5">
-                          <Key size={14} />
-                          {bounty.fullKeysRemaining} keys left
-                        </div>
-                      )}
-                      {bounty.endDate && (
-                        <div className="flex items-center gap-1.5">
-                          <Clock size={14} />
-                          {new Date(bounty.endDate).toLocaleDateString()}
-                        </div>
-                      )}
-                    </div>
-                  </Link>
+                    {(game.capsuleImageUrl || game.headerImageUrl) ? <img src={game.capsuleImageUrl || game.headerImageUrl || ''} alt="" className="h-7 w-10 rounded object-cover" /> : <Gamepad2 size={15} />}
+                    <span className="max-w-36 truncate">{game.gameName || 'Untitled game'}</span>
+                  </button>
                 );
               })}
             </div>
           )}
-        </section>
-      )}
+          <div className="grid items-end gap-8 lg:grid-cols-[1fr_auto]">
+            <div className="max-w-3xl">
+              <div className="mb-4 flex flex-wrap gap-2">
+                {genres.map((genre) => <span key={genre} className="rounded-full border border-[#B7FF18]/25 bg-[#B7FF18]/10 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-[#B7FF18]">{genre}</span>)}
+              </div>
+              {editing ? (
+                <div className="space-y-3">
+                  <input value={editName} onChange={(event) => setEditName(event.target.value)} maxLength={60} className="w-full rounded-xl border border-white/20 bg-black/30 px-4 py-3 text-3xl font-black outline-none focus:border-[#B7FF18]/60" />
+                  <textarea value={editBio} onChange={(event) => setEditBio(event.target.value)} maxLength={500} rows={3} className="w-full rounded-xl border border-white/20 bg-black/30 px-4 py-3 text-sm text-white/80 outline-none focus:border-[#B7FF18]/60" />
+                  <div className="flex gap-2">
+                    <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="rounded-lg bg-[#B7FF18] px-4 py-2 text-sm font-black text-black disabled:opacity-50">Save studio details</button>
+                    <button onClick={() => setEditing(false)} className="rounded-lg border border-white/15 px-4 py-2 text-sm font-bold text-white/70">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-4xl font-black tracking-tight text-white sm:text-6xl">{gameName}</h1>
+                  <p className="mt-3 text-sm font-semibold text-white/55">{gameProfile?.releaseStatus === 'coming_soon' ? 'Coming soon' : gameProfile?.releaseStatus === 'early_access' ? 'Early access' : gameProfile?.releaseStatus === 'released' ? 'Available now' : `A game by @${profile.username}`}</p>
+                  {description && <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/75">{description}</p>}
+                </>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-3 lg:justify-end">
+              {primaryStore && <a href={primaryStore.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black hover:brightness-110"><Play size={16} fill="currentColor" />Play / Buy</a>}
+              {!isOwnProfile && <button onClick={() => currentUser ? followMutation.mutate() : setLocation('/auth')} disabled={followMutation.isPending} className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/20 px-5 py-3 text-sm font-bold hover:bg-white/10">{isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}{isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}</button>}
+              {!isOwnProfile && <button onClick={() => currentUser ? setMessageDialogOpen(true) : setLocation('/auth')} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Message developer"><MessageCircle size={18} /></button>}
+              <button onClick={shareGame} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Share game"><Share2 size={18} /></button>
+              {isOwnProfile && <><button onClick={() => setEditing(!editing)} className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/20 px-4 py-3 text-sm font-bold hover:bg-white/10"><Settings size={16} />Edit</button><a href="/indie/dashboard" className="rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black">Game dashboard</a></>}
+            </div>
+          </div>
+        </div>
+      </section>
 
-      {currentUser && (
-        <React.Suspense fallback={null}>
-          <MessageDialog
-            open={messageDialogOpen}
-            onOpenChange={setMessageDialogOpen}
-            targetUser={{
-              id: profile.id,
-              username: profile.username,
-              displayName: profile.displayName,
-              avatarUrl: profile.avatarUrl,
-            }}
-          />
-        </React.Suspense>
-      )}
+      <nav className="sticky top-0 z-30 border-b border-white/10 bg-[#080d11]/95 px-5 backdrop-blur sm:px-8">
+        <div className="mx-auto flex max-w-7xl overflow-x-auto">
+          {TABS.map((tab) => <button key={tab} onClick={() => jumpTo(tab)} className={`relative shrink-0 px-4 py-4 text-xs font-black tracking-[0.13em] ${activeTab === tab ? 'text-white' : 'text-white/45 hover:text-white/80'}`}>{tab}{activeTab === tab && <span className="absolute inset-x-4 bottom-0 h-0.5 bg-[#B7FF18]" />}</button>)}
+        </div>
+      </nav>
+
+      <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
+        {!canonicalGameId && <div className="mb-8 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-5 text-sm text-amber-100/80">Community uploads will appear here when this game is added to the Gamefolio game catalogue.</div>}
+        {activeTab === 'OVERVIEW' && (
+          <div className="space-y-10">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {[{ label: 'Active bounties', value: activeBounties.length, icon: Sword }, { label: 'Game clips', value: counts?.clips ?? clips.length, icon: Play }, { label: 'Reels', value: counts?.reels ?? reels.length, icon: Video }, { label: 'Screenshots', value: counts?.screenshots ?? communityScreenshots.length, icon: Camera }].map(({ label, value, icon: Icon }) => <div key={label} className="p-4" style={surfaceStyle}><Icon size={18} className="mb-3 text-[#B7FF18]" /><div className="text-2xl font-black">{value.toLocaleString()}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-white/45">{label}</div></div>)}
+            </div>
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_290px]">
+              <div className="space-y-8">
+                {trailer && <section><div className="mb-3 flex items-center justify-between"><h2 className="text-xl font-black">Official trailer</h2></div><div className="aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black">{getVideoEmbedUrl(trailer) ? <iframe src={getVideoEmbedUrl(trailer)!} title={`${gameName} trailer`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="h-full w-full" /> : <HlsVideo src={trailer} controls className="h-full w-full object-cover" />}</div></section>}
+                <section>
+                  <div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-black">Featured community clips</h2>{clips.length > 0 && <button onClick={() => jumpTo('CLIPS')} className="flex items-center gap-1 text-xs font-bold text-[#B7FF18]">View all <ChevronRight size={14} /></button>}</div>
+                  {clips.length ? <div className="grid gap-4 sm:grid-cols-2">{clips.slice(0, 4).map((clip) => <VideoClipGridItem key={clip.id} clip={clip} clipsList={clips} />)}</div> : <EmptyCommunityState title="No clips yet" body={`Be the first player to share a moment from ${gameName}.`} icon={Play} />}
+                </section>
+                {communityScreenshots.length > 0 && <section><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-black">Community screenshots</h2><button onClick={() => jumpTo('SCREENSHOTS')} className="flex items-center gap-1 text-xs font-bold text-[#B7FF18]">View all <ChevronRight size={14} /></button></div><div className="grid gap-4 sm:grid-cols-2">{communityScreenshots.slice(0, 4).map((shot) => <ScreenshotCard key={shot.id} screenshot={shot} profile={profile} showUserInfo onSelect={setSelectedScreenshot} />)}</div></section>}
+                {activeBounties.length > 0 && <section><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-black">Creator bounties</h2><button onClick={() => jumpTo('BOUNTIES')} className="flex items-center gap-1 text-xs font-bold text-[#B7FF18]">View all <ChevronRight size={14} /></button></div><div className="grid gap-4 sm:grid-cols-2">{activeBounties.slice(0, 2).map((bounty) => <BountyCard key={bounty.id} bounty={bounty} gameId={canonicalGameId!} />)}</div></section>}
+              </div>
+              <aside className="space-y-5">
+                <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">About the game</p><p className="mt-3 text-sm leading-relaxed text-white/65">{description || 'The developer has not added a description yet.'}</p>{gameProfile?.keyFeatures?.length ? <ul className="mt-4 space-y-2 text-sm text-white/70">{gameProfile.keyFeatures.map((feature) => <li key={feature} className="flex gap-2"><CheckCircle2 size={15} className="mt-0.5 shrink-0 text-[#B7FF18]" />{feature}</li>)}</ul> : null}</section>
+                {(genres.length || platforms.length) > 0 && <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Details</p><div className="mt-4 space-y-4">{genres.length > 0 && <div><div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-white/60"><Tag size={13} />Genres</div><div className="flex flex-wrap gap-2">{genres.map((genre) => <span key={genre} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs text-white/75">{genre}</span>)}</div></div>}{platforms.length > 0 && <div><div className="mb-2 text-xs font-bold text-white/60">Platforms</div><div className="flex flex-wrap gap-2">{platforms.map((platform) => <span key={platform} className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-2.5 py-1 text-xs text-white/75"><PlatformIcon value={platform} />{formatPlatform(platform)}</span>)}</div></div>}</div></section>}
+                {storeLinks.length > 0 && <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Get the game</p><div className="mt-4 space-y-2">{storeLinks.map((store) => { const Icon = store.icon; return <a key={store.name} href={store.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-sm font-bold hover:bg-white/[0.06]"><Icon size={19} /><span>{store.name}</span><ExternalLink size={13} className="ml-auto text-white/40" /></a>; })}</div></section>}
+                <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Developer</p><div className="mt-3 flex items-center gap-3">{profile.avatarUrl ? <img src={profile.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10"><Users size={18} /></div>}<div><p className="font-bold">{gameProfile?.studioName || profile.displayName}</p><p className="text-xs text-white/45">@{profile.username}</p></div></div><PlatformConnections profile={profile} className="mt-4 !border-t-0 !px-0 !py-0" /></section>
+              </aside>
+            </div>
+          </div>
+        )}
+        {activeTab === 'CLIPS' && <section><h2 className="mb-5 text-2xl font-black">Community clips</h2>{clips.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{clips.map((clip) => <VideoClipGridItem key={clip.id} clip={clip} clipsList={clips} />)}</div> : <EmptyCommunityState title="No clips yet" body={`No one has posted a ${gameName} clip yet. Be first to put the game on the map.`} icon={Play} />}</section>}
+        {activeTab === 'REELS' && <section><h2 className="mb-5 text-2xl font-black">Community reels</h2>{reels.length ? <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">{reels.map((reel) => <VideoClipGridItem key={reel.id} clip={reel} reelsList={reels} />)}</div> : <EmptyCommunityState title="No reels yet" body={`Short-form ${gameName} moments will appear here.`} icon={Video} />}</section>}
+        {activeTab === 'SCREENSHOTS' && <section><h2 className="mb-5 text-2xl font-black">Community screenshots</h2>{communityScreenshots.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{communityScreenshots.map((shot) => <ScreenshotCard key={shot.id} screenshot={shot} profile={profile} showUserInfo onSelect={setSelectedScreenshot} />)}</div> : <EmptyCommunityState title="No screenshots yet" body={`Players have not shared screenshots from ${gameName} yet.`} icon={Camera} />}</section>}
+        {activeTab === 'BOUNTIES' && <section><div className="mb-5"><h2 className="text-2xl font-black">Creator bounties</h2><p className="mt-1 text-sm text-white/55">Open creator campaigns for {gameName}.</p></div>{bounties.length && canonicalGameId ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{bounties.map((bounty) => <BountyCard key={bounty.id} bounty={bounty} gameId={canonicalGameId} />)}</div> : <EmptyCommunityState title="No bounties right now" body="There are no creator campaigns running for this game at the moment." icon={Sword} />}</section>}
+      </main>
+
+      {selectedScreenshot && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-5" onClick={() => setSelectedScreenshot(null)}><button onClick={() => setSelectedScreenshot(null)} className="absolute right-5 top-5 rounded-full border border-white/20 p-2"><X size={20} /></button><img src={selectedScreenshot.imageUrl} alt={selectedScreenshot.title} className="max-h-full max-w-full rounded-lg object-contain" onClick={(event) => event.stopPropagation()} /></div>}
+      {currentUser && <React.Suspense fallback={null}><MessageDialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen} targetUser={{ id: profile.id, username: profile.username, displayName: profile.displayName, avatarUrl: profile.avatarUrl }} /></React.Suspense>}
     </div>
   );
 }
