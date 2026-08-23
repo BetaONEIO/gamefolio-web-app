@@ -2013,60 +2013,8 @@ export default function OnboardingFlow({
           <div className="flex flex-col flex-1 min-h-0">
             <div className="flex-1 overflow-y-auto space-y-3">
               <div>
-                <h2 className="text-2xl font-bold text-white mb-1">{indieGames.length > 1 ? "Your Games" : "Your Game"}</h2>
-                <p className="text-gray-400 mb-4">Tell us about your indie game{indieGames.length > 1 ? "s" : ""}. Required fields are marked with <span className="text-primary">*</span></p>
-              </div>
-
-              {/* Game switcher. The limit comes from the server: free accounts
-                  get one game, indie dev subscribers get up to ten. */}
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                {indieGames.map((g, i) => (
-                  <div
-                    key={i}
-                    className={`group flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm cursor-pointer transition-colors ${
-                      i === activeGameIdx
-                        ? "border-primary bg-primary/10 text-white"
-                        : "border-[#1B2A33] bg-[#0B1218] text-gray-400 hover:text-white"
-                    }`}
-                    onClick={() => setActiveGameIdx(i)}
-                  >
-                    <Gamepad2 className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="max-w-[10rem] truncate">{g.gameName.trim() || `Game ${i + 1}`}</span>
-                    {indieGames.length > 1 && (
-                      <button
-                        type="button"
-                        aria-label={`Remove ${g.gameName.trim() || `game ${i + 1}`}`}
-                        onClick={(e) => { e.stopPropagation(); removeIndieGame(i); }}
-                        className="ml-0.5 text-gray-500 hover:text-red-400"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-
-                {indieGames.length < indieGameLimit ? (
-                  <button
-                    type="button"
-                    onClick={addIndieGame}
-                    className="flex items-center gap-1.5 rounded-full border border-dashed border-[#2A3A44] px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:border-primary transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Add another game
-                  </button>
-                ) : !indieSubscribed ? (
-                  // Free account at its limit — adding more games is the
-                  // headline reason to subscribe, so route the click to the upsell.
-                  <button
-                    type="button"
-                    onClick={() => setShowIndieDevUpgrade(true)}
-                    className="flex items-center gap-1.5 rounded-full border border-dashed border-primary/40 bg-primary/5 px-3 py-1.5 text-sm text-primary hover:bg-primary/10 transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Add another game
-                    <span className="ml-0.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide">Pro</span>
-                  </button>
-                ) : null}
+                <h2 className="text-2xl font-bold text-white mb-1">Add your first game</h2>
+                <p className="text-gray-400 mb-4">Tell us a little about your game. You can add more details later.</p>
               </div>
 
               {storeLookup.status !== "idle" && (
@@ -2137,40 +2085,203 @@ export default function OnboardingFlow({
                 </div>
               )}
 
-              {indieGames.length >= indieGameLimit && !indieSubscribed && (
-                <button
-                  type="button"
-                  onClick={() => setShowIndieDevUpgrade(true)}
-                  className="w-full text-left rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5 mb-2 hover:bg-primary/10 transition-colors"
-                >
-                  <p className="text-sm text-white font-medium flex items-center gap-1.5">
-                    <Code className="w-3.5 h-3.5 text-primary" />
-                    Got more than one game?
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Free accounts include {indieGameLimit} games. The Game Developer subscription
-                    lets you showcase up to 10 — <span className="text-primary underline">see what's included</span>.
-                  </p>
-                </button>
-              )}
-              {indieGames.length >= indieGameLimit && indieSubscribed && (
-                <p className="text-xs text-gray-500 mb-2">
-                  You've reached your limit of {indieGameLimit} games.
-                </p>
-              )}
-
+              {/* 1. Game Name */}
               <div>
                 <Label className="text-white text-sm mb-1.5 block">Game Name <span className="text-primary">*</span></Label>
                 <Input value={indieGameData.gameName} onChange={(e) => setIndieGameData({ ...indieGameData, gameName: e.target.value })} placeholder="Your game's name" className="bg-[#0B1218] border-[#1B2A33] text-white" />
               </div>
+
+              {/* 2. Store pages — one row per platform, added state replaces the add button */}
               <div>
-                <Label className="text-gray-400 text-sm mb-1.5 block">Studio Name</Label>
-                <Input value={indieGameData.studioName} onChange={(e) => setIndieGameData({ ...indieGameData, studioName: e.target.value })} placeholder="Studio or developer name" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                <Label className="text-gray-400 text-sm mb-2 block">Where can players find your game?</Label>
+                <div className="space-y-2">
+
+                  {/* Steam */}
+                  {indieGameData.steamLink && !platformExpanded.steam ? (
+                    <div className="flex items-center gap-2 rounded-lg border border-[#1B2A33] bg-[#0B1218] px-3 py-2.5">
+                      <SiSteam className="w-4 h-4 flex-shrink-0 text-[#c6d4df]" />
+                      <span className="flex-1 text-sm text-white flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                        Steam page added
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPlatformExpanded(p => ({ ...p, steam: true }))}
+                        className="text-xs font-medium text-gray-300 hover:text-white transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Remove Steam page"
+                        onClick={() => { setIndieGameData(d => ({ ...d, steamLink: '' })); setPlatformExpanded(p => ({ ...p, steam: false })); }}
+                        className="text-gray-500 hover:text-red-400 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {!platformExpanded.steam ? (
+                        <button
+                          type="button"
+                          onClick={() => setPlatformExpanded(p => ({ ...p, steam: true }))}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#1B2A33] bg-[#0B1218] text-gray-300 hover:text-white hover:border-[#2A3A44] transition-colors text-sm"
+                        >
+                          <SiSteam className="w-4 h-4 flex-shrink-0 text-[#c6d4df]" />
+                          Add Steam page
+                        </button>
+                      ) : (
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            autoFocus
+                            value={indieGameData.steamLink}
+                            onChange={(e) => setIndieGameData({ ...indieGameData, steamLink: e.target.value })}
+                            onBlur={() => { if (!indieLinkError("steamLink")) void lookupStoreUrl(indieGameData.steamLink); }}
+                            placeholder="https://store.steampowered.com/app/..."
+                            className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPlatformExpanded(p => ({ ...p, steam: false }))}
+                            className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
+                            style={{ background: "rgba(255,255,255,0.06)" }}
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {indieLinkError("steamLink") && (
+                    <p className="text-xs text-red-400 -mt-1">{indieLinkError("steamLink")}</p>
+                  )}
+
+                  {/* Itch.io */}
+                  {indieGameData.itchLink && !platformExpanded.itch ? (
+                    <div className="flex items-center gap-2 rounded-lg border border-[#1B2A33] bg-[#0B1218] px-3 py-2.5">
+                      <SiItchdotio className="w-4 h-4 flex-shrink-0 text-[#FA5C5C]" />
+                      <span className="flex-1 text-sm text-white flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                        itch.io page added
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPlatformExpanded(p => ({ ...p, itch: true }))}
+                        className="text-xs font-medium text-gray-300 hover:text-white transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Remove itch.io page"
+                        onClick={() => { setIndieGameData(d => ({ ...d, itchLink: '' })); setPlatformExpanded(p => ({ ...p, itch: false })); }}
+                        className="text-gray-500 hover:text-red-400 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {!platformExpanded.itch ? (
+                        <button
+                          type="button"
+                          onClick={() => setPlatformExpanded(p => ({ ...p, itch: true }))}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#1B2A33] bg-[#0B1218] text-gray-300 hover:text-white hover:border-[#2A3A44] transition-colors text-sm"
+                        >
+                          <SiItchdotio className="w-4 h-4 flex-shrink-0 text-[#FA5C5C]" />
+                          Add itch.io page
+                        </button>
+                      ) : (
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            autoFocus
+                            value={indieGameData.itchLink}
+                            onChange={(e) => setIndieGameData({ ...indieGameData, itchLink: e.target.value })}
+                            onBlur={() => { if (!indieLinkError("itchLink")) void lookupStoreUrl(indieGameData.itchLink); }}
+                            placeholder="https://yourname.itch.io/your-game"
+                            className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPlatformExpanded(p => ({ ...p, itch: false }))}
+                            className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
+                            style={{ background: "rgba(255,255,255,0.06)" }}
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {indieLinkError("itchLink") && (
+                    <p className="text-xs text-red-400 -mt-1">{indieLinkError("itchLink")}</p>
+                  )}
+
+                  {/* Epic Games */}
+                  {indieGameData.epicLink && !platformExpanded.epic ? (
+                    <div className="flex items-center gap-2 rounded-lg border border-[#1B2A33] bg-[#0B1218] px-3 py-2.5">
+                      <SiEpicgames className="w-4 h-4 flex-shrink-0 text-white/70" />
+                      <span className="flex-1 text-sm text-white flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                        Epic Games page added
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPlatformExpanded(p => ({ ...p, epic: true }))}
+                        className="text-xs font-medium text-gray-300 hover:text-white transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Remove Epic Games page"
+                        onClick={() => { setIndieGameData(d => ({ ...d, epicLink: '' })); setPlatformExpanded(p => ({ ...p, epic: false })); }}
+                        className="text-gray-500 hover:text-red-400 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {!platformExpanded.epic ? (
+                        <button
+                          type="button"
+                          onClick={() => setPlatformExpanded(p => ({ ...p, epic: true }))}
+                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#1B2A33] bg-[#0B1218] text-gray-300 hover:text-white hover:border-[#2A3A44] transition-colors text-sm"
+                        >
+                          <SiEpicgames className="w-4 h-4 flex-shrink-0 text-white/70" />
+                          Add Epic Games page
+                        </button>
+                      ) : (
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            autoFocus
+                            value={indieGameData.epicLink}
+                            onChange={(e) => setIndieGameData({ ...indieGameData, epicLink: e.target.value })}
+                            onBlur={() => { if (!indieLinkError("epicLink")) void lookupStoreUrl(indieGameData.epicLink); }}
+                            placeholder="https://store.epicgames.com/..."
+                            className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPlatformExpanded(p => ({ ...p, epic: false }))}
+                            className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
+                            style={{ background: "rgba(255,255,255,0.06)" }}
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {indieLinkError("epicLink") && (
+                    <p className="text-xs text-red-400 -mt-1">{indieLinkError("epicLink")}</p>
+                  )}
+                </div>
               </div>
-              <div>
-                <Label className="text-gray-400 text-sm mb-1.5 block">Genre</Label>
-                <Input value={indieGameData.genre} onChange={(e) => setIndieGameData({ ...indieGameData, genre: e.target.value })} placeholder="e.g. Action RPG, Puzzle, Platformer" className="bg-[#0B1218] border-[#1B2A33] text-white" />
-              </div>
+
+              {/* 3. Release Status */}
               <div>
                 <Label className="text-white text-sm mb-1.5 block">Release Status <span className="text-primary">*</span></Label>
                 <Select value={indieGameData.releaseStatus} onValueChange={(v) => setIndieGameData({ ...indieGameData, releaseStatus: v })}>
@@ -2180,176 +2291,60 @@ export default function OnboardingFlow({
                   <SelectContent className="bg-[#0B1218] border-[#1B2A33]">
                     <SelectItem value="released">Released</SelectItem>
                     <SelectItem value="early_access">Early Access</SelectItem>
-                    <SelectItem value="beta">Beta</SelectItem>
                     <SelectItem value="coming_soon">Coming Soon</SelectItem>
+                    <SelectItem value="in_development">In Development</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              {/* Platform Connect Buttons */}
+
+              {/* 4. Genre */}
               <div>
-                <Label className="text-gray-400 text-sm mb-2 block">Connect Store Pages</Label>
-                <div className="flex gap-2 mb-2">
-                  {/* Steam */}
-                  <button
-                    type="button"
-                    onClick={() => setPlatformExpanded(p => ({ ...p, steam: !p.steam }))}
-                    className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl font-bold text-sm transition-all border"
-                    style={indieGameData.steamLink
-                      ? { background: "rgba(183,255,26,0.08)", border: "1px solid rgba(183,255,26,0.40)", color: "#B7FF1A" }
-                      : { background: "#1b2838", border: "1px solid rgba(255,255,255,0.10)", color: "white" }
-                    }
-                  >
-                    <SiSteam className="w-4 h-4 flex-shrink-0" />
-                    <span className="flex-1 text-left text-xs">
-                      {indieGameData.steamLink ? "Steam ✓" : "Connect Steam"}
-                    </span>
-                    {indieGameData.steamLink && (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setIndieGameData(d => ({ ...d, steamLink: '' })); setPlatformExpanded(p => ({ ...p, steam: false })); }}>
-                        <X className="w-3 h-3 opacity-60 hover:opacity-100" />
-                      </button>
-                    )}
-                  </button>
-
-                  {/* Itch.io */}
-                  <button
-                    type="button"
-                    onClick={() => setPlatformExpanded(p => ({ ...p, itch: !p.itch }))}
-                    className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl font-bold text-sm transition-all border"
-                    style={indieGameData.itchLink
-                      ? { background: "rgba(183,255,26,0.08)", border: "1px solid rgba(183,255,26,0.40)", color: "#B7FF1A" }
-                      : { background: "#1c1a20", border: "1px solid rgba(255,255,255,0.10)", color: "white" }
-                    }
-                  >
-                    <SiItchdotio className="w-4 h-4 flex-shrink-0" style={{ color: indieGameData.itchLink ? undefined : "#FA5C5C" }} />
-                    <span className="flex-1 text-left text-xs">
-                      {indieGameData.itchLink ? "Itch.io ✓" : "Connect Itch.io"}
-                    </span>
-                    {indieGameData.itchLink && (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setIndieGameData(d => ({ ...d, itchLink: '' })); setPlatformExpanded(p => ({ ...p, itch: false })); }}>
-                        <X className="w-3 h-3 opacity-60 hover:opacity-100" />
-                      </button>
-                    )}
-                  </button>
-
-                  {/* Epic Games */}
-                  <button
-                    type="button"
-                    onClick={() => setPlatformExpanded(p => ({ ...p, epic: !p.epic }))}
-                    className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl font-bold text-sm transition-all border"
-                    style={indieGameData.epicLink
-                      ? { background: "rgba(183,255,26,0.08)", border: "1px solid rgba(183,255,26,0.40)", color: "#B7FF1A" }
-                      : { background: "#2a2a2a", border: "1px solid rgba(255,255,255,0.10)", color: "white" }
-                    }
-                  >
-                    <SiEpicgames className="w-4 h-4 flex-shrink-0" />
-                    <span className="flex-1 text-left text-xs">
-                      {indieGameData.epicLink ? "Epic Games ✓" : "Connect Epic Games"}
-                    </span>
-                    {indieGameData.epicLink && (
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setIndieGameData(d => ({ ...d, epicLink: '' })); setPlatformExpanded(p => ({ ...p, epic: false })); }}>
-                        <X className="w-3 h-3 opacity-60 hover:opacity-100" />
-                      </button>
-                    )}
-                  </button>
-                </div>
-
-                {/* Steam URL input (expanded) */}
-                {platformExpanded.steam && (
-                  <div className="mb-2 flex gap-2 items-center">
-                    <Input
-                      autoFocus
-                      value={indieGameData.steamLink}
-                      onChange={(e) => setIndieGameData({ ...indieGameData, steamLink: e.target.value })}
-                      onBlur={() => { if (!indieLinkError("steamLink")) void lookupStoreUrl(indieGameData.steamLink); }}
-                      placeholder="https://store.steampowered.com/app/..."
-                      className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setPlatformExpanded(p => ({ ...p, steam: false }))}
-                      className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
-                      style={{ background: "rgba(255,255,255,0.06)" }}
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
-                {indieLinkError("steamLink") && (
-                  <p className="text-xs text-red-400 mb-2 -mt-1">{indieLinkError("steamLink")}</p>
-                )}
-
-                {/* Itch.io URL input (expanded) */}
-                {platformExpanded.itch && (
-                  <div className="mb-2 flex gap-2 items-center">
-                    <Input
-                      autoFocus
-                      value={indieGameData.itchLink}
-                      onChange={(e) => setIndieGameData({ ...indieGameData, itchLink: e.target.value })}
-                      onBlur={() => { if (!indieLinkError("itchLink")) void lookupStoreUrl(indieGameData.itchLink); }}
-                      placeholder="https://yourname.itch.io/your-game"
-                      className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setPlatformExpanded(p => ({ ...p, itch: false }))}
-                      className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
-                      style={{ background: "rgba(255,255,255,0.06)" }}
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
-                {indieLinkError("itchLink") && (
-                  <p className="text-xs text-red-400 mb-2 -mt-1">{indieLinkError("itchLink")}</p>
-                )}
-
-                {/* Epic Games URL input (expanded) */}
-                {platformExpanded.epic && (
-                  <div className="mb-2 flex gap-2 items-center">
-                    <Input
-                      autoFocus
-                      value={indieGameData.epicLink}
-                      onChange={(e) => setIndieGameData({ ...indieGameData, epicLink: e.target.value })}
-                      onBlur={() => { if (!indieLinkError("epicLink")) void lookupStoreUrl(indieGameData.epicLink); }}
-                      placeholder="https://store.epicgames.com/..."
-                      className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setPlatformExpanded(p => ({ ...p, epic: false }))}
-                      className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg text-white/60 hover:text-white transition-colors"
-                      style={{ background: "rgba(255,255,255,0.06)" }}
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
-                {indieLinkError("epicLink") && (
-                  <p className="text-xs text-red-400 mb-2 -mt-1">{indieLinkError("epicLink")}</p>
-                )}
+                <Label className="text-gray-400 text-sm mb-1.5 block">Genre <span className="text-gray-600 font-normal text-xs ml-1">optional</span></Label>
+                <Input value={indieGameData.genre} onChange={(e) => setIndieGameData({ ...indieGameData, genre: e.target.value })} placeholder="e.g. Action RPG, Puzzle, Platformer" className="bg-[#0B1218] border-[#1B2A33] text-white" />
               </div>
 
+              {/* 5. Studio / Developer */}
               <div>
-                <Label className="text-gray-400 text-sm mb-1.5 block">Website</Label>
+                <Label className="text-gray-400 text-sm mb-1.5 block">Studio / Developer <span className="text-gray-600 font-normal text-xs ml-1">optional</span></Label>
+                <Input value={indieGameData.studioName} onChange={(e) => setIndieGameData({ ...indieGameData, studioName: e.target.value })} placeholder="Studio or developer name" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+              </div>
+
+              {/* 6. Short Description */}
+              <div>
+                <Label className="text-gray-400 text-sm mb-1.5 block">Short Description <span className="text-gray-600 font-normal text-xs ml-1">optional</span></Label>
+                <Textarea value={indieGameData.description} onChange={(e) => setIndieGameData({ ...indieGameData, description: e.target.value })} placeholder="A short description of your game..." className="bg-[#0B1218] border-[#1B2A33] text-white resize-none" rows={3} />
+              </div>
+
+              {/* 7. Website */}
+              <div>
+                <Label className="text-gray-400 text-sm mb-1.5 block">Website <span className="text-gray-600 font-normal text-xs ml-1">optional</span></Label>
                 <Input value={indieGameData.websiteLink} onChange={(e) => setIndieGameData({ ...indieGameData, websiteLink: e.target.value })} placeholder="https://yourgame.com" className="bg-[#0B1218] border-[#1B2A33] text-white" />
                 {indieLinkError("websiteLink") && (
                   <p className="text-xs text-red-400 mt-1">{indieLinkError("websiteLink")}</p>
                 )}
               </div>
-              <div>
-                <Label className="text-gray-400 text-sm mb-1.5 block">Short Description</Label>
-                <Textarea value={indieGameData.description} onChange={(e) => setIndieGameData({ ...indieGameData, description: e.target.value })} placeholder="A short description of your game..." className="bg-[#0B1218] border-[#1B2A33] text-white resize-none" rows={3} />
-              </div>
             </div>
 
-            <div className="flex gap-3 mt-4">
-              <Button onClick={goToNextStep} disabled={!indieGameData.gameName.trim() || !indieGameData.releaseStatus} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
-                Next <ArrowRight className="h-4 w-4 ml-2" />
+            {/* Footer navigation — Back on the left, Continue on the right */}
+            <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-[#1B2A33] flex-shrink-0">
+              <button
+                type="button"
+                onClick={goToPrevStep}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 border border-[#1B2A33] hover:border-[#2A3A44] transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </button>
+              <Button
+                onClick={goToNextStep}
+                disabled={!indieGameData.gameName.trim() || !indieGameData.releaseStatus}
+                className="bg-primary hover:bg-primary/90 text-[#071013] font-semibold px-6"
+              >
+                Continue <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
-          
-            {/* Mounted here so the "add another game" upsell has a dialog to
-                open — the copy on the later subscribe step renders separately.
+
+            {/* Mounted here so the upgrade upsell has a dialog to open.
                 Re-check the quota on close: they may have just subscribed. */}
             <IndieDevUpgradeDialog
               open={showIndieDevUpgrade}
