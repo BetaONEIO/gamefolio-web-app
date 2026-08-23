@@ -104,18 +104,18 @@ function useUploadTrailer() {
 function useUploadScreenshot() {
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async (files: File[]) => {
       const fd = new FormData();
-      fd.append("screenshot", file);
+      files.forEach(file => fd.append("screenshot", file));
       const res = await fetch("/api/indie/upload/screenshot", {
         method: "POST", body: fd, credentials: "include",
       });
       if (!res.ok) throw new Error("Upload failed");
-      return res.json() as Promise<{ url: string; screenshotUrls: string[] }>;
+      return res.json() as Promise<{ urls: string[]; screenshotUrls: string[] }>;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
-      toast({ description: "Screenshot uploaded" });
+      toast({ description: "Screenshots uploaded" });
     },
     onError: () => toast({ description: "Upload failed", variant: "gamefolioError" }),
   });
@@ -702,10 +702,11 @@ function MediaCard({ profile }: { profile: Profile | null }) {
               ref={shotFileRef}
               type="file"
               accept="image/*"
+              multiple
               className="hidden"
               onChange={e => {
-                const f = e.target.files?.[0];
-                if (f) uploadScreenshot.mutate(f);
+                const files = Array.from(e.target.files ?? []);
+                if (files.length > 0) uploadScreenshot.mutate(files);
                 e.target.value = "";
               }}
             />
@@ -720,7 +721,7 @@ function MediaCard({ profile }: { profile: Profile | null }) {
                 ? <Loader2 size={18} className="animate-spin" style={{ color: NEON }} />
                 : <Upload size={18} className="text-white/20" />}
               <span className="text-sm text-white/30">
-                {uploadScreenshot.isPending ? "Uploading…" : "Click to upload image"}
+                {uploadScreenshot.isPending ? "Uploading…" : "Click to upload one or more images"}
               </span>
             </button>
           </div>

@@ -273,6 +273,23 @@ const screenshotUpload = multer({
   }
 });
 
+// Indie profile artwork can be substantially larger than avatars. Keep this
+// separate from the general `upload` middleware, whose 5MB limit is intended
+// for avatars and legacy image uploads.
+const indieProfileImageUpload = multer({
+  storage: screenshotStorage,
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25MB for banners and capsule artwork
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed for indie profile artwork'));
+    }
+  }
+});
+
 // Video upload configuration for desktop app
 const videoUploadStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -305,7 +322,7 @@ const videoUpload = multer({
 const indieTrailerUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 250 * 1024 * 1024, // 250MB max for trailers
+    fileSize: 500 * 1024 * 1024, // 500MB max for trailers
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('video/')) {
@@ -11672,7 +11689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/indie/profile/upload-image — upload capsule or header image for the indie game profile
-  app.post("/api/indie/profile/upload-image", upload.single('image'), async (req, res) => {
+  app.post("/api/indie/profile/upload-image", indieProfileImageUpload.single('image'), async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       if (!req.file) return res.status(400).json({ message: "No file provided" });
@@ -13026,19 +13043,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/indie/upload/screenshot — upload and append a screenshot
-  app.post("/api/indie/upload/screenshot", upload.single('screenshot'), async (req, res) => {
+  app.post("/api/indie/upload/screenshot", screenshotUpload.array('screenshot', 20), async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
     try {
-      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-      const sharpInstance = sharp(req.file.path);
-      const processedBuffer = await sharpInstance
-        .resize(1920, undefined, { fit: 'inside', withoutEnlargement: true })
-        .jpeg({ quality: 88 })
-        .toBuffer();
-      const fileName = `indie-screenshot-${req.user.id}-${Date.now()}.jpg`;
-      const { url: imageUrl } = await supabaseStorage.uploadBuffer(processedBuffer, fileName, 'image/jpeg', 'image', req.user.id);
-      try { await fsPromises.unlink(req.file.path); } catch {}
+      const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+      if (files.length === 0) return res.status(400).json({ error: "No file uploaded" });
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
       const { eq, sql } = await import("drizzle-orm");
@@ -13047,7 +13057,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? await db.select({ screenshotUrls: indieGameProfiles.screenshotUrls }).from(indieGameProfiles).where(eq(indieGameProfiles.id, shotGameId))
         : [];
       const existing = ex[0]?.screenshotUrls ?? [];
-      const updated = [...existing, imageUrl].slice(0, 20);
+      const remaining = Math.max(0, 20 - existing.length);
+      const uploadedUrls: string[] = [];
+      for (const [index, file] of files.slice(0, remaining).entries()) {
+        const processedBuffer = await sharp(file.path)
+          .resize(1920, undefined, { fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 88 })
+          .toBuffer();
+        const fileName = `indie-screenshot-${req.user.id}-${Date.now()}-${index}.jpg`;
+        const { url: imageUrl } = await supabaseStorage.uploadBuffer(processedBuffer, fileName, 'image/jpeg', 'image', req.user.id);
+        uploadedUrls.push(imageUrl);
+      }
+      for (const file of files) {
+        try { await fsPromises.unlink(file.path); } catch {}
+      }
+      const updated = [...existing, ...uploadedUrls].slice(0, 20);
       let shotTargetId = shotGameId;
       if (shotTargetId) {
         await db.update(indieGameProfiles).set({ screenshotUrls: updated, updatedAt: new Date() }).where(eq(indieGameProfiles.id, shotTargetId));
@@ -13056,10 +13080,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         shotTargetId = created?.id ?? null;
       }
       await _indieUpsertMeta(req.user.id, 'screenshotUrls', { isManualOverride: true, lastEditedAt: new Date() }, shotTargetId);
-      res.json({ url: imageUrl, screenshotUrls: updated });
+      res.json({ urls: uploadedUrls, url: uploadedUrls[0] ?? null, screenshotUrls: updated });
     } catch (err) {
       console.error("POST /api/indie/upload/screenshot error:", err);
-      try { if (req.file?.path) await fsPromises.unlink(req.file.path); } catch {}
+      const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+      for (const file of files) {
+        try { await fsPromises.unlink(file.path); } catch {}
+      }
       res.status(500).json({ error: "Upload failed" });
     }
   });
