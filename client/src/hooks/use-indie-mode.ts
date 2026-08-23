@@ -1,13 +1,8 @@
 import { useAuth } from "@/hooks/use-auth";
+import { hasIndieDeveloperAccess } from "@shared/partner-access";
 
 export function useIndieMode() {
   const { user } = useAuth();
-  const isIndieMode = !!(
-    user &&
-    user.userType
-      ?.split(",")
-      .map((t: string) => t.trim())
-      .includes("indie_developer")
-  );
+  const isIndieMode = hasIndieDeveloperAccess(user);
   return { isIndieMode };
 }

@@ -55,7 +55,10 @@ function useSaveProfile(onSuccess?: () => void) {
       toast({ description: "Saved" });
       onSuccess?.();
     },
-    onError: () => toast({ description: "Save failed", variant: "gamefolioError" }),
+    onError: (error: Error) => {
+      const message = error.message.replace(/^\d+:\s*/, "");
+      toast({ description: message || "Save failed", variant: "gamefolioError" });
+    },
   });
 }
 

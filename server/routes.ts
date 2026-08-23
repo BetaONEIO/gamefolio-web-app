@@ -29,6 +29,7 @@ import { db } from "./db";
 import { captureRouteError } from "./sentry";
 import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
 import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog } from "@shared/schema";
+import { hasIndieDeveloperAccess } from "@shared/partner-access";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -380,6 +381,8 @@ declare global {
       authProvider?: string | null;
       externalId?: string | null;
       isPrivate?: boolean;
+      isPartner?: boolean | null;
+      partnerType?: string | null;
     }
   }
 }
@@ -11707,6 +11710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/indie/profile/upload-image — upload capsule or header image for the indie game profile
   app.post("/api/indie/profile/upload-image", indieProfileImageUpload.single('image'), async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       if (!req.file) return res.status(400).json({ message: "No file provided" });
       if (!req.file.path || !fs.existsSync(req.file.path)) return res.status(400).json({ message: "Uploaded file not found" });
@@ -11745,6 +11749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // share the same underlying indie_game_profiles data).
   app.post("/api/indie/profile/upload-trailer", indieProfileTrailerUpload.single('video'), async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       if (!req.file) return res.status(400).json({ message: "No file provided" });
       const ext = (req.file.originalname.split('.').pop() || 'mp4').toLowerCase();
@@ -12167,12 +12172,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return first?.id ?? null;
   }
 
-  // GET /api/indie/profile — owner: full profile + field meta (partner access only)
+  // GET /api/indie/profile — owner: full profile + field meta
   // Resolution model: when useImported is true for a field, the resolved profile value
   // should reflect the importedValue rather than the manually-edited value.
   app.get("/api/indie/profile", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       // ?gameId= selects one of the developer's games; omitted means primary.
       const gameId = await _indieResolveGameId(req.user.id, req.query.gameId);
@@ -12208,7 +12213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PUT /api/indie/profile — owner: manually update profile fields
   app.put("/api/indie/profile", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
@@ -12564,7 +12569,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/indie/steam/preview?appId= — preview Steam data without saving
   app.get("/api/indie/steam/preview", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const appId = (req.query.appId as string || "").replace(/\D/g, "");
     if (!appId) return res.status(400).json({ error: "Valid numeric appId required" });
     try {
@@ -12580,7 +12585,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/indie/epic/preview?slug= — preview Epic Games data without saving
   app.get("/api/indie/epic/preview", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const slug = (req.query.slug as string || "").trim().toLowerCase();
     if (!slug) return res.status(400).json({ error: "slug required (from Epic store URL)" });
     try {
@@ -12767,7 +12772,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // later choose to revert to it via the Revert button or sync-apply.
   app.post("/api/indie/import", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const { source, fields, steamAppId: reqAppId, epicSlug: reqSlug, itchGameUrl } = req.body;
     if (!source || !fields || typeof fields !== "object") return res.status(400).json({ error: "source and fields object required" });
     try {
@@ -12861,7 +12866,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/indie/sync-check — diff current profile vs live store data
   app.post("/api/indie/sync-check", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       const gameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
       const profile = await _indieGetOrCreate(req.user.id, gameId);
@@ -12906,7 +12911,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // and always applies them, clearing isManualOverride so the field tracks the store source.
   app.post("/api/indie/sync-apply", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const { fields, source } = req.body;
     if (!Array.isArray(fields)) return res.status(400).json({ error: "fields array required" });
     try {
@@ -12952,7 +12957,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // this is a single-field explicit revert that always succeeds if there is an importedValue.
   app.post("/api/indie/field-revert", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const { fieldName } = req.body;
     if (!fieldName || typeof fieldName !== "string" || !INDIE_ALLOWED_FIELDS.includes(fieldName)) {
       return res.status(400).json({ error: "Valid fieldName required" });
@@ -12995,7 +13000,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/indie/upload/image — upload header or capsule image for indie profile
   app.post("/api/indie/upload/image", upload.single('image'), async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const field = req.body?.field === 'capsule' ? 'capsuleImageUrl' : 'headerImageUrl';
     try {
       if (!req.file) return res.status(400).json({ error: "No file uploaded" });
@@ -13033,7 +13038,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/indie/upload/trailer — upload a trailer video for an indie game
   app.post("/api/indie/upload/trailer", indieTrailerUpload.single('video'), async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       if (!req.file) return res.status(400).json({ error: "No file uploaded" });
       const ext = (req.file.originalname.split('.').pop() || 'mp4').toLowerCase();
@@ -13061,7 +13066,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/indie/upload/screenshot — upload and append a screenshot
   app.post("/api/indie/upload/screenshot", screenshotUpload.array('screenshot', 20), async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       const files = (req.files as Express.Multer.File[] | undefined) ?? [];
       if (files.length === 0) return res.status(400).json({ error: "No file uploaded" });
@@ -13110,7 +13115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // DELETE /api/indie/screenshot — remove a screenshot URL from the array
   app.delete("/api/indie/screenshot", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const { url } = req.body;
     if (!url || typeof url !== 'string') return res.status(400).json({ error: "url required" });
     try {
@@ -13231,7 +13236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ─── Indie Game Management: Creator Content ───────────────────────────────
   app.get("/api/indie/creator-content", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const { type = "all", sort = "newest" } = req.query as any;
     try {
       const { db } = await import("./db");
@@ -13300,7 +13305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/indie/updates", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       const { db } = await import("./db");
       const { sql } = await import("drizzle-orm");
@@ -13317,7 +13322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/indie/updates", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const { title, type = "Announcement", summary = "", content = "", publishDate = "", status = "draft" } = req.body;
     if (!title?.trim()) return res.status(400).json({ error: "title required" });
     try {
@@ -13337,7 +13342,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/indie/updates/:id", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const id = parseInt(req.params.id);
     if (!id) return res.status(400).json({ error: "Invalid id" });
     try {
@@ -13354,7 +13359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ─── Indie Game Management: Analytics ─────────────────────────────────────
   app.get("/api/indie/analytics", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       const { db } = await import("./db");
       const { sql } = await import("drizzle-orm");
@@ -13386,7 +13391,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ─── Indie Game Management: Bounty Status ─────────────────────────────────
   app.get("/api/indie/bounty-status", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       res.json({ status: "not_enrolled", demoKeys: { uploaded: 0, valid: 0, available: 0, claimed: 0 }, fullGameKeys: { uploaded: 0, valid: 0, available: 0, awarded: 0 } });
     } catch (err) {
@@ -13397,7 +13402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ─── Indie Game Management: Verification ──────────────────────────────────
   app.get("/api/indie/verification", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       const { db } = await import("./db");
       const { sql } = await import("drizzle-orm");
