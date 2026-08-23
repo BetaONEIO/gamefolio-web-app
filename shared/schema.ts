@@ -245,10 +245,16 @@ export const clips = pgTable("clips", {
   status: text("status").default("ready").notNull(), // "processing" | "ready" | "failed"
   processingError: text("processing_error"),
   rawUploadPath: text("raw_upload_path"),
+  // Browser-generated key used to acknowledge a completed upload when its
+  // process-video response was interrupted. It is unique per creator so a
+  // retry cannot create a second clip for the same upload attempt.
+  uploadAttemptId: text("upload_attempt_id"),
   processingAttempts: integer("processing_attempts").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  userUploadAttemptIdx: uniqueIndex("clips_user_upload_attempt_idx").on(table.userId, table.uploadAttemptId),
+}));
 
 // Likes table
 export const likes = pgTable("likes", {
@@ -315,12 +321,16 @@ export const scheduledPosts = pgTable("scheduled_posts", {
   publishedAt: timestamp("published_at"),
   publishedContentId: integer("published_content_id"),
   errorMessage: text("error_message"),
+  // Matches the client upload attempt so retries can return the already
+  // queued post instead of adding another scheduled item.
+  uploadAttemptId: text("upload_attempt_id"),
   attempts: integer("attempts").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
   dueIdx: index("scheduled_posts_due_idx").on(table.status, table.scheduledAt),
   userIdx: index("scheduled_posts_user_idx").on(table.userId, table.status),
+  userUploadAttemptIdx: uniqueIndex("scheduled_posts_user_upload_attempt_idx").on(table.userId, table.uploadAttemptId),
 }));
 
 // UserGameFavorites table

@@ -16,9 +16,35 @@ import { hybridFullAccess } from '../middleware/hybrid-auth';
 import { XPService } from '../xp-service';
 import { captureRouteError } from "../sentry";
 import { getRequestMeta } from "../lib/request-meta";
-import { processAndCreateClip, ClipProcessingError } from '../services/clip-processing';
+import { processAndCreateClip, ClipProcessingError, isValidUploadAttemptId } from '../services/clip-processing';
 
 const router = express.Router();
+
+async function getExistingUploadAttempt(userId: number, uploadAttemptId: unknown) {
+  if (!isValidUploadAttemptId(uploadAttemptId)) return null;
+
+  const clip = await storage.getClipByUserAndUploadAttemptId(userId, uploadAttemptId);
+  if (clip) {
+    return {
+      success: true,
+      reconciled: true,
+      clip,
+      message: 'This upload was already received and is processing.',
+    };
+  }
+
+  const scheduled = await storage.getScheduledPostByUserAndUploadAttemptId(userId, uploadAttemptId);
+  if (scheduled) {
+    return {
+      success: true,
+      reconciled: true,
+      scheduled,
+      message: 'This upload was already scheduled.',
+    };
+  }
+
+  return null;
+}
 
 // Temporary directory for processing
 const tempDir = path.join(process.cwd(), "temp");
@@ -706,6 +732,11 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 // Video/Reel processing endpoint (called after TUS upload completes)
 router.post('/process-video', hybridFullAccess, async (req, res) => {
   try {
+    // Check before validation/limits so a retry after a dropped response does
+    // not appear to hit a new quota or scheduling cap.
+    const existingUpload = await getExistingUploadAttempt(req.user!.id, req.body.uploadAttemptId);
+    if (existingUpload) return res.json(existingUpload);
+
     // Resolve scheduling intent up front so we can reject before doing the
     // expensive download/transcode work in processAndCreateClip below.
     const { date: scheduledAt, error: scheduleError } = parseScheduledAt(req.body.scheduledAt);
@@ -760,6 +791,20 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
     res.status(500).json({
       error: error instanceof Error ? error.message : 'Video processing failed'
     });
+  }
+});
+
+// Browser-side recovery for a request that reached the server but whose
+// response did not make it back to the client. The lookup is strictly scoped
+// to the authenticated owner and reveals no upload-path or other-user data.
+router.get('/process-video/reconcile', hybridFullAccess, async (req, res) => {
+  try {
+    const existingUpload = await getExistingUploadAttempt(req.user!.id, req.query.uploadAttemptId);
+    res.json(existingUpload ?? { found: false });
+  } catch (error) {
+    captureRouteError(error);
+    console.error('Video upload reconciliation error:', error);
+    res.status(500).json({ error: 'Could not confirm the upload status' });
   }
 });
 
