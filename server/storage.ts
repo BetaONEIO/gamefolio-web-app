@@ -145,6 +145,7 @@ export interface IStorage {
   getClip(id: number): Promise<Clip | null>;
   getClipWithUser(id: number): Promise<ClipWithUser | null>;
   getClipByShareCode(shareCode: string): Promise<Clip | null>;
+  getClipByUserAndUploadAttemptId(userId: number, uploadAttemptId: string): Promise<Clip | null>;
   createClip(clipData: InsertClip): Promise<Clip>;
   updateClip(id: number, clip: Partial<Clip>): Promise<Clip | null>;
   // Rows stuck in background video processing (status "processing", not
@@ -517,6 +518,7 @@ export interface IStorage {
   // Scheduled posts operations
   createScheduledPost(data: InsertScheduledPost): Promise<ScheduledPost>;
   getScheduledPost(id: number): Promise<ScheduledPost | undefined>;
+  getScheduledPostByUserAndUploadAttemptId(userId: number, uploadAttemptId: string): Promise<ScheduledPost | undefined>;
   getScheduledPostsByUser(userId: number): Promise<ScheduledPost[]>;
   countPendingScheduledPosts(userId: number): Promise<number>;
   getDueScheduledPosts(now: Date, limit?: number): Promise<ScheduledPost[]>;

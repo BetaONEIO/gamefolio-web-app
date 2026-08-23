@@ -58,6 +58,14 @@ interface BulkItem {
   status: ItemStatus;
   progress: number;
   error: string | null;
+  // Video upload recovery state. These values survive an in-page retry after a
+  // lost process-video response, so the original server-side attempt can be
+  // acknowledged without re-uploading or creating another clip.
+  uploadAttemptId: string | null;
+  videoUploadPath: string | null;
+  videoUploadPublicUrl: string | null;
+  storageUploaded: boolean;
+  createdContentId: number | null;
   // Set once the item finishes, reflecting whether *this* upload was
   // scheduled — kept per-item so the "Posted" vs "Scheduled" badge stays
   // correct even if the batch-wide schedule toggle changes afterward.
@@ -70,6 +78,13 @@ const ALLOWED_IMAGE = ["image/jpeg", "image/png", "image/jpg"];
 // Monotonic id source so React keys stay stable across re-renders.
 let itemIdCounter = 0;
 const nextItemId = () => `bulk-${++itemIdCounter}`;
+
+function createUploadAttemptId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 16)}`;
+}
 
 // On Android, File.type can be empty even for valid media. Fall back to the
 // extension, mirroring UploadPage.getEffectiveMimeType.
@@ -254,6 +269,11 @@ const BulkUploadPage = () => {
         status: "pending",
         progress: 0,
         error: null,
+        uploadAttemptId: null,
+        videoUploadPath: null,
+        videoUploadPublicUrl: null,
+        storageUploaded: false,
+        createdContentId: null,
         wasScheduled: false,
       };
     });
@@ -291,66 +311,151 @@ const BulkUploadPage = () => {
   // Direct-to-Supabase + process-video, mirroring UploadPage's uploadMutation
   // but without client-side trimming (server uses the full clip when trimEnd
   // is omitted).
-  async function uploadVideoItem(item: BulkItem, onProgress: (p: number) => void, scheduledIso?: string) {
-    const timestamp = Date.now();
-    const randomId = Math.random().toString(36).substring(2, 15);
+  async function reconcileVideoUpload(uploadAttemptId: string) {
+    const response = await fetch(
+      `/api/upload/process-video/reconcile?uploadAttemptId=${encodeURIComponent(uploadAttemptId)}`,
+      { credentials: "include" },
+    );
+    if (!response.ok) return null;
+    const result = await response.json();
+    return result?.success ? result : null;
+  }
+
+  async function uploadVideoItem(
+    item: BulkItem,
+    onProgress: (p: number) => void,
+    scheduledIso?: string,
+  ): Promise<{ contentId: number | null; recovered: boolean }> {
+    const uploadAttemptId = item.uploadAttemptId || createUploadAttemptId();
     const extension = item.file.name.split(".").pop() || "mp4";
     const prefix = item.videoType === "reel" ? "reels" : "videos";
-    const fileName = `${prefix}/${timestamp}-${randomId}.${extension}`;
-    const filePath = `users/${user!.id}/${fileName}`;
+    const filePath = item.videoUploadPath || `users/${user!.id}/${prefix}/${uploadAttemptId}.${extension}`;
+    let publicUrl = item.videoUploadPublicUrl;
 
-    onProgress(5);
-    const credsRes = await fetch("/api/upload/supabase-creds", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filePath, contentType: item.file.type }),
-      credentials: "include",
-    });
-    if (!credsRes.ok) throw new Error("Failed to get upload credentials");
-    const { uploadUrl, publicUrl } = await credsRes.json();
+    if (!item.storageUploaded || !publicUrl) {
+      updateItem(item.id, {
+        uploadAttemptId,
+        videoUploadPath: filePath,
+        videoUploadPublicUrl: null,
+        storageUploaded: false,
+      });
+      onProgress(5);
 
-    await new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("PUT", uploadUrl);
-      xhr.setRequestHeader("Content-Type", item.file.type);
-      xhr.setRequestHeader("x-upsert", "false");
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const pct = Math.round((event.loaded / event.total) * 100);
-          onProgress(10 + Math.round(pct * 0.75)); // 10 → 85
-        }
-      };
-      xhr.onload = () =>
-        xhr.status >= 200 && xhr.status < 300
-          ? resolve()
-          : reject(new Error(`Upload failed (${xhr.status})`));
-      xhr.onerror = () => reject(new Error("Upload network error"));
-      xhr.send(item.file);
-    });
+      try {
+        const credsRes = await fetch("/api/upload/supabase-creds", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filePath, contentType: item.file.type }),
+          credentials: "include",
+        });
+        if (!credsRes.ok) throw new Error("Failed to get upload credentials");
+        const credentials = await credsRes.json();
+        publicUrl = credentials.publicUrl;
+
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", credentials.uploadUrl);
+          xhr.setRequestHeader("Content-Type", item.file.type);
+          xhr.setRequestHeader("x-upsert", "false");
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const pct = Math.round((event.loaded / event.total) * 100);
+              onProgress(10 + Math.round(pct * 0.75)); // 10 → 85
+            }
+          };
+          xhr.onload = () =>
+            xhr.status >= 200 && xhr.status < 300
+              ? resolve()
+              : reject(new Error(`Upload to storage failed (${xhr.status})`));
+          xhr.onerror = () => reject(new Error("Upload to storage was interrupted by a network error"));
+          xhr.send(item.file);
+        });
+      } catch (error) {
+        // A failed storage transfer may have left only a partial object. Use a
+        // fresh attempt/path next time rather than colliding with it.
+        updateItem(item.id, {
+          uploadAttemptId: null,
+          videoUploadPath: null,
+          videoUploadPublicUrl: null,
+          storageUploaded: false,
+        });
+        throw error;
+      }
+
+      updateItem(item.id, {
+        uploadAttemptId,
+        videoUploadPath: filePath,
+        videoUploadPublicUrl: publicUrl,
+        storageUploaded: true,
+      });
+    } else {
+      onProgress(85);
+    }
 
     onProgress(88);
-    const processRes = await fetch("/api/upload/process-video", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        uploadResult: { url: publicUrl, path: filePath },
-        title: item.title.trim(),
-        description: item.description.trim(),
-        gameId: item.game ? item.game.id : null,
-        tags: item.tags,
-        videoType: item.videoType,
-        ageRestricted: item.ageRestricted,
-        trimStart: 0,
-        // trimEnd omitted → server keeps the full clip duration.
-        scheduledAt: scheduledIso,
-      }),
-      credentials: "include",
-    });
-    if (!processRes.ok) {
-      const err = await processRes.json().catch(() => ({}));
-      throw new Error(err.message || err.error || "Video processing failed");
+    let processRes: Response;
+    let serverError = "Video processing failed";
+    let receivedProcessResponse = false;
+    try {
+      processRes = await fetch("/api/upload/process-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uploadResult: { url: publicUrl, path: filePath },
+          uploadAttemptId,
+          title: item.title.trim(),
+          description: item.description.trim(),
+          gameId: item.game ? item.game.id : null,
+          tags: item.tags,
+          videoType: item.videoType,
+          ageRestricted: item.ageRestricted,
+          trimStart: 0,
+          // trimEnd omitted → server keeps the full clip duration.
+          scheduledAt: scheduledIso,
+        }),
+        credentials: "include",
+      });
+      receivedProcessResponse = true;
+      if (!processRes.ok) {
+        const body = await processRes.json().catch(() => ({}));
+        serverError = body.message || body.error || `Video processing failed (${processRes.status})`;
+        throw new Error(serverError);
+      }
+      const result = await processRes.json();
+      onProgress(100);
+      return {
+        contentId: result?.clip?.id ?? result?.scheduled?.id ?? null,
+        recovered: !!result?.reconciled,
+      };
+    } catch (error) {
+      // A failed request/response does not prove the server rejected it. Check
+      // the authenticated, attempt-scoped acknowledgement before showing an
+      // error or inviting the creator to retry.
+      try {
+        const recovered = await reconcileVideoUpload(uploadAttemptId);
+        if (recovered) {
+          onProgress(100);
+          return {
+            contentId: recovered.clip?.id ?? recovered.scheduled?.id ?? null,
+            recovered: true,
+          };
+        }
+      } catch {
+        // Keep the original processing error: the reconciliation request is
+        // best-effort and should not hide a useful server response.
+      }
+      if (!receivedProcessResponse) {
+        throw new Error(
+          "The video reached storage, but the processing connection was interrupted. Retry this item to confirm it safely.",
+        );
+      }
+      if (processRes.ok) {
+        throw new Error(
+          "The server accepted the video, but its confirmation could not be read. Retry this item to confirm it safely.",
+        );
+      }
+      throw new Error(error instanceof Error ? error.message : serverError);
     }
-    onProgress(100);
   }
 
   async function uploadScreenshotItem(item: BulkItem, onProgress: (p: number) => void, scheduledIso?: string) {
@@ -461,7 +566,8 @@ const BulkUploadPage = () => {
       try {
         const onProgress = (p: number) => updateItem(it.id, { progress: p });
         if (it.kind === "video") {
-          await uploadVideoItem(it, onProgress, scheduledIso);
+          const result = await uploadVideoItem(it, onProgress, scheduledIso);
+          updateItem(it.id, { createdContentId: result.contentId });
         } else {
           await uploadScreenshotItem(it, onProgress, scheduledIso);
         }

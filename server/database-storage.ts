@@ -869,6 +869,15 @@ export class DatabaseStorage implements IStorage {
     return result || null;
   }
 
+  async getClipByUserAndUploadAttemptId(userId: number, uploadAttemptId: string): Promise<Clip | null> {
+    const [clip] = await db
+      .select()
+      .from(clips)
+      .where(and(eq(clips.userId, userId), eq(clips.uploadAttemptId, uploadAttemptId)))
+      .limit(1);
+    return clip || null;
+  }
+
   async createClip(clipData: InsertClip): Promise<Clip> {
     const [clip] = await db.insert(clips).values(clipData).returning();
     return clip;
@@ -5957,6 +5966,18 @@ export class DatabaseStorage implements IStorage {
 
   async getScheduledPost(id: number): Promise<ScheduledPost | undefined> {
     const [row] = await db.select().from(scheduledPosts).where(eq(scheduledPosts.id, id));
+    return row;
+  }
+
+  async getScheduledPostByUserAndUploadAttemptId(userId: number, uploadAttemptId: string): Promise<ScheduledPost | undefined> {
+    const [row] = await db
+      .select()
+      .from(scheduledPosts)
+      .where(and(
+        eq(scheduledPosts.userId, userId),
+        eq(scheduledPosts.uploadAttemptId, uploadAttemptId),
+      ))
+      .limit(1);
     return row;
   }
 
