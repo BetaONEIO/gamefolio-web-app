@@ -135,9 +135,9 @@ function EditModal({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto"
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-4 pt-20"
       style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)" }}>
-      <div className="relative w-full max-w-2xl flex flex-col rounded-2xl overflow-hidden mx-4 my-14"
+      <div className="relative w-full max-w-2xl max-h-[calc(100vh-6rem)] flex flex-col rounded-2xl overflow-hidden"
         style={{ background: "#0e1419", border: `1px solid ${CARD_BORDER}`, boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0"
