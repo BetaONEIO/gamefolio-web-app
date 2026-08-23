@@ -6816,6 +6816,25 @@ export class DatabaseStorage implements IStorage {
     if (existing.length > 0) {
       await db.update(indieGameFieldOverrides).set(patch as any).where(eq(indieGameFieldOverrides.id, existing[0].id));
     } else {
+      // Profiles created before multi-game support have an override row with a
+      // null game_id. Reattach that row to the selected game instead of
+      // inserting a duplicate user/field row on older databases that still
+      // retain the legacy uniqueness constraint.
+      if (gameId) {
+        const [legacy] = await db.select({ id: indieGameFieldOverrides.id })
+          .from(indieGameFieldOverrides)
+          .where(and(
+            eq(indieGameFieldOverrides.userId, userId),
+            eq(indieGameFieldOverrides.fieldName, fieldName),
+            isNull(indieGameFieldOverrides.gameId),
+          ));
+        if (legacy) {
+          await db.update(indieGameFieldOverrides)
+            .set({ ...patch, gameId } as any)
+            .where(eq(indieGameFieldOverrides.id, legacy.id));
+          return;
+        }
+      }
       await db.insert(indieGameFieldOverrides).values({ userId, fieldName, gameId: gameId ?? null, ...patch } as any);
     }
   }
