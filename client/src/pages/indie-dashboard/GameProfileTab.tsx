@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, getQueryFn, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Pencil, X, Check, Loader2, Upload, Plus, Trash2, ExternalLink,
@@ -66,10 +66,11 @@ function useSaveProfile(onSuccess?: () => void) {
 function useUploadImage() {
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async ({ file, field }: { file: File; field: "headerImageUrl" | "capsuleImageUrl" }) => {
+    mutationFn: async ({ file, field, gameId }: { file: File; field: "headerImageUrl" | "capsuleImageUrl"; gameId?: number }) => {
       const fd = new FormData();
       fd.append("image", file);
       fd.append("field", field);
+      if (gameId) fd.append("gameId", String(gameId));
       const res = await fetch("/api/indie/profile/upload-image", {
         method: "POST", body: fd, credentials: "include",
       });
@@ -87,9 +88,10 @@ function useUploadImage() {
 function useUploadTrailer() {
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async ({ file, gameId }: { file: File; gameId?: number }) => {
       const fd = new FormData();
       fd.append("video", file);
+      if (gameId) fd.append("gameId", String(gameId));
       const res = await fetch("/api/indie/profile/upload-trailer", {
         method: "POST", body: fd, credentials: "include",
       });
@@ -107,9 +109,10 @@ function useUploadTrailer() {
 function useUploadScreenshot() {
   const { toast } = useToast();
   return useMutation({
-    mutationFn: async (files: File[]) => {
+    mutationFn: async ({ files, gameId }: { files: File[]; gameId?: number }) => {
       const fd = new FormData();
       files.forEach(file => fd.append("screenshot", file));
+      if (gameId) fd.append("gameId", String(gameId));
       const res = await fetch("/api/indie/upload/screenshot", {
         method: "POST", body: fd, credentials: "include",
       });
@@ -236,9 +239,10 @@ function FieldInput({ label, value, onChange, type = "text", placeholder, rows }
 
 // ─── DropZone ──────────────────────────────────────────────────────────────────
 function DropZone({
-  currentUrl, field, onUploaded, label, aspect, className = "",
+  currentUrl, field, gameId, onUploaded, label, aspect, className = "",
 }: {
   currentUrl?: string | null; field: "headerImageUrl" | "capsuleImageUrl";
+  gameId?: number;
   onUploaded?: () => void; label?: string; aspect?: string; className?: string;
 }) {
   const [dragging, setDragging] = useState(false);
@@ -247,7 +251,7 @@ function DropZone({
 
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) return;
-    upload.mutate({ file, field }, { onSuccess: () => onUploaded?.() });
+    upload.mutate({ file, field, gameId }, { onSuccess: () => onUploaded?.() });
   }, [upload, field, onUploaded]);
 
   const onDrop = (e: React.DragEvent) => {
@@ -548,13 +552,13 @@ function MediaCard({ profile }: { profile: Profile | null }) {
           <div className="grid grid-cols-[1fr_160px] gap-3">
             <div>
               <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">Banner · 16:9</p>
-              <DropZone currentUrl={profile?.headerImageUrl} field="headerImageUrl"
+              <DropZone currentUrl={profile?.headerImageUrl} field="headerImageUrl" gameId={profile?.id}
                 label="Drop banner or click to upload" aspect="1920 × 1080 recommended"
                 className="h-40" />
             </div>
             <div>
               <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">Capsule · 2:3</p>
-              <DropZone currentUrl={profile?.capsuleImageUrl} field="capsuleImageUrl"
+              <DropZone currentUrl={profile?.capsuleImageUrl} field="capsuleImageUrl" gameId={profile?.id}
                 label="Drop capsule" aspect="460 × 215 min"
                 className="h-40" />
             </div>
@@ -658,8 +662,8 @@ function MediaCard({ profile }: { profile: Profile | null }) {
             className="hidden"
             onChange={e => {
               const f = e.target.files?.[0];
-              if (f) {
-                uploadTrailer.mutate(f, { onSuccess: () => setTrailerOpen(false) });
+                 if (f) {
+                 uploadTrailer.mutate({ file: f, gameId: profile?.id }, { onSuccess: () => setTrailerOpen(false) });
               }
               e.target.value = "";
             }}
@@ -709,7 +713,12 @@ function MediaCard({ profile }: { profile: Profile | null }) {
               className="hidden"
               onChange={e => {
                 const files = Array.from(e.target.files ?? []);
-                if (files.length > 0) uploadScreenshot.mutate(files);
+                if (files.length > 0) {
+                  uploadScreenshot.mutate(
+                    { files, gameId: profile?.id },
+                    { onSuccess: (data) => setScreenshots(data.screenshotUrls ?? []) },
+                  );
+                }
                 e.target.value = "";
               }}
             />
@@ -1092,6 +1101,7 @@ function AdvancedCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
 export default function GameProfileTab() {
   const { data } = useQuery<{ profile: Profile; fieldMeta: FieldMeta }>({
     queryKey: ["/api/indie/profile"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   const profile = (data as any)?.profile ?? null;
