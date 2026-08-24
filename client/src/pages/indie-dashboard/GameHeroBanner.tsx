@@ -157,10 +157,11 @@ export default function GameHeroBanner() {
   const artworkInputRef = useRef<HTMLInputElement>(null);
 
   const uploadMutation = useMutation({
-    mutationFn: async (blob: Blob) => {
+    mutationFn: async ({ blob, gameId }: { blob: Blob; gameId?: number }) => {
       const fd = new FormData();
       fd.append("image", blob, "banner.jpg");
       fd.append("field", "headerImageUrl");
+      if (gameId) fd.append("gameId", String(gameId));
       const res = await fetch("/api/indie/profile/upload-image", { method: "POST", body: fd });
       if (!res.ok) throw new Error("Upload failed");
       return res.json() as Promise<{ url: string; field: string }>;
@@ -208,7 +209,7 @@ export default function GameHeroBanner() {
     // Show optimistic preview immediately
     const previewUrl = URL.createObjectURL(blob);
     setLocalPreview(previewUrl);
-    uploadMutation.mutate(blob);
+    uploadMutation.mutate({ blob, gameId: profile?.id });
   };
 
   const handleCropCancel = () => {
