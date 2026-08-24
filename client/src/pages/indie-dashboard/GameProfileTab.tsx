@@ -12,6 +12,7 @@ import { SiSteam, SiEpicgames, SiItchdotio, SiDiscord } from "react-icons/si";
 import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 import { StoreImportPanel } from "./edit-profile/StoreImportPanel";
 import { SyncPanel } from "./edit-profile/SyncPanel";
+import { SourceBadge } from "./edit-profile/FieldRow";
 import {
   isFieldFilled, RELEASE_STATUS_OPTIONS, PLATFORM_OPTIONS,
   type Profile, type FieldMeta,
@@ -368,7 +369,7 @@ function ProfileHealthCard({ profile }: { profile: Profile | null }) {
 }
 
 // ─── About Card ────────────────────────────────────────────────────────────────
-function AboutCard({ profile }: { profile: Profile | null }) {
+function AboutCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta: FieldMeta }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [short, setShort] = useState("");
@@ -412,7 +413,10 @@ function AboutCard({ profile }: { profile: Profile | null }) {
         <div className="p-5 space-y-4">
           {/* Game name */}
           {profile?.gameName ? (
-            <h2 className="text-2xl font-black text-white">{profile.gameName}</h2>
+            <h2 className="flex flex-wrap items-center gap-2 text-2xl font-black text-white">
+              {profile.gameName}
+              <SourceBadge fieldName="gameName" fieldMeta={fieldMeta} />
+            </h2>
           ) : (
             <p className="text-white/20 text-sm italic">No game name set</p>
           )}
@@ -422,40 +426,52 @@ function AboutCard({ profile }: { profile: Profile | null }) {
               <span className="text-xs px-2.5 py-1 rounded-full font-medium"
                 style={{ background: `${NEON}18`, color: NEON, border: `1px solid ${NEON}33` }}>
                 {RELEASE_STATUS_OPTIONS.find(o => o.value === profile.releaseStatus)?.label ?? profile.releaseStatus}
+                <span className="ml-2 inline-flex align-middle"><SourceBadge fieldName="releaseStatus" fieldMeta={fieldMeta} /></span>
               </span>
             )}
             {profile?.price && (
               <span className="text-xs px-2.5 py-1 rounded-full font-medium text-white/60"
                 style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
                 ${profile.price}
+                <span className="ml-2 inline-flex align-middle"><SourceBadge fieldName="price" fieldMeta={fieldMeta} /></span>
               </span>
             )}
             {profile?.isFree && (
               <span className="text-xs px-2.5 py-1 rounded-full font-medium text-green-400"
                 style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.25)" }}>
                 Free to Play
+                <span className="ml-2 inline-flex align-middle"><SourceBadge fieldName="isFree" fieldMeta={fieldMeta} /></span>
               </span>
             )}
           </div>
           {/* Short description */}
           {profile?.shortDescription && (
-            <p className="text-sm text-white/70 leading-relaxed">{profile.shortDescription}</p>
+            <div>
+              <div className="mb-1"><SourceBadge fieldName="shortDescription" fieldMeta={fieldMeta} /></div>
+              <p className="text-sm text-white/70 leading-relaxed">{profile.shortDescription}</p>
+            </div>
           )}
           {/* Genres */}
           {genreList.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {genreList.map((g, i) => (
-                <span key={i} className="text-xs px-2 py-0.5 rounded-md text-white/50"
-                  style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  {g}
-                </span>
-              ))}
+            <div>
+              <div className="mb-1"><SourceBadge fieldName="genres" fieldMeta={fieldMeta} /></div>
+              <div className="flex flex-wrap gap-1.5">
+                {genreList.map((g, i) => (
+                  <span key={i} className="text-xs px-2 py-0.5 rounded-md text-white/50"
+                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    {g}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
           {/* Key features */}
           {featureList.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-xs text-white/30 uppercase tracking-wider font-medium">Key Features</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-white/30 uppercase tracking-wider font-medium">Key Features</p>
+                <SourceBadge fieldName="keyFeatures" fieldMeta={fieldMeta} />
+              </div>
               <div className="grid gap-1.5">
                 {featureList.slice(0, 4).map((f, i) => (
                   <div key={i} className="flex items-start gap-2">
@@ -521,7 +537,7 @@ function AboutCard({ profile }: { profile: Profile | null }) {
 }
 
 // ─── Media Card ────────────────────────────────────────────────────────────────
-function MediaCard({ profile }: { profile: Profile | null }) {
+function MediaCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta: FieldMeta }) {
   // Trailer modal state
   const [trailerOpen, setTrailerOpen] = useState(false);
   const [trailer, setTrailer] = useState("");
@@ -572,13 +588,17 @@ function MediaCard({ profile }: { profile: Profile | null }) {
           {/* Banner + Capsule row — direct drag-and-drop, no modal needed */}
           <div className="grid grid-cols-[1fr_160px] gap-3">
             <div>
-              <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">Banner · 16:9</p>
+              <p className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">
+                Banner · 16:9 <SourceBadge fieldName="headerImageUrl" fieldMeta={fieldMeta} />
+              </p>
               <DropZone currentUrl={profile?.headerImageUrl} field="headerImageUrl" gameId={profile?.id}
                 label="Drop banner or click to upload" aspect="1920 × 1080 recommended"
                 className="h-40" />
             </div>
             <div>
-              <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">Capsule · 2:3</p>
+              <p className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">
+                Capsule · 2:3 <SourceBadge fieldName="capsuleImageUrl" fieldMeta={fieldMeta} />
+              </p>
               <DropZone currentUrl={profile?.capsuleImageUrl} field="capsuleImageUrl" gameId={profile?.id}
                 label="Drop capsule" aspect="460 × 215 min"
                 className="h-40" />
@@ -588,7 +608,9 @@ function MediaCard({ profile }: { profile: Profile | null }) {
           {/* Trailer */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <p className="text-[10px] text-white/30 uppercase tracking-wider font-medium">Trailer</p>
+              <p className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-wider font-medium">
+                Trailer <SourceBadge fieldName="trailerUrl" fieldMeta={fieldMeta} />
+              </p>
               <button
                 type="button"
                 onClick={openTrailerModal}
@@ -625,6 +647,7 @@ function MediaCard({ profile }: { profile: Profile | null }) {
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-[10px] text-white/30 uppercase tracking-wider font-medium">
                 Screenshots ({shotList.length})
+                <span className="ml-2 inline-flex align-middle"><SourceBadge fieldName="screenshotUrls" fieldMeta={fieldMeta} /></span>
               </p>
               <button
                 type="button"
@@ -814,7 +837,7 @@ function MediaCard({ profile }: { profile: Profile | null }) {
 }
 
 // ─── Store Listing Card ────────────────────────────────────────────────────────
-function StoreListingCard({ profile, onGoToStoreLinks }: { profile: Profile | null; onGoToStoreLinks?: () => void }) {
+function StoreListingCard({ profile, fieldMeta, onGoToStoreLinks }: { profile: Profile | null; fieldMeta: FieldMeta; onGoToStoreLinks?: () => void }) {
   const [open, setOpen] = useState(false);
   const [steamAppId, setSteamAppId] = useState("");
   const [steamUrl, setSteamUrl] = useState("");
@@ -835,10 +858,10 @@ function StoreListingCard({ profile, onGoToStoreLinks }: { profile: Profile | nu
   };
 
   const stores = [
-    { key: "steam", icon: <SiSteam size={20} className="text-[#66c0f4]" />, label: "Steam", filled: !!(profile?.steamUrl || profile?.steamAppId), url: profile?.steamUrl, bg: "rgba(102,192,244,0.08)", border: "rgba(102,192,244,0.2)" },
-    { key: "epic",  icon: <SiEpicgames size={20} className="text-white" />, label: "Epic Games", filled: !!(profile?.epicUrl || profile?.epicSlug), url: profile?.epicUrl, bg: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.12)" },
-    { key: "itch",  icon: <SiItchdotio size={20} className="text-[#fa5c5c]" />, label: "itch.io", filled: !!(profile?.itchUrl), url: profile?.itchUrl, bg: "rgba(250,92,92,0.08)", border: "rgba(250,92,92,0.2)" },
-    { key: "web",   icon: <Globe size={20} className="text-white/50" />, label: "Website", filled: !!(profile?.websiteUrl), url: profile?.websiteUrl, bg: "rgba(255,255,255,0.04)", border: CARD_BORDER },
+     { key: "steam", fieldName: "steamUrl", icon: <SiSteam size={20} className="text-[#66c0f4]" />, label: "Steam", filled: !!(profile?.steamUrl || profile?.steamAppId), url: profile?.steamUrl, bg: "rgba(102,192,244,0.08)", border: "rgba(102,192,244,0.2)" },
+     { key: "epic",  fieldName: "epicUrl", icon: <SiEpicgames size={20} className="text-white" />, label: "Epic Games", filled: !!(profile?.epicUrl || profile?.epicSlug), url: profile?.epicUrl, bg: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.12)" },
+     { key: "itch",  fieldName: "itchUrl", icon: <SiItchdotio size={20} className="text-[#fa5c5c]" />, label: "itch.io", filled: !!(profile?.itchUrl), url: profile?.itchUrl, bg: "rgba(250,92,92,0.08)", border: "rgba(250,92,92,0.2)" },
+     { key: "web",   fieldName: "websiteUrl", icon: <Globe size={20} className="text-white/50" />, label: "Website", filled: !!(profile?.websiteUrl), url: profile?.websiteUrl, bg: "rgba(255,255,255,0.04)", border: CARD_BORDER },
   ];
 
   return (
@@ -857,13 +880,15 @@ function StoreListingCard({ profile, onGoToStoreLinks }: { profile: Profile | nu
           </button>
         </div>
         <div className="p-5 grid grid-cols-2 gap-3">
-          {stores.map(s => (
+     {stores.map(s => (
             <div key={s.key}
               className="flex items-center gap-3 p-4 rounded-xl transition-all"
               style={{ background: s.filled ? s.bg : "rgba(255,255,255,0.02)", border: `1px solid ${s.filled ? s.border : CARD_BORDER}` }}>
               <div className="shrink-0">{s.icon}</div>
               <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold text-white/70">{s.label}</div>
+                 <div className="flex items-center gap-2 text-xs font-bold text-white/70">
+                   {s.label} <SourceBadge fieldName={s.fieldName} fieldMeta={fieldMeta} />
+                 </div>
                 {s.filled && s.url ? (
                   <a href={s.url} target="_blank" rel="noopener noreferrer"
                     className="text-[10px] text-white/30 hover:text-white/60 flex items-center gap-1 truncate transition-colors">
@@ -930,7 +955,7 @@ function StoreListingCard({ profile, onGoToStoreLinks }: { profile: Profile | nu
 }
 
 // ─── Platforms Card ─────────────────────────────────────────────────────────────
-function PlatformCard({ profile }: { profile: Profile | null }) {
+function PlatformCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta: FieldMeta }) {
   const { toast } = useToast();
   const selected: string[] = (profile?.platforms as string[] | null) ?? [];
 
@@ -956,7 +981,9 @@ function PlatformCard({ profile }: { profile: Profile | null }) {
       <div className="flex items-center gap-2.5 px-5 py-4"
         style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
         <Gamepad2 size={16} style={{ color: NEON }} />
-        <span className="text-sm font-bold text-white">Platforms</span>
+         <span className="flex items-center gap-2 text-sm font-bold text-white">
+           Platforms <SourceBadge fieldName="platforms" fieldMeta={fieldMeta} />
+         </span>
       </div>
       <div className="p-5 grid grid-cols-4 gap-2">
         {PLATFORM_OPTIONS.map(p => {
@@ -980,7 +1007,7 @@ function PlatformCard({ profile }: { profile: Profile | null }) {
 }
 
 // ─── Studio Card ───────────────────────────────────────────────────────────────
-function StudioCard({ profile }: { profile: Profile | null }) {
+function StudioCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta: FieldMeta }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [country, setCountry] = useState("");
@@ -1023,7 +1050,9 @@ function StudioCard({ profile }: { profile: Profile | null }) {
           {hasInfo ? (
             <div className="space-y-3">
               {profile?.studioName && (
-                <h3 className="text-lg font-bold text-white">{profile.studioName}</h3>
+                 <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+                   {profile.studioName} <SourceBadge fieldName="studioName" fieldMeta={fieldMeta} />
+                 </h3>
               )}
               <div className="flex flex-wrap gap-3 text-sm text-white/50">
                 {profile?.studioCountry && <span>📍 {profile.studioCountry}</span>}
@@ -1032,10 +1061,10 @@ function StudioCard({ profile }: { profile: Profile | null }) {
               </div>
               <div className="flex flex-wrap gap-2">
                 {profile?.studioWebsite && (
-                  <a href={profile.studioWebsite} target="_blank" rel="noopener noreferrer"
+                   <a href={profile.studioWebsite} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-colors"
                     style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${CARD_BORDER}` }}>
-                    <Globe size={11} /> Website
+                     <Globe size={11} /> Website <SourceBadge fieldName="studioWebsite" fieldMeta={fieldMeta} />
                   </a>
                 )}
                 {profile?.twitterUrl && (
@@ -1143,11 +1172,16 @@ export default function GameProfileTab({ gameId }: { gameId?: number }) {
   return (
     <div className="space-y-4 pb-10">
       <ProfileHealthCard profile={profile} />
-      <AboutCard profile={profile} />
-      <MediaCard profile={profile} />
-      <StoreListingCard profile={profile} />
-      <PlatformCard profile={profile} />
-      <StudioCard profile={profile} />
+      <div className="flex items-center gap-2 rounded-xl px-4 py-3 text-xs text-white/55"
+        style={{ background: "rgba(102,192,244,0.06)", border: "1px solid rgba(102,192,244,0.18)" }}>
+        <Download size={14} className="shrink-0 text-[#66c0f4]" />
+        <span>Information imported from a connected store is marked with an API badge.</span>
+      </div>
+      <AboutCard profile={profile} fieldMeta={fieldMeta} />
+      <MediaCard profile={profile} fieldMeta={fieldMeta} />
+      <StoreListingCard profile={profile} fieldMeta={fieldMeta} />
+      <PlatformCard profile={profile} fieldMeta={fieldMeta} />
+      <StudioCard profile={profile} fieldMeta={fieldMeta} />
       <AdvancedCard profile={profile} fieldMeta={fieldMeta} />
     </div>
   );

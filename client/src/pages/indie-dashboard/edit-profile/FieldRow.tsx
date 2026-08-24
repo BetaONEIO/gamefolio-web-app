@@ -19,9 +19,9 @@ export function SourceBadge({ fieldName, fieldMeta }: { fieldName: string; field
   if (meta.importSource) {
     const color = SOURCE_COLORS[meta.importSource] ?? "#aaa";
     return (
-      <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
+      <span title={`Imported via the ${meta.importSource} API`} className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
         style={{ background: `${color}22`, color, border: `1px solid ${color}44` }}>
-        {meta.importSource}
+        API · {meta.importSource}
       </span>
     );
   }
