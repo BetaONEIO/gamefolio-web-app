@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { getQueryFn, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, ImagePlus, X, CropIcon, Upload } from "lucide-react";
 import { NEON } from "./constants";
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
@@ -149,7 +149,7 @@ function BannerCropModal({ src, onConfirm, onCancel, isUploading }: CropModalPro
 }
 
 // ── Main banner component ───────────────────────────────────────────────────────
-export default function GameHeroBanner() {
+export default function GameHeroBanner({ gameId }: { gameId?: number }) {
   const { user } = useAuth();
   const [imgError, setImgError] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
@@ -180,8 +180,8 @@ export default function GameHeroBanner() {
   });
 
   const { data: profileData } = useQuery<any>({
-    queryKey: ["/api/indie/profile"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryKey: ["/api/indie/profile", gameId ?? null],
+    queryFn: () => apiRequest("GET", `/api/indie/profile${gameId ? `?gameId=${gameId}` : ""}`).then(r => r.json()),
   });
 
   const profile = profileData?.profile ?? null;
@@ -209,7 +209,7 @@ export default function GameHeroBanner() {
     // Show optimistic preview immediately
     const previewUrl = URL.createObjectURL(blob);
     setLocalPreview(previewUrl);
-    uploadMutation.mutate({ blob, gameId: profile?.id });
+    uploadMutation.mutate({ blob, gameId: profile?.id ?? gameId });
   };
 
   const handleCropCancel = () => {

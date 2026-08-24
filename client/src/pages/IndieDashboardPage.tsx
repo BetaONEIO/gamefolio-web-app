@@ -48,6 +48,8 @@ export default function IndieDashboardPage() {
   // useState initializer never re-runs on a second "Upload Keys" click —
   // useSearch() is reactive to that and re-triggers this effect instead.
   const search = useSearch();
+  const gameIdParam = new URLSearchParams(search).get("gameId");
+  const activeGameId = gameIdParam && /^\d+$/.test(gameIdParam) ? Number(gameIdParam) : undefined;
   useEffect(() => {
     const tabParam = new URLSearchParams(search).get("tab");
     if (tabParam && (TOP_TAB_IDS as string[]).includes(tabParam)) {
@@ -68,7 +70,7 @@ export default function IndieDashboardPage() {
   return (
     <div className="min-h-screen" style={{ background: PAGE_BG }}>
       {/* Full-width cinematic hero banner (edge-to-edge) */}
-      <GameHeroBanner />
+      <GameHeroBanner gameId={activeGameId} />
 
       <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Top tab bar — underline style */}
@@ -118,7 +120,7 @@ export default function IndieDashboardPage() {
         {tab === "analytics" && <AnalyticsTab />}
 
         {/* ── GAME PROFILE ── */}
-        {tab === "game-profile" && <GameProfileTab />}
+        {tab === "game-profile" && <GameProfileTab gameId={activeGameId} />}
 
       </div>
 

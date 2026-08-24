@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, getQueryFn, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Pencil, X, Check, Loader2, Upload, Plus, Trash2, ExternalLink,
@@ -45,12 +45,13 @@ function computeHealth(profile: Profile | null) {
 }
 
 // ─── Save hook ─────────────────────────────────────────────────────────────────
-function useSaveProfile(onSuccess?: () => void) {
+function useSaveProfile(gameId?: number, onSuccess?: () => void) {
   const { toast } = useToast();
   return useMutation({
     mutationFn: (fields: Record<string, any>) =>
       apiRequest("PUT", "/api/indie/profile", fields).then(r => r.json()),
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      queryClient.setQueryData(["/api/indie/profile", gameId ?? null], data);
       await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       toast({ description: "Saved" });
       onSuccess?.();
@@ -74,14 +75,17 @@ function useUploadImage() {
       const res = await fetch("/api/indie/profile/upload-image", {
         method: "POST", body: fd, credentials: "include",
       });
-      if (!res.ok) throw new Error("Upload failed");
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || data?.message || "Image upload failed");
+      }
       return res.json() as Promise<{ url: string; field: string }>;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       toast({ description: "Image uploaded" });
     },
-    onError: () => toast({ description: "Upload failed", variant: "gamefolioError" }),
+    onError: (error: Error) => toast({ description: error.message, variant: "gamefolioError" }),
   });
 }
 
@@ -95,14 +99,17 @@ function useUploadTrailer() {
       const res = await fetch("/api/indie/profile/upload-trailer", {
         method: "POST", body: fd, credentials: "include",
       });
-      if (!res.ok) throw new Error("Upload failed");
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || data?.message || "Trailer upload failed");
+      }
       return res.json() as Promise<{ url: string; field: string }>;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       toast({ description: "Trailer uploaded" });
     },
-    onError: () => toast({ description: "Upload failed", variant: "gamefolioError" }),
+    onError: (error: Error) => toast({ description: error.message, variant: "gamefolioError" }),
   });
 }
 
@@ -116,14 +123,17 @@ function useUploadScreenshot() {
       const res = await fetch("/api/indie/upload/screenshot", {
         method: "POST", body: fd, credentials: "include",
       });
-      if (!res.ok) throw new Error("Upload failed");
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || data?.message || "Screenshot upload failed");
+      }
       return res.json() as Promise<{ urls: string[]; screenshotUrls: string[] }>;
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       toast({ description: "Screenshots uploaded" });
     },
-    onError: () => toast({ description: "Upload failed", variant: "gamefolioError" }),
+    onError: (error: Error) => toast({ description: error.message, variant: "gamefolioError" }),
   });
 }
 
@@ -252,7 +262,7 @@ function DropZone({
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) return;
     upload.mutate({ file, field, gameId }, { onSuccess: () => onUploaded?.() });
-  }, [upload, field, onUploaded]);
+  }, [upload, field, gameId, onUploaded]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault(); setDragging(false);
@@ -357,7 +367,7 @@ function AboutCard({ profile }: { profile: Profile | null }) {
   const [status, setStatus] = useState("");
   const [price, setPrice] = useState("");
 
-  const save = useSaveProfile(() => setOpen(false));
+  const save = useSaveProfile(profile?.id, () => setOpen(false));
 
   const openModal = () => {
     setName(profile?.gameName ?? "");
@@ -512,8 +522,8 @@ function MediaCard({ profile }: { profile: Profile | null }) {
   const [newShot, setNewShot] = useState("");
   const shotFileRef = useRef<HTMLInputElement>(null);
 
-  const saveTrailer = useSaveProfile(() => setTrailerOpen(false));
-  const saveShots = useSaveProfile(() => setShotsOpen(false));
+  const saveTrailer = useSaveProfile(profile?.id, () => setTrailerOpen(false));
+  const saveShots = useSaveProfile(profile?.id, () => setShotsOpen(false));
   const uploadTrailer = useUploadTrailer();
   const uploadScreenshot = useUploadScreenshot();
 
@@ -641,7 +651,7 @@ function MediaCard({ profile }: { profile: Profile | null }) {
       {/* ── Trailer modal ─────────────────────────────────────────────────────── */}
       {trailerOpen && (
         <EditModal title="Trailer" onClose={() => setTrailerOpen(false)}
-          onSave={() => saveTrailer.mutate({ trailerUrl: trailer })}
+          onSave={() => saveTrailer.mutate({ gameId: profile?.id, trailerUrl: trailer })}
           isSaving={saveTrailer.isPending}>
           {/* URL input */}
           <FieldInput label="Trailer URL (YouTube / Vimeo)" value={trailer} onChange={setTrailer}
@@ -697,7 +707,7 @@ function MediaCard({ profile }: { profile: Profile | null }) {
       {/* ── Screenshots modal ──────────────────────────────────────────────────── */}
       {shotsOpen && (
         <EditModal title="Screenshots" onClose={() => setShotsOpen(false)}
-          onSave={() => saveShots.mutate({ screenshotUrls: screenshots })}
+          onSave={() => saveShots.mutate({ gameId: profile?.id, screenshotUrls: screenshots })}
           isSaving={saveShots.isPending}>
 
           {/* Upload a file */}
@@ -793,7 +803,7 @@ function StoreListingCard({ profile, onGoToStoreLinks }: { profile: Profile | nu
   const [epicUrl, setEpicUrl] = useState("");
   const [itchUrl, setItchUrl] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
-  const save = useSaveProfile(() => setOpen(false));
+  const save = useSaveProfile(profile?.id, () => setOpen(false));
 
   const openModal = () => {
     setSteamAppId(profile?.steamAppId ?? "");
@@ -855,7 +865,7 @@ function StoreListingCard({ profile, onGoToStoreLinks }: { profile: Profile | nu
 
       {open && (
         <EditModal title="Store Listing" onClose={() => setOpen(false)}
-          onSave={() => save.mutate({ steamAppId, steamUrl, epicSlug, epicUrl, itchUrl, websiteUrl })}
+          onSave={() => save.mutate({ gameId: profile?.id, steamAppId, steamUrl, epicSlug, epicUrl, itchUrl, websiteUrl })}
           isSaving={save.isPending}>
           <div className="space-y-3">
             <div className="flex items-center gap-2 mb-1">
@@ -908,9 +918,12 @@ function PlatformCard({ profile }: { profile: Profile | null }) {
   const toggle = async (id: string) => {
     const next = selected.includes(id) ? selected.filter(p => p !== id) : [...selected, id];
     try {
-      await apiRequest("PUT", "/api/indie/profile", { platforms: next });
+      const data = await (await apiRequest("PUT", "/api/indie/profile", { gameId: profile?.id, platforms: next })).json();
+      queryClient.setQueryData(["/api/indie/profile", profile?.id ?? null], data);
       await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
-    } catch { toast({ description: "Save failed", variant: "gamefolioError" }); }
+    } catch (error: any) {
+      toast({ description: error?.message?.replace(/^\d+:\s*/, "") || "Save failed", variant: "gamefolioError" });
+    }
   };
 
   const platformIcons: Record<string, React.ReactNode> = {
@@ -957,7 +970,7 @@ function StudioCard({ profile }: { profile: Profile | null }) {
   const [website, setWebsite] = useState("");
   const [twitter, setTwitter] = useState("");
   const [discord, setDiscord] = useState("");
-  const save = useSaveProfile(() => setOpen(false));
+  const save = useSaveProfile(profile?.id, () => setOpen(false));
 
   const openModal = () => {
     setName(profile?.studioName ?? "");
@@ -1036,6 +1049,7 @@ function StudioCard({ profile }: { profile: Profile | null }) {
       {open && (
         <EditModal title="Studio" onClose={() => setOpen(false)}
           onSave={() => save.mutate({
+            gameId: profile?.id,
             studioName: name, studioCountry: country,
             studioFoundedYear: year ? parseInt(year) : null,
             studioTeamSize: team ? parseInt(team) : null,
@@ -1085,11 +1099,11 @@ function AdvancedCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
       </div>
       <div className="p-5">
         {tab === "import" && (
-          <StoreImportPanel profile={profile} fieldMeta={fieldMeta}
+          <StoreImportPanel profile={profile} gameId={profile?.id} fieldMeta={fieldMeta}
             onImported={() => queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] })} />
         )}
         {tab === "sync" && (
-          <SyncPanel profile={profile}
+          <SyncPanel profile={profile} gameId={profile?.id}
             onSynced={() => queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] })} />
         )}
       </div>
@@ -1098,10 +1112,10 @@ function AdvancedCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
 }
 
 // ─── Main export ───────────────────────────────────────────────────────────────
-export default function GameProfileTab() {
+export default function GameProfileTab({ gameId }: { gameId?: number }) {
   const { data } = useQuery<{ profile: Profile; fieldMeta: FieldMeta }>({
-    queryKey: ["/api/indie/profile"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryKey: ["/api/indie/profile", gameId ?? null],
+    queryFn: () => apiRequest("GET", `/api/indie/profile${gameId ? `?gameId=${gameId}` : ""}`).then(r => r.json()),
   });
 
   const profile = (data as any)?.profile ?? null;

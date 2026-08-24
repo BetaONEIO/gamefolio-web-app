@@ -11715,6 +11715,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) return res.status(400).json({ message: "No file provided" });
       if (!req.file.path || !fs.existsSync(req.file.path)) return res.status(400).json({ message: "Uploaded file not found" });
       const field = (req.body?.field === "headerImageUrl") ? "headerImageUrl" : "capsuleImageUrl";
+      const uploadGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !uploadGameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
       const sharpInstance = sharp(req.file.path);
       const metadata = await sharpInstance.metadata();
       if (!metadata.width || !metadata.height) return res.status(400).json({ message: "Invalid image" });
@@ -11726,7 +11730,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { url: imageUrl } = await supabaseStorage.uploadBuffer(processedBuffer, fileName, "image/jpeg", "image", req.user.id);
       try { await fsPromises.unlink(req.file.path); } catch {}
       const { indieGameProfiles } = await import("@shared/schema");
-      const uploadGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
       let targetGameId = uploadGameId;
       if (targetGameId) {
         await db.update(indieGameProfiles).set({ [field]: imageUrl }).where(eq(indieGameProfiles.id, targetGameId));
@@ -11752,11 +11755,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       if (!req.file) return res.status(400).json({ message: "No file provided" });
+      const uploadGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !uploadGameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
       const ext = (req.file.originalname.split('.').pop() || 'mp4').toLowerCase();
       const fileName = `indie-trailer-${req.user.id}-${Date.now()}.${ext}`;
       const { url: trailerUrl } = await supabaseStorage.uploadBuffer(req.file.buffer, fileName, req.file.mimetype, 'video', req.user.id);
       const { indieGameProfiles } = await import("@shared/schema");
-      const uploadGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
       let targetGameId = uploadGameId;
       if (targetGameId) {
         await db.update(indieGameProfiles).set({ trailerUrl, updatedAt: new Date() }).where(eq(indieGameProfiles.id, targetGameId));
@@ -12123,6 +12129,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "platforms",
     "steamUrl","steamAppId","epicUrl","epicSlug","itchUrl",
     "websiteUrl","twitterUrl","discordUrl",
+    "ageRating","supportedLanguages","contentDescriptors",
+    "autoSyncEnabled","preferredSyncSource",
   ];
 
   // Game quotas: a free developer gets two games; an indie-dev subscriber gets ten.
@@ -12150,8 +12158,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { db } = await import("./db");
     const { eq, and, asc } = await import("drizzle-orm");
 
+    const isExplicitlyRequested = requested !== undefined && requested !== null && requested !== "";
     const wanted = Number(requested);
-    if (Number.isInteger(wanted) && wanted > 0) {
+    if (isExplicitlyRequested && (!Number.isInteger(wanted) || wanted <= 0)) {
+      return null;
+    }
+    if (isExplicitlyRequested) {
       const [owned] = await db.select({ id: indieGameProfiles.id })
         .from(indieGameProfiles)
         .where(and(eq(indieGameProfiles.id, wanted), eq(indieGameProfiles.userId, userId)));
@@ -12181,7 +12193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // ?gameId= selects one of the developer's games; omitted means primary.
       const gameId = await _indieResolveGameId(req.user.id, req.query.gameId);
-      if (req.query.gameId && !gameId) return res.status(404).json({ error: "Game not found" });
+      if (req.query.gameId != null && req.query.gameId !== "" && !gameId) return res.status(404).json({ error: "Game not found" });
       // Read-only: do NOT create a profile here. Auto-creating was harmless when
       // a user could only ever have one, but now it spends a slot from their
       // quota on a nameless placeholder just for opening the dashboard — a free
@@ -12231,7 +12243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 0020 has removed the UNIQUE(user_id) constraint.
       const requestedGameId = req.body.gameId ?? req.query.gameId;
       const gameId = await _indieResolveGameId(req.user.id, requestedGameId);
-      if (requestedGameId && !gameId) return res.status(404).json({ error: "Game not found" });
+      if (requestedGameId != null && requestedGameId !== "" && !gameId) return res.status(404).json({ error: "Game not found" });
       let profile;
       if (gameId) {
         const up = await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, gameId)).returning();
@@ -12781,7 +12793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { eq } = await import("drizzle-orm");
       const now = new Date();
       const importGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
-      if ((req.body.gameId ?? req.query.gameId) && !importGameId) {
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !importGameId) {
         return res.status(404).json({ error: "Game not found" });
       }
 
@@ -12869,6 +12881,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       const gameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !gameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
       const profile = await _indieGetOrCreate(req.user.id, gameId);
       const fieldMeta = await _indieFieldMetaMap(req.user.id, gameId);
       let storeData: Record<string, any> | null = null;
@@ -12919,6 +12934,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
       const syncGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !syncGameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
       const patch: Record<string, any> = {};
       const applied: string[] = [];
       const now = new Date();
@@ -12940,7 +12958,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             importSource: source || "store",
             isManualOverride: false,
             lastImportedAt: now,
-          });
+          }, syncGameId);
         }
       }
       const profile = await _indieGetOrCreate(req.user.id, syncGameId);
@@ -13074,6 +13092,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { db } = await import("./db");
       const { eq, sql } = await import("drizzle-orm");
       const shotGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !shotGameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
       const ex = shotGameId
         ? await db.select({ screenshotUrls: indieGameProfiles.screenshotUrls }).from(indieGameProfiles).where(eq(indieGameProfiles.id, shotGameId))
         : [];
