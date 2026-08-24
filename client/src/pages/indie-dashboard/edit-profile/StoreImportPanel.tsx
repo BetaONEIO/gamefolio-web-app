@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, getQueryFn, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Check, AlertTriangle, ShieldCheck, ShieldAlert,
@@ -12,12 +12,13 @@ import { formatFieldName, formatValue, type Profile, type FieldMeta } from "./ty
 
 interface StoreImportPanelProps {
   profile: Profile | null;
+  gameId?: number;
   fieldMeta: FieldMeta;
   onImported: () => void;
   onGoToStoreLinks?: () => void;
 }
 
-export function StoreImportPanel({ profile, fieldMeta, onImported, onGoToStoreLinks }: StoreImportPanelProps) {
+export function StoreImportPanel({ profile, gameId, fieldMeta, onImported, onGoToStoreLinks }: StoreImportPanelProps) {
   const { toast } = useToast();
   const [tab, setTab] = useState<"steam" | "epic" | "itch">("steam");
   const [epicInput, setEpicInput] = useState(profile?.epicSlug ?? "");
@@ -32,6 +33,7 @@ export function StoreImportPanel({ profile, fieldMeta, onImported, onGoToStoreLi
   // ── Steam verification state ──
   const { data: steamStatus, refetch: refetchSteamStatus } = useQuery<any>({
     queryKey: ["/api/indie/steam/status"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
   const [steamVerifLoading, setSteamVerifLoading] = useState(false);
   const [steamVerifStep, setSteamVerifStep] = useState<"idle" | "code" | "checking">("idle");
@@ -75,6 +77,7 @@ export function StoreImportPanel({ profile, fieldMeta, onImported, onGoToStoreLi
   // ── itch.io connection state ──
   const { data: itchStatus, refetch: refetchItchStatus } = useQuery<any>({
     queryKey: ["/api/indie/itch/status"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
   const [showItchConnect, setShowItchConnect] = useState(false);
   const [itchKeyInput, setItchKeyInput] = useState("");
@@ -155,7 +158,7 @@ export function StoreImportPanel({ profile, fieldMeta, onImported, onGoToStoreLi
       const data = previewData?.fields ?? {};
       for (const k of Array.from(selectedFields)) { if (k in data) fields[k] = data[k]; }
       const res = await apiRequest("POST", "/api/indie/import", {
-        source: previewSource, fields,
+        source: previewSource, fields, gameId,
         ...(previewSource === "steam" && previewAppId ? { steamAppId: previewAppId } : {}),
         ...(previewSource === "epic" && previewSlug ? { epicSlug: previewSlug } : {}),
         ...(previewSource === "itch" && selectedItchGame ? { itchGameUrl: selectedItchGame.url } : {}),
@@ -171,7 +174,7 @@ export function StoreImportPanel({ profile, fieldMeta, onImported, onGoToStoreLi
       await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       setPreviewData(null); setSelectedFields(new Set()); onImported();
     },
-    onError: () => toast({ description: "Import failed.", variant: "gamefolioError" }),
+    onError: (error: Error) => toast({ description: error.message.replace(/^\d+:\s*/, "") || "Import failed.", variant: "gamefolioError" }),
   });
 
   const previewFields = previewData?.fields ?? {};
