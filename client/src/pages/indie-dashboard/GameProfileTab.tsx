@@ -81,7 +81,11 @@ function useUploadImage() {
       }
       return res.json() as Promise<{ url: string; field: string }>;
     },
-    onSuccess: async () => {
+    onSuccess: async (data, variables) => {
+      queryClient.setQueryData(["/api/indie/profile", variables.gameId ?? null], (cached: any) => ({
+        ...(cached ?? {}),
+        profile: { ...(cached?.profile ?? {}), [data.field]: data.url },
+      }));
       await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       toast({ description: "Image uploaded" });
     },

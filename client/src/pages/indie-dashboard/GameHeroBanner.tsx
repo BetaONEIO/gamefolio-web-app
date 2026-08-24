@@ -166,11 +166,15 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
       if (!res.ok) throw new Error("Upload failed");
       return res.json() as Promise<{ url: string; field: string }>;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       setImgError(false);
       setCropSrc(null);
       // Replace local blob preview with the real server URL
       setLocalPreview(data.url);
+      queryClient.setQueryData(["/api/indie/profile", variables.gameId ?? null], (cached: any) => ({
+        ...(cached ?? {}),
+        profile: { ...(cached?.profile ?? {}), headerImageUrl: data.url },
+      }));
       queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
     },
     onError: () => {
