@@ -10,6 +10,7 @@ import VideoClipGridItem from '@/components/clips/VideoClipGridItem';
 import { ScreenshotCard } from '@/components/screenshots/ScreenshotCard';
 import HlsVideo from '@/components/media/HlsVideo';
 import { getVideoEmbedUrl } from '@/lib/video-embed';
+import { useSignedUrl, useSignedUrls } from '@/hooks/use-signed-url';
 import { SiEpicgames, SiItchdotio, SiSteam } from 'react-icons/si';
 import {
   Award,
@@ -150,6 +151,8 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     retry: false,
   });
   const gameList = gameListData?.games ?? [];
+  const gameListImageSources = gameList.map((game) => game.capsuleImageUrl || game.headerImageUrl || null);
+  const { getSignedUrl: getGameImageUrl } = useSignedUrls(gameListImageSources);
 
   const gameProfileQueryKey = selectedGameId
     ? [`/api/games/indie/${profile.username}`, { gameId: selectedGameId }]
@@ -209,6 +212,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const gameName = gameProfile?.gameName?.trim() || canonicalGame?.name || profile.displayName;
   const description = gameProfile?.fullDescription || gameProfile?.shortDescription || profile.bio;
   const header = gameProfile?.headerImageUrl || gameProfile?.capsuleImageUrl || canonicalGame?.imageUrl || null;
+  const { signedUrl: displayHeader } = useSignedUrl(header);
   const trailer = gameProfile?.trailerUrl || null;
   const genres = gameProfile?.genres ?? [];
   const platforms = gameProfile?.platforms ?? [];
@@ -262,8 +266,8 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   return (
     <div className="min-h-screen bg-[#080d11] pb-20 text-white">
       <section className="relative isolate overflow-hidden border-b border-white/10">
-        {header ? (
-          <img src={header} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-50" />
+        {displayHeader ? (
+          <img src={displayHeader} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-50" />
         ) : null}
         <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(8,13,17,.98)_0%,rgba(8,13,17,.78)_47%,rgba(8,13,17,.92)_100%)]" />
         <div className="absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-gradient-to-t from-[#080d11] to-transparent" />
@@ -279,7 +283,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                     onClick={() => { setSelectedGameId(game.id); setActiveTab('OVERVIEW'); }}
                     className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-bold transition ${active ? 'border-[#B7FF18]/50 bg-[#B7FF18]/10 text-white' : 'border-white/10 bg-black/20 text-white/55 hover:bg-white/5'}`}
                   >
-                    {(game.capsuleImageUrl || game.headerImageUrl) ? <img src={game.capsuleImageUrl || game.headerImageUrl || ''} alt="" className="h-7 w-10 rounded object-cover" /> : <Gamepad2 size={15} />}
+                    {getGameImageUrl(game.capsuleImageUrl || game.headerImageUrl) ? <img src={getGameImageUrl(game.capsuleImageUrl || game.headerImageUrl)!} alt="" className="h-7 w-10 rounded object-cover" /> : <Gamepad2 size={15} />}
                     <span className="max-w-36 truncate">{game.gameName || 'Untitled game'}</span>
                   </button>
                 );
