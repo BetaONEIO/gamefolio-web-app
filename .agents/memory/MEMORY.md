@@ -22,3 +22,4 @@
 - [Weekly XP multi-ledger](weekly-xp-multi-ledger.md) — weekly scores must combine both XP ledgers through independent per-user aggregates, never a raw join.
 - [Upload attempt idempotency](upload-attempt-idempotency.md) — direct video uploads reconcile creator-scoped attempt IDs to recover lost responses without duplicates.
 - [Indie dashboard access](indie-dashboard-access.md) — Indie Developer personas have the free game quota; paid Indie partners receive the higher subscriber quota.
+- [Private indie media URLs](private-indie-media-urls.md) — game profile media is stored in a private bucket; render it through the signed-URL hook, not its canonical storage URL.

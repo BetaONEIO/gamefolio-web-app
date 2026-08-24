@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useSignedUrl, useSignedUrls } from "@/hooks/use-signed-url";
 import {
   Pencil, X, Check, Loader2, Upload, Plus, Trash2, ExternalLink,
   Image as ImageIcon, Video, Globe, Gamepad2, Monitor, Smartphone,
@@ -262,6 +263,7 @@ function DropZone({
   const [dragging, setDragging] = useState(false);
   const upload = useUploadImage();
   const inputRef = useRef<HTMLInputElement>(null);
+  const { signedUrl: displayUrl, isLoading: isLoadingImage } = useSignedUrl(currentUrl);
 
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) return;
@@ -284,9 +286,9 @@ function DropZone({
       <input ref={inputRef} type="file" accept="image/*" className="hidden"
         onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
 
-      {currentUrl ? (
+      {currentUrl && displayUrl ? (
         <>
-          <img src={currentUrl} alt="" className="w-full h-full object-cover" />
+          <img src={displayUrl} alt="" className="w-full h-full object-cover" />
           <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
             style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}>
             {upload.isPending
@@ -296,6 +298,11 @@ function DropZone({
             {aspect && <span className="text-[10px] text-white/50 mt-0.5">{aspect}</span>}
           </div>
         </>
+      ) : currentUrl && isLoadingImage ? (
+        <div className="flex h-full flex-col items-center justify-center gap-2">
+          <Loader2 size={20} className="animate-spin" style={{ color: NEON }} />
+          <span className="text-xs text-white/35">Loading image…</span>
+        </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-8 px-4">
           {upload.isPending
@@ -530,6 +537,8 @@ function MediaCard({ profile }: { profile: Profile | null }) {
   const saveShots = useSaveProfile(profile?.id, () => setShotsOpen(false));
   const uploadTrailer = useUploadTrailer();
   const uploadScreenshot = useUploadScreenshot();
+  const shotList = (profile?.screenshotUrls as string[] | null) ?? [];
+  const { getSignedUrl: getScreenshotUrl } = useSignedUrls(shotList);
 
   const openTrailerModal = () => {
     setTrailer(profile?.trailerUrl ?? "");
@@ -548,8 +557,6 @@ function MediaCard({ profile }: { profile: Profile | null }) {
       setNewShot("");
     }
   };
-
-  const shotList = (profile?.screenshotUrls as string[] | null) ?? [];
 
   return (
     <>
@@ -629,10 +636,18 @@ function MediaCard({ profile }: { profile: Profile | null }) {
             </div>
             {shotList.length > 0 ? (
               <div className="grid grid-cols-3 gap-2">
-                {shotList.slice(0, 5).map((url, i) => (
-                  <img key={i} src={url} alt="" className="rounded-lg w-full aspect-video object-cover"
-                    style={{ border: `1px solid ${CARD_BORDER}` }} />
-                ))}
+                {shotList.slice(0, 5).map((url, i) => {
+                  const displayUrl = getScreenshotUrl(url);
+                  return displayUrl ? (
+                    <img key={i} src={displayUrl} alt={`Screenshot ${i + 1}`} className="rounded-lg w-full aspect-video object-cover"
+                      style={{ border: `1px solid ${CARD_BORDER}` }} />
+                  ) : (
+                    <div key={i} className="rounded-lg aspect-video flex items-center justify-center"
+                      style={{ border: `1px solid ${CARD_BORDER}`, background: "rgba(255,255,255,0.04)" }}>
+                      <Loader2 size={16} className="animate-spin text-white/30" />
+                    </div>
+                  );
+                })}
                 {shotList.length > 5 && (
                   <div className="rounded-lg aspect-video flex items-center justify-center"
                     style={{ border: `1px solid ${CARD_BORDER}`, background: "rgba(255,255,255,0.04)" }}>

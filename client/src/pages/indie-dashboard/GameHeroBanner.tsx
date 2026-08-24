@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useSignedUrl } from "@/hooks/use-signed-url";
 import { Loader2, ImagePlus, X, CropIcon, Upload } from "lucide-react";
 import { NEON } from "./constants";
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
@@ -197,6 +198,8 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
   const serverBannerUrl = !imgError ? (profile?.headerImageUrl || profile?.capsuleImageUrl || null) : null;
   const bannerUrl = localPreview ?? serverBannerUrl;
   const capsuleUrl = profile?.capsuleImageUrl ?? null;
+  const { signedUrl: displayBannerUrl } = useSignedUrl(bannerUrl);
+  const { signedUrl: displayCapsuleUrl } = useSignedUrl(capsuleUrl);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -237,8 +240,8 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
         style={{ background: "#0a0f14" }}>
 
         {/* Background banner image — full width, no rounding */}
-        {bannerUrl && (
-          <img src={bannerUrl} alt=""
+        {displayBannerUrl && (
+          <img src={displayBannerUrl} alt=""
             className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
             onError={() => { setImgError(true); setLocalPreview(null); }} />
         )}
@@ -289,10 +292,10 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
             {/* LEFT — Capsule + game info */}
             <div className="flex items-end gap-5 flex-1 min-w-0">
               {/* Capsule image */}
-              {capsuleUrl ? (
+              {displayCapsuleUrl ? (
                 <div className="shrink-0 rounded-lg overflow-hidden shadow-2xl"
                   style={{ width: 128, aspectRatio: "3/4", border: "1px solid rgba(255,255,255,0.10)" }}>
-                  <img src={capsuleUrl} alt="" className="w-full h-full object-cover" />
+                  <img src={displayCapsuleUrl} alt="" className="w-full h-full object-cover" />
                 </div>
               ) : (
                 <div className="shrink-0 rounded-lg flex items-center justify-center"
