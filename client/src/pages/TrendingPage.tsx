@@ -996,10 +996,10 @@ const TrendingPage: React.FC = () => {
 
   // Game search results for filter modal
   const { data: gameSearchResults, isLoading: isGameSearchLoading } = useQuery<{ id: number; name: string; imageUrl?: string }[]>({
-    queryKey: ['/api/twitch/games/search', debouncedGameQuery],
+    queryKey: ['/api/game-catalog/search', debouncedGameQuery],
     queryFn: async () => {
       if (debouncedGameQuery.length < 2) return [];
-      const res = await fetch(`/api/twitch/games/search?q=${encodeURIComponent(debouncedGameQuery)}`);
+      const res = await fetch(`/api/game-catalog/search?q=${encodeURIComponent(debouncedGameQuery)}`);
       if (!res.ok) return [];
       const data = await res.json();
       return data.map((g: any) => ({ id: g.id, name: g.name, imageUrl: g.imageUrl || g.box_art_url }));

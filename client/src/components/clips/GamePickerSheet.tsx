@@ -113,10 +113,10 @@ export function GamePickerSheet({
   const isSearching = debouncedQuery.length >= 2;
 
   const { data: searchResults, isLoading: isSearchLoading } = useQuery<Game[]>({
-    queryKey: ["/api/twitch/games/search", debouncedQuery],
+    queryKey: ["/api/game-catalog/search", debouncedQuery],
     queryFn: async () => {
       if (!isSearching) return [];
-      const res = await fetch(`/api/twitch/games/search?q=${encodeURIComponent(debouncedQuery)}`);
+      const res = await fetch(`/api/game-catalog/search?q=${encodeURIComponent(debouncedQuery)}`);
       if (!res.ok) return [];
       const data = await res.json();
       return data.map((g: TwitchGame) => ({
@@ -132,9 +132,9 @@ export function GamePickerSheet({
   });
 
   const { data: trendingGames, isLoading: isTrendingLoading } = useQuery<Game[]>({
-    queryKey: ["/api/twitch/games/top", "game-picker"],
+    queryKey: ["/api/game-catalog/top", "game-picker"],
     queryFn: async () => {
-      const res = await fetch("/api/twitch/games/top?limit=30");
+      const res = await fetch("/api/game-catalog/top?limit=30");
       if (!res.ok) return [];
       const data = await res.json();
       return data.map((g: any) => ({

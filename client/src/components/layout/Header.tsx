@@ -205,11 +205,11 @@ const Header = () => {
     enabled: !!debouncedQuery && debouncedQuery.length >= 2,
   });
 
-  // Search games for dropdown — uses Twitch catalog (same source as Explore page)
+  // Search games for dropdown from the shared game catalogue.
   const { data: gameResults } = useQuery<TwitchGame[]>({
-    queryKey: ['/api/twitch/games/search', debouncedQuery],
+    queryKey: ['/api/game-catalog/search', debouncedQuery],
     queryFn: async () => {
-      const response = await fetch(resolveApiUrl(`/api/twitch/games/search?q=${encodeURIComponent(debouncedQuery)}`));
+      const response = await fetch(resolveApiUrl(`/api/game-catalog/search?q=${encodeURIComponent(debouncedQuery)}`));
       if (!response.ok) throw new Error("Failed to search games");
       return await response.json();
     },

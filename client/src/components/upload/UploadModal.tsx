@@ -60,7 +60,7 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
 
   // Get games for selection
   const { data: games = [] } = useQuery<any[]>({
-    queryKey: ['/api/twitch/games/top'],
+    queryKey: ['/api/game-catalog/top'],
   });
 
   // Screenshot upload mutation

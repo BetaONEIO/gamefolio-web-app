@@ -29,9 +29,9 @@ function TrendingGamesGrid({ onSelectGame, existingFavorites }: {
   existingFavorites: { id: number; name: string }[];
 }) {
   const { data: trendingGames, isLoading } = useQuery<TwitchGame[]>({
-    queryKey: ["/api/twitch/games/top"],
+    queryKey: ["/api/game-catalog/top"],
     queryFn: async () => {
-      const response = await fetch("/api/twitch/games/top?limit=20");
+      const response = await fetch("/api/game-catalog/top?limit=20");
       if (!response.ok) throw new Error("Failed to fetch trending games");
       return await response.json();
     }
@@ -119,9 +119,9 @@ function SearchResults({
   existingFavorites: { id: number; name: string }[];
 }) {
   const { data: searchResults, isLoading } = useQuery<TwitchGame[]>({
-    queryKey: ["/api/twitch/games/search", searchQuery],
+    queryKey: ["/api/game-catalog/search", searchQuery],
     queryFn: async () => {
-      const response = await fetch(`/api/twitch/games/search?q=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(`/api/game-catalog/search?q=${encodeURIComponent(searchQuery)}`);
       if (!response.ok) throw new Error("Failed to search games");
       return await response.json();
     },

@@ -50,10 +50,9 @@ router.get('/twitch/games/top', async (req: express.Request, res: express.Respon
   }
 });
 
-// Search the RAWG catalogue and persist selected catalogue entries so every
-// caller receives a real Gamefolio database ID for uploads and favorites.
-async function searchGamesWithRawg(query: string) {
-  const results = await rawgService.searchGames(query);
+// Persist catalogue entries so every caller receives a real Gamefolio database
+// ID for uploads and favorites, rather than an external provider ID.
+async function persistCatalogueGames(results: Array<{ name: string; imageUrl: string | null }>) {
   const games = [];
 
   for (const result of results) {
@@ -84,9 +83,28 @@ async function searchGamesWithRawg(query: string) {
   }));
 }
 
+async function searchGamesWithRawg(query: string) {
+  return persistCatalogueGames(await rawgService.searchGames(query));
+}
+
+// Popular games from RAWG. This is used by selection UIs instead of Twitch's
+// live-stream viewer count, which is not a reliable popularity signal here.
+router.get('/game-catalog/top', async (req: express.Request, res: express.Response) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+    const games = await rawgService.getTrendingGames(limit + offset);
+    res.json((await persistCatalogueGames(games)).slice(offset, offset + limit));
+  } catch (error) {
+    captureRouteError(error);
+    console.error('Error fetching popular games from RAWG:', error);
+    res.status(503).json({ message: 'Game catalogue is temporarily unavailable.' });
+  }
+});
+
 // Search for games on RAWG. The Twitch path remains as a compatibility alias
 // for older clients, but no longer calls Twitch.
-router.get(['/games/search', '/twitch/games/search'], async (req: express.Request, res: express.Response) => {
+router.get(['/game-catalog/search', '/twitch/games/search'], async (req: express.Request, res: express.Response) => {
   try {
     const query = req.query.q as string;
 
@@ -146,7 +164,7 @@ router.get('/twitch/games/:id', async (req: express.Request, res: express.Respon
 });
 
 // Add a Twitch game to our database
-router.post('/twitch/games/add', async (req: express.Request, res: express.Response) => {
+router.post(['/game-catalog/add', '/twitch/games/add'], async (req: express.Request, res: express.Response) => {
   try {
     const { gameId } = req.body;
 
@@ -154,7 +172,13 @@ router.post('/twitch/games/add', async (req: express.Request, res: express.Respo
       return res.status(400).json({ message: 'Game ID is required' });
     }
 
-    // Fetch the game from Twitch first
+    // RAWG-backed search results already carry a Gamefolio database ID.
+    const existingById = await storage.getGame(Number(gameId));
+    if (existingById) {
+      return res.json(existingById);
+    }
+
+    // Legacy callers can still submit a Twitch ID while they migrate.
     const twitchGame = await twitchApi.getGameById(gameId);
 
     if (!twitchGame) {
