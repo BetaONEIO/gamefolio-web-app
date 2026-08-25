@@ -82,9 +82,9 @@ interface TrendingGamesGridProps {
 
 function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridProps) {
   const { data: trendingGames, isLoading } = useQuery<TwitchGame[]>({
-    queryKey: ["/api/twitch/games/top"],
+    queryKey: ["/api/game-catalog/top"],
     queryFn: async () => {
-      const response = await fetch("/api/twitch/games/top?limit=50");
+      const response = await fetch("/api/game-catalog/top?limit=50");
       if (!response.ok) throw new Error("Failed to fetch trending games");
       return await response.json();
     }
@@ -888,7 +888,7 @@ export default function OnboardingFlow({
   const loadGames = async () => {
     setIsSearching(true);
     try {
-      const response = await apiRequest("GET", "/api/twitch/games/top");
+      const response = await apiRequest("GET", "/api/game-catalog/top");
       if (!response.ok) throw new Error("Failed to load games from Twitch");
       const twitchGames = await response.json();
       if (!twitchGames || twitchGames.length === 0) { await loadFallbackGames(); return; }
@@ -918,7 +918,7 @@ export default function OnboardingFlow({
     if (!query.trim()) { loadGames(); return; }
     setIsSearching(true);
     try {
-      const response = await apiRequest("GET", `/api/twitch/games/search?query=${encodeURIComponent(query)}`);
+      const response = await apiRequest("GET", `/api/game-catalog/search?q=${encodeURIComponent(query)}`);
       if (!response.ok) throw new Error("Search failed");
       const twitchGames = await response.json();
       setGames(twitchGames.map((game: TwitchGame) => ({

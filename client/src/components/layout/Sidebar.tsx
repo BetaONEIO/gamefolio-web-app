@@ -81,9 +81,9 @@ const Sidebar = () => {
   });
 
   const { data: trendingGames } = useQuery<Game[]>({
-    queryKey: ["/api/twitch/games/top"],
+    queryKey: ["/api/game-catalog/top"],
     queryFn: async () => {
-      const response = await fetch("/api/twitch/games/top");
+      const response = await fetch("/api/game-catalog/top");
       if (!response.ok) {
         throw new Error('Failed to fetch trending games from Twitch');
       }
@@ -111,10 +111,10 @@ const Sidebar = () => {
 
   // Search for games to add
   const { data: searchResults } = useQuery<TwitchGame[]>({
-    queryKey: ["/api/twitch/games/search", gameSearchQuery],
+    queryKey: ["/api/game-catalog/search", gameSearchQuery],
     queryFn: async () => {
       if (!gameSearchQuery.trim()) return [];
-      const response = await fetch(`/api/twitch/games/search?q=${encodeURIComponent(gameSearchQuery)}`);
+      const response = await fetch(`/api/game-catalog/search?q=${encodeURIComponent(gameSearchQuery)}`);
       if (!response.ok) throw new Error("Failed to search games");
       return response.json();
     },

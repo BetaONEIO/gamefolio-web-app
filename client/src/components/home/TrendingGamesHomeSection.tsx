@@ -22,9 +22,9 @@ const TrendingGamesHomeSection = () => {
     data: twitchTrendingGames, 
     isLoading: isLoadingGames
   } = useQuery<TwitchGame[]>({
-    queryKey: ["/api/twitch/games/top"],
+    queryKey: ["/api/game-catalog/top"],
     queryFn: async () => {
-      const response = await fetch("/api/twitch/games/top");
+      const response = await fetch("/api/game-catalog/top");
       if (!response.ok) {
         throw new Error('Failed to fetch trending games from Twitch');
       }
