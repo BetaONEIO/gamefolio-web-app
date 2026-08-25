@@ -82,3 +82,57 @@ export function setSentryUser(
     user ? { id: user.id, username: user.username ?? undefined } : null,
   );
 }
+
+export type BulkUploadTelemetry = {
+  batchId: string;
+  itemIndex: number;
+  itemKind: "video" | "screenshot" | "batch";
+  videoType?: "clip" | "reel";
+  mimeType?: string;
+  fileSizeBytes?: number;
+  durationSeconds?: number | null;
+  stage:
+    | "selection"
+    | "validation"
+    | "storage-credentials"
+    | "storage-transfer"
+    | "processing"
+    | "reconciliation"
+    | "complete";
+  outcome: "started" | "rejected" | "failed" | "recovered" | "succeeded";
+  errorCategory?: string;
+  httpStatus?: number;
+};
+
+export type BulkUploadTelemetryDetails = Omit<
+  BulkUploadTelemetry,
+  "batchId" | "itemIndex" | "itemKind" | "videoType" | "mimeType" | "fileSizeBytes" | "durationSeconds"
+>;
+
+// Bulk upload diagnostics intentionally accept only a closed set of fields.
+// Never add filenames, titles, descriptions, tags, URLs, request bodies, or
+// provider credentials here: this event is meant to be useful without copying
+// user-generated content into Sentry.
+export function captureBulkUploadEvent(
+  event: BulkUploadTelemetry,
+): void {
+  Sentry.captureMessage(`bulk_upload.${event.stage}.${event.outcome}`, {
+    level: event.outcome === "failed" || event.outcome === "rejected" ? "warning" : "info",
+    tags: {
+      feature: "bulk_upload",
+      batch_id: event.batchId,
+      item_index: String(event.itemIndex),
+      item_kind: event.itemKind,
+      stage: event.stage,
+      outcome: event.outcome,
+      ...(event.videoType ? { video_type: event.videoType } : {}),
+      ...(event.errorCategory ? { error_category: event.errorCategory } : {}),
+      ...(event.httpStatus !== undefined ? { http_status: String(event.httpStatus) } : {}),
+    },
+    extra: {
+      ...(event.mimeType ? { mime_type: event.mimeType } : {}),
+      ...(event.fileSizeBytes !== undefined ? { file_size_bytes: event.fileSizeBytes } : {}),
+      ...(event.durationSeconds !== undefined ? { duration_seconds: event.durationSeconds } : {}),
+    },
+  });
+}
