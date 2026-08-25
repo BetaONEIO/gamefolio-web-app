@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, BarChart3, TrendingUp, Users, Trophy } from "lucide-react";
-import { NEON, CARD_BG, CARD_BORDER } from "./constants";
+import { NEON, CARD_BG, CARD_BORDER, DASHBOARD_THEME } from "./constants";
 
 interface AnalyticsData {
   joinsOverTime: Array<{ date: string; joins: number }>;
@@ -11,7 +11,7 @@ interface AnalyticsData {
 
 function MiniBarChart({ data }: { data: Array<{ date: string; joins: number }> }) {
   if (data.length === 0) {
-    return <div className="text-sm text-gray-500 text-center py-8">No creator activity in the last 30 days.</div>;
+    return <div className="text-sm text-center py-8" style={{ color: DASHBOARD_THEME.textSubtle }}>No creator activity in the last 30 days.</div>;
   }
   const max = Math.max(...data.map((d) => d.joins), 1);
   return (
@@ -48,19 +48,19 @@ export default function AnalyticsTab() {
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
         <div className="rounded-2xl p-4" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
           <div className="text-xl font-black text-white">{d.submissionStats.total}</div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Submissions</div>
+           <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: DASHBOARD_THEME.textSubtle }}>Submissions</div>
         </div>
         <div className="rounded-2xl p-4" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
           <div className="text-xl font-black" style={{ color: NEON }}>{approvalRate}%</div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Approval Rate</div>
+           <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: DASHBOARD_THEME.textSubtle }}>Approval Rate</div>
         </div>
         <div className="rounded-2xl p-4" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
           <div className="text-xl font-black text-white">{d.submissionStats.pending}</div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Pending</div>
+           <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: DASHBOARD_THEME.textSubtle }}>Pending</div>
         </div>
         <div className="rounded-2xl p-4" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
           <div className="text-xl font-black text-white">{d.submissionStats.rejected}</div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Rejected</div>
+           <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: DASHBOARD_THEME.textSubtle }}>Rejected</div>
         </div>
       </div>
 
@@ -79,13 +79,13 @@ export default function AnalyticsTab() {
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">Top Bounties</h3>
           </div>
           {d.topBounties.length === 0 ? (
-            <div className="text-sm text-gray-500 text-center py-6">No bounty data yet.</div>
+             <div className="text-sm text-center py-6" style={{ color: DASHBOARD_THEME.textSubtle }}>No bounty data yet.</div>
           ) : (
             <div className="space-y-2">
               {d.topBounties.map((b) => (
                 <div key={b.id} className="flex items-center justify-between rounded-lg p-2.5" style={{ background: "rgba(255,255,255,0.03)" }}>
                   <div className="text-sm text-white truncate flex-1 mr-2">{b.title}</div>
-                  <div className="text-xs text-gray-400 shrink-0">{b.totalViews.toLocaleString()} views · {b.participantCount} creators</div>
+                   <div className="text-xs shrink-0" style={{ color: DASHBOARD_THEME.textMuted }}>{b.totalViews.toLocaleString()} views · {b.participantCount} creators</div>
                 </div>
               ))}
             </div>
@@ -98,7 +98,7 @@ export default function AnalyticsTab() {
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">Top Creators</h3>
           </div>
           {d.topCreators.length === 0 ? (
-            <div className="text-sm text-gray-500 text-center py-6">No creator data yet.</div>
+             <div className="text-sm text-center py-6" style={{ color: DASHBOARD_THEME.textSubtle }}>No creator data yet.</div>
           ) : (
             <div className="space-y-2">
               {d.topCreators.map((c) => (

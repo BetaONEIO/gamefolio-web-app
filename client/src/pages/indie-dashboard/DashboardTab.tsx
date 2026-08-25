@@ -9,7 +9,7 @@ import {
   AlertCircle, Star, CheckCircle2,
   TrendingUp, Play, ImagePlus,
 } from "lucide-react";
-import { NEON } from "./constants";
+import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
 import { CAMPAIGNS_ENABLED } from "@/lib/feature-flags";
 
 type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "analytics" | "game-profile";
@@ -44,9 +44,10 @@ function isFieldFilled(profile: any, f: string): boolean {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  live: NEON, approved: "#4ade80", scheduled: "#60a5fa",
-  awaiting_review: "#f59e0b", changes_requested: "#f97316",
-  draft: "#94a3b8", completed: "#4ade80", cancelled: "#f87171", paused: "#94a3b8",
+  live: NEON, approved: DASHBOARD_THEME.success, scheduled: DASHBOARD_THEME.info,
+  awaiting_review: DASHBOARD_THEME.warning, changes_requested: DASHBOARD_THEME.warning,
+  draft: DASHBOARD_THEME.textMuted, completed: DASHBOARD_THEME.success,
+  cancelled: DASHBOARD_THEME.danger, paused: DASHBOARD_THEME.textMuted,
 };
 
 export default function DashboardTab({
@@ -116,9 +117,9 @@ export default function DashboardTab({
     ...(CAMPAIGNS_ENABLED ? [{ label: "Active Campaigns", value: String(activeCampaigns.length), icon: Target, color: activeCampaigns.length > 0 ? NEON : "#475569" }] : []),
     { label: "Active Creators", value: String(d.totalParticipants), icon: Users, color: d.totalParticipants > 0 ? NEON : "#475569" },
     { label: "Demo Keys", value: String(demoKeys.available), icon: KeyRound, color: demoKeys.available < 5 ? "#f87171" : demoKeys.available < 15 ? "#f59e0b" : NEON },
-    { label: "Content", value: String(contentTotal), icon: Film, color: contentTotal > 0 ? "#a78bfa" : "#475569" },
-    { label: "Total Views", value: (d.totalViews ?? 0).toLocaleString(), icon: BarChart3, color: (d.totalViews ?? 0) > 0 ? "#60a5fa" : "#475569" },
-    { label: "Profile", value: `${profilePct}%`, icon: CheckCircle2, color: profilePct >= 80 ? "#4ade80" : profilePct >= 50 ? "#f59e0b" : "#f87171" },
+    { label: "Content", value: String(contentTotal), icon: Film, color: contentTotal > 0 ? NEON : DASHBOARD_THEME.textSubtle },
+    { label: "Total Views", value: (d.totalViews ?? 0).toLocaleString(), icon: BarChart3, color: (d.totalViews ?? 0) > 0 ? NEON : DASHBOARD_THEME.textSubtle },
+    { label: "Profile", value: `${profilePct}%`, icon: CheckCircle2, color: profilePct >= 80 ? NEON : profilePct >= 50 ? DASHBOARD_THEME.warning : DASHBOARD_THEME.danger },
   ];
 
   /* ── LAUNCH CHECKLIST ITEMS ── */
@@ -135,10 +136,10 @@ export default function DashboardTab({
 
       {/* ── 1. UNIFIED STATS STRIP ── */}
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-px rounded-xl overflow-hidden"
-        style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.06)" }}>
+         style={{ background: DASHBOARD_THEME.borderSubtle, border: `1px solid ${DASHBOARD_THEME.borderSubtle}` }}>
         {stats.map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="flex flex-col items-center justify-center py-5 px-2 text-center"
-            style={{ background: "rgba(255,255,255,0.015)" }}>
+             style={{ background: DASHBOARD_THEME.surfaceSubtle }}>
             <Icon className="w-4 h-4 mb-1.5" style={{ color }} />
             <div className="text-lg font-black leading-none mb-0.5" style={{ color }}>{value}</div>
             <div className="text-[10px] text-white/25 uppercase tracking-wider">{label}</div>
@@ -165,9 +166,9 @@ export default function DashboardTab({
               <button key={item.label} onClick={item.action}
                 className="w-full flex items-center gap-3 text-left group py-2 rounded-lg px-3 transition-colors hover:bg-white/[0.03]">
                 <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-colors"
-                  style={{ background: item.done ? "rgba(74,222,128,0.12)" : "rgba(255,255,255,0.05)", border: `1px solid ${item.done ? "rgba(74,222,128,0.25)" : "rgba(255,255,255,0.10)"}` }}>
+                 style={{ background: item.done ? rgbaAccent(0.12) : CARD_BG, border: `1px solid ${item.done ? rgbaAccent(0.25) : DASHBOARD_THEME.border}` }}>
                   {item.done ? (
-                    <CheckCircle2 className="w-3.5 h-3.5" style={{ color: "#4ade80" }} />
+                     <CheckCircle2 className="w-3.5 h-3.5" style={{ color: NEON }} />
                   ) : (
                     <div className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
                   )}
@@ -177,7 +178,7 @@ export default function DashboardTab({
                     {item.label}
                   </span>
                   {item.pct !== null && (
-                    <span className="text-[10px] ml-2" style={{ color: item.pct >= 80 ? NEON : "#f59e0b" }}>({item.pct}%)</span>
+                   <span className="text-[10px] ml-2" style={{ color: item.pct >= 80 ? NEON : DASHBOARD_THEME.warning }}>({item.pct}%)</span>
                   )}
                 </div>
                 {!item.done && (
@@ -466,8 +467,8 @@ export default function DashboardTab({
             {demoKeys.available < 5 && (
               <button onClick={() => onGoTo("keys")}
                 className="w-full flex items-center gap-3 text-left group py-2.5 px-3 rounded-xl transition-colors hover:bg-white/[0.03]"
-                style={{ background: "rgba(251,146,60,0.03)", border: "1px solid rgba(251,146,60,0.10)" }}>
-                <KeyRound className="w-4 h-4 shrink-0" style={{ color: "#fb923c" }} />
+                 style={{ background: `${DASHBOARD_THEME.warning}08`, border: `1px solid ${DASHBOARD_THEME.warning}1a` }}>
+                 <KeyRound className="w-4 h-4 shrink-0" style={{ color: DASHBOARD_THEME.warning }} />
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold text-white/70">Low on demo keys</div>
                   <div className="text-[10px] text-white/25">Only {demoKeys.available} remaining — upload more</div>
@@ -478,8 +479,8 @@ export default function DashboardTab({
             {content.length > 0 && (
               <button onClick={() => onGoTo("creator-content")}
                 className="w-full flex items-center gap-3 text-left group py-2.5 px-3 rounded-xl transition-colors hover:bg-white/[0.03]"
-                style={{ background: "rgba(167,139,250,0.03)", border: "1px solid rgba(167,139,250,0.10)" }}>
-                <Film className="w-4 h-4 shrink-0" style={{ color: "#a78bfa" }} />
+                 style={{ background: rgbaAccent(0.03), border: `1px solid ${rgbaAccent(0.10)}` }}>
+                 <Film className="w-4 h-4 shrink-0" style={{ color: NEON }} />
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold text-white/70">{content.length} submission{content.length > 1 ? "s" : ""} to review</div>
                   <div className="text-[10px] text-white/25">Feature the best community content</div>
