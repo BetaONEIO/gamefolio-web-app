@@ -155,13 +155,15 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
   const [imgError, setImgError] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
+  const [localCapsulePreview, setLocalCapsulePreview] = useState<string | null>(null);
   const artworkInputRef = useRef<HTMLInputElement>(null);
+  const capsuleInputRef = useRef<HTMLInputElement>(null);
 
   const uploadMutation = useMutation({
-    mutationFn: async ({ blob, gameId }: { blob: Blob; gameId?: number }) => {
+    mutationFn: async ({ blob, field, gameId }: { blob: Blob; field: "headerImageUrl" | "capsuleImageUrl"; gameId?: number }) => {
       const fd = new FormData();
-      fd.append("image", blob, "banner.jpg");
-      fd.append("field", "headerImageUrl");
+      fd.append("image", blob, field === "headerImageUrl" ? "banner.jpg" : "capsule.jpg");
+      fd.append("field", field);
       if (gameId) fd.append("gameId", String(gameId));
       const res = await fetch("/api/indie/profile/upload-image", { method: "POST", body: fd });
       if (!res.ok) throw new Error("Upload failed");
@@ -170,17 +172,22 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
     onSuccess: (data, variables) => {
       setImgError(false);
       setCropSrc(null);
-      // Replace local blob preview with the real server URL
-      setLocalPreview(data.url);
+      // Replace the local blob preview with the real server URL
+      if (variables.field === "headerImageUrl") {
+        setLocalPreview(data.url);
+      } else {
+        setLocalCapsulePreview(data.url);
+      }
       queryClient.setQueryData(["/api/indie/profile", variables.gameId ?? null], (cached: any) => ({
         ...(cached ?? {}),
-        profile: { ...(cached?.profile ?? {}), headerImageUrl: data.url },
+        profile: { ...(cached?.profile ?? {}), [variables.field]: data.url },
       }));
       queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
     },
     onError: () => {
       setCropSrc(null);
       setLocalPreview(null);
+      setLocalCapsulePreview(null);
     },
   });
 
@@ -197,7 +204,7 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
   // Use local optimistic preview first, then server data, then fallback
   const serverBannerUrl = !imgError ? (profile?.headerImageUrl || profile?.capsuleImageUrl || null) : null;
   const bannerUrl = localPreview ?? serverBannerUrl;
-  const capsuleUrl = profile?.capsuleImageUrl ?? null;
+  const capsuleUrl = localCapsulePreview ?? profile?.capsuleImageUrl ?? null;
   const { signedUrl: displayBannerUrl } = useSignedUrl(bannerUrl);
   const { signedUrl: displayCapsuleUrl } = useSignedUrl(capsuleUrl);
 
@@ -216,7 +223,15 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
     // Show optimistic preview immediately
     const previewUrl = URL.createObjectURL(blob);
     setLocalPreview(previewUrl);
-    uploadMutation.mutate({ blob, gameId: profile?.id ?? gameId });
+    uploadMutation.mutate({ blob, field: "headerImageUrl", gameId: profile?.id ?? gameId });
+  };
+
+  const handleCapsuleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLocalCapsulePreview(URL.createObjectURL(file));
+    uploadMutation.mutate({ blob: file, field: "capsuleImageUrl", gameId: profile?.id ?? gameId });
+    e.target.value = "";
   };
 
   const handleCropCancel = () => {
@@ -284,6 +299,11 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
           type="file" accept="image/*" className="hidden"
           onChange={handleFileChange}
         />
+        <input
+          ref={capsuleInputRef}
+          type="file" accept="image/*" className="hidden"
+          onChange={handleCapsuleFileChange}
+        />
 
         {/* Hero content */}
         <div className="relative z-10 max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center min-h-[420px] sm:min-h-[560px] md:min-h-[640px]">
@@ -292,17 +312,37 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
             {/* LEFT — Capsule + game info */}
             <div className="flex items-end gap-5 flex-1 min-w-0">
               {/* Capsule image */}
-              {displayCapsuleUrl ? (
-                <div className="shrink-0 rounded-lg overflow-hidden shadow-2xl"
-                  style={{ width: 128, aspectRatio: "3/4", border: "1px solid rgba(255,255,255,0.10)" }}>
-                  <img src={displayCapsuleUrl} alt="" className="w-full h-full object-cover" />
-                </div>
-              ) : (
-                <div className="shrink-0 rounded-lg flex items-center justify-center"
-                  style={{ width: 128, aspectRatio: "3/4", background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(255,255,255,0.12)" }}>
-                  <ImagePlus className="w-6 h-6 text-white/15" />
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => capsuleInputRef.current?.click()}
+                disabled={uploadMutation.isPending}
+                aria-label={displayCapsuleUrl ? "Change game icon" : "Upload game icon"}
+                className="group relative shrink-0 rounded-lg overflow-hidden shadow-2xl disabled:cursor-wait"
+                style={{
+                  width: 128,
+                  aspectRatio: "3/4",
+                  background: "rgba(255,255,255,0.04)",
+                  border: displayCapsuleUrl ? "1px solid rgba(255,255,255,0.10)" : "1px dashed rgba(255,255,255,0.12)",
+                }}>
+                {displayCapsuleUrl ? (
+                  <img src={displayCapsuleUrl} alt="Game icon" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="w-full h-full flex flex-col items-center justify-center gap-2">
+                    <ImagePlus className="w-6 h-6 text-white/25" />
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-white/35">Upload icon</span>
+                  </span>
+                )}
+                {displayCapsuleUrl && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-[9px] font-bold uppercase tracking-wider text-white opacity-0 transition-opacity group-hover:opacity-100">
+                    Change icon
+                  </span>
+                )}
+                {uploadMutation.isPending && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/60">
+                    <Loader2 className="w-5 h-5 animate-spin" style={{ color: NEON }} />
+                  </span>
+                )}
+              </button>
 
               <div className="min-w-0 pb-1">
                 <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight mb-3 drop-shadow-lg">
