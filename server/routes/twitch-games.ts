@@ -64,14 +64,23 @@ router.get('/twitch/games/search', async (req: express.Request, res: express.Res
     captureRouteError(error);
     console.error('Error searching games on Twitch:', error);
 
-    // Return a user-friendly error with fallback suggestion
-    if (error instanceof Error && error.message.includes('credentials not configured')) {
-      res.status(503).json({
-        message: 'Twitch API integration is not configured. Please set TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET environment variables.',
-        fallback: 'You can still browse existing games in the database.'
+    // Keep the upload game picker functional when Twitch is unavailable.
+    // Local games use their internal numeric IDs, which are valid for the
+    // picker and its downstream upload flow.
+    try {
+      const localGames = await storage.searchGames(query);
+      return res.json(localGames.map((game) => ({
+        id: String(game.twitchId ?? game.id),
+        name: game.name,
+        box_art_url: game.imageUrl ?? '',
+        igdb_id: '',
+      })));
+    } catch (fallbackError) {
+      captureRouteError(fallbackError);
+      console.error('Error searching the local game catalogue:', fallbackError);
+      return res.status(503).json({
+        message: 'Game search is temporarily unavailable. Please try again shortly.',
       });
-    } else {
-      res.status(500).json({ message: 'Failed to search games on Twitch' });
     }
   }
 });
