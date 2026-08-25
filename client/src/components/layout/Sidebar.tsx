@@ -14,6 +14,7 @@ import {
   Bookmark,
 } from "lucide-react";
 import { isPartnerType } from "@shared/partner-access";
+import { GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
 import { GamefolioStoreIcon } from "@/components/icons/GamefolioStoreIcon";
 import { GamefolioCollectionIcon } from "@/components/icons/GamefolioCollectionIcon";
 import { GamefolioHelpIcon } from "@/components/icons/GamefolioHelpIcon";
@@ -259,7 +260,7 @@ const Sidebar = () => {
   };
 
   const isIndieDev = user?.userType?.split(",").includes("indie_developer");
-  const canAccessIndieGame = !!user && (
+  const canAccessIndieGame = GAME_DEVELOPER_FEATURES_ENABLED && !!user && (
     user.role === "admin" ||
     isPartnerType(user, "indie") ||
     isIndieDev

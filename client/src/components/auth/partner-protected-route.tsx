@@ -4,6 +4,7 @@ import { Redirect, Route } from "wouter";
 import { Button } from "@/components/ui/button";
 import { FullScreenLoader } from "@/components/ui/game-loader";
 import { hasIndieDeveloperAccess, isPartnerType, type PartnerType } from "@shared/partner-access";
+import { GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
 
 const LABELS: Record<PartnerType, string> = {
   streamer: "Streamer Partner",
@@ -40,6 +41,14 @@ export function PartnerProtectedRoute({
   if (!user) {
     return (
       <Route path={path}>{() => <Redirect to="/auth" />}</Route>
+    );
+  }
+
+  if (partnerType === "indie" && !GAME_DEVELOPER_FEATURES_ENABLED) {
+    return (
+      <Route path={path}>
+        {() => <Redirect to="/" />}
+      </Route>
     );
   }
 
