@@ -213,7 +213,10 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const gameName = gameProfile?.gameName?.trim() || canonicalGame?.name || profile.displayName;
   const description = gameProfile?.fullDescription || gameProfile?.shortDescription || profile.bio;
   const header = gameProfile?.headerImageUrl || gameProfile?.capsuleImageUrl || canonicalGame?.imageUrl || null;
+  const capsule = gameProfile?.capsuleImageUrl || canonicalGame?.imageUrl || null;
   const { signedUrl: displayHeader } = useSignedUrl(header);
+  const { signedUrl: displayCapsule } = useSignedUrl(capsule);
+  const { signedUrl: displayDeveloperAvatar } = useSignedUrl(profile.avatarUrl);
   const trailer = gameProfile?.trailerUrl || null;
   const genres = gameProfile?.genres ?? [];
   const platforms = gameProfile?.platforms ?? [];
@@ -306,11 +309,20 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                   </div>
                 </div>
               ) : (
-                <>
-                  <h1 className="text-4xl font-black tracking-tight text-white sm:text-6xl">{gameName}</h1>
-                  <p className="mt-3 text-sm font-semibold text-white/55">{gameProfile?.releaseStatus === 'coming_soon' ? 'Coming soon' : gameProfile?.releaseStatus === 'early_access' ? 'Early access' : gameProfile?.releaseStatus === 'released' ? 'Available now' : `A game by @${profile.username}`}</p>
-                  {description && <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/75">{description}</p>}
-                </>
+                <div className="flex items-end gap-5 sm:gap-6">
+                  {displayCapsule && (
+                    <img
+                      src={displayCapsule}
+                      alt={`${gameName} game artwork`}
+                      className="hidden h-28 w-[84px] shrink-0 rounded-xl border border-white/15 object-cover shadow-2xl sm:block"
+                    />
+                  )}
+                  <div>
+                    <h1 className="text-4xl font-black tracking-tight text-white sm:text-6xl">{gameName}</h1>
+                    <p className="mt-3 text-sm font-semibold text-white/55">{gameProfile?.releaseStatus === 'coming_soon' ? 'Coming soon' : gameProfile?.releaseStatus === 'early_access' ? 'Early access' : gameProfile?.releaseStatus === 'released' ? 'Available now' : `A game by @${profile.username}`}</p>
+                    {description && <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/75">{description}</p>}
+                  </div>
+                </div>
               )}
             </div>
             <div className="flex flex-wrap gap-3 lg:justify-end">
@@ -351,7 +363,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                 <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">About the game</p><p className="mt-3 text-sm leading-relaxed text-white/65">{description || 'The developer has not added a description yet.'}</p>{gameProfile?.keyFeatures?.length ? <ul className="mt-4 space-y-2 text-sm text-white/70">{gameProfile.keyFeatures.map((feature) => <li key={feature} className="flex gap-2"><CheckCircle2 size={15} className="mt-0.5 shrink-0 text-[#B7FF18]" />{feature}</li>)}</ul> : null}</section>
                 {(genres.length || platforms.length) > 0 && <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Details</p><div className="mt-4 space-y-4">{genres.length > 0 && <div><div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-white/60"><Tag size={13} />Genres</div><div className="flex flex-wrap gap-2">{genres.map((genre) => <span key={genre} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs text-white/75">{genre}</span>)}</div></div>}{platforms.length > 0 && <div><div className="mb-2 text-xs font-bold text-white/60">Platforms</div><div className="flex flex-wrap gap-2">{platforms.map((platform) => <span key={platform} className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-2.5 py-1 text-xs text-white/75"><PlatformIcon value={platform} />{formatPlatform(platform)}</span>)}</div></div>}</div></section>}
                 {storeLinks.length > 0 && <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Get the game</p><div className="mt-4 space-y-2">{storeLinks.map((store) => { const Icon = store.icon; return <a key={store.name} href={store.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-sm font-bold hover:bg-white/[0.06]"><Icon size={19} /><span>{store.name}</span><ExternalLink size={13} className="ml-auto text-white/40" /></a>; })}</div></section>}
-                <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Developer</p><div className="mt-3 flex items-center gap-3">{profile.avatarUrl ? <img src={profile.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10"><Users size={18} /></div>}<div><p className="font-bold">{gameProfile?.studioName || profile.displayName}</p><p className="text-xs text-white/45">@{profile.username}</p></div></div><PlatformConnections profile={profile} className="mt-4 !border-t-0 !px-0 !py-0" /></section>
+                <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Developer</p><div className="mt-3 flex items-center gap-3">{displayDeveloperAvatar ? <img src={displayDeveloperAvatar} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10"><Users size={18} /></div>}<div><p className="font-bold">{gameProfile?.studioName || profile.displayName}</p><p className="text-xs text-white/45">@{profile.username}</p></div></div><PlatformConnections profile={profile} className="mt-4 !border-t-0 !px-0 !py-0" /></section>
               </aside>
             </div>
           </div>
