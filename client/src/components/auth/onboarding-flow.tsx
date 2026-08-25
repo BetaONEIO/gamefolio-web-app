@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
 import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop, Zap, Star, Target, Gift, Tv, Globe, Swords, Users, Flame, ChevronLeft, ChevronRight, X, ExternalLink } from "lucide-react";
 import { SiSteam, SiItchdotio, SiEpicgames, SiTwitch, SiKick } from "react-icons/si";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
@@ -1610,7 +1611,7 @@ export default function OnboardingFlow({
               </div>
             ),
           },
-          {
+          ...(GAME_DEVELOPER_FEATURES_ENABLED ? [{
             id: 'indie' as UserPath,
             title: 'GAME DEVELOPER',
             ctaLabel: 'Continue as Game Developer',
@@ -1641,7 +1642,7 @@ export default function OnboardingFlow({
                 </div>
               </div>
             ),
-          },
+          }] : []),
         ];
 
         const totalCards = pathCards.length;
