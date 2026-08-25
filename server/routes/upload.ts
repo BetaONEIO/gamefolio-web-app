@@ -14,11 +14,28 @@ import QRCode from 'qrcode';
 import { fullAccessMiddleware } from '../middleware/full-access';
 import { hybridFullAccess } from '../middleware/hybrid-auth';
 import { XPService } from '../xp-service';
-import { captureRouteError } from "../sentry";
+import { captureRouteError, captureRouteMessage } from "../sentry";
 import { getRequestMeta } from "../lib/request-meta";
 import { processAndCreateClip, ClipProcessingError, isValidUploadAttemptId } from '../services/clip-processing';
 
 const router = express.Router();
+
+function safeTelemetryHeader(value: unknown, pattern: RegExp): string | undefined {
+  return typeof value === 'string' && pattern.test(value) ? value : undefined;
+}
+
+function uploadTelemetryContext(req: express.Request, extra: Record<string, string> = {}) {
+  const batchId = safeTelemetryHeader(req.headers['x-bulk-upload-id'], /^[A-Za-z0-9-]{1,100}$/);
+  const itemIndex = safeTelemetryHeader(req.headers['x-bulk-upload-item'], /^\d{1,3}$/);
+  const context: Record<string, string> = {
+    route: req.path,
+    ...(req.user?.id ? { user_id: String(req.user.id) } : {}),
+    ...(batchId ? { batch_id: batchId } : {}),
+    ...(itemIndex ? { item_index: itemIndex } : {}),
+    ...extra,
+  };
+  return context;
+}
 
 async function getExistingUploadAttempt(userId: number, uploadAttemptId: unknown) {
   if (!isValidUploadAttemptId(uploadAttemptId)) return null;
@@ -366,7 +383,7 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
     });
 
   } catch (error) {
-    captureRouteError(error);
+    captureRouteError(error, uploadTelemetryContext(req, { stage: 'direct-upload' }));
     console.error('❌ Direct video upload error:', error);
 
     // Clean up temp file on error
@@ -396,7 +413,7 @@ router.post('/upload/supabase-creds', hybridFullAccess, async (req, res) => {
     
     res.json({ uploadUrl, publicUrl });
   } catch (error) {
-    captureRouteError(error);
+    captureRouteError(error, uploadTelemetryContext(req, { stage: 'storage-credentials' }));
     console.error('Error generating Supabase upload credentials:', error);
     res.status(500).json({ error: 'Failed to generate upload credentials' });
   }
@@ -713,7 +730,7 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
     res.json(responseData);
 
   } catch (error) {
-    captureRouteError(error);
+    captureRouteError(error, uploadTelemetryContext(req, { stage: 'screenshot-processing' }));
     console.error('Screenshot upload error:', error);
 
     // Clean up temp file on error
@@ -783,7 +800,12 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
 
     res.json(responseData);
   } catch (error) {
-    captureRouteError(error);
+    captureRouteError(error, uploadTelemetryContext(req, {
+      stage: 'processing',
+      ...(isValidUploadAttemptId(req.body?.uploadAttemptId)
+        ? { upload_attempt_id: req.body.uploadAttemptId }
+        : {}),
+    }));
     if (error instanceof ClipProcessingError) {
       return res.status(error.status).json(error.body);
     }
@@ -800,9 +822,25 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
 router.get('/process-video/reconcile', hybridFullAccess, async (req, res) => {
   try {
     const existingUpload = await getExistingUploadAttempt(req.user!.id, req.query.uploadAttemptId);
+    captureRouteMessage(
+      existingUpload ? 'bulk_upload.reconciliation.recovered' : 'bulk_upload.reconciliation.not_found',
+      uploadTelemetryContext(req, {
+        stage: 'reconciliation',
+        outcome: existingUpload ? 'recovered' : 'not_found',
+        ...(isValidUploadAttemptId(req.query?.uploadAttemptId)
+          ? { upload_attempt_id: String(req.query.uploadAttemptId) }
+          : {}),
+      }),
+    );
     res.json(existingUpload ?? { found: false });
   } catch (error) {
-    captureRouteError(error);
+    captureRouteError(error, uploadTelemetryContext(req, {
+      stage: 'reconciliation',
+      outcome: 'failed',
+      ...(isValidUploadAttemptId(req.query?.uploadAttemptId)
+        ? { upload_attempt_id: String(req.query.uploadAttemptId) }
+        : {}),
+    }));
     console.error('Video upload reconciliation error:', error);
     res.status(500).json({ error: 'Could not confirm the upload status' });
   }

@@ -25,6 +25,10 @@ import { ScheduleControl, type ScheduleLimits } from "@/components/upload/Schedu
 import { Game } from "@shared/schema";
 import type { UploadLimits } from "@shared/schema";
 import {
+  captureBulkUploadEvent,
+  type BulkUploadTelemetryDetails,
+} from "@/lib/sentry";
+import {
   Upload,
   Video,
   Image as ImageIcon,
@@ -78,6 +82,13 @@ const ALLOWED_IMAGE = ["image/jpeg", "image/png", "image/jpg"];
 // Monotonic id source so React keys stay stable across re-renders.
 let itemIdCounter = 0;
 const nextItemId = () => `bulk-${++itemIdCounter}`;
+
+function createBatchId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 16)}`;
+}
 
 function createUploadAttemptId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -139,6 +150,7 @@ const BulkUploadPage = () => {
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const batchIdRef = useRef(createBatchId());
 
   const { data: limits } = useQuery<UploadLimits>({
     queryKey: ["/api/upload/limits"],
@@ -195,6 +207,28 @@ const BulkUploadPage = () => {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
   };
 
+  const telemetryFor = (item: BulkItem, itemIndex: number) => ({
+    batchId: batchIdRef.current,
+    itemIndex,
+    itemKind: item.kind,
+    videoType: item.kind === "video" ? item.videoType : undefined,
+    mimeType: getEffectiveMimeType(item.file),
+    fileSizeBytes: item.file.size,
+    durationSeconds: item.kind === "video" ? item.durationSeconds : undefined,
+  });
+
+  const captureItemEvent = (
+    item: BulkItem,
+    itemIndex: number,
+    event: BulkUploadTelemetryDetails,
+  ) => {
+    try {
+      captureBulkUploadEvent({ ...telemetryFor(item, itemIndex), ...event });
+    } catch {
+      // Diagnostics must never affect the upload flow.
+    }
+  };
+
   const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files || []);
     e.target.value = ""; // allow re-picking the same file
@@ -212,15 +246,35 @@ const BulkUploadPage = () => {
 
     const accepted: File[] = [];
     let skippedForLimit = 0;
-    for (const file of picked) {
+    for (let pickedIndex = 0; pickedIndex < picked.length; pickedIndex++) {
+      const file = picked[pickedIndex];
       if (accepted.length >= remaining) {
         skippedForLimit++;
+        captureBulkUploadEvent({
+          batchId: batchIdRef.current,
+          itemIndex: pickedIndex,
+          itemKind: "batch",
+          fileSizeBytes: file.size,
+          stage: "selection",
+          outcome: "rejected",
+          errorCategory: "batch_size_limit",
+        });
         continue;
       }
       const mime = getEffectiveMimeType(file);
       const isVideo = ALLOWED_VIDEO.includes(mime);
       const isImage = ALLOWED_IMAGE.includes(mime);
       if (!isVideo && !isImage) {
+        captureBulkUploadEvent({
+          batchId: batchIdRef.current,
+          itemIndex: pickedIndex,
+          itemKind: "video",
+          mimeType: mime || undefined,
+          fileSizeBytes: file.size,
+          stage: "selection",
+          outcome: "rejected",
+          errorCategory: "unsupported_type",
+        });
         toast({
           title: "Unsupported file",
           description: `"${file.name}" isn't a supported video (MP4, WebM, MOV) or image (JPEG, PNG).`,
@@ -234,6 +288,17 @@ const BulkUploadPage = () => {
       const maxVideoMB = limits?.maxClipSizeMB ?? 100;
       const capMB = isVideo ? maxVideoMB : maxImageMB;
       if (file.size > capMB * 1024 * 1024) {
+        captureBulkUploadEvent({
+          batchId: batchIdRef.current,
+          itemIndex: pickedIndex,
+          itemKind: isVideo ? "video" : "screenshot",
+          videoType: isVideo ? "clip" : undefined,
+          mimeType: mime,
+          fileSizeBytes: file.size,
+          stage: "selection",
+          outcome: "rejected",
+          errorCategory: "file_size_limit",
+        });
         toast({
           title: "File too large",
           description: `"${file.name}" exceeds your ${capMB}MB limit.${isFreeTier ? " Upgrade to Pro for larger uploads." : ""}`,
@@ -293,7 +358,11 @@ const BulkUploadPage = () => {
             });
           })
           .catch(() => {
-            /* leave defaults; the server re-validates anyway */
+            captureItemEvent(it, newItems.indexOf(it), {
+              stage: "validation",
+              outcome: "failed",
+              errorCategory: "metadata_probe",
+            });
           });
       });
   };
@@ -314,7 +383,12 @@ const BulkUploadPage = () => {
   async function reconcileVideoUpload(uploadAttemptId: string) {
     const response = await fetch(
       `/api/upload/process-video/reconcile?uploadAttemptId=${encodeURIComponent(uploadAttemptId)}`,
-      { credentials: "include" },
+      {
+        credentials: "include",
+        headers: {
+          "X-Bulk-Upload-Id": batchIdRef.current,
+        },
+      },
     );
     if (!response.ok) return null;
     const result = await response.json();
@@ -332,6 +406,7 @@ const BulkUploadPage = () => {
     const filePath = item.videoUploadPath || `users/${user!.id}/${prefix}/${uploadAttemptId}.${extension}`;
     let publicUrl = item.videoUploadPublicUrl;
 
+    const itemIndex = items.findIndex((candidate) => candidate.id === item.id);
     if (!item.storageUploaded || !publicUrl) {
       updateItem(item.id, {
         uploadAttemptId,
@@ -344,11 +419,23 @@ const BulkUploadPage = () => {
       try {
         const credsRes = await fetch("/api/upload/supabase-creds", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ filePath, contentType: item.file.type }),
           credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Bulk-Upload-Id": batchIdRef.current,
+            "X-Bulk-Upload-Item": String(itemIndex),
+          },
         });
-        if (!credsRes.ok) throw new Error("Failed to get upload credentials");
+        if (!credsRes.ok) {
+          captureItemEvent(item, itemIndex, {
+            stage: "storage-credentials",
+            outcome: "failed",
+            errorCategory: "credential_request",
+            httpStatus: credsRes.status,
+          });
+          throw new Error("Failed to get upload credentials");
+        }
         const credentials = await credsRes.json();
         publicUrl = credentials.publicUrl;
 
@@ -363,11 +450,27 @@ const BulkUploadPage = () => {
               onProgress(10 + Math.round(pct * 0.75)); // 10 → 85
             }
           };
-          xhr.onload = () =>
-            xhr.status >= 200 && xhr.status < 300
-              ? resolve()
-              : reject(new Error(`Upload to storage failed (${xhr.status})`));
-          xhr.onerror = () => reject(new Error("Upload to storage was interrupted by a network error"));
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              captureItemEvent(item, itemIndex, {
+                stage: "storage-transfer",
+                outcome: "failed",
+                errorCategory: "storage_http",
+                httpStatus: xhr.status,
+              });
+              reject(new Error(`Upload to storage failed (${xhr.status})`));
+            }
+          };
+          xhr.onerror = () => {
+            captureItemEvent(item, itemIndex, {
+              stage: "storage-transfer",
+              outcome: "failed",
+              errorCategory: "storage_network",
+            });
+            reject(new Error("Upload to storage was interrupted by a network error"));
+          };
           xhr.send(item.file);
         });
       } catch (error) {
@@ -379,6 +482,11 @@ const BulkUploadPage = () => {
           videoUploadPublicUrl: null,
           storageUploaded: false,
         });
+        captureItemEvent(item, itemIndex, {
+          stage: "storage-transfer",
+          outcome: "failed",
+          errorCategory: error instanceof Error ? "storage_transfer" : "storage_unknown",
+        });
         throw error;
       }
 
@@ -388,18 +496,30 @@ const BulkUploadPage = () => {
         videoUploadPublicUrl: publicUrl,
         storageUploaded: true,
       });
+      captureItemEvent(item, itemIndex, {
+        stage: "storage-transfer",
+        outcome: "succeeded",
+      });
     } else {
       onProgress(85);
     }
 
     onProgress(88);
-    let processRes: Response;
+    captureItemEvent(item, itemIndex, {
+      stage: "processing",
+      outcome: "started",
+    });
+    let processRes: Response | null = null;
     let serverError = "Video processing failed";
     let receivedProcessResponse = false;
     try {
       processRes = await fetch("/api/upload/process-video", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Bulk-Upload-Id": batchIdRef.current,
+            "X-Bulk-Upload-Item": String(itemIndex),
+          },
         body: JSON.stringify({
           uploadResult: { url: publicUrl, path: filePath },
           uploadAttemptId,
@@ -423,6 +543,11 @@ const BulkUploadPage = () => {
       }
       const result = await processRes.json();
       onProgress(100);
+      captureItemEvent(item, itemIndex, {
+        stage: "processing",
+        outcome: "succeeded",
+        httpStatus: processRes.status,
+      });
       return {
         contentId: result?.clip?.id ?? result?.scheduled?.id ?? null,
         recovered: !!result?.reconciled,
@@ -434,6 +559,11 @@ const BulkUploadPage = () => {
       try {
         const recovered = await reconcileVideoUpload(uploadAttemptId);
         if (recovered) {
+          captureItemEvent(item, itemIndex, {
+            stage: "reconciliation",
+            outcome: "recovered",
+            httpStatus: 200,
+          });
           onProgress(100);
           return {
             contentId: recovered.clip?.id ?? recovered.scheduled?.id ?? null,
@@ -445,20 +575,46 @@ const BulkUploadPage = () => {
         // best-effort and should not hide a useful server response.
       }
       if (!receivedProcessResponse) {
+        captureItemEvent(item, itemIndex, {
+          stage: "processing",
+          outcome: "failed",
+          errorCategory: "response_lost",
+        });
         throw new Error(
           "The video reached storage, but the processing connection was interrupted. Retry this item to confirm it safely.",
         );
       }
+      if (!processRes) {
+        captureItemEvent(item, itemIndex, {
+          stage: "processing",
+          outcome: "failed",
+          errorCategory: "missing_response",
+        });
+        throw new Error("Video processing failed without a response.");
+      }
       if (processRes.ok) {
+        captureItemEvent(item, itemIndex, {
+          stage: "processing",
+          outcome: "failed",
+          errorCategory: "response_unreadable",
+          httpStatus: processRes.status,
+        });
         throw new Error(
           "The server accepted the video, but its confirmation could not be read. Retry this item to confirm it safely.",
         );
       }
+      captureItemEvent(item, itemIndex, {
+        stage: "processing",
+        outcome: "failed",
+        errorCategory: "processing_http",
+        httpStatus: processRes.status,
+      });
       throw new Error(error instanceof Error ? error.message : serverError);
     }
   }
 
   async function uploadScreenshotItem(item: BulkItem, onProgress: (p: number) => void, scheduledIso?: string) {
+    const itemIndex = items.findIndex((candidate) => candidate.id === item.id);
     const formData = new FormData();
     formData.append("title", item.title.trim());
     formData.append("description", item.description.trim());
@@ -476,6 +632,8 @@ const BulkUploadPage = () => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/screenshots/upload");
       xhr.withCredentials = true;
+      xhr.setRequestHeader("X-Bulk-Upload-Id", batchIdRef.current);
+      xhr.setRequestHeader("X-Bulk-Upload-Item", String(itemIndex));
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) {
           onProgress(Math.round((event.loaded / event.total) * 90)); // 0 → 90
@@ -493,10 +651,23 @@ const BulkUploadPage = () => {
           } catch {
             /* keep default */
           }
+          captureItemEvent(item, itemIndex, {
+            stage: "processing",
+            outcome: "failed",
+            errorCategory: "screenshot_http",
+            httpStatus: xhr.status,
+          });
           reject(new Error(message));
         }
       };
-      xhr.onerror = () => reject(new Error("Upload network error"));
+      xhr.onerror = () => {
+        captureItemEvent(item, itemIndex, {
+          stage: "processing",
+          outcome: "failed",
+          errorCategory: "screenshot_network",
+        });
+        reject(new Error("Upload network error"));
+      };
       xhr.send(formData);
     });
   }
@@ -514,11 +685,21 @@ const BulkUploadPage = () => {
     // Validate: title required for everything; videos also need a game.
     for (const it of pending) {
       if (!it.title.trim()) {
+        captureItemEvent(it, items.findIndex((candidate) => candidate.id === it.id), {
+          stage: "validation",
+          outcome: "rejected",
+          errorCategory: "missing_title",
+        });
         updateItem(it.id, { error: "Add a title before uploading." });
         toast({ title: "Missing title", description: `"${it.file.name}" needs a title.`, variant: "destructive" });
         return;
       }
       if (it.kind === "video" && !it.game) {
+        captureItemEvent(it, items.findIndex((candidate) => candidate.id === it.id), {
+          stage: "validation",
+          outcome: "rejected",
+          errorCategory: "missing_game",
+        });
         updateItem(it.id, { error: "Pick a game before uploading." });
         toast({ title: "Missing game", description: `"${it.file.name}" needs a game.`, variant: "destructive" });
         return;
@@ -528,10 +709,26 @@ const BulkUploadPage = () => {
     if (scheduleEnabled) {
       const iso = getScheduledIso();
       if (!iso) {
+        captureBulkUploadEvent({
+          batchId: batchIdRef.current,
+          itemIndex: -1,
+          itemKind: "batch",
+          stage: "validation",
+          outcome: "rejected",
+          errorCategory: "invalid_schedule",
+        });
         toast({ title: "Pick a time", description: "Choose a date and time to schedule this batch.", variant: "destructive" });
         return;
       }
       if (new Date(iso).getTime() <= Date.now()) {
+        captureBulkUploadEvent({
+          batchId: batchIdRef.current,
+          itemIndex: -1,
+          itemKind: "batch",
+          stage: "validation",
+          outcome: "rejected",
+          errorCategory: "past_schedule",
+        });
         toast({ title: "Time must be in the future", description: "Pick a date and time later than now.", variant: "destructive" });
         return;
       }
@@ -548,6 +745,14 @@ const BulkUploadPage = () => {
       scheduleLimits.remaining !== null &&
       pending.length > scheduleLimits.remaining
     ) {
+      captureBulkUploadEvent({
+        batchId: batchIdRef.current,
+        itemIndex: -1,
+        itemKind: "batch",
+        stage: "validation",
+        outcome: "rejected",
+        errorCategory: "schedule_quota",
+      });
       toast({
         title: "Not enough scheduling slots",
         description: `You have ${scheduleLimits.remaining} scheduled-post slot${scheduleLimits.remaining === 1 ? "" : "s"} left, but this batch has ${pending.length} files. Trim the batch or upgrade to Pro for unlimited scheduling.`,
@@ -562,7 +767,12 @@ const BulkUploadPage = () => {
 
     // Sequential so we don't saturate bandwidth / hit rate limits.
     for (const it of pending) {
+      const itemIndex = items.findIndex((candidate) => candidate.id === it.id);
       updateItem(it.id, { status: "uploading", progress: 0, error: null });
+      captureItemEvent(it, itemIndex, {
+        stage: "processing",
+        outcome: "started",
+      });
       try {
         const onProgress = (p: number) => updateItem(it.id, { progress: p });
         if (it.kind === "video") {
@@ -572,12 +782,29 @@ const BulkUploadPage = () => {
           await uploadScreenshotItem(it, onProgress, scheduledIso);
         }
         updateItem(it.id, { status: "success", progress: 100, wasScheduled: !!scheduledIso });
+        captureItemEvent(it, itemIndex, {
+          stage: "complete",
+          outcome: "succeeded",
+        });
         succeeded++;
       } catch (err: any) {
         updateItem(it.id, { status: "error", error: err?.message || "Upload failed" });
+        captureItemEvent(it, itemIndex, {
+          stage: "complete",
+          outcome: "failed",
+          errorCategory: it.kind === "video" ? "video_upload" : "screenshot_upload",
+        });
         failed++;
       }
     }
+    captureBulkUploadEvent({
+      batchId: batchIdRef.current,
+      itemIndex: -1,
+      itemKind: "batch",
+      stage: "complete",
+      outcome: failed === 0 ? "succeeded" : "failed",
+      errorCategory: `batch_${succeeded}_succeeded_${failed}_failed`,
+    });
 
     setIsUploading(false);
 
