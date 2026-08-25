@@ -6862,17 +6862,21 @@ export class DatabaseStorage implements IStorage {
 
   async getIndieGameProfileByUsername(username: string, gameId?: number | null): Promise<{ profile: IndieGameProfile | null; user: User } | null> {
     const user = await this.getUserByUsername(username);
-    if (!user || user.partnerType !== "indie") return null;
+    // Access to the Game Dashboard is no longer determined solely by the
+    // legacy partnerType flag. A developer can have a valid Indie game profile
+    // while that older account field is empty, so use the profile record as the
+    // source of truth for whether a public studio page exists.
+    if (!user) return null;
     const profile = await this.getIndieGameProfile(user.id, gameId);
-    return { user, profile };
+    return profile ? { user, profile } : null;
   }
 
   async getIndieGameProfilesByUsername(username: string): Promise<{ profiles: IndieGameProfile[]; user: User } | null> {
     const user = await this.getUserByUsername(username);
-    if (!user || user.partnerType !== "indie") return null;
+    if (!user) return null;
     const profiles = await db.select().from(indieGameProfiles)
       .where(eq(indieGameProfiles.userId, user.id))
       .orderBy(desc(indieGameProfiles.isPrimary), asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id));
-    return { user, profiles };
+    return profiles.length > 0 ? { user, profiles } : null;
   }
 }
