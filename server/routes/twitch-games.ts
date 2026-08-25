@@ -1,6 +1,7 @@
 import express from 'express';
 import { storage } from '../storage';
 import { twitchApi } from '../services/twitch-api';
+import { rawgService } from '../services/rawg-service';
 import { InsertGame } from '@shared/schema';
 import { captureRouteError } from "../sentry";
 
@@ -49,8 +50,43 @@ router.get('/twitch/games/top', async (req: express.Request, res: express.Respon
   }
 });
 
-// Search for games on Twitch
-router.get('/twitch/games/search', async (req: express.Request, res: express.Response) => {
+// Search the RAWG catalogue and persist selected catalogue entries so every
+// caller receives a real Gamefolio database ID for uploads and favorites.
+async function searchGamesWithRawg(query: string) {
+  const results = await rawgService.searchGames(query);
+  const games = [];
+
+  for (const result of results) {
+    let game = await storage.getGameByName(result.name);
+    if (!game) {
+      try {
+        game = await storage.createGame({
+          name: result.name,
+          imageUrl: result.imageUrl || '',
+        });
+      } catch (error: any) {
+        if (error.code === '23505') {
+          game = await storage.getGameByName(result.name);
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (game) games.push(game);
+  }
+
+  return games.map((game) => ({
+    id: String(game.id),
+    name: game.name,
+    box_art_url: game.imageUrl || '',
+    igdb_id: '',
+  }));
+}
+
+// Search for games on RAWG. The Twitch path remains as a compatibility alias
+// for older clients, but no longer calls Twitch.
+router.get(['/games/search', '/twitch/games/search'], async (req: express.Request, res: express.Response) => {
   try {
     const query = req.query.q as string;
 
@@ -58,21 +94,18 @@ router.get('/twitch/games/search', async (req: express.Request, res: express.Res
       return res.status(400).json({ message: 'Query parameter (q) is required' });
     }
 
-    const games = await twitchApi.searchGames(query);
-    res.json(games);
+    res.json(await searchGamesWithRawg(query));
   } catch (error) {
     captureRouteError(error);
-    console.error('Error searching games on Twitch:', error);
+    console.error('Error searching games on RAWG:', error);
 
     // Keep the upload game picker functional when Twitch is unavailable.
-    // Local games use their internal numeric IDs, which are valid for the
-    // picker and its downstream upload flow.
     try {
       const localGames = await storage.searchGames(query);
       return res.json(localGames.map((game) => ({
-        id: String(game.twitchId ?? game.id),
+        id: String(game.id),
         name: game.name,
-        box_art_url: game.imageUrl ?? '',
+        box_art_url: game.imageUrl || '',
         igdb_id: '',
       })));
     } catch (fallbackError) {
