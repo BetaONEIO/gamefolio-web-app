@@ -36,10 +36,6 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
   const hasBanner = !!user.bannerUrl && !bannerError;
   const theme = getCardTheme(user);
 
-  const displayPeriod = entry.effectivePeriod ?? period;
-  const xpLabel = displayPeriod === 'alltime' ? 'XP total' : displayPeriod === 'season' ? 'XP this season' : displayPeriod === 'month' ? 'XP this month' : 'XP this week';
-  const ctaText = `${fmt(entry.totalPoints)} ${xpLabel}`;
-
   const recentTitle = entry.recentUpload
     ? (() => {
         const { title, gameTitle, contentType } = entry.recentUpload!;
@@ -56,7 +52,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
   // Identical visual design to the standard card; only differences are:
   //   • no fixed width/height (fills its container, sizes to content)
   //   • no creator-card-wrap size constraints
-  //   • no flex-1 spacer — XP button sits directly below Recently Uploaded
+  //   • no flex-1 spacer — the card ends after Recently Uploaded
   if (compact) {
     return (
       <Link
@@ -244,19 +240,9 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
                 </div>
               </div>
 
-              {/* Spacer — pushes XP button to the bottom */}
+               {/* Keep the card content compact when no banner is present. */}
               <div className="flex-1" />
 
-              {/* XP button */}
-              <div className="px-3 pt-3 pb-3 flex-shrink-0">
-                <div
-                  className="w-full rounded-xl py-2.5 flex items-center justify-center gap-1.5 text-xs font-bold"
-                  style={{ background: '#B7FF1A', color: '#0B1319', boxShadow: '0 0 12px rgba(183,255,26,0.4)', letterSpacing: '0.01em' }}
-                >
-                  <Zap className="w-3 h-3" />
-                  {ctaText}
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -458,16 +444,6 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
 
             <div className="flex-1" />
 
-            {/* XP button */}
-            <div className="px-3 pb-3 flex-shrink-0">
-              <div
-                className="w-full rounded-xl py-2.5 flex items-center justify-center gap-1.5 text-xs font-bold"
-                style={{ background: '#B7FF1A', color: '#0B1319', boxShadow: '0 0 12px rgba(183,255,26,0.4)', letterSpacing: '0.01em' }}
-              >
-                <Zap className="w-3 h-3" />
-                {ctaText}
-              </div>
-            </div>
           </div>
         </div>
       </div>
