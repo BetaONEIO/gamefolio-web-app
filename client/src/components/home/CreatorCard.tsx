@@ -48,6 +48,8 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
       })()
     : null;
   const recentTime = entry.recentUpload ? timeAgo(entry.recentUpload.createdAt) : null;
+  const profileHref = `/profile/${encodeURIComponent(user.username)}`;
+  const linkClassName = `block ${className}`.trim();
 
   // ── Compact (mobile) layout ─────────────────────────────────────────────────
   // Identical visual design to the standard card; only differences are:
@@ -56,7 +58,11 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
   //   • no flex-1 spacer — XP button sits directly below Recently Uploaded
   if (compact) {
     return (
-      <Link href={`/profile/${user.username}`} className={className}>
+      <Link
+        href={profileHref}
+        className={linkClassName}
+        aria-label={`Open ${user.displayName || user.username}'s Gamefolio`}
+      >
         {/* Outer shell: position:relative, width:100%, no height — replaces creator-card-wrap */}
         <div
           className="cursor-pointer fire-card"
@@ -103,19 +109,15 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
             <div className="relative flex flex-col flex-1 pt-7" style={{ zIndex: 3 }}>
 
               {/* Banner */}
-              <div className="relative flex-shrink-0 mx-2 rounded-lg overflow-hidden" style={{ height: 66 }}>
-                {hasBanner ? (
-                  <>
-                    <img src={user.bannerUrl!} alt="" className="w-full h-full object-cover" onError={() => setBannerError(true)} />
-                    <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(11,19,25,0.2) 0%, rgba(11,19,25,0.55) 100%)' }} />
-                  </>
-                ) : (
-                  <div className="w-full h-full" style={{ background: 'rgba(255,255,255,0.03)' }} />
-                )}
-              </div>
+              {hasBanner && (
+                <div className="relative flex-shrink-0 mx-2 rounded-lg overflow-hidden" style={{ height: 66 }}>
+                  <img src={user.bannerUrl!} alt="" className="w-full h-full object-cover" onError={() => setBannerError(true)} />
+                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(11,19,25,0.2) 0%, rgba(11,19,25,0.55) 100%)' }} />
+                </div>
+              )}
 
               {/* Avatar */}
-              <div className="flex justify-center flex-shrink-0" style={{ marginTop: -22, position: 'relative', zIndex: 2 }}>
+              <div className="flex justify-center flex-shrink-0" style={{ marginTop: hasBanner ? -22 : 12, position: 'relative', zIndex: 2 }}>
                 <div style={{ position: 'relative' }}>
                   {entry.rank === 1 && (
                     <Lottie
@@ -258,7 +260,11 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
 
   // ── Standard (desktop) layout — unchanged ────────────────────────────────────
   return (
-    <Link href={`/profile/${user.username}`} className={className}>
+    <Link
+      href={profileHref}
+      className={linkClassName}
+      aria-label={`Open ${user.displayName || user.username}'s Gamefolio`}
+    >
       <div className="creator-card-wrap">
       <div
         className="creator-card-inner flex-shrink-0 cursor-pointer fire-card"
@@ -302,19 +308,15 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
 
           <div className="relative flex flex-col h-full pt-7" style={{ zIndex: 3 }}>
             {/* Banner */}
-            <div className="relative flex-shrink-0 mx-2 rounded-lg overflow-hidden" style={{ height: 66 }}>
-              {hasBanner ? (
-                <>
-                  <img src={user.bannerUrl!} alt="" className="w-full h-full object-cover" onError={() => setBannerError(true)} />
-                  <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(11,19,25,0.2) 0%, rgba(11,19,25,0.55) 100%)' }} />
-                </>
-              ) : (
-                <div className="w-full h-full" style={{ background: 'rgba(255,255,255,0.03)' }} />
-              )}
-            </div>
+            {hasBanner && (
+              <div className="relative flex-shrink-0 mx-2 rounded-lg overflow-hidden" style={{ height: 66 }}>
+                <img src={user.bannerUrl!} alt="" className="w-full h-full object-cover" onError={() => setBannerError(true)} />
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(11,19,25,0.2) 0%, rgba(11,19,25,0.55) 100%)' }} />
+              </div>
+            )}
 
             {/* Avatar */}
-            <div className="flex justify-center flex-shrink-0" style={{ marginTop: -20, position: 'relative', zIndex: 2 }}>
+            <div className="flex justify-center flex-shrink-0" style={{ marginTop: hasBanner ? -20 : 12, position: 'relative', zIndex: 2 }}>
               <div style={{ position: 'relative' }}>
                 {entry.rank === 1 && (
                   <Lottie
