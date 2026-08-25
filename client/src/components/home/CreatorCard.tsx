@@ -35,6 +35,9 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
   const borderColor = user.avatarBorderColor || user.accentColor || '#B7FF1A';
   const hasBanner = !!user.bannerUrl && !bannerError;
   const theme = getCardTheme(user);
+  const displayPeriod = entry.effectivePeriod ?? period;
+  const xpLabel = displayPeriod === 'alltime' ? 'XP total' : displayPeriod === 'season' ? 'XP this season' : displayPeriod === 'month' ? 'XP this month' : 'XP this week';
+  const ctaText = `${fmt(entry.totalPoints)} ${xpLabel}`;
 
   const recentTitle = entry.recentUpload
     ? (() => {
@@ -75,13 +78,6 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
               style={{ background: 'rgba(0,0,0,0.65)', color: entry.rank <= 3 ? (['#FFD700','#C0C0C0','#CD7F32'] as const)[entry.rank - 1] : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}
             >
               #{entry.rank}
-            </div>
-            <div
-              className="flex items-center gap-0.5 text-[11px] font-bold px-2 py-0.5 rounded-full"
-              style={{ background: 'rgba(0,0,0,0.65)', color: '#B7FF1A', border: '1px solid rgba(183,255,26,0.3)', backdropFilter: 'blur(4px)' }}
-            >
-              <Zap className="w-3 h-3" />
-              {fmt(entry.totalPoints)}
             </div>
           </div>
 
@@ -240,8 +236,18 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
                 </div>
               </div>
 
-               {/* Keep the card content compact when no banner is present. */}
               <div className="flex-1" />
+
+               {/* XP button */}
+               <div className="px-3 pt-3 pb-3 flex-shrink-0">
+                 <div
+                   className="w-full rounded-xl py-2.5 flex items-center justify-center gap-1.5 text-xs font-bold"
+                   style={{ background: '#B7FF1A', color: '#0B1319', boxShadow: '0 0 12px rgba(183,255,26,0.4)', letterSpacing: '0.01em' }}
+                 >
+                   <Zap className="w-3 h-3" />
+                   {ctaText}
+                 </div>
+               </div>
 
             </div>
           </div>
@@ -272,13 +278,6 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
             style={{ background: 'rgba(0,0,0,0.65)', color: entry.rank <= 3 ? (['#FFD700','#C0C0C0','#CD7F32'] as const)[entry.rank - 1] : 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}
           >
             #{entry.rank}
-          </div>
-          <div
-            className="flex items-center gap-0.5 text-[11px] font-bold px-2 py-0.5 rounded-full"
-            style={{ background: 'rgba(0,0,0,0.65)', color: '#B7FF1A', border: '1px solid rgba(183,255,26,0.3)', backdropFilter: 'blur(4px)' }}
-          >
-            <Zap className="w-3 h-3" />
-            {fmt(entry.totalPoints)}
           </div>
         </div>
 
@@ -443,6 +442,17 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
             </div>
 
             <div className="flex-1" />
+
+            {/* XP button */}
+            <div className="px-3 pb-3 flex-shrink-0">
+              <div
+                className="w-full rounded-xl py-2.5 flex items-center justify-center gap-1.5 text-xs font-bold"
+                style={{ background: '#B7FF1A', color: '#0B1319', boxShadow: '0 0 12px rgba(183,255,26,0.4)', letterSpacing: '0.01em' }}
+              >
+                <Zap className="w-3 h-3" />
+                {ctaText}
+              </div>
+            </div>
 
           </div>
         </div>
