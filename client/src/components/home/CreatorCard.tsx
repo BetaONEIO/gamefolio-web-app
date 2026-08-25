@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Zap, Upload, Users, Gamepad2, Clock } from "lucide-react";
 import Lottie from "lottie-react";
 import onFireData from "@/assets/on-fire.json";
+import { ProBadge } from "@/components/ui/pro-badge";
 import { TrendingEntry, fmt, getCardTheme, CREATOR_CARD_STYLES } from "./creator-card-utils";
 
 interface CreatorCardProps {
@@ -153,9 +154,14 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
 
               {/* Name / username — identical to standard */}
               <div className="text-center px-3 mt-2 flex-shrink-0">
-                <p className="text-white text-sm font-bold truncate leading-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  {user.displayName || user.username}
-                </p>
+                <div className="flex items-center justify-center gap-1 min-w-0">
+                  <p className="text-white text-sm font-bold truncate leading-tight min-w-0" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                    {user.displayName || user.username}
+                  </p>
+                  {user.isPro && user.selectedVerificationBadgeId && (
+                    <ProBadge selectedVerificationBadgeId={user.selectedVerificationBadgeId} size="sm" />
+                  )}
+                </div>
                 <p className="text-white/40 text-[11px] truncate mt-0.5">@{user.username}</p>
               </div>
 
@@ -352,9 +358,14 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
 
             {/* Name / username */}
             <div className="text-center px-3 mt-2 flex-shrink-0">
-              <p className="text-white text-sm font-bold truncate leading-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                {user.displayName || user.username}
-              </p>
+              <div className="flex items-center justify-center gap-1 min-w-0">
+                <p className="text-white text-sm font-bold truncate leading-tight min-w-0" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  {user.displayName || user.username}
+                </p>
+                {user.isPro && user.selectedVerificationBadgeId && (
+                  <ProBadge selectedVerificationBadgeId={user.selectedVerificationBadgeId} size="sm" />
+                )}
+              </div>
               <p className="text-white/40 text-[11px] truncate mt-0.5">@{user.username}</p>
             </div>
 
