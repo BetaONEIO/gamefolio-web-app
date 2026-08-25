@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
 import { apiRequest, getQueryFn, queryClient } from '@/lib/queryClient';
+import { GAME_DEVELOPER_FEATURES_ENABLED } from '@/lib/feature-flags';
 import { ClipWithUser, IndieGameProfile, UserWithStats } from '@shared/schema';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -317,7 +318,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
               {!isOwnProfile && <button onClick={() => currentUser ? followMutation.mutate() : setLocation('/auth')} disabled={followMutation.isPending} className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/20 px-5 py-3 text-sm font-bold hover:bg-white/10">{isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}{isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}</button>}
               {!isOwnProfile && <button onClick={() => currentUser ? setMessageDialogOpen(true) : setLocation('/auth')} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Message developer"><MessageCircle size={18} /></button>}
               <button onClick={shareGame} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Share game"><Share2 size={18} /></button>
-              {isOwnProfile && <><button onClick={() => setEditing(!editing)} className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/20 px-4 py-3 text-sm font-bold hover:bg-white/10"><Settings size={16} />Edit</button><a href="/indie/dashboard" className="rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black">Game dashboard</a></>}
+              {isOwnProfile && <><button onClick={() => setEditing(!editing)} className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/20 px-4 py-3 text-sm font-bold hover:bg-white/10"><Settings size={16} />Edit</button>{GAME_DEVELOPER_FEATURES_ENABLED && <a href="/indie/dashboard" className="rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black">Game dashboard</a>}</>}
             </div>
           </div>
         </div>
