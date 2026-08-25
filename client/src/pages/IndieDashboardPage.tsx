@@ -14,8 +14,8 @@ import RunCampaignWizard from "./indie-dashboard/RunCampaignWizard";
 import GameHeroBanner from "./indie-dashboard/GameHeroBanner";
 import DashboardTab from "./indie-dashboard/DashboardTab";
 
-export { NEON, CARD_BG, CARD_BORDER, PAGE_BG } from "./indie-dashboard/constants";
-import { NEON, PAGE_BG } from "./indie-dashboard/constants";
+export { NEON, CARD_BG, CARD_BORDER, PAGE_BG, DASHBOARD_THEME } from "./indie-dashboard/constants";
+import { DASHBOARD_THEME } from "./indie-dashboard/constants";
 
 type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "analytics" | "game-profile";
 type CampaignSubTab = "create" | "my";
@@ -68,25 +68,25 @@ export default function IndieDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: PAGE_BG }}>
+    <div className="min-h-screen" style={{ background: DASHBOARD_THEME.page, color: DASHBOARD_THEME.text }}>
       {/* Full-width cinematic hero banner (edge-to-edge) */}
       <GameHeroBanner gameId={activeGameId} />
 
       <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Top tab bar — underline style */}
         <div className="flex items-center overflow-x-auto scrollbar-hide mb-10"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          style={{ borderBottom: `1px solid ${DASHBOARD_THEME.borderSubtle}` }}>
           {TOP_TABS.map((t) => {
             const active = tab === t.id;
             return (
               <button key={t.id} onClick={() => setTab(t.id)}
                 className="relative flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-colors"
-                style={{ color: active ? NEON : "rgba(255,255,255,0.4)" }}>
+                style={{ color: active ? DASHBOARD_THEME.accent : DASHBOARD_THEME.textMuted }}>
                 <t.icon className="w-3.5 h-3.5" />
                 {t.label}
                 {active && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t-full"
-                    style={{ background: NEON }} />
+                    style={{ background: DASHBOARD_THEME.accent }} />
                 )}
               </button>
             );

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { Film, Video, Camera, Star, CheckCircle2, Eye, Flame } from "lucide-react";
 import SubmissionReviewTab from "./SubmissionReviewTab";
+import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
 
 const FILTER_OPTIONS = [
   { id: "all",        label: "All",        icon: Film },
@@ -40,9 +41,9 @@ export default function CreatorContentTab() {
               onClick={() => setFilter(id)}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-all"
               style={{
-                background: active ? "rgba(183,255,24,0.10)" : "rgba(255,255,255,0.03)",
-                color: active ? "#B7FF18" : "rgba(255,255,255,0.45)",
-                border: active ? "1px solid rgba(183,255,24,0.25)" : "1px solid rgba(255,255,255,0.07)",
+                 background: active ? rgbaAccent(0.10) : DASHBOARD_THEME.surfaceSubtle,
+                 color: active ? NEON : DASHBOARD_THEME.textMuted,
+                 border: active ? `1px solid ${rgbaAccent(0.25)}` : `1px solid ${DASHBOARD_THEME.borderSubtle}`,
               }}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -106,8 +107,8 @@ export default function CreatorContentTab() {
                     <Eye className="w-3 h-3" />
                     {(item.views ?? 0).toLocaleString()}
                   </span>
-                  {item.fires > 0 && (
-                    <span className="text-[9px] text-orange-400 flex items-center gap-0.5">
+                   {item.fires > 0 && (
+                    <span className="text-[9px] flex items-center gap-0.5" style={{ color: DASHBOARD_THEME.accent }}>
                       <Flame className="w-3 h-3" />
                       {item.fires}
                     </span>
@@ -115,7 +116,7 @@ export default function CreatorContentTab() {
                 </div>
                 <div className="flex gap-1 mt-2">
                   <button className="flex-1 text-[9px] font-bold py-1 rounded transition-all hover:brightness-110"
-                    style={{ background: "rgba(183,255,24,0.09)", color: "#B7FF18" }}>
+                     style={{ background: rgbaAccent(0.09), color: NEON }}>
                     <CheckCircle2 className="w-3 h-3 inline mr-0.5" />
                     Feature
                   </button>
