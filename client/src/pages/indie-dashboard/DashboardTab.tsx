@@ -9,7 +9,7 @@ import {
   AlertCircle, Star, CheckCircle2,
   TrendingUp, Play, ImagePlus,
 } from "lucide-react";
-import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
+import { NEON, CARD_BG, DASHBOARD_THEME, rgbaAccent } from "./constants";
 import { CAMPAIGNS_ENABLED } from "@/lib/feature-flags";
 
 type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "analytics" | "game-profile";
