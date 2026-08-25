@@ -4,3 +4,7 @@
 // studio profile tabs, home page CTAs, etc).
 export const CAMPAIGNS_ENABLED = false;
 export const BOUNTIES_ENABLED = false;
+
+// Game Developer onboarding and dashboard work is still being staged. Keep it
+// available in development while excluding it from production releases.
+export const GAME_DEVELOPER_FEATURES_ENABLED = import.meta.env.MODE !== "production";

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera, Clock, Layers, X as XIcon, Rocket, Radio, KeyRound, Gamepad2, BarChart3, Megaphone } from "lucide-react";
 import { isPartnerType } from "@shared/partner-access";
+import { GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
 import {
   LevelTrackerIcon,
   ReferFriendIcon,
@@ -741,7 +742,7 @@ const Header = () => {
                     </DropdownMenuGroup>
 
                     <DropdownMenuSeparator />
-                    {(user.userType?.split(",").includes("indie_developer") || isPartnerType(user, "indie") || user.role === "admin") && (
+                    {GAME_DEVELOPER_FEATURES_ENABLED && (user.userType?.split(",").includes("indie_developer") || isPartnerType(user, "indie") || user.role === "admin") && (
                       <DropdownMenuItem
                         className="cursor-pointer"
                         onClick={() => setLocation("/indie/dashboard")}
