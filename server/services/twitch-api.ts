@@ -244,19 +244,34 @@ class TwitchApiService {
     }
     
     try {
-      const token = await this.getAccessToken();
-      
-      // Use the search API which supports partial matches
-      const response = await axios.get('https://api.twitch.tv/helix/search/categories', {
-        headers: {
-          'Client-ID': this.clientId,
-          'Authorization': `Bearer ${token}`
+      const requestSearch = async (token: string) => axios.get(
+        'https://api.twitch.tv/helix/search/categories',
+        {
+          headers: {
+            'Client-ID': this.clientId,
+            'Authorization': `Bearer ${token}`,
+          },
+          params: {
+            query,
+            first: limit,
+          },
         },
-        params: {
-          query: query,
-          first: limit
+      );
+
+      let response;
+      try {
+        response = await requestSearch(await this.getAccessToken());
+      } catch (error) {
+        // A token can be revoked before its expiry (for example after a
+        // credential rotation). Clear it and retry once with a fresh token.
+        if (!axios.isAxiosError(error) || error.response?.status !== 401) {
+          throw error;
         }
-      });
+        console.warn('Twitch game search received a 401; refreshing app access token');
+        this.accessToken = null;
+        this.tokenExpiresAt = 0;
+        response = await requestSearch(await this.getAccessToken());
+      }
       
       return response.data.data.map((game: any) => ({
         id: game.id,
@@ -265,7 +280,7 @@ class TwitchApiService {
         igdb_id: game.igdb_id || ''
       }));
     } catch (error) {
-      console.error('Error searching games on Twitch:', error);
+      logTwitchError('Error searching games on Twitch', error);
       throw new Error('Failed to search games on Twitch API');
     }
   }
