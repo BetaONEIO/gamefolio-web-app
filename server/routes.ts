@@ -13292,13 +13292,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { user, profile } = result;
       if (!profile) return res.status(404).json({ error: "Indie game profile not found" });
       // Prefer the explicit relationship created by the indie write paths.
-      // Keep the name fallback for legacy profiles and older catalogue rows.
-      const namedGame = profile.gameName?.trim()
-        ? await storage.getGameByName(profile.gameName.trim())
-        : null;
-      const canonicalGame = profile.catalogGameId
+      // Legacy profiles receive the same idempotent reconciliation the next
+      // time their public hub is opened, so they are not left with a permanent
+      // “waiting for catalogue” state after this feature ships.
+      let canonicalGame = profile.catalogGameId
         ? await storage.getGame(profile.catalogGameId)
-        : (namedGame?.isApproved === false ? null : namedGame);
+        : null;
+      if (!canonicalGame && profile.gameName?.trim()) {
+        const catalogue = await _syncIndieGameCatalogue(profile);
+        canonicalGame = catalogue.game;
+      }
       res.json({
         user: { id: user.id, username: user.username, displayName: user.displayName, avatarUrl: user.avatarUrl, bio: user.bio, level: user.level, totalXP: user.totalXP, currentStreak: user.currentStreak },
         profile,
