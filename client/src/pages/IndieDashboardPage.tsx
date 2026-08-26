@@ -42,7 +42,7 @@ export default function IndieDashboardPage() {
   const [runWizardTemplate, setRunWizardTemplate] = useState<any>(null);
 
   // Lets links like the "Upload Keys" header menu item deep-link straight to
-  // a tab (e.g. /indie/dashboard?tab=keys). Reading window.location.search
+  // a tab (e.g. /game-dashboard?tab=keys). Reading window.location.search
   // once as initial state wouldn't work here: wouter keeps this component
   // mounted across a query-only navigation (the path doesn't change), so a
   // useState initializer never re-runs on a second "Upload Keys" click —

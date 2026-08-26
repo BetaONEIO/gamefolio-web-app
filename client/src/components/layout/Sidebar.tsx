@@ -267,7 +267,9 @@ const Sidebar = () => {
   );
   const menuItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
-    ...(user ? [{ icon: GamefolioDashboardIcon, label: "Dashboard", href: "/dashboard" }] : []),
+    ...(user && (!canAccessIndieGame || user.role === "admin")
+      ? [{ icon: GamefolioDashboardIcon, label: "Dashboard", href: "/dashboard" }]
+      : []),
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
@@ -289,7 +291,7 @@ const Sidebar = () => {
     { icon: GamefolioProfileIcon, label: "My Gamefolio", href: user ? `/profile/${user.username}` : "/auth", themed: true, gamefolioIcon: true },
 
     // Partner dashboards — visible only to the matching paid partner (admins see both).
-    ...(canAccessIndieGame ? [{ icon: Rocket, label: "Game Dashboard", href: "/indie/dashboard" }] : []),
+    ...(canAccessIndieGame ? [{ icon: Rocket, label: "Game Dashboard", href: "/game-dashboard" }] : []),
     ...(isPartnerType(user, "streamer") || user?.role === "admin" ? [{ icon: Radio, label: "Streamer Dashboard", href: "/streamer/dashboard" }] : []),
 
     { icon: GamefolioHelpIcon, label: "Help & Support", href: "/help" },

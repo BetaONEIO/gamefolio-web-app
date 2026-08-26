@@ -287,7 +287,7 @@ const MobileMenu = () => {
                   <span className="font-medium">Home</span>
                 </Link>
               </li>
-              {user && (
+              {user && (!canAccessIndieGame || user.role === "admin") && (
                 <li>
                   <Link
                     href="/dashboard"
@@ -302,7 +302,7 @@ const MobileMenu = () => {
               {canAccessIndieGame && (
                 <li>
                   <Link
-                    href="/indie/dashboard"
+                    href="/game-dashboard"
                     onClick={handleClose}
                     className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                     data-testid="mobile-game-dashboard-link"
