@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
@@ -59,7 +58,6 @@ export default function DashboardTab({
   onRunCampaign: () => void;
 }) {
   const { user } = useAuth();
-  const [, navigate] = useLocation();
   const [showUpgrade, setShowUpgrade] = useState(false);
 
   const { data: overview } = useQuery<any>({
@@ -116,23 +114,6 @@ export default function DashboardTab({
   const hasContent = content.length > 0;
   const hasKeys = demoKeys.available > 0 || fullKeys.available > 0;
   const profileReady = missingEssential.length === 0;
-  const communityUploadHref = (type: "clips" | "reels" | "screenshots") => {
-    const params = new URLSearchParams({ type });
-    const catalogGameId = Number(profile?.catalogGameId);
-
-    // Developer profiles are reconciled to the shared catalogue. Their linked
-    // game is the only allowed target for Developer Dashboard uploads.
-    if (Number.isInteger(catalogGameId) && catalogGameId > 0 && profile?.gameName) {
-      params.set("gameId", String(catalogGameId));
-      params.set("gameName", profile.gameName);
-      if (profile.capsuleImageUrl || profile.headerImageUrl) {
-        params.set("gameImage", profile.capsuleImageUrl || profile.headerImageUrl);
-      }
-    }
-
-    return `/upload?${params.toString()}`;
-  };
-
   /* ── 1. STATS STRIP ── */
   const stats = [
     ...(CAMPAIGNS_ENABLED ? [{ label: "Active Campaigns", value: String(activeCampaigns.length), icon: Target, color: activeCampaigns.length > 0 ? NEON : "#475569" }] : []),
@@ -167,56 +148,6 @@ export default function DashboardTab({
           </div>
         ))}
       </div>
-
-      {/* ── SHARE GAMEPLAY ── */}
-      <section
-        className="rounded-2xl p-5 sm:p-6"
-        style={{ background: "rgba(183,255,24,0.035)", border: "1px solid rgba(183,255,24,0.14)" }}
-      >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="max-w-2xl">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "rgba(183,255,24,0.12)" }}>
-                <Film className="h-4 w-4" style={{ color: NEON }} />
-              </div>
-              <h3 className="text-sm font-black text-white">Share gameplay</h3>
-            </div>
-            <p className="mt-2 text-xs leading-relaxed text-white/45">
-              Publish clips, reels, or screenshots for the games you manage.
-              {profile?.gameName && Number(profile?.catalogGameId) > 0 ? ` ${profile.gameName} is selected automatically.` : ""}
-            </p>
-          </div>
-          <div className="grid grid-cols-3 gap-2 sm:flex sm:shrink-0">
-            <button
-              type="button"
-              onClick={() => navigate(communityUploadHref("clips"))}
-              className="flex flex-col items-center gap-1.5 rounded-xl px-3 py-3 text-[11px] font-bold transition-all hover:brightness-110"
-              style={{ background: NEON, color: "#070b10" }}
-              data-testid="button-developer-upload-clip"
-            >
-              <Film className="h-4 w-4" /> Clip
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate(communityUploadHref("reels"))}
-              className="flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3 text-[11px] font-bold text-white/75 transition-colors hover:bg-white/[0.06]"
-              style={{ borderColor: "rgba(255,255,255,0.14)" }}
-              data-testid="button-developer-upload-reel"
-            >
-              <Video className="h-4 w-4" /> Reel
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate(communityUploadHref("screenshots"))}
-              className="flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3 text-[11px] font-bold text-white/75 transition-colors hover:bg-white/[0.06]"
-              style={{ borderColor: "rgba(255,255,255,0.14)" }}
-              data-testid="button-developer-upload-screenshot"
-            >
-              <Camera className="h-4 w-4" /> Screenshot
-            </button>
-          </div>
-        </div>
-      </section>
 
       {/* ── 2. LAUNCH CHECKLIST (pre-campaign) ── */}
       {!hasCampaign && (
