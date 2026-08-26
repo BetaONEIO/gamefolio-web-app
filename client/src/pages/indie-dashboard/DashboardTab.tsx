@@ -120,9 +120,8 @@ export default function DashboardTab({
     const params = new URLSearchParams({ type });
     const catalogGameId = Number(profile?.catalogGameId);
 
-    // Developer profiles are reconciled to the shared catalogue. Prefilling
-    // that game makes it fast to publish official gameplay, but the regular
-    // picker stays available so developers can still post as gamers.
+    // Developer profiles are reconciled to the shared catalogue. Their linked
+    // game is the only allowed target for Developer Dashboard uploads.
     if (Number.isInteger(catalogGameId) && catalogGameId > 0 && profile?.gameName) {
       params.set("gameId", String(catalogGameId));
       params.set("gameName", profile.gameName);
@@ -183,8 +182,8 @@ export default function DashboardTab({
               <h3 className="text-sm font-black text-white">Share gameplay</h3>
             </div>
             <p className="mt-2 text-xs leading-relaxed text-white/45">
-              Publish clips, reels, or screenshots for your game—or choose any approved game in the uploader.
-              {profile?.gameName && Number(profile?.catalogGameId) > 0 ? ` ${profile.gameName} will be selected first.` : ""}
+              Publish clips, reels, or screenshots for the games you manage.
+              {profile?.gameName && Number(profile?.catalogGameId) > 0 ? ` ${profile.gameName} is selected automatically.` : ""}
             </p>
           </div>
           <div className="grid grid-cols-3 gap-2 sm:flex sm:shrink-0">

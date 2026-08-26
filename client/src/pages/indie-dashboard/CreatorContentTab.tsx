@@ -32,9 +32,7 @@ type CreatorContentItem = {
 type CreatorContentResponse = {
   items?: CreatorContentItem[];
   ownedGameContent?: CreatorContentItem[];
-  otherGameContent?: CreatorContentItem[];
   ownedGameContentTotal?: number;
-  otherGameContentTotal?: number;
 };
 
 function filterByType(items: CreatorContentItem[], filter: string) {
@@ -123,10 +121,8 @@ export default function CreatorContentTab() {
   });
 
   const ownedGameContent = contentData?.ownedGameContent ?? contentData?.items ?? [];
-  const otherGameContent = contentData?.otherGameContent ?? [];
   const filteredOwnedGameContent = filterByType(ownedGameContent, filter);
-  const filteredOtherGameContent = filterByType(otherGameContent, filter);
-  const totalItems = filteredOwnedGameContent.length + filteredOtherGameContent.length;
+  const totalItems = filteredOwnedGameContent.length;
 
   return (
     <div className="space-y-8">
@@ -171,42 +167,18 @@ export default function CreatorContentTab() {
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
-          <section>
-            <div className="mb-3 flex items-end justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-black text-white">Content for your games</h2>
-                <p className="mt-1 text-xs text-white/35">
-                  Everything published for the catalogue games you manage.
-                </p>
-              </div>
-              <span className="text-xs text-white/25">{filteredOwnedGameContent.length} item{filteredOwnedGameContent.length !== 1 ? "s" : ""}</span>
+        <section>
+          <div className="mb-3 flex items-end justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-black text-white">Content for your games</h2>
+              <p className="mt-1 text-xs text-white/35">
+                Everything published for the catalogue games you manage.
+              </p>
             </div>
-            {filteredOwnedGameContent.length > 0 ? (
-              <ContentGrid items={filteredOwnedGameContent} showGame={true} />
-            ) : (
-              <div className="rounded-xl px-5 py-8 text-center text-xs text-white/30"
-                style={{ background: "rgba(255,255,255,0.015)", border: "1px dashed rgba(255,255,255,0.07)" }}>
-                No {filter === "all" ? "content" : `${filter}s`} published for your games yet.
-              </div>
-            )}
-          </section>
-
-          {filteredOtherGameContent.length > 0 && (
-            <section className="border-t pt-8" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-              <div className="mb-3 flex items-end justify-between gap-4">
-                <div>
-                  <h2 className="text-sm font-black text-white/80">Your uploads to other games</h2>
-                  <p className="mt-1 text-xs text-white/35">
-                    Your creator uploads for games you do not manage, kept separate from your game content.
-                  </p>
-                </div>
-                <span className="text-xs text-white/25">{filteredOtherGameContent.length} item{filteredOtherGameContent.length !== 1 ? "s" : ""}</span>
-              </div>
-              <ContentGrid items={filteredOtherGameContent} showGame={true} />
-            </section>
-          )}
-        </div>
+            <span className="text-xs text-white/25">{filteredOwnedGameContent.length} item{filteredOwnedGameContent.length !== 1 ? "s" : ""}</span>
+          </div>
+          <ContentGrid items={filteredOwnedGameContent} showGame={true} />
+        </section>
       )}
     </div>
   );

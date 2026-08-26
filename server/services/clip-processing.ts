@@ -3,6 +3,9 @@ import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
 import { supabaseStorage } from '../supabase-storage';
 import { storage } from '../storage';
+import { db } from '../db';
+import { indieGameProfiles } from '@shared/schema';
+import { and, eq } from 'drizzle-orm';
 import { insertClipSchema, type Clip } from '@shared/schema';
 import { VideoProcessor } from '../video-processor';
 import { XPService } from '../xp-service';
@@ -108,6 +111,10 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   }
   if (!['clip', 'reel'].includes(videoType)) {
     throw new ClipProcessingError(400, { error: 'Invalid video type. Must be "clip" or "reel"' });
+  }
+  const gameAccess = await validateDeveloperGameSelection(userId, gameId);
+  if (!gameAccess.allowed) {
+    throw new ClipProcessingError(403, { error: gameAccess.message });
   }
 
   // A response can be lost after the server has created the clip. Return that
@@ -424,6 +431,28 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   });
 
   return buildLiveClipResponse(clip, userId);
+}
+
+function isGameDeveloper(user: { userType?: string | null; isPartner?: boolean | null; partnerType?: string | null } | null | undefined) {
+  const personas = user?.userType?.split(",").map((type) => type.trim()) ?? [];
+  return personas.includes("indie_developer") || (user?.isPartner === true && user.partnerType === "indie");
+}
+
+export async function validateDeveloperGameSelection(userId: number, gameId: unknown): Promise<{ allowed: boolean; message?: string }> {
+  const user = await storage.getUser(userId);
+  if (!isGameDeveloper(user)) return { allowed: true };
+
+  const parsedGameId = Number(gameId);
+  if (!Number.isInteger(parsedGameId) || parsedGameId <= 0) {
+    return { allowed: false, message: "Select one of your own games before uploading." };
+  }
+  const [ownedProfile] = await db.select({ id: indieGameProfiles.id })
+    .from(indieGameProfiles)
+    .where(and(eq(indieGameProfiles.userId, userId), eq(indieGameProfiles.catalogGameId, parsedGameId)))
+    .limit(1);
+  return ownedProfile
+    ? { allowed: true }
+    : { allowed: false, message: "Game Developers can only upload content for games they manage." };
 }
 
 interface ClipPipelineContext {

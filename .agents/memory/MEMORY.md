@@ -24,3 +24,4 @@
 - [Indie dashboard access](indie-dashboard-access.md) — Indie Developer personas have the free game quota; paid Indie partners receive the higher subscriber quota.
 - [Private indie media URLs](private-indie-media-urls.md) — game profile media is stored in a private bucket; render it through the signed-URL hook, not its canonical storage URL.
 - [Expired signed media URLs](expired-signed-media-urls.md) — legacy asset records may persist expired signed Supabase URLs; refresh them by token expiry instead of treating every signed URL as current.
+- [Developer upload ownership](developer-upload-ownership.md) — Game Developers may publish only to catalogue games explicitly linked to their Indie profiles.

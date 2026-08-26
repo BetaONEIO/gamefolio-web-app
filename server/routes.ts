@@ -13427,19 +13427,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const emptyResponse = {
         ownedGames,
         ownedGameContent: [] as any[],
-        otherGameContent: [] as any[],
         ownedGameContentTotal: 0,
-        otherGameContentTotal: 0,
         // Keep older callers working while they migrate to the grouped fields.
         items: [] as any[],
       };
 
-      const loadVideos = async (scope: "owned" | "other") => {
+      const loadVideos = async () => {
         if (!wantsClips && !wantsReels) return [];
-        if (scope === "owned" && ownedGameIds.length === 0) return [];
-        const visibility = scope === "owned"
-          ? sql`c.game_id = ANY(${ownedGameIdsSql})`
-          : sql`c.user_id = ${req.user.id} AND c.game_id != ALL(${ownedGameIdsSql}) AND g.is_approved = true`;
+        if (ownedGameIds.length === 0) return [];
         const rows = await db.execute(sql`
           SELECT
             c.id,
@@ -13456,19 +13451,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           FROM clips c
           JOIN users u ON u.id = c.user_id
           JOIN games g ON g.id = c.game_id
-          WHERE ${visibility} ${videoTypeFilter}
+          WHERE c.game_id = ANY(${ownedGameIdsSql}) ${videoTypeFilter}
           ORDER BY ${clipSort}
           LIMIT 30
         `);
         return rows.rows ?? [];
       };
 
-      const loadScreenshots = async (scope: "owned" | "other") => {
+      const loadScreenshots = async () => {
         if (!wantsScreenshots) return [];
-        if (scope === "owned" && ownedGameIds.length === 0) return [];
-        const visibility = scope === "owned"
-          ? sql`s.game_id = ANY(${ownedGameIdsSql})`
-          : sql`s.user_id = ${req.user.id} AND s.game_id != ALL(${ownedGameIdsSql}) AND g.is_approved = true`;
+        if (ownedGameIds.length === 0) return [];
         const rows = await db.execute(sql`
           SELECT
             s.id,
@@ -13485,7 +13477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           FROM screenshots s
           JOIN users u ON u.id = s.user_id
           JOIN games g ON g.id = s.game_id
-          WHERE ${visibility}
+          WHERE s.game_id = ANY(${ownedGameIdsSql})
           ORDER BY ${screenshotSort}
           LIMIT 30
         `);
@@ -13500,21 +13492,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .slice(0, 30);
 
-      const [ownedVideos, ownedScreenshots, otherVideos, otherScreenshots] = await Promise.all([
-        loadVideos("owned"),
-        loadScreenshots("owned"),
-        loadVideos("other"),
-        loadScreenshots("other"),
+      const [ownedVideos, ownedScreenshots] = await Promise.all([
+        loadVideos(),
+        loadScreenshots(),
       ]);
       const ownedGameContent = sortAndLimit([...ownedVideos, ...ownedScreenshots]);
-      const otherGameContent = sortAndLimit([...otherVideos, ...otherScreenshots]);
 
       res.json({
         ownedGames,
         ownedGameContent,
-        otherGameContent,
         ownedGameContentTotal: ownedGameContent.length,
-        otherGameContentTotal: otherGameContent.length,
         // Compatibility response for the older settings implementation.
         items: ownedGameContent,
       });
@@ -13523,9 +13510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         ownedGames: [],
         ownedGameContent: [],
-        otherGameContent: [],
         ownedGameContentTotal: 0,
-        otherGameContentTotal: 0,
         items: [],
       });
     }
