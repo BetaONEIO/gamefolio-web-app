@@ -47,6 +47,7 @@ import { LevelTrackerModal } from "@/components/level/LevelTrackerModal";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useLevelTracker } from "@/hooks/use-level-tracker";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
+import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
 import ManageProDialog from "@/components/ManageProDialog";
 import { useAuthModal } from "@/hooks/use-auth-modal";
 import { resolveApiUrl } from "@/lib/platform";
@@ -523,15 +524,22 @@ const Header = () => {
           )}
           
           
-          <ProUpgradeDialog 
-            open={proUpgradeOpen} 
-            onOpenChange={setProUpgradeOpen}
-            onAuthRequired={() => {
-              setProUpgradeOpen(false);
-              sessionStorage.setItem('pending_pro_upgrade', '1');
-              openModal('login');
-            }}
-          />
+          {isIndieMode ? (
+            <IndieDevUpgradeDialog
+              open={proUpgradeOpen}
+              onOpenChange={setProUpgradeOpen}
+            />
+          ) : (
+            <ProUpgradeDialog
+              open={proUpgradeOpen}
+              onOpenChange={setProUpgradeOpen}
+              onAuthRequired={() => {
+                setProUpgradeOpen(false);
+                sessionStorage.setItem('pending_pro_upgrade', '1');
+                openModal('login');
+              }}
+            />
+          )}
           {user ? (
             <>
               {!isIndieMode && <LootboxTrigger onClick={() => setLootboxOpen(true)} />}
