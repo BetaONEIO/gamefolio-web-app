@@ -163,7 +163,7 @@ export default function DeveloperUploadContentDialog({
                 type="button"
                 onClick={() => {
                   onOpenChange(false);
-                  setLocation("/indie/dashboard?tab=game-profile");
+                  setLocation("/game-dashboard?tab=game-profile");
                 }}
                 className="mt-4 rounded-lg px-3 py-2 text-xs font-bold"
                 style={{ background: "rgba(183,255,24,0.10)", color: NEON }}

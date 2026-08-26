@@ -572,7 +572,7 @@ const Header = () => {
                         <Film className="h-4 w-4 mr-2" />
                         Upload Content
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setLocation('/indie/dashboard?tab=keys')} className="cursor-pointer">
+                      <DropdownMenuItem onClick={() => setLocation('/game-dashboard?tab=keys')} className="cursor-pointer">
                         <KeyRound className="h-4 w-4 mr-2" />
                         Upload Keys
                       </DropdownMenuItem>
