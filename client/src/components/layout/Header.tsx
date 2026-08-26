@@ -751,15 +751,6 @@ const Header = () => {
                     </DropdownMenuGroup>
 
                     <DropdownMenuSeparator />
-                    {GAME_DEVELOPER_FEATURES_ENABLED && (user.userType?.split(",").includes("indie_developer") || isPartnerType(user, "indie") || user.role === "admin") && (
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => setLocation("/indie/dashboard")}
-                      >
-                        <Rocket className="mr-2 h-4 w-4" />
-                        Game Dashboard
-                      </DropdownMenuItem>
-                    )}
                     {(isPartnerType(user, "streamer") || user.role === "admin") && (
                       <DropdownMenuItem
                         className="cursor-pointer"

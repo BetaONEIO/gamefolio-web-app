@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { X, Plus, Gift, Users, Bookmark, ChevronDown, Radio } from "lucide-react";
+import { X, Plus, Gift, Users, Bookmark, ChevronDown, Radio, Rocket } from "lucide-react";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioDashboardIcon } from "@/components/icons/GamefolioDashboardIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
@@ -25,6 +25,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Game } from "@shared/schema";
 import { isPartnerType } from "@shared/partner-access";
+import { GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
 import { GiftProSearchDialog } from "@/components/profile/GiftProSearchDialog";
 
 const LEVEL_THRESHOLDS = [
@@ -142,6 +143,11 @@ const MobileMenu = () => {
   const followerCount = (ownProfileData as any)?._count?.followers ?? 0;
   const followingCount = (ownProfileData as any)?._count?.following ?? 0;
   const isStreamerPartner = isPartnerType(user, "streamer");
+  const canAccessIndieGame = GAME_DEVELOPER_FEATURES_ENABLED && !!user && (
+    user.role === "admin" ||
+    isPartnerType(user, "indie") ||
+    user.userType?.split(",").includes("indie_developer")
+  );
 
   const { data: favoriteGames } = useQuery<Game[]>({
     queryKey: [`/api/users/${user?.id}/favorites`],
@@ -290,6 +296,19 @@ const MobileMenu = () => {
                   >
                     <GamefolioDashboardIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
                     <span className="font-medium">Dashboard</span>
+                  </Link>
+                </li>
+              )}
+              {canAccessIndieGame && (
+                <li>
+                  <Link
+                    href="/indie/dashboard"
+                    onClick={handleClose}
+                    className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
+                    data-testid="mobile-game-dashboard-link"
+                  >
+                    <Rocket className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                    <span className="font-medium">Game Dashboard</span>
                   </Link>
                 </li>
               )}
