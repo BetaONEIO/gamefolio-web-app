@@ -13324,6 +13324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         games: result.profiles.map(p => ({
           id: p.id,
+          catalogGameId: p.catalogGameId,
           gameName: p.gameName,
           headerImageUrl: p.headerImageUrl,
           capsuleImageUrl: p.capsuleImageUrl,
@@ -13387,6 +13388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const { type = "all", sort = "newest" } = req.query as any;
+    let ownedGames: Array<{ id: number; name: string | null; imageUrl: string | null }> = [];
     try {
       const { db } = await import("./db");
       const { sql } = await import("drizzle-orm");
@@ -13402,7 +13404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         LEFT JOIN games g ON g.id = igp.catalog_game_id
         WHERE igp.user_id = ${req.user.id} AND igp.catalog_game_id IS NOT NULL
       `);
-      const ownedGames = (profileRows.rows ?? [])
+      ownedGames = (profileRows.rows ?? [])
         .map((row: any) => ({ id: Number(row.catalogGameId), name: row.gameName ?? null, imageUrl: row.imageUrl ?? null }))
         .filter((game: { id: number }) => Number.isInteger(game.id) && game.id > 0);
       const ownedGameIds = ownedGames.map((game: { id: number }) => game.id);
@@ -13421,7 +13423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clipSort = normalizedSort === "most_viewed"
         ? sql`c.views DESC, c.created_at DESC`
         : normalizedSort === "most_liked"
-          ? sql`c.likes DESC, c.created_at DESC`
+          ? sql`c.created_at DESC`
           : sql`c.created_at DESC`;
       const screenshotSort = normalizedSort === "most_viewed"
         ? sql`s.views DESC, s.created_at DESC`
@@ -13511,7 +13513,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) {
       console.error("GET /api/indie/creator-content error:", err);
       res.json({
-        ownedGames: [],
+        ownedGames,
         ownedGameContent: [],
         ownedGameContentTotal: 0,
         items: [],
