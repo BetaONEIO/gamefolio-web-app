@@ -52,6 +52,7 @@ import { useAuthModal } from "@/hooks/use-auth-modal";
 import { resolveApiUrl } from "@/lib/platform";
 import { useIndieMode } from "@/hooks/use-indie-mode";
 import { CAMPAIGNS_ENABLED } from "@/lib/feature-flags";
+import DeveloperUploadContentDialog from "@/components/indie/DeveloperUploadContentDialog";
 
 const RECENT_SEARCHES_KEY = "gamefolio_recent_searches";
 const MAX_RECENT = 8;
@@ -150,6 +151,7 @@ const Header = () => {
   const { openModal } = useAuthModal();
   const [proUpgradeOpen, setProUpgradeOpen] = useState(false);
   const [manageProOpen, setManageProOpen] = useState(false);
+  const [developerUploadOpen, setDeveloperUploadOpen] = useState(false);
   const { user, logoutMutation } = useAuth();
 
   useEffect(() => {
@@ -551,39 +553,46 @@ const Header = () => {
                 onOpenChange={setManageProOpen}
               />
               {isIndieMode ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button className="ml-2 sm:ml-4 flex items-center px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)]">
-                      <Plus className="mr-1 sm:mr-3 h-4 w-4 sm:h-6 sm:w-6" />
-                      <span className="hidden sm:inline">New</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-52 mt-2">
-                    {CAMPAIGNS_ENABLED && (
-                      <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
-                        <Rocket className="h-4 w-4 mr-2" />
-                        New Campaign
+                <>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button className="ml-2 sm:ml-4 flex items-center px-3 sm:px-6 py-2 sm:py-3 text-sm sm:text-lg transition-all duration-300 bg-primary hover:bg-primary/90 border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_2px_8px_hsl(var(--primary)/0.13)]">
+                        <Plus className="mr-1 sm:mr-3 h-4 w-4 sm:h-6 sm:w-6" />
+                        <span className="hidden sm:inline">New</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52 mt-2">
+                      {CAMPAIGNS_ENABLED && (
+                        <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
+                          <Rocket className="h-4 w-4 mr-2" />
+                          New Campaign
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem onClick={() => setDeveloperUploadOpen(true)} className="cursor-pointer" data-testid="menu-upload-content">
+                        <Film className="h-4 w-4 mr-2" />
+                        Upload Content
                       </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={() => setLocation('/indie/dashboard?tab=keys')} className="cursor-pointer">
-                      <KeyRound className="h-4 w-4 mr-2" />
-                      Upload Keys
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
-                      <Gamepad2 className="h-4 w-4 mr-2" />
-                      Manage Game
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
-                      <Megaphone className="h-4 w-4 mr-2" />
-                      Publish Update
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
-                      <BarChart3 className="h-4 w-4 mr-2" />
-                      View Analytics
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      <DropdownMenuItem onClick={() => setLocation('/indie/dashboard?tab=keys')} className="cursor-pointer">
+                        <KeyRound className="h-4 w-4 mr-2" />
+                        Upload Keys
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
+                        <Gamepad2 className="h-4 w-4 mr-2" />
+                        Manage Game
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
+                        <Megaphone className="h-4 w-4 mr-2" />
+                        Publish Update
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
+                        <BarChart3 className="h-4 w-4 mr-2" />
+                        View Analytics
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <DeveloperUploadContentDialog open={developerUploadOpen} onOpenChange={setDeveloperUploadOpen} />
+                </>
               ) : (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

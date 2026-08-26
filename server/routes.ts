@@ -13395,12 +13395,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // developer can manage more than one game, and a renamed game must not
       // accidentally pick up a different catalogue title's content.
       const profileRows = await db.execute(sql`
-        SELECT catalog_game_id AS "catalogGameId", game_name AS "gameName"
-        FROM indie_game_profiles
-        WHERE user_id = ${req.user.id} AND catalog_game_id IS NOT NULL
+        SELECT igp.catalog_game_id AS "catalogGameId",
+               COALESCE(g.name, igp.game_name, CONCAT('Game ', igp.catalog_game_id::text)) AS "gameName",
+               g.image_url AS "imageUrl"
+        FROM indie_game_profiles igp
+        LEFT JOIN games g ON g.id = igp.catalog_game_id
+        WHERE igp.user_id = ${req.user.id} AND igp.catalog_game_id IS NOT NULL
       `);
       const ownedGames = (profileRows.rows ?? [])
-        .map((row: any) => ({ id: Number(row.catalogGameId), name: row.gameName ?? null }))
+        .map((row: any) => ({ id: Number(row.catalogGameId), name: row.gameName ?? null, imageUrl: row.imageUrl ?? null }))
         .filter((game: { id: number }) => Number.isInteger(game.id) && game.id > 0);
       const ownedGameIds = ownedGames.map((game: { id: number }) => game.id);
       const ownedGameIdsSql = sql`ARRAY[${sql.join(ownedGameIds.map((id: number) => sql`${id}`), sql`, `)}]::int[]`;
