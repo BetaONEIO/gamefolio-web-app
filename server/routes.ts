@@ -3079,7 +3079,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ALTER TABLE indie_game_profiles
           ADD COLUMN IF NOT EXISTS age_rating TEXT,
           ADD COLUMN IF NOT EXISTS supported_languages TEXT[],
-          ADD COLUMN IF NOT EXISTS content_descriptors TEXT[]
+          ADD COLUMN IF NOT EXISTS content_descriptors TEXT[],
+          ADD COLUMN IF NOT EXISTS catalog_game_id INTEGER REFERENCES games(id) ON DELETE SET NULL
+      `);
+      await db.execute(sql`
+        CREATE UNIQUE INDEX IF NOT EXISTS indie_game_profiles_catalog_game_id_unique
+        ON indie_game_profiles (catalog_game_id)
+        WHERE catalog_game_id IS NOT NULL
       `);
     } catch (err) {
       // Columns already exist or other harmless error
@@ -11739,7 +11745,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       // Clear useImported so GET /api/indie/profile returns the uploaded URL, not a stale imported value
       await _indieUpsertMeta(req.user.id, field, { isManualOverride: true, useImported: false, lastEditedAt: new Date() }, targetGameId);
-      res.json({ url: imageUrl, field });
+      const [updatedProfile] = targetGameId
+        ? await db.select().from(indieGameProfiles).where(eq(indieGameProfiles.id, targetGameId)).limit(1)
+        : [];
+      const catalogue = updatedProfile ? await _syncIndieGameCatalogue(updatedProfile) : { game: null };
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
+      res.json({ url: imageUrl, field, catalogueGame: catalogue.game });
     } catch (err) {
       console.error("Error uploading indie profile image:", err);
       res.status(500).json({ message: "Upload failed" });
@@ -12184,6 +12197,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return first?.id ?? null;
   }
 
+  type IndieCatalogueSyncResult = {
+    game: { id: number; name: string; imageUrl: string | null } | null;
+    conflict?: string;
+  };
+
+  // An Indie profile is the source of truth for a developer-owned game, while
+  // `games` is the catalogue used by uploads and community content. Reconcile
+  // the two through an explicit ID link so renaming a game never disconnects
+  // its clips/screenshots and title matches cannot attach another dev's game.
+  async function _syncIndieGameCatalogue(profile: any): Promise<IndieCatalogueSyncResult> {
+    const name = String(profile?.gameName ?? "").trim();
+    if (!name) return { game: null };
+
+    const { indieGameProfiles } = await import("@shared/schema");
+    const artwork = profile.capsuleImageUrl || profile.headerImageUrl || null;
+    const matchingName = async () => {
+      const [match] = await db.select().from(games)
+        .where(sql`lower(${games.name}) = lower(${name})`)
+        .limit(1);
+      return match ?? null;
+    };
+
+    const linked = profile.catalogGameId ? await storage.getGame(profile.catalogGameId) : null;
+    if (linked) {
+      const sameName = await matchingName();
+      if (sameName && sameName.id !== linked.id) {
+        return { game: null, conflict: "A different Gamefolio catalogue entry already uses this game name. Rename your game or contact support to merge the entries." };
+      }
+
+      // Only modify metadata for the catalogue row created by this indie flow.
+      // A pre-existing provider catalogue entry may be linked below, but its
+      // metadata must remain provider-owned.
+      if (linked.isUserAdded && !linked.showContactBanner) {
+        const updated = await storage.updateGame(linked.id, {
+          name,
+          imageUrl: artwork ?? linked.imageUrl,
+          isApproved: true,
+          showContactBanner: false,
+        });
+        if (updated) return { game: updated };
+      }
+      return { game: linked };
+    }
+
+    const existing = await matchingName();
+    if (existing) {
+      const [linkedElsewhere] = await db.select({ id: indieGameProfiles.id })
+        .from(indieGameProfiles)
+        .where(eq(indieGameProfiles.catalogGameId, existing.id))
+        .limit(1);
+      if (linkedElsewhere && linkedElsewhere.id !== profile.id) {
+        return { game: null, conflict: "This catalogue game is already managed by another indie profile. Choose a distinct title or contact support." };
+      }
+      if (existing.isUserAdded) {
+        return { game: null, conflict: "A community-submitted game already uses this title. Rename your game or contact support to safely merge the entries." };
+      }
+
+      await db.update(indieGameProfiles)
+        .set({ catalogGameId: existing.id, updatedAt: new Date() })
+        .where(eq(indieGameProfiles.id, profile.id));
+      profile.catalogGameId = existing.id;
+      return { game: existing };
+    }
+
+    const created = await storage.createGame({
+      name,
+      imageUrl: artwork,
+      isUserAdded: true,
+      isApproved: true,
+      showContactBanner: false,
+    });
+    await db.update(indieGameProfiles)
+      .set({ catalogGameId: created.id, updatedAt: new Date() })
+      .where(eq(indieGameProfiles.id, profile.id));
+    profile.catalogGameId = created.id;
+    return { game: created };
+  }
+
   // GET /api/indie/profile — owner: full profile + field meta
   // Resolution model: when useImported is true for a field, the resolved profile value
   // should reflect the importedValue rather than the manually-edited value.
@@ -12257,8 +12348,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (key === "updatedAt") continue;
         await _indieUpsertMeta(req.user.id, key, { isManualOverride: true, useImported: false, lastEditedAt: now }, profile?.id);
       }
+      const catalogue = profile ? await _syncIndieGameCatalogue(profile) : { game: null };
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
       const fieldMeta = await _indieFieldMetaMap(req.user.id, profile?.id);
-      res.json({ profile, fieldMeta });
+      res.json({ profile, fieldMeta, catalogueGame: catalogue.game });
     } catch (err) {
       console.error("PUT /api/indie/profile error:", err);
       res.status(500).json({ error: "Failed to update profile" });
@@ -12304,7 +12399,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .values({ userId: userId, ...patch, isPrimary: true }).returning();
         profile = ins[0];
       }
-      res.json({ profile });
+      const catalogue = await _syncIndieGameCatalogue(profile);
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
+      res.json({ profile, catalogueGame: catalogue.game });
     } catch (err) {
       console.error("POST /api/indie/onboarding-profile error:", err);
       res.status(500).json({ error: "Failed to save game profile" });
@@ -12509,7 +12608,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sortOrder: existing.length,
         updatedAt: new Date(),
       }).returning();
-      res.status(201).json({ game });
+      const catalogue = await _syncIndieGameCatalogue(game);
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
+      res.status(201).json({ game, catalogueGame: catalogue.game });
     } catch (err) {
       console.error("POST /api/indie/games error:", err);
       res.status(500).json({ error: "Failed to create game" });
@@ -12859,10 +12962,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }, metaGameId);
       }
 
+      const catalogue = profile ? await _syncIndieGameCatalogue(profile) : { game: null };
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
       const fieldMeta = await _indieFieldMetaMap(req.user.id, metaGameId);
       res.json({
         profile,
         fieldMeta,
+        catalogueGame: catalogue.game,
         imported: Object.keys(patch).length - 2,  // subtract updatedAt + timestamp fields
         protected: protected_fields,
         message: protected_fields.length
@@ -12962,8 +13070,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       const profile = await _indieGetOrCreate(req.user.id, syncGameId);
+      const catalogue = await _syncIndieGameCatalogue(profile);
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
       const fieldMetaNew = await _indieFieldMetaMap(req.user.id, syncGameId);
-      res.json({ profile, fieldMeta: fieldMetaNew, applied, skipped: [] });
+      res.json({ profile, fieldMeta: fieldMetaNew, applied, skipped: [], catalogueGame: catalogue.game });
     } catch (err) {
       console.error("POST /api/indie/sync-apply error:", err);
       res.status(500).json({ error: "Sync apply failed" });
@@ -13007,8 +13119,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastEditedAt: now,
       });
       const profile = await _indieGetOrCreate(req.user.id, revertGameId);
+      const catalogue = await _syncIndieGameCatalogue(profile);
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
       const fieldMetaNew = await _indieFieldMetaMap(req.user.id, revertGameId);
-      res.json({ profile, fieldMeta: fieldMetaNew, reverted: fieldName, value: importedValue });
+      res.json({ profile, fieldMeta: fieldMetaNew, reverted: fieldName, value: importedValue, catalogueGame: catalogue.game });
     } catch (err) {
       console.error("POST /api/indie/field-revert error:", err);
       res.status(500).json({ error: "Revert failed" });
@@ -13045,7 +13161,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         imgTargetId = created?.id ?? null;
       }
       await _indieUpsertMeta(req.user.id, field, { isManualOverride: true, lastEditedAt: new Date() }, imgTargetId);
-      res.json({ url: imageUrl, field });
+      const [updatedProfile] = imgTargetId
+        ? await db.select().from(indieGameProfiles).where(eq(indieGameProfiles.id, imgTargetId)).limit(1)
+        : [];
+      const catalogue = updatedProfile ? await _syncIndieGameCatalogue(updatedProfile) : { game: null };
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
+      res.json({ url: imageUrl, field, catalogueGame: catalogue.game });
     } catch (err) {
       console.error("POST /api/indie/upload/image error:", err);
       try { if (req.file?.path) await fsPromises.unlink(req.file.path); } catch {}
@@ -13168,12 +13291,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!result) return res.status(404).json({ error: "Indie game profile not found" });
       const { user, profile } = result;
       if (!profile) return res.status(404).json({ error: "Indie game profile not found" });
-      // Indie profile records pre-date the canonical games table. Resolve the
-      // existing game by its name without creating a record, so community
-      // content is only shown when it is genuinely associated with this game.
-      const canonicalGame = profile.gameName?.trim()
+      // Prefer the explicit relationship created by the indie write paths.
+      // Keep the name fallback for legacy profiles and older catalogue rows.
+      const namedGame = profile.gameName?.trim()
         ? await storage.getGameByName(profile.gameName.trim())
         : null;
+      const canonicalGame = profile.catalogGameId
+        ? await storage.getGame(profile.catalogGameId)
+        : (namedGame?.isApproved === false ? null : namedGame);
       res.json({
         user: { id: user.id, username: user.username, displayName: user.displayName, avatarUrl: user.avatarUrl, bio: user.bio, level: user.level, totalXP: user.totalXP, currentStreak: user.currentStreak },
         profile,
