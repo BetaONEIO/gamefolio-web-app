@@ -13406,6 +13406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ownedGameIdsSql = sql`ARRAY[${sql.join(ownedGameIds.map((id: number) => sql`${id}`), sql`, `)}]::int[]`;
 
       const normalizedType = String(type).toLowerCase();
+      const normalizedSort = String(sort).toLowerCase();
       const wantsClips = normalizedType === "all" || normalizedType === "clip" || normalizedType === "clips";
       const wantsReels = normalizedType === "all" || normalizedType === "reel" || normalizedType === "reels";
       const wantsScreenshots = normalizedType === "all" || normalizedType === "screenshot" || normalizedType === "screenshots";
@@ -13414,12 +13415,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : wantsReels
           ? sql`AND c.video_type = 'reel'`
           : sql`AND (c.video_type = 'clip' OR c.video_type IS NULL)`;
-      const clipSort = normalizedType === "most_viewed"
+      const clipSort = normalizedSort === "most_viewed"
         ? sql`c.views DESC, c.created_at DESC`
-        : normalizedType === "most_liked"
+        : normalizedSort === "most_liked"
           ? sql`c.likes DESC, c.created_at DESC`
           : sql`c.created_at DESC`;
-      const screenshotSort = normalizedType === "most_viewed"
+      const screenshotSort = normalizedSort === "most_viewed"
         ? sql`s.views DESC, s.created_at DESC`
         : sql`s.created_at DESC`;
 
@@ -13438,7 +13439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (scope === "owned" && ownedGameIds.length === 0) return [];
         const visibility = scope === "owned"
           ? sql`c.game_id = ANY(${ownedGameIdsSql})`
-          : sql`c.user_id = ${req.user.id} AND c.game_id != ALL(${ownedGameIdsSql})`;
+          : sql`c.user_id = ${req.user.id} AND c.game_id != ALL(${ownedGameIdsSql}) AND g.is_approved = true`;
         const rows = await db.execute(sql`
           SELECT
             c.id,
@@ -13467,7 +13468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (scope === "owned" && ownedGameIds.length === 0) return [];
         const visibility = scope === "owned"
           ? sql`s.game_id = ANY(${ownedGameIdsSql})`
-          : sql`s.user_id = ${req.user.id} AND s.game_id != ALL(${ownedGameIdsSql})`;
+          : sql`s.user_id = ${req.user.id} AND s.game_id != ALL(${ownedGameIdsSql}) AND g.is_approved = true`;
         const rows = await db.execute(sql`
           SELECT
             s.id,
@@ -13493,8 +13494,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const sortAndLimit = (items: any[]) => items
         .sort((a, b) => {
-          if (normalizedType === "most_viewed") return Number(b.views ?? 0) - Number(a.views ?? 0);
-          if (normalizedType === "most_liked") return Number(b.likes ?? 0) - Number(a.likes ?? 0);
+          if (normalizedSort === "most_viewed") return Number(b.views ?? 0) - Number(a.views ?? 0);
+          if (normalizedSort === "most_liked") return Number(b.likes ?? 0) - Number(a.likes ?? 0);
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         })
         .slice(0, 30);

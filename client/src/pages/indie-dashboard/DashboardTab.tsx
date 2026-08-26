@@ -78,7 +78,7 @@ export default function DashboardTab({
     queryKey: ["/api/indie/bounty-status"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
-  const { data: contentData } = useQuery<any[]>({
+  const { data: contentData } = useQuery<any>({
     queryKey: ["/api/indie/creator-content"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
@@ -99,11 +99,14 @@ export default function DashboardTab({
   };
   const demoKeys = bountyStatus?.demoKeys ?? { available: d.demoKeysRemaining ?? 0, claimed: 0 };
   const fullKeys = bountyStatus?.fullGameKeys ?? { available: d.fullKeysRemaining ?? 0, awarded: 0 };
-  const content = Array.isArray(contentData) ? contentData : [];
+  const content = Array.isArray(contentData)
+    ? contentData
+    : contentData?.ownedGameContent ?? contentData?.items ?? [];
   const clipsTotal = analyticsData?.clipsGenerated ?? 0;
   const screenshotsTotal = analyticsData?.screenshotsGenerated ?? 0;
   const reelsTotal = analyticsData?.reelsGenerated ?? 0;
-  const contentTotal = clipsTotal + screenshotsTotal + reelsTotal;
+  const analyticsContentTotal = clipsTotal + screenshotsTotal + reelsTotal;
+  const contentTotal = analyticsContentTotal || contentData?.ownedGameContentTotal || content.length;
   const activeCampaigns = (campaigns ?? []).filter((c: any) => c.status === "live" || c.status === "approved");
 
   // Forced off (not just hidden from the checklist/stats below) while
