@@ -5,6 +5,7 @@ import { Camera, ChevronLeft, Film, Gamepad2, Loader2, Video } from "lucide-reac
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DASHBOARD_THEME, NEON } from "@/pages/indie-dashboard/constants";
 import { resolveApiUrl } from "@/lib/platform";
+import { useAuth } from "@/hooks/use-auth";
 
 type OwnedGame = {
   id: number;
@@ -12,8 +13,13 @@ type OwnedGame = {
   imageUrl?: string | null;
 };
 
-type OwnedGamesResponse = {
-  ownedGames?: OwnedGame[];
+type GameProfileListResponse = {
+  games?: Array<{
+    catalogGameId?: number | null;
+    gameName?: string | null;
+    headerImageUrl?: string | null;
+    capsuleImageUrl?: string | null;
+  }>;
 };
 
 type ContentChoice = {
@@ -38,14 +44,17 @@ export default function DeveloperUploadContentDialog({
 }) {
   const [, setLocation] = useLocation();
   const [selectedGame, setSelectedGame] = useState<OwnedGame | null>(null);
-  const { data, isLoading, isError } = useQuery<OwnedGamesResponse>({
-    queryKey: ["/api/indie/creator-content", "owned-games-for-upload"],
+  const { user } = useAuth();
+  const username = user?.username;
+  const { data, isLoading, isError } = useQuery<GameProfileListResponse>({
+    queryKey: ["/api/games/indie", username, "uploadable-games"],
     queryFn: async () => {
-      const response = await fetch(resolveApiUrl("/api/indie/creator-content"), { credentials: "include" });
+      const response = await fetch(resolveApiUrl(`/api/games/indie/${encodeURIComponent(username!)}/list`), { credentials: "include" });
+      if (response.status === 404) return { games: [] };
       if (!response.ok) throw new Error("Could not load your games");
       return response.json();
     },
-    enabled: open,
+    enabled: open && !!username,
     staleTime: 30_000,
   });
 
@@ -53,7 +62,13 @@ export default function DeveloperUploadContentDialog({
     if (!open) setSelectedGame(null);
   }, [open]);
 
-  const ownedGames = data?.ownedGames ?? [];
+  const ownedGames: OwnedGame[] = (data?.games ?? [])
+    .filter((game) => Number.isInteger(game.catalogGameId) && Number(game.catalogGameId) > 0)
+    .map((game) => ({
+      id: Number(game.catalogGameId),
+      name: game.gameName?.trim() || `Game ${game.catalogGameId}`,
+      imageUrl: game.capsuleImageUrl ?? game.headerImageUrl ?? null,
+    }));
 
   const beginUpload = (type: ContentChoice["type"]) => {
     if (!selectedGame) return;
