@@ -16,7 +16,7 @@ import { hybridFullAccess } from '../middleware/hybrid-auth';
 import { XPService } from '../xp-service';
 import { captureRouteError, captureRouteMessage } from "../sentry";
 import { getRequestMeta } from "../lib/request-meta";
-import { processAndCreateClip, ClipProcessingError, isValidUploadAttemptId } from '../services/clip-processing';
+import { processAndCreateClip, ClipProcessingError, isValidUploadAttemptId, validateDeveloperGameSelection } from '../services/clip-processing';
 
 const router = express.Router();
 
@@ -506,6 +506,15 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
           scheduleLimits,
         });
       }
+    }
+
+    // Developers may only publish content for catalogue games linked to their
+    // Indie profiles. Check the raw requested ID before any fallback can create
+    // or resolve an unrelated catalogue record.
+    const requestedGameAccess = await validateDeveloperGameSelection(req.user!.id, gameId);
+    if (!requestedGameAccess.allowed) {
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
+      return res.status(403).json({ error: requestedGameAccess.message });
     }
 
     // Handle game ID - ensure game exists in database
