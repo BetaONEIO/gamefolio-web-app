@@ -13906,14 +13906,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // All users get default tags + their individually unlocked tags
+      // All users get default tags + their individually unlocked tags.
+      // Also retain an active tag that was selected before ownership records
+      // were introduced (for example, an admin-assigned legacy tag). Without
+      // this, the profile can render the selected tag while its owner cannot
+      // see or remove it in Profile & Appearance.
       const allTags = await storage.getAllNameTags();
       const defaultTags = allTags.filter(t => t.isDefault);
       const unlockedTags = await storage.getUserUnlockedNameTags(req.user.id);
+      const currentUser = await storage.getUserById(req.user.id);
+      const selectedTag = currentUser?.selectedNameTagId
+        ? allTags.find(t => t.id === currentUser.selectedNameTagId && t.isActive)
+        : undefined;
       
-      // Merge default and unlocked tags, avoiding duplicates
+      // Merge default, unlocked, and legacy-selected tags, avoiding duplicates.
       const unlockedIds = new Set(unlockedTags.map(t => t.id));
-      const mergedTags = [...defaultTags.filter(t => !unlockedIds.has(t.id)), ...unlockedTags];
+      const mergedTags = [
+        ...defaultTags.filter(t => !unlockedIds.has(t.id)),
+        ...unlockedTags,
+      ];
+      if (selectedTag && !mergedTags.some(t => t.id === selectedTag.id)) {
+        mergedTags.push(selectedTag);
+      }
       
       res.json(mergedTags);
     } catch (err) {
