@@ -2052,18 +2052,16 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className={`grid w-full gap-1 ${user.isPartner ? "grid-cols-2" : "grid-cols-3 sm:grid-cols-5"}`}>
+          <TabsList className={`grid w-full gap-1 ${user.isPartner ? "grid-cols-3" : "grid-cols-3 sm:grid-cols-5"}`}>
             <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Profile</span>
             </TabsTrigger>
-            {!user.isPartner && (
-              <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-                <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Appearance</span>
-                <span className="sm:hidden">Look</span>
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Appearance</span>
+              <span className="sm:hidden">Look</span>
+            </TabsTrigger>
             {!user.isPartner && (
               <TabsTrigger value="banners" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
                 <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
