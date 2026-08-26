@@ -2346,6 +2346,10 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   isPrimary: boolean("is_primary").default(false).notNull(),
   sortOrder: integer("sort_order").default(0).notNull(),
+  // The approved Gamefolio catalogue entry created for this developer-owned game.
+  // Keeping the relationship explicit prevents title changes from disconnecting
+  // community uploads or accidentally attaching to another developer's game.
+  catalogGameId: integer("catalog_game_id").references(() => games.id, { onDelete: "set null" }),
 
   // Section 1: Basic Info
   gameName: text("game_name"),
