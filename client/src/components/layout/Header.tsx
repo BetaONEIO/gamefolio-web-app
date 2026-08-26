@@ -686,14 +686,16 @@ const Header = () => {
                         <span>Level Tracker</span>
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onClick={() => setLocation("/account/settings?tab=referral")}
-                      data-testid="button-referral"
-                    >
-                      <ReferFriendIcon className="mr-2 h-4 w-4" />
-                      <span>Refer a Friend</span>
-                    </DropdownMenuItem>
+                    {!isIndieMode && (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/account/settings?tab=referral")}
+                        data-testid="button-referral"
+                      >
+                        <ReferFriendIcon className="mr-2 h-4 w-4" />
+                        <span>Refer a Friend</span>
+                      </DropdownMenuItem>
+                    )}
 
                     {user?.isAmbassador && (
                       <DropdownMenuItem
@@ -714,7 +716,7 @@ const Header = () => {
                         data-testid="button-go-pro"
                       >
                         <GoProIcon className="mr-2 h-4 w-4" />
-                        <span>Go Pro</span>
+                        <span>{isIndieMode ? "Game Developer Pro" : "Go Pro"}</span>
                       </DropdownMenuItem>
                     )}
                     
