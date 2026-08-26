@@ -13390,42 +13390,143 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { db } = await import("./db");
       const { sql } = await import("drizzle-orm");
-      // Find the indie profile to get the game name
+
+      // Use the explicit catalogue relationship rather than title matching. A
+      // developer can manage more than one game, and a renamed game must not
+      // accidentally pick up a different catalogue title's content.
       const profileRows = await db.execute(sql`
-        SELECT game_name FROM indie_game_profiles WHERE user_id = ${req.user.id} LIMIT 1
+        SELECT catalog_game_id AS "catalogGameId", game_name AS "gameName"
+        FROM indie_game_profiles
+        WHERE user_id = ${req.user.id} AND catalog_game_id IS NOT NULL
       `);
-      const gameName = (profileRows.rows?.[0] as any)?.game_name;
-      if (!gameName) return res.json({ items: [] });
+      const ownedGames = (profileRows.rows ?? [])
+        .map((row: any) => ({ id: Number(row.catalogGameId), name: row.gameName ?? null }))
+        .filter((game: { id: number }) => Number.isInteger(game.id) && game.id > 0);
+      const ownedGameIds = ownedGames.map((game: { id: number }) => game.id);
+      const ownedGameIdsSql = sql`ARRAY[${sql.join(ownedGameIds.map((id: number) => sql`${id}`), sql`, `)}]::int[]`;
 
-      const orderBy = sort === "most_viewed" ? "c.views DESC" : sort === "most_liked" ? "c.likes DESC" : "c.created_at DESC";
-      let items: any[] = [];
+      const normalizedType = String(type).toLowerCase();
+      const wantsClips = normalizedType === "all" || normalizedType === "clip" || normalizedType === "clips";
+      const wantsReels = normalizedType === "all" || normalizedType === "reel" || normalizedType === "reels";
+      const wantsScreenshots = normalizedType === "all" || normalizedType === "screenshot" || normalizedType === "screenshots";
+      const videoTypeFilter = wantsClips && wantsReels
+        ? sql``
+        : wantsReels
+          ? sql`AND c.video_type = 'reel'`
+          : sql`AND (c.video_type = 'clip' OR c.video_type IS NULL)`;
+      const clipSort = normalizedType === "most_viewed"
+        ? sql`c.views DESC, c.created_at DESC`
+        : normalizedType === "most_liked"
+          ? sql`c.likes DESC, c.created_at DESC`
+          : sql`c.created_at DESC`;
+      const screenshotSort = normalizedType === "most_viewed"
+        ? sql`s.views DESC, s.created_at DESC`
+        : sql`s.created_at DESC`;
 
-      if (type === "all" || type === "clips") {
+      const emptyResponse = {
+        ownedGames,
+        ownedGameContent: [] as any[],
+        otherGameContent: [] as any[],
+        ownedGameContentTotal: 0,
+        otherGameContentTotal: 0,
+        // Keep older callers working while they migrate to the grouped fields.
+        items: [] as any[],
+      };
+
+      const loadVideos = async (scope: "owned" | "other") => {
+        if (!wantsClips && !wantsReels) return [];
+        if (scope === "owned" && ownedGameIds.length === 0) return [];
+        const visibility = scope === "owned"
+          ? sql`c.game_id = ANY(${ownedGameIdsSql})`
+          : sql`c.user_id = ${req.user.id} AND c.game_id != ALL(${ownedGameIdsSql})`;
         const rows = await db.execute(sql`
-          SELECT c.id, 'clip' AS type, c.title, c.thumbnail_url AS "thumbnailUrl", c.views, c.likes, u.username, c.created_at AS "createdAt"
+          SELECT
+            c.id,
+            CASE WHEN c.video_type = 'reel' THEN 'reel' ELSE 'clip' END AS type,
+            c.title,
+            c.thumbnail_url AS "thumbnailUrl",
+            COALESCE(c.views, 0) AS views,
+            0 AS likes,
+            c.user_id = ${req.user.id} AS "isDeveloperUpload",
+            u.username AS "creatorUsername",
+            g.id AS "gameId",
+            g.name AS "gameName",
+            c.created_at AS "createdAt"
           FROM clips c
           JOIN users u ON u.id = c.user_id
           JOIN games g ON g.id = c.game_id
-          WHERE g.name ILIKE ${'%' + gameName + '%'} AND c.user_id != ${req.user.id}
-          ORDER BY c.created_at DESC LIMIT 20
+          WHERE ${visibility} ${videoTypeFilter}
+          ORDER BY ${clipSort}
+          LIMIT 30
         `);
-        items = [...items, ...(rows.rows ?? [])];
-      }
-      if (type === "all" || type === "screenshots") {
+        return rows.rows ?? [];
+      };
+
+      const loadScreenshots = async (scope: "owned" | "other") => {
+        if (!wantsScreenshots) return [];
+        if (scope === "owned" && ownedGameIds.length === 0) return [];
+        const visibility = scope === "owned"
+          ? sql`s.game_id = ANY(${ownedGameIdsSql})`
+          : sql`s.user_id = ${req.user.id} AND s.game_id != ALL(${ownedGameIdsSql})`;
         const rows = await db.execute(sql`
-          SELECT s.id, 'screenshot' AS type, s.title, s.file_url AS "thumbnailUrl", 0 AS views, 0 AS likes, u.username, s.created_at AS "createdAt"
+          SELECT
+            s.id,
+            'screenshot' AS type,
+            s.title,
+            COALESCE(s.thumbnail_url, s.image_url) AS "thumbnailUrl",
+            COALESCE(s.views, 0) AS views,
+            0 AS likes,
+            s.user_id = ${req.user.id} AS "isDeveloperUpload",
+            u.username AS "creatorUsername",
+            g.id AS "gameId",
+            g.name AS "gameName",
+            s.created_at AS "createdAt"
           FROM screenshots s
           JOIN users u ON u.id = s.user_id
           JOIN games g ON g.id = s.game_id
-          WHERE g.name ILIKE ${'%' + gameName + '%'} AND s.user_id != ${req.user.id}
-          ORDER BY s.created_at DESC LIMIT 20
+          WHERE ${visibility}
+          ORDER BY ${screenshotSort}
+          LIMIT 30
         `);
-        items = [...items, ...(rows.rows ?? [])];
-      }
-      res.json({ items: items.slice(0, 30) });
+        return rows.rows ?? [];
+      };
+
+      const sortAndLimit = (items: any[]) => items
+        .sort((a, b) => {
+          if (normalizedType === "most_viewed") return Number(b.views ?? 0) - Number(a.views ?? 0);
+          if (normalizedType === "most_liked") return Number(b.likes ?? 0) - Number(a.likes ?? 0);
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        })
+        .slice(0, 30);
+
+      const [ownedVideos, ownedScreenshots, otherVideos, otherScreenshots] = await Promise.all([
+        loadVideos("owned"),
+        loadScreenshots("owned"),
+        loadVideos("other"),
+        loadScreenshots("other"),
+      ]);
+      const ownedGameContent = sortAndLimit([...ownedVideos, ...ownedScreenshots]);
+      const otherGameContent = sortAndLimit([...otherVideos, ...otherScreenshots]);
+
+      res.json({
+        ownedGames,
+        ownedGameContent,
+        otherGameContent,
+        ownedGameContentTotal: ownedGameContent.length,
+        otherGameContentTotal: otherGameContent.length,
+        // Compatibility response for the older settings implementation.
+        items: ownedGameContent,
+      });
     } catch (err) {
       console.error("GET /api/indie/creator-content error:", err);
-      res.json({ items: [] });
+      res.json({
+        ownedGames: [],
+        ownedGameContent: [],
+        otherGameContent: [],
+        ownedGameContentTotal: 0,
+        otherGameContentTotal: 0,
+        items: [],
+      });
     }
   });
 
