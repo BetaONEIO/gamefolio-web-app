@@ -4,6 +4,7 @@ import { Crown, Loader2, X, Check, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useAuth } from "@/hooks/use-auth";
+import { useIndieMode } from "@/hooks/use-indie-mode";
 import type { RcPackage } from "@/hooks/use-revenuecat";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import {
@@ -184,6 +185,8 @@ function parseApiErrorMessage(error: unknown, fallback: string): string {
 export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthRequired }: ProUpgradeDialogProps) {
   const { isInitialized, isLoading, isPro, getCurrentOffering, purchasePackage } = useRevenueCat();
   const { user } = useAuth();
+  const { isIndieMode } = useIndieMode();
+  const proProductName = isIndieMode ? "Developer Pro" : "Gamefolio Pro";
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
   const [purchasing, setPurchasing] = useState(false);
   const [step, setStep] = useState<"plans" | "checkout" | "success">("plans");
@@ -428,7 +431,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">You're already Pro!</h2>
             <p className="text-[#B8C0AE] mb-6">
-              You have full access to all Gamefolio Pro features. Thank you for your support!
+              You have full access to all {proProductName} features. Thank you for your support!
             </p>
             <button
               onClick={() => onOpenChange(false)}
@@ -608,7 +611,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       <div className="absolute inset-0">
         <img
           src={proHeroImage}
-          alt="Gamefolio Pro"
+          alt={proProductName}
           className="w-full h-full object-cover"
           style={{ objectPosition: "center 70%" }}
         />
@@ -641,7 +644,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         <div className="text-center md:text-left mb-1">
           <h2 className="text-xl font-bold leading-tight whitespace-nowrap">
             <span className="text-white">Unlock </span>
-            <span className="text-[#B7FF1A]">Gamefolio Pro</span>
+            <span className="text-[#B7FF1A]">{proProductName}</span>
           </h2>
         </div>
 
@@ -702,7 +705,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
             <Loader2 className="w-5 h-5 animate-spin text-[#071013]" />
           ) : (
             <>
-              <span className="text-[#071013] text-base font-bold">Join Gamefolio Pro</span>
+              <span className="text-[#071013] text-base font-bold">Join {proProductName}</span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#022C22" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -784,7 +787,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                 <div className="relative w-full flex-shrink-0" style={{ height: "56vh" }}>
                   <img
                     src={proHeroImage}
-                    alt="Gamefolio Pro"
+                    alt={proProductName}
                     className="w-full h-full object-cover"
                     style={{ objectPosition: "center 70%" }}
                   />
@@ -815,7 +818,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
                   <h2 className="text-center text-xl font-bold leading-tight mb-0.5">
                     <span className="text-white">Unlock </span>
-                    <span className="text-[#B7FF1A]">Gamefolio Pro</span>
+                    <span className="text-[#B7FF1A]">{proProductName}</span>
                   </h2>
 
                   <p className="text-[#B8C0AE] text-xs text-center leading-relaxed mb-3 max-w-[260px] mx-auto">
@@ -869,7 +872,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                       <Loader2 className="w-5 h-5 animate-spin text-[#071013]" />
                     ) : (
                       <>
-                        <span className="text-[#071013] text-base font-bold">Join Gamefolio Pro</span>
+                        <span className="text-[#071013] text-base font-bold">Join {proProductName}</span>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#022C22" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
