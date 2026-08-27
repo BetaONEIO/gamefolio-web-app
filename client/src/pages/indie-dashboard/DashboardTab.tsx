@@ -3,15 +3,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import {
-  Rocket, KeyRound, Film, Camera, Video,
+  Rocket, Film, Camera, Video,
   ArrowUpRight, ChevronRight,
   AlertCircle, Star, CheckCircle2,
   TrendingUp, Play, ImagePlus,
 } from "lucide-react";
 import { NEON, CARD_BG, DASHBOARD_THEME, rgbaAccent } from "./constants";
-import { CAMPAIGNS_ENABLED } from "@/lib/feature-flags";
 
-type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "analytics" | "game-profile";
+type TopTabId = "overview" | "creator-content" | "analytics" | "game-profile";
 
 const ESSENTIAL_FIELDS = ["gameName","shortDescription","headerImageUrl","steamUrl","epicUrl","itchUrl"];
 const ALL_PROFILE_FIELDS = [
@@ -42,27 +41,14 @@ function isFieldFilled(profile: any, f: string): boolean {
   return true;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  live: NEON, approved: DASHBOARD_THEME.success, scheduled: DASHBOARD_THEME.info,
-  awaiting_review: DASHBOARD_THEME.warning, changes_requested: DASHBOARD_THEME.warning,
-  draft: DASHBOARD_THEME.textMuted, completed: DASHBOARD_THEME.success,
-  cancelled: DASHBOARD_THEME.danger, paused: DASHBOARD_THEME.textMuted,
-};
-
 export default function DashboardTab({
   onGoTo,
-  onRunCampaign,
 }: {
   onGoTo: (tab: TopTabId, sub?: string) => void;
-  onRunCampaign: () => void;
 }) {
   const { user } = useAuth();
   const [showUpgrade, setShowUpgrade] = useState(false);
 
-  const { data: overview } = useQuery<any>({
-    queryKey: ["/api/campaigns/overview"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-  });
   const { data: profileData } = useQuery<any>({
     queryKey: ["/api/indie/profile"],
     queryFn: getQueryFn({ on401: "returnNull" }),
@@ -71,16 +57,8 @@ export default function DashboardTab({
     queryKey: ["/api/indie/analytics"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
-  const { data: bountyStatus } = useQuery<any>({
-    queryKey: ["/api/indie/bounty-status"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-  });
   const { data: contentData } = useQuery<any>({
     queryKey: ["/api/indie/creator-content"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
-  });
-  const { data: campaigns } = useQuery<any[]>({
-    queryKey: ["/api/campaigns/my"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
@@ -90,12 +68,6 @@ export default function DashboardTab({
   const missingEssential = ESSENTIAL_FIELDS.filter((f) => !isFieldFilled(profile, f));
   const nextSteps = PROFILE_STEPS.filter((s) => !isFieldFilled(profile, s.field)).slice(0, 3);
 
-  const d = overview ?? {
-    activeCampaigns: 0, totalParticipants: 0,
-    demoKeysRemaining: 0, fullKeysRemaining: 0, recentCampaigns: [], totalViews: 0,
-  };
-  const demoKeys = bountyStatus?.demoKeys ?? { available: d.demoKeysRemaining ?? 0, claimed: 0 };
-  const fullKeys = bountyStatus?.fullGameKeys ?? { available: d.fullKeysRemaining ?? 0, awarded: 0 };
   const content = Array.isArray(contentData)
     ? contentData
     : contentData?.ownedGameContent ?? contentData?.items ?? [];
@@ -104,20 +76,12 @@ export default function DashboardTab({
   const reelsTotal = analyticsData?.reelsGenerated ?? 0;
   const analyticsContentTotal = clipsTotal + screenshotsTotal + reelsTotal;
   const contentTotal = analyticsContentTotal || contentData?.ownedGameContentTotal || content.length;
-  const activeCampaigns = (campaigns ?? []).filter((c: any) => c.status === "live" || c.status === "approved");
 
-  // Forced off (not just hidden from the checklist/stats below) while
-  // CAMPAIGNS_ENABLED is false, so the "Active Campaign Overview" section
-  // never renders even if the account has old campaign data.
-  const hasCampaign = CAMPAIGNS_ENABLED && activeCampaigns.length > 0;
   const hasContent = content.length > 0;
-  const hasKeys = demoKeys.available > 0 || fullKeys.available > 0;
   const profileReady = missingEssential.length === 0;
   /* ── LAUNCH CHECKLIST ITEMS ── */
   const checklist = [
     { label: "Complete your game profile", done: profileReady, action: () => onGoTo("game-profile"), pct: profilePct },
-    { label: "Upload demo / full keys", done: hasKeys, action: () => onGoTo("keys"), pct: null },
-    ...(CAMPAIGNS_ENABLED ? [{ label: "Create your first campaign", done: hasCampaign, action: () => onGoTo("campaigns", "create"), pct: null }] : []),
   ];
 
   const doneCount = checklist.filter((c) => c.done).length;
@@ -125,9 +89,8 @@ export default function DashboardTab({
   return (
     <div className="space-y-8">
 
-      {/* ── 1. LAUNCH CHECKLIST (pre-campaign) ── */}
-      {!hasCampaign && (
-        <div className="rounded-2xl overflow-hidden"
+      {/* ── 1. LAUNCH CHECKLIST ── */}
+      <div className="rounded-2xl overflow-hidden"
           style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
           <div className="px-6 py-5 flex items-center gap-3"
             style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
@@ -165,106 +128,10 @@ export default function DashboardTab({
               </button>
             ))}
           </div>
-          {CAMPAIGNS_ENABLED && doneCount === checklist.length && (
-            <div className="px-6 pb-5">
-              <button onClick={() => onGoTo("campaigns", "create")}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.01]"
-                style={{ background: NEON, color: "#070b10" }}>
-                <Rocket className="w-4 h-4" /> Launch Your First Campaign
-              </button>
-            </div>
-          )}
         </div>
-      )}
 
-      {/* ── 3. ACTIVE CAMPAIGN OVERVIEW (post-launch) ── */}
-      {hasCampaign && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-black text-white">Active Campaigns</h3>
-            <button onClick={() => onGoTo("campaigns", "my")}
-              className="text-xs font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
-              View all <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {activeCampaigns.map((c: any) => {
-              const statusColor = STATUS_COLORS[c.status] ?? "#94a3b8";
-              const daysLeft = c.ends_at
-                ? Math.max(0, Math.ceil((new Date(c.ends_at).getTime() - Date.now()) / 86400000))
-                : null;
-              const completionPct = c.participant_count && c.participant_capacity
-                ? Math.round((c.participant_count / c.participant_capacity) * 100) : null;
-              return (
-                <div key={c.id} className="rounded-2xl overflow-hidden"
-                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                  {/* Campaign artwork strip */}
-                  <div className="h-28 relative overflow-hidden">
-                    {profile?.headerImageUrl ? (
-                      <img src={profile.headerImageUrl} alt="" className="w-full h-full object-cover opacity-40" />
-                    ) : (
-                      <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(183,255,24,0.06) 0%, rgba(255,255,255,0.02) 100%)" }} />
-                    )}
-                    <div className="absolute inset-0 flex items-end p-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide"
-                          style={{ color: statusColor, background: `${statusColor}18` }}>
-                          {(c.status ?? "").replace(/_/g, " ")}
-                        </span>
-                        {daysLeft !== null && (
-                          <span className="text-[9px] text-white/40">{daysLeft} days left</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-5 space-y-4">
-                    <div>
-                      <div className="text-sm font-bold text-white">{c.template_name ?? c.name ?? "Campaign"}</div>
-                      <div className="text-[10px] text-white/25 mt-0.5">{c.game_name ?? profile?.gameName ?? "Your game"}</div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div>
-                        <div className="text-base font-black text-white">{c.participant_count ?? 0}</div>
-                        <div className="text-[9px] text-white/25 uppercase tracking-wider">Creators</div>
-                      </div>
-                      <div>
-                        <div className="text-base font-black" style={{ color: completionPct !== null ? NEON : "#94a3b8" }}>
-                          {completionPct !== null ? `${completionPct}%` : "—"}
-                        </div>
-                        <div className="text-[9px] text-white/25 uppercase tracking-wider">Filled</div>
-                      </div>
-                      <div>
-                        <div className="text-base font-black text-white">{contentTotal}</div>
-                        <div className="text-[9px] text-white/25 uppercase tracking-wider">Content</div>
-                      </div>
-                    </div>
-                    {completionPct !== null && (
-                      <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                        <div className="h-full rounded-full" style={{ width: `${completionPct}%`, background: NEON }} />
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <button onClick={() => onGoTo("campaigns", "my")}
-                        className="flex-1 text-xs font-bold py-2 rounded-xl transition-all hover:brightness-110"
-                        style={{ background: "rgba(183,255,24,0.09)", color: NEON, border: "1px solid rgba(183,255,24,0.18)" }}>
-                        View Campaign
-                      </button>
-                      <button onClick={() => onGoTo("creator-content")}
-                        className="flex-1 text-xs font-bold py-2 rounded-xl transition-all hover:brightness-110"
-                        style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                        Review Content
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── 4. CONTENT PREVIEW ── */}
-      {(hasContent || hasCampaign) && (
+      {/* ── 2. CONTENT PREVIEW ── */}
+      {hasContent && (
         <div>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-black text-white">Content</h3>
