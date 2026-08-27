@@ -5,6 +5,7 @@
 export const CAMPAIGNS_ENABLED = false;
 export const BOUNTIES_ENABLED = false;
 export const GAME_KEYS_ENABLED = false;
+export const GAME_DEVELOPER_PRO_PURCHASES_ENABLED = false;
 
 // Game Developer onboarding and dashboard features are approved for release.
 export const GAME_DEVELOPER_FEATURES_ENABLED = true;
