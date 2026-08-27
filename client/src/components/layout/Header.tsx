@@ -174,6 +174,12 @@ const Header = () => {
   }, [user?.id, (user as any)?.userType]);
   const { isPro } = useRevenueCat();
   const { isIndieMode } = useIndieMode();
+  const hasStandardPro = !!(
+    isPro ||
+    user?.isPro ||
+    (user?.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date())
+  );
+  const hasDeveloperPro = !!user?.isIndieDevSubscriber;
   const { state: levelTrackerState, hideLevelTracker } = useLevelTracker();
   
   const isLevelTrackerOpen = levelTrackerOpen || levelTrackerState.isOpen;
@@ -718,7 +724,7 @@ const Header = () => {
                       </DropdownMenuItem>
                     )}
 
-                    {!(isPro || user?.isPro || (user?.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date())) && (
+                    {!(isIndieMode ? hasDeveloperPro : hasStandardPro) && (
                       <DropdownMenuItem
                         className="cursor-pointer text-white"
                         style={{ background: 'linear-gradient(to right, #B7FF1A 0%, rgba(30, 41, 59, 0) 70%)' }}
@@ -730,14 +736,14 @@ const Header = () => {
                       </DropdownMenuItem>
                     )}
                     
-                    {(isPro || user?.isPro || (user?.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date())) && (
+                    {(isIndieMode ? hasDeveloperPro : hasStandardPro) && (
                       <DropdownMenuItem
                         className="cursor-pointer"
-                        onClick={() => setManageProOpen(true)}
+                        onClick={() => isIndieMode ? setProUpgradeOpen(true) : setManageProOpen(true)}
                         data-testid="button-manage-pro"
                       >
                         <ManageProIcon className="mr-2 h-4 w-4 text-yellow-500" />
-                        <span>Manage Pro</span>
+                        <span>{isIndieMode ? "Developer Pro status" : "Manage Pro"}</span>
                       </DropdownMenuItem>
                     )}
 

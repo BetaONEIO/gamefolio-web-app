@@ -9,6 +9,7 @@ import {
   TrendingUp, Play, ImagePlus,
 } from "lucide-react";
 import { NEON, CARD_BG, DASHBOARD_THEME, rgbaAccent } from "./constants";
+import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
 
 type TopTabId = "overview" | "creator-content" | "analytics" | "game-profile";
 
@@ -276,26 +277,28 @@ export default function DashboardTab({
         </div>
       )}
 
-      {/* ── 7. INDIE PRO UPSELL ── */}
+      {/* ── 7. GAME DEVELOPER PRO UPSELL ── */}
       {!user?.isIndieDevSubscriber && (
         <div className="rounded-xl p-5"
           style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.06)" }}>
           <div className="flex items-start gap-3">
             <Star className="w-4 h-4 shrink-0 mt-0.5" style={{ color: NEON }} />
             <div className="flex-1">
-              <div className="text-xs font-bold text-white mb-1">Indie Pro</div>
+              <div className="text-xs font-bold text-white mb-1">Game Developer Pro</div>
               <p className="text-[10px] text-white/25 mb-3 leading-relaxed">
                 Unlock additional developer tools and promotion benefits for your game.
               </p>
               <button onClick={() => setShowUpgrade(true)}
                 className="text-[10px] font-bold px-4 py-2 rounded-lg transition-all hover:brightness-110"
                 style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                View Indie Pro
+                View Developer Pro
               </button>
             </div>
           </div>
         </div>
       )}
+
+      <IndieDevUpgradeDialog open={showUpgrade} onOpenChange={setShowUpgrade} />
     </div>
   );
 }
