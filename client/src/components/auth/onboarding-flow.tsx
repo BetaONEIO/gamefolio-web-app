@@ -15,7 +15,6 @@ import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboar
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import { Game } from "@shared/schema";
 import { validateStoreUrl, type StoreField } from "@shared/store-urls";
-import { validateStreamerHandle, normalizeStreamerHandle, type StreamerPlatform } from "@shared/streamer-handles";
 import { Card, CardContent } from "@/components/ui/card";
 import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
@@ -501,31 +500,6 @@ export default function OnboardingFlow({
         })
         .filter((e): e is string => e !== null));
 
-  // Streamer channel-name validation. Same shape as the indie link checks:
-  // a pasted URL for the wrong platform is named rather than rejected blankly.
-  const STREAM_FIELD_MAP: Record<string, StreamerPlatform> = {
-    twitchUsername: "twitch",
-    kickUsername: "kick",
-    vpzoneUsername: "vpzone",
-  };
-
-  const streamerHandleError = (key: keyof typeof STREAM_FIELD_MAP): string | null =>
-    validateStreamerHandle(STREAM_FIELD_MAP[key], (streamerData as any)[key]);
-
-  const allStreamerHandleErrors = (): string[] =>
-    (Object.keys(STREAM_FIELD_MAP) as (keyof typeof STREAM_FIELD_MAP)[])
-      .map(k => streamerHandleError(k))
-      .filter((e): e is string => e !== null);
-
-  // Tidy "@name" and pasted URLs down to a bare handle once the field loses
-  // focus, rather than fighting the user mid-keystroke.
-  const normalizeStreamerField = (key: keyof typeof STREAM_FIELD_MAP) => {
-    const current = (streamerData as any)[key] as string;
-    if (!current) return;
-    const cleaned = normalizeStreamerHandle(current);
-    if (cleaned !== current) setStreamerData(d => ({ ...d, [key]: cleaned }));
-  };
-
   // Pasting a supported store URL fills in what the store already knows.
   // Only ever fills blanks — anything the developer has typed wins, so this
   // can never overwrite their own wording.
@@ -840,13 +814,7 @@ export default function OnboardingFlow({
       return;
     }
     if (currentStep === OnboardingStep.PathSetup && selectedPath === 'streamer') {
-      // Channel names must look like channel names — the OAuth buttons above
-      // fill these in verified, but they stay hand-editable.
-      const handleErrors = allStreamerHandleErrors();
-      if (handleErrors.length > 0) {
-        toast({ title: "Check your channel names", description: handleErrors[0], variant: "default" });
-        return;
-      }
+      // Channel names come from the verified OAuth connections above.
     }
     if (currentStep === OnboardingStep.PathSetup && selectedPath === 'indie') {
       // Every game the developer added must be complete, not just the visible one.
