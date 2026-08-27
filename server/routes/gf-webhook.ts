@@ -225,6 +225,10 @@ router.post('/api/stripe/webhook',
           console.warn(`[GF Webhook] Ignoring disabled Game Developer checkout session ${session.id}`);
           return;
         }
+        if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
+          console.warn(`[GF Webhook] Ignoring unpaid Game Developer checkout session ${session.id} (payment_status: ${session.payment_status})`);
+          return;
+        }
         try {
           const userId = parseInt(session.metadata.userId, 10);
           const plan: 'monthly' | 'yearly' = session.metadata.plan === 'yearly' ? 'yearly' : 'monthly';

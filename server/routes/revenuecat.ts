@@ -338,13 +338,17 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
         console.log(`[RevenueCat Webhook] Activating event with no recognized entitlement_ids — ignoring (type: ${type})`);
       }
     } else if (deactivatingEvents.includes(type)) {
-      if (isProEvent) {
+      // RevenueCat CANCELLATION only disables auto-renewal; the paid
+      // entitlement remains valid until the later EXPIRATION event. A billing
+      // issue can also remain within its grace period, and SUBSCRIBER_ALIAS is
+      // not a lifecycle transition at all.
+      if (isProEvent && type === 'EXPIRATION') {
         await db.update(users).set({
           isPro: false,
           updatedAt: new Date(),
         }).where(eq(users.id, user.id));
 
-        console.log(`[RevenueCat Webhook] User ${user.id} Pro deactivated (type: ${type})`);
+        console.log(`[RevenueCat Webhook] User ${user.id} Pro expired (type: ${type})`);
       }
 
       // RevenueCat CANCELLATION only disables auto-renewal; the paid
