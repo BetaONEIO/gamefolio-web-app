@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera, Clock, Layers, X as XIcon, Rocket, Radio, KeyRound, Gamepad2, BarChart3, Megaphone } from "lucide-react";
 import { isPartnerType } from "@shared/partner-access";
-import { GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
+import { GAME_DEVELOPER_FEATURES_ENABLED, GAME_KEYS_ENABLED } from "@/lib/feature-flags";
 import {
   LevelTrackerIcon,
   ReferFriendIcon,
@@ -580,10 +580,12 @@ const Header = () => {
                         <Film className="h-4 w-4 mr-2" />
                         Upload Content
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setLocation('/game-dashboard?tab=keys')} className="cursor-pointer">
-                        <KeyRound className="h-4 w-4 mr-2" />
-                        Upload Keys
-                      </DropdownMenuItem>
+                      {GAME_KEYS_ENABLED && (
+                        <DropdownMenuItem onClick={() => setLocation('/game-dashboard?tab=keys')} className="cursor-pointer">
+                          <KeyRound className="h-4 w-4 mr-2" />
+                          Upload Keys
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
                         <Gamepad2 className="h-4 w-4 mr-2" />

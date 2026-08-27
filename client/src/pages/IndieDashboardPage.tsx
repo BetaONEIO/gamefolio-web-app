@@ -3,11 +3,10 @@ import { useSearch } from "wouter";
 import {
   Target, BarChart3, KeyRound, Film, Settings, LayoutDashboard,
 } from "lucide-react";
-import { CAMPAIGNS_ENABLED } from "@/lib/feature-flags";
+import { CAMPAIGNS_ENABLED, GAME_KEYS_ENABLED } from "@/lib/feature-flags";
 import CreateCampaignFlow from "./indie-dashboard/CreateCampaignFlow";
 import MyCampaignsTab from "./indie-dashboard/MyCampaignsTab";
 import CreatorContentTab from "./indie-dashboard/CreatorContentTab";
-import KeyManagementTab from "./indie-dashboard/KeyManagementTab";
 import AnalyticsTab from "./indie-dashboard/AnalyticsTab";
 import GameProfileTab from "./indie-dashboard/GameProfileTab";
 import RunCampaignWizard from "./indie-dashboard/RunCampaignWizard";
@@ -17,7 +16,7 @@ import DashboardTab from "./indie-dashboard/DashboardTab";
 export { NEON, CARD_BG, CARD_BORDER, PAGE_BG, DASHBOARD_THEME } from "./indie-dashboard/constants";
 import { DASHBOARD_THEME } from "./indie-dashboard/constants";
 
-type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "analytics" | "game-profile";
+type TopTabId = "overview" | "campaigns" | "creator-content" | "analytics" | "game-profile";
 type CampaignSubTab = "create" | "my";
 
 
@@ -29,7 +28,7 @@ const TOP_TABS: { id: TopTabId; label: string; icon: any }[] = [
   { id: "overview",        label: "Overview",       icon: LayoutDashboard },
   ...(CAMPAIGNS_ENABLED ? [{ id: "campaigns" as const, label: "Campaigns", icon: Target }] : []),
   { id: "creator-content", label: "Content",         icon: Film },
-  { id: "keys",            label: "Keys",           icon: KeyRound },
+  ...(GAME_KEYS_ENABLED ? [{ id: "keys" as const, label: "Keys", icon: KeyRound }] : []),
   { id: "analytics",       label: "Analytics",      icon: BarChart3 },
   { id: "game-profile",    label: "Game Profile",   icon: Settings },
 ];
@@ -41,12 +40,6 @@ export default function IndieDashboardPage() {
   const [campaignSub, setCampaignSub] = useState<CampaignSubTab>("my");
   const [runWizardTemplate, setRunWizardTemplate] = useState<any>(null);
 
-  // Lets links like the "Upload Keys" header menu item deep-link straight to
-  // a tab (e.g. /game-dashboard?tab=keys). Reading window.location.search
-  // once as initial state wouldn't work here: wouter keeps this component
-  // mounted across a query-only navigation (the path doesn't change), so a
-  // useState initializer never re-runs on a second "Upload Keys" click —
-  // useSearch() is reactive to that and re-triggers this effect instead.
   const search = useSearch();
   const gameIdParam = new URLSearchParams(search).get("gameId");
   const activeGameId = gameIdParam && /^\d+$/.test(gameIdParam) ? Number(gameIdParam) : undefined;
@@ -112,9 +105,6 @@ export default function IndieDashboardPage() {
 
         {/* ── CONTENT ── */}
         {tab === "creator-content" && <CreatorContentTab />}
-
-        {/* ── KEYS ── */}
-        {tab === "keys" && <KeyManagementTab />}
 
         {/* ── ANALYTICS ── */}
         {tab === "analytics" && <AnalyticsTab />}
