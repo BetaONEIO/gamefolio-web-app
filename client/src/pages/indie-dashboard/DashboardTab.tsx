@@ -190,57 +190,8 @@ export default function DashboardTab({
         </div>
       )}
 
-      {/* ── 5. SUPPORTING ROW: Key Inventory + Profile Strength ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Key Inventory */}
-        <div className="rounded-2xl p-5"
-          style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-black text-white">Key Inventory</h3>
-            <button onClick={() => onGoTo("keys")}
-              className="text-[10px] font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
-              Manage <ChevronRight className="w-3 h-3" />
-            </button>
-          </div>
-          {!hasKeys ? (
-            <div className="text-center py-4">
-              <KeyRound className="w-5 h-5 mx-auto mb-2" style={{ color: "rgba(255,255,255,0.12)" }} />
-              <p className="text-xs text-white/30 mb-3">No keys uploaded yet</p>
-              <button onClick={() => onGoTo("keys")}
-                className="text-[11px] font-bold px-4 py-2 rounded-lg transition-all hover:brightness-110"
-                style={{ background: "rgba(183,255,24,0.10)", color: NEON, border: "1px solid rgba(183,255,24,0.20)" }}>
-                Upload Keys
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {[
-                { label: "Demo Keys", avail: demoKeys.available, committed: demoKeys.claimed ?? 0, total: (demoKeys.available ?? 0) + (demoKeys.claimed ?? 0) },
-                { label: "Full Game Keys", avail: fullKeys.available, committed: fullKeys.awarded ?? 0, total: (fullKeys.available ?? 0) + (fullKeys.awarded ?? 0) },
-              ].map((item) => {
-                const pct = item.total > 0 ? Math.round((item.avail / item.total) * 100) : 0;
-                const isLow = item.avail <= 3;
-                const barColor = isLow ? "#f87171" : item.avail <= 10 ? "#f59e0b" : NEON;
-                return (
-                  <div key={item.label}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-semibold text-white/60">{item.label}</span>
-                      <span className="text-xs font-black" style={{ color: barColor }}>{item.avail}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: barColor }} />
-                    </div>
-                    <div className="text-[9px] text-white/20 mt-1">
-                      {item.avail} available · {item.committed} committed
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Profile Strength */}
+      {/* ── 5. PROFILE STRENGTH ── */}
+      <div>
         <div className="rounded-2xl p-5"
           style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
           <div className="flex items-center justify-between mb-4">
@@ -292,7 +243,7 @@ export default function DashboardTab({
       </div>
 
       {/* ── 6. NEEDS ATTENTION (if any) ── */}
-      {(!profileReady || demoKeys.available < 5 || content.length > 0) && (
+      {(!profileReady || content.length > 0) && (
         <div className="rounded-2xl p-5"
           style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
           <h3 className="text-sm font-black text-white mb-4">Needs Attention</h3>
@@ -305,18 +256,6 @@ export default function DashboardTab({
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-semibold text-white/70">Complete your game profile</div>
                   <div className="text-[10px] text-white/25">{missingEssential.length} essential field{missingEssential.length > 1 ? "s" : ""} missing</div>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 text-white/15 group-hover:text-white/40" />
-              </button>
-            )}
-            {demoKeys.available < 5 && (
-              <button onClick={() => onGoTo("keys")}
-                className="w-full flex items-center gap-3 text-left group py-2.5 px-3 rounded-xl transition-colors hover:bg-white/[0.03]"
-                 style={{ background: `${DASHBOARD_THEME.warning}08`, border: `1px solid ${DASHBOARD_THEME.warning}1a` }}>
-                 <KeyRound className="w-4 h-4 shrink-0" style={{ color: DASHBOARD_THEME.warning }} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-semibold text-white/70">Low on demo keys</div>
-                  <div className="text-[10px] text-white/25">Only {demoKeys.available} remaining — upload more</div>
                 </div>
                 <ChevronRight className="w-3.5 h-3.5 text-white/15 group-hover:text-white/40" />
               </button>
