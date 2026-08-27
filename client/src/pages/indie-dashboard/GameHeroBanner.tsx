@@ -27,6 +27,7 @@ const PROFILE_STEPS: { field: string; label: string; pct: number }[] = [
 ];
 
 const BANNER_ASPECT = 16 / 9;
+const CAPSULE_ASPECT = 3 / 4;
 
 function isFieldFilled(profile: any, field: string) {
   if (!profile) return false;
@@ -54,9 +55,9 @@ function getCroppedBlob(image: HTMLImageElement, crop: PixelCrop): Promise<Blob>
   });
 }
 
-function makeInitialCrop(imgWidth: number, imgHeight: number): Crop {
+function makeInitialCrop(imgWidth: number, imgHeight: number, aspect: number): Crop {
   return centerCrop(
-    makeAspectCrop({ unit: "%", width: 90 }, BANNER_ASPECT, imgWidth, imgHeight),
+    makeAspectCrop({ unit: "%", width: 90 }, aspect, imgWidth, imgHeight),
     imgWidth, imgHeight,
   );
 }
@@ -67,17 +68,30 @@ interface CropModalProps {
   onConfirm: (blob: Blob) => void;
   onCancel: () => void;
   isUploading: boolean;
+  aspect: number;
+  title: string;
+  aspectLabel: string;
+  confirmLabel: string;
 }
 
-function BannerCropModal({ src, onConfirm, onCancel, isUploading }: CropModalProps) {
+function ImageCropModal({
+  src,
+  onConfirm,
+  onCancel,
+  isUploading,
+  aspect,
+  title,
+  aspectLabel,
+  confirmLabel,
+}: CropModalProps) {
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const imgRef = useRef<HTMLImageElement>(null);
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
-    setCrop(makeInitialCrop(width, height));
-  }, []);
+    setCrop(makeInitialCrop(width, height, aspect));
+  }, [aspect]);
 
   const handleConfirm = async () => {
     if (!imgRef.current || !completedCrop) return;
@@ -95,7 +109,7 @@ function BannerCropModal({ src, onConfirm, onCancel, isUploading }: CropModalPro
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CropIcon className="w-4 h-4" style={{ color: NEON }} />
-            <span className="text-sm font-black text-white">Crop Banner Image</span>
+            <span className="text-sm font-black text-white">{title}</span>
           </div>
           <button onClick={onCancel} disabled={isUploading}
             className="rounded-lg p-1.5 transition-colors hover:bg-white/10">
@@ -104,7 +118,7 @@ function BannerCropModal({ src, onConfirm, onCancel, isUploading }: CropModalPro
         </div>
 
         <p className="text-[11px] text-white/40 -mt-2">
-          Drag to reposition · Resize handles to adjust · 16:9 aspect ratio
+          Drag to reposition · Resize handles to adjust · {aspectLabel} aspect ratio
         </p>
 
         {/* Cropper */}
@@ -114,7 +128,7 @@ function BannerCropModal({ src, onConfirm, onCancel, isUploading }: CropModalPro
             crop={crop}
             onChange={c => setCrop(c)}
             onComplete={c => setCompletedCrop(c)}
-            aspect={BANNER_ASPECT}
+            aspect={aspect}
             minWidth={120}>
             <img
               ref={imgRef}
@@ -141,7 +155,7 @@ function BannerCropModal({ src, onConfirm, onCancel, isUploading }: CropModalPro
               opacity: !completedCrop ? 0.5 : 1,
             }}>
             {isUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-            {isUploading ? "Uploading…" : "Upload Banner"}
+            {isUploading ? "Uploading…" : confirmLabel}
           </button>
         </div>
       </div>
@@ -154,6 +168,7 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
   const { user } = useAuth();
   const [imgError, setImgError] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [capsuleCropSrc, setCapsuleCropSrc] = useState<string | null>(null);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
   const [localCapsulePreview, setLocalCapsulePreview] = useState<string | null>(null);
   const artworkInputRef = useRef<HTMLInputElement>(null);
@@ -175,8 +190,10 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
       // Replace the local blob preview with the real server URL
       if (variables.field === "headerImageUrl") {
         setLocalPreview(data.url);
+        setCropSrc(null);
       } else {
         setLocalCapsulePreview(data.url);
+        setCapsuleCropSrc(null);
       }
       queryClient.setQueryData(["/api/indie/profile", variables.gameId ?? null], (cached: any) => ({
         ...(cached ?? {}),
@@ -185,9 +202,10 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
       queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
     },
     onError: () => {
-      setCropSrc(null);
       setLocalPreview(null);
       setLocalCapsulePreview(null);
+      setCropSrc(null);
+      setCapsuleCropSrc(null);
     },
   });
 
@@ -229,25 +247,54 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
   const handleCapsuleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setLocalCapsulePreview(URL.createObjectURL(file));
-    uploadMutation.mutate({ blob: file, field: "capsuleImageUrl", gameId: profile?.id ?? gameId });
+    if (capsuleCropSrc) URL.revokeObjectURL(capsuleCropSrc);
+    setCapsuleCropSrc(URL.createObjectURL(file));
+    setImgError(false);
     e.target.value = "";
   };
 
-  const handleCropCancel = () => {
+  const handleBannerCropCancel = () => {
     if (cropSrc) URL.revokeObjectURL(cropSrc);
     setCropSrc(null);
+  };
+
+  const handleCapsuleCropConfirm = (blob: Blob) => {
+    if (capsuleCropSrc) URL.revokeObjectURL(capsuleCropSrc);
+    setCapsuleCropSrc(null);
+    setLocalCapsulePreview(URL.createObjectURL(blob));
+    uploadMutation.mutate({ blob, field: "capsuleImageUrl", gameId: profile?.id ?? gameId });
+  };
+
+  const handleCapsuleCropCancel = () => {
+    if (capsuleCropSrc) URL.revokeObjectURL(capsuleCropSrc);
+    setCapsuleCropSrc(null);
   };
 
   return (
     <>
       {/* ── Crop modal ─────────────────────────────────────────────────── */}
       {cropSrc && (
-        <BannerCropModal
+        <ImageCropModal
           src={cropSrc}
           onConfirm={handleCropConfirm}
-          onCancel={handleCropCancel}
+          onCancel={handleBannerCropCancel}
           isUploading={uploadMutation.isPending}
+          aspect={BANNER_ASPECT}
+          title="Crop Banner Image"
+          aspectLabel="16:9"
+          confirmLabel="Upload Banner"
+        />
+      )}
+      {capsuleCropSrc && (
+        <ImageCropModal
+          src={capsuleCropSrc}
+          onConfirm={handleCapsuleCropConfirm}
+          onCancel={handleCapsuleCropCancel}
+          isUploading={uploadMutation.isPending}
+          aspect={CAPSULE_ASPECT}
+          title="Crop Game Icon"
+          aspectLabel="3:4"
+          confirmLabel="Upload Game Icon"
         />
       )}
 
@@ -312,37 +359,42 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
             {/* LEFT — Capsule + game info */}
             <div className="flex items-end gap-5 flex-1 min-w-0">
               {/* Capsule image */}
-              <button
-                type="button"
-                onClick={() => capsuleInputRef.current?.click()}
-                disabled={uploadMutation.isPending}
-                aria-label={displayCapsuleUrl ? "Change game icon" : "Upload game icon"}
-                className="group relative shrink-0 rounded-lg overflow-hidden shadow-2xl disabled:cursor-wait"
-                style={{
-                  width: 128,
-                  aspectRatio: "3/4",
-                  background: "rgba(255,255,255,0.04)",
-                  border: displayCapsuleUrl ? "1px solid rgba(255,255,255,0.10)" : "1px dashed rgba(255,255,255,0.12)",
-                }}>
-                {displayCapsuleUrl ? (
-                  <img src={displayCapsuleUrl} alt="Game icon" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="w-full h-full flex flex-col items-center justify-center gap-2">
-                    <ImagePlus className="w-6 h-6 text-white/25" />
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-white/35">Upload icon</span>
-                  </span>
-                )}
-                {displayCapsuleUrl && (
-                  <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-[9px] font-bold uppercase tracking-wider text-white opacity-0 transition-opacity group-hover:opacity-100">
-                    Change icon
-                  </span>
-                )}
-                {uploadMutation.isPending && (
-                  <span className="absolute inset-0 flex items-center justify-center bg-black/60">
-                    <Loader2 className="w-5 h-5 animate-spin" style={{ color: NEON }} />
-                  </span>
-                )}
-              </button>
+              <div className="flex flex-col items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => capsuleInputRef.current?.click()}
+                  disabled={uploadMutation.isPending}
+                  aria-label={displayCapsuleUrl ? "Change game icon" : "Upload game icon"}
+                  className="group relative rounded-lg overflow-hidden shadow-2xl disabled:cursor-wait"
+                  style={{
+                    width: 128,
+                    aspectRatio: "3/4",
+                    background: "rgba(255,255,255,0.04)",
+                    border: displayCapsuleUrl ? "1px solid rgba(255,255,255,0.10)" : "1px dashed rgba(255,255,255,0.12)",
+                  }}>
+                  {displayCapsuleUrl ? (
+                    <img src={displayCapsuleUrl} alt="Game icon" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="w-full h-full flex flex-col items-center justify-center gap-2">
+                      <ImagePlus className="w-6 h-6 text-white/25" />
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-white/35">Upload icon</span>
+                    </span>
+                  )}
+                  {displayCapsuleUrl && (
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-[9px] font-bold uppercase tracking-wider text-white opacity-0 transition-opacity group-hover:opacity-100">
+                      Change icon
+                    </span>
+                  )}
+                  {uploadMutation.isPending && (
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/60">
+                      <Loader2 className="w-5 h-5 animate-spin" style={{ color: NEON }} />
+                    </span>
+                  )}
+                </button>
+                <p className="max-w-36 text-center text-[10px] leading-relaxed text-white/35">
+                  Recommended: 600 × 800 px (3:4)
+                </p>
+              </div>
 
               <div className="min-w-0 pb-1">
                 <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight mb-3 drop-shadow-lg">

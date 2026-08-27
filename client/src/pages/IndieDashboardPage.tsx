@@ -28,7 +28,7 @@ type CampaignSubTab = "create" | "my";
 const TOP_TABS: { id: TopTabId; label: string; icon: any }[] = [
   { id: "overview",        label: "Overview",       icon: LayoutDashboard },
   ...(CAMPAIGNS_ENABLED ? [{ id: "campaigns" as const, label: "Campaigns", icon: Target }] : []),
-  { id: "creator-content", label: "Creator Content", icon: Film },
+  { id: "creator-content", label: "Content",         icon: Film },
   { id: "keys",            label: "Keys",           icon: KeyRound },
   { id: "analytics",       label: "Analytics",      icon: BarChart3 },
   { id: "game-profile",    label: "Game Profile",   icon: Settings },
@@ -110,7 +110,7 @@ export default function IndieDashboardPage() {
           </>
         )}
 
-        {/* ── CREATOR CONTENT ── */}
+        {/* ── CONTENT ── */}
         {tab === "creator-content" && <CreatorContentTab />}
 
         {/* ── KEYS ── */}

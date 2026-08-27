@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getQueryFn } from "@/lib/queryClient";
 import { Film, Video, Camera, Star, CheckCircle2, Eye, Flame } from "lucide-react";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import SubmissionReviewTab from "./SubmissionReviewTab";
 import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
+import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
 
 const FILTER_OPTIONS = [
   { id: "all",        label: "All",        icon: Film },
@@ -12,6 +12,12 @@ const FILTER_OPTIONS = [
   { id: "reel",       label: "Reels",      icon: Video },
   { id: "screenshot", label: "Screenshots", icon: Camera },
 ];
+
+const SOURCE_FILTER_OPTIONS = [
+  { id: "all", label: "All uploads" },
+  { id: "publisher", label: "Publisher" },
+  { id: "creator", label: "Creator" },
+] as const;
 
 type CreatorContentItem = {
   id: number;
@@ -37,6 +43,12 @@ type CreatorContentResponse = {
 
 function filterByType(items: CreatorContentItem[], filter: string) {
   return filter === "all" ? items : items.filter((item) => item.type === filter);
+}
+
+function filterBySource(items: CreatorContentItem[], source: string) {
+  if (source === "publisher") return items.filter((item) => item.isDeveloperUpload);
+  if (source === "creator") return items.filter((item) => !item.isDeveloperUpload);
+  return items;
 }
 
 function ContentGrid({ items, showGame }: { items: CreatorContentItem[]; showGame: boolean }) {
@@ -74,7 +86,7 @@ function ContentCard({ item, showGame }: { item: CreatorContentItem; showGame: b
           {item.isDeveloperUpload && (
             <span className="text-[8px] font-bold px-1.5 py-0.5 rounded"
               style={{ background: "rgba(183,255,24,0.18)", color: NEON }}>
-              YOU
+              PUBLISHER
             </span>
           )}
         </div>
@@ -114,44 +126,71 @@ function ContentCard({ item, showGame }: { item: CreatorContentItem; showGame: b
 
 export default function CreatorContentTab() {
   const [filter, setFilter] = useState("all");
+  const [source, setSource] = useState<"all" | "publisher" | "creator">("all");
 
   const { data: contentData } = useQuery<CreatorContentResponse | null>({
-    queryKey: ["/api/indie/creator-content"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryKey: ["/api/indie/creator-content", source],
+    queryFn: async () => {
+      const response = await fetch(`/api/indie/creator-content?source=${source}`, { credentials: "include" });
+      if (response.status === 401) return null;
+      if (!response.ok) throw new Error("Could not load content for your games");
+      return response.json();
+    },
   });
 
   const ownedGameContent = contentData?.ownedGameContent ?? contentData?.items ?? [];
-  const filteredOwnedGameContent = filterByType(ownedGameContent, filter);
+  const filteredOwnedGameContent = filterByType(filterBySource(ownedGameContent, source), filter);
   const totalItems = filteredOwnedGameContent.length;
 
   return (
     <div className="space-y-8">
       {/* Submissions to Review — shown at top if any exist */}
-      <SubmissionReviewTab />
+      {BOUNTIES_ENABLED && <SubmissionReviewTab />}
 
       {/* Filters */}
-      <div className="flex items-center gap-2 flex-wrap">
-        {FILTER_OPTIONS.map(({ id, label, icon: Icon }) => {
-          const active = filter === id;
-          return (
-            <button
-              key={id}
-              onClick={() => setFilter(id)}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-all"
-              style={{
-                 background: active ? rgbaAccent(0.10) : DASHBOARD_THEME.surfaceSubtle,
-                 color: active ? NEON : DASHBOARD_THEME.textMuted,
-                 border: active ? `1px solid ${rgbaAccent(0.25)}` : `1px solid ${DASHBOARD_THEME.borderSubtle}`,
-              }}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {label}
-            </button>
-          );
-        })}
-        <span className="text-xs text-white/25 ml-2">
-          {totalItems} item{totalItems !== 1 ? "s" : ""}
-        </span>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {SOURCE_FILTER_OPTIONS.map(({ id, label }) => {
+            const active = source === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setSource(id)}
+                className="px-3.5 py-2 rounded-lg text-xs font-bold transition-all"
+                style={{
+                  background: active ? rgbaAccent(0.10) : DASHBOARD_THEME.surfaceSubtle,
+                  color: active ? NEON : DASHBOARD_THEME.textMuted,
+                  border: active ? `1px solid ${rgbaAccent(0.25)}` : `1px solid ${DASHBOARD_THEME.borderSubtle}`,
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {FILTER_OPTIONS.map(({ id, label, icon: Icon }) => {
+            const active = filter === id;
+            return (
+              <button
+                key={id}
+                onClick={() => setFilter(id)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-all"
+                style={{
+                   background: active ? rgbaAccent(0.10) : DASHBOARD_THEME.surfaceSubtle,
+                   color: active ? NEON : DASHBOARD_THEME.textMuted,
+                   border: active ? `1px solid ${rgbaAccent(0.25)}` : `1px solid ${DASHBOARD_THEME.borderSubtle}`,
+                 }}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+              </button>
+            );
+          })}
+          <span className="text-xs text-white/25 ml-2">
+            {totalItems} item{totalItems !== 1 ? "s" : ""}
+          </span>
+        </div>
       </div>
 
       {/* Content for games the developer manages */}
@@ -160,7 +199,11 @@ export default function CreatorContentTab() {
           style={{ background: "rgba(255,255,255,0.015)", border: "1px dashed rgba(255,255,255,0.07)" }}>
           <Film className="w-10 h-10 mx-auto mb-3 text-white/10" />
           <p className="text-sm font-semibold text-white/40 mb-1">
-            {filter === "all" ? "No content for your games yet" : `No ${filter}s found`}
+              {source === "publisher"
+                ? "No publisher uploads yet"
+                : source === "creator"
+                  ? "No creator uploads yet"
+                  : filter === "all" ? "No content for your games yet" : `No ${filter}s found`}
           </p>
           <p className="text-xs text-white/20 max-w-sm mx-auto">
             Clips, reels and screenshots published for games you manage will appear here.
@@ -172,7 +215,11 @@ export default function CreatorContentTab() {
             <div>
               <h2 className="text-sm font-black text-white">Content for your games</h2>
               <p className="mt-1 text-xs text-white/35">
-                Everything published for the catalogue games you manage.
+                {source === "publisher"
+                  ? "Clips, reels and screenshots uploaded by your studio."
+                  : source === "creator"
+                    ? "Community uploads for the catalogue games you manage."
+                    : "Everything published for the catalogue games you manage."}
               </p>
             </div>
             <span className="text-xs text-white/25">{filteredOwnedGameContent.length} item{filteredOwnedGameContent.length !== 1 ? "s" : ""}</span>
