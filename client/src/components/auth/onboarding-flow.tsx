@@ -2471,11 +2471,11 @@ export default function OnboardingFlow({
             proLabel: 'View Gamefolio Pro',
           },
           indie: {
-            titleA: 'GAME',  titleB: 'DEVELOPER',
-            sub: 'Get featured across Gamefolio with expanded developer benefits.',
+            titleA: 'GAME DEVELOPER',  titleB: 'PRO',
+            sub: 'Game Developer Pro is coming soon. Get ready for expanded developer benefits.',
             emoji: '🚀',
             benefits: ['Featured promotion on gamefolio.com/games', 'Included in Gamefolio\'s social media promotion', 'Priority developer support', '£3.99/mo or £42.00/yr'],
-            proLabel: 'Upgrade to Game Developer',
+            proLabel: 'Game Developer Pro — Coming soon',
           },
         };
         const upsell = upsellConfig[selectedPath || 'gamer'];
