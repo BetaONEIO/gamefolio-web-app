@@ -12,6 +12,7 @@ import {
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isNative } from "@/lib/platform";
 import gameDeveloperVideo from "@assets/game-developer-pro-preview.mp4";
+import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from "@/lib/feature-flags";
 
 interface IndieDevUpgradeDialogProps {
   open: boolean;
@@ -220,7 +221,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
   }, [open]);
 
   const handleUpgrade = async () => {
-    if (!user || purchasing) return;
+    if (!GAME_DEVELOPER_PRO_PURCHASES_ENABLED || !user || purchasing) return;
 
     if (isNative) {
       if (!selectedPackage) return;
@@ -294,8 +295,10 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
     );
   }
 
-  const canPurchase = isNative ? !!selectedPackage : !!webPricing;
-  const buttonDisabled = isLoading || purchasing || checkoutLoading || !canPurchase || (isNative && !isInitialized);
+  const canPurchase = GAME_DEVELOPER_PRO_PURCHASES_ENABLED &&
+    (isNative ? !!selectedPackage : !!webPricing);
+  const buttonDisabled = !GAME_DEVELOPER_PRO_PURCHASES_ENABLED ||
+    isLoading || purchasing || checkoutLoading || !canPurchase || (isNative && !isInitialized);
   const hasNativePackages = !!packages && packages.length > 0;
   const showPurchaseUI = isNative ? hasNativePackages : true;
 
@@ -331,24 +334,40 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
             <button
               type="button"
               onClick={() => setBillingPeriod("yearly")}
+              disabled={!GAME_DEVELOPER_PRO_PURCHASES_ENABLED}
               className={`relative w-full rounded-xl border-2 p-3 text-left transition-all ${
                 billingPeriod === "yearly" ? "border-[#B7FF1A] bg-[#B7FF1A0d]" : "border-[#1B2A33] bg-[#0B1218] hover:border-[#22313A]"
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-white">Yearly</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-white">Yearly</span>
+                  {!GAME_DEVELOPER_PRO_PURCHASES_ENABLED && (
+                    <span className="rounded-full bg-[#B7FF1A1a] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#B7FF1A]">
+                      Coming soon
+                    </span>
+                  )}
+                </div>
                 <span className="font-bold text-white">{isNative ? yearlyPkg?.priceFormatted ?? "—" : yearlyPrice ?? "—"}</span>
               </div>
             </button>
             <button
               type="button"
               onClick={() => setBillingPeriod("monthly")}
+              disabled={!GAME_DEVELOPER_PRO_PURCHASES_ENABLED}
               className={`relative w-full rounded-xl border-2 p-3 text-left transition-all ${
                 billingPeriod === "monthly" ? "border-[#B7FF1A] bg-[#B7FF1A0d]" : "border-[#1B2A33] bg-[#0B1218] hover:border-[#22313A]"
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-white">Monthly</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-white">Monthly</span>
+                  {!GAME_DEVELOPER_PRO_PURCHASES_ENABLED && (
+                    <span className="rounded-full bg-[#B7FF1A1a] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#B7FF1A]">
+                      Coming soon
+                    </span>
+                  )}
+                </div>
                 <span className="font-bold text-white">{isNative ? monthlyPkg?.priceFormatted ?? "—" : monthlyPrice ?? "—"}</span>
               </div>
             </button>
@@ -364,7 +383,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#B7FF1A] py-4 text-lg font-bold text-[#071013] transition-colors hover:bg-[#A2F000] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {(purchasing || checkoutLoading) && <Loader2 className="h-5 w-5 animate-spin" />}
-            Upgrade to Developer Pro
+            {GAME_DEVELOPER_PRO_PURCHASES_ENABLED ? "Upgrade to Developer Pro" : "Developer Pro coming soon"}
           </button>
         ) : (
           <button
