@@ -2314,3 +2314,28 @@ export type InsertIndieGameProfile = z.infer<typeof insertIndieGameProfileSchema
 export const insertIndieGameFieldOverrideSchema = createInsertSchema(indieGameFieldOverrides).omit({ id: true, createdAt: true });
 export type IndieGameFieldOverride = typeof indieGameFieldOverrides.$inferSelect;
 export type InsertIndieGameFieldOverride = z.infer<typeof insertIndieGameFieldOverrideSchema>;
+
+// ─── Spotlight Leaderboard (POC) ─────────────────────────────────────────────
+// A pay-to-rank leaderboard modeled on outbid.lol: an indie dev spends GFT
+// (their off-chain gf_token_balance) to hold the #1 spot for their game in a
+// category. Bids are non-refundable by design — outbidding someone does not
+// return their spent GFT, which is what makes the ladder self-funding.
+export const spotlightCategories = [
+  "overall", "action", "adventure", "rpg", "strategy", "simulation",
+  "puzzle", "horror", "platformer", "multiplayer", "sports", "other",
+] as const;
+export type SpotlightCategory = typeof spotlightCategories[number];
+
+export const spotlightClaims = pgTable("spotlight_claims", {
+  id: serial("id").primaryKey(),
+  gameId: integer("game_id").notNull().references(() => indieGameProfiles.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  category: text("category").notNull().default("overall"),
+  gftAmount: integer("gft_amount").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertSpotlightClaimSchema = createInsertSchema(spotlightClaims).omit({ id: true, createdAt: true, isActive: true });
+export type SpotlightClaim = typeof spotlightClaims.$inferSelect;
+export type InsertSpotlightClaim = z.infer<typeof insertSpotlightClaimSchema>;

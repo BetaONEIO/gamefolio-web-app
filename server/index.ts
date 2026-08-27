@@ -88,6 +88,7 @@ import proSubscriptionRoutes from './routes/pro-subscription';
 import indieDevSubscriptionRoutes from './routes/indie-dev-subscription';
 import gfWebhookRoutes from './routes/gf-webhook';
 import gfStakingRoutes from './routes/gf-staking';
+import spotlightLeaderboardRoutes from './routes/spotlight-leaderboard';
 import { blockCryptoOnNative } from './middleware/block-crypto-on-native';
 import { requestContextMiddleware } from './request-context';
 import storeRoutes from './routes/store';
@@ -274,6 +275,7 @@ app.use((req, res, next) => {
     app.use(proSubscriptionRoutes);
     app.use(indieDevSubscriptionRoutes);
     app.use(gfStakingRoutes);
+    app.use(spotlightLeaderboardRoutes);
     app.use(storeRoutes);
     app.use(gamefolioPurchaseRoutes);
     app.use(revenuecatRoutes);

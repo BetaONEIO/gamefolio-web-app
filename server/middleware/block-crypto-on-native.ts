@@ -33,6 +33,7 @@ const BLOCKED_PREFIXES = [
   '/api/mint/',        // NFT minting + approvals
   '/api/marketplace/', // NFT marketplace buy/sell
   '/api/nfts/',        // owned-NFT listings (NFT collection surfaces)
+  '/api/spotlight-leaderboard/claim', // spends GFT to buy leaderboard rank — read-only GET stays visible
 ];
 
 // Store purchase flows are paid in GFT on-chain, so they are crypto too. The

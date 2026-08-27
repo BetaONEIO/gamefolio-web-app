@@ -121,6 +121,7 @@ const ScreenshotUploadPage = lazyWithRecovery(() => import("./pages/ScreenshotUp
 const AccountSettingsPage = lazyWithRecovery(() => import("./pages/AccountSettingsPage"));
 const GameCategoriesPage = lazyWithRecovery(() => import("./pages/GameCategoriesPage"));
 const LeaderboardPage = lazyWithRecovery(() => import("./pages/LeaderboardPage"));
+const SpotlightLeaderboardPage = lazyWithRecovery(() => import("./pages/SpotlightLeaderboardPage"));
 const CustomizePage = lazyWithRecovery(() => import("./pages/customize-page"));
 const SettingsPage = lazyWithRecovery(() => import("./pages/settings-page"));
 const AuthPage = lazyWithRecovery(() => import("./pages/auth-page"));
@@ -564,6 +565,7 @@ function Router() {
           <Route path="/browse/games/:category" component={GameCategoriesPage} />
           <Route path="/browse/games/categories" component={GameCategoriesPage} />
           <Route path="/leaderboard" component={LeaderboardPage} />
+          <Route path="/spotlight" component={SpotlightLeaderboardPage} />
           <ProtectedRoute path="/messages" component={MessagesPage} />
           <ProtectedRoute path="/notifications" component={NotificationsPage} />
           <Route path="/latest-reels" component={LatestReelsPage} />
