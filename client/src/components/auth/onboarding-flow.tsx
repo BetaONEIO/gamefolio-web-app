@@ -813,9 +813,6 @@ export default function OnboardingFlow({
       toast({ title: "Choose your path", description: "Please select one of the options to continue.", variant: "default" });
       return;
     }
-    if (currentStep === OnboardingStep.PathSetup && selectedPath === 'streamer') {
-      // Channel names come from the verified OAuth connections above.
-    }
     if (currentStep === OnboardingStep.PathSetup && selectedPath === 'indie') {
       // Every game the developer added must be complete, not just the visible one.
       const missingName = indieGames.findIndex(g => !g.gameName.trim());
@@ -1025,8 +1022,8 @@ export default function OnboardingFlow({
       });
 
       // Persist the streamer setup step. The OAuth buttons already wrote any
-      // verified channel straight to the account; this saves the hand-typed
-      // fields, and the server refuses to let them displace a verified name.
+      // verified channel straight to the account; this saves the OAuth-filled
+      // channel values along with the remaining profile preferences.
       if (selectedPath === "streamer") {
         try {
           await apiRequest("POST", "/api/streamer/onboarding-profile", {
@@ -1850,12 +1847,12 @@ export default function OnboardingFlow({
               <div className="flex-1 overflow-y-auto space-y-4">
                 <div>
                   <h2 className="text-2xl font-bold text-white mb-1">Streamer Setup</h2>
-                  <p className="text-gray-400 mb-4">Connect a platform to pull your channel in automatically, or fill it in by hand. All fields except main platform are optional.</p>
+                  <p className="text-gray-400 mb-4">Connect a platform to pull your channel in automatically. Choose your main platform and tell us what you stream.</p>
                 </div>
 
                 {/* Verified connections. Each opens the existing OAuth flow in a
-                    popup; on success the account is updated server-side and the
-                    fields below fill themselves in. */}
+                    popup; on success the account is updated server-side and
+                    the connected channel is used automatically. */}
                 {(socialOAuth.twitch || socialOAuth.kick || socialOAuth.vpzone) && (
                   <div className="space-y-2">
                     {socialOAuth.twitch && (
@@ -1905,45 +1902,6 @@ export default function OnboardingFlow({
                     </Select>
                   </div>
 
-                  <div>
-                    <Label className="text-gray-400 text-sm mb-1.5 block">Kick Username</Label>
-                    <Input
-                      value={streamerData.kickUsername}
-                      onChange={(e) => setStreamerData({ ...streamerData, kickUsername: e.target.value })}
-                      onBlur={() => normalizeStreamerField("kickUsername")}
-                      placeholder="@yourname"
-                      className="bg-[#0B1218] border-[#1B2A33] text-white"
-                    />
-                    {streamerHandleError("kickUsername") && (
-                      <p className="text-xs text-red-400 mt-1">{streamerHandleError("kickUsername")}</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label className="text-gray-400 text-sm mb-1.5 block">Twitch Username</Label>
-                    <Input
-                      value={streamerData.twitchUsername}
-                      onChange={(e) => setStreamerData({ ...streamerData, twitchUsername: e.target.value })}
-                      onBlur={() => normalizeStreamerField("twitchUsername")}
-                      placeholder="@yourname"
-                      className="bg-[#0B1218] border-[#1B2A33] text-white"
-                    />
-                    {streamerHandleError("twitchUsername") && (
-                      <p className="text-xs text-red-400 mt-1">{streamerHandleError("twitchUsername")}</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label className="text-gray-400 text-sm mb-1.5 block">VPZone Username</Label>
-                    <Input
-                      value={streamerData.vpzoneUsername}
-                      onChange={(e) => setStreamerData({ ...streamerData, vpzoneUsername: e.target.value })}
-                      onBlur={() => normalizeStreamerField("vpzoneUsername")}
-                      placeholder="@yourname"
-                      className="bg-[#0B1218] border-[#1B2A33] text-white"
-                    />
-                    {streamerHandleError("vpzoneUsername") && (
-                      <p className="text-xs text-red-400 mt-1">{streamerHandleError("vpzoneUsername")}</p>
-                    )}
-                  </div>
                   <div>
                     <Label className="text-gray-400 text-sm mb-1.5 block">Main Game / Category</Label>
                     <Input value={streamerData.mainGame} onChange={(e) => setStreamerData({ ...streamerData, mainGame: e.target.value })} placeholder="e.g. Fortnite, Just Chatting" className="bg-[#0B1218] border-[#1B2A33] text-white" />
@@ -2442,7 +2400,7 @@ export default function OnboardingFlow({
             titleA: 'GAME DEVELOPER',  titleB: 'PRO',
             sub: 'Game Developer Pro is coming soon. Get ready for expanded developer benefits.',
             emoji: '🚀',
-            benefits: ['Featured promotion on gamefolio.com/games', 'Included in Gamefolio\'s social media promotion', 'Priority developer support', '£3.99/mo or £42.00/yr'],
+            benefits: ['Add multiple games', 'Featured promotion on gamefolio.com/games', 'Included in Gamefolio\'s social media promotion', 'Priority developer support', '£3.99/mo or £42.00/yr'],
             proLabel: 'Game Developer Pro — Coming soon',
           },
         };
