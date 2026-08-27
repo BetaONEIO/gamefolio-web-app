@@ -393,7 +393,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
         }
         toast({
           title: "Welcome to Game Developer!",
-          description: "You can now run up to 5 active bounties at once.",
+          description: "Your Game Developer benefits are now active.",
           variant: "gamefolioSuccess",
         });
         return true;

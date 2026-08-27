@@ -13387,7 +13387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/indie/creator-content", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
-    const { type = "all", sort = "newest" } = req.query as any;
+    const { type = "all", sort = "newest", source = "all" } = req.query as any;
     let ownedGames: Array<{ id: number; name: string | null; imageUrl: string | null }> = [];
     try {
       const { db } = await import("./db");
@@ -13412,6 +13412,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const normalizedType = String(type).toLowerCase();
       const normalizedSort = String(sort).toLowerCase();
+      const normalizedSource = String(source).toLowerCase();
+      const sourceFilter = normalizedSource === "publisher" || normalizedSource === "creator"
+        ? normalizedSource
+        : "all";
       const wantsClips = normalizedType === "all" || normalizedType === "clip" || normalizedType === "clips";
       const wantsReels = normalizedType === "all" || normalizedType === "reel" || normalizedType === "reels";
       const wantsScreenshots = normalizedType === "all" || normalizedType === "screenshot" || normalizedType === "screenshots";
@@ -13420,6 +13424,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : wantsReels
           ? sql`AND c.video_type = 'reel'`
           : sql`AND (c.video_type = 'clip' OR c.video_type IS NULL)`;
+      const videoSourceFilter = sourceFilter === "publisher"
+        ? sql`AND c.user_id = ${req.user.id}`
+        : sourceFilter === "creator"
+          ? sql`AND c.user_id <> ${req.user.id}`
+          : sql``;
+      const screenshotSourceFilter = sourceFilter === "publisher"
+        ? sql`AND s.user_id = ${req.user.id}`
+        : sourceFilter === "creator"
+          ? sql`AND s.user_id <> ${req.user.id}`
+          : sql``;
       const clipSort = normalizedSort === "most_viewed"
         ? sql`c.views DESC, c.created_at DESC`
         : normalizedSort === "most_liked"
@@ -13456,7 +13470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           FROM clips c
           JOIN users u ON u.id = c.user_id
           JOIN games g ON g.id = c.game_id
-          WHERE c.game_id = ANY(${ownedGameIdsSql}) ${videoTypeFilter}
+          WHERE c.game_id = ANY(${ownedGameIdsSql}) ${videoTypeFilter} ${videoSourceFilter}
           ORDER BY ${clipSort}
           LIMIT 30
         `);
@@ -13482,7 +13496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           FROM screenshots s
           JOIN users u ON u.id = s.user_id
           JOIN games g ON g.id = s.game_id
-          WHERE s.game_id = ANY(${ownedGameIdsSql})
+          WHERE s.game_id = ANY(${ownedGameIdsSql}) ${screenshotSourceFilter}
           ORDER BY ${screenshotSort}
           LIMIT 30
         `);

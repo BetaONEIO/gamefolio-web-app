@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
 import { apiRequest, getQueryFn, queryClient } from '@/lib/queryClient';
-import { GAME_DEVELOPER_FEATURES_ENABLED } from '@/lib/feature-flags';
+import { BOUNTIES_ENABLED, GAME_DEVELOPER_FEATURES_ENABLED } from '@/lib/feature-flags';
 import { ClipWithUser, IndieGameProfile, UserWithStats } from '@shared/schema';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -31,7 +31,6 @@ import {
   Share2,
   Smartphone,
   Sword,
-  Tag,
   UserCheck,
   UserPlus,
   Users,
@@ -45,6 +44,7 @@ const MessageDialog = React.lazy(() =>
 
 const TABS = ['OVERVIEW', 'CLIPS', 'REELS', 'SCREENSHOTS', 'BOUNTIES'] as const;
 type Tab = typeof TABS[number];
+const VISIBLE_TABS = BOUNTIES_ENABLED ? TABS : TABS.filter((tab) => tab !== 'BOUNTIES');
 
 type Bounty = {
   id: number;
@@ -141,9 +141,6 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const [activeTab, setActiveTab] = useState<Tab>('OVERVIEW');
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [editName, setEditName] = useState(profile.displayName ?? '');
-  const [editBio, setEditBio] = useState(profile.bio ?? '');
   const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
 
   const { data: gameListData } = useQuery<{ games: { id: number; gameName: string | null; headerImageUrl: string | null; capsuleImageUrl: string | null; isPrimary: boolean }[] }>({
@@ -197,7 +194,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
       if (!res.ok) throw new Error('Failed to fetch game bounties');
       return res.json();
     }),
-    enabled: !!canonicalGameId,
+    enabled: !!canonicalGameId && BOUNTIES_ENABLED,
   });
   const { data: followStatus } = useQuery<{ status: 'following' | 'requested' | 'not_following' }>({
     queryKey: [`/api/users/${profile.username}/follow-status`],
@@ -207,7 +204,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
 
   const clips = useMemo(() => gameContent.filter((clip) => clip.videoType !== 'reel'), [gameContent]);
   const reels = useMemo(() => gameContent.filter((clip) => clip.videoType === 'reel'), [gameContent]);
-  const activeBounties = bounties.filter((bounty) => bounty.status === 'active');
+  const activeBounties = BOUNTIES_ENABLED ? bounties.filter((bounty) => bounty.status === 'active') : [];
   const isFollowing = followStatus?.status === 'following';
   const isRequested = followStatus?.status === 'requested';
   const gameName = gameProfile?.gameName?.trim() || canonicalGame?.name || profile.displayName;
@@ -238,19 +235,6 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [`/api/users/${profile.username}/follow-status`] }),
     onError: (error: Error) => toast({ description: error.message, variant: 'gamefolioError' }),
   });
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest('PATCH', `/api/users/${profile.id}`, { displayName: editName.trim(), bio: editBio.trim() });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${profile.username}`] });
-      setEditing(false);
-      toast({ description: 'Studio profile updated.' });
-    },
-    onError: (error: Error) => toast({ description: error.message || 'Could not save changes.', variant: 'gamefolioError' }),
-  });
-
   const shareGame = async () => {
     const url = window.location.href;
     try {
@@ -296,41 +280,27 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
           )}
           <div className="grid items-end gap-8 lg:grid-cols-[1fr_auto]">
             <div className="max-w-3xl">
-              <div className="mb-4 flex flex-wrap gap-2">
-                {genres.map((genre) => <span key={genre} className="rounded-full border border-[#B7FF18]/25 bg-[#B7FF18]/10 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-[#B7FF18]">{genre}</span>)}
+              <div className="flex items-end gap-5 sm:gap-6">
+                {displayCapsule && (
+                  <img
+                    src={displayCapsule}
+                    alt={`${gameName} game artwork`}
+                    className="hidden h-28 w-[84px] shrink-0 rounded-xl border border-white/15 object-cover shadow-2xl sm:block"
+                  />
+                )}
+                <div>
+                  <h1 className="text-4xl font-black tracking-tight text-white sm:text-6xl">{gameName}</h1>
+                  <p className="mt-3 text-sm font-semibold text-white/55">{gameProfile?.releaseStatus === 'coming_soon' ? 'Coming soon' : gameProfile?.releaseStatus === 'early_access' ? 'Early access' : gameProfile?.releaseStatus === 'released' ? 'Available now' : `A game by @${profile.username}`}</p>
+                  {description && <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/75">{description}</p>}
+                </div>
               </div>
-              {editing ? (
-                <div className="space-y-3">
-                  <input value={editName} onChange={(event) => setEditName(event.target.value)} maxLength={60} className="w-full rounded-xl border border-white/20 bg-black/30 px-4 py-3 text-3xl font-black outline-none focus:border-[#B7FF18]/60" />
-                  <textarea value={editBio} onChange={(event) => setEditBio(event.target.value)} maxLength={500} rows={3} className="w-full rounded-xl border border-white/20 bg-black/30 px-4 py-3 text-sm text-white/80 outline-none focus:border-[#B7FF18]/60" />
-                  <div className="flex gap-2">
-                    <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="rounded-lg bg-[#B7FF18] px-4 py-2 text-sm font-black text-black disabled:opacity-50">Save studio details</button>
-                    <button onClick={() => setEditing(false)} className="rounded-lg border border-white/15 px-4 py-2 text-sm font-bold text-white/70">Cancel</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-end gap-5 sm:gap-6">
-                  {displayCapsule && (
-                    <img
-                      src={displayCapsule}
-                      alt={`${gameName} game artwork`}
-                      className="hidden h-28 w-[84px] shrink-0 rounded-xl border border-white/15 object-cover shadow-2xl sm:block"
-                    />
-                  )}
-                  <div>
-                    <h1 className="text-4xl font-black tracking-tight text-white sm:text-6xl">{gameName}</h1>
-                    <p className="mt-3 text-sm font-semibold text-white/55">{gameProfile?.releaseStatus === 'coming_soon' ? 'Coming soon' : gameProfile?.releaseStatus === 'early_access' ? 'Early access' : gameProfile?.releaseStatus === 'released' ? 'Available now' : `A game by @${profile.username}`}</p>
-                    {description && <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/75">{description}</p>}
-                  </div>
-                </div>
-              )}
             </div>
             <div className="flex flex-wrap gap-3 lg:justify-end">
               {primaryStore && <a href={primaryStore.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black hover:brightness-110"><Play size={16} fill="currentColor" />Play / Buy</a>}
               {!isOwnProfile && <button onClick={() => currentUser ? followMutation.mutate() : setLocation('/auth')} disabled={followMutation.isPending} className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/20 px-5 py-3 text-sm font-bold hover:bg-white/10">{isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}{isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}</button>}
               {!isOwnProfile && <button onClick={() => currentUser ? setMessageDialogOpen(true) : setLocation('/auth')} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Message developer"><MessageCircle size={18} /></button>}
               <button onClick={shareGame} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Share game"><Share2 size={18} /></button>
-              {isOwnProfile && <><button onClick={() => setEditing(!editing)} className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/20 px-4 py-3 text-sm font-bold hover:bg-white/10"><Settings size={16} />Edit</button>{GAME_DEVELOPER_FEATURES_ENABLED && <a href="/game-dashboard" className="rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black">Game dashboard</a>}</>}
+              {isOwnProfile && GAME_DEVELOPER_FEATURES_ENABLED && <a href="/game-dashboard" className="rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black">Game dashboard</a>}
             </div>
           </div>
         </div>
@@ -338,7 +308,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
 
       <nav className="sticky top-0 z-30 border-b border-white/10 bg-[#080d11]/95 px-5 backdrop-blur sm:px-8">
         <div className="mx-auto flex max-w-7xl overflow-x-auto">
-          {TABS.map((tab) => <button key={tab} onClick={() => jumpTo(tab)} className={`relative shrink-0 px-4 py-4 text-xs font-black tracking-[0.13em] ${activeTab === tab ? 'text-white' : 'text-white/45 hover:text-white/80'}`}>{tab}{activeTab === tab && <span className="absolute inset-x-4 bottom-0 h-0.5 bg-[#B7FF18]" />}</button>)}
+          {VISIBLE_TABS.map((tab) => <button key={tab} onClick={() => jumpTo(tab)} className={`relative shrink-0 px-4 py-4 text-xs font-black tracking-[0.13em] ${activeTab === tab ? 'text-white' : 'text-white/45 hover:text-white/80'}`}>{tab}{activeTab === tab && <span className="absolute inset-x-4 bottom-0 h-0.5 bg-[#B7FF18]" />}</button>)}
         </div>
       </nav>
 
@@ -347,7 +317,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
         {activeTab === 'OVERVIEW' && (
           <div className="space-y-10">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {[{ label: 'Active bounties', value: activeBounties.length, icon: Sword }, { label: 'Game clips', value: counts?.clips ?? clips.length, icon: Play }, { label: 'Reels', value: counts?.reels ?? reels.length, icon: Video }, { label: 'Screenshots', value: counts?.screenshots ?? communityScreenshots.length, icon: Camera }].map(({ label, value, icon: Icon }) => <div key={label} className="p-4" style={surfaceStyle}><Icon size={18} className="mb-3 text-[#B7FF18]" /><div className="text-2xl font-black">{value.toLocaleString()}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-white/45">{label}</div></div>)}
+              {[...(BOUNTIES_ENABLED ? [{ label: 'Active bounties', value: activeBounties.length, icon: Sword }] : []), { label: 'Game clips', value: counts?.clips ?? clips.length, icon: Play }, { label: 'Reels', value: counts?.reels ?? reels.length, icon: Video }, { label: 'Screenshots', value: counts?.screenshots ?? communityScreenshots.length, icon: Camera }].map(({ label, value, icon: Icon }) => <div key={label} className="p-4" style={surfaceStyle}><Icon size={18} className="mb-3 text-[#B7FF18]" /><div className="text-2xl font-black">{value.toLocaleString()}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-white/45">{label}</div></div>)}
             </div>
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_290px]">
               <div className="space-y-8">
@@ -357,11 +327,10 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                   {clips.length ? <div className="grid gap-4 sm:grid-cols-2">{clips.slice(0, 4).map((clip) => <VideoClipGridItem key={clip.id} clip={clip} clipsList={clips} />)}</div> : <EmptyCommunityState title="No clips yet" body={`Be the first player to share a moment from ${gameName}.`} icon={Play} />}
                 </section>
                 {communityScreenshots.length > 0 && <section><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-black">Community screenshots</h2><button onClick={() => jumpTo('SCREENSHOTS')} className="flex items-center gap-1 text-xs font-bold text-[#B7FF18]">View all <ChevronRight size={14} /></button></div><div className="grid gap-4 sm:grid-cols-2">{communityScreenshots.slice(0, 4).map((shot) => <ScreenshotCard key={shot.id} screenshot={shot} profile={profile} showUserInfo onSelect={setSelectedScreenshot} />)}</div></section>}
-                {activeBounties.length > 0 && <section><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-black">Creator bounties</h2><button onClick={() => jumpTo('BOUNTIES')} className="flex items-center gap-1 text-xs font-bold text-[#B7FF18]">View all <ChevronRight size={14} /></button></div><div className="grid gap-4 sm:grid-cols-2">{activeBounties.slice(0, 2).map((bounty) => <BountyCard key={bounty.id} bounty={bounty} gameId={canonicalGameId!} />)}</div></section>}
               </div>
               <aside className="space-y-5">
-                <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">About the game</p><p className="mt-3 text-sm leading-relaxed text-white/65">{description || 'The developer has not added a description yet.'}</p>{gameProfile?.keyFeatures?.length ? <ul className="mt-4 space-y-2 text-sm text-white/70">{gameProfile.keyFeatures.map((feature) => <li key={feature} className="flex gap-2"><CheckCircle2 size={15} className="mt-0.5 shrink-0 text-[#B7FF18]" />{feature}</li>)}</ul> : null}</section>
-                {(genres.length || platforms.length) > 0 && <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Details</p><div className="mt-4 space-y-4">{genres.length > 0 && <div><div className="mb-2 flex items-center gap-1.5 text-xs font-bold text-white/60"><Tag size={13} />Genres</div><div className="flex flex-wrap gap-2">{genres.map((genre) => <span key={genre} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs text-white/75">{genre}</span>)}</div></div>}{platforms.length > 0 && <div><div className="mb-2 text-xs font-bold text-white/60">Platforms</div><div className="flex flex-wrap gap-2">{platforms.map((platform) => <span key={platform} className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-2.5 py-1 text-xs text-white/75"><PlatformIcon value={platform} />{formatPlatform(platform)}</span>)}</div></div>}</div></section>}
+                <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">About the game</p><p className="mt-3 text-sm leading-relaxed text-white/65">{description || 'The developer has not added a description yet.'}</p>{genres.length > 0 && <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">{genres.map((genre) => <span key={genre} className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/80"><img src="/favicon-32.png" alt="" className="h-3.5 w-3.5 object-contain" />{genre}</span>)}</div>}{gameProfile?.keyFeatures?.length ? <ul className="mt-4 space-y-2 text-sm text-white/70">{gameProfile.keyFeatures.map((feature) => <li key={feature} className="flex gap-2"><CheckCircle2 size={15} className="mt-0.5 shrink-0 text-[#B7FF18]" />{feature}</li>)}</ul> : null}</section>
+                {platforms.length > 0 && <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Platforms</p><div className="mt-4 flex flex-wrap gap-2">{platforms.map((platform) => <span key={platform} className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-2.5 py-1 text-xs text-white/75"><PlatformIcon value={platform} />{formatPlatform(platform)}</span>)}</div></section>}
                 {storeLinks.length > 0 && <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Get the game</p><div className="mt-4 space-y-2">{storeLinks.map((store) => { const Icon = store.icon; return <a key={store.name} href={store.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-sm font-bold hover:bg-white/[0.06]"><Icon size={19} /><span>{store.name}</span><ExternalLink size={13} className="ml-auto text-white/40" /></a>; })}</div></section>}
                 <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Developer</p><div className="mt-3 flex items-center gap-3">{displayDeveloperAvatar ? <img src={displayDeveloperAvatar} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10"><Users size={18} /></div>}<div><p className="font-bold">{gameProfile?.studioName || profile.displayName}</p><p className="text-xs text-white/45">@{profile.username}</p></div></div><PlatformConnections profile={profile} className="mt-4 !border-t-0 !px-0 !py-0" /></section>
               </aside>
@@ -371,7 +340,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
         {activeTab === 'CLIPS' && <section><h2 className="mb-5 text-2xl font-black">Community clips</h2>{clips.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{clips.map((clip) => <VideoClipGridItem key={clip.id} clip={clip} clipsList={clips} />)}</div> : <EmptyCommunityState title="No clips yet" body={`No one has posted a ${gameName} clip yet. Be first to put the game on the map.`} icon={Play} />}</section>}
         {activeTab === 'REELS' && <section><h2 className="mb-5 text-2xl font-black">Community reels</h2>{reels.length ? <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">{reels.map((reel) => <VideoClipGridItem key={reel.id} clip={reel} reelsList={reels} />)}</div> : <EmptyCommunityState title="No reels yet" body={`Short-form ${gameName} moments will appear here.`} icon={Video} />}</section>}
         {activeTab === 'SCREENSHOTS' && <section><h2 className="mb-5 text-2xl font-black">Community screenshots</h2>{communityScreenshots.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{communityScreenshots.map((shot) => <ScreenshotCard key={shot.id} screenshot={shot} profile={profile} showUserInfo onSelect={setSelectedScreenshot} />)}</div> : <EmptyCommunityState title="No screenshots yet" body={`Players have not shared screenshots from ${gameName} yet.`} icon={Camera} />}</section>}
-        {activeTab === 'BOUNTIES' && <section><div className="mb-5"><h2 className="text-2xl font-black">Creator bounties</h2><p className="mt-1 text-sm text-white/55">Open creator campaigns for {gameName}.</p></div>{bounties.length && canonicalGameId ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{bounties.map((bounty) => <BountyCard key={bounty.id} bounty={bounty} gameId={canonicalGameId} />)}</div> : <EmptyCommunityState title="No bounties right now" body="There are no creator campaigns running for this game at the moment." icon={Sword} />}</section>}
+        {BOUNTIES_ENABLED && activeTab === 'BOUNTIES' && <section><div className="mb-5"><h2 className="text-2xl font-black">Creator bounties</h2><p className="mt-1 text-sm text-white/55">Open creator campaigns for {gameName}.</p></div>{bounties.length && canonicalGameId ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{bounties.map((bounty) => <BountyCard key={bounty.id} bounty={bounty} gameId={canonicalGameId} />)}</div> : <EmptyCommunityState title="No bounties right now" body="There are no creator campaigns running for this game at the moment." icon={Sword} />}</section>}
       </main>
 
       {selectedScreenshot && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-5" onClick={() => setSelectedScreenshot(null)}><button onClick={() => setSelectedScreenshot(null)} className="absolute right-5 top-5 rounded-full border border-white/20 p-2"><X size={20} /></button><img src={selectedScreenshot.imageUrl} alt={selectedScreenshot.title} className="max-h-full max-w-full rounded-lg object-contain" onClick={(event) => event.stopPropagation()} /></div>}

@@ -156,8 +156,8 @@ function UploadCard({
   const accentRgb = DASHBOARD_THEME.accentRgb;
   const label = isDemo ? "Demo Keys" : "Full Game Keys";
   const desc = isDemo
-    ? "Creators receive these immediately after joining your campaign."
-    : "Creators receive these after successfully completing the campaign.";
+    ? "Store demo keys securely for your game."
+    : "Store full-game keys securely for your game.";
 
   // Animate count up on success
   useEffect(() => {
@@ -601,9 +601,7 @@ export default function KeyManagementTab() {
   const demoKeys = bountyStatus?.demoKeys      ?? { available: 0, valid: 0, claimed: 0, uploaded: 0 };
   const fullKeys = bountyStatus?.fullGameKeys  ?? { available: 0, valid: 0, awarded: 0, uploaded: 0 };
 
-  // Required = max participants of the first active campaign (or first campaign)
-  const activeCampaign = bounties.find(b => b.status === "active" || b.status === "live") ?? bounties[0] ?? null;
-  const required = activeCampaign?.maxParticipants ?? 0;
+  const required = 0;
 
   return (
     <div className="space-y-7">
@@ -634,15 +632,6 @@ export default function KeyManagementTab() {
         </div>
       </div>
 
-      {/* ── Compact warning ── */}
-      <div className="flex items-start gap-2.5 rounded-xl px-4 py-3"
-        style={{ background: "rgba(251,146,60,0.06)", border: "1px solid rgba(251,146,60,0.14)" }}>
-        <Lock className="w-3.5 h-3.5 text-orange-400 shrink-0 mt-0.5" />
-        <p className="text-[11px] text-orange-300/70">
-          Keys become locked when your campaign goes live and cannot be withdrawn once creators begin participating.
-        </p>
-      </div>
-
       {/* ── Upload cards ── */}
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
@@ -655,22 +644,6 @@ export default function KeyManagementTab() {
         </div>
       )}
 
-      {/* ── Campaign vaults ── */}
-      {!isLoading && bounties.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2.5 mb-4">
-            <h3 className="text-sm font-black text-white">Campaign Vaults</h3>
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full"
-              style={{ background: "rgba(183,255,24,0.07)", border: "1px solid rgba(183,255,24,0.14)" }}>
-              <Shield className="w-3 h-3" style={{ color: NEON }} />
-              <span className="text-[9px] font-bold" style={{ color: NEON }}>Escrow Protected</span>
-            </div>
-          </div>
-          <div className="space-y-3">
-            {bounties.map(b => <VaultCard key={b.id} bounty={b} />)}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -3,8 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import {
-  Rocket, Users, Target, KeyRound,
-  BarChart3, Film, Camera, Video,
+  Rocket, KeyRound, Film, Camera, Video,
   ArrowUpRight, ChevronRight,
   AlertCircle, Star, CheckCircle2,
   TrendingUp, Play, ImagePlus,
@@ -114,16 +113,6 @@ export default function DashboardTab({
   const hasContent = content.length > 0;
   const hasKeys = demoKeys.available > 0 || fullKeys.available > 0;
   const profileReady = missingEssential.length === 0;
-  /* ── 1. STATS STRIP ── */
-  const stats = [
-    ...(CAMPAIGNS_ENABLED ? [{ label: "Active Campaigns", value: String(activeCampaigns.length), icon: Target, color: activeCampaigns.length > 0 ? NEON : "#475569" }] : []),
-    { label: "Active Creators", value: String(d.totalParticipants), icon: Users, color: d.totalParticipants > 0 ? NEON : "#475569" },
-    { label: "Demo Keys", value: String(demoKeys.available), icon: KeyRound, color: demoKeys.available < 5 ? "#f87171" : demoKeys.available < 15 ? "#f59e0b" : NEON },
-    { label: "Content", value: String(contentTotal), icon: Film, color: contentTotal > 0 ? NEON : DASHBOARD_THEME.textSubtle },
-    { label: "Total Views", value: (d.totalViews ?? 0).toLocaleString(), icon: BarChart3, color: (d.totalViews ?? 0) > 0 ? NEON : DASHBOARD_THEME.textSubtle },
-    { label: "Profile", value: `${profilePct}%`, icon: CheckCircle2, color: profilePct >= 80 ? NEON : profilePct >= 50 ? DASHBOARD_THEME.warning : DASHBOARD_THEME.danger },
-  ];
-
   /* ── LAUNCH CHECKLIST ITEMS ── */
   const checklist = [
     { label: "Complete your game profile", done: profileReady, action: () => onGoTo("game-profile"), pct: profilePct },
@@ -136,20 +125,7 @@ export default function DashboardTab({
   return (
     <div className="space-y-8">
 
-      {/* ── 1. UNIFIED STATS STRIP ── */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-px rounded-xl overflow-hidden"
-         style={{ background: DASHBOARD_THEME.borderSubtle, border: `1px solid ${DASHBOARD_THEME.borderSubtle}` }}>
-        {stats.map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="flex flex-col items-center justify-center py-5 px-2 text-center"
-             style={{ background: DASHBOARD_THEME.surfaceSubtle }}>
-            <Icon className="w-4 h-4 mb-1.5" style={{ color }} />
-            <div className="text-lg font-black leading-none mb-0.5" style={{ color }}>{value}</div>
-            <div className="text-[10px] text-white/25 uppercase tracking-wider">{label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── 2. LAUNCH CHECKLIST (pre-campaign) ── */}
+      {/* ── 1. LAUNCH CHECKLIST (pre-campaign) ── */}
       {!hasCampaign && (
         <div className="rounded-2xl overflow-hidden"
           style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -287,11 +263,11 @@ export default function DashboardTab({
         </div>
       )}
 
-      {/* ── 4. CREATOR CONTENT PREVIEW ── */}
+      {/* ── 4. CONTENT PREVIEW ── */}
       {(hasContent || hasCampaign) && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-black text-white">Creator Content</h3>
+            <h3 className="text-sm font-black text-white">Content</h3>
             {hasContent && (
               <button onClick={() => onGoTo("creator-content")}
                 className="text-xs font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
@@ -340,8 +316,8 @@ export default function DashboardTab({
             <div className="rounded-xl py-8 text-center"
               style={{ background: "rgba(255,255,255,0.015)", border: "1px dashed rgba(255,255,255,0.07)" }}>
               <Film className="w-6 h-6 text-white/10 mx-auto mb-2" />
-              <p className="text-xs font-semibold text-white/30 mb-1">Creator content will appear here</p>
-              <p className="text-[10px] text-white/20">Once creators join your campaign and submit clips, reels and screenshots.</p>
+              <p className="text-xs font-semibold text-white/30 mb-1">Content will appear here</p>
+              <p className="text-[10px] text-white/20">Clips, reels and screenshots for your game will appear here.</p>
             </div>
           )}
         </div>
@@ -503,7 +479,7 @@ export default function DashboardTab({
             <div className="flex-1">
               <div className="text-xs font-bold text-white mb-1">Indie Pro</div>
               <p className="text-[10px] text-white/25 mb-3 leading-relaxed">
-                Run unlimited campaigns and access advanced promotional tools. Currently limited to 1 active campaign.
+                Unlock additional developer tools and promotion benefits for your game.
               </p>
               <button onClick={() => setShowUpgrade(true)}
                 className="text-[10px] font-bold px-4 py-2 rounded-lg transition-all hover:brightness-110"

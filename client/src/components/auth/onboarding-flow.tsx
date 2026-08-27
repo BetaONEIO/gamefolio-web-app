@@ -2472,9 +2472,9 @@ export default function OnboardingFlow({
           },
           indie: {
             titleA: 'GAME',  titleB: 'DEVELOPER',
-            sub: 'Run up to 5 active bounties at once, plus get featured across Gamefolio.',
+            sub: 'Get featured across Gamefolio with expanded developer benefits.',
             emoji: '🚀',
-            benefits: ['Run up to 5 active bounties at once (free: 1)', 'Featured promotion on gamefolio.com/games', 'Included in Gamefolio\'s social media promotion', '£3.99/mo or £42.00/yr'],
+            benefits: ['Featured promotion on gamefolio.com/games', 'Included in Gamefolio\'s social media promotion', 'Priority developer support', '£3.99/mo or £42.00/yr'],
             proLabel: 'Upgrade to Game Developer',
           },
         };

@@ -348,7 +348,7 @@ export default function ManageGameSettings() {
               { id: "media", label: "Media & Artwork", icon: ImageIcon },
               { id: "store", label: "Store & Platforms", icon: Store },
               ...(BOUNTIES_ENABLED ? [{ id: "bounty", label: "Bounty Programme", icon: Trophy }] : []),
-              { id: "content", label: "Creator Content", icon: Users },
+              { id: "content", label: "Content", icon: Users },
               { id: "updates", label: "Updates", icon: Megaphone },
               { id: "analytics", label: "Analytics", icon: BarChart3 },
               { id: "verification", label: "Verification", icon: Shield },
@@ -868,8 +868,8 @@ function CreatorContentTab({ user }: { user: any }) {
       ) : items.length === 0 ? (
         <div className="text-center py-12" style={{ background: "#0d0d0d", borderRadius: 12, border: "1px solid #1a1a1a" }}>
           <Users className="h-10 w-10 mx-auto mb-3 text-gray-700" />
-          <p className="text-sm font-semibold text-gray-400">No creator content yet</p>
-          <p className="text-xs text-gray-600 mt-1">Content from Gamefolio creators tagged with your game will appear here</p>
+          <p className="text-sm font-semibold text-gray-400">No content yet</p>
+          <p className="text-xs text-gray-600 mt-1">Content tagged with your game will appear here</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

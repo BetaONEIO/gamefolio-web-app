@@ -18,9 +18,9 @@ interface IndieDevUpgradeDialogProps {
 }
 
 const perks = [
-  { title: "Run more bounties", description: "Up to 5 active bounties at once, instead of 1" },
   { title: "Featured promotion", description: "Priority placement on gamefolio.com/games" },
   { title: "Social media spotlight", description: "Included in Gamefolio's social promotion" },
+  { title: "Priority support", description: "Get help when you need it most" },
 ];
 
 function isYearlyPackage(pkg: RcPackage): boolean {
@@ -214,7 +214,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
               <Rocket className="w-10 h-10 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">You're already a Game Developer Pro subscriber!</h2>
-            <p className="text-[#B8C0AE] mb-6">You can run up to 5 active bounties at once. Thanks for your support!</p>
+            <p className="text-[#B8C0AE] mb-6">Your developer benefits are active. Thanks for your support!</p>
             <button
               onClick={() => onOpenChange(false)}
               className="w-full py-4 bg-[#B7FF1A] hover:bg-[#A2F000] text-[#071013] font-bold text-lg rounded-2xl transition-colors"
@@ -239,7 +239,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
           <Rocket className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-2xl font-bold text-white mb-1">Game Developer Pro</h2>
-        <p className="text-[#B8C0AE] text-sm">Run more bounties and get promoted across Gamefolio</p>
+        <p className="text-[#B8C0AE] text-sm">Get promoted across Gamefolio with added developer benefits</p>
       </div>
 
       <div className="flex flex-col gap-3 mb-6">
@@ -352,7 +352,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
         <Rocket className="w-10 h-10 text-white" />
       </div>
       <h2 className="text-2xl font-bold text-white mb-2">Welcome to Game Developer Pro!</h2>
-      <p className="text-[#B8C0AE] mb-6">You can now run up to 5 active bounties at once.</p>
+      <p className="text-[#B8C0AE] mb-6">Your developer benefits are now active.</p>
       <button
         onClick={() => onOpenChange(false)}
         className="w-full py-4 bg-[#B7FF1A] hover:bg-[#A2F000] text-[#071013] font-bold text-lg rounded-2xl transition-colors"
