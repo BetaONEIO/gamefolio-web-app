@@ -27,11 +27,11 @@ type CampaignSubTab = "create" | "my";
 // which validates against these ids.
 const TOP_TABS: { id: TopTabId; label: string; icon: any }[] = [
   { id: "overview",        label: "Overview",       icon: LayoutDashboard },
+  { id: "game-profile",    label: "Game Profile",   icon: Settings },
   ...(CAMPAIGNS_ENABLED ? [{ id: "campaigns" as const, label: "Campaigns", icon: Target }] : []),
   { id: "creator-content", label: "Content",         icon: Film },
   ...(GAME_KEYS_ENABLED ? [{ id: "keys" as const, label: "Keys", icon: KeyRound }] : []),
   { id: "analytics",       label: "Analytics",      icon: BarChart3 },
-  { id: "game-profile",    label: "Game Profile",   icon: Settings },
 ];
 
 const TOP_TAB_IDS = TOP_TABS.map((t) => t.id);

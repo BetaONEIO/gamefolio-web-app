@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
 import { getGbpRates, detectLocalCurrency } from '../services/currency-service';
 import { captureRouteError } from '../sentry';
+import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
 
 const router = Router();
 
@@ -160,6 +161,9 @@ router.post('/api/stripe/create-indie-dev-subscription', hybridAuth, async (req:
     const userId = (req as any).user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
+    }
+    if (!GAME_DEVELOPER_PRO_PURCHASES_ENABLED) {
+      return res.status(503).json({ error: 'Game Developer Pro purchases are coming soon' });
     }
 
     const { plan } = req.body;
