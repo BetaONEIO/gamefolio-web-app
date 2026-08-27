@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Rocket, Loader2, ArrowLeft, Trophy, KeyRound, Megaphone, Users, Eye, BadgeCheck, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
@@ -444,11 +445,30 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent aria-describedby={undefined} className="max-w-[430px] md:max-w-[840px] w-full h-[100dvh] md:h-auto md:max-h-[90vh] bg-[#0B1218] border-none p-0 overflow-hidden [&>button]:hidden top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]">
+      <DialogContent
+        aria-describedby={undefined}
+        className="max-w-[430px] md:max-w-[840px] w-full h-[100dvh] md:h-auto md:max-h-[90vh] bg-[#0B1218] border-none p-0 overflow-hidden [&>button]:hidden top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
+        data-testid="dialog-developer-pro-upgrade"
+        onOpenAutoFocus={(event) => event.preventDefault()}
+      >
         <DialogTitle className="sr-only">Game Developer Pro</DialogTitle>
-        {step === "plans" && plansScreen}
-        {step === "checkout" && checkoutScreen}
-        {step === "success" && successScreen}
+        <AnimatePresence mode="wait" initial={false}>
+          {step === "plans" && (
+            <motion.div key="plans" className="h-full" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              {plansScreen}
+            </motion.div>
+          )}
+          {step === "checkout" && (
+            <motion.div key="checkout" className="h-full" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              {checkoutScreen}
+            </motion.div>
+          )}
+          {step === "success" && (
+            <motion.div key="success" className="h-full" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              {successScreen}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </DialogContent>
     </Dialog>
   );

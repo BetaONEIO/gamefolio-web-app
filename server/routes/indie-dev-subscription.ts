@@ -109,8 +109,9 @@ export async function provisionIndieDevSubscription(opts: {
   plan: 'monthly' | 'yearly';
   customerId?: string;
   subscriptionId?: string;
+  endDate?: Date;
 }): Promise<void> {
-  const { userId, plan, customerId, subscriptionId } = opts;
+  const { userId, plan, customerId, subscriptionId, endDate } = opts;
 
   const [before] = await db.select().from(users).where(eq(users.id, userId));
 
@@ -118,9 +119,9 @@ export async function provisionIndieDevSubscription(opts: {
     isIndieDevSubscriber: true,
     indieDevSubscriptionType: plan,
     indieDevSubscriptionStartDate: before?.indieDevSubscriptionStartDate ?? new Date(),
-    indieDevSubscriptionEndDate: plan === 'yearly'
+    indieDevSubscriptionEndDate: endDate ?? (plan === 'yearly'
       ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)),
     ...(customerId ? { stripeCustomerId: customerId } : {}),
     ...(subscriptionId ? { indieDevStripeSubscriptionId: subscriptionId } : {}),
     updatedAt: new Date(),
@@ -245,6 +246,10 @@ router.post('/api/stripe/create-indie-dev-subscription', hybridAuth, async (req:
 
 router.post('/api/stripe/confirm-indie-dev-subscription', hybridAuth, async (req: Request, res: Response) => {
   try {
+    if (!GAME_DEVELOPER_PRO_PURCHASES_ENABLED) {
+      return res.status(503).json({ error: 'Game Developer Pro purchases are coming soon' });
+    }
+
     const userId = (req as any).user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
