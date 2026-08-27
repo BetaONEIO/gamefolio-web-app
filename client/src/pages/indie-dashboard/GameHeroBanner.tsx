@@ -359,7 +359,7 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
             {/* LEFT — Capsule + game info */}
             <div className="flex items-end gap-5 flex-1 min-w-0">
               {/* Capsule image */}
-              <div className="flex flex-col items-center gap-2 shrink-0">
+              <div className="shrink-0">
                 <button
                   type="button"
                   onClick={() => capsuleInputRef.current?.click()}
@@ -391,9 +391,6 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
                     </span>
                   )}
                 </button>
-                <p className="max-w-36 text-center text-[10px] leading-relaxed text-white/35">
-                  Recommended: 600 × 800 px (3:4)
-                </p>
               </div>
 
               <div className="min-w-0 pb-1">
