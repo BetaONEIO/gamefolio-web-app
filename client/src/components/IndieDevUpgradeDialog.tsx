@@ -11,7 +11,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isNative } from "@/lib/platform";
-import gameDeveloperVideo from "@assets/GAME-GRAPHIC-VIDEO_1787836682910.mp4";
+import gameDeveloperVideo from "@assets/game-developer-pro-preview.mp4";
 
 interface IndieDevUpgradeDialogProps {
   open: boolean;
@@ -274,7 +274,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
   if (isIndieDevSubscriber && step !== "success") {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent aria-describedby={undefined} className="max-w-[430px] md:max-w-[780px] w-full h-[100dvh] md:h-auto md:max-h-[90vh] bg-[#0B1218] border-none p-0 overflow-hidden [&>button]:hidden top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]">
+        <DialogContent aria-describedby={undefined} className="max-w-[430px] md:max-w-[840px] w-full h-[100dvh] md:h-auto md:max-h-[90vh] bg-[#0B1218] border-none p-0 overflow-hidden [&>button]:hidden top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]">
           <DialogTitle className="sr-only">Game Developer Pro</DialogTitle>
           <div className="flex h-full max-h-[100dvh] flex-col md:grid md:max-h-[90vh] md:grid-cols-2">
             <DeveloperVideoPanel onClose={() => onOpenChange(false)} />
@@ -425,7 +425,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent aria-describedby={undefined} className="max-w-[430px] md:max-w-[780px] w-full h-[100dvh] md:h-auto md:max-h-[90vh] bg-[#0B1218] border-none p-0 overflow-hidden [&>button]:hidden top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]">
+      <DialogContent aria-describedby={undefined} className="max-w-[430px] md:max-w-[840px] w-full h-[100dvh] md:h-auto md:max-h-[90vh] bg-[#0B1218] border-none p-0 overflow-hidden [&>button]:hidden top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]">
         <DialogTitle className="sr-only">Game Developer Pro</DialogTitle>
         {step === "plans" && plansScreen}
         {step === "checkout" && checkoutScreen}
