@@ -298,48 +298,41 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
         />
       )}
 
-      <div className="relative w-full overflow-hidden min-h-[420px] sm:min-h-[560px] md:min-h-[640px]"
-        style={{ background: "#0a0f14" }}>
+      <div className="relative w-full overflow-hidden" style={{ background: "#0a0f14" }}>
+        {/* Banner artwork stays visually separate from the game identity section below. */}
+        <div className="relative h-[300px] sm:h-[420px] md:h-[520px]">
+          {displayBannerUrl && (
+            <img src={displayBannerUrl} alt=""
+              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
+              onError={() => { setImgError(true); setLocalPreview(null); }} />
+          )}
 
-        {/* Background banner image — full width, no rounding */}
-        {displayBannerUrl && (
-          <img src={displayBannerUrl} alt=""
-            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
-            onError={() => { setImgError(true); setLocalPreview(null); }} />
-        )}
+          <div className="absolute inset-0"
+            style={{ background: "linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.35) 100%)" }} />
+          <div className="absolute inset-0"
+            style={{ background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, transparent 50%)" }} />
 
-        {/* Dark gradient overlays */}
-        <div className="absolute inset-0"
-          style={{ background: "linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.35) 100%)" }} />
-        <div className="absolute inset-0"
-          style={{ background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, transparent 50%)" }} />
+          <button
+            onClick={() => artworkInputRef.current?.click()}
+            disabled={uploadMutation.isPending}
+            className="absolute top-5 right-5 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all backdrop-blur-md"
+            style={{ background: "rgba(0,0,0,0.45)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}>
+            {uploadMutation.isPending
+              ? <Loader2 className="w-3 h-3 animate-spin" />
+              : <ImagePlus className="w-3 h-3" />}
+            {uploadMutation.isPending ? "Uploading…" : "Change Banner"}
+          </button>
 
-        {/* Neon bottom border */}
-        <div className="absolute bottom-0 left-0 right-0 h-0.5"
-          style={{ background: "rgba(183,255,24,0.25)" }} />
-
-        {/* Change banner button */}
-        <button
-          onClick={() => artworkInputRef.current?.click()}
-          disabled={uploadMutation.isPending}
-          className="absolute top-5 right-5 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all backdrop-blur-md"
-          style={{ background: "rgba(0,0,0,0.45)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}>
-          {uploadMutation.isPending
-            ? <Loader2 className="w-3 h-3 animate-spin" />
-            : <ImagePlus className="w-3 h-3" />}
-          {uploadMutation.isPending ? "Uploading…" : "Change Banner"}
-        </button>
-
-        {/* Upload indicator overlay */}
-        {uploadMutation.isPending && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl backdrop-blur-md"
-              style={{ background: "rgba(0,0,0,0.6)", border: "1px solid rgba(183,255,24,0.25)" }}>
-              <Loader2 className="w-4 h-4 animate-spin" style={{ color: NEON }} />
-              <span className="text-xs font-bold" style={{ color: NEON }}>Uploading banner…</span>
+          {uploadMutation.isPending && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl backdrop-blur-md"
+                style={{ background: "rgba(0,0,0,0.6)", border: "1px solid rgba(183,255,24,0.25)" }}>
+                <Loader2 className="w-4 h-4 animate-spin" style={{ color: NEON }} />
+                <span className="text-xs font-bold" style={{ color: NEON }}>Uploading banner…</span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <input
           ref={artworkInputRef}
@@ -352,49 +345,42 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
           onChange={handleCapsuleFileChange}
         />
 
-        {/* Hero content */}
-        <div className="relative z-10 max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center min-h-[420px] sm:min-h-[560px] md:min-h-[640px]">
-          <div className="flex flex-col lg:flex-row lg:items-end gap-8 py-10">
+        {/* Game identity section — intentionally below the banner, with a larger icon. */}
+        <div className="relative z-10 border-t border-white/10">
+          <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-7">
+              <button
+                type="button"
+                onClick={() => capsuleInputRef.current?.click()}
+                disabled={uploadMutation.isPending}
+                aria-label={displayCapsuleUrl ? "Change game icon" : "Upload game icon"}
+                className="group relative w-36 sm:w-44 md:w-48 aspect-[3/4] shrink-0 rounded-xl overflow-hidden shadow-2xl disabled:cursor-wait"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: displayCapsuleUrl ? "1px solid rgba(255,255,255,0.10)" : "1px dashed rgba(255,255,255,0.12)",
+                }}>
+                {displayCapsuleUrl ? (
+                  <img src={displayCapsuleUrl} alt="Game icon" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="w-full h-full flex flex-col items-center justify-center gap-2">
+                    <ImagePlus className="w-8 h-8 text-white/25" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/35">Upload icon</span>
+                  </span>
+                )}
+                {displayCapsuleUrl && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-[10px] font-bold uppercase tracking-wider text-white opacity-0 transition-opacity group-hover:opacity-100">
+                    Change icon
+                  </span>
+                )}
+                {uploadMutation.isPending && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/60">
+                    <Loader2 className="w-6 h-6 animate-spin" style={{ color: NEON }} />
+                  </span>
+                )}
+              </button>
 
-            {/* LEFT — Capsule + game info */}
-            <div className="flex items-end gap-5 flex-1 min-w-0">
-              {/* Capsule image */}
-              <div className="shrink-0">
-                <button
-                  type="button"
-                  onClick={() => capsuleInputRef.current?.click()}
-                  disabled={uploadMutation.isPending}
-                  aria-label={displayCapsuleUrl ? "Change game icon" : "Upload game icon"}
-                  className="group relative rounded-lg overflow-hidden shadow-2xl disabled:cursor-wait"
-                  style={{
-                    width: 128,
-                    aspectRatio: "3/4",
-                    background: "rgba(255,255,255,0.04)",
-                    border: displayCapsuleUrl ? "1px solid rgba(255,255,255,0.10)" : "1px dashed rgba(255,255,255,0.12)",
-                  }}>
-                  {displayCapsuleUrl ? (
-                    <img src={displayCapsuleUrl} alt="Game icon" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="w-full h-full flex flex-col items-center justify-center gap-2">
-                      <ImagePlus className="w-6 h-6 text-white/25" />
-                      <span className="text-[9px] font-bold uppercase tracking-wider text-white/35">Upload icon</span>
-                    </span>
-                  )}
-                  {displayCapsuleUrl && (
-                    <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-[9px] font-bold uppercase tracking-wider text-white opacity-0 transition-opacity group-hover:opacity-100">
-                      Change icon
-                    </span>
-                  )}
-                  {uploadMutation.isPending && (
-                    <span className="absolute inset-0 flex items-center justify-center bg-black/60">
-                      <Loader2 className="w-5 h-5 animate-spin" style={{ color: NEON }} />
-                    </span>
-                  )}
-                </button>
-              </div>
-
-              <div className="min-w-0 pb-1">
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight mb-3 drop-shadow-lg">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight mb-3">
                   {profile?.gameName ?? "Your Game"}
                 </h2>
                 <div className="flex flex-wrap items-center gap-3 mb-5">
@@ -404,16 +390,11 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
                       {profile.releaseStatus.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
                     </span>
                   )}
-                  {profile?.platforms?.[0] && (
-                    <span className="text-[11px] text-white/40">{profile.platforms[0]}</span>
-                  )}
-                  {profile?.studioName && (
-                    <span className="text-[11px] text-white/40">{profile.studioName}</span>
-                  )}
+                  {profile?.platforms?.[0] && <span className="text-[11px] text-white/40">{profile.platforms[0]}</span>}
+                  {profile?.studioName && <span className="text-[11px] text-white/40">{profile.studioName}</span>}
                 </div>
 
-                {/* Profile Strength */}
-                <div className="mb-5 max-w-sm">
+                <div className="mb-2 max-w-xl">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">Profile Strength</span>
                     <span className="text-[11px] font-black"
