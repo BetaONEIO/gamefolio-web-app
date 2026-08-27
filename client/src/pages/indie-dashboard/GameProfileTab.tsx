@@ -593,15 +593,16 @@ function MediaCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta:
               </p>
               <DropZone currentUrl={profile?.headerImageUrl} field="headerImageUrl" gameId={profile?.id}
                 label="Drop banner or click to upload" aspect="1920 × 1080 recommended"
-                className="h-40" />
+                className="aspect-video" />
             </div>
             <div>
               <p className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">
                 Capsule · 2:3 <SourceBadge fieldName="capsuleImageUrl" fieldMeta={fieldMeta} />
               </p>
               <DropZone currentUrl={profile?.capsuleImageUrl} field="capsuleImageUrl" gameId={profile?.id}
-                label="Drop capsule" aspect="460 × 215 min"
+                label="Drop capsule" aspect="600 × 800 recommended"
                 className="h-40" />
+              <p className="mt-1 text-[10px] text-white/25">Recommended: 600 × 800 px (3:4)</p>
             </div>
           </div>
 

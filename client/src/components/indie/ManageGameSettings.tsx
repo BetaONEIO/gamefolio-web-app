@@ -556,8 +556,8 @@ function MediaTab({ profile, saveMut }: { profile: IndieProfile; saveMut: any })
           <Input value={form.headerImageUrl ?? ""} onChange={(e) => set("headerImageUrl", e.target.value)}
             placeholder="https://..." className={inputCls} />
           {form.headerImageUrl && (
-            <div className="mt-2 rounded-lg overflow-hidden border border-[#2a2a2a]" style={{ maxHeight: 160 }}>
-              <img src={form.headerImageUrl} alt="Banner preview" className="w-full object-cover" style={{ maxHeight: 160 }} onError={(e) => { (e.target as any).style.display = "none"; }} />
+            <div className="mt-2 aspect-video rounded-lg overflow-hidden border border-[#2a2a2a]" style={{ background: "#111" }}>
+              <img src={form.headerImageUrl} alt="Banner preview" className="h-full w-full object-cover" onError={(e) => { (e.target as any).style.display = "none"; }} />
             </div>
           )}
         </FormField>
