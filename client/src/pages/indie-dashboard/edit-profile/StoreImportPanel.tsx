@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { SiSteam, SiEpicgames, SiItchdotio } from "react-icons/si";
 import { NEON, CARD_BG, CARD_BORDER } from "../../IndieDashboardPage";
-import { formatFieldName, formatValue, type Profile, type FieldMeta } from "./types";
+import { formatFieldName, formatValue, getSourceLabel, type Profile, type FieldMeta } from "./types";
 
 interface StoreImportPanelProps {
   profile: Profile | null;
@@ -453,14 +453,15 @@ export function StoreImportPanel({ profile, gameId, fieldMeta, onImported, onGoT
           </div>
           <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
             {previewEntries.map(([k, v]) => {
-              const hasOverride = fieldMeta[k]?.isManualOverride;
+              const sourceLabel = getSourceLabel(fieldMeta[k]);
+              const hasOverride = sourceLabel === "OVERRIDDEN";
               return (
                 <label key={k} className="flex items-start gap-2.5 p-2 rounded cursor-pointer hover:bg-white/5 transition-colors">
                   <input type="checkbox" checked={selectedFields.has(k)} onChange={() => toggleField(k)} className="mt-0.5 accent-[#c1ff00]" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-bold text-white">{formatFieldName(k)}</span>
-                      {hasOverride && <span className="flex items-center gap-0.5 text-[9px] text-yellow-400"><AlertTriangle size={9} /> manual edit</span>}
+                      {hasOverride && <span className="flex items-center gap-0.5 text-[9px] text-yellow-400"><AlertTriangle size={9} /> OVERRIDDEN · current value kept</span>}
                     </div>
                     <div className="text-[11px] text-white/40 truncate">{formatValue(v)}</div>
                   </div>
