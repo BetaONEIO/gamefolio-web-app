@@ -200,6 +200,14 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const uploadHref = canonicalGameId
     ? `/upload?type=clips&gameId=${canonicalGameId}&gameName=${encodeURIComponent(gameName)}`
     : null;
+  const profileStats = [
+    { label: 'Following', value: profile._count?.following },
+    { label: 'Followers', value: profile._count?.followers },
+    {
+      label: 'Uploads',
+      value: profile._count ? (profile._count.clips ?? 0) + (profile._count.screenshots ?? 0) : undefined,
+    },
+  ];
 
   const followMutation = useMutation({
     mutationFn: async () => {
@@ -253,8 +261,26 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
             </div>
           )}
 
-          <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.78fr)] lg:gap-12">
-            <div className="order-2 min-w-0 lg:order-1">
+          <div className="grid items-center gap-8 lg:grid-cols-[minmax(300px,0.78fr)_minmax(0,1fr)] lg:gap-12">
+            {(displayHeader || displayCapsule) && (
+              <div className="relative order-1 overflow-hidden rounded-3xl border border-white/15 bg-[#0d151b] shadow-2xl shadow-black/40">
+                <div className="aspect-[16/10]">
+                  {displayHeader ? (
+                    <img src={displayHeader} alt={`${gameName} banner artwork`} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center bg-[#101923]">
+                      <Gamepad2 size={48} className="text-white/20" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/10" />
+                </div>
+                {displayCapsule && (
+                  <img src={displayCapsule} alt={`${gameName} icon`} className="absolute bottom-5 left-5 h-24 w-[72px] rounded-2xl border-2 border-white/30 object-cover shadow-2xl sm:h-32 sm:w-24" />
+                )}
+              </div>
+            )}
+
+            <div className="order-2 min-w-0">
               <div className="mb-4 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#B7FF18]">
                 <Gamepad2 size={14} />
                 <span>Indie game</span>
@@ -286,6 +312,14 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                     {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
                   </button>
                 )}
+                <div className="flex items-stretch overflow-hidden rounded-xl border border-white/15 bg-black/25" aria-label="Developer profile statistics">
+                  {profileStats.map(({ label, value }, index) => (
+                    <div key={label} className={`min-w-[74px] px-3 py-2 text-center sm:min-w-[86px] sm:px-4 ${index > 0 ? 'border-l border-white/10' : ''}`}>
+                      <div className="text-sm font-black text-white">{value == null ? '—' : value.toLocaleString()}</div>
+                      <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-white/40">{label}</div>
+                    </div>
+                  ))}
+                </div>
                 {!isOwnProfile && (
                   <button onClick={() => currentUser ? setMessageDialogOpen(true) : setLocation('/auth')} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Message developer">
                     <MessageCircle size={18} />
@@ -302,23 +336,6 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
               </div>
             </div>
 
-            {(displayHeader || displayCapsule) && (
-              <div className="relative order-1 overflow-hidden rounded-3xl border border-white/15 bg-[#0d151b] shadow-2xl shadow-black/40 lg:order-2">
-                <div className="aspect-[16/10]">
-                  {displayHeader ? (
-                    <img src={displayHeader} alt={`${gameName} banner artwork`} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full items-center justify-center bg-[#101923]">
-                      <Gamepad2 size={48} className="text-white/20" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/10" />
-                </div>
-                {displayCapsule && (
-                  <img src={displayCapsule} alt={`${gameName} icon`} className="absolute bottom-5 left-5 h-24 w-[72px] rounded-2xl border-2 border-white/30 object-cover shadow-2xl sm:h-32 sm:w-24" />
-                )}
-              </div>
-            )}
           </div>
         </div>
       </section>
