@@ -68,7 +68,7 @@ export default function IndieDashboardPage() {
     if (activeGameId) params.set("gameId", String(activeGameId));
     if (toTab === "game-profile" && sub) params.set("profileSection", sub);
     else params.delete("profileSection");
-    setLocation(`/indie-dashboard?${params.toString()}`, { replace: true });
+    setLocation(`/game-dashboard?${params.toString()}`, { replace: true });
   };
 
   const openRunWizard = (template?: any) => {

@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { Check, X, Edit2, RotateCcw, ExternalLink, Plus, Trash2, ChevronDown, ChevronRight, Monitor, Smartphone, Globe, Gamepad2 } from "lucide-react";
+import { Check, X, Edit2, RotateCcw, ExternalLink, Plus, Trash2, ChevronDown, ChevronRight, Gamepad2 } from "lucide-react";
+import {
+  SiAndroid, SiIos, SiLinux, SiMacos, SiNintendoswitch, SiPlaystation,
+} from "react-icons/si";
+import { FaWindows, FaXbox } from "react-icons/fa6";
 import { NEON, CARD_BG, CARD_BORDER } from "../../IndieDashboardPage";
 import { SOURCE_COLORS, PLATFORM_OPTIONS, formatFieldName, type FieldMeta, type Profile, type FieldType } from "./types";
 
@@ -91,14 +95,23 @@ export function UrlArrayEditor({ values, onChange }: { values: string[]; onChang
 
 // ─── Platform Select ──────────────────────────────────────────────────────────
 
-const ICON_MAP = { Monitor, Globe, Gamepad2, Smartphone };
+const ICON_MAP: Record<string, React.ElementType> = {
+  windows: FaWindows,
+  mac: SiMacos,
+  linux: SiLinux,
+  ps5: SiPlaystation,
+  xbox: FaXbox,
+  switch: SiNintendoswitch,
+  ios: SiIos,
+  android: SiAndroid,
+};
 
 export function PlatformToggleGrid({ values, onChange }: { values: string[]; onChange: (v: string[]) => void }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
       {PLATFORM_OPTIONS.map(opt => {
         const selected = values.includes(opt.id);
-        const Icon = ICON_MAP[opt.icon as keyof typeof ICON_MAP];
+         const Icon = ICON_MAP[opt.id] ?? Gamepad2;
         return (
           <button key={opt.id}
             onClick={() => onChange(selected ? values.filter(p => p !== opt.id) : [...values, opt.id])}
@@ -192,7 +205,7 @@ export function FieldRow({ fieldName, label, profile, fieldMeta, type, selectOpt
               <div className="flex flex-wrap gap-1.5 mt-1">
                 {(currentVal as string[]).map(p => {
                   const opt = PLATFORM_OPTIONS.find(o => o.id === p);
-                  const Icon = ICON_MAP[(opt?.icon ?? "Gamepad2") as keyof typeof ICON_MAP];
+                   const Icon = ICON_MAP[p] ?? Gamepad2;
                   return (
                     <span key={p} className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
                       style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${CARD_BORDER}` }}>

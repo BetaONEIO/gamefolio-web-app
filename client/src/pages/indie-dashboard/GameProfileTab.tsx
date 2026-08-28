@@ -5,10 +5,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useSignedUrl, useSignedUrls } from "@/hooks/use-signed-url";
 import {
   Pencil, X, Check, Loader2, Upload, Plus, Trash2, ExternalLink,
-  Image as ImageIcon, Video, Globe, Gamepad2, Monitor, Smartphone,
+  Image as ImageIcon, Video, Globe, Gamepad2,
   Play, Sparkles, Building2, Package, Download, Twitter,
 } from "lucide-react";
-import { SiSteam, SiEpicgames, SiItchdotio, SiDiscord } from "react-icons/si";
+import {
+  SiSteam, SiEpicgames, SiItchdotio, SiDiscord, SiMacos, SiLinux,
+  SiPlaystation, SiNintendoswitch, SiIos, SiAndroid,
+} from "react-icons/si";
+import { FaWindows, FaXbox } from "react-icons/fa6";
 import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 import { StoreImportPanel } from "./edit-profile/StoreImportPanel";
 import { SyncPanel } from "./edit-profile/SyncPanel";
@@ -1067,10 +1071,15 @@ function PlatformCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
     }
   };
 
-  const platformIcons: Record<string, React.ReactNode> = {
-    windows: <Monitor size={18} />, mac: <Monitor size={18} />, linux: <Globe size={18} />,
-    ps5: <Gamepad2 size={18} />, xbox: <Gamepad2 size={18} />, switch: <Gamepad2 size={18} />,
-    ios: <Smartphone size={18} />, android: <Smartphone size={18} />,
+  const platformIcons: Record<string, React.ElementType> = {
+    windows: FaWindows,
+    mac: SiMacos,
+    linux: SiLinux,
+    ps5: SiPlaystation,
+    xbox: FaXbox,
+    switch: SiNintendoswitch,
+    ios: SiIos,
+    android: SiAndroid,
   };
 
   return (
@@ -1093,7 +1102,10 @@ function PlatformCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
                 border: `1px solid ${on ? `${NEON}55` : CARD_BORDER}`,
                 color: on ? NEON : "rgba(255,255,255,0.3)",
               }}>
-              {platformIcons[p.id]}
+              {(() => {
+                const Icon = platformIcons[p.id] ?? Gamepad2;
+                return <Icon size={18} />;
+              })()}
               <span className="text-[10px] font-bold">{p.label}</span>
             </button>
           );
