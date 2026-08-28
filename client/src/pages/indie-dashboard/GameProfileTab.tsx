@@ -1049,16 +1049,52 @@ function StoreListingCard({
 function PlatformCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta: FieldMeta }) {
   const { toast } = useToast();
   const selected: string[] = (profile?.platforms as string[] | null) ?? [];
+  const [optimisticSelected, setOptimisticSelected] = useState<string[] | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const displayedSelected = optimisticSelected ?? selected;
+  const displayedSelectedRef = useRef(selected);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const pendingWritesRef = useRef(0);
 
-  const toggle = async (id: string) => {
-    const next = selected.includes(id) ? selected.filter(p => p !== id) : [...selected, id];
-    try {
-      const data = await (await apiRequest("PUT", "/api/indie/profile", { gameId: profile?.id, platforms: next })).json();
-      queryClient.setQueryData(["/api/indie/profile", profile?.id ?? null], data);
-      await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
-    } catch (error: any) {
-      toast({ description: error?.message?.replace(/^\d+:\s*/, "") || "Save failed", variant: "gamefolioError" });
-    }
+  useEffect(() => {
+    if (optimisticSelected === null) displayedSelectedRef.current = selected;
+  }, [selected, optimisticSelected]);
+
+  const toggle = (id: string) => {
+    const current = displayedSelectedRef.current;
+    const next = current.includes(id)
+      ? current.filter(p => p !== id)
+      : [...current, id];
+    // Reflect the choice immediately. The profile PUT also reconciles the
+    // catalogue row, so waiting for its response makes this simple toggle
+    // feel unresponsive even though the write is still progressing.
+    displayedSelectedRef.current = next;
+    setOptimisticSelected(next);
+    pendingWritesRef.current += 1;
+    setIsSaving(true);
+
+    // Queue snapshots so rapid clicks remain responsive without allowing
+    // out-of-order responses to overwrite the user's final selection.
+    const save = async () => {
+      try {
+        const data = await (await apiRequest("PUT", "/api/indie/profile", { gameId: profile?.id, platforms: next })).json();
+        queryClient.setQueryData(["/api/indie/profile", profile?.id ?? null], data);
+      } catch (error: any) {
+        if (pendingWritesRef.current === 1) {
+          displayedSelectedRef.current = selected;
+          setOptimisticSelected(null);
+        }
+        toast({ description: error?.message?.replace(/^\d+:\s*/, "") || "Save failed", variant: "gamefolioError" });
+      } finally {
+        pendingWritesRef.current -= 1;
+        if (pendingWritesRef.current === 0) {
+          setIsSaving(false);
+          setOptimisticSelected(null);
+          await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+        }
+      }
+    };
+    saveQueueRef.current = saveQueueRef.current.then(save, save);
   };
 
   const platformIcons: Record<string, React.ElementType> = {
@@ -1074,18 +1110,20 @@ function PlatformCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
 
   return (
     <div data-profile-section="platforms" className="scroll-mt-24 rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
-      <div className="flex items-center gap-2.5 px-5 py-4"
+      <div className="flex items-center gap-2.5 px-5 py-4" aria-busy={isSaving}
         style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
         <Gamepad2 size={16} style={{ color: NEON }} />
          <span className="flex items-center gap-2 text-sm font-bold text-white">
             Platforms
          </span>
+         {isSaving && <Loader2 size={12} className="animate-spin text-white/40" aria-label="Saving platform changes" />}
       </div>
       <div className="p-5 grid grid-cols-4 gap-2">
         {PLATFORM_OPTIONS.map(p => {
-          const on = selected.includes(p.id);
+          const on = displayedSelected.includes(p.id);
           return (
-            <button key={p.id} onClick={() => toggle(p.id)}
+            <button key={p.id} type="button" onClick={() => toggle(p.id)}
+              aria-pressed={on}
               className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all"
               style={{
                 background: on ? `${NEON}14` : "rgba(255,255,255,0.03)",
