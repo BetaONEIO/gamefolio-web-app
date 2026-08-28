@@ -12348,7 +12348,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (key === "updatedAt") continue;
         await _indieUpsertMeta(req.user.id, key, { isManualOverride: true, useImported: false, lastEditedAt: now }, profile?.id);
       }
-      const catalogue = profile ? await _syncIndieGameCatalogue(profile) : { game: null };
+      // Catalogue reconciliation only depends on the game's name and artwork.
+      // Avoid doing those extra lookups for unrelated fields such as platforms,
+      // which should feel like an immediate multi-select interaction.
+      const catalogueFields = new Set(["gameName", "capsuleImageUrl", "headerImageUrl"]);
+      const needsCatalogueSync = Object.keys(patch).some((key) => catalogueFields.has(key));
+      const catalogue = profile && needsCatalogueSync
+        ? await _syncIndieGameCatalogue(profile)
+        : { game: null };
       if (catalogue.conflict) {
         return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
       }
