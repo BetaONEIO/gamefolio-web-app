@@ -196,16 +196,16 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     { label: 'Reels', value: counts?.reels ?? reels.length, icon: Video },
     { label: 'Screenshots', value: counts?.screenshots ?? communityScreenshots.length, icon: Camera },
   ].filter((item) => item.value > 0);
-  const hasCommunity = clips.length > 0 || reels.length > 0 || communityScreenshots.length > 0;
+  const hasCommunityHighlights = clips.length > 0 || reels.length > 0;
   const uploadHref = canonicalGameId
     ? `/upload?type=clips&gameId=${canonicalGameId}&gameName=${encodeURIComponent(gameName)}`
     : null;
   const profileStats = [
-    { label: 'Following', value: profile._count?.following },
-    { label: 'Followers', value: profile._count?.followers },
+    { label: 'Following', value: profile._count?.following == null ? undefined : Number(profile._count.following) },
+    { label: 'Followers', value: profile._count?.followers == null ? undefined : Number(profile._count.followers) },
     {
       label: 'Uploads',
-      value: profile._count ? (profile._count.clips ?? 0) + (profile._count.screenshots ?? 0) : undefined,
+      value: profile._count ? Number(profile._count.clips ?? 0) + Number(profile._count.screenshots ?? 0) : undefined,
     },
   ];
 
@@ -236,10 +236,10 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     <div className="min-h-screen bg-[#080d11] pb-20 text-white">
       <section className="relative isolate overflow-hidden border-b border-white/10">
         {displayHeader ? (
-          <img src={displayHeader} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-55" />
+          <img src={displayHeader} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-70" />
         ) : null}
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(8,13,17,.88)_0%,rgba(8,13,17,.52)_48%,rgba(8,13,17,.72)_100%)]" />
-        <div className="absolute inset-x-0 bottom-0 -z-10 h-2/3 bg-gradient-to-t from-[#080d11] to-transparent" />
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(8,13,17,.72)_0%,rgba(8,13,17,.28)_48%,rgba(8,13,17,.5)_100%)]" />
+        <div className="absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-gradient-to-t from-[#080d11] to-transparent" />
         <div className="mx-auto max-w-7xl px-5 pb-10 pt-28 sm:px-8 lg:pb-14 lg:pt-36">
           {gameList.length > 1 && (
             <div className="mb-8 flex max-w-full gap-2 overflow-x-auto pb-1" aria-label="Choose a game">
@@ -394,20 +394,47 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                   </section>
                 )}
 
+                {communityScreenshots.length > 0 && (
+                  <section>
+                    <div className="mb-4 flex items-end justify-between gap-4">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#B7FF18]">Game media</p>
+                        <h2 className="mt-1 text-xl font-black">Screenshots</h2>
+                      </div>
+                      <button onClick={() => jumpTo('SCREENSHOTS')} className="flex shrink-0 items-center gap-1 text-xs font-bold text-[#B7FF18]">
+                        View all <ChevronRight size={14} />
+                      </button>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {communityScreenshots.slice(0, 4).map((shot) => <ScreenshotCard key={shot.id} screenshot={shot} profile={profile} showUserInfo onSelect={setSelectedScreenshot} />)}
+                    </div>
+                  </section>
+                )}
+
+                {hasCommunityHighlights ? (
                 <section>
                   <div className="mb-4 flex items-end justify-between gap-4">
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#B7FF18]">From the community</p>
                       <h2 className="mt-1 text-xl font-black">Community highlights</h2>
                     </div>
-                    {hasCommunity && (
+                    {hasCommunityHighlights && (
                       <button onClick={() => jumpTo(clips.length ? 'CLIPS' : 'SCREENSHOTS')} className="flex shrink-0 items-center gap-1 text-xs font-bold text-[#B7FF18]">
                         View all <ChevronRight size={14} />
                       </button>
                     )}
                   </div>
 
-                  {!hasCommunity ? (
+                  <div className="space-y-8">
+                    {clips.length > 0 && (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {clips.slice(0, 4).map((clip) => <VideoClipGridItem key={clip.id} clip={clip} clipsList={clips} />)}
+                      </div>
+                    )}
+                  </div>
+                </section>
+                ) : !communityScreenshots.length ? (
+                  <section>
                     <EmptyCommunityState
                       title="No community content yet"
                       body={`Clips, reels and screenshots shared for ${gameName} will appear here.`}
@@ -418,27 +445,8 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                         </Link>
                       ) : null}
                     />
-                  ) : (
-                    <div className="space-y-8">
-                      {clips.length > 0 && (
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          {clips.slice(0, 4).map((clip) => <VideoClipGridItem key={clip.id} clip={clip} clipsList={clips} />)}
-                        </div>
-                      )}
-                      {communityScreenshots.length > 0 && (
-                        <div>
-                          <div className="mb-3 flex items-center justify-between">
-                            <h3 className="text-sm font-black text-white/80">Screenshots</h3>
-                            <button onClick={() => jumpTo('SCREENSHOTS')} className="text-xs font-bold text-[#B7FF18]">View all</button>
-                          </div>
-                          <div className="grid gap-4 sm:grid-cols-2">
-                            {communityScreenshots.slice(0, 4).map((shot) => <ScreenshotCard key={shot.id} screenshot={shot} profile={profile} showUserInfo onSelect={setSelectedScreenshot} />)}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </section>
+                  </section>
+                ) : null}
               </div>
 
               <aside className="space-y-5">
