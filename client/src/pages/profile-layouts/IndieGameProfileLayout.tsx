@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
 import { getQueryFn, queryClient } from '@/lib/queryClient';
@@ -9,7 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import PlatformConnections from '@/components/profile/PlatformConnections';
 import { GameShareDialog } from '@/components/profile/GameShareDialog';
 import VideoClipGridItem from '@/components/clips/VideoClipGridItem';
-import { ScreenshotCard } from '@/components/screenshots/ScreenshotCard';
 import HlsVideo from '@/components/media/HlsVideo';
 import { getVideoEmbedUrl } from '@/lib/video-embed';
 import { useSignedUrl, useSignedUrls } from '@/hooks/use-signed-url';
@@ -28,6 +28,7 @@ import { FaWindows, FaXbox } from 'react-icons/fa6';
 import {
   Camera,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   ExternalLink,
   Gamepad2,
@@ -104,6 +105,78 @@ function PlatformIcon({ value }: { value: string }) {
   return <Icon size={13} />;
 }
 
+function ScreenshotCarousel({
+  screenshots,
+  onSelect,
+}: {
+  screenshots: any[];
+  onSelect: (screenshot: any, trigger: HTMLButtonElement) => void;
+}) {
+  const railRef = useRef<HTMLDivElement>(null);
+
+  if (screenshots.length === 0) return null;
+
+  const scrollRail = (direction: 'previous' | 'next') => {
+    railRef.current?.scrollBy({
+      left: direction === 'next' ? railRef.current.clientWidth * 0.82 : -railRef.current.clientWidth * 0.82,
+      behavior: 'smooth',
+    });
+  };
+
+  return (
+    <div className="group/rail relative">
+      <div
+        ref={railRef}
+        className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 scrollbar-hide"
+        aria-label="Game screenshots"
+      >
+        {screenshots.map((screenshot, index) => (
+          <button
+            key={screenshot.id}
+            type="button"
+            onClick={(event) => onSelect(screenshot, event.currentTarget)}
+            className="group/shot relative min-w-[min(78vw,360px)] snap-start overflow-hidden rounded-xl border border-white/10 bg-[#0B1218] text-left outline-none transition hover:border-white/25 focus-visible:ring-2 focus-visible:ring-[#B7FF1A] sm:min-w-[360px] lg:min-w-[410px]"
+            aria-label={`View ${screenshot.title || `screenshot ${index + 1}`} full screen`}
+          >
+            <div className="aspect-video">
+              <img
+                src={screenshot.imageUrl}
+                alt={screenshot.title || `Screenshot ${index + 1}`}
+                loading="lazy"
+                className="h-full w-full object-cover transition duration-300 group-hover/shot:scale-[1.02]"
+              />
+            </div>
+            <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 pb-3 pt-8 text-[10px] font-bold uppercase tracking-wider text-white/75 opacity-0 transition-opacity group-hover/shot:opacity-100 group-focus/shot:opacity-100">
+              View full screen
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {screenshots.length > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={() => scrollRail('previous')}
+            aria-label="Previous screenshots"
+            className="absolute left-2 top-1/2 hidden -translate-y-1/2 rounded-full border border-white/15 bg-black/75 p-2 text-white shadow-lg transition hover:bg-black sm:flex sm:opacity-0 sm:group-hover/rail:opacity-100"
+          >
+            <ChevronLeft size={17} />
+          </button>
+          <button
+            type="button"
+            onClick={() => scrollRail('next')}
+            aria-label="Next screenshots"
+            className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-full border border-white/15 bg-black/75 p-2 text-white shadow-lg transition hover:bg-black sm:flex sm:opacity-0 sm:group-hover/rail:opacity-100"
+          >
+            <ChevronRight size={17} />
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function EmptyCommunityState({
   title,
   body,
@@ -139,7 +212,13 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   });
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
+  const [selectedScreenshotId, setSelectedScreenshotId] = useState<string | number | null>(null);
+  const pageRootRef = useRef<HTMLDivElement>(null);
+  const lightboxRef = useRef<HTMLDivElement>(null);
+  const closeLightboxButtonRef = useRef<HTMLButtonElement>(null);
+  const lightboxReturnFocusRef = useRef<HTMLElement | null>(null);
+  const gameScreenshotsRef = useRef<any[]>([]);
+  const selectedScreenshotIdRef = useRef<string | number | null>(null);
 
   const { data: gameListData } = useQuery<{ games: { id: number; gameName: string | null; headerImageUrl: string | null; capsuleImageUrl: string | null; isPrimary: boolean }[] }>({
     queryKey: [`/api/games/indie/${profile.username}/list`],
@@ -220,6 +299,15 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     .filter((screenshot): screenshot is NonNullable<typeof screenshot> => screenshot !== null);
   const gameScreenshots = [...profileScreenshots, ...communityScreenshots];
   const screenshotCount = profileScreenshotSources.length + Number(counts?.screenshots ?? 0);
+  const selectedScreenshotIndex = selectedScreenshotId === null
+    ? -1
+    : gameScreenshots.findIndex((screenshot) => screenshot.id === selectedScreenshotId);
+  const selectedScreenshot = selectedScreenshotIndex >= 0
+    ? gameScreenshots[selectedScreenshotIndex]
+    : null;
+  gameScreenshotsRef.current = gameScreenshots;
+  selectedScreenshotIdRef.current = selectedScreenshotId;
+  const isScreenshotViewerOpen = selectedScreenshot !== null;
   const header = gameProfile?.headerImageUrl || gameProfile?.capsuleImageUrl || canonicalGame?.imageUrl || null;
   const capsule = gameProfile?.capsuleImageUrl || canonicalGame?.imageUrl || null;
   const { signedUrl: displayHeader } = useSignedUrl(header);
@@ -256,6 +344,76 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     },
   ];
 
+  useEffect(() => {
+    if (!isScreenshotViewerOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedScreenshotId(null);
+      } else if (event.key === 'ArrowLeft') {
+        const screenshots = gameScreenshotsRef.current;
+        const currentIndex = screenshots.findIndex((screenshot) => screenshot.id === selectedScreenshotIdRef.current);
+        if (currentIndex >= 0 && screenshots.length > 0) {
+          setSelectedScreenshotId(screenshots[(currentIndex - 1 + screenshots.length) % screenshots.length].id);
+        }
+      } else if (event.key === 'ArrowRight') {
+        const screenshots = gameScreenshotsRef.current;
+        const currentIndex = screenshots.findIndex((screenshot) => screenshot.id === selectedScreenshotIdRef.current);
+        if (currentIndex >= 0 && screenshots.length > 0) {
+          setSelectedScreenshotId(screenshots[(currentIndex + 1) % screenshots.length].id);
+        }
+      } else if (event.key === 'Tab') {
+        const focusable = Array.from(
+          lightboxRef.current?.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+          ) ?? [],
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    const backgroundRoot = (pageRootRef.current?.closest('#root') as HTMLElement | null) ?? pageRootRef.current;
+    const previousAriaHidden = backgroundRoot?.getAttribute('aria-hidden');
+    document.body.style.overflow = 'hidden';
+    backgroundRoot?.setAttribute('inert', '');
+    backgroundRoot?.setAttribute('aria-hidden', 'true');
+    window.requestAnimationFrame(() => closeLightboxButtonRef.current?.focus());
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      backgroundRoot?.removeAttribute('inert');
+      if (previousAriaHidden === null || previousAriaHidden === undefined) {
+        backgroundRoot?.removeAttribute('aria-hidden');
+      } else {
+        backgroundRoot?.setAttribute('aria-hidden', previousAriaHidden);
+      }
+      lightboxReturnFocusRef.current?.focus();
+    };
+  }, [isScreenshotViewerOpen]);
+
+  const openScreenshot = (screenshot: any, trigger: HTMLButtonElement) => {
+    lightboxReturnFocusRef.current = trigger;
+    setSelectedScreenshotId(screenshot.id);
+  };
+  const moveScreenshot = (direction: 'previous' | 'next') => {
+    if (selectedScreenshotIndex < 0 || gameScreenshots.length === 0) return;
+    const nextIndex = direction === 'next'
+      ? (selectedScreenshotIndex + 1) % gameScreenshots.length
+      : (selectedScreenshotIndex - 1 + gameScreenshots.length) % gameScreenshots.length;
+    setSelectedScreenshotId(gameScreenshots[nextIndex].id);
+  };
+
   const followMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch(`/api/users/${profile.username}/follow`, {
@@ -280,7 +438,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const gameShareUrl = publicUrl(`/studio/${encodeURIComponent(profile.username)}${sharedGameId != null ? `?gameId=${sharedGameId}` : ''}`);
 
   return (
-    <div className="min-h-screen bg-[#080d11] pb-20 text-white">
+    <div ref={pageRootRef} className="min-h-screen bg-[#080d11] pb-20 text-white">
       <section className="relative isolate overflow-hidden border-b border-white/10">
         {displayHeader ? (
           <img src={displayHeader} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-70" />
@@ -454,9 +612,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                         View all <ChevronRight size={14} />
                       </button>
                     </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {gameScreenshots.slice(0, 4).map((shot) => <ScreenshotCard key={shot.id} screenshot={shot} profile={profile} showUserInfo onSelect={setSelectedScreenshot} />)}
-                    </div>
+                    <ScreenshotCarousel screenshots={gameScreenshots.slice(0, 4)} onSelect={openScreenshot} />
                   </section>
                 )}
 
@@ -573,7 +729,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
         {activeTab === 'SCREENSHOTS' && (
           <section>
             <h2 className="mb-5 text-2xl font-black">Game screenshots</h2>
-            {gameScreenshots.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{gameScreenshots.map((shot) => <ScreenshotCard key={shot.id} screenshot={shot} profile={profile} showUserInfo onSelect={setSelectedScreenshot} />)}</div> : <EmptyCommunityState title="No screenshots yet" body={`No screenshots have been added for ${gameName} yet.`} icon={Camera} />}
+            {gameScreenshots.length ? <ScreenshotCarousel screenshots={gameScreenshots} onSelect={openScreenshot} /> : <EmptyCommunityState title="No screenshots yet" body={`No screenshots have been added for ${gameName} yet.`} icon={Camera} />}
           </section>
         )}
       </main>
@@ -586,7 +742,58 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
         open={shareDialogOpen}
         onOpenChange={setShareDialogOpen}
       />
-      {selectedScreenshot && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-5" onClick={() => setSelectedScreenshot(null)}><button onClick={() => setSelectedScreenshot(null)} className="absolute right-5 top-5 rounded-full border border-white/20 p-2"><X size={20} /></button><img src={selectedScreenshot.imageUrl} alt={selectedScreenshot.title} className="max-h-full max-w-full rounded-lg object-contain" onClick={(event) => event.stopPropagation()} /></div>}
+      {selectedScreenshot && createPortal(
+        <div
+          ref={lightboxRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${gameName} screenshot viewer`}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 sm:p-8"
+          onClick={() => setSelectedScreenshotId(null)}
+        >
+          <button
+            ref={closeLightboxButtonRef}
+            type="button"
+            onClick={() => setSelectedScreenshotId(null)}
+            aria-label="Close screenshot viewer"
+            className="absolute right-4 top-4 rounded-full border border-white/20 bg-black/40 p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+          >
+            <X size={20} />
+          </button>
+          {gameScreenshots.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(event) => { event.stopPropagation(); moveScreenshot('previous'); }}
+                aria-label="Previous screenshot"
+                className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/55 p-3 text-white transition hover:bg-white/10 sm:left-6"
+              >
+                <ChevronLeft size={24} />
+              </button>
+              <button
+                type="button"
+                onClick={(event) => { event.stopPropagation(); moveScreenshot('next'); }}
+                aria-label="Next screenshot"
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-black/55 p-3 text-white transition hover:bg-white/10 sm:right-6"
+              >
+                <ChevronRight size={24} />
+              </button>
+            </>
+          )}
+          <figure className="flex max-h-full max-w-6xl flex-col items-center gap-3" onClick={(event) => event.stopPropagation()}>
+            <img
+              src={selectedScreenshot.imageUrl}
+              alt={selectedScreenshot.title}
+              className="max-h-[calc(100vh-7rem)] max-w-full rounded-lg object-contain shadow-2xl"
+            />
+            <figcaption className="text-center text-xs font-semibold text-white/60">
+              {selectedScreenshot.title}
+              {gameScreenshots.length > 1 && <span className="ml-2 text-white/35">{selectedScreenshotIndex + 1} / {gameScreenshots.length}</span>}
+            </figcaption>
+          </figure>
+        </div>,
+        document.body,
+      )}
       {currentUser && <React.Suspense fallback={null}><MessageDialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen} targetUser={{ id: profile.id, username: profile.username, displayName: profile.displayName, avatarUrl: profile.avatarUrl }} /></React.Suspense>}
     </div>
   );

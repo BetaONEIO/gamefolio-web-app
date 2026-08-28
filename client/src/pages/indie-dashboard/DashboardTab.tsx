@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { getQueryFn } from "@/lib/queryClient";
+import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import {
   Rocket, Film, Camera, Video,
   ArrowUpRight, ChevronRight,
@@ -44,15 +44,17 @@ function isFieldFilled(profile: any, f: string): boolean {
 
 export default function DashboardTab({
   onGoTo,
+  gameId,
 }: {
   onGoTo: (tab: TopTabId, sub?: string) => void;
+  gameId?: number;
 }) {
   const { user } = useAuth();
   const [showUpgrade, setShowUpgrade] = useState(false);
 
   const { data: profileData } = useQuery<any>({
-    queryKey: ["/api/indie/profile"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryKey: ["/api/indie/profile", gameId ?? null],
+    queryFn: () => apiRequest("GET", `/api/indie/profile${gameId ? `?gameId=${gameId}` : ""}`).then(r => r.json()),
   });
   const { data: analyticsData } = useQuery<any>({
     queryKey: ["/api/indie/analytics"],
@@ -80,9 +82,10 @@ export default function DashboardTab({
 
   const hasContent = content.length > 0;
   const profileReady = missingEssential.length === 0;
+  const firstMissingField = missingEssential[0] ?? nextSteps[0]?.field;
   /* ── LAUNCH CHECKLIST ITEMS ── */
   const checklist = [
-    { label: "Complete your game profile", done: profileReady, action: () => onGoTo("game-profile"), pct: profilePct },
+    { label: "Complete your game profile", done: profileReady, action: () => onGoTo("game-profile", firstMissingField), pct: profilePct },
   ];
 
   const doneCount = checklist.filter((c) => c.done).length;
@@ -197,7 +200,7 @@ export default function DashboardTab({
           style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-black text-white">Profile Strength</h3>
-            <button onClick={() => onGoTo("game-profile")}
+             <button onClick={() => onGoTo("game-profile", nextSteps[0]?.field)}
               className="text-[10px] font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
               Edit <ChevronRight className="w-3 h-3" />
             </button>
@@ -224,7 +227,7 @@ export default function DashboardTab({
             <div className="space-y-1.5">
               <p className="text-[10px] text-white/25 mb-1.5">Recommended next steps:</p>
               {nextSteps.map((step, i) => (
-                <button key={step.field ?? i} onClick={() => onGoTo("game-profile")}
+               <button key={step.field ?? i} onClick={() => onGoTo("game-profile", step.field)}
                   className="w-full flex items-center gap-2 text-left group py-1.5 rounded-lg px-2 transition-colors hover:bg-white/[0.03]">
                   <div className="w-4 h-4 rounded-full border flex items-center justify-center shrink-0"
                     style={{ borderColor: "rgba(255,255,255,0.12)" }}>
@@ -250,7 +253,7 @@ export default function DashboardTab({
           <h3 className="text-sm font-black text-white mb-4">Needs Attention</h3>
           <div className="space-y-2">
             {!profileReady && (
-              <button onClick={() => onGoTo("game-profile")}
+               <button onClick={() => onGoTo("game-profile", firstMissingField)}
                 className="w-full flex items-center gap-3 text-left group py-2.5 px-3 rounded-xl transition-colors hover:bg-white/[0.03]"
                 style={{ background: "rgba(248,113,113,0.03)", border: "1px solid rgba(248,113,113,0.10)" }}>
                 <AlertCircle className="w-4 h-4 shrink-0" style={{ color: "#f87171" }} />

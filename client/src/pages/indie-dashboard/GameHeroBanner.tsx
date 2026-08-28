@@ -164,7 +164,13 @@ function ImageCropModal({
 }
 
 // ── Main banner component ───────────────────────────────────────────────────────
-export default function GameHeroBanner({ gameId }: { gameId?: number }) {
+export default function GameHeroBanner({
+  gameId,
+  onGoTo,
+}: {
+  gameId?: number;
+  onGoTo?: (field: string) => void;
+}) {
   const { user } = useAuth();
   const [imgError, setImgError] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
@@ -407,10 +413,14 @@ export default function GameHeroBanner({ gameId }: { gameId?: number }) {
                       style={{ width: `${profilePct}%`,
                         background: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171" }} />
                   </div>
-                  {profilePct < 100 && nextSteps.length > 0 && (
-                    <p className="text-[10px] mt-1.5 text-white/30">
+                   {profilePct < 100 && nextSteps.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => onGoTo?.(nextSteps[0].field)}
+                      className="mt-1.5 text-left text-[10px] text-white/30 transition-colors hover:text-white/65"
+                    >
                       Next: {nextSteps[0].label} <span style={{ color: NEON }}>+{nextSteps[0].pct}%</span>
-                    </p>
+                    </button>
                   )}
                 </div>
               </div>

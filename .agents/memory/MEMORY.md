@@ -27,3 +27,4 @@
 - [Developer upload ownership](developer-upload-ownership.md) — Game Developers may publish only to catalogue games explicitly linked to their Indie profiles.
 - [Developer Pro purchase pauses](developer-pro-purchase-pauses.md) — pause every acquisition channel, but keep existing subscriber renewal and expiry synchronization active.
 - [Developer renewal timestamps](developer-renewal-timestamps.md) — validate persisted lifecycle dates before reusing them in renewal writes.
+- [Async signed-media selection](async-signed-media-selection.md) — select mixed signed/public media by stable identity, never array index, because signed items appear asynchronously.
