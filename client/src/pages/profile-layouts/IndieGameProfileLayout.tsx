@@ -280,7 +280,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
               </div>
             )}
 
-            <div className="order-2 min-w-0">
+            <div className="order-1 min-w-0">
               <div className="mb-4 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#B7FF18]">
                 <Gamepad2 size={14} />
                 <span>Indie game</span>
