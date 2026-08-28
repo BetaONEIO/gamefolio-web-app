@@ -19,19 +19,27 @@ const ALL_PROFILE_FIELDS = [
   "fullDescription","releaseDate","studioName","genres","tags","platforms",
   "capsuleImageUrl","trailerUrl","screenshotUrls","keyFeatures",
   "websiteUrl","twitterUrl","discordUrl","ageRating","supportedLanguages",
+  "contentDescriptors",
 ];
 
 const PROFILE_STEPS: { field: string; label: string; pct: number }[] = [
   { field: "trailerUrl", label: "Upload a trailer", pct: 5 },
   { field: "steamUrl", label: "Add Steam Store URL", pct: 3 },
+  { field: "epicUrl", label: "Add Epic Games URL", pct: 3 },
+  { field: "itchUrl", label: "Add itch.io URL", pct: 3 },
   { field: "discordUrl", label: "Connect Discord", pct: 2 },
   { field: "fullDescription", label: "Write full description", pct: 4 },
   { field: "screenshotUrls", label: "Add screenshots", pct: 3 },
   { field: "capsuleImageUrl", label: "Add capsule image", pct: 2 },
   { field: "keyFeatures", label: "List key features", pct: 2 },
   { field: "genres", label: "Tag your genres", pct: 1 },
+  { field: "tags", label: "Add discovery tags", pct: 1 },
+  { field: "releaseDate", label: "Set a release date", pct: 1 },
   { field: "platforms", label: "Select platforms", pct: 1 },
   { field: "websiteUrl", label: "Add website URL", pct: 1 },
+  { field: "ageRating", label: "Add an age rating", pct: 1 },
+  { field: "supportedLanguages", label: "Add supported languages", pct: 1 },
+  { field: "contentDescriptors", label: "Add content descriptors", pct: 1 },
 ];
 
 function isFieldFilled(profile: any, f: string): boolean {
@@ -69,6 +77,7 @@ export default function DashboardTab({
   const allFilled = ALL_PROFILE_FIELDS.filter((f) => isFieldFilled(profile, f)).length;
   const profilePct = Math.round((allFilled / ALL_PROFILE_FIELDS.length) * 100);
   const missingEssential = ESSENTIAL_FIELDS.filter((f) => !isFieldFilled(profile, f));
+  const missingProfileFields = ALL_PROFILE_FIELDS.filter((f) => !isFieldFilled(profile, f));
   const nextSteps = PROFILE_STEPS.filter((s) => !isFieldFilled(profile, s.field)).slice(0, 3);
 
   const content = Array.isArray(contentData)
@@ -82,7 +91,7 @@ export default function DashboardTab({
 
   const hasContent = content.length > 0;
   const profileReady = missingEssential.length === 0;
-  const firstMissingField = missingEssential[0] ?? nextSteps[0]?.field;
+  const firstMissingField = missingEssential[0] ?? missingProfileFields[0];
   /* ── LAUNCH CHECKLIST ITEMS ── */
   const checklist = [
     { label: "Complete your game profile", done: profileReady, action: () => onGoTo("game-profile", firstMissingField), pct: profilePct },
@@ -200,7 +209,7 @@ export default function DashboardTab({
           style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-black text-white">Profile Strength</h3>
-             <button onClick={() => onGoTo("game-profile", nextSteps[0]?.field)}
+             <button onClick={() => onGoTo("game-profile", firstMissingField)}
               className="text-[10px] font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
               Edit <ChevronRight className="w-3 h-3" />
             </button>

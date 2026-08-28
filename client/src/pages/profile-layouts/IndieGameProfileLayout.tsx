@@ -262,7 +262,16 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     }),
     enabled: !!canonicalGameId,
   });
-  const communityScreenshots = communityScreenshotData ?? [];
+  const communityScreenshotSources = (communityScreenshotData ?? [])
+    .map((screenshot) => screenshot.imageUrl)
+    .filter((url): url is string => typeof url === 'string' && url.length > 0);
+  const { getSignedUrl: getCommunityScreenshotUrl } = useSignedUrls(communityScreenshotSources);
+  const communityScreenshots = (communityScreenshotData ?? [])
+    .map((screenshot) => ({
+      ...screenshot,
+      imageUrl: getCommunityScreenshotUrl(screenshot.imageUrl) || '',
+    }))
+    .filter((screenshot) => screenshot.imageUrl);
   const { data: counts } = useQuery<GameContentCounts>({
     queryKey: ['/api/games', canonicalGameId, 'content-counts'],
     queryFn: () => fetch(`/api/games/${canonicalGameId}/content-counts`, { credentials: 'include' }).then(async (res) => {

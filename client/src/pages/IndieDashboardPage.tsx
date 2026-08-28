@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearch } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import {
   Target, BarChart3, KeyRound, Film, Settings, LayoutDashboard,
 } from "lucide-react";
@@ -44,19 +44,31 @@ export default function IndieDashboardPage() {
   const [profileFocus, setProfileFocus] = useState<ProfileFocusRequest | null>(null);
 
   const search = useSearch();
-  const gameIdParam = new URLSearchParams(search).get("gameId");
+  const [, setLocation] = useLocation();
+  const searchParams = new URLSearchParams(search);
+  const gameIdParam = searchParams.get("gameId");
   const activeGameId = gameIdParam && /^\d+$/.test(gameIdParam) ? Number(gameIdParam) : undefined;
   useEffect(() => {
-    const tabParam = new URLSearchParams(search).get("tab");
+    const params = new URLSearchParams(search);
+    const tabParam = params.get("tab");
     if (tabParam && (TOP_TAB_IDS as string[]).includes(tabParam)) {
       setTab(tabParam as TopTabId);
     }
+    setProfileFocus(tabParam === "game-profile" && params.get("profileSection")
+      ? { field: params.get("profileSection")! }
+      : null);
   }, [search]);
 
   const goTo = (toTab: TopTabId, sub?: string) => {
     setTab(toTab);
     setProfileFocus(toTab === "game-profile" && sub ? { field: sub } : null);
     if (toTab === "campaigns" && sub) setCampaignSub(sub as CampaignSubTab);
+    const params = new URLSearchParams(search);
+    params.set("tab", toTab);
+    if (activeGameId) params.set("gameId", String(activeGameId));
+    if (toTab === "game-profile" && sub) params.set("profileSection", sub);
+    else params.delete("profileSection");
+    setLocation(`/indie-dashboard?${params.toString()}`, { replace: true });
   };
 
   const openRunWizard = (template?: any) => {
@@ -79,7 +91,7 @@ export default function IndieDashboardPage() {
           {TOP_TABS.map((t) => {
             const active = tab === t.id;
             return (
-              <button key={t.id} onClick={() => { setTab(t.id); setProfileFocus(null); }}
+              <button key={t.id} onClick={() => goTo(t.id)}
                 className="relative flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-colors"
                 style={{ color: active ? DASHBOARD_THEME.accent : DASHBOARD_THEME.textMuted }}>
                 <t.icon className="w-3.5 h-3.5" />
