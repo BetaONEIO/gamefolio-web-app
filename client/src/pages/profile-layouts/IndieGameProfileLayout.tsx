@@ -7,11 +7,13 @@ import { ClipWithUser, IndieGameProfile, UserWithStats } from '@shared/schema';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import PlatformConnections from '@/components/profile/PlatformConnections';
+import { GameShareDialog } from '@/components/profile/GameShareDialog';
 import VideoClipGridItem from '@/components/clips/VideoClipGridItem';
 import { ScreenshotCard } from '@/components/screenshots/ScreenshotCard';
 import HlsVideo from '@/components/media/HlsVideo';
 import { getVideoEmbedUrl } from '@/lib/video-embed';
 import { useSignedUrl, useSignedUrls } from '@/hooks/use-signed-url';
+import { publicUrl } from '@/lib/platform';
 import { SiEpicgames, SiItchdotio, SiSteam } from 'react-icons/si';
 import {
   Award,
@@ -139,8 +141,13 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>('OVERVIEW');
-  const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
+  const [selectedGameId, setSelectedGameId] = useState<number | null>(() => {
+    const rawGameId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('gameId') : null;
+    const parsedGameId = rawGameId ? Number(rawGameId) : NaN;
+    return Number.isFinite(parsedGameId) ? parsedGameId : null;
+  });
   const [messageDialogOpen, setMessageDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [selectedScreenshot, setSelectedScreenshot] = useState<any>(null);
 
   const { data: gameListData } = useQuery<{ games: { id: number; gameName: string | null; headerImageUrl: string | null; capsuleImageUrl: string | null; isPrimary: boolean }[] }>({
@@ -235,21 +242,17 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [`/api/users/${profile.username}/follow-status`] }),
     onError: (error: Error) => toast({ description: error.message, variant: 'gamefolioError' }),
   });
-  const shareGame = async () => {
-    const url = window.location.href;
-    try {
-      if (navigator.share) await navigator.share({ title: gameName, text: `Check out ${gameName} on Gamefolio`, url });
-      else {
-        await navigator.clipboard.writeText(url);
-        toast({ description: 'Game link copied to your clipboard.' });
-      }
-    } catch (error: any) {
-      if (error?.name !== 'AbortError') toast({ description: 'Could not share this game.', variant: 'gamefolioError' });
-    }
-  };
-
   const jumpTo = (tab: Tab) => setActiveTab(tab);
   const visibleGameId = selectedGameId ?? gameList.find((game) => game.isPrimary)?.id ?? gameList[0]?.id;
+  const selectGame = (gameId: number) => {
+    setSelectedGameId(gameId);
+    setActiveTab('OVERVIEW');
+    const url = new URL(window.location.href);
+    url.searchParams.set('gameId', String(gameId));
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  };
+  const sharedGameId = selectedGameId ?? visibleGameId;
+  const gameShareUrl = publicUrl(`/studio/${encodeURIComponent(profile.username)}${sharedGameId != null ? `?gameId=${sharedGameId}` : ''}`);
 
   return (
     <div className="min-h-screen bg-[#080d11] pb-20 text-white">
@@ -268,7 +271,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                   <button
                     type="button"
                     key={game.id}
-                    onClick={() => { setSelectedGameId(game.id); setActiveTab('OVERVIEW'); }}
+                    onClick={() => selectGame(game.id)}
                     className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-bold transition ${active ? 'border-[#B7FF18]/50 bg-[#B7FF18]/10 text-white' : 'border-white/10 bg-black/20 text-white/55 hover:bg-white/5'}`}
                   >
                     {getGameImageUrl(game.capsuleImageUrl || game.headerImageUrl) ? <img src={getGameImageUrl(game.capsuleImageUrl || game.headerImageUrl)!} alt="" className="h-7 w-10 rounded object-cover" /> : <Gamepad2 size={15} />}
@@ -299,7 +302,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
               {primaryStore && <a href={primaryStore.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black hover:brightness-110"><Play size={16} fill="currentColor" />Play / Buy</a>}
               {!isOwnProfile && <button onClick={() => currentUser ? followMutation.mutate() : setLocation('/auth')} disabled={followMutation.isPending} className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/20 px-5 py-3 text-sm font-bold hover:bg-white/10">{isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}{isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}</button>}
               {!isOwnProfile && <button onClick={() => currentUser ? setMessageDialogOpen(true) : setLocation('/auth')} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Message developer"><MessageCircle size={18} /></button>}
-              <button onClick={shareGame} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Share game"><Share2 size={18} /></button>
+              <button onClick={() => setShareDialogOpen(true)} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Share game"><Share2 size={18} /></button>
               {isOwnProfile && GAME_DEVELOPER_FEATURES_ENABLED && <a href="/game-dashboard" className="rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black">Game dashboard</a>}
             </div>
           </div>
@@ -343,6 +346,14 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
         {BOUNTIES_ENABLED && activeTab === 'BOUNTIES' && <section><div className="mb-5"><h2 className="text-2xl font-black">Creator bounties</h2><p className="mt-1 text-sm text-white/55">Open creator campaigns for {gameName}.</p></div>{bounties.length && canonicalGameId ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{bounties.map((bounty) => <BountyCard key={bounty.id} bounty={bounty} gameId={canonicalGameId} />)}</div> : <EmptyCommunityState title="No bounties right now" body="There are no creator campaigns running for this game at the moment." icon={Sword} />}</section>}
       </main>
 
+      <GameShareDialog
+        gameName={gameName}
+        gameIconUrl={displayCapsule}
+        bannerUrl={displayHeader}
+        shareUrl={gameShareUrl}
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+      />
       {selectedScreenshot && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-5" onClick={() => setSelectedScreenshot(null)}><button onClick={() => setSelectedScreenshot(null)} className="absolute right-5 top-5 rounded-full border border-white/20 p-2"><X size={20} /></button><img src={selectedScreenshot.imageUrl} alt={selectedScreenshot.title} className="max-h-full max-w-full rounded-lg object-contain" onClick={(event) => event.stopPropagation()} /></div>}
       {currentUser && <React.Suspense fallback={null}><MessageDialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen} targetUser={{ id: profile.id, username: profile.username, displayName: profile.displayName, avatarUrl: profile.avatarUrl }} /></React.Suspense>}
     </div>
