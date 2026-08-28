@@ -14,7 +14,17 @@ import HlsVideo from '@/components/media/HlsVideo';
 import { getVideoEmbedUrl } from '@/lib/video-embed';
 import { useSignedUrl, useSignedUrls } from '@/hooks/use-signed-url';
 import { publicUrl } from '@/lib/platform';
-import { SiEpicgames, SiItchdotio, SiSteam } from 'react-icons/si';
+import {
+  SiAndroid,
+  SiApple,
+  SiEpicgames,
+  SiItchdotio,
+  SiLinux,
+  SiNintendo,
+  SiPlaystation,
+  SiSteam,
+} from 'react-icons/si';
+import { FaWindows, FaXbox } from 'react-icons/fa6';
 import {
   Camera,
   CheckCircle2,
@@ -63,17 +73,34 @@ function formatPlatform(value: string) {
   if (normalized === 'windows') return 'Windows';
   if (normalized === 'mac') return 'macOS';
   if (normalized === 'ios') return 'iOS';
-  if (normalized === 'ps5') return 'PlayStation';
+  if (['ps4', 'ps5', 'playstation'].includes(normalized)) return 'PlayStation';
+  if (['switch', 'nintendo'].includes(normalized)) return 'Nintendo Switch';
+  if (normalized === 'xbox') return 'Xbox';
   return value;
 }
 
 function PlatformIcon({ value }: { value: string }) {
   const normalized = value.toLowerCase();
-  const Icon = ['windows', 'mac', 'linux'].includes(normalized)
-    ? Monitor
-    : ['ios', 'android'].includes(normalized)
-      ? Smartphone
-      : Gamepad2;
+  const icons: Record<string, React.ElementType> = {
+    android: SiAndroid,
+    epic: SiEpicgames,
+    itch: SiItchdotio,
+    itchio: SiItchdotio,
+    linux: SiLinux,
+    mac: SiApple,
+    macos: SiApple,
+    nintendo: SiNintendo,
+    pc: FaWindows,
+    playstation: SiPlaystation,
+    ps4: SiPlaystation,
+    ps5: SiPlaystation,
+    steam: SiSteam,
+    switch: SiNintendo,
+    windows: FaWindows,
+    xbox: FaXbox,
+    ios: SiApple,
+  };
+  const Icon = icons[normalized] || Gamepad2;
   return <Icon size={13} />;
 }
 
