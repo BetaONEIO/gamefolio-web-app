@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
-import { apiRequest, getQueryFn, queryClient } from '@/lib/queryClient';
-import { BOUNTIES_ENABLED, GAME_DEVELOPER_FEATURES_ENABLED } from '@/lib/feature-flags';
+import { getQueryFn, queryClient } from '@/lib/queryClient';
+import { GAME_DEVELOPER_FEATURES_ENABLED } from '@/lib/feature-flags';
 import { ClipWithUser, IndieGameProfile, UserWithStats } from '@shared/schema';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -16,23 +16,17 @@ import { useSignedUrl, useSignedUrls } from '@/hooks/use-signed-url';
 import { publicUrl } from '@/lib/platform';
 import { SiEpicgames, SiItchdotio, SiSteam } from 'react-icons/si';
 import {
-  Award,
   Camera,
   CheckCircle2,
   ChevronRight,
-  Clock,
   ExternalLink,
   Gamepad2,
   Globe,
-  Key,
   MessageCircle,
   Monitor,
-  Pencil,
   Play,
-  Settings,
   Share2,
   Smartphone,
-  Sword,
   UserCheck,
   UserPlus,
   Users,
@@ -44,22 +38,9 @@ const MessageDialog = React.lazy(() =>
   import('@/components/messages/MessageDialog').then((m) => ({ default: m.MessageDialog })),
 );
 
-const TABS = ['OVERVIEW', 'CLIPS', 'REELS', 'SCREENSHOTS', 'BOUNTIES'] as const;
+const TABS = ['OVERVIEW', 'CLIPS', 'REELS', 'SCREENSHOTS'] as const;
 type Tab = typeof TABS[number];
-const VISIBLE_TABS = BOUNTIES_ENABLED ? TABS : TABS.filter((tab) => tab !== 'BOUNTIES');
-
-type Bounty = {
-  id: number;
-  title: string;
-  campaignTitle?: string | null;
-  description?: string | null;
-  status?: string | null;
-  participantCount?: number | null;
-  maxParticipants?: number | null;
-  totalXpAvailable?: number | null;
-  fullKeysRemaining?: number | null;
-  endDate?: string | null;
-};
+const VISIBLE_TABS = TABS;
 
 type GameContentCounts = { clips: number; reels: number; screenshots: number };
 type CanonicalGame = { id: number; name: string; imageUrl?: string | null };
@@ -96,43 +77,26 @@ function PlatformIcon({ value }: { value: string }) {
   return <Icon size={13} />;
 }
 
-function EmptyCommunityState({ title, body, icon: Icon }: { title: string; body: string; icon: React.ElementType }) {
+function EmptyCommunityState({
+  title,
+  body,
+  icon: Icon,
+  action,
+}: {
+  title: string;
+  body: string;
+  icon: React.ElementType;
+  action?: React.ReactNode;
+}) {
   return (
-    <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-6 py-14 text-center">
-      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.05] text-[#B7FF18]">
-        <Icon size={27} />
+    <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-5 py-8 text-center sm:px-8">
+      <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.05] text-[#B7FF18]">
+        <Icon size={21} />
       </div>
-      <h3 className="text-lg font-black text-white">{title}</h3>
-      <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-white/55">{body}</p>
+      <h3 className="text-base font-black text-white">{title}</h3>
+      <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-white/55">{body}</p>
+      {action ? <div className="mt-4">{action}</div> : null}
     </div>
-  );
-}
-
-function BountyCard({ bounty, gameId }: { bounty: Bounty; gameId: number }) {
-  const active = bounty.status === 'active';
-  return (
-    <Link
-      href={`/games/${gameId}?tab=bounties`}
-      className="block p-5 transition-transform hover:-translate-y-1"
-      style={surfaceStyle}
-    >
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2 text-[#B7FF18]">
-          <Sword size={18} />
-          <span className="text-[11px] font-black uppercase tracking-[0.16em]">{active ? 'Open bounty' : bounty.status || 'Campaign'}</span>
-        </div>
-        {bounty.endDate && (
-          <span className="flex items-center gap-1 text-xs text-white/45"><Clock size={12} />{new Date(bounty.endDate).toLocaleDateString()}</span>
-        )}
-      </div>
-      <h3 className="text-lg font-black text-white">{bounty.campaignTitle || bounty.title}</h3>
-      {bounty.description && <p className="mt-2 line-clamp-2 text-sm text-white/55">{bounty.description}</p>}
-      <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-xs text-white/50">
-        <span className="flex items-center gap-1.5"><Users size={13} />{bounty.participantCount ?? 0}/{bounty.maxParticipants ?? 10} joined</span>
-        {(bounty.totalXpAvailable ?? 0) > 0 && <span className="flex items-center gap-1.5"><Award size={13} />{(bounty.totalXpAvailable ?? 0).toLocaleString()} XP</span>}
-        {(bounty.fullKeysRemaining ?? 0) > 0 && <span className="flex items-center gap-1.5"><Key size={13} />{bounty.fullKeysRemaining} keys</span>}
-      </div>
-    </Link>
   );
 }
 
@@ -171,7 +135,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const canonicalGame = indieData?.game ?? null;
   const canonicalGameId = canonicalGame?.id;
 
-  const { data: gameContent = [] } = useQuery<ClipWithUser[]>({
+  const { data: gameContentData } = useQuery<ClipWithUser[] | null>({
     queryKey: ['/api/games', canonicalGameId, 'clips'],
     queryFn: () => fetch(`/api/games/${canonicalGameId}/clips?limit=100`, { credentials: 'include' }).then(async (res) => {
       if (!res.ok) throw new Error('Failed to fetch community clips');
@@ -179,7 +143,8 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     }),
     enabled: !!canonicalGameId,
   });
-  const { data: communityScreenshots = [] } = useQuery<any[]>({
+  const gameContent = gameContentData ?? [];
+  const { data: communityScreenshotData } = useQuery<any[] | null>({
     queryKey: ['/api/games', canonicalGameId, 'screenshots'],
     queryFn: () => fetch(`/api/games/${canonicalGameId}/screenshots?limit=100`, { credentials: 'include' }).then(async (res) => {
       if (!res.ok) throw new Error('Failed to fetch community screenshots');
@@ -187,6 +152,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     }),
     enabled: !!canonicalGameId,
   });
+  const communityScreenshots = communityScreenshotData ?? [];
   const { data: counts } = useQuery<GameContentCounts>({
     queryKey: ['/api/games', canonicalGameId, 'content-counts'],
     queryFn: () => fetch(`/api/games/${canonicalGameId}/content-counts`, { credentials: 'include' }).then(async (res) => {
@@ -194,14 +160,6 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
       return res.json();
     }),
     enabled: !!canonicalGameId,
-  });
-  const { data: bounties = [] } = useQuery<Bounty[]>({
-    queryKey: ['/api/games', canonicalGameId, 'bounties'],
-    queryFn: () => fetch(`/api/games/${canonicalGameId}/bounties`, { credentials: 'include' }).then(async (res) => {
-      if (!res.ok) throw new Error('Failed to fetch game bounties');
-      return res.json();
-    }),
-    enabled: !!canonicalGameId && BOUNTIES_ENABLED,
   });
   const { data: followStatus } = useQuery<{ status: 'following' | 'requested' | 'not_following' }>({
     queryKey: [`/api/users/${profile.username}/follow-status`],
@@ -211,11 +169,10 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
 
   const clips = useMemo(() => gameContent.filter((clip) => clip.videoType !== 'reel'), [gameContent]);
   const reels = useMemo(() => gameContent.filter((clip) => clip.videoType === 'reel'), [gameContent]);
-  const activeBounties = BOUNTIES_ENABLED ? bounties.filter((bounty) => bounty.status === 'active') : [];
   const isFollowing = followStatus?.status === 'following';
   const isRequested = followStatus?.status === 'requested';
   const gameName = gameProfile?.gameName?.trim() || canonicalGame?.name || profile.displayName;
-  const description = gameProfile?.fullDescription || gameProfile?.shortDescription || profile.bio;
+  const description = gameProfile?.fullDescription || gameProfile?.shortDescription || null;
   const header = gameProfile?.headerImageUrl || gameProfile?.capsuleImageUrl || canonicalGame?.imageUrl || null;
   const capsule = gameProfile?.capsuleImageUrl || canonicalGame?.imageUrl || null;
   const { signedUrl: displayHeader } = useSignedUrl(header);
@@ -229,7 +186,20 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     gameProfile?.epicUrl ? { name: 'Epic Games', url: gameProfile.epicUrl, icon: SiEpicgames } : null,
     gameProfile?.itchUrl ? { name: 'itch.io', url: gameProfile.itchUrl, icon: SiItchdotio } : null,
   ].filter(Boolean) as { name: string; url: string; icon: React.ElementType }[];
+  const whereToPlayLinks = [
+    ...storeLinks,
+    gameProfile?.websiteUrl ? { name: 'Official website', url: gameProfile.websiteUrl, icon: Globe } : null,
+  ].filter(Boolean) as { name: string; url: string; icon: React.ElementType }[];
   const primaryStore = storeLinks[0];
+  const statItems = [
+    { label: 'Clips', value: counts?.clips ?? clips.length, icon: Play },
+    { label: 'Reels', value: counts?.reels ?? reels.length, icon: Video },
+    { label: 'Screenshots', value: counts?.screenshots ?? communityScreenshots.length, icon: Camera },
+  ].filter((item) => item.value > 0);
+  const hasCommunity = clips.length > 0 || reels.length > 0 || communityScreenshots.length > 0;
+  const uploadHref = canonicalGameId
+    ? `/upload?type=clips&gameId=${canonicalGameId}&gameName=${encodeURIComponent(gameName)}`
+    : null;
 
   const followMutation = useMutation({
     mutationFn: async () => {
@@ -258,15 +228,16 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     <div className="min-h-screen bg-[#080d11] pb-20 text-white">
       <section className="relative isolate overflow-hidden border-b border-white/10">
         {displayHeader ? (
-          <img src={displayHeader} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-50" />
+          <img src={displayHeader} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-30" />
         ) : null}
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(8,13,17,.98)_0%,rgba(8,13,17,.78)_47%,rgba(8,13,17,.92)_100%)]" />
-        <div className="absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-gradient-to-t from-[#080d11] to-transparent" />
-        <div className="mx-auto max-w-7xl px-5 pb-10 pt-28 sm:px-8 lg:pt-36">
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(8,13,17,.98)_0%,rgba(8,13,17,.82)_48%,rgba(8,13,17,.94)_100%)]" />
+        <div className="absolute inset-x-0 bottom-0 -z-10 h-2/3 bg-gradient-to-t from-[#080d11] to-transparent" />
+        <div className="mx-auto max-w-7xl px-5 pb-10 pt-28 sm:px-8 lg:pb-14 lg:pt-36">
           {gameList.length > 1 && (
             <div className="mb-8 flex max-w-full gap-2 overflow-x-auto pb-1" aria-label="Choose a game">
               {gameList.map((game) => {
                 const active = visibleGameId === game.id;
+                const gameImage = getGameImageUrl(game.capsuleImageUrl || game.headerImageUrl);
                 return (
                   <button
                     type="button"
@@ -274,76 +245,263 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                     onClick={() => selectGame(game.id)}
                     className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs font-bold transition ${active ? 'border-[#B7FF18]/50 bg-[#B7FF18]/10 text-white' : 'border-white/10 bg-black/20 text-white/55 hover:bg-white/5'}`}
                   >
-                    {getGameImageUrl(game.capsuleImageUrl || game.headerImageUrl) ? <img src={getGameImageUrl(game.capsuleImageUrl || game.headerImageUrl)!} alt="" className="h-7 w-10 rounded object-cover" /> : <Gamepad2 size={15} />}
+                    {gameImage ? <img src={gameImage} alt="" className="h-7 w-10 rounded object-cover" /> : <Gamepad2 size={15} />}
                     <span className="max-w-36 truncate">{game.gameName || 'Untitled game'}</span>
                   </button>
                 );
               })}
             </div>
           )}
-          <div className="grid items-end gap-8 lg:grid-cols-[1fr_auto]">
-            <div className="max-w-3xl">
-              <div className="flex items-end gap-5 sm:gap-6">
-                {displayCapsule && (
-                  <img
-                    src={displayCapsule}
-                    alt={`${gameName} game artwork`}
-                    className="hidden h-28 w-[84px] shrink-0 rounded-xl border border-white/15 object-cover shadow-2xl sm:block"
-                  />
+
+          <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.78fr)] lg:gap-12">
+            <div className="order-2 min-w-0 lg:order-1">
+              <div className="mb-4 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-[#B7FF18]">
+                <Gamepad2 size={14} />
+                <span>Indie game</span>
+                {gameProfile?.releaseStatus && (
+                  <span className="rounded-full border border-white/15 bg-white/[0.06] px-2 py-1 tracking-[0.12em] text-white/65">
+                    {gameProfile.releaseStatus === 'coming_soon' ? 'Coming soon' : gameProfile.releaseStatus === 'early_access' ? 'Early access' : gameProfile.releaseStatus === 'released' ? 'Available now' : gameProfile.releaseStatus}
+                  </span>
                 )}
-                <div>
-                  <h1 className="text-4xl font-black tracking-tight text-white sm:text-6xl">{gameName}</h1>
-                  <p className="mt-3 text-sm font-semibold text-white/55">{gameProfile?.releaseStatus === 'coming_soon' ? 'Coming soon' : gameProfile?.releaseStatus === 'early_access' ? 'Early access' : gameProfile?.releaseStatus === 'released' ? 'Available now' : `A game by @${profile.username}`}</p>
-                  {description && <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/75">{description}</p>}
-                </div>
+              </div>
+              <h1 className="max-w-3xl text-4xl font-black tracking-tight text-white sm:text-6xl lg:text-7xl">{gameName}</h1>
+              <p className="mt-3 text-sm font-semibold text-white/50">By @{profile.username}</p>
+              {description && <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/75">{description}</p>}
+
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                {primaryStore && (
+                  <a href={primaryStore.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black hover:brightness-110">
+                    <Play size={16} fill="currentColor" />
+                    Play / buy
+                  </a>
+                )}
+                {!isOwnProfile && (
+                  <button
+                    onClick={() => currentUser ? followMutation.mutate() : setLocation('/auth')}
+                    disabled={followMutation.isPending}
+                    aria-label={`${isFollowing ? 'Following' : isRequested ? 'Follow request pending for' : 'Follow'} @${profile.username}`}
+                    className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/20 px-5 py-3 text-sm font-bold hover:bg-white/10 disabled:opacity-50"
+                  >
+                    {isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}
+                    {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
+                  </button>
+                )}
+                {!isOwnProfile && (
+                  <button onClick={() => currentUser ? setMessageDialogOpen(true) : setLocation('/auth')} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Message developer">
+                    <MessageCircle size={18} />
+                  </button>
+                )}
+                <button onClick={() => setShareDialogOpen(true)} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Share game">
+                  <Share2 size={18} />
+                </button>
+                {isOwnProfile && GAME_DEVELOPER_FEATURES_ENABLED && (
+                  <Link href={`/game-dashboard?tab=game-profile${gameProfile?.id ? `&gameId=${gameProfile.id}` : ''}`} className="rounded-xl border border-[#B7FF18]/30 bg-[#B7FF18]/10 px-5 py-3 text-sm font-black text-[#B7FF18] hover:bg-[#B7FF18]/20">
+                    Game dashboard
+                  </Link>
+                )}
               </div>
             </div>
-            <div className="flex flex-wrap gap-3 lg:justify-end">
-              {primaryStore && <a href={primaryStore.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black hover:brightness-110"><Play size={16} fill="currentColor" />Play / Buy</a>}
-              {!isOwnProfile && <button onClick={() => currentUser ? followMutation.mutate() : setLocation('/auth')} disabled={followMutation.isPending} className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/20 px-5 py-3 text-sm font-bold hover:bg-white/10">{isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}{isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}</button>}
-              {!isOwnProfile && <button onClick={() => currentUser ? setMessageDialogOpen(true) : setLocation('/auth')} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Message developer"><MessageCircle size={18} /></button>}
-              <button onClick={() => setShareDialogOpen(true)} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Share game"><Share2 size={18} /></button>
-              {isOwnProfile && GAME_DEVELOPER_FEATURES_ENABLED && <a href="/game-dashboard" className="rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black">Game dashboard</a>}
-            </div>
+
+            {(displayHeader || displayCapsule) && (
+              <div className="relative order-1 overflow-hidden rounded-3xl border border-white/15 bg-[#0d151b] shadow-2xl shadow-black/40 lg:order-2">
+                <div className="aspect-[16/10]">
+                  {displayHeader ? (
+                    <img src={displayHeader} alt={`${gameName} banner artwork`} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center bg-[#101923]">
+                      <Gamepad2 size={48} className="text-white/20" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/10" />
+                </div>
+                {displayCapsule && (
+                  <img src={displayCapsule} alt={`${gameName} icon`} className="absolute bottom-5 left-5 h-24 w-[72px] rounded-2xl border-2 border-white/30 object-cover shadow-2xl sm:h-32 sm:w-24" />
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>
 
       <nav className="sticky top-0 z-30 border-b border-white/10 bg-[#080d11]/95 px-5 backdrop-blur sm:px-8">
         <div className="mx-auto flex max-w-7xl overflow-x-auto">
-          {VISIBLE_TABS.map((tab) => <button key={tab} onClick={() => jumpTo(tab)} className={`relative shrink-0 px-4 py-4 text-xs font-black tracking-[0.13em] ${activeTab === tab ? 'text-white' : 'text-white/45 hover:text-white/80'}`}>{tab}{activeTab === tab && <span className="absolute inset-x-4 bottom-0 h-0.5 bg-[#B7FF18]" />}</button>)}
+          {VISIBLE_TABS.map((tab) => (
+            <button key={tab} onClick={() => jumpTo(tab)} className={`relative shrink-0 px-4 py-4 text-xs font-black tracking-[0.13em] ${activeTab === tab ? 'text-white' : 'text-white/45 hover:text-white/80'}`}>
+              {tab}
+              {activeTab === tab && <span className="absolute inset-x-4 bottom-0 h-0.5 bg-[#B7FF18]" />}
+            </button>
+          ))}
         </div>
       </nav>
 
       <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
-        {!canonicalGameId && <div className="mb-8 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-5 text-sm text-amber-100/80">Community uploads will appear here when this game is added to the Gamefolio game catalogue.</div>}
+        {!canonicalGameId && (
+          <div className="mb-8 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] p-4 text-sm text-amber-100/80">
+            Community uploads will appear once this game is connected to the Gamefolio catalogue.
+          </div>
+        )}
+
         {activeTab === 'OVERVIEW' && (
-          <div className="space-y-10">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {[...(BOUNTIES_ENABLED ? [{ label: 'Active bounties', value: activeBounties.length, icon: Sword }] : []), { label: 'Game clips', value: counts?.clips ?? clips.length, icon: Play }, { label: 'Reels', value: counts?.reels ?? reels.length, icon: Video }, { label: 'Screenshots', value: counts?.screenshots ?? communityScreenshots.length, icon: Camera }].map(({ label, value, icon: Icon }) => <div key={label} className="p-4" style={surfaceStyle}><Icon size={18} className="mb-3 text-[#B7FF18]" /><div className="text-2xl font-black">{value.toLocaleString()}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-white/45">{label}</div></div>)}
-            </div>
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_290px]">
-              <div className="space-y-8">
-                {trailer && <section><div className="mb-3 flex items-center justify-between"><h2 className="text-xl font-black">Official trailer</h2></div><div className="aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black">{getVideoEmbedUrl(trailer) ? <iframe src={getVideoEmbedUrl(trailer)!} title={`${gameName} trailer`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="h-full w-full" /> : <HlsVideo src={trailer} controls className="h-full w-full object-cover" />}</div></section>}
-                <section>
-                  <div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-black">Featured community clips</h2>{clips.length > 0 && <button onClick={() => jumpTo('CLIPS')} className="flex items-center gap-1 text-xs font-bold text-[#B7FF18]">View all <ChevronRight size={14} /></button>}</div>
-                  {clips.length ? <div className="grid gap-4 sm:grid-cols-2">{clips.slice(0, 4).map((clip) => <VideoClipGridItem key={clip.id} clip={clip} clipsList={clips} />)}</div> : <EmptyCommunityState title="No clips yet" body={`Be the first player to share a moment from ${gameName}.`} icon={Play} />}
-                </section>
-                {communityScreenshots.length > 0 && <section><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-black">Community screenshots</h2><button onClick={() => jumpTo('SCREENSHOTS')} className="flex items-center gap-1 text-xs font-bold text-[#B7FF18]">View all <ChevronRight size={14} /></button></div><div className="grid gap-4 sm:grid-cols-2">{communityScreenshots.slice(0, 4).map((shot) => <ScreenshotCard key={shot.id} screenshot={shot} profile={profile} showUserInfo onSelect={setSelectedScreenshot} />)}</div></section>}
+          <div className="space-y-8">
+            {statItems.length > 0 && (
+              <div className={`grid gap-3 ${statItems.length === 1 ? 'sm:grid-cols-1' : statItems.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}`}>
+                {statItems.map(({ label, value, icon: Icon }) => (
+                  <div key={label} className="flex items-center gap-3 p-4" style={surfaceStyle}>
+                    <Icon size={17} className="text-[#B7FF18]" />
+                    <div>
+                      <div className="text-xl font-black">{value.toLocaleString()}</div>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-white/45">{label}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
+            )}
+
+            <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
+              <div className="space-y-8">
+                {trailer && (
+                  <section>
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#B7FF18]">Watch</p>
+                        <h2 className="mt-1 text-xl font-black">Official trailer</h2>
+                      </div>
+                    </div>
+                    <div className="aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black">
+                      {getVideoEmbedUrl(trailer) ? (
+                        <iframe src={getVideoEmbedUrl(trailer)!} title={`${gameName} trailer`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className="h-full w-full" />
+                      ) : (
+                        <HlsVideo src={trailer} controls className="h-full w-full object-cover" />
+                      )}
+                    </div>
+                  </section>
+                )}
+
+                <section>
+                  <div className="mb-4 flex items-end justify-between gap-4">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#B7FF18]">From the community</p>
+                      <h2 className="mt-1 text-xl font-black">Community highlights</h2>
+                    </div>
+                    {hasCommunity && (
+                      <button onClick={() => jumpTo(clips.length ? 'CLIPS' : 'SCREENSHOTS')} className="flex shrink-0 items-center gap-1 text-xs font-bold text-[#B7FF18]">
+                        View all <ChevronRight size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  {!hasCommunity ? (
+                    <EmptyCommunityState
+                      title="No community content yet"
+                      body={`Clips, reels and screenshots shared for ${gameName} will appear here.`}
+                      icon={Gamepad2}
+                      action={isOwnProfile && uploadHref ? (
+                        <Link href={uploadHref} className="inline-flex items-center gap-2 rounded-lg bg-[#B7FF18] px-4 py-2.5 text-xs font-black text-black hover:brightness-110">
+                          <Play size={14} fill="currentColor" /> Upload a clip
+                        </Link>
+                      ) : null}
+                    />
+                  ) : (
+                    <div className="space-y-8">
+                      {clips.length > 0 && (
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          {clips.slice(0, 4).map((clip) => <VideoClipGridItem key={clip.id} clip={clip} clipsList={clips} />)}
+                        </div>
+                      )}
+                      {communityScreenshots.length > 0 && (
+                        <div>
+                          <div className="mb-3 flex items-center justify-between">
+                            <h3 className="text-sm font-black text-white/80">Screenshots</h3>
+                            <button onClick={() => jumpTo('SCREENSHOTS')} className="text-xs font-bold text-[#B7FF18]">View all</button>
+                          </div>
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            {communityScreenshots.slice(0, 4).map((shot) => <ScreenshotCard key={shot.id} screenshot={shot} profile={profile} showUserInfo onSelect={setSelectedScreenshot} />)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </section>
+              </div>
+
               <aside className="space-y-5">
-                <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">About the game</p><p className="mt-3 text-sm leading-relaxed text-white/65">{description || 'The developer has not added a description yet.'}</p>{genres.length > 0 && <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">{genres.map((genre) => <span key={genre} className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/80"><img src="/favicon-32.png" alt="" className="h-3.5 w-3.5 object-contain" />{genre}</span>)}</div>}{gameProfile?.keyFeatures?.length ? <ul className="mt-4 space-y-2 text-sm text-white/70">{gameProfile.keyFeatures.map((feature) => <li key={feature} className="flex gap-2"><CheckCircle2 size={15} className="mt-0.5 shrink-0 text-[#B7FF18]" />{feature}</li>)}</ul> : null}</section>
-                {platforms.length > 0 && <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Platforms</p><div className="mt-4 flex flex-wrap gap-2">{platforms.map((platform) => <span key={platform} className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-2.5 py-1 text-xs text-white/75"><PlatformIcon value={platform} />{formatPlatform(platform)}</span>)}</div></section>}
-                {storeLinks.length > 0 && <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Get the game</p><div className="mt-4 space-y-2">{storeLinks.map((store) => { const Icon = store.icon; return <a key={store.name} href={store.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-sm font-bold hover:bg-white/[0.06]"><Icon size={19} /><span>{store.name}</span><ExternalLink size={13} className="ml-auto text-white/40" /></a>; })}</div></section>}
-                <section className="p-5" style={surfaceStyle}><p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Developer</p><div className="mt-3 flex items-center gap-3">{displayDeveloperAvatar ? <img src={displayDeveloperAvatar} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10"><Users size={18} /></div>}<div><p className="font-bold">{gameProfile?.studioName || profile.displayName}</p><p className="text-xs text-white/45">@{profile.username}</p></div></div><PlatformConnections profile={profile} className="mt-4 !border-t-0 !px-0 !py-0" /></section>
+                <section className="p-5 sm:p-6" style={surfaceStyle}>
+                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-[#B7FF18]">About the game</p>
+                  {description ? <p className="mt-3 text-sm leading-relaxed text-white/70">{description}</p> : <p className="mt-3 text-sm text-white/40">No game description has been added yet.</p>}
+                  {genres.length > 0 && (
+                    <div className="mt-5">
+                      <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/35">Genres</p>
+                      <div className="flex flex-wrap gap-2">
+                        {genres.map((genre) => <span key={genre} className="rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-1 text-xs font-semibold text-white/75">{genre}</span>)}
+                      </div>
+                    </div>
+                  )}
+                  {gameProfile?.keyFeatures?.length ? (
+                    <div className="mt-5">
+                      <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/35">Key features</p>
+                      <ul className="space-y-2 text-sm text-white/70">
+                        {gameProfile.keyFeatures.map((feature) => <li key={feature} className="flex gap-2"><CheckCircle2 size={15} className="mt-0.5 shrink-0 text-[#B7FF18]" />{feature}</li>)}
+                      </ul>
+                    </div>
+                  ) : null}
+                </section>
+
+                {platforms.length > 0 && (
+                  <section className="p-5" style={surfaceStyle}>
+                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Platforms</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {platforms.map((platform) => <span key={platform} className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-2.5 py-1 text-xs text-white/75"><PlatformIcon value={platform} />{formatPlatform(platform)}</span>)}
+                    </div>
+                  </section>
+                )}
+
+                {whereToPlayLinks.length > 0 && (
+                  <section className="p-5" style={surfaceStyle}>
+                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Where to play</p>
+                    <div className="mt-4 space-y-2">
+                      {whereToPlayLinks.map((store) => {
+                        const Icon = store.icon;
+                        return <a key={store.name} href={store.url} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3 text-sm font-bold hover:bg-white/[0.06]"><Icon size={19} /><span>{store.name}</span><ExternalLink size={13} className="ml-auto text-white/40" /></a>;
+                      })}
+                    </div>
+                  </section>
+                )}
+
+                <section className="p-5" style={surfaceStyle}>
+                  <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Developer</p>
+                  <Link href={`/profile/${profile.username}`} className="mt-3 flex items-center gap-3 rounded-xl p-1 -m-1 transition-colors hover:bg-white/[0.05]">
+                    {displayDeveloperAvatar ? <img src={displayDeveloperAvatar} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10"><Users size={18} /></div>}
+                    <div className="min-w-0">
+                      <p className="truncate font-bold">{gameProfile?.studioName || profile.displayName}</p>
+                      <p className="text-xs text-white/45">@{profile.username}</p>
+                    </div>
+                    <ChevronRight size={16} className="ml-auto shrink-0 text-white/30" />
+                  </Link>
+                  <PlatformConnections profile={profile} className="mt-4 !border-t-0 !px-0 !py-0" />
+                </section>
               </aside>
             </div>
           </div>
         )}
-        {activeTab === 'CLIPS' && <section><h2 className="mb-5 text-2xl font-black">Community clips</h2>{clips.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{clips.map((clip) => <VideoClipGridItem key={clip.id} clip={clip} clipsList={clips} />)}</div> : <EmptyCommunityState title="No clips yet" body={`No one has posted a ${gameName} clip yet. Be first to put the game on the map.`} icon={Play} />}</section>}
-        {activeTab === 'REELS' && <section><h2 className="mb-5 text-2xl font-black">Community reels</h2>{reels.length ? <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">{reels.map((reel) => <VideoClipGridItem key={reel.id} clip={reel} reelsList={reels} />)}</div> : <EmptyCommunityState title="No reels yet" body={`Short-form ${gameName} moments will appear here.`} icon={Video} />}</section>}
-        {activeTab === 'SCREENSHOTS' && <section><h2 className="mb-5 text-2xl font-black">Community screenshots</h2>{communityScreenshots.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{communityScreenshots.map((shot) => <ScreenshotCard key={shot.id} screenshot={shot} profile={profile} showUserInfo onSelect={setSelectedScreenshot} />)}</div> : <EmptyCommunityState title="No screenshots yet" body={`Players have not shared screenshots from ${gameName} yet.`} icon={Camera} />}</section>}
-        {BOUNTIES_ENABLED && activeTab === 'BOUNTIES' && <section><div className="mb-5"><h2 className="text-2xl font-black">Creator bounties</h2><p className="mt-1 text-sm text-white/55">Open creator campaigns for {gameName}.</p></div>{bounties.length && canonicalGameId ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{bounties.map((bounty) => <BountyCard key={bounty.id} bounty={bounty} gameId={canonicalGameId} />)}</div> : <EmptyCommunityState title="No bounties right now" body="There are no creator campaigns running for this game at the moment." icon={Sword} />}</section>}
+
+        {activeTab === 'CLIPS' && (
+          <section>
+            <h2 className="mb-5 text-2xl font-black">Community clips</h2>
+            {clips.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{clips.map((clip) => <VideoClipGridItem key={clip.id} clip={clip} clipsList={clips} />)}</div> : <EmptyCommunityState title="No clips yet" body={`No one has posted a ${gameName} clip yet.`} icon={Play} action={isOwnProfile && uploadHref ? <Link href={uploadHref} className="inline-flex items-center gap-2 rounded-lg bg-[#B7FF18] px-4 py-2.5 text-xs font-black text-black hover:brightness-110"><Play size={14} fill="currentColor" /> Upload a clip</Link> : null} />}
+          </section>
+        )}
+        {activeTab === 'REELS' && (
+          <section>
+            <h2 className="mb-5 text-2xl font-black">Community reels</h2>
+            {reels.length ? <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">{reels.map((reel) => <VideoClipGridItem key={reel.id} clip={reel} reelsList={reels} />)}</div> : <EmptyCommunityState title="No reels yet" body={`Short-form ${gameName} moments will appear here.`} icon={Video} />}
+          </section>
+        )}
+        {activeTab === 'SCREENSHOTS' && (
+          <section>
+            <h2 className="mb-5 text-2xl font-black">Community screenshots</h2>
+            {communityScreenshots.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{communityScreenshots.map((shot) => <ScreenshotCard key={shot.id} screenshot={shot} profile={profile} showUserInfo onSelect={setSelectedScreenshot} />)}</div> : <EmptyCommunityState title="No screenshots yet" body={`Players have not shared screenshots from ${gameName} yet.`} icon={Camera} />}
+          </section>
+        )}
       </main>
 
       <GameShareDialog
