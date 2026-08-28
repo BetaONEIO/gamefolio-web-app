@@ -228,9 +228,9 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     <div className="min-h-screen bg-[#080d11] pb-20 text-white">
       <section className="relative isolate overflow-hidden border-b border-white/10">
         {displayHeader ? (
-          <img src={displayHeader} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-30" />
+          <img src={displayHeader} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover opacity-55" />
         ) : null}
-        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(8,13,17,.98)_0%,rgba(8,13,17,.82)_48%,rgba(8,13,17,.94)_100%)]" />
+        <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(8,13,17,.88)_0%,rgba(8,13,17,.52)_48%,rgba(8,13,17,.72)_100%)]" />
         <div className="absolute inset-x-0 bottom-0 -z-10 h-2/3 bg-gradient-to-t from-[#080d11] to-transparent" />
         <div className="mx-auto max-w-7xl px-5 pb-10 pt-28 sm:px-8 lg:pb-14 lg:pt-36">
           {gameList.length > 1 && (
