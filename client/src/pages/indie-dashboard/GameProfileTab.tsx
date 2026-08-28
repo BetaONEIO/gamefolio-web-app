@@ -16,7 +16,7 @@ import { FaWindows, FaXbox } from "react-icons/fa6";
 import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 import { StoreImportPanel } from "./edit-profile/StoreImportPanel";
 import { SyncPanel } from "./edit-profile/SyncPanel";
-import { SourceBadge } from "./edit-profile/FieldRow";
+import { DataSourceExplainer } from "./edit-profile/DataSourceExplainer";
 import {
   isFieldFilled, RELEASE_STATUS_OPTIONS, PLATFORM_OPTIONS,
   type Profile, type FieldMeta,
@@ -481,10 +481,7 @@ function AboutCard({
         <div className="p-5 space-y-4">
           {/* Game name */}
           {profile?.gameName ? (
-            <h2 className="flex flex-wrap items-center gap-2 text-2xl font-black text-white">
-              {profile.gameName}
-              <SourceBadge fieldName="gameName" fieldMeta={fieldMeta} />
-            </h2>
+            <h2 className="text-2xl font-black text-white">{profile.gameName}</h2>
           ) : (
             <p className="text-white/20 text-sm italic">No game name set</p>
           )}
@@ -494,35 +491,30 @@ function AboutCard({
               <span className="text-xs px-2.5 py-1 rounded-full font-medium"
                 style={{ background: `${NEON}18`, color: NEON, border: `1px solid ${NEON}33` }}>
                 {RELEASE_STATUS_OPTIONS.find(o => o.value === profile.releaseStatus)?.label ?? profile.releaseStatus}
-                <span className="ml-2 inline-flex align-middle"><SourceBadge fieldName="releaseStatus" fieldMeta={fieldMeta} /></span>
               </span>
             )}
             {profile?.price && (
               <span className="text-xs px-2.5 py-1 rounded-full font-medium text-white/60"
                 style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
                 ${profile.price}
-                <span className="ml-2 inline-flex align-middle"><SourceBadge fieldName="price" fieldMeta={fieldMeta} /></span>
               </span>
             )}
             {profile?.isFree && (
               <span className="text-xs px-2.5 py-1 rounded-full font-medium text-green-400"
                 style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.25)" }}>
                 Free to Play
-                <span className="ml-2 inline-flex align-middle"><SourceBadge fieldName="isFree" fieldMeta={fieldMeta} /></span>
               </span>
             )}
           </div>
           {/* Short description */}
           {profile?.shortDescription && (
             <div>
-              <div className="mb-1"><SourceBadge fieldName="shortDescription" fieldMeta={fieldMeta} /></div>
               <p className="text-sm text-white/70 leading-relaxed">{profile.shortDescription}</p>
             </div>
           )}
           {/* Genres */}
           {genreList.length > 0 && (
             <div>
-              <div className="mb-1"><SourceBadge fieldName="genres" fieldMeta={fieldMeta} /></div>
               <div className="flex flex-wrap gap-1.5">
                 {genreList.map((g, i) => (
                   <span key={i} className="text-xs px-2 py-0.5 rounded-md text-white/50"
@@ -538,7 +530,6 @@ function AboutCard({
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <p className="text-xs text-white/30 uppercase tracking-wider font-medium">Key Features</p>
-                <SourceBadge fieldName="keyFeatures" fieldMeta={fieldMeta} />
               </div>
               <div className="grid gap-1.5">
                 {featureList.slice(0, 4).map((f, i) => (
@@ -676,7 +667,7 @@ function MediaCard({
           <div className="grid grid-cols-[1fr_160px] gap-3">
             <div>
               <p className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">
-                Banner · 16:9 <SourceBadge fieldName="headerImageUrl" fieldMeta={fieldMeta} />
+                Banner · 16:9
               </p>
               <DropZone currentUrl={profile?.headerImageUrl} field="headerImageUrl" gameId={profile?.id}
                 label="Drop banner or click to upload" aspect="1920 × 1080 recommended"
@@ -684,7 +675,7 @@ function MediaCard({
             </div>
             <div>
               <p className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-wider mb-1.5 font-medium">
-                Capsule · 2:3 <SourceBadge fieldName="capsuleImageUrl" fieldMeta={fieldMeta} />
+                Capsule · 2:3
               </p>
               <DropZone currentUrl={profile?.capsuleImageUrl} field="capsuleImageUrl" gameId={profile?.id}
                 label="Drop capsule" aspect="600 × 800 recommended"
@@ -697,7 +688,7 @@ function MediaCard({
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <p className="flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-wider font-medium">
-                Trailer <SourceBadge fieldName="trailerUrl" fieldMeta={fieldMeta} />
+                Trailer
               </p>
               <button
                 type="button"
@@ -735,7 +726,6 @@ function MediaCard({
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-[10px] text-white/30 uppercase tracking-wider font-medium">
                 Screenshots ({shotList.length})
-                <span className="ml-2 inline-flex align-middle"><SourceBadge fieldName="screenshotUrls" fieldMeta={fieldMeta} /></span>
               </p>
               <button
                 type="button"
@@ -988,7 +978,7 @@ function StoreListingCard({
               <div className="shrink-0">{s.icon}</div>
               <div className="flex-1 min-w-0">
                  <div className="flex items-center gap-2 text-xs font-bold text-white/70">
-                   {s.label} <SourceBadge fieldName={s.fieldName} fieldMeta={fieldMeta} />
+                    {s.label}
                  </div>
                 {s.filled && s.url ? (
                   <a href={s.url} target="_blank" rel="noopener noreferrer"
@@ -1088,7 +1078,7 @@ function PlatformCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
         style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
         <Gamepad2 size={16} style={{ color: NEON }} />
          <span className="flex items-center gap-2 text-sm font-bold text-white">
-           Platforms <SourceBadge fieldName="platforms" fieldMeta={fieldMeta} />
+            Platforms
          </span>
       </div>
       <div className="p-5 grid grid-cols-4 gap-2">
@@ -1176,7 +1166,7 @@ function StudioCard({
             <div className="space-y-3">
               {profile?.studioName && (
                  <h3 className="flex items-center gap-2 text-lg font-bold text-white">
-                   {profile.studioName} <SourceBadge fieldName="studioName" fieldMeta={fieldMeta} />
+                   {profile.studioName}
                  </h3>
               )}
               <div className="flex flex-wrap gap-3 text-sm text-white/50">
@@ -1189,7 +1179,7 @@ function StudioCard({
                    <a href={profile.studioWebsite} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-colors"
                     style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${CARD_BORDER}` }}>
-                     <Globe size={11} /> Website <SourceBadge fieldName="studioWebsite" fieldMeta={fieldMeta} />
+                     <Globe size={11} /> Website
                   </a>
                 )}
                 {profile?.twitterUrl && (
@@ -1297,14 +1287,12 @@ function MetadataCard({
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-white/30">Age rating</span>
                   <span>{profile.ageRating}</span>
-                  <SourceBadge fieldName="ageRating" fieldMeta={fieldMeta} />
                 </div>
               )}
               {((profile?.supportedLanguages as string[] | null) ?? []).length > 0 && (
                 <div>
                   <div className="mb-1 flex items-center gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-white/30">Languages</span>
-                    <SourceBadge fieldName="supportedLanguages" fieldMeta={fieldMeta} />
                   </div>
                   <p>{(profile?.supportedLanguages as string[]).join(", ")}</p>
                 </div>
@@ -1313,7 +1301,6 @@ function MetadataCard({
                 <div>
                   <div className="mb-1 flex items-center gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-white/30">Content descriptors</span>
-                    <SourceBadge fieldName="contentDescriptors" fieldMeta={fieldMeta} />
                   </div>
                   <p>{(profile?.contentDescriptors as string[]).join(", ")}</p>
                 </div>
@@ -1430,10 +1417,11 @@ export default function GameProfileTab({
   return (
     <div className="space-y-4 pb-10">
       <ProfileHealthCard profile={profile} onSelectField={(field) => setActiveFocusRequest({ field })} />
-      <div className="flex items-center gap-2 rounded-xl px-4 py-3 text-xs text-white/55"
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl px-4 py-3 text-xs text-white/55"
         style={{ background: "rgba(102,192,244,0.06)", border: "1px solid rgba(102,192,244,0.18)" }}>
         <Download size={14} className="shrink-0 text-[#66c0f4]" />
-        <span>Information imported from a connected store is marked with an API badge.</span>
+        <span className="flex-1 min-w-[12rem]">Imported information is kept separate from values you enter directly.</span>
+        <DataSourceExplainer showOverridden={Object.values(fieldMeta).some(meta => meta?.isManualOverride && meta?.importedValue)} />
       </div>
       <AboutCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
       <MediaCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />

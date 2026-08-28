@@ -25,6 +25,7 @@ import {
 import { FaSteam, FaDiscord, FaTwitter, FaYoutube, FaGlobe } from "react-icons/fa";
 import { SiEpicgames, SiItchdotio, SiGogdotcom } from "react-icons/si";
 import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
+import { getSourceColor, getSourceLabel, getSourceLabelFromValue, type SourceLabel } from "@/pages/indie-dashboard/edit-profile/types";
 
 const GREEN = "#B8FF1B";
 
@@ -106,23 +107,15 @@ type IndieProfile = {
 };
 
 function FieldSourceBadge({ source }: { source?: string }) {
-  if (!source) return null;
-  const labels: Record<string, string> = {
-    steam: "Steam",
-    epic: "Epic",
-    itch: "itch.io",
-    manual: "Manual",
-  };
-  const colors: Record<string, string> = {
-    steam: "#1b9aed",
-    epic: "#2d2d2d",
-    itch: "#fa5c5c",
-    manual: GREEN,
-  };
+  const knownLabel = source && ["MANUAL", "IMPORTED", "STEAM", "ITCH.IO", "EPIC", "OVERRIDDEN"].includes(source)
+    ? source as SourceLabel
+    : null;
+  const label = knownLabel ?? getSourceLabelFromValue(source);
+  if (!label) return null;
   return (
-    <span className="text-[10px] px-1.5 py-0.5 rounded font-medium ml-2"
-      style={{ background: colors[source] || "#333", color: source === "manual" ? "#000" : "#fff" }}>
-      {labels[source] || source}
+    <span className="text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider ml-2"
+      style={{ background: `${getSourceColor(label as SourceLabel)}18`, color: getSourceColor(label as SourceLabel), border: `1px solid ${getSourceColor(label as SourceLabel)}35` }}>
+      {label}
     </span>
   );
 }
@@ -389,7 +382,7 @@ function GameProfileTab({ profile, fieldMeta, saveMut }: {
   useEffect(() => { setForm(profile); }, [profile]);
 
   const set = (k: keyof IndieProfile, v: any) => setForm((f) => ({ ...f, [k]: v }));
-  const src = (k: string) => fieldMeta[k]?.importSource ?? (fieldMeta[k]?.isManualOverride ? "manual" : undefined);
+  const src = (k: string) => getSourceLabel(fieldMeta[k]) ?? undefined;
 
   const save = () => saveMut.mutate({
     gameName: form.gameName, releaseStatus: form.releaseStatus, releaseDate: form.releaseDate,
