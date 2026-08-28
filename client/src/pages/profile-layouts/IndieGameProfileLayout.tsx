@@ -321,7 +321,15 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
               <p className="mt-3 text-sm font-semibold text-white/50">By @{profile.username}</p>
               {description && <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/75">{description}</p>}
 
-              <div className="mt-7 flex flex-wrap items-center gap-3">
+              <div className="mt-7 flex flex-wrap items-center gap-2">
+                <div className="flex items-stretch gap-3 px-1 py-2 text-xs" aria-label="Developer profile statistics">
+                  {profileStats.map(({ label, value }, index) => (
+                    <div key={label} className={`min-w-[64px] text-center sm:min-w-[72px] ${index > 0 ? 'border-l border-white/10 pl-3 sm:pl-4' : ''}`}>
+                      <div className="text-base font-black text-white sm:text-lg">{value == null ? '—' : value.toLocaleString()}</div>
+                      <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/40">{label}</div>
+                    </div>
+                  ))}
+                </div>
                 {primaryStore && (
                   <a href={primaryStore.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black hover:brightness-110">
                     <Play size={16} fill="currentColor" />
@@ -347,14 +355,6 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                 <button onClick={() => setShareDialogOpen(true)} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Share game">
                   <Share2 size={18} />
                 </button>
-                <div className="flex items-stretch gap-5 px-1 py-2 text-xs" aria-label="Developer profile statistics">
-                  {profileStats.map(({ label, value }, index) => (
-                    <div key={label} className={`min-w-[72px] text-center sm:min-w-[84px] ${index > 0 ? 'border-l border-white/10 pl-4 sm:pl-5' : ''}`}>
-                      <div className="text-base font-black text-white sm:text-lg">{value == null ? '—' : value.toLocaleString()}</div>
-                      <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/40">{label}</div>
-                    </div>
-                  ))}
-                </div>
                 {isOwnProfile && GAME_DEVELOPER_FEATURES_ENABLED && (
                   <Link href={`/game-dashboard?tab=game-profile${gameProfile?.id ? `&gameId=${gameProfile.id}` : ''}`} className="rounded-xl border border-[#B7FF18]/30 bg-[#B7FF18]/10 px-5 py-3 text-sm font-black text-[#B7FF18] hover:bg-[#B7FF18]/20">
                     Game dashboard
