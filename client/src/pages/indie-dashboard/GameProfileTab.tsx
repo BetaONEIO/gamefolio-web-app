@@ -62,6 +62,9 @@ const PROFILE_SECTION_BY_FIELD: Record<string, string> = {
   studioWebsite: "studio",
   twitterUrl: "studio",
   discordUrl: "studio",
+  ageRating: "metadata",
+  supportedLanguages: "metadata",
+  contentDescriptors: "metadata",
 };
 
 function computeHealth(profile: Profile | null) {
@@ -1229,6 +1232,116 @@ function StudioCard({
   );
 }
 
+// ─── Store Metadata Card ───────────────────────────────────────────────────────
+function MetadataCard({
+  profile,
+  fieldMeta,
+  focusRequest,
+}: {
+  profile: Profile | null;
+  fieldMeta: FieldMeta;
+  focusRequest?: { field: string } | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const [ageRating, setAgeRating] = useState("");
+  const [supportedLanguages, setSupportedLanguages] = useState<string[]>([]);
+  const [contentDescriptors, setContentDescriptors] = useState<string[]>([]);
+  const save = useSaveProfile(profile?.id, () => setOpen(false));
+
+  const openModal = () => {
+    setAgeRating(profile?.ageRating ?? "");
+    setSupportedLanguages((profile?.supportedLanguages as string[] | null) ?? []);
+    setContentDescriptors((profile?.contentDescriptors as string[] | null) ?? []);
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (focusRequest && PROFILE_SECTION_BY_FIELD[focusRequest.field] === "metadata") openModal();
+  }, [focusRequest, profile?.id]);
+
+  const hasMetadata = !!profile?.ageRating
+    || ((profile?.supportedLanguages as string[] | null) ?? []).length > 0
+    || ((profile?.contentDescriptors as string[] | null) ?? []).length > 0;
+
+  return (
+    <>
+      <div data-profile-section="metadata" className="rounded-2xl overflow-hidden scroll-mt-24" style={{ border: `1px solid ${CARD_BORDER}` }}>
+        <div className="flex items-center justify-between px-5 py-4"
+          style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
+          <div className="flex items-center gap-2.5">
+            <Globe size={16} style={{ color: NEON }} />
+            <span className="text-sm font-bold text-white">Store Metadata</span>
+          </div>
+          <button onClick={openModal}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/10"
+            style={{ border: `1px solid ${CARD_BORDER}`, color: "white" }}>
+            <Pencil size={11} /> Edit
+          </button>
+        </div>
+        <div className="p-5">
+          {hasMetadata ? (
+            <div className="space-y-3 text-sm text-white/55">
+              {profile?.ageRating && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-white/30">Age rating</span>
+                  <span>{profile.ageRating}</span>
+                  <SourceBadge fieldName="ageRating" fieldMeta={fieldMeta} />
+                </div>
+              )}
+              {((profile?.supportedLanguages as string[] | null) ?? []).length > 0 && (
+                <div>
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-white/30">Languages</span>
+                    <SourceBadge fieldName="supportedLanguages" fieldMeta={fieldMeta} />
+                  </div>
+                  <p>{(profile?.supportedLanguages as string[]).join(", ")}</p>
+                </div>
+              )}
+              {((profile?.contentDescriptors as string[] | null) ?? []).length > 0 && (
+                <div>
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-white/30">Content descriptors</span>
+                    <SourceBadge fieldName="contentDescriptors" fieldMeta={fieldMeta} />
+                  </div>
+                  <p>{(profile?.contentDescriptors as string[]).join(", ")}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button onClick={openModal}
+              className="w-full py-6 flex flex-col items-center justify-center gap-2 rounded-xl transition-all hover:bg-white/5"
+              style={{ border: `1px dashed ${CARD_BORDER}` }}>
+              <Globe size={20} className="text-white/20" />
+              <span className="text-sm text-white/30">Add store metadata</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {open && (
+        <EditModal title="Store Metadata" onClose={() => setOpen(false)}
+          onSave={() => save.mutate({
+            gameId: profile?.id,
+            ageRating,
+            supportedLanguages,
+            contentDescriptors,
+          })}
+          isSaving={save.isPending}>
+          <FieldInput label="Age Rating" value={ageRating} onChange={setAgeRating} placeholder="e.g. PEGI 12, ESRB T" />
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-white/50 uppercase tracking-wider block">Supported Languages</label>
+            <TagInput value={supportedLanguages} onChange={setSupportedLanguages} placeholder="e.g. English, French, Japanese" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-white/50 uppercase tracking-wider block">Content Descriptors</label>
+            <TagInput value={contentDescriptors} onChange={setContentDescriptors} placeholder="e.g. Fantasy Violence, Online Interactions" />
+          </div>
+        </EditModal>
+      )}
+    </>
+  );
+}
+
 // ─── Advanced Card ─────────────────────────────────────────────────────────────
 function AdvancedCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta: FieldMeta }) {
   const [tab, setTab] = useState<"import" | "sync">("import");
@@ -1315,6 +1428,7 @@ export default function GameProfileTab({
       <StoreListingCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
       <PlatformCard profile={profile} fieldMeta={fieldMeta} />
       <StudioCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
+      <MetadataCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
       <AdvancedCard profile={profile} fieldMeta={fieldMeta} />
     </div>
   );
