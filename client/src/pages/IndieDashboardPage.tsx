@@ -19,6 +19,7 @@ import { DASHBOARD_THEME } from "./indie-dashboard/constants";
 
 type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "analytics" | "game-profile";
 type CampaignSubTab = "create" | "my";
+type ProfileFocusRequest = { field: string };
 
 
 // "Campaigns" tab hidden while CAMPAIGNS_ENABLED is false — bounty campaigns
@@ -40,6 +41,7 @@ export default function IndieDashboardPage() {
   const [tab, setTab] = useState<TopTabId>("overview");
   const [campaignSub, setCampaignSub] = useState<CampaignSubTab>("my");
   const [runWizardTemplate, setRunWizardTemplate] = useState<any>(null);
+  const [profileFocus, setProfileFocus] = useState<ProfileFocusRequest | null>(null);
 
   const search = useSearch();
   const gameIdParam = new URLSearchParams(search).get("gameId");
@@ -53,6 +55,7 @@ export default function IndieDashboardPage() {
 
   const goTo = (toTab: TopTabId, sub?: string) => {
     setTab(toTab);
+    setProfileFocus(toTab === "game-profile" && sub ? { field: sub } : null);
     if (toTab === "campaigns" && sub) setCampaignSub(sub as CampaignSubTab);
   };
 
@@ -64,7 +67,10 @@ export default function IndieDashboardPage() {
   return (
     <div className="min-h-screen" style={{ background: DASHBOARD_THEME.page, color: DASHBOARD_THEME.text }}>
       {/* Full-width cinematic hero banner (edge-to-edge) */}
-      <GameHeroBanner gameId={activeGameId} />
+       <GameHeroBanner
+         gameId={activeGameId}
+         onGoTo={(field) => goTo("game-profile", field)}
+       />
 
       <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Top tab bar — underline style */}
@@ -73,7 +79,7 @@ export default function IndieDashboardPage() {
           {TOP_TABS.map((t) => {
             const active = tab === t.id;
             return (
-              <button key={t.id} onClick={() => setTab(t.id)}
+              <button key={t.id} onClick={() => { setTab(t.id); setProfileFocus(null); }}
                 className="relative flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-colors"
                 style={{ color: active ? DASHBOARD_THEME.accent : DASHBOARD_THEME.textMuted }}>
                 <t.icon className="w-3.5 h-3.5" />
@@ -89,7 +95,7 @@ export default function IndieDashboardPage() {
 
         {/* ── OVERVIEW ── */}
         {tab === "overview" && (
-          <DashboardTab onGoTo={goTo} />
+          <DashboardTab onGoTo={goTo} gameId={activeGameId} />
         )}
 
         {/* ── CAMPAIGNS ── */}
@@ -114,7 +120,7 @@ export default function IndieDashboardPage() {
         {tab === "analytics" && <AnalyticsTab />}
 
         {/* ── GAME PROFILE ── */}
-        {tab === "game-profile" && <GameProfileTab gameId={activeGameId} />}
+         {tab === "game-profile" && <GameProfileTab gameId={activeGameId} focusRequest={profileFocus} />}
 
       </div>
 

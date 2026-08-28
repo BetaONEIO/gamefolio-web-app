@@ -34,6 +34,36 @@ const HEALTH_FIELDS = [
   { key: "screenshotUrls",  label: "Screenshots",        pts: 5,  section: "media"  },
 ] as const;
 
+const PROFILE_SECTION_BY_FIELD: Record<string, string> = {
+  gameName: "about",
+  shortDescription: "about",
+  fullDescription: "about",
+  genres: "about",
+  tags: "about",
+  keyFeatures: "about",
+  releaseStatus: "about",
+  releaseDate: "about",
+  price: "about",
+  headerImageUrl: "media",
+  capsuleImageUrl: "media",
+  trailerUrl: "media",
+  screenshotUrls: "media",
+  steamUrl: "store",
+  steamAppId: "store",
+  epicUrl: "store",
+  epicSlug: "store",
+  itchUrl: "store",
+  websiteUrl: "store",
+  platforms: "platforms",
+  studioName: "studio",
+  studioCountry: "studio",
+  studioFoundedYear: "studio",
+  studioTeamSize: "studio",
+  studioWebsite: "studio",
+  twitterUrl: "studio",
+  discordUrl: "studio",
+};
+
 function computeHealth(profile: Profile | null) {
   let earned = 0;
   const missing: typeof HEALTH_FIELDS[number][] = [];
@@ -320,7 +350,13 @@ function DropZone({
 }
 
 // ─── Profile Health Card ────────────────────────────────────────────────────────
-function ProfileHealthCard({ profile }: { profile: Profile | null }) {
+function ProfileHealthCard({
+  profile,
+  onSelectField,
+}: {
+  profile: Profile | null;
+  onSelectField: (field: string) => void;
+}) {
   const { pct, top3 } = computeHealth(profile);
   const color = pct >= 80 ? NEON : pct >= 50 ? "#f59e0b" : "#ef4444";
   const label = pct >= 80 ? "Looking great" : pct >= 50 ? "Good progress" : "Needs attention";
@@ -355,11 +391,16 @@ function ProfileHealthCard({ profile }: { profile: Profile | null }) {
         ) : (
           <div className="space-y-1">
             {top3.map(f => (
-              <div key={f.key} className="flex items-center gap-2">
+              <button
+                key={f.key}
+                type="button"
+                onClick={() => onSelectField(f.key)}
+                className="flex w-full items-center gap-2 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-white/[0.04]"
+              >
                 <div className="w-1 h-1 rounded-full shrink-0" style={{ background: color }} />
                 <span className="text-xs text-white/50">Add {f.label}</span>
                 <span className="text-[10px] ml-auto" style={{ color: `${color}80` }}>+{f.pts}pts</span>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -369,14 +410,24 @@ function ProfileHealthCard({ profile }: { profile: Profile | null }) {
 }
 
 // ─── About Card ────────────────────────────────────────────────────────────────
-function AboutCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta: FieldMeta }) {
+function AboutCard({
+  profile,
+  fieldMeta,
+  focusRequest,
+}: {
+  profile: Profile | null;
+  fieldMeta: FieldMeta;
+  focusRequest?: { field: string } | null;
+}) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [short, setShort] = useState("");
   const [full, setFull] = useState("");
   const [genres, setGenres] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
   const [features, setFeatures] = useState<string[]>([]);
   const [status, setStatus] = useState("");
+  const [releaseDate, setReleaseDate] = useState("");
   const [price, setPrice] = useState("");
 
   const save = useSaveProfile(profile?.id, () => setOpen(false));
@@ -386,18 +437,28 @@ function AboutCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta:
     setShort(profile?.shortDescription ?? "");
     setFull(profile?.fullDescription ?? "");
     setGenres((profile?.genres as string[]) ?? []);
+    setTags((profile?.tags as string[]) ?? []);
     setFeatures((profile?.keyFeatures as string[]) ?? []);
     setStatus(profile?.releaseStatus ?? "");
+    setReleaseDate(profile?.releaseDate ? String(profile.releaseDate).slice(0, 10) : "");
     setPrice(profile?.price ?? "");
     setOpen(true);
   };
+
+  useEffect(() => {
+    const aboutFields = new Set([
+      "gameName", "shortDescription", "fullDescription", "genres", "tags",
+      "keyFeatures", "releaseStatus", "releaseDate", "price",
+    ]);
+    if (profile && focusRequest && aboutFields.has(focusRequest.field)) openModal();
+  }, [focusRequest, profile?.id]);
 
   const genreList = (profile?.genres as string[] | null) ?? [];
   const featureList = (profile?.keyFeatures as string[] | null) ?? [];
 
   return (
     <>
-      <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+      <div data-profile-section="about" className="scroll-mt-24 rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
         <div className="flex items-center justify-between px-5 py-4"
           style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
           <div className="flex items-center gap-2.5">
@@ -498,7 +559,7 @@ function AboutCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta:
 
       {open && (
         <EditModal title="About Your Game" onClose={() => setOpen(false)}
-          onSave={() => save.mutate({ gameId: profile?.id, gameName: name, shortDescription: short, fullDescription: full, genres, keyFeatures: features, releaseStatus: status, price })}
+          onSave={() => save.mutate({ gameId: profile?.id, gameName: name, shortDescription: short, fullDescription: full, genres, tags, keyFeatures: features, releaseStatus: status, releaseDate: releaseDate || null, price })}
           isSaving={save.isPending}>
           <FieldInput label="Game Name" value={name} onChange={setName} placeholder="My Awesome Game" />
           <div>
@@ -517,6 +578,7 @@ function AboutCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta:
               ))}
             </div>
           </div>
+          <FieldInput label="Release Date" value={releaseDate} onChange={setReleaseDate} type="date" />
           <FieldInput label="Price (USD)" value={price} onChange={setPrice} placeholder="19.99" />
           <FieldInput label="Short Description" value={short} onChange={setShort} rows={2}
             placeholder="One or two sentences about your game…" />
@@ -525,6 +587,10 @@ function AboutCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta:
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-white/50 uppercase tracking-wider block">Genres</label>
             <TagInput value={genres} onChange={setGenres} placeholder="e.g. Action, RPG, Platformer" />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-white/50 uppercase tracking-wider block">Tags</label>
+            <TagInput value={tags} onChange={setTags} placeholder="e.g. Co-op, Roguelite, Indie" />
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-white/50 uppercase tracking-wider block">Key Features</label>
@@ -537,7 +603,15 @@ function AboutCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta:
 }
 
 // ─── Media Card ────────────────────────────────────────────────────────────────
-function MediaCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta: FieldMeta }) {
+function MediaCard({
+  profile,
+  fieldMeta,
+  focusRequest,
+}: {
+  profile: Profile | null;
+  fieldMeta: FieldMeta;
+  focusRequest?: { field: string } | null;
+}) {
   // Trailer modal state
   const [trailerOpen, setTrailerOpen] = useState(false);
   const [trailer, setTrailer] = useState("");
@@ -567,6 +641,12 @@ function MediaCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta:
     setShotsOpen(true);
   };
 
+  useEffect(() => {
+    if (!profile) return;
+    if (focusRequest?.field === "trailerUrl") openTrailerModal();
+    if (focusRequest?.field === "screenshotUrls") openShotsModal();
+  }, [focusRequest, profile?.id]);
+
   const addShot = () => {
     if (newShot.trim() && !screenshots.includes(newShot.trim())) {
       setScreenshots([...screenshots, newShot.trim()]);
@@ -576,7 +656,7 @@ function MediaCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta:
 
   return (
     <>
-      <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+      <div data-profile-section="media" className="scroll-mt-24 rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
         <div className="flex items-center px-5 py-4"
           style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
           <div className="flex items-center gap-2.5">
@@ -838,7 +918,15 @@ function MediaCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta:
 }
 
 // ─── Store Listing Card ────────────────────────────────────────────────────────
-function StoreListingCard({ profile, fieldMeta, onGoToStoreLinks }: { profile: Profile | null; fieldMeta: FieldMeta; onGoToStoreLinks?: () => void }) {
+function StoreListingCard({
+  profile,
+  fieldMeta,
+  focusRequest,
+}: {
+  profile: Profile | null;
+  fieldMeta: FieldMeta;
+  focusRequest?: { field: string } | null;
+}) {
   const [open, setOpen] = useState(false);
   const [steamAppId, setSteamAppId] = useState("");
   const [steamUrl, setSteamUrl] = useState("");
@@ -858,6 +946,11 @@ function StoreListingCard({ profile, fieldMeta, onGoToStoreLinks }: { profile: P
     setOpen(true);
   };
 
+  useEffect(() => {
+    const storeFields = new Set(["steamUrl", "steamAppId", "epicUrl", "epicSlug", "itchUrl", "websiteUrl"]);
+    if (profile && focusRequest && storeFields.has(focusRequest.field)) openModal();
+  }, [focusRequest, profile?.id]);
+
   const stores = [
      { key: "steam", fieldName: "steamUrl", icon: <SiSteam size={20} className="text-[#66c0f4]" />, label: "Steam", filled: !!(profile?.steamUrl || profile?.steamAppId), url: profile?.steamUrl, bg: "rgba(102,192,244,0.08)", border: "rgba(102,192,244,0.2)" },
      { key: "epic",  fieldName: "epicUrl", icon: <SiEpicgames size={20} className="text-white" />, label: "Epic Games", filled: !!(profile?.epicUrl || profile?.epicSlug), url: profile?.epicUrl, bg: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.12)" },
@@ -867,7 +960,7 @@ function StoreListingCard({ profile, fieldMeta, onGoToStoreLinks }: { profile: P
 
   return (
     <>
-      <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+      <div data-profile-section="store" className="scroll-mt-24 rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
         <div className="flex items-center justify-between px-5 py-4"
           style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
           <div className="flex items-center gap-2.5">
@@ -978,7 +1071,7 @@ function PlatformCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
   };
 
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+    <div data-profile-section="platforms" className="scroll-mt-24 rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
       <div className="flex items-center gap-2.5 px-5 py-4"
         style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
         <Gamepad2 size={16} style={{ color: NEON }} />
@@ -1008,7 +1101,15 @@ function PlatformCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
 }
 
 // ─── Studio Card ───────────────────────────────────────────────────────────────
-function StudioCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta: FieldMeta }) {
+function StudioCard({
+  profile,
+  fieldMeta,
+  focusRequest,
+}: {
+  profile: Profile | null;
+  fieldMeta: FieldMeta;
+  focusRequest?: { field: string } | null;
+}) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [country, setCountry] = useState("");
@@ -1030,11 +1131,19 @@ function StudioCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta
     setOpen(true);
   };
 
+  useEffect(() => {
+    const studioFields = new Set([
+      "studioName", "studioCountry", "studioFoundedYear", "studioTeamSize",
+      "studioWebsite", "twitterUrl", "discordUrl",
+    ]);
+    if (profile && focusRequest && studioFields.has(focusRequest.field)) openModal();
+  }, [focusRequest, profile?.id]);
+
   const hasInfo = profile?.studioName || profile?.studioCountry || profile?.studioFoundedYear;
 
   return (
     <>
-      <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+      <div data-profile-section="studio" className="scroll-mt-24 rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
         <div className="flex items-center justify-between px-5 py-4"
           style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
           <div className="flex items-center gap-2.5">
@@ -1058,7 +1167,7 @@ function StudioCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta
               <div className="flex flex-wrap gap-3 text-sm text-white/50">
                 {profile?.studioCountry && <span>📍 {profile.studioCountry}</span>}
                 {profile?.studioFoundedYear && <span>Est. {profile.studioFoundedYear}</span>}
-                {profile?.studioTeamSize && <span>{profile.studioTeamSize} person{profile.studioTeamSize !== 1 ? "s" : ""}</span>}
+                {profile?.studioTeamSize && <span>{profile.studioTeamSize} person{Number(profile.studioTeamSize) !== 1 ? "s" : ""}</span>}
               </div>
               <div className="flex flex-wrap gap-2">
                 {profile?.studioWebsite && (
@@ -1161,7 +1270,13 @@ function AdvancedCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
 }
 
 // ─── Main export ───────────────────────────────────────────────────────────────
-export default function GameProfileTab({ gameId }: { gameId?: number }) {
+export default function GameProfileTab({
+  gameId,
+  focusRequest,
+}: {
+  gameId?: number;
+  focusRequest?: { field: string } | null;
+}) {
   const { data } = useQuery<{ profile: Profile; fieldMeta: FieldMeta }>({
     queryKey: ["/api/indie/profile", gameId ?? null],
     queryFn: () => apiRequest("GET", `/api/indie/profile${gameId ? `?gameId=${gameId}` : ""}`).then(r => r.json()),
@@ -1169,20 +1284,37 @@ export default function GameProfileTab({ gameId }: { gameId?: number }) {
 
   const profile = (data as any)?.profile ?? null;
   const fieldMeta: FieldMeta = (data as any)?.fieldMeta ?? {};
+  const [activeFocusRequest, setActiveFocusRequest] = useState<{ field: string } | null>(null);
+
+  useEffect(() => {
+    if (focusRequest) setActiveFocusRequest(focusRequest);
+  }, [focusRequest]);
+
+  useEffect(() => {
+    if (!activeFocusRequest || !profile) return;
+    const section = PROFILE_SECTION_BY_FIELD[activeFocusRequest.field];
+    if (!section) return;
+    window.requestAnimationFrame(() => {
+      document.querySelector(`[data-profile-section="${section}"]`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }, [activeFocusRequest, profile?.id]);
 
   return (
     <div className="space-y-4 pb-10">
-      <ProfileHealthCard profile={profile} />
+      <ProfileHealthCard profile={profile} onSelectField={(field) => setActiveFocusRequest({ field })} />
       <div className="flex items-center gap-2 rounded-xl px-4 py-3 text-xs text-white/55"
         style={{ background: "rgba(102,192,244,0.06)", border: "1px solid rgba(102,192,244,0.18)" }}>
         <Download size={14} className="shrink-0 text-[#66c0f4]" />
         <span>Information imported from a connected store is marked with an API badge.</span>
       </div>
-      <AboutCard profile={profile} fieldMeta={fieldMeta} />
-      <MediaCard profile={profile} fieldMeta={fieldMeta} />
-      <StoreListingCard profile={profile} fieldMeta={fieldMeta} />
+      <AboutCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
+      <MediaCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
+      <StoreListingCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
       <PlatformCard profile={profile} fieldMeta={fieldMeta} />
-      <StudioCard profile={profile} fieldMeta={fieldMeta} />
+      <StudioCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
       <AdvancedCard profile={profile} fieldMeta={fieldMeta} />
     </div>
   );
