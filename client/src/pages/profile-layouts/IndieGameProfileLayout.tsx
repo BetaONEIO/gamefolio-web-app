@@ -312,9 +312,9 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                     {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
                   </button>
                 )}
-                <div className="flex items-stretch overflow-hidden rounded-xl border border-white/15 bg-black/25" aria-label="Developer profile statistics">
+                <div className="flex items-stretch gap-3 px-1 py-1 text-xs" aria-label="Developer profile statistics">
                   {profileStats.map(({ label, value }, index) => (
-                    <div key={label} className={`min-w-[74px] px-3 py-2 text-center sm:min-w-[86px] sm:px-4 ${index > 0 ? 'border-l border-white/10' : ''}`}>
+                    <div key={label} className={`min-w-[58px] text-center sm:min-w-[68px] ${index > 0 ? 'border-l border-white/10 pl-3 sm:pl-4' : ''}`}>
                       <div className="text-sm font-black text-white">{value == null ? '—' : value.toLocaleString()}</div>
                       <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-white/40">{label}</div>
                     </div>
