@@ -261,9 +261,9 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
             </div>
           )}
 
-          <div className="grid items-center gap-8 lg:grid-cols-[minmax(300px,0.78fr)_minmax(0,1fr)] lg:gap-12">
+          <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(300px,0.78fr)] lg:gap-12">
             {(displayHeader || displayCapsule) && (
-              <div className="relative order-1 overflow-hidden rounded-3xl border border-white/15 bg-[#0d151b] shadow-2xl shadow-black/40">
+              <div className="relative order-2 overflow-hidden rounded-3xl border border-white/15 bg-[#0d151b] shadow-2xl shadow-black/40">
                 <div className="aspect-[16/10]">
                   {displayHeader ? (
                     <img src={displayHeader} alt={`${gameName} banner artwork`} className="h-full w-full object-cover" />
@@ -312,14 +312,6 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                     {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
                   </button>
                 )}
-                <div className="flex items-stretch gap-3 px-1 py-1 text-xs" aria-label="Developer profile statistics">
-                  {profileStats.map(({ label, value }, index) => (
-                    <div key={label} className={`min-w-[58px] text-center sm:min-w-[68px] ${index > 0 ? 'border-l border-white/10 pl-3 sm:pl-4' : ''}`}>
-                      <div className="text-sm font-black text-white">{value == null ? '—' : value.toLocaleString()}</div>
-                      <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-white/40">{label}</div>
-                    </div>
-                  ))}
-                </div>
                 {!isOwnProfile && (
                   <button onClick={() => currentUser ? setMessageDialogOpen(true) : setLocation('/auth')} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Message developer">
                     <MessageCircle size={18} />
@@ -328,6 +320,14 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                 <button onClick={() => setShareDialogOpen(true)} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Share game">
                   <Share2 size={18} />
                 </button>
+                <div className="flex items-stretch gap-3 px-1 py-1 text-xs" aria-label="Developer profile statistics">
+                  {profileStats.map(({ label, value }, index) => (
+                    <div key={label} className={`min-w-[58px] text-center sm:min-w-[68px] ${index > 0 ? 'border-l border-white/10 pl-3 sm:pl-4' : ''}`}>
+                      <div className="text-sm font-black text-white">{value == null ? '—' : value.toLocaleString()}</div>
+                      <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-white/40">{label}</div>
+                    </div>
+                  ))}
+                </div>
                 {isOwnProfile && GAME_DEVELOPER_FEATURES_ENABLED && (
                   <Link href={`/game-dashboard?tab=game-profile${gameProfile?.id ? `&gameId=${gameProfile.id}` : ''}`} className="rounded-xl border border-[#B7FF18]/30 bg-[#B7FF18]/10 px-5 py-3 text-sm font-black text-[#B7FF18] hover:bg-[#B7FF18]/20">
                     Game dashboard
