@@ -336,25 +336,27 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                     Play / buy
                   </a>
                 )}
-                {!isOwnProfile && (
-                  <button
-                    onClick={() => currentUser ? followMutation.mutate() : setLocation('/auth')}
-                    disabled={followMutation.isPending}
-                    aria-label={`${isFollowing ? 'Following' : isRequested ? 'Follow request pending for' : 'Follow'} @${profile.username}`}
-                    className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/20 px-5 py-3 text-sm font-bold hover:bg-white/10 disabled:opacity-50"
-                  >
-                    {isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}
-                    {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
+                <div className="ml-2 flex items-center gap-2">
+                  {!isOwnProfile && (
+                    <button
+                      onClick={() => currentUser ? followMutation.mutate() : setLocation('/auth')}
+                      disabled={followMutation.isPending}
+                      aria-label={`${isFollowing ? 'Following' : isRequested ? 'Follow request pending for' : 'Follow'} @${profile.username}`}
+                      className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/20 px-5 py-3 text-sm font-bold hover:bg-white/10 disabled:opacity-50"
+                    >
+                      {isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}
+                      {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
+                    </button>
+                  )}
+                  {!isOwnProfile && (
+                    <button onClick={() => currentUser ? setMessageDialogOpen(true) : setLocation('/auth')} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Message developer">
+                      <MessageCircle size={18} />
+                    </button>
+                  )}
+                  <button onClick={() => setShareDialogOpen(true)} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Share game">
+                    <Share2 size={18} />
                   </button>
-                )}
-                {!isOwnProfile && (
-                  <button onClick={() => currentUser ? setMessageDialogOpen(true) : setLocation('/auth')} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Message developer">
-                    <MessageCircle size={18} />
-                  </button>
-                )}
-                <button onClick={() => setShareDialogOpen(true)} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Share game">
-                  <Share2 size={18} />
-                </button>
+                </div>
                 {isOwnProfile && GAME_DEVELOPER_FEATURES_ENABLED && (
                   <Link href={`/game-dashboard?tab=game-profile${gameProfile?.id ? `&gameId=${gameProfile.id}` : ''}`} className="rounded-xl border border-[#B7FF18]/30 bg-[#B7FF18]/10 px-5 py-3 text-sm font-black text-[#B7FF18] hover:bg-[#B7FF18]/20">
                     Game dashboard
