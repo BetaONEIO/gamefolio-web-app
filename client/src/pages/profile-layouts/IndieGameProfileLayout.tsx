@@ -161,6 +161,10 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const gameProfile = indieData?.profile ?? null;
   const canonicalGame = indieData?.game ?? null;
   const canonicalGameId = canonicalGame?.id;
+  const profileScreenshotSources = Array.isArray(gameProfile?.screenshotUrls)
+    ? gameProfile.screenshotUrls.filter((url): url is string => typeof url === 'string' && url.length > 0)
+    : [];
+  const { getSignedUrl: getProfileScreenshotUrl } = useSignedUrls(profileScreenshotSources);
 
   const { data: gameContentData } = useQuery<ClipWithUser[] | null>({
     queryKey: ['/api/games', canonicalGameId, 'clips'],
@@ -200,6 +204,22 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const isRequested = followStatus?.status === 'requested';
   const gameName = gameProfile?.gameName?.trim() || canonicalGame?.name || profile.displayName;
   const description = gameProfile?.fullDescription || gameProfile?.shortDescription || null;
+  const profileScreenshots = profileScreenshotSources
+    .map((url, index) => {
+      const imageUrl = getProfileScreenshotUrl(url);
+      return imageUrl
+        ? {
+            id: `indie-profile-screenshot-${index}`,
+            imageUrl,
+            title: `${gameName} screenshot ${index + 1}`,
+            userId: profile.id,
+            views: 0,
+          }
+        : null;
+    })
+    .filter((screenshot): screenshot is NonNullable<typeof screenshot> => screenshot !== null);
+  const gameScreenshots = [...profileScreenshots, ...communityScreenshots];
+  const screenshotCount = profileScreenshotSources.length + Number(counts?.screenshots ?? 0);
   const header = gameProfile?.headerImageUrl || gameProfile?.capsuleImageUrl || canonicalGame?.imageUrl || null;
   const capsule = gameProfile?.capsuleImageUrl || canonicalGame?.imageUrl || null;
   const { signedUrl: displayHeader } = useSignedUrl(header);
@@ -221,7 +241,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const statItems = [
     { label: 'Clips', value: counts?.clips ?? clips.length, icon: Play },
     { label: 'Reels', value: counts?.reels ?? reels.length, icon: Video },
-    { label: 'Screenshots', value: counts?.screenshots ?? communityScreenshots.length, icon: Camera },
+    { label: 'Screenshots', value: screenshotCount, icon: Camera },
   ].filter((item) => item.value > 0);
   const hasCommunityHighlights = clips.length > 0 || reels.length > 0;
   const uploadHref = canonicalGameId
@@ -423,7 +443,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                   </section>
                 )}
 
-                {communityScreenshots.length > 0 && (
+                {gameScreenshots.length > 0 && (
                   <section>
                     <div className="mb-4 flex items-end justify-between gap-4">
                       <div>
@@ -435,7 +455,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                       </button>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
-                      {communityScreenshots.slice(0, 4).map((shot) => <ScreenshotCard key={shot.id} screenshot={shot} profile={profile} showUserInfo onSelect={setSelectedScreenshot} />)}
+                      {gameScreenshots.slice(0, 4).map((shot) => <ScreenshotCard key={shot.id} screenshot={shot} profile={profile} showUserInfo onSelect={setSelectedScreenshot} />)}
                     </div>
                   </section>
                 )}
@@ -552,8 +572,8 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
         )}
         {activeTab === 'SCREENSHOTS' && (
           <section>
-            <h2 className="mb-5 text-2xl font-black">Community screenshots</h2>
-            {communityScreenshots.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{communityScreenshots.map((shot) => <ScreenshotCard key={shot.id} screenshot={shot} profile={profile} showUserInfo onSelect={setSelectedScreenshot} />)}</div> : <EmptyCommunityState title="No screenshots yet" body={`Players have not shared screenshots from ${gameName} yet.`} icon={Camera} />}
+            <h2 className="mb-5 text-2xl font-black">Game screenshots</h2>
+            {gameScreenshots.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{gameScreenshots.map((shot) => <ScreenshotCard key={shot.id} screenshot={shot} profile={profile} showUserInfo onSelect={setSelectedScreenshot} />)}</div> : <EmptyCommunityState title="No screenshots yet" body={`No screenshots have been added for ${gameName} yet.`} icon={Camera} />}
           </section>
         )}
       </main>
