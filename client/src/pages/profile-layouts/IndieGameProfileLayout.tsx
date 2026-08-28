@@ -320,11 +320,11 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                 <button onClick={() => setShareDialogOpen(true)} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Share game">
                   <Share2 size={18} />
                 </button>
-                <div className="flex items-stretch gap-3 px-1 py-1 text-xs" aria-label="Developer profile statistics">
+                <div className="flex items-stretch gap-5 px-1 py-2 text-xs" aria-label="Developer profile statistics">
                   {profileStats.map(({ label, value }, index) => (
-                    <div key={label} className={`min-w-[58px] text-center sm:min-w-[68px] ${index > 0 ? 'border-l border-white/10 pl-3 sm:pl-4' : ''}`}>
-                      <div className="text-sm font-black text-white">{value == null ? '—' : value.toLocaleString()}</div>
-                      <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.12em] text-white/40">{label}</div>
+                    <div key={label} className={`min-w-[72px] text-center sm:min-w-[84px] ${index > 0 ? 'border-l border-white/10 pl-4 sm:pl-5' : ''}`}>
+                      <div className="text-base font-black text-white sm:text-lg">{value == null ? '—' : value.toLocaleString()}</div>
+                      <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white/40">{label}</div>
                     </div>
                   ))}
                 </div>
