@@ -4,39 +4,15 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { Loader2, ImagePlus, X, CropIcon, Upload, ArrowUpRight, Edit3 } from "lucide-react";
+import { SiDiscord, SiEpicgames, SiItchdotio, SiSteam } from "react-icons/si";
+import { FaXTwitter } from "react-icons/fa6";
 import { publicUrl } from "@/lib/platform";
 import { NEON } from "./constants";
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 
-const ALL_PROFILE_FIELDS = [
-  "gameName", "shortDescription", "headerImageUrl", "steamUrl", "epicUrl", "itchUrl",
-  "fullDescription", "releaseDate", "studioName", "genres", "tags", "platforms",
-  "capsuleImageUrl", "trailerUrl", "screenshotUrls", "keyFeatures",
-  "websiteUrl", "twitterUrl", "discordUrl", "ageRating", "supportedLanguages",
-];
-
-const PROFILE_STEPS: { field: string; label: string; pct: number }[] = [
-  { field: "trailerUrl",       label: "Upload a trailer",      pct: 5 },
-  { field: "steamUrl",         label: "Add Steam Store URL",   pct: 3 },
-  { field: "fullDescription",  label: "Write full description", pct: 3 },
-  { field: "releaseDate",      label: "Set release date",      pct: 3 },
-  { field: "screenshotUrls",   label: "Add screenshots",       pct: 2 },
-  { field: "genres",           label: "Select genres",         pct: 2 },
-  { field: "tags",             label: "Add tags",              pct: 2 },
-  { field: "platforms",        label: "Set platforms",         pct: 2 },
-];
-
 const BANNER_ASPECT = 16 / 9;
 const CAPSULE_ASPECT = 3 / 4;
-
-function isFieldFilled(profile: any, field: string) {
-  if (!profile) return false;
-  const v = profile[field];
-  if (v === null || v === undefined || v === "") return false;
-  if (Array.isArray(v) && v.length === 0) return false;
-  return true;
-}
 
 function getCroppedBlob(image: HTMLImageElement, crop: PixelCrop): Promise<Blob> {
   const canvas = document.createElement("canvas");
@@ -258,9 +234,6 @@ export default function GameHeroBanner({
   });
 
   const profile = profileData?.profile ?? null;
-  const allFilled = ALL_PROFILE_FIELDS.filter((f) => isFieldFilled(profile, f)).length;
-  const profilePct = Math.round((allFilled / ALL_PROFILE_FIELDS.length) * 100);
-  const nextSteps = PROFILE_STEPS.filter((s) => !isFieldFilled(profile, s.field)).slice(0, 3);
 
   // Use local optimistic preview first, then server data, then fallback
   const serverBannerUrl = !imgError ? (profile?.headerImageUrl || profile?.capsuleImageUrl || null) : null;
@@ -423,9 +396,14 @@ export default function GameHeroBanner({
               </button>
 
               <div className="min-w-0 flex-1">
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight mb-3">
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight mb-2">
                   {profile?.gameName ?? "Your Game"}
                 </h2>
+                {(profile?.shortDescription || profile?.fullDescription) && (
+                  <p className="mb-3 max-w-3xl text-sm leading-relaxed text-white/60 line-clamp-2 sm:text-base">
+                    {profile.shortDescription || profile.fullDescription}
+                  </p>
+                )}
                 <div className="flex flex-wrap items-center gap-3 mb-5">
                   {profile?.releaseStatus && (
                     <span className="text-[11px] font-bold px-2.5 py-1 rounded uppercase tracking-wider"
@@ -433,34 +411,52 @@ export default function GameHeroBanner({
                       {profile.releaseStatus.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
                     </span>
                   )}
-                  {profile?.platforms?.[0] && <span className="text-[11px] text-white/40">{profile.platforms[0]}</span>}
+                  {profile?.platforms?.map((platform: string) => (
+                    <span key={platform} className="text-[11px] capitalize text-white/40">{platform.replace(/_/g, " ")}</span>
+                  ))}
                   {profile?.studioName && <span className="text-[11px] text-white/40">{profile.studioName}</span>}
                 </div>
 
-                <div className="mb-2 max-w-xl">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">Profile Strength</span>
-                    <span className="text-[11px] font-black"
-                      style={{ color: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171" }}>
-                      {profilePct}%
-                    </span>
+                {(profile?.steamUrl || profile?.epicUrl || profile?.itchUrl || profile?.twitterUrl || profile?.discordUrl) && (
+                  <div className="mb-5 flex flex-wrap gap-2">
+                    {profile?.steamUrl && (
+                      <a href={profile.steamUrl} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold transition-opacity hover:opacity-80"
+                        style={{ background: "#1b2838", color: "#c6d4df", border: "1px solid #1b2838" }}>
+                        <SiSteam className="h-3 w-3" /> Steam
+                      </a>
+                    )}
+                    {profile?.epicUrl && (
+                      <a href={profile.epicUrl} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold transition-opacity hover:opacity-80"
+                        style={{ background: "#2a2a2a", color: "#fff", border: "1px solid #444" }}>
+                        <SiEpicgames className="h-3 w-3" /> Epic Games
+                      </a>
+                    )}
+                    {profile?.itchUrl && (
+                      <a href={profile.itchUrl} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold text-white transition-opacity hover:opacity-80"
+                        style={{ background: "#fa5c5c", border: "1px solid #fa5c5c" }}>
+                        <SiItchdotio className="h-3 w-3" /> itch.io
+                      </a>
+                    )}
+                    {profile?.twitterUrl && (
+                      <a href={profile.twitterUrl} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold text-white transition-opacity hover:opacity-80"
+                        style={{ background: "#000", border: "1px solid rgba(255,255,255,0.16)" }}>
+                        <FaXTwitter className="h-3 w-3" /> X
+                      </a>
+                    )}
+                    {profile?.discordUrl && (
+                      <a href={profile.discordUrl} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold text-white transition-opacity hover:opacity-80"
+                        style={{ background: "#5865F2", border: "1px solid #5865F2" }}>
+                        <SiDiscord className="h-3 w-3" /> Discord
+                      </a>
+                    )}
                   </div>
-                  <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.10)" }}>
-                    <div className="h-full rounded-full transition-all duration-700"
-                      style={{ width: `${profilePct}%`,
-                        background: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171" }} />
-                  </div>
-                   {profilePct < 100 && nextSteps.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => onGoTo?.(nextSteps[0].field)}
-                      className="mt-1.5 text-left text-[10px] text-white/30 transition-colors hover:text-white/65"
-                    >
-                      Next: {nextSteps[0].label} <span style={{ color: NEON }}>+{nextSteps[0].pct}%</span>
-                    </button>
-                  )}
-                </div>
-                 <div className="flex flex-wrap items-center gap-2 pt-3">
+                )}
+                <div className="flex flex-wrap items-center gap-2">
                    {onEditProfile && (
                      <button type="button" onClick={onEditProfile}
                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-black transition-all hover:brightness-110"

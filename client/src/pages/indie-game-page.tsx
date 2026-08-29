@@ -27,6 +27,8 @@ import {
   Gamepad, Monitor, Smartphone,
   Film, MessageSquare, AlertCircle, ShieldCheck, Unlock, Rocket,
 } from "lucide-react";
+import { SiDiscord } from "react-icons/si";
+import { FaXTwitter } from "react-icons/fa6";
 
 const UploadPage = lazy(() => import("./UploadPage"));
 
@@ -1186,6 +1188,7 @@ interface IndieGameMeta {
   features: string[];
   website: string;
   discordUrl: string;
+  twitterUrl: string;
   steamUrl: string;
   epicUrl: string;
   itchUrl: string;
@@ -1412,6 +1415,7 @@ const IndieGamePage = () => {
     features: (igp?.keyFeatures?.length ? igp.keyFeatures : game?.indieMeta?.features) ?? [],
     website: igp?.websiteUrl ?? game?.indieMeta?.website ?? "",
     discordUrl: igp?.discordUrl ?? game?.indieMeta?.discordUrl ?? "",
+    twitterUrl: igp?.twitterUrl ?? "",
     steamUrl: igp?.steamUrl ?? game?.indieMeta?.steamUrl ?? "",
     epicUrl: igp?.epicUrl ?? game?.indieMeta?.epicUrl ?? "",
     itchUrl: igp?.itchUrl ?? game?.indieMeta?.itchUrl ?? "",
@@ -1658,9 +1662,19 @@ const IndieGamePage = () => {
             {meta.discordUrl && (
               <button
                 onClick={() => openExternal(meta.discordUrl)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white/70 transition-all hover:bg-white/5 border border-white/10">
-                <Users className="w-3.5 h-3.5" />
+                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-80"
+                style={{ background: "#5865F2", border: "1px solid #5865F2" }}>
+                <SiDiscord className="w-3.5 h-3.5" />
                 Discord
+              </button>
+            )}
+            {meta.twitterUrl && (
+              <button
+                onClick={() => openExternal(meta.twitterUrl)}
+                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-80"
+                style={{ background: "#000", border: "1px solid rgba(255,255,255,0.16)" }}>
+                <FaXTwitter className="w-3.5 h-3.5" />
+                X
               </button>
             )}
             <button
