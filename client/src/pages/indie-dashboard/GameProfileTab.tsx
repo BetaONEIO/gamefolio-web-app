@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useId } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -203,8 +203,37 @@ function EditModal({
   title: string; onClose: () => void; children: React.ReactNode;
   onSave?: () => void; isSaving?: boolean; saveLabel?: string;
 }) {
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
-    const down = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+    return () => previousFocus?.focus();
+  }, []);
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+      ));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
   }, [onClose]);
@@ -212,13 +241,14 @@ function EditModal({
   return createPortal(
     <div className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto p-4 overscroll-contain"
       style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)", paddingTop: "calc(env(safe-area-inset-top, 0px) + 4.5rem)" }}>
-      <div className="relative w-full max-w-2xl max-h-[calc(100dvh-7rem)] flex flex-col rounded-2xl overflow-hidden"
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId}
+        className="relative w-full max-w-2xl max-h-[calc(100dvh-7rem)] flex flex-col rounded-2xl overflow-hidden"
         style={{ background: "#0e1419", border: `1px solid ${CARD_BORDER}`, boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0"
           style={{ borderColor: CARD_BORDER }}>
-          <h3 className="text-base font-bold text-white">{title}</h3>
-          <button onClick={onClose}
+          <h3 id={titleId} className="text-base font-bold text-white">{title}</h3>
+          <button ref={closeButtonRef} onClick={onClose} aria-label={`Close ${title}`}
             className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-white/10 text-white/50 hover:text-white">
             <X size={16} />
           </button>
@@ -634,6 +664,7 @@ function MediaCard({
 
   // Screenshots modal state
   const [shotsOpen, setShotsOpen] = useState(false);
+  const [artworkOpen, setArtworkOpen] = useState<"headerImageUrl" | "capsuleImageUrl" | null>(null);
   const [screenshots, setScreenshots] = useState<string[]>([]);
   const [newShot, setNewShot] = useState("");
   const shotFileRef = useRef<HTMLInputElement>(null);
@@ -660,6 +691,9 @@ function MediaCard({
     if (!profile) return;
     if (focusRequest?.field === "trailerUrl") openTrailerModal();
     if (focusRequest?.field === "screenshotUrls") openShotsModal();
+    if (focusRequest?.field === "headerImageUrl" || focusRequest?.field === "capsuleImageUrl") {
+      setArtworkOpen(focusRequest.field);
+    }
   }, [focusRequest, profile?.id]);
 
   const addShot = () => {
@@ -927,6 +961,26 @@ function MediaCard({
           </div>
         </EditModal>
       )}
+      {artworkOpen && (
+        <EditModal
+          title={artworkOpen === "headerImageUrl" ? "Game Banner" : "Game Icon"}
+          onClose={() => setArtworkOpen(null)}
+        >
+          <p className="text-xs leading-relaxed text-white/45">
+            {artworkOpen === "headerImageUrl"
+              ? "Upload a 16:9 banner for the top of your public game page."
+              : "Upload a portrait game icon for cards and game identity."}
+          </p>
+          <DropZone
+            currentUrl={profile?.[artworkOpen]}
+            field={artworkOpen}
+            gameId={profile?.id}
+            label={artworkOpen === "headerImageUrl" ? "Drop banner or click to upload" : "Drop game icon or click to upload"}
+            aspect={artworkOpen === "headerImageUrl" ? "1920 × 1080 recommended" : "600 × 800 recommended"}
+            className={artworkOpen === "headerImageUrl" ? "aspect-video" : "mx-auto h-72 max-w-56"}
+          />
+        </EditModal>
+      )}
     </>
   );
 }
@@ -1063,11 +1117,20 @@ function StoreListingCard({
 }
 
 // ─── Platforms Card ─────────────────────────────────────────────────────────────
-function PlatformCard({ profile, fieldMeta }: { profile: Profile | null; fieldMeta: FieldMeta }) {
+function PlatformCard({
+  profile,
+  fieldMeta,
+  focusRequest,
+}: {
+  profile: Profile | null;
+  fieldMeta: FieldMeta;
+  focusRequest?: { field: string } | null;
+}) {
   const { toast } = useToast();
   const selected: string[] = (profile?.platforms as string[] | null) ?? [];
   const [optimisticSelected, setOptimisticSelected] = useState<string[] | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [open, setOpen] = useState(false);
   const displayedSelected = optimisticSelected ?? selected;
   const displayedSelectedRef = useRef(selected);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
@@ -1076,6 +1139,10 @@ function PlatformCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
   useEffect(() => {
     if (optimisticSelected === null) displayedSelectedRef.current = selected;
   }, [selected, optimisticSelected]);
+
+  useEffect(() => {
+    if (profile && focusRequest?.field === "platforms") setOpen(true);
+  }, [focusRequest, profile?.id]);
 
   const toggle = (id: string) => {
     const current = displayedSelectedRef.current;
@@ -1125,7 +1192,30 @@ function PlatformCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
     android: SiAndroid,
   };
 
+  const platformButtons = (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {PLATFORM_OPTIONS.map(p => {
+        const on = displayedSelected.includes(p.id);
+        const Icon = platformIcons[p.id] ?? Gamepad2;
+        return (
+          <button key={p.id} type="button" onClick={() => toggle(p.id)}
+            aria-pressed={on}
+            className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all"
+            style={{
+              background: on ? `${NEON}14` : "rgba(255,255,255,0.03)",
+              border: `1px solid ${on ? `${NEON}55` : CARD_BORDER}`,
+              color: on ? NEON : "rgba(255,255,255,0.3)",
+            }}>
+            <Icon size={18} />
+            <span className="text-[10px] font-bold">{p.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
+    <>
     <div data-profile-section="platforms" className="scroll-mt-24 rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
       <div className="flex items-center gap-2.5 px-5 py-4" aria-busy={isSaving}
         style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
@@ -1135,28 +1225,15 @@ function PlatformCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
          </span>
          {isSaving && <Loader2 size={12} className="animate-spin text-white/40" aria-label="Saving platform changes" />}
       </div>
-      <div className="p-5 grid grid-cols-4 gap-2">
-        {PLATFORM_OPTIONS.map(p => {
-          const on = displayedSelected.includes(p.id);
-          return (
-            <button key={p.id} type="button" onClick={() => toggle(p.id)}
-              aria-pressed={on}
-              className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all"
-              style={{
-                background: on ? `${NEON}14` : "rgba(255,255,255,0.03)",
-                border: `1px solid ${on ? `${NEON}55` : CARD_BORDER}`,
-                color: on ? NEON : "rgba(255,255,255,0.3)",
-              }}>
-              {(() => {
-                const Icon = platformIcons[p.id] ?? Gamepad2;
-                return <Icon size={18} />;
-              })()}
-              <span className="text-[10px] font-bold">{p.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      <div className="p-5">{platformButtons}</div>
     </div>
+    {open && (
+      <EditModal title="Platforms" onClose={() => setOpen(false)}>
+        <p className="text-xs leading-relaxed text-white/45">Choose every platform where players can find your game. Changes save automatically.</p>
+        {platformButtons}
+      </EditModal>
+    )}
+    </>
   );
 }
 
@@ -1483,7 +1560,7 @@ export default function GameProfileTab({
       <AboutCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
       <MediaCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
       <StoreListingCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
-      <PlatformCard profile={profile} fieldMeta={fieldMeta} />
+      <PlatformCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
       <StudioCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
       <MetadataCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
       <AdvancedCard profile={profile} fieldMeta={fieldMeta} />

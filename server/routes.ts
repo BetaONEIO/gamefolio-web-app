@@ -13394,7 +13394,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/indie/creator-content", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
-    const { type = "all", sort = "newest", source = "all" } = req.query as any;
+    const { type = "all", sort = "newest", source = "all", gameId: rawGameId } = req.query as any;
+    const requestedProfileId = rawGameId == null || rawGameId === "" ? null : Number.parseInt(String(rawGameId), 10);
+    if (requestedProfileId != null && (!Number.isInteger(requestedProfileId) || requestedProfileId <= 0)) {
+      return res.status(400).json({ error: "Invalid gameId" });
+    }
     let ownedGames: Array<{ id: number; name: string | null; imageUrl: string | null }> = [];
     try {
       const { db } = await import("./db");
@@ -13403,13 +13407,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use the explicit catalogue relationship rather than title matching. A
       // developer can manage more than one game, and a renamed game must not
       // accidentally pick up a different catalogue title's content.
+      const profileFilter = requestedProfileId == null ? sql`` : sql`AND igp.id = ${requestedProfileId}`;
       const profileRows = await db.execute(sql`
         SELECT igp.catalog_game_id AS "catalogGameId",
                COALESCE(g.name, igp.game_name, CONCAT('Game ', igp.catalog_game_id::text)) AS "gameName",
                g.image_url AS "imageUrl"
         FROM indie_game_profiles igp
         LEFT JOIN games g ON g.id = igp.catalog_game_id
-        WHERE igp.user_id = ${req.user.id} AND igp.catalog_game_id IS NOT NULL
+         WHERE igp.user_id = ${req.user.id} AND igp.catalog_game_id IS NOT NULL ${profileFilter}
       `);
       ownedGames = (profileRows.rows ?? [])
         .map((row: any) => ({ id: Number(row.catalogGameId), name: row.gameName ?? null, imageUrl: row.imageUrl ?? null }))
@@ -13510,6 +13515,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return rows.rows ?? [];
       };
 
+      const loadVideoCount = async () => {
+        if ((!wantsClips && !wantsReels) || ownedGameIds.length === 0) return 0;
+        const result = await db.execute(sql`
+          SELECT COUNT(*)::int AS count
+          FROM clips c
+          WHERE c.game_id = ANY(${ownedGameIdsSql}) ${videoTypeFilter} ${videoSourceFilter}
+        `);
+        return Number((result.rows ?? [])[0]?.count ?? 0);
+      };
+
+      const loadScreenshotCount = async () => {
+        if (!wantsScreenshots || ownedGameIds.length === 0) return 0;
+        const result = await db.execute(sql`
+          SELECT COUNT(*)::int AS count
+          FROM screenshots s
+          WHERE s.game_id = ANY(${ownedGameIdsSql}) ${screenshotSourceFilter}
+        `);
+        return Number((result.rows ?? [])[0]?.count ?? 0);
+      };
+
       const sortAndLimit = (items: any[]) => items
         .sort((a, b) => {
           if (normalizedSort === "most_viewed") return Number(b.views ?? 0) - Number(a.views ?? 0);
@@ -13518,16 +13543,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
         .slice(0, 30);
 
-      const [ownedVideos, ownedScreenshots] = await Promise.all([
+      const [ownedVideos, ownedScreenshots, videoCount, screenshotCount] = await Promise.all([
         loadVideos(),
         loadScreenshots(),
+        loadVideoCount(),
+        loadScreenshotCount(),
       ]);
       const ownedGameContent = sortAndLimit([...ownedVideos, ...ownedScreenshots]);
 
       res.json({
         ownedGames,
         ownedGameContent,
-        ownedGameContentTotal: ownedGameContent.length,
+        ownedGameContentTotal: videoCount + screenshotCount,
         // Compatibility response for the older settings implementation.
         items: ownedGameContent,
       });
