@@ -585,9 +585,9 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           onChange={handleChange}
           disabled={isLoading}
           className="auth-input uppercase"
-          maxLength={8}
+          maxLength={16}
         />
-        <p className="text-xs text-muted-foreground">Have a friend's referral code? Enter it here to earn bonus XP!</p>
+        <p className="text-xs text-muted-foreground">Have a friend's referral code? Enter it here to earn bonus XP! (3–16 characters)</p>
       </div>
 
       <div className="flex items-start gap-2">
