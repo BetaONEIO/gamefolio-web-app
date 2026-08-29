@@ -8,7 +8,7 @@ import {
   Pencil, X, Check, Loader2, Upload, Plus, Trash2, ExternalLink,
   Image as ImageIcon, Video, Globe, Gamepad2,
   Play, Sparkles, Building2, Package, Download, Twitter,
-  ArrowUpRight, ChevronDown, ChevronRight,
+  ArrowUpRight, ChevronDown, ChevronRight, Share2,
 } from "lucide-react";
 import {
   SiSteam, SiEpicgames, SiItchdotio, SiMacos, SiLinux,
@@ -1564,7 +1564,7 @@ function AdvancedCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
   );
 }
 
-// ─── Community & Social Card ───────────────────────────────────────────────────
+// ─── Social Platforms Card ──────────────────────────────────────────────────────
 function CommunitySocialCard({
   profile,
   focusRequest,
@@ -1572,79 +1572,42 @@ function CommunitySocialCard({
   profile: Profile | null;
   focusRequest?: { field: string } | null;
 }) {
-  const [open, setOpen] = useState(false);
   const [socialValues, setSocialValues] = useState<Record<GameSocialField, string>>(emptyGameSocialValues);
-  const save = useSaveProfile(profile?.id, () => setOpen(false));
-
-  const openModal = () => {
-    setSocialValues(Object.fromEntries(
-      GAME_SOCIAL_LINKS.map(({ field }) => [field, profile?.[field] ?? ""]),
-    ) as Record<GameSocialField, string>);
-    setOpen(true);
-  };
+  const save = useSaveProfile(profile?.id);
 
   useEffect(() => {
-    if (profile && focusRequest && GAME_SOCIAL_LINKS.some(({ field }) => field === focusRequest.field)) {
-      openModal();
-    }
-  }, [focusRequest, profile?.id]);
+    if (!profile) return;
+    setSocialValues(Object.fromEntries(
+      GAME_SOCIAL_LINKS.map(({ field }) => [field, profile[field] ?? ""]),
+    ) as Record<GameSocialField, string>);
+  }, [profile?.id]);
 
-  const hasSocial = GAME_SOCIAL_LINKS.some(({ field }) => !!profile?.[field]);
+  useEffect(() => {
+    if (!focusRequest || !GAME_SOCIAL_LINKS.some(({ field }) => field === focusRequest.field)) return;
+    window.requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>(`[data-profile-field="${focusRequest.field}"]`)?.focus();
+    });
+  }, [focusRequest]);
 
   return (
-    <>
-      <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
-        <div className="flex items-center justify-between px-5 py-4"
-          style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
-          <div className="flex items-center gap-2.5">
-            <Twitter size={16} style={{ color: NEON }} />
-            <div>
-              <span className="text-sm font-bold text-white">Social platforms</span>
-              <p className="mt-0.5 text-[11px] text-white/35">Connect the social spaces that belong to this game.</p>
-            </div>
-          </div>
-          <button type="button" onClick={openModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/10"
-            style={{ border: `1px solid ${CARD_BORDER}`, color: "white" }}>
-            <Pencil size={11} /> Edit
-          </button>
-        </div>
-        <div className="p-5">
-          {hasSocial ? (
-            <div className="flex flex-wrap gap-2">
-              {GAME_SOCIAL_LINKS.map(({ field, label, color, borderColor, icon: Icon }) => {
-                const href = profile?.[field];
-                return href ? (
-                  <a key={field} href={href} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition-[filter] hover:brightness-110"
-                    style={{ background: color, border: `1px solid ${borderColor}` }}>
-                    <Icon size={11} /> {label} <ExternalLink size={9} />
-                  </a>
-                ) : null;
-              })}
-            </div>
-          ) : (
-            <button type="button" onClick={openModal}
-              className="w-full py-6 flex flex-col items-center justify-center gap-2 rounded-xl transition-all hover:bg-white/5"
-              style={{ border: `1px dashed ${CARD_BORDER}` }}>
-              <Twitter size={20} className="text-white/20" />
-              <span className="text-sm text-white/30">Connect social platforms</span>
-            </button>
-          )}
+    <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+      <div className="flex items-center gap-2.5 px-5 py-4"
+        style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
+        <Share2 size={16} style={{ color: NEON }} aria-hidden="true" />
+        <div>
+          <span className="text-sm font-bold text-white">Social platforms</span>
+          <p className="mt-0.5 text-[11px] text-white/35">Add the social spaces that belong to this game.</p>
         </div>
       </div>
-
-      {open && (
-        <EditModal title="Social platforms" onClose={() => setOpen(false)} focusField={focusRequest?.field}
-          onSave={() => save.mutate({ gameId: profile?.id, ...socialValues })}
-          isSaving={save.isPending}>
-          <p className="text-xs leading-relaxed text-white/45">
-            These links belong to this game and appear as branded badges in the dashboard and on its public profile.
-          </p>
+      <div className="space-y-4 p-5">
+        <p className="text-xs leading-relaxed text-white/45">
+          These links appear as branded badges in the dashboard and on the game’s public profile.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
           {GAME_SOCIAL_LINKS.map(({ field, inputLabel, placeholder, color, icon: Icon }) => (
             <div key={field} className="rounded-xl p-3" style={{ background: "#151724", border: "1px solid #252938" }}>
               <div className="flex items-start gap-2.5">
-                <Icon size={16} className="mt-0.5 shrink-0" style={{ color }} aria-hidden="true" />
+                <Icon size={18} className="mt-0.5 shrink-0" style={{ color }} aria-hidden="true" />
                 <div className="min-w-0 flex-1">
                   <FieldInput
                     fieldName={field}
@@ -1658,9 +1621,21 @@ function CommunitySocialCard({
               </div>
             </div>
           ))}
-        </EditModal>
-      )}
-    </>
+        </div>
+        <div className="flex justify-end border-t pt-4" style={{ borderColor: CARD_BORDER }}>
+          <button
+            type="button"
+            onClick={() => save.mutate({ gameId: profile?.id, ...socialValues })}
+            disabled={save.isPending}
+            className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+            style={{ background: NEON, color: "#0F101B" }}
+          >
+            {save.isPending ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+            {save.isPending ? "Saving…" : "Save social platforms"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
