@@ -47,14 +47,14 @@ const HEALTH_FIELDS = [
   { key: "screenshotUrls",  label: "Screenshots",        pts: 5,  section: "media"  },
 ] as const;
 
-type ProfileSectionId = "basics" | "stores" | "media" | "details" | "community" | "developer" | "advanced";
+type ProfileSectionId = "basics" | "platforms" | "stores" | "media" | "details" | "developer" | "advanced";
 
 const PROFILE_SECTION_BY_FIELD: Record<string, ProfileSectionId> = {
   gameName: "basics",
   shortDescription: "basics",
   releaseStatus: "basics",
   genres: "basics",
-  platforms: "basics",
+   platforms: "platforms",
   fullDescription: "details",
   tags: "details",
   keyFeatures: "details",
@@ -75,23 +75,23 @@ const PROFILE_SECTION_BY_FIELD: Record<string, ProfileSectionId> = {
   studioFoundedYear: "developer",
   studioTeamSize: "developer",
   studioWebsite: "developer",
-  twitterUrl: "community",
-  discordUrl: "community",
-  youtubeUrl: "community",
-  twitchUrl: "community",
-  instagramUrl: "community",
-  facebookUrl: "community",
-  tiktokUrl: "community",
+   twitterUrl: "platforms",
+   discordUrl: "platforms",
+   youtubeUrl: "platforms",
+   twitchUrl: "platforms",
+   instagramUrl: "platforms",
+   facebookUrl: "platforms",
+   tiktokUrl: "platforms",
   ageRating: "details",
   supportedLanguages: "details",
   contentDescriptors: "details",
 };
 
 const PROFILE_SECTION_FIELDS: Record<Exclude<ProfileSectionId, "stores" | "advanced">, string[]> = {
-  basics: ["gameName", "shortDescription", "releaseStatus", "genres", "platforms"],
+  basics: ["gameName", "shortDescription", "releaseStatus", "genres"],
+  platforms: ["platforms", ...GAME_SOCIAL_LINKS.map(({ field }) => field)],
   media: ["headerImageUrl", "capsuleImageUrl", "trailerUrl", "screenshotUrls"],
   details: ["fullDescription", "tags", "keyFeatures", "releaseDate", "ageRating", "supportedLanguages", "contentDescriptors"],
-  community: GAME_SOCIAL_LINKS.map(({ field }) => field),
   developer: ["studioName", "studioCountry", "studioFoundedYear", "studioTeamSize", "studioWebsite"],
 };
 
@@ -1289,7 +1289,7 @@ function PlatformCard({
 
   return (
     <>
-    <div data-profile-section="platforms" className="scroll-mt-24 rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+    <div data-profile-card="platforms" className="scroll-mt-24 rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
       <div className="flex items-center gap-2.5 px-5 py-4" aria-busy={isSaving}
         style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
         <Gamepad2 size={16} style={{ color: NEON }} />
@@ -1599,7 +1599,7 @@ function CommunitySocialCard({
           <div className="flex items-center gap-2.5">
             <Twitter size={16} style={{ color: NEON }} />
             <div>
-              <span className="text-sm font-bold text-white">Game social platforms</span>
+              <span className="text-sm font-bold text-white">Social platforms</span>
               <p className="mt-0.5 text-[11px] text-white/35">Connect the social spaces that belong to this game.</p>
             </div>
           </div>
@@ -1635,7 +1635,7 @@ function CommunitySocialCard({
       </div>
 
       {open && (
-        <EditModal title="Game social platforms" onClose={() => setOpen(false)} focusField={focusRequest?.field}
+        <EditModal title="Social platforms" onClose={() => setOpen(false)} focusField={focusRequest?.field}
           onSave={() => save.mutate({ gameId: profile?.id, ...socialValues })}
           isSaving={save.isPending}>
           <p className="text-xs leading-relaxed text-white/45">
@@ -1960,13 +1960,20 @@ export default function GameProfileTab({
         </div>
       ) : (
         <div className="space-y-3">
-          <ProfileAccordion id="basics" title="Game Basics"
-            description="Name, description, release status, genres, and supported platforms"
+           <ProfileAccordion id="basics" title="Game Basics"
+             description="Name, description, release status, and genres"
             status={getSectionStatus(profile, "basics")} open={activeSection === "basics"}
             onToggle={() => toggleSection("basics")}>
             <AboutCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
-            <PlatformCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
           </ProfileAccordion>
+
+           <ProfileAccordion id="platforms" title="Platforms"
+             description="Choose where players can play and follow your game"
+             status={getSectionStatus(profile, "platforms")} open={activeSection === "platforms"}
+             onToggle={() => toggleSection("platforms")}>
+             <PlatformCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
+             <CommunitySocialCard profile={profile} focusRequest={activeFocusRequest} />
+           </ProfileAccordion>
 
           <ProfileAccordion id="stores" title="Store & Purchase Links"
             description="Connect the places where players can buy or learn more about your game"
@@ -1988,13 +1995,6 @@ export default function GameProfileTab({
             onToggle={() => toggleSection("details")}>
             <GameDetailsSummary profile={profile} onEdit={requestFocus} />
             <MetadataCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
-          </ProfileAccordion>
-
-          <ProfileAccordion id="community" title="Community & Social"
-            description="Help players follow your game and join the conversation"
-            status={getSectionStatus(profile, "community")} open={activeSection === "community"}
-            onToggle={() => toggleSection("community")}>
-            <CommunitySocialCard profile={profile} focusRequest={activeFocusRequest} />
           </ProfileAccordion>
 
           <ProfileAccordion id="developer" title="Developer Information"
