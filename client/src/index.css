@@ -14,7 +14,7 @@
   --visual-viewport-height: 100dvh;
 
   /* Official shared Gamefolio colour system */
-  --gf-background: #0F101B;
+  --gf-background: #090C11;
   --gf-surface: #151724;
   --gf-surface-raised: #1A1D2B;
   --gf-border: #252938;
@@ -372,7 +372,7 @@ video:focus {
 
 :root {
   /* Global Gamefolio theme - solid competitive gaming surfaces */
-  --background: 235 28.57% 8.24%; /* #0F101B */
+  --background: 217.5 30.77% 5.10%; /* #090C11 */
   --foreground: 0 0% 100%;        /* #FFFFFF */
 
   /* Card */
