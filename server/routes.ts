@@ -20,7 +20,7 @@ import { XPService } from "./xp-service";
 import { createInsertSchema } from "drizzle-zod";
 import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema, insertBookmarkSchema } from "@shared/schema";
 import { promisify } from "util";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
 import { eq, sql, desc, inArray, and } from "drizzle-orm";
@@ -13618,35 +13618,211 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // First-party analytics collection for public indie game pages. This route is
+  // deliberately public: visitors do not need an account to view a game.
+  app.post("/api/games/indie/:profileId/analytics-event", async (req, res) => {
+    const profileId = Number.parseInt(req.params.profileId, 10);
+    const eventType = req.body?.eventType;
+    const store = req.body?.store;
+    const allowedStores = new Set(["steam", "epic", "itch"]);
+    if (!Number.isInteger(profileId) || profileId <= 0) return res.status(400).json({ error: "Invalid profile id" });
+    if (eventType !== "game_page_view" && eventType !== "game_store_click") {
+      return res.status(400).json({ error: "Unsupported analytics event" });
+    }
+    if (eventType === "game_store_click" && (!allowedStores.has(store) || typeof store !== "string")) {
+      return res.status(400).json({ error: "Unsupported store" });
+    }
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      const profiles = await db.execute(sql`
+        SELECT id, user_id AS "userId", catalog_game_id AS "catalogGameId"
+        FROM indie_game_profiles WHERE id = ${profileId} LIMIT 1
+      `);
+      const profile = ((profiles as any).rows ?? profiles as any[])[0] as any;
+      if (!profile || !profile.catalogGameId) return res.status(404).json({ error: "Indie game profile not found" });
+      const authenticatedUserId = req.isAuthenticated() ? req.user?.id : undefined;
+      if (authenticatedUserId === Number(profile.userId)) {
+        return res.status(204).send();
+      }
+      const fingerprint = authenticatedUserId
+        ? `user:${authenticatedUserId}`
+        : `anonymous:${req.ip}|${req.get("user-agent") ?? ""}`;
+      const visitorKey = createHash("sha256").update(fingerprint).digest("hex");
+      if (eventType === "game_page_view") {
+        const duplicate = await db.execute(sql`
+          SELECT 1 FROM indie_game_analytics_events
+          WHERE profile_id = ${profileId} AND event_type = 'game_page_view'
+            AND visitor_key = ${visitorKey} AND created_at >= now() - interval '1 hour'
+          LIMIT 1
+        `);
+        if ((((duplicate as any).rows ?? duplicate as any[]) as any[]).length > 0) return res.status(204).send();
+      }
+      await db.execute(sql`
+        INSERT INTO indie_game_analytics_events
+          (profile_id, catalog_game_id, event_type, store, visitor_key)
+        VALUES (${profileId}, ${Number(profile.catalogGameId)}, ${eventType},
+          ${eventType === "game_store_click" ? store : null}, ${visitorKey})
+      `);
+      return res.status(204).send();
+    } catch (err) {
+      console.error("POST /api/games/indie/:profileId/analytics-event error:", err);
+      return res.status(500).json({ error: "Failed to record analytics event" });
+    }
+  });
+
   // ─── Indie Game Management: Analytics ─────────────────────────────────────
   app.get("/api/indie/analytics", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    const developerId = req.user!.id;
+    const rawGameId = req.query.gameId;
+    const gameId = rawGameId == null || rawGameId === "" ? null : Number.parseInt(String(rawGameId), 10);
+    const requestedRange = String(req.query.range ?? "30d");
+    if (gameId != null && (!Number.isInteger(gameId) || gameId <= 0)) return res.status(400).json({ error: "Invalid gameId" });
+    if (!["7d", "30d", "90d", "all"].includes(requestedRange)) return res.status(400).json({ error: "Invalid range" });
     try {
+      // Ownership is resolved through storage, not a client-supplied catalogue id.
+      const profile = await storage.getIndieGameProfile(developerId, gameId);
+      if (!profile) return res.status(404).json({ error: "Indie game profile not found" });
+      if (!profile.catalogGameId) return res.status(409).json({ error: "This profile is not linked to a catalogue game" });
       const { db } = await import("./db");
       const { sql } = await import("drizzle-orm");
-      const profileRows = await db.execute(sql`SELECT game_name FROM indie_game_profiles WHERE user_id = ${req.user.id} LIMIT 1`);
-      const gameName = (profileRows.rows?.[0] as any)?.game_name;
-
-      let clipsGenerated = 0, screenshotsGenerated = 0;
-      if (gameName) {
-        const clipCount = await db.execute(sql`
-          SELECT COUNT(*)::int AS cnt FROM clips c JOIN games g ON g.id = c.game_id
-          WHERE g.name ILIKE ${'%' + gameName + '%'} AND c.user_id != ${req.user.id}
-        `);
-        clipsGenerated = (clipCount.rows?.[0] as any)?.cnt ?? 0;
-        const ssCount = await db.execute(sql`
-          SELECT COUNT(*)::int AS cnt FROM screenshots s JOIN games g ON g.id = s.game_id
-          WHERE g.name ILIKE ${'%' + gameName + '%'} AND s.user_id != ${req.user.id}
-        `);
-        screenshotsGenerated = (ssCount.rows?.[0] as any)?.cnt ?? 0;
+      const days = requestedRange === "all" ? null : Number.parseInt(requestedRange, 10);
+      const rangeStart = days ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : null;
+      const previousStart = days ? new Date(Date.now() - days * 2 * 24 * 60 * 60 * 1000) : null;
+      const currentFilter = rangeStart ? sql`AND created_at >= ${rangeStart}` : sql``;
+      const currentMetricFilter = rangeStart ? sql`AND created_at >= ${rangeStart}` : sql``;
+      const previousFilter = previousStart && rangeStart
+        ? sql`AND created_at >= ${previousStart} AND created_at < ${rangeStart}` : sql`AND false`;
+      const [metricResult, seriesResult, contentResult, topContentResult, storesResult, favoritesResult, creatorsResult, updatesResult] = await Promise.all([
+        db.execute(sql`SELECT
+          COUNT(*) FILTER (WHERE event_type = 'game_page_view' ${currentMetricFilter})::int AS "pageViews",
+          COUNT(DISTINCT visitor_key) FILTER (WHERE event_type = 'game_page_view' ${currentMetricFilter})::int AS "uniqueVisitors",
+          COUNT(*) FILTER (WHERE event_type = 'game_store_click' ${currentMetricFilter})::int AS "storeClicks",
+          COUNT(*) FILTER (WHERE event_type = 'game_page_view' ${previousFilter})::int AS "previousPageViews",
+          COUNT(DISTINCT visitor_key) FILTER (WHERE event_type = 'game_page_view' ${previousFilter})::int AS "previousUniqueVisitors",
+          COUNT(*) FILTER (WHERE event_type = 'game_store_click' ${previousFilter})::int AS "previousStoreClicks"
+          FROM indie_game_analytics_events WHERE profile_id = ${profile.id}`),
+        db.execute(sql`SELECT date_trunc('day', created_at)::date AS day,
+          COUNT(*) FILTER (WHERE event_type = 'game_page_view')::int AS "pageViews",
+          COUNT(DISTINCT visitor_key) FILTER (WHERE event_type = 'game_page_view')::int AS "uniqueVisitors",
+          COUNT(*) FILTER (WHERE event_type = 'game_store_click')::int AS "storeClicks"
+          FROM indie_game_analytics_events WHERE profile_id = ${profile.id} ${currentFilter}
+          GROUP BY 1 ORDER BY 1`),
+        db.execute(sql`SELECT
+          COUNT(*) FILTER (WHERE type = 'clip')::int AS clips,
+          COUNT(*) FILTER (WHERE type = 'reel')::int AS reels,
+          COUNT(*) FILTER (WHERE type = 'screenshot')::int AS screenshots,
+          COALESCE(SUM(views), 0)::int AS "totalContentViews"
+          FROM (
+            SELECT CASE WHEN video_type = 'reel' THEN 'reel' ELSE 'clip' END AS type, COALESCE(views, 0) AS views FROM clips WHERE game_id = ${profile.catalogGameId}
+            UNION ALL SELECT 'screenshot', COALESCE(views, 0) FROM screenshots WHERE game_id = ${profile.catalogGameId}
+          ) content`),
+        db.execute(sql`SELECT * FROM (
+          SELECT c.id, CASE WHEN c.video_type = 'reel' THEN 'reel' ELSE 'clip' END AS type, c.title,
+            c.thumbnail_url AS "thumbnailUrl", COALESCE(c.views, 0)::int AS views, c.video_url AS url,
+            u.username AS "creatorUsername", u.avatar_url AS "creatorAvatarUrl",
+            (COALESCE(u.twitch_verified,false) OR COALESCE(u.kick_verified,false) OR COALESCE(u.youtube_verified,false) OR COALESCE(u.rumble_verified,false) OR COALESCE(u.vpzone_verified,false)) AS verified,
+            (SELECT COUNT(*)::int FROM clip_reactions cr WHERE cr.clip_id = c.id) AS reactions
+          FROM clips c JOIN users u ON u.id = c.user_id WHERE c.game_id = ${profile.catalogGameId}
+          UNION ALL
+          SELECT s.id, 'screenshot', s.title, COALESCE(s.thumbnail_url, s.image_url), COALESCE(s.views, 0)::int, s.image_url,
+            u.username, u.avatar_url,
+            (COALESCE(u.twitch_verified,false) OR COALESCE(u.kick_verified,false) OR COALESCE(u.youtube_verified,false) OR COALESCE(u.rumble_verified,false) OR COALESCE(u.vpzone_verified,false)),
+            (SELECT COUNT(*)::int FROM screenshot_reactions sr WHERE sr.screenshot_id = s.id)
+          FROM screenshots s JOIN users u ON u.id = s.user_id WHERE s.game_id = ${profile.catalogGameId}
+        ) content ORDER BY views DESC, reactions DESC LIMIT 5`),
+        db.execute(sql`SELECT store, COUNT(*)::int AS clicks FROM indie_game_analytics_events
+          WHERE profile_id = ${profile.id} AND event_type = 'game_store_click' ${currentFilter} GROUP BY store`),
+        db.execute(sql`SELECT COUNT(*)::int AS favorites FROM user_game_favorites WHERE game_id = ${profile.catalogGameId}`),
+        db.execute(sql`SELECT "creatorId", "creatorUsername", "creatorAvatarUrl", verified, COUNT(*)::int AS "contentCount", SUM(views)::int AS views, SUM(reactions)::int AS reactions FROM (
+          SELECT u.id AS "creatorId", u.username AS "creatorUsername", u.avatar_url AS "creatorAvatarUrl",
+            (COALESCE(u.twitch_verified,false) OR COALESCE(u.kick_verified,false) OR COALESCE(u.youtube_verified,false) OR COALESCE(u.rumble_verified,false) OR COALESCE(u.vpzone_verified,false)) AS verified,
+            COALESCE(c.views,0) AS views, (SELECT COUNT(*) FROM clip_reactions WHERE clip_id=c.id) AS reactions
+          FROM clips c JOIN users u ON u.id=c.user_id WHERE c.game_id=${profile.catalogGameId} AND c.user_id <> ${developerId}
+          UNION ALL SELECT u.id, u.username, u.avatar_url, (COALESCE(u.twitch_verified,false) OR COALESCE(u.kick_verified,false) OR COALESCE(u.youtube_verified,false) OR COALESCE(u.rumble_verified,false) OR COALESCE(u.vpzone_verified,false)), COALESCE(s.views,0), (SELECT COUNT(*) FROM screenshot_reactions WHERE screenshot_id=s.id)
+          FROM screenshots s JOIN users u ON u.id=s.user_id WHERE s.game_id=${profile.catalogGameId} AND s.user_id <> ${developerId}
+        ) creators GROUP BY "creatorId", "creatorUsername", "creatorAvatarUrl", verified ORDER BY views DESC, reactions DESC LIMIT 5`),
+        db.execute(sql`SELECT COUNT(*)::int AS count FROM indie_game_updates WHERE user_id = ${developerId}`),
+      ]);
+      const rowsOf = (result: any): any[] => result.rows ?? result ?? [];
+      const metrics = rowsOf(metricResult)[0] ?? {};
+      const content = rowsOf(contentResult)[0] ?? {};
+      const percent = (current: any, previous: any) => Number(previous) > 0 ? Math.round(((Number(current) - Number(previous)) / Number(previous)) * 10000) / 100 : null;
+      const pageViews = Number(metrics.pageViews ?? 0), storeClicks = Number(metrics.storeClicks ?? 0);
+      const connectedStores = [
+        { key: "steam", label: "Steam", url: profile.steamUrl, clicks: 0 },
+        { key: "epic", label: "Epic Games", url: profile.epicUrl, clicks: 0 },
+        { key: "itch", label: "itch.io", url: profile.itchUrl, clicks: 0 },
+      ].filter((entry) => Boolean(entry.url)) as Array<{ key: string; label: string; url: string; clicks: number }>;
+      for (const row of rowsOf(storesResult)) {
+        const target = connectedStores.find((entry) => entry.key === (row as any).store);
+        if (target) target.clicks = Number((row as any).clicks ?? 0);
       }
-
-      const updateCount = await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM indie_game_updates WHERE user_id = ${req.user.id}`);
-      res.json({ clipsGenerated, screenshotsGenerated, reelsGenerated: 0, publishedUpdates: (updateCount.rows?.[0] as any)?.cnt ?? 0 });
+      const timeSeries = rowsOf(seriesResult).map((row: any) => {
+        const date = row.day instanceof Date
+          ? row.day.toISOString().slice(0, 10)
+          : String(row.day ?? "").slice(0, 10);
+        return {
+          date,
+          label: requestedRange === "all"
+            ? new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", year: "2-digit", timeZone: "UTC" })
+            : new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }),
+          pageViews: Number(row.pageViews ?? 0),
+          uniqueVisitors: Number(row.uniqueVisitors ?? 0),
+          storeClicks: Number(row.storeClicks ?? 0),
+        };
+      });
+      const topContent = rowsOf(topContentResult).map((row: any) => ({
+        id: Number(row.id),
+        type: row.type,
+        title: row.title,
+        thumbnail: row.thumbnailUrl ?? null,
+        thumbnailUrl: row.thumbnailUrl ?? null,
+        creator: {
+          username: row.creatorUsername,
+          avatarUrl: row.creatorAvatarUrl ?? null,
+        },
+        verified: Boolean(row.verified),
+        views: Number(row.views ?? 0),
+        reactions: Number(row.reactions ?? 0),
+        url: row.url,
+      }));
+      res.json({
+        game: { id: profile.id, catalogGameId: profile.catalogGameId, name: profile.gameName ?? "Your game" },
+        range: { key: requestedRange, start: rangeStart?.toISOString() ?? null, contentPerformanceScope: "all_time" },
+        metrics: {
+          pageViews: { value: pageViews, changePct: percent(pageViews, metrics.previousPageViews) },
+          uniqueVisitors: { value: Number(metrics.uniqueVisitors ?? 0), changePct: percent(metrics.uniqueVisitors, metrics.previousUniqueVisitors) },
+          contentViews: { value: Number(content.totalContentViews ?? 0), changePct: null, scope: "All-time total" },
+          storeClicks: { value: storeClicks, changePct: percent(storeClicks, metrics.previousStoreClicks) },
+        },
+        discovery: { availability: "available", series: timeSeries, sourcesAvailable: false, sources: [] },
+        content: { scope: "All-time current totals", clips: Number(content.clips ?? 0), reels: Number(content.reels ?? 0), screenshots: Number(content.screenshots ?? 0), totalContentViews: Number(content.totalContentViews ?? 0) },
+        topContent,
+        stores: {
+          connected: connectedStores,
+          totalClicks: storeClicks,
+          ctr: pageViews > 0 ? Math.round((storeClicks / pageViews) * 10000) / 100 : null,
+        },
+        engagement: [{ name: "Game saves", value: Number(rowsOf(favoritesResult)[0]?.favorites ?? 0) }],
+        topCreators: rowsOf(creatorsResult).map((row: any) => ({
+          id: Number(row.creatorId),
+          username: row.creatorUsername,
+          avatarUrl: row.creatorAvatarUrl ?? null,
+          verified: Boolean(row.verified),
+          contentCount: Number(row.contentCount ?? 0),
+          totalViews: Number(row.views ?? 0),
+          reactions: Number(row.reactions ?? 0),
+        })),
+        insight: pageViews > 0 && storeClicks > 0 ? `${storeClicks} store clicks were recorded in the selected period.` : null,
+        clipsGenerated: Number(content.clips ?? 0), screenshotsGenerated: Number(content.screenshots ?? 0), reelsGenerated: Number(content.reels ?? 0),
+        publishedUpdates: Number(rowsOf(updatesResult)[0]?.count ?? 0),
+      });
     } catch (err) {
       console.error("GET /api/indie/analytics error:", err);
-      res.json({});
+      res.status(500).json({ error: "Failed to fetch analytics" });
     }
   });
 

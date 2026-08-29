@@ -129,7 +129,7 @@ export default function IndieDashboardPage() {
         {GAME_KEYS_ENABLED && tab === "keys" && <KeyManagementTab />}
 
         {/* ── ANALYTICS ── */}
-        {tab === "analytics" && <AnalyticsTab />}
+        {tab === "analytics" && <AnalyticsTab gameId={activeGameId} />}
 
         {/* ── GAME PROFILE ── */}
          {tab === "game-profile" && <GameProfileTab gameId={activeGameId} focusRequest={profileFocus} />}
