@@ -56,6 +56,16 @@ const VISIBLE_TABS = TABS;
 type GameContentCounts = { clips: number; reels: number; screenshots: number };
 type CanonicalGame = { id: number; name: string; imageUrl?: string | null };
 type IndieResponse = { profile: IndieGameProfile; game: CanonicalGame | null };
+type UploadSource = 'publisher' | 'community';
+type PublicGameClip = ClipWithUser & { uploadSource: UploadSource };
+type PublicGameScreenshot = {
+  id: string | number;
+  imageUrl: string;
+  title?: string | null;
+  userId?: number | null;
+  uploadSource: UploadSource;
+  [key: string]: unknown;
+};
 
 interface Props {
   profile: UserWithStats;
@@ -105,12 +115,32 @@ function PlatformIcon({ value }: { value: string }) {
   return <Icon size={13} />;
 }
 
+function UploadSourceBadge({
+  source,
+  className = '',
+}: {
+  source: UploadSource;
+  className?: string;
+}) {
+  return (
+    <span
+      className={`pointer-events-none rounded-md border px-1.5 py-1 text-[9px] font-black uppercase tracking-[0.12em] shadow-lg backdrop-blur-sm ${
+        source === 'publisher'
+          ? 'border-[#B7FF18]/35 bg-[#B7FF18]/85 text-[#07100A]'
+          : 'border-white/20 bg-black/70 text-white/80'
+      } ${className}`}
+    >
+      {source === 'publisher' ? 'Publisher' : 'Community'}
+    </span>
+  );
+}
+
 function ScreenshotCarousel({
   screenshots,
   onSelect,
 }: {
-  screenshots: any[];
-  onSelect: (screenshot: any, trigger: HTMLButtonElement) => void;
+  screenshots: PublicGameScreenshot[];
+  onSelect: (screenshot: PublicGameScreenshot, trigger: HTMLButtonElement) => void;
 }) {
   const railRef = useRef<HTMLDivElement>(null);
 
@@ -146,6 +176,10 @@ function ScreenshotCarousel({
                 className="h-full w-full object-cover transition duration-300 group-hover/shot:scale-[1.02]"
               />
             </div>
+            <UploadSourceBadge
+              source={screenshot.uploadSource}
+              className="absolute left-3 top-3"
+            />
             <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 pb-3 pt-8 text-[10px] font-bold uppercase tracking-wider text-white/75 opacity-0 transition-opacity group-hover/shot:opacity-100 group-focus/shot:opacity-100">
               View full screen
             </span>
@@ -253,7 +287,13 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     }),
     enabled: !!canonicalGameId,
   });
-  const gameContent = gameContentData ?? [];
+  const gameContent: PublicGameClip[] = useMemo(
+    () => (gameContentData ?? []).map((clip) => ({
+      ...clip,
+      uploadSource: clip.userId === profile.id || clip.user?.id === profile.id ? 'publisher' : 'community',
+    })),
+    [gameContentData, profile.id],
+  );
   const { data: communityScreenshotData } = useQuery<any[] | null>({
     queryKey: ['/api/games', canonicalGameId, 'screenshots'],
     queryFn: () => fetch(`/api/games/${canonicalGameId}/screenshots?limit=100`, { credentials: 'include' }).then(async (res) => {
@@ -266,10 +306,11 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     .map((screenshot) => screenshot.imageUrl)
     .filter((url): url is string => typeof url === 'string' && url.length > 0);
   const { getSignedUrl: getCommunityScreenshotUrl } = useSignedUrls(communityScreenshotSources);
-  const communityScreenshots = (communityScreenshotData ?? [])
+  const communityScreenshots: PublicGameScreenshot[] = (communityScreenshotData ?? [])
     .map((screenshot) => ({
       ...screenshot,
       imageUrl: getCommunityScreenshotUrl(screenshot.imageUrl) || '',
+      uploadSource: screenshot.userId === profile.id ? 'publisher' as const : 'community' as const,
     }))
     .filter((screenshot) => screenshot.imageUrl);
   const { data: counts } = useQuery<GameContentCounts>({
@@ -292,7 +333,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const isRequested = followStatus?.status === 'requested';
   const gameName = gameProfile?.gameName?.trim() || canonicalGame?.name || profile.displayName;
   const description = gameProfile?.fullDescription || gameProfile?.shortDescription || null;
-  const profileScreenshots = profileScreenshotSources
+  const profileScreenshots: PublicGameScreenshot[] = profileScreenshotSources
     .map((url, index) => {
       const imageUrl = getProfileScreenshotUrl(url);
       return imageUrl
@@ -302,10 +343,11 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
             title: `${gameName} screenshot ${index + 1}`,
             userId: profile.id,
             views: 0,
+            uploadSource: 'publisher' as const,
           }
         : null;
     })
-    .filter((screenshot): screenshot is NonNullable<typeof screenshot> => screenshot !== null);
+    .filter((screenshot): screenshot is PublicGameScreenshot => screenshot !== null);
   const gameScreenshots = [...profileScreenshots, ...communityScreenshots];
   const screenshotCount = profileScreenshotSources.length + Number(counts?.screenshots ?? 0);
   const selectedScreenshotIndex = selectedScreenshotId === null
@@ -516,24 +558,24 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                     </div>
                   ))}
                 </div>
-                {primaryStore && (
+                {!isOwnProfile ? (
+                  <button
+                    type="button"
+                    onClick={() => currentUser ? followMutation.mutate() : setLocation('/auth')}
+                    disabled={followMutation.isPending}
+                    aria-label={`${isFollowing ? 'Following' : isRequested ? 'Follow request pending for' : 'Follow'} @${profile.username}`}
+                    className="flex items-center gap-2 rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black transition hover:brightness-110 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}
+                    {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
+                  </button>
+                ) : primaryStore ? (
                   <a href={primaryStore.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black hover:brightness-110">
                     <Play size={16} fill="currentColor" />
                     Play / buy
                   </a>
-                )}
+                ) : null}
                 <div className="ml-2 flex items-center gap-2">
-                  {!isOwnProfile && (
-                    <button
-                      onClick={() => currentUser ? followMutation.mutate() : setLocation('/auth')}
-                      disabled={followMutation.isPending}
-                      aria-label={`${isFollowing ? 'Following' : isRequested ? 'Follow request pending for' : 'Follow'} @${profile.username}`}
-                      className="flex items-center gap-2 rounded-xl border border-white/20 bg-black/20 px-5 py-3 text-sm font-bold hover:bg-white/10 disabled:opacity-50"
-                    >
-                      {isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}
-                      {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
-                    </button>
-                  )}
                   {!isOwnProfile && (
                     <button onClick={() => currentUser ? setMessageDialogOpen(true) : setLocation('/auth')} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Message developer">
                       <MessageCircle size={18} />
@@ -628,8 +670,8 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                 <section>
                   <div className="mb-4 flex items-end justify-between gap-4">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#B7FF18]">From the community</p>
-                      <h2 className="mt-1 text-xl font-black">Community highlights</h2>
+                       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#B7FF18]">Publisher &amp; community</p>
+                       <h2 className="mt-1 text-xl font-black">Game highlights</h2>
                     </div>
                     {hasCommunityHighlights && (
                       <button onClick={() => jumpTo(clips.length ? 'CLIPS' : 'SCREENSHOTS')} className="flex shrink-0 items-center gap-1 text-xs font-bold text-[#B7FF18]">
@@ -724,20 +766,44 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
 
         {activeTab === 'CLIPS' && (
           <section>
-            <h2 className="mb-5 text-2xl font-black">Community clips</h2>
-            {clips.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{clips.map((clip) => <VideoClipGridItem key={clip.id} clip={clip} clipsList={clips} />)}</div> : <EmptyCommunityState title="No clips yet" body={`No one has posted a ${gameName} clip yet.`} icon={Play} action={isOwnProfile && uploadHref ? <Link href={uploadHref} className="inline-flex items-center gap-2 rounded-lg bg-[#B7FF18] px-4 py-2.5 text-xs font-black text-black hover:brightness-110"><Play size={14} fill="currentColor" /> Upload a clip</Link> : null} />}
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-2xl font-black">Clips</h2>
+              {clips.length > 0 && (
+                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/45">
+                  {clips.some((clip) => clip.uploadSource === 'publisher') && <span className="flex items-center gap-1.5"><UploadSourceBadge source="publisher" /> Studio uploads</span>}
+                  {clips.some((clip) => clip.uploadSource === 'community') && <span className="flex items-center gap-1.5"><UploadSourceBadge source="community" /> Community uploads</span>}
+                </div>
+              )}
+            </div>
+            {clips.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{clips.map((clip) => <VideoClipGridItem key={clip.id} clip={clip} clipsList={clips} />)}</div> : <EmptyCommunityState title="No clips yet" body={`No publisher or community clips have been posted for ${gameName} yet.`} icon={Play} action={isOwnProfile && uploadHref ? <Link href={uploadHref} className="inline-flex items-center gap-2 rounded-lg bg-[#B7FF18] px-4 py-2.5 text-xs font-black text-black hover:brightness-110"><Play size={14} fill="currentColor" /> Upload a clip</Link> : null} />}
           </section>
         )}
         {activeTab === 'REELS' && (
           <section>
-            <h2 className="mb-5 text-2xl font-black">Community reels</h2>
-            {reels.length ? <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">{reels.map((reel) => <VideoClipGridItem key={reel.id} clip={reel} reelsList={reels} />)}</div> : <EmptyCommunityState title="No reels yet" body={`Short-form ${gameName} moments will appear here.`} icon={Video} />}
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-2xl font-black">Reels</h2>
+              {reels.length > 0 && (
+                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/45">
+                  {reels.some((reel) => reel.uploadSource === 'publisher') && <span className="flex items-center gap-1.5"><UploadSourceBadge source="publisher" /> Studio uploads</span>}
+                  {reels.some((reel) => reel.uploadSource === 'community') && <span className="flex items-center gap-1.5"><UploadSourceBadge source="community" /> Community uploads</span>}
+                </div>
+              )}
+            </div>
+            {reels.length ? <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">{reels.map((reel) => <VideoClipGridItem key={reel.id} clip={reel} reelsList={reels} />)}</div> : <EmptyCommunityState title="No reels yet" body={`No publisher or community reels have been posted for ${gameName} yet.`} icon={Video} />}
           </section>
         )}
         {activeTab === 'SCREENSHOTS' && (
           <section>
-            <h2 className="mb-5 text-2xl font-black">Game screenshots</h2>
-            {gameScreenshots.length ? <ScreenshotCarousel screenshots={gameScreenshots} onSelect={openScreenshot} /> : <EmptyCommunityState title="No screenshots yet" body={`No screenshots have been added for ${gameName} yet.`} icon={Camera} />}
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-2xl font-black">Screenshots</h2>
+              {gameScreenshots.length > 0 && (
+                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/45">
+                  {gameScreenshots.some((screenshot) => screenshot.uploadSource === 'publisher') && <span className="flex items-center gap-1.5"><UploadSourceBadge source="publisher" /> Studio uploads</span>}
+                  {gameScreenshots.some((screenshot) => screenshot.uploadSource === 'community') && <span className="flex items-center gap-1.5"><UploadSourceBadge source="community" /> Community uploads</span>}
+                </div>
+              )}
+            </div>
+            {gameScreenshots.length ? <ScreenshotCarousel screenshots={gameScreenshots} onSelect={openScreenshot} /> : <EmptyCommunityState title="No screenshots yet" body={`No publisher or community screenshots have been added for ${gameName} yet.`} icon={Camera} />}
           </section>
         )}
       </main>
