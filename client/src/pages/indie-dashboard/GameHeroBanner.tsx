@@ -430,7 +430,7 @@ export default function GameHeroBanner({
                   {profile?.studioName && <span className="text-[11px] text-white/40">{profile.studioName}</span>}
                 </div>
 
-                {(profile?.steamUrl || profile?.epicUrl || profile?.itchUrl || GAME_SOCIAL_LINKS.some(({ field }) => profile?.[field])) && (
+                {(profile?.steamUrl || profile?.epicUrl || profile?.itchUrl) && (
                   <div className="mb-5 flex flex-wrap gap-2">
                     {profile?.steamUrl && (
                       <a href={profile.steamUrl} target="_blank" rel="noopener noreferrer"
@@ -453,16 +453,23 @@ export default function GameHeroBanner({
                         <SiItchdotio className="h-3 w-3" /> itch.io
                       </a>
                     )}
-                    {GAME_SOCIAL_LINKS.map(({ field, label, color, borderColor, icon: Icon }) => {
-                      const href = profile?.[field];
-                      return href ? (
-                        <a key={field} href={href} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold text-white transition-[filter] hover:brightness-110"
-                          style={{ background: color, border: `1px solid ${borderColor}` }}>
-                          <Icon className="h-3 w-3" /> {label}
-                        </a>
-                      ) : null;
-                    })}
+                  </div>
+                )}
+                {GAME_SOCIAL_LINKS.some(({ field }) => profile?.[field]) && (
+                  <div className="mb-5" aria-label="Game social platforms">
+                    <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/40">Social platforms</p>
+                    <div className="flex flex-wrap gap-2">
+                      {GAME_SOCIAL_LINKS.map(({ field, label, color, borderColor, icon: Icon }) => {
+                        const href = profile?.[field];
+                        return href ? (
+                          <a key={field} href={href} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold text-white transition-[filter] hover:brightness-110"
+                            style={{ background: color, border: `1px solid ${borderColor}` }}>
+                            <Icon className="h-3 w-3 text-white" style={{ color: "#fff" }} /> {label}
+                          </a>
+                        ) : null;
+                      })}
+                    </div>
                   </div>
                 )}
                 <div className="flex flex-wrap items-center gap-2">
