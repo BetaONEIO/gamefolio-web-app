@@ -14,7 +14,7 @@ import {
   SiSteam, SiEpicgames, SiItchdotio, SiDiscord, SiMacos, SiLinux,
   SiPlaystation, SiNintendoswitch, SiIos, SiAndroid,
 } from "react-icons/si";
-import { FaWindows, FaXbox } from "react-icons/fa6";
+import { FaWindows, FaXbox, FaXTwitter } from "react-icons/fa6";
 import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 import { useAuth } from "@/hooks/use-auth";
 import { publicUrl } from "@/lib/platform";
@@ -1589,8 +1589,8 @@ function CommunitySocialCard({
           <div className="flex items-center gap-2.5">
             <Twitter size={16} style={{ color: NEON }} />
             <div>
-              <span className="text-sm font-bold text-white">Community links</span>
-              <p className="mt-0.5 text-[11px] text-white/35">Give players somewhere to follow and talk about your game.</p>
+              <span className="text-sm font-bold text-white">Game social platforms</span>
+              <p className="mt-0.5 text-[11px] text-white/35">Connect the social spaces that belong to this game.</p>
             </div>
           </div>
           <button type="button" onClick={openModal}
@@ -1604,16 +1604,16 @@ function CommunitySocialCard({
             <div className="flex flex-wrap gap-2">
               {profile?.twitterUrl && (
                 <a href={profile.twitterUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-colors"
-                  style={{ background: "rgba(29,161,242,0.08)", border: "1px solid rgba(29,161,242,0.2)" }}>
-                  <Twitter size={10} className="text-[#1da1f2]" /> Twitter / X <ExternalLink size={9} />
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-80"
+                  style={{ background: "#000", border: "1px solid rgba(255,255,255,0.16)" }}>
+                  <FaXTwitter size={11} /> X <ExternalLink size={9} />
                 </a>
               )}
               {profile?.discordUrl && (
                 <a href={profile.discordUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-colors"
-                  style={{ background: "rgba(88,101,242,0.08)", border: "1px solid rgba(88,101,242,0.2)" }}>
-                  <SiDiscord size={10} className="text-[#5865f2]" /> Discord <ExternalLink size={9} />
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-80"
+                  style={{ background: "#5865F2", border: "1px solid #5865F2" }}>
+                  <SiDiscord size={11} /> Discord <ExternalLink size={9} />
                 </a>
               )}
             </div>
@@ -1622,18 +1622,18 @@ function CommunitySocialCard({
               className="w-full py-6 flex flex-col items-center justify-center gap-2 rounded-xl transition-all hover:bg-white/5"
               style={{ border: `1px dashed ${CARD_BORDER}` }}>
               <Twitter size={20} className="text-white/20" />
-              <span className="text-sm text-white/30">Add community links</span>
+              <span className="text-sm text-white/30">Connect social platforms</span>
             </button>
           )}
         </div>
       </div>
 
       {open && (
-        <EditModal title="Community links" onClose={() => setOpen(false)} focusField={focusRequest?.field}
+        <EditModal title="Game social platforms" onClose={() => setOpen(false)} focusField={focusRequest?.field}
           onSave={() => save.mutate({ gameId: profile?.id, twitterUrl: twitter, discordUrl: discord })}
           isSaving={save.isPending}>
           <p className="text-xs leading-relaxed text-white/45">
-            These links appear on your public game profile so players can find your community.
+            These links belong to this game and appear as branded badges in the dashboard and on its public profile.
           </p>
           <FieldInput fieldName="twitterUrl" label="Twitter / X URL" value={twitter} onChange={setTwitter} type="url" placeholder="https://twitter.com/…" />
           <FieldInput fieldName="discordUrl" label="Discord Server URL" value={discord} onChange={setDiscord} type="url" placeholder="https://discord.gg/…" />
