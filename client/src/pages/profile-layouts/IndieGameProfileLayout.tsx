@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import PlatformConnections from '@/components/profile/PlatformConnections';
 import { GameShareDialog } from '@/components/profile/GameShareDialog';
 import VideoClipGridItem from '@/components/clips/VideoClipGridItem';
+import { ScreenshotCard } from '@/components/screenshots/ScreenshotCard';
 import HlsVideo from '@/components/media/HlsVideo';
 import { getVideoEmbedUrl } from '@/lib/video-embed';
 import { useSignedUrl, useSignedUrls } from '@/hooks/use-signed-url';
@@ -216,21 +217,61 @@ function EmptyCommunityState({
   body,
   icon: Icon,
   action,
+  compact = false,
 }: {
   title: string;
   body: string;
   icon: React.ElementType;
   action?: React.ReactNode;
+  compact?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-5 py-8 text-center sm:px-8">
-      <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.05] text-[#B7FF18]">
-        <Icon size={21} />
+    <div className={`rounded-2xl border border-dashed border-white/15 bg-white/[0.02] text-center ${compact ? 'px-4 py-5 sm:px-5' : 'px-5 py-8 sm:px-8'}`}>
+      <div className={`mx-auto flex items-center justify-center rounded-xl bg-white/[0.05] text-[#B7FF18] ${compact ? 'mb-2 h-9 w-9' : 'mb-3 h-11 w-11'}`}>
+        <Icon size={compact ? 18 : 21} />
       </div>
-      <h3 className="text-base font-black text-white">{title}</h3>
+      <h3 className={compact ? 'text-sm font-black text-white' : 'text-base font-black text-white'}>{title}</h3>
       <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-white/55">{body}</p>
-      {action ? <div className="mt-4">{action}</div> : null}
+      {action ? <div className="mt-3">{action}</div> : null}
     </div>
+  );
+}
+
+function PublicMediaSection({
+  title,
+  description,
+  emptyTitle,
+  emptyBody,
+  icon: Icon,
+  action,
+  children,
+  hasContent,
+}: {
+  title: string;
+  description: string;
+  emptyTitle: string;
+  emptyBody: string;
+  icon: React.ElementType;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+  hasContent: boolean;
+}) {
+  return (
+    <section>
+      <div className="mb-4">
+        <h3 className="text-lg font-black text-white">{title}</h3>
+        <p className="mt-1 text-sm text-white/50">{description}</p>
+      </div>
+      {hasContent ? children : (
+        <EmptyCommunityState
+          title={emptyTitle}
+          body={emptyBody}
+          icon={Icon}
+          action={action}
+          compact
+        />
+      )}
+    </section>
   );
 }
 
@@ -287,12 +328,13 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     }),
     enabled: !!canonicalGameId,
   });
+  const officialOwnerId = gameProfile?.userId ?? profile.id;
   const gameContent: PublicGameClip[] = useMemo(
     () => (gameContentData ?? []).map((clip) => ({
       ...clip,
-      uploadSource: clip.userId === profile.id || clip.user?.id === profile.id ? 'publisher' : 'community',
+      uploadSource: clip.userId === officialOwnerId || clip.user?.id === officialOwnerId ? 'publisher' : 'community',
     })),
-    [gameContentData, profile.id],
+    [gameContentData, officialOwnerId],
   );
   const { data: communityScreenshotData } = useQuery<any[] | null>({
     queryKey: ['/api/games', canonicalGameId, 'screenshots'],
@@ -309,8 +351,9 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const communityScreenshots: PublicGameScreenshot[] = (communityScreenshotData ?? [])
     .map((screenshot) => ({
       ...screenshot,
+      sourceImageUrl: screenshot.imageUrl,
       imageUrl: getCommunityScreenshotUrl(screenshot.imageUrl) || '',
-      uploadSource: screenshot.userId === profile.id ? 'publisher' as const : 'community' as const,
+      uploadSource: screenshot.userId === officialOwnerId ? 'publisher' as const : 'community' as const,
     }))
     .filter((screenshot) => screenshot.imageUrl);
   const { data: counts } = useQuery<GameContentCounts>({
@@ -329,6 +372,10 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
 
   const clips = useMemo(() => gameContent.filter((clip) => clip.videoType !== 'reel'), [gameContent]);
   const reels = useMemo(() => gameContent.filter((clip) => clip.videoType === 'reel'), [gameContent]);
+  const officialClips = useMemo(() => clips.filter((clip) => clip.uploadSource === 'publisher'), [clips]);
+  const communityClips = useMemo(() => clips.filter((clip) => clip.uploadSource === 'community'), [clips]);
+  const officialReels = useMemo(() => reels.filter((reel) => reel.uploadSource === 'publisher'), [reels]);
+  const communityReels = useMemo(() => reels.filter((reel) => reel.uploadSource === 'community'), [reels]);
   const isFollowing = followStatus?.status === 'following';
   const isRequested = followStatus?.status === 'requested';
   const gameName = gameProfile?.gameName?.trim() || canonicalGame?.name || profile.displayName;
@@ -341,11 +388,29 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
             imageUrl,
             title: `${gameName} screenshot ${index + 1}`,
             userId: profile.id,
+            user: {
+              id: profile.id,
+              username: profile.username,
+              displayName: profile.displayName,
+              avatarUrl: profile.avatarUrl,
+            },
             views: 0,
             uploadSource: 'publisher' as const,
           }] : [];
     });
-  const gameScreenshots = [...profileScreenshots, ...communityScreenshots];
+  const officialScreenshots = useMemo(() => {
+    const profileScreenshotKeys = new Set(profileScreenshotSources.map((url) => url.split('?')[0]));
+    const linkedOfficialScreenshots = communityScreenshots.filter(
+      (screenshot) => screenshot.uploadSource === 'publisher'
+        && !profileScreenshotKeys.has(String(screenshot.sourceImageUrl ?? screenshot.imageUrl).split('?')[0]),
+    );
+    return [...profileScreenshots, ...linkedOfficialScreenshots];
+  }, [communityScreenshots, profileScreenshotSources, profileScreenshots]);
+  const communityGameScreenshots = useMemo(
+    () => communityScreenshots.filter((screenshot) => screenshot.uploadSource === 'community'),
+    [communityScreenshots],
+  );
+  const gameScreenshots = [...officialScreenshots, ...communityGameScreenshots];
   const screenshotCount = profileScreenshotSources.length + Number(counts?.screenshots ?? 0);
   const selectedScreenshotIndex = selectedScreenshotId === null
     ? -1
@@ -382,9 +447,10 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     { label: 'Reels', value: counts?.reels ?? reels.length, icon: Video },
   ].filter((item) => item.value > 0);
   const hasCommunityHighlights = clips.length > 0 || reels.length > 0;
-  const uploadHref = canonicalGameId
-    ? `/upload?type=clips&gameId=${canonicalGameId}&gameName=${encodeURIComponent(gameName)}`
+  const uploadHrefFor = (type: 'clips' | 'reels' | 'screenshots') => canonicalGameId
+    ? `/upload?type=${type}&gameId=${canonicalGameId}&gameName=${encodeURIComponent(gameName)}`
     : null;
+  const uploadHref = uploadHrefFor('clips');
   const profileStats = [
     { label: 'Following', value: profile._count?.following == null ? undefined : Number(profile._count.following) },
     { label: 'Followers', value: profile._count?.followers == null ? undefined : Number(profile._count.followers) },
@@ -452,8 +518,9 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     };
   }, [isScreenshotViewerOpen]);
 
-  const openScreenshot = (screenshot: any, trigger: HTMLButtonElement) => {
-    lightboxReturnFocusRef.current = trigger;
+  const openScreenshot = (screenshot: any, trigger?: HTMLElement) => {
+    lightboxReturnFocusRef.current = trigger
+      ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     setSelectedScreenshotId(screenshot.id);
   };
   const moveScreenshot = (direction: 'previous' | 'next') => {
@@ -796,44 +863,152 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
 
         {activeTab === 'CLIPS' && (
           <section>
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-2xl font-black">Clips</h2>
-              {clips.length > 0 && (
-                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/45">
-                  {clips.some((clip) => clip.uploadSource === 'publisher') && <span className="flex items-center gap-1.5"><UploadSourceBadge source="publisher" /> Studio uploads</span>}
-                  {clips.some((clip) => clip.uploadSource === 'community') && <span className="flex items-center gap-1.5"><UploadSourceBadge source="community" /> Community uploads</span>}
+            <h2 className="mb-7 text-2xl font-black">Clips</h2>
+            <div className="space-y-12">
+              <PublicMediaSection
+                title="Official Clips"
+                description="Clips uploaded by the developer or publisher."
+                emptyTitle="No official clips yet."
+                emptyBody="The developer hasn't uploaded any clips for this game yet."
+                icon={Play}
+                hasContent={officialClips.length > 0}
+                action={isOwnProfile && uploadHrefFor('clips') ? (
+                  <Link href={uploadHrefFor('clips')!} className="inline-flex items-center gap-2 rounded-lg bg-[#B7FF18] px-4 py-2.5 text-xs font-black text-black transition hover:brightness-110">
+                    <Play size={14} fill="currentColor" /> Upload a clip
+                  </Link>
+                ) : undefined}
+              >
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4">
+                  {officialClips.map((clip) => (
+                    <VideoClipGridItem key={clip.id} clip={clip} clipsList={officialClips} />
+                  ))}
                 </div>
-              )}
+              </PublicMediaSection>
+
+              <PublicMediaSection
+                title="Community Clips"
+                description="Clips shared by players, streamers and creators."
+                emptyTitle="No community clips yet."
+                emptyBody={`Be the first player to share a moment from ${gameName}.`}
+                icon={Play}
+                hasContent={communityClips.length > 0}
+                action={currentUser && uploadHrefFor('clips') ? (
+                  <Link href={uploadHrefFor('clips')!} className="inline-flex items-center gap-2 rounded-lg bg-[#B7FF18] px-4 py-2.5 text-xs font-black text-black transition hover:brightness-110">
+                    <Play size={14} fill="currentColor" /> Upload a clip
+                  </Link>
+                ) : undefined}
+              >
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4">
+                  {communityClips.map((clip) => (
+                    <VideoClipGridItem key={clip.id} clip={clip} clipsList={communityClips} />
+                  ))}
+                </div>
+              </PublicMediaSection>
             </div>
-            {clips.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{clips.map((clip) => <VideoClipGridItem key={clip.id} clip={clip} clipsList={clips} />)}</div> : <EmptyCommunityState title="No clips yet" body={`No publisher or community clips have been posted for ${gameName} yet.`} icon={Play} action={isOwnProfile && uploadHref ? <Link href={uploadHref} className="inline-flex items-center gap-2 rounded-lg bg-[#B7FF18] px-4 py-2.5 text-xs font-black text-black hover:brightness-110"><Play size={14} fill="currentColor" /> Upload a clip</Link> : null} />}
           </section>
         )}
         {activeTab === 'REELS' && (
           <section>
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-2xl font-black">Reels</h2>
-              {reels.length > 0 && (
-                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/45">
-                  {reels.some((reel) => reel.uploadSource === 'publisher') && <span className="flex items-center gap-1.5"><UploadSourceBadge source="publisher" /> Studio uploads</span>}
-                  {reels.some((reel) => reel.uploadSource === 'community') && <span className="flex items-center gap-1.5"><UploadSourceBadge source="community" /> Community uploads</span>}
+            <h2 className="mb-7 text-2xl font-black">Reels</h2>
+            <div className="space-y-12">
+              <PublicMediaSection
+                title="Official Reels"
+                description="Reels uploaded by the developer or publisher."
+                emptyTitle="No official reels yet."
+                emptyBody="The developer hasn't uploaded any reels for this game yet."
+                icon={Video}
+                hasContent={officialReels.length > 0}
+                action={isOwnProfile && uploadHrefFor('reels') ? (
+                  <Link href={uploadHrefFor('reels')!} className="inline-flex items-center gap-2 rounded-lg bg-[#B7FF18] px-4 py-2.5 text-xs font-black text-black transition hover:brightness-110">
+                    <Video size={14} /> Upload a reel
+                  </Link>
+                ) : undefined}
+              >
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4">
+                  {officialReels.map((reel) => (
+                    <VideoClipGridItem key={reel.id} clip={reel} reelsList={officialReels} />
+                  ))}
                 </div>
-              )}
+              </PublicMediaSection>
+
+              <PublicMediaSection
+                title="Community Reels"
+                description="Reels shared by players, streamers and creators."
+                emptyTitle="No community reels yet."
+                emptyBody={`Be the first player to share a reel from ${gameName}.`}
+                icon={Video}
+                hasContent={communityReels.length > 0}
+                action={currentUser && uploadHrefFor('reels') ? (
+                  <Link href={uploadHrefFor('reels')!} className="inline-flex items-center gap-2 rounded-lg bg-[#B7FF18] px-4 py-2.5 text-xs font-black text-black transition hover:brightness-110">
+                    <Video size={14} /> Upload a reel
+                  </Link>
+                ) : undefined}
+              >
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4">
+                  {communityReels.map((reel) => (
+                    <VideoClipGridItem key={reel.id} clip={reel} reelsList={communityReels} />
+                  ))}
+                </div>
+              </PublicMediaSection>
             </div>
-            {reels.length ? <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">{reels.map((reel) => <VideoClipGridItem key={reel.id} clip={reel} reelsList={reels} />)}</div> : <EmptyCommunityState title="No reels yet" body={`No publisher or community reels have been posted for ${gameName} yet.`} icon={Video} />}
           </section>
         )}
         {activeTab === 'SCREENSHOTS' && (
           <section>
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-2xl font-black">Screenshots</h2>
-              {gameScreenshots.length > 0 && (
-                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-white/45">
-                  {gameScreenshots.some((screenshot) => screenshot.uploadSource === 'publisher') && <span className="flex items-center gap-1.5"><UploadSourceBadge source="publisher" /> Studio uploads</span>}
-                  {gameScreenshots.some((screenshot) => screenshot.uploadSource === 'community') && <span className="flex items-center gap-1.5"><UploadSourceBadge source="community" /> Community uploads</span>}
+            <h2 className="mb-7 text-2xl font-black">Screenshots</h2>
+            <div className="space-y-12">
+              <PublicMediaSection
+                title="Official Screenshots"
+                description="Screenshots uploaded by the developer or publisher."
+                emptyTitle="No official screenshots yet."
+                emptyBody="The developer hasn't uploaded any screenshots for this game yet."
+                icon={Camera}
+                hasContent={officialScreenshots.length > 0}
+                action={isOwnProfile && uploadHrefFor('screenshots') ? (
+                  <Link href={uploadHrefFor('screenshots')!} className="inline-flex items-center gap-2 rounded-lg bg-[#B7FF18] px-4 py-2.5 text-xs font-black text-black transition hover:brightness-110">
+                    <Camera size={14} /> Upload a screenshot
+                  </Link>
+                ) : undefined}
+              >
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {officialScreenshots.map((screenshot) => (
+                    <ScreenshotCard
+                      key={screenshot.id}
+                      screenshot={screenshot}
+                      profile={profile}
+                      showUserInfo
+                      onSelect={(selected) => openScreenshot(selected)}
+                    />
+                  ))}
                 </div>
-              )}
+              </PublicMediaSection>
+
+              <PublicMediaSection
+                title="Community Screenshots"
+                description="Screenshots shared by players and creators."
+                emptyTitle="No community screenshots yet."
+                emptyBody={`Be the first player to share a screenshot from ${gameName}.`}
+                icon={Camera}
+                hasContent={communityGameScreenshots.length > 0}
+                action={currentUser && uploadHrefFor('screenshots') ? (
+                  <Link href={uploadHrefFor('screenshots')!} className="inline-flex items-center gap-2 rounded-lg bg-[#B7FF18] px-4 py-2.5 text-xs font-black text-black transition hover:brightness-110">
+                    <Camera size={14} /> Upload a screenshot
+                  </Link>
+                ) : undefined}
+              >
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {communityGameScreenshots.map((screenshot) => (
+                    <ScreenshotCard
+                      key={screenshot.id}
+                      screenshot={screenshot}
+                      profile={profile}
+                      showUserInfo
+                      onSelect={(selected) => openScreenshot(selected)}
+                    />
+                  ))}
+                </div>
+              </PublicMediaSection>
             </div>
-            {gameScreenshots.length ? <ScreenshotCarousel screenshots={gameScreenshots} onSelect={openScreenshot} /> : <EmptyCommunityState title="No screenshots yet" body={`No publisher or community screenshots have been added for ${gameName} yet.`} icon={Camera} />}
           </section>
         )}
       </main>
