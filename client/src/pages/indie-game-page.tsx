@@ -19,6 +19,7 @@ import HlsVideo from "@/components/media/HlsVideo";
 import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
 import { CreatorDashboard } from "@/components/indie-bounty/CreatorDashboard";
 import { DeveloperDashboard } from "@/components/indie-bounty/DeveloperDashboard";
+import { GamePlatformBadges, GameSocialBadges } from "@/components/indie/GameProfileBadges";
 import {
   ArrowLeft, Play, Camera, Users, Clock, Eye,
   Trophy, Zap, Key, Star, Gift, Sword, Plus, Upload, X,
@@ -27,7 +28,6 @@ import {
   Gamepad, Monitor, Smartphone,
   Film, MessageSquare, AlertCircle, ShieldCheck, Unlock, Rocket,
 } from "lucide-react";
-import { GAME_SOCIAL_LINKS } from "@/lib/indie-game-links";
 
 const UploadPage = lazy(() => import("./UploadPage"));
 
@@ -1239,14 +1239,14 @@ const IndieGamePage = () => {
 
   // Fetch the developer's Indie Game Profile for enriched public data
   const { data: indieProfileData } = useQuery<{ profile: any; user: any } | null>({
-    queryKey: ["/api/games/indie", gameSlug],
+    queryKey: ["/api/games", game?.id, "indie-profile"],
     queryFn: async () => {
-      if (!gameSlug) return null;
-      const r = await fetch(`/api/games/indie/${gameSlug}`, { credentials: "include" });
+      if (!game?.id) return null;
+      const r = await fetch(`/api/games/${game.id}/indie-profile`, { credentials: "include" });
       if (!r.ok) return null;
       return r.json();
     },
-    enabled: !!gameSlug,
+    enabled: !!game?.id,
   });
 
   const { data: clips } = useQuery<ClipWithUser[]>({
@@ -1668,18 +1668,7 @@ const IndieGamePage = () => {
                 Website
               </button>
             )}
-            {GAME_SOCIAL_LINKS.map(({ field, label, color, borderColor, icon: Icon }) => {
-              const href = meta[field];
-              return href ? (
-                <button key={field}
-                  onClick={() => openExternal(href)}
-                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition-[filter] hover:brightness-110"
-                  style={{ background: color, border: `1px solid ${borderColor}` }}>
-                  <Icon className="w-3.5 h-3.5" />
-                  {label}
-                </button>
-              ) : null;
-            })}
+            <GameSocialBadges links={meta} onOpen={openExternal} />
             <button
               onClick={handleOpenUpload}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/5"
@@ -1878,8 +1867,7 @@ const IndieGamePage = () => {
                 <div>
                   <h2 className="text-xl font-black text-white mb-4">Available Platforms</h2>
                   <div className="flex flex-wrap gap-3">
-                    {meta.platforms.map(p => <PlatformIcon key={p} platform={p} />)}
-                    {meta.platforms.length === 0 && <PlatformIcon platform="pc" />}
+                    <GamePlatformBadges platforms={meta.platforms.length > 0 ? meta.platforms : ["pc"]} />
                   </div>
                 </div>
 

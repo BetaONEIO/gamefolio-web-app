@@ -6,8 +6,8 @@ import { useSignedUrl } from "@/hooks/use-signed-url";
 import { Loader2, ImagePlus, X, CropIcon, Upload, ArrowUpRight, Edit3 } from "lucide-react";
 import { SiEpicgames, SiItchdotio, SiSteam } from "react-icons/si";
 import { publicUrl } from "@/lib/platform";
-import { GAME_PLATFORM_LINKS, GAME_SOCIAL_LINKS } from "@/lib/indie-game-links";
 import { NEON } from "./constants";
+import { GamePlatformBadges, GameSocialBadges } from "@/components/indie/GameProfileBadges";
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 
@@ -404,22 +404,9 @@ export default function GameHeroBanner({
                     {profile.shortDescription || profile.fullDescription}
                   </p>
                 )}
-                {!!profile?.platforms?.length && (
-                  <div className="mb-4 flex flex-wrap gap-2" aria-label="Available platforms">
-                    {profile.platforms.map((platform: string) => {
-                      const definition = GAME_PLATFORM_LINKS[platform.toLowerCase()];
-                      const Icon = definition?.icon;
-                      return (
-                        <span key={platform}
-                          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold text-white"
-                          style={{ background: "#151724", border: "1px solid #252938" }}>
-                          {Icon && <Icon className="h-3 w-3" />}
-                          {definition?.label ?? platform.replace(/_/g, " ")}
-                        </span>
-                      );
-                    })}
-                  </div>
-                )}
+                <div className="mb-4">
+                  <GamePlatformBadges platforms={profile?.platforms} />
+                </div>
                 <div className="flex flex-wrap items-center gap-3 mb-5">
                   {profile?.releaseStatus && (
                     <span className="text-[11px] font-bold px-2.5 py-1 rounded uppercase tracking-wider"
@@ -455,23 +442,7 @@ export default function GameHeroBanner({
                     )}
                   </div>
                 )}
-                {GAME_SOCIAL_LINKS.some(({ field }) => profile?.[field]) && (
-                  <div className="mb-5" aria-label="Game social platforms">
-                    <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/40">Social platforms</p>
-                    <div className="flex flex-wrap gap-2">
-                      {GAME_SOCIAL_LINKS.map(({ field, label, color, borderColor, icon: Icon }) => {
-                        const href = profile?.[field];
-                        return href ? (
-                          <a key={field} href={href} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold text-white transition-[filter] hover:brightness-110"
-                            style={{ background: color, border: `1px solid ${borderColor}` }}>
-                            <Icon className="h-3 w-3 text-white" style={{ color: "#fff" }} /> {label}
-                          </a>
-                        ) : null;
-                      })}
-                    </div>
-                  </div>
-                )}
+                <GameSocialBadges links={profile ?? {}} className="mb-5" />
                 <div className="flex flex-wrap items-center gap-2">
                    {onEditProfile && (
                      <button type="button" onClick={onEditProfile}
