@@ -63,6 +63,10 @@ export default function IndieDashboardPage() {
   const goTo = (toTab: TopTabId, sub?: string) => {
     setTab(toTab);
     setProfileFocus(toTab === "game-profile" && sub ? { field: sub } : null);
+    // Quick-edit requests are one-shot. Do not leave a request mounted while
+    // switching tabs, because GameProfileTab stays mounted (but hidden) so it
+    // can host Overview's in-place dialogs.
+    setQuickEditFocus(null);
     if (toTab === "campaigns" && sub) setCampaignSub(sub as CampaignSubTab);
     const params = new URLSearchParams(search);
     params.set("tab", toTab);
@@ -93,7 +97,7 @@ export default function IndieDashboardPage() {
           {TOP_TABS.map((t) => {
             const active = tab === t.id;
             return (
-              <button key={t.id} onClick={() => goTo(t.id)}
+              <button key={t.id} type="button" onClick={() => goTo(t.id)}
                 className="relative flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold whitespace-nowrap transition-colors"
                 style={{ color: active ? DASHBOARD_THEME.accent : DASHBOARD_THEME.textMuted }}>
                 <t.icon className="w-3.5 h-3.5" />
