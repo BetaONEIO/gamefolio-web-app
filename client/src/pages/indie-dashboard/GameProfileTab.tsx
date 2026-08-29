@@ -84,13 +84,28 @@ function computeHealth(profile: Profile | null) {
 }
 
 // ─── Save hook ─────────────────────────────────────────────────────────────────
-function useSaveProfile(gameId?: number, onSuccess?: () => void) {
+function updateMatchingProfileCaches(data: any) {
+  const savedProfileId = data?.profile?.id;
+  queryClient.setQueriesData(
+    { queryKey: ["/api/indie/profile"] },
+    (cached: any) => {
+      if (!cached) return cached;
+      const cachedProfileId = cached?.profile?.id;
+      if (savedProfileId != null && cachedProfileId != null && cachedProfileId !== savedProfileId) {
+        return cached;
+      }
+      return data;
+    },
+  );
+}
+
+function useSaveProfile(_gameId?: number, onSuccess?: () => void) {
   const { toast } = useToast();
   return useMutation({
     mutationFn: (fields: Record<string, any>) =>
       apiRequest("PUT", "/api/indie/profile", fields).then(r => r.json()),
     onSuccess: async (data) => {
-      queryClient.setQueryData(["/api/indie/profile", gameId ?? null], data);
+      updateMatchingProfileCaches(data);
       await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       toast({ description: "Saved" });
       onSuccess?.();
@@ -194,9 +209,9 @@ function EditModal({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-4 pt-20"
-      style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)" }}>
-      <div className="relative w-full max-w-2xl max-h-[calc(100vh-6rem)] flex flex-col rounded-2xl overflow-hidden"
+    <div className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto p-4 overscroll-contain"
+      style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)", paddingTop: "calc(env(safe-area-inset-top, 0px) + 4.5rem)" }}>
+      <div className="relative w-full max-w-2xl max-h-[calc(100dvh-7rem)] flex flex-col rounded-2xl overflow-hidden"
         style={{ background: "#0e1419", border: `1px solid ${CARD_BORDER}`, boxShadow: "0 32px 80px rgba(0,0,0,0.7)" }}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0"
@@ -1078,7 +1093,7 @@ function PlatformCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
     const save = async () => {
       try {
         const data = await (await apiRequest("PUT", "/api/indie/profile", { gameId: profile?.id, platforms: next })).json();
-        queryClient.setQueryData(["/api/indie/profile", profile?.id ?? null], data);
+        updateMatchingProfileCaches(data);
       } catch (error: any) {
         if (pendingWritesRef.current === 1) {
           displayedSelectedRef.current = selected;
