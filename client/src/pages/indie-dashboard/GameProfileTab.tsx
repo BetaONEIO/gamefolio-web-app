@@ -8,6 +8,7 @@ import {
   Pencil, X, Check, Loader2, Upload, Plus, Trash2, ExternalLink,
   Image as ImageIcon, Video, Globe, Gamepad2,
   Play, Sparkles, Building2, Package, Download, Twitter,
+  ArrowUpRight, ChevronDown, ChevronRight,
 } from "lucide-react";
 import {
   SiSteam, SiEpicgames, SiItchdotio, SiDiscord, SiMacos, SiLinux,
@@ -15,6 +16,8 @@ import {
 } from "react-icons/si";
 import { FaWindows, FaXbox } from "react-icons/fa6";
 import { NEON, CARD_BG, CARD_BORDER } from "./constants";
+import { useAuth } from "@/hooks/use-auth";
+import { publicUrl } from "@/lib/platform";
 import { StoreImportPanel } from "./edit-profile/StoreImportPanel";
 import { SyncPanel } from "./edit-profile/SyncPanel";
 import { DataSourceExplainer } from "./edit-profile/DataSourceExplainer";
@@ -39,37 +42,47 @@ const HEALTH_FIELDS = [
   { key: "screenshotUrls",  label: "Screenshots",        pts: 5,  section: "media"  },
 ] as const;
 
-const PROFILE_SECTION_BY_FIELD: Record<string, string> = {
-  gameName: "about",
-  shortDescription: "about",
-  fullDescription: "about",
-  genres: "about",
-  tags: "about",
-  keyFeatures: "about",
-  releaseStatus: "about",
-  releaseDate: "about",
-  price: "about",
+type ProfileSectionId = "basics" | "stores" | "media" | "details" | "community" | "developer" | "advanced";
+
+const PROFILE_SECTION_BY_FIELD: Record<string, ProfileSectionId> = {
+  gameName: "basics",
+  shortDescription: "basics",
+  releaseStatus: "basics",
+  genres: "basics",
+  platforms: "basics",
+  fullDescription: "details",
+  tags: "details",
+  keyFeatures: "details",
+  releaseDate: "details",
+  price: "basics",
   headerImageUrl: "media",
   capsuleImageUrl: "media",
   trailerUrl: "media",
   screenshotUrls: "media",
-  steamUrl: "store",
-  steamAppId: "store",
-  epicUrl: "store",
-  epicSlug: "store",
-  itchUrl: "store",
-  websiteUrl: "store",
-  platforms: "platforms",
-  studioName: "studio",
-  studioCountry: "studio",
-  studioFoundedYear: "studio",
-  studioTeamSize: "studio",
-  studioWebsite: "studio",
-  twitterUrl: "studio",
-  discordUrl: "studio",
-  ageRating: "metadata",
-  supportedLanguages: "metadata",
-  contentDescriptors: "metadata",
+  steamUrl: "stores",
+  steamAppId: "stores",
+  epicUrl: "stores",
+  epicSlug: "stores",
+  itchUrl: "stores",
+  websiteUrl: "stores",
+  studioName: "developer",
+  studioCountry: "developer",
+  studioFoundedYear: "developer",
+  studioTeamSize: "developer",
+  studioWebsite: "developer",
+  twitterUrl: "community",
+  discordUrl: "community",
+  ageRating: "details",
+  supportedLanguages: "details",
+  contentDescriptors: "details",
+};
+
+const PROFILE_SECTION_FIELDS: Record<Exclude<ProfileSectionId, "stores" | "advanced">, string[]> = {
+  basics: ["gameName", "shortDescription", "releaseStatus", "genres", "platforms"],
+  media: ["headerImageUrl", "capsuleImageUrl", "trailerUrl", "screenshotUrls"],
+  details: ["fullDescription", "tags", "keyFeatures", "releaseDate", "ageRating", "supportedLanguages", "contentDescriptors"],
+  community: ["twitterUrl", "discordUrl"],
+  developer: ["studioName", "studioCountry", "studioFoundedYear", "studioTeamSize", "studioWebsite"],
 };
 
 function computeHealth(profile: Profile | null) {
@@ -81,7 +94,37 @@ function computeHealth(profile: Profile | null) {
   }
   const total = HEALTH_FIELDS.reduce((s, f) => s + f.pts, 0);
   const pct = Math.round((earned / total) * 100);
-  return { pct, top3: missing.sort((a, b) => b.pts - a.pts).slice(0, 3) };
+  return { pct, top3: missing.sort((a, b) => b.pts - a.pts).slice(0, 3), missing, missingCount: missing.length };
+}
+
+function getSectionStatus(profile: Profile | null, section: ProfileSectionId) {
+  if (section === "advanced") {
+    return {
+      label: profile?.steamAppId || profile?.epicSlug ? "Sync ready" : "Import available",
+      color: profile?.steamAppId || profile?.epicSlug ? NEON : "rgba(255,255,255,0.5)",
+    };
+  }
+
+  if (section === "stores") {
+    const connected = [
+      !!(profile?.steamUrl || profile?.steamAppId),
+      !!(profile?.epicUrl || profile?.epicSlug),
+      !!profile?.itchUrl,
+      !!profile?.websiteUrl,
+    ].filter(Boolean).length;
+    return {
+      label: connected ? `${connected} link${connected === 1 ? "" : "s"} connected` : "No links connected",
+      color: connected ? NEON : "#f59e0b",
+    };
+  }
+
+  const fields = PROFILE_SECTION_FIELDS[section];
+  const filled = fields.filter(field => isFieldFilled(profile, field)).length;
+  const missing = fields.length - filled;
+  return {
+    label: missing === 0 ? "Complete" : `${missing} to add`,
+    color: missing === 0 ? NEON : filled > 0 ? "#d8b24c" : "#f59e0b",
+  };
 }
 
 // ─── Save hook ─────────────────────────────────────────────────────────────────
@@ -198,10 +241,10 @@ function useUploadScreenshot() {
 
 // ─── EditModal ─────────────────────────────────────────────────────────────────
 function EditModal({
-  title, onClose, children, onSave, isSaving, saveLabel = "Save changes",
+  title, onClose, children, onSave, isSaving, saveLabel = "Save changes", focusField,
 }: {
   title: string; onClose: () => void; children: React.ReactNode;
-  onSave?: () => void; isSaving?: boolean; saveLabel?: string;
+  onSave?: () => void; isSaving?: boolean; saveLabel?: string; focusField?: string;
 }) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -209,9 +252,14 @@ function EditModal({
 
   useEffect(() => {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+    window.requestAnimationFrame(() => {
+      const target = focusField
+        ? dialogRef.current?.querySelector<HTMLElement>(`[data-profile-field="${focusField}"]`)
+        : null;
+      (target ?? closeButtonRef.current)?.focus();
+    });
     return () => previousFocus?.focus();
-  }, []);
+  }, [focusField]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -280,7 +328,9 @@ function EditModal({
 }
 
 // ─── TagInput ──────────────────────────────────────────────────────────────────
-function TagInput({ value = [], onChange, placeholder }: { value?: string[]; onChange: (v: string[]) => void; placeholder?: string }) {
+function TagInput({ value = [], onChange, placeholder, fieldName }: {
+  value?: string[]; onChange: (v: string[]) => void; placeholder?: string; fieldName?: string;
+}) {
   const [input, setInput] = useState("");
   const add = () => {
     const t = input.trim();
@@ -301,7 +351,7 @@ function TagInput({ value = [], onChange, placeholder }: { value?: string[]; onC
         ))}
       </div>
       <div className="flex gap-2">
-        <input value={input} onChange={e => setInput(e.target.value)}
+        <input data-profile-field={fieldName} value={input} onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
           placeholder={placeholder || "Type and press Enter…"}
           className="flex-1 bg-transparent border rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-white/30"
@@ -315,20 +365,20 @@ function TagInput({ value = [], onChange, placeholder }: { value?: string[]; onC
 }
 
 // ─── FieldInput ────────────────────────────────────────────────────────────────
-function FieldInput({ label, value, onChange, type = "text", placeholder, rows }: {
+function FieldInput({ label, value, onChange, type = "text", placeholder, rows, fieldName }: {
   label: string; value: string; onChange: (v: string) => void;
-  type?: string; placeholder?: string; rows?: number;
+  type?: string; placeholder?: string; rows?: number; fieldName?: string;
 }) {
   return (
     <div className="space-y-1.5">
       <label className="text-xs font-medium text-white/50 uppercase tracking-wider">{label}</label>
       {rows ? (
-        <textarea value={value} onChange={e => onChange(e.target.value)} rows={rows}
+          <textarea data-profile-field={fieldName} value={value} onChange={e => onChange(e.target.value)} rows={rows}
           placeholder={placeholder}
           className="w-full bg-transparent border rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-white/30 resize-none"
           style={{ borderColor: CARD_BORDER }} />
       ) : (
-        <input type={type} value={value} onChange={e => onChange(e.target.value)}
+        <input data-profile-field={fieldName} type={type} value={value} onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           className="w-full bg-transparent border rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-white/30"
           style={{ borderColor: CARD_BORDER }} />
@@ -362,11 +412,22 @@ function DropZone({
   };
 
   return (
-    <div className={`relative rounded-xl overflow-hidden cursor-pointer group ${className}`}
+    <div
+      data-profile-field={field}
+      role="button"
+      tabIndex={0}
+      aria-label={label || `Upload ${field === "headerImageUrl" ? "banner" : "capsule artwork"}`}
+      className={`relative rounded-xl overflow-hidden cursor-pointer group ${className}`}
       style={{ border: `2px dashed ${dragging ? NEON : CARD_BORDER}`, transition: "border-color 0.15s" }}
       onDragOver={e => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={onDrop}
+      onKeyDown={e => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          inputRef.current?.click();
+        }
+      }}
       onClick={() => inputRef.current?.click()}>
       <input ref={inputRef} type="file" accept="image/*" className="hidden"
         onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
@@ -603,15 +664,15 @@ function AboutCard({
       </div>
 
       {open && (
-        <EditModal title="About Your Game" onClose={() => setOpen(false)}
+        <EditModal title="About Your Game" onClose={() => setOpen(false)} focusField={focusRequest?.field}
           onSave={() => save.mutate({ gameId: profile?.id, gameName: name, shortDescription: short, fullDescription: full, genres, tags, keyFeatures: features, releaseStatus: status, releaseDate: releaseDate || null, price })}
           isSaving={save.isPending}>
-          <FieldInput label="Game Name" value={name} onChange={setName} placeholder="My Awesome Game" />
+          <FieldInput fieldName="gameName" label="Game Name" value={name} onChange={setName} placeholder="My Awesome Game" />
           <div>
             <label className="text-xs font-medium text-white/50 uppercase tracking-wider block mb-1.5">Release Status</label>
             <div className="flex gap-2">
               {RELEASE_STATUS_OPTIONS.map(o => (
-                <button key={o.value} onClick={() => setStatus(o.value)}
+                <button key={o.value} data-profile-field={o.value === "coming_soon" ? "releaseStatus" : undefined} onClick={() => setStatus(o.value)}
                   className="flex-1 py-2 rounded-lg text-xs font-bold transition-all"
                   style={{
                     background: status === o.value ? `${NEON}22` : "rgba(255,255,255,0.04)",
@@ -623,23 +684,23 @@ function AboutCard({
               ))}
             </div>
           </div>
-          <FieldInput label="Release Date" value={releaseDate} onChange={setReleaseDate} type="date" />
-          <FieldInput label="Price (USD)" value={price} onChange={setPrice} placeholder="19.99" />
-          <FieldInput label="Short Description" value={short} onChange={setShort} rows={2}
+          <FieldInput fieldName="releaseDate" label="Release Date" value={releaseDate} onChange={setReleaseDate} type="date" />
+          <FieldInput fieldName="price" label="Price (USD)" value={price} onChange={setPrice} placeholder="19.99" />
+          <FieldInput fieldName="shortDescription" label="Short Description" value={short} onChange={setShort} rows={2}
             placeholder="One or two sentences about your game…" />
-          <FieldInput label="Full Description" value={full} onChange={setFull} rows={5}
+          <FieldInput fieldName="fullDescription" label="Full Description" value={full} onChange={setFull} rows={5}
             placeholder="Detailed description for store pages, campaign listings, and press kits…" />
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-white/50 uppercase tracking-wider block">Genres</label>
-            <TagInput value={genres} onChange={setGenres} placeholder="e.g. Action, RPG, Platformer" />
+            <TagInput fieldName="genres" value={genres} onChange={setGenres} placeholder="e.g. Action, RPG, Platformer" />
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-white/50 uppercase tracking-wider block">Tags</label>
-            <TagInput value={tags} onChange={setTags} placeholder="e.g. Co-op, Roguelite, Indie" />
+            <TagInput fieldName="tags" value={tags} onChange={setTags} placeholder="e.g. Co-op, Roguelite, Indie" />
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-white/50 uppercase tracking-wider block">Key Features</label>
-            <TagInput value={features} onChange={setFeatures} placeholder="e.g. Open world, Co-op, Procedural generation" />
+            <TagInput fieldName="keyFeatures" value={features} onChange={setFeatures} placeholder="e.g. Open world, Co-op, Procedural generation" />
           </div>
         </EditModal>
       )}
@@ -821,11 +882,11 @@ function MediaCard({
 
       {/* ── Trailer modal ─────────────────────────────────────────────────────── */}
       {trailerOpen && (
-        <EditModal title="Trailer" onClose={() => setTrailerOpen(false)}
+        <EditModal title="Trailer" onClose={() => setTrailerOpen(false)} focusField={focusRequest?.field}
           onSave={() => saveTrailer.mutate({ gameId: profile?.id, trailerUrl: trailer })}
           isSaving={saveTrailer.isPending}>
           {/* URL input */}
-          <FieldInput label="Trailer URL (YouTube / Vimeo)" value={trailer} onChange={setTrailer}
+          <FieldInput fieldName="trailerUrl" label="Trailer URL (YouTube / Vimeo)" value={trailer} onChange={setTrailer}
             type="url" placeholder="https://youtu.be/…" />
 
           {/* Divider */}
@@ -877,7 +938,7 @@ function MediaCard({
 
       {/* ── Screenshots modal ──────────────────────────────────────────────────── */}
       {shotsOpen && (
-        <EditModal title="Screenshots" onClose={() => setShotsOpen(false)}
+        <EditModal title="Screenshots" onClose={() => setShotsOpen(false)} focusField={focusRequest?.field}
           onSave={() => saveShots.mutate({ gameId: profile?.id, screenshotUrls: screenshots })}
           isSaving={saveShots.isPending}>
 
@@ -905,6 +966,7 @@ function MediaCard({
             />
             <button
               type="button"
+              data-profile-field="screenshotUrls"
               onClick={() => shotFileRef.current?.click()}
               disabled={uploadScreenshot.isPending}
               className="w-full flex items-center justify-center gap-2 py-4 rounded-xl transition-all hover:bg-white/5 disabled:opacity-50"
@@ -965,6 +1027,7 @@ function MediaCard({
         <EditModal
           title={artworkOpen === "headerImageUrl" ? "Game Banner" : "Game Icon"}
           onClose={() => setArtworkOpen(null)}
+          focusField={artworkOpen}
         >
           <p className="text-xs leading-relaxed text-white/45">
             {artworkOpen === "headerImageUrl"
@@ -1070,7 +1133,7 @@ function StoreListingCard({
       </div>
 
       {open && (
-        <EditModal title="Store Listing" onClose={() => setOpen(false)}
+        <EditModal title="Store Listing" onClose={() => setOpen(false)} focusField={focusRequest?.field}
           onSave={() => save.mutate({ gameId: profile?.id, steamAppId, steamUrl, epicSlug, epicUrl, itchUrl, websiteUrl })}
           isSaving={save.isPending}>
           <div className="space-y-3">
@@ -1078,8 +1141,8 @@ function StoreListingCard({
               <SiSteam size={14} className="text-[#66c0f4]" />
               <span className="text-xs font-bold text-white/70 uppercase tracking-wider">Steam</span>
             </div>
-            <FieldInput label="Steam App ID" value={steamAppId} onChange={setSteamAppId} placeholder="e.g. 730" />
-            <FieldInput label="Steam Store URL" value={steamUrl} onChange={setSteamUrl} type="url"
+            <FieldInput fieldName="steamAppId" label="Steam App ID" value={steamAppId} onChange={setSteamAppId} placeholder="e.g. 730" />
+            <FieldInput fieldName="steamUrl" label="Steam Store URL" value={steamUrl} onChange={setSteamUrl} type="url"
               placeholder="https://store.steampowered.com/app/…" />
           </div>
           <div className="h-px" style={{ background: CARD_BORDER }} />
@@ -1088,8 +1151,8 @@ function StoreListingCard({
               <SiEpicgames size={14} className="text-white/70" />
               <span className="text-xs font-bold text-white/70 uppercase tracking-wider">Epic Games</span>
             </div>
-            <FieldInput label="Epic Slug" value={epicSlug} onChange={setEpicSlug} placeholder="e.g. my-game" />
-            <FieldInput label="Epic Store URL" value={epicUrl} onChange={setEpicUrl} type="url"
+            <FieldInput fieldName="epicSlug" label="Epic Slug" value={epicSlug} onChange={setEpicSlug} placeholder="e.g. my-game" />
+            <FieldInput fieldName="epicUrl" label="Epic Store URL" value={epicUrl} onChange={setEpicUrl} type="url"
               placeholder="https://store.epicgames.com/…" />
           </div>
           <div className="h-px" style={{ background: CARD_BORDER }} />
@@ -1098,7 +1161,7 @@ function StoreListingCard({
               <SiItchdotio size={14} className="text-[#fa5c5c]" />
               <span className="text-xs font-bold text-white/70 uppercase tracking-wider">itch.io</span>
             </div>
-            <FieldInput label="itch.io URL" value={itchUrl} onChange={setItchUrl} type="url"
+            <FieldInput fieldName="itchUrl" label="itch.io URL" value={itchUrl} onChange={setItchUrl} type="url"
               placeholder="https://user.itch.io/game" />
           </div>
           <div className="h-px" style={{ background: CARD_BORDER }} />
@@ -1107,7 +1170,7 @@ function StoreListingCard({
               <Globe size={14} className="text-white/50" />
               <span className="text-xs font-bold text-white/70 uppercase tracking-wider">Website</span>
             </div>
-            <FieldInput label="Game / Studio Website" value={websiteUrl} onChange={setWebsiteUrl} type="url"
+            <FieldInput fieldName="websiteUrl" label="Game / Studio Website" value={websiteUrl} onChange={setWebsiteUrl} type="url"
               placeholder="https://mygame.com" />
           </div>
         </EditModal>
@@ -1193,7 +1256,7 @@ function PlatformCard({
   };
 
   const platformButtons = (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+    <div data-profile-field="platforms" tabIndex={-1} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {PLATFORM_OPTIONS.map(p => {
         const on = displayedSelected.includes(p.id);
         const Icon = platformIcons[p.id] ?? Gamepad2;
@@ -1228,7 +1291,7 @@ function PlatformCard({
       <div className="p-5">{platformButtons}</div>
     </div>
     {open && (
-      <EditModal title="Platforms" onClose={() => setOpen(false)}>
+      <EditModal title="Platforms" onClose={() => setOpen(false)} focusField={focusRequest?.field}>
         <p className="text-xs leading-relaxed text-white/45">Choose every platform where players can find your game. Changes save automatically.</p>
         {platformButtons}
       </EditModal>
@@ -1253,8 +1316,6 @@ function StudioCard({
   const [year, setYear] = useState("");
   const [team, setTeam] = useState("");
   const [website, setWebsite] = useState("");
-  const [twitter, setTwitter] = useState("");
-  const [discord, setDiscord] = useState("");
   const save = useSaveProfile(profile?.id, () => setOpen(false));
 
   const openModal = () => {
@@ -1263,20 +1324,18 @@ function StudioCard({
     setYear(profile?.studioFoundedYear ? String(profile.studioFoundedYear) : "");
     setTeam(profile?.studioTeamSize ? String(profile.studioTeamSize) : "");
     setWebsite(profile?.studioWebsite ?? "");
-    setTwitter(profile?.twitterUrl ?? "");
-    setDiscord(profile?.discordUrl ?? "");
     setOpen(true);
   };
 
   useEffect(() => {
     const studioFields = new Set([
       "studioName", "studioCountry", "studioFoundedYear", "studioTeamSize",
-      "studioWebsite", "twitterUrl", "discordUrl",
+      "studioWebsite",
     ]);
     if (profile && focusRequest && studioFields.has(focusRequest.field)) openModal();
   }, [focusRequest, profile?.id]);
 
-  const hasInfo = profile?.studioName || profile?.studioCountry || profile?.studioFoundedYear;
+  const hasInfo = profile?.studioName || profile?.studioCountry || profile?.studioFoundedYear || profile?.studioTeamSize || profile?.studioWebsite;
 
   return (
     <>
@@ -1306,29 +1365,13 @@ function StudioCard({
                 {profile?.studioFoundedYear && <span>Est. {profile.studioFoundedYear}</span>}
                 {profile?.studioTeamSize && <span>{profile.studioTeamSize} person{Number(profile.studioTeamSize) !== 1 ? "s" : ""}</span>}
               </div>
-              <div className="flex flex-wrap gap-2">
-                {profile?.studioWebsite && (
-                   <a href={profile.studioWebsite} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-colors"
-                    style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${CARD_BORDER}` }}>
-                     <Globe size={11} /> Website
-                  </a>
-                )}
-                {profile?.twitterUrl && (
-                  <a href={profile.twitterUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-colors"
-                    style={{ background: "rgba(29,161,242,0.08)", border: "1px solid rgba(29,161,242,0.2)" }}>
-                    <Twitter size={10} className="text-[#1da1f2]" /> Twitter / X
-                  </a>
-                )}
-                {profile?.discordUrl && (
-                  <a href={profile.discordUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-colors"
-                    style={{ background: "rgba(88,101,242,0.08)", border: "1px solid rgba(88,101,242,0.2)" }}>
-                    <SiDiscord size={10} className="text-[#5865f2]" /> Discord
-                  </a>
-                )}
-              </div>
+              {profile?.studioWebsite && (
+                <a href={profile.studioWebsite} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-colors"
+                  style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${CARD_BORDER}` }}>
+                  <Globe size={11} /> Studio website
+                </a>
+              )}
             </div>
           ) : (
             <button onClick={openModal}
@@ -1342,24 +1385,21 @@ function StudioCard({
       </div>
 
       {open && (
-        <EditModal title="Studio" onClose={() => setOpen(false)}
+        <EditModal title="Studio" onClose={() => setOpen(false)} focusField={focusRequest?.field}
           onSave={() => save.mutate({
             gameId: profile?.id,
             studioName: name, studioCountry: country,
             studioFoundedYear: year ? parseInt(year) : null,
             studioTeamSize: team ? parseInt(team) : null,
-            studioWebsite: website, twitterUrl: twitter, discordUrl: discord,
+            studioWebsite: website,
           })} isSaving={save.isPending}>
-          <FieldInput label="Studio Name" value={name} onChange={setName} placeholder="Acme Games" />
+          <FieldInput fieldName="studioName" label="Studio Name" value={name} onChange={setName} placeholder="Acme Games" />
           <div className="grid grid-cols-2 gap-3">
-            <FieldInput label="Country" value={country} onChange={setCountry} placeholder="e.g. UK" />
-            <FieldInput label="Founded Year" value={year} onChange={setYear} placeholder="e.g. 2022" />
+            <FieldInput fieldName="studioCountry" label="Country" value={country} onChange={setCountry} placeholder="e.g. UK" />
+            <FieldInput fieldName="studioFoundedYear" label="Founded Year" value={year} onChange={setYear} placeholder="e.g. 2022" />
           </div>
-          <FieldInput label="Team Size" value={team} onChange={setTeam} placeholder="e.g. 3" />
-          <FieldInput label="Studio Website" value={website} onChange={setWebsite} type="url" placeholder="https://…" />
-          <div className="h-px" style={{ background: CARD_BORDER }} />
-          <FieldInput label="Twitter / X URL" value={twitter} onChange={setTwitter} type="url" placeholder="https://twitter.com/…" />
-          <FieldInput label="Discord Server URL" value={discord} onChange={setDiscord} type="url" placeholder="https://discord.gg/…" />
+          <FieldInput fieldName="studioTeamSize" label="Team Size" value={team} onChange={setTeam} placeholder="e.g. 3" />
+          <FieldInput fieldName="studioWebsite" label="Studio Website" value={website} onChange={setWebsite} type="url" placeholder="https://…" />
         </EditModal>
       )}
     </>
@@ -1390,7 +1430,8 @@ function MetadataCard({
   };
 
   useEffect(() => {
-    if (focusRequest && PROFILE_SECTION_BY_FIELD[focusRequest.field] === "metadata") openModal();
+    if (focusRequest && PROFILE_SECTION_BY_FIELD[focusRequest.field] === "details"
+      && ["ageRating", "supportedLanguages", "contentDescriptors"].includes(focusRequest.field)) openModal();
   }, [focusRequest, profile?.id]);
 
   const hasMetadata = !!profile?.ageRating
@@ -1450,7 +1491,7 @@ function MetadataCard({
       </div>
 
       {open && (
-        <EditModal title="Store Metadata" onClose={() => setOpen(false)}
+        <EditModal title="Store Metadata" onClose={() => setOpen(false)} focusField={focusRequest?.field}
           onSave={() => save.mutate({
             gameId: profile?.id,
             ageRating,
@@ -1458,14 +1499,14 @@ function MetadataCard({
             contentDescriptors,
           })}
           isSaving={save.isPending}>
-          <FieldInput label="Age Rating" value={ageRating} onChange={setAgeRating} placeholder="e.g. PEGI 12, ESRB T" />
+          <FieldInput fieldName="ageRating" label="Age Rating" value={ageRating} onChange={setAgeRating} placeholder="e.g. PEGI 12, ESRB T" />
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-white/50 uppercase tracking-wider block">Supported Languages</label>
-            <TagInput value={supportedLanguages} onChange={setSupportedLanguages} placeholder="e.g. English, French, Japanese" />
+            <TagInput fieldName="supportedLanguages" value={supportedLanguages} onChange={setSupportedLanguages} placeholder="e.g. English, French, Japanese" />
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-white/50 uppercase tracking-wider block">Content Descriptors</label>
-            <TagInput value={contentDescriptors} onChange={setContentDescriptors} placeholder="e.g. Fantasy Violence, Online Interactions" />
+            <TagInput fieldName="contentDescriptors" value={contentDescriptors} onChange={setContentDescriptors} placeholder="e.g. Fantasy Violence, Online Interactions" />
           </div>
         </EditModal>
       )}
@@ -1513,6 +1554,322 @@ function AdvancedCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
   );
 }
 
+// ─── Community & Social Card ───────────────────────────────────────────────────
+function CommunitySocialCard({
+  profile,
+  focusRequest,
+}: {
+  profile: Profile | null;
+  focusRequest?: { field: string } | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const [twitter, setTwitter] = useState("");
+  const [discord, setDiscord] = useState("");
+  const save = useSaveProfile(profile?.id, () => setOpen(false));
+
+  const openModal = () => {
+    setTwitter(profile?.twitterUrl ?? "");
+    setDiscord(profile?.discordUrl ?? "");
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (profile && focusRequest && ["twitterUrl", "discordUrl"].includes(focusRequest.field)) {
+      openModal();
+    }
+  }, [focusRequest, profile?.id]);
+
+  const hasSocial = !!profile?.twitterUrl || !!profile?.discordUrl;
+
+  return (
+    <>
+      <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+        <div className="flex items-center justify-between px-5 py-4"
+          style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
+          <div className="flex items-center gap-2.5">
+            <Twitter size={16} style={{ color: NEON }} />
+            <div>
+              <span className="text-sm font-bold text-white">Community links</span>
+              <p className="mt-0.5 text-[11px] text-white/35">Give players somewhere to follow and talk about your game.</p>
+            </div>
+          </div>
+          <button type="button" onClick={openModal}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/10"
+            style={{ border: `1px solid ${CARD_BORDER}`, color: "white" }}>
+            <Pencil size={11} /> Edit
+          </button>
+        </div>
+        <div className="p-5">
+          {hasSocial ? (
+            <div className="flex flex-wrap gap-2">
+              {profile?.twitterUrl && (
+                <a href={profile.twitterUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-colors"
+                  style={{ background: "rgba(29,161,242,0.08)", border: "1px solid rgba(29,161,242,0.2)" }}>
+                  <Twitter size={10} className="text-[#1da1f2]" /> Twitter / X <ExternalLink size={9} />
+                </a>
+              )}
+              {profile?.discordUrl && (
+                <a href={profile.discordUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white/60 hover:text-white transition-colors"
+                  style={{ background: "rgba(88,101,242,0.08)", border: "1px solid rgba(88,101,242,0.2)" }}>
+                  <SiDiscord size={10} className="text-[#5865f2]" /> Discord <ExternalLink size={9} />
+                </a>
+              )}
+            </div>
+          ) : (
+            <button type="button" onClick={openModal}
+              className="w-full py-6 flex flex-col items-center justify-center gap-2 rounded-xl transition-all hover:bg-white/5"
+              style={{ border: `1px dashed ${CARD_BORDER}` }}>
+              <Twitter size={20} className="text-white/20" />
+              <span className="text-sm text-white/30">Add community links</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {open && (
+        <EditModal title="Community links" onClose={() => setOpen(false)} focusField={focusRequest?.field}
+          onSave={() => save.mutate({ gameId: profile?.id, twitterUrl: twitter, discordUrl: discord })}
+          isSaving={save.isPending}>
+          <p className="text-xs leading-relaxed text-white/45">
+            These links appear on your public game profile so players can find your community.
+          </p>
+          <FieldInput fieldName="twitterUrl" label="Twitter / X URL" value={twitter} onChange={setTwitter} type="url" placeholder="https://twitter.com/…" />
+          <FieldInput fieldName="discordUrl" label="Discord Server URL" value={discord} onChange={setDiscord} type="url" placeholder="https://discord.gg/…" />
+        </EditModal>
+      )}
+    </>
+  );
+}
+
+// ─── Details Summary ───────────────────────────────────────────────────────────
+function GameDetailsSummary({ profile, onEdit }: { profile: Profile | null; onEdit: (field: string) => void }) {
+  const fullDescription = profile?.fullDescription;
+  const tags = (profile?.tags as string[] | null) ?? [];
+  const features = (profile?.keyFeatures as string[] | null) ?? [];
+  const releaseDate = profile?.releaseDate ? String(profile.releaseDate).slice(0, 10) : "";
+  const hasDetails = !!fullDescription || tags.length > 0 || features.length > 0 || !!releaseDate;
+
+  return (
+    <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+      <div className="flex items-center justify-between px-5 py-4"
+        style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
+        <div className="flex items-center gap-2.5">
+          <Sparkles size={16} style={{ color: NEON }} />
+          <div>
+            <span className="text-sm font-bold text-white">Game details</span>
+            <p className="mt-0.5 text-[11px] text-white/35">Tell players what makes this game worth discovering.</p>
+          </div>
+        </div>
+        <button type="button" onClick={() => onEdit("fullDescription")}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/10"
+          style={{ border: `1px solid ${CARD_BORDER}`, color: "white" }}>
+          <Pencil size={11} /> Edit in Game Basics
+        </button>
+      </div>
+      <div className="p-5">
+        {hasDetails ? (
+          <div className="space-y-4">
+            {releaseDate && (
+              <div className="flex items-center gap-2 text-sm text-white/55">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-white/30">Release date</span>
+                <span>{releaseDate}</span>
+              </div>
+            )}
+            {fullDescription && (
+              <p className="text-sm leading-relaxed text-white/60 whitespace-pre-wrap">{fullDescription}</p>
+            )}
+            {features.length > 0 && (
+              <div>
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/30">Key features</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {features.map((feature, index) => (
+                    <span key={`${feature}-${index}`} className="rounded-full px-2.5 py-1 text-xs text-white/55"
+                      style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${CARD_BORDER}` }}>
+                      {feature}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {tags.length > 0 && (
+              <div>
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/30">Discovery tags</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map((tag, index) => (
+                    <span key={`${tag}-${index}`} className="rounded-full px-2.5 py-1 text-xs text-white/45"
+                      style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${CARD_BORDER}` }}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button type="button" onClick={() => onEdit("fullDescription")}
+            className="w-full py-6 flex flex-col items-center justify-center gap-2 rounded-xl transition-all hover:bg-white/5"
+            style={{ border: `1px dashed ${CARD_BORDER}` }}>
+            <Sparkles size={20} className="text-white/20" />
+            <span className="text-sm text-white/30">Add a full description, features, or tags</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Profile Accordion ─────────────────────────────────────────────────────────
+function ProfileAccordion({
+  id,
+  title,
+  description,
+  status,
+  open,
+  onToggle,
+  children,
+}: {
+  id: ProfileSectionId;
+  title: string;
+  description: string;
+  status: { label: string; color: string };
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  const headingId = `profile-section-heading-${id}`;
+  const contentId = `profile-section-content-${id}`;
+
+  return (
+    <section data-profile-section={id} className="scroll-mt-24 overflow-hidden rounded-2xl"
+      style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+      <button
+        type="button"
+        id={headingId}
+        aria-expanded={open}
+        aria-controls={contentId}
+        onClick={onToggle}
+        className="flex min-h-[4.5rem] w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.035] sm:px-5"
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+          style={{ background: open ? `${NEON}16` : "rgba(255,255,255,0.045)", color: open ? NEON : "rgba(255,255,255,0.5)" }}>
+          {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold text-white">{title}</span>
+          <span className="mt-0.5 block truncate text-[11px] text-white/35">{description}</span>
+        </span>
+        <span className="flex shrink-0 items-center gap-1.5 text-[11px] font-semibold" style={{ color: status.color }}>
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: status.color }} />
+          <span className="hidden sm:inline">{status.label}</span>
+        </span>
+      </button>
+      <div
+        id={contentId}
+        role="region"
+        aria-labelledby={headingId}
+        aria-hidden={!open}
+        className={`grid transition-[grid-template-rows] duration-200 ease-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+      >
+        <div className={`min-h-0 overflow-hidden ${open ? "visible" : "invisible pointer-events-none"}`}>
+          <div className="space-y-4 border-t px-4 pb-4 pt-4 sm:px-5 sm:pb-5">
+            {children}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Profile Header ────────────────────────────────────────────────────────────
+function ProfileEditorHeader({
+  profile,
+  publicProfileUrl,
+  onSelectField,
+  hasOverrides,
+}: {
+  profile: Profile | null;
+  publicProfileUrl: string | null;
+  onSelectField: (field: string) => void;
+  hasOverrides: boolean;
+}) {
+  const health = computeHealth(profile);
+  const color = health.pct >= 80 ? NEON : health.pct >= 50 ? "#d8b24c" : "#e66b73";
+  const status = health.pct >= 80 ? "Looking great" : health.pct >= 50 ? "Good progress" : "Needs attention";
+
+  return (
+    <header className="overflow-hidden rounded-2xl" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+      <div className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5 sm:py-5">
+        <div className="min-w-0">
+          <div className="mb-1.5 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em]" style={{ color: NEON }}>
+            <SettingsIcon />
+            Game Profile
+          </div>
+          <h1 className="truncate text-xl font-black tracking-tight text-white sm:text-2xl">
+            {profile?.gameName || "Set up your game profile"}
+          </h1>
+          <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-white/40">
+            Keep the details players see in one place. Start with the essentials, then add the finishing touches.
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <button type="button" onClick={() => onSelectField("gameName")}
+            className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-xs font-black text-white transition-colors hover:bg-white/10"
+            style={{ border: `1px solid ${CARD_BORDER}` }}>
+            <Pencil size={13} /> Edit profile
+          </button>
+          {publicProfileUrl && (
+            <a href={publicProfileUrl} target="_blank" rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-xs font-black transition-colors hover:brightness-110"
+              style={{ background: NEON, color: "#071000" }}>
+              Preview page <ArrowUpRight size={13} />
+            </a>
+          )}
+        </div>
+      </div>
+
+      <div className="border-t px-4 py-4 sm:px-5" style={{ borderColor: CARD_BORDER }}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-white">Profile completeness</span>
+            <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ color, background: `${color}18` }}>{status}</span>
+          </div>
+          <span className="text-sm font-black" style={{ color }}>{health.pct}%</span>
+        </div>
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.07]" role="progressbar"
+          aria-label="Profile completeness" aria-valuemin={0} aria-valuemax={100} aria-valuenow={health.pct}>
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${health.pct}%`, background: color }} />
+        </div>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-[11px] text-white/35">
+            {health.missingCount
+              ? `${health.missingCount} improvement${health.missingCount === 1 ? "" : "s"} available`
+              : "Everything needed for a complete profile is in place"}
+          </span>
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {health.top3.map(field => (
+              <button key={field.key} type="button" onClick={() => onSelectField(field.key)}
+                className="text-left text-[11px] font-bold transition-colors hover:text-white"
+                style={{ color: `${color}cc` }}>
+                Add {field.label} <span className="text-white/25">+{field.pts}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 border-t pt-3 text-[11px] text-white/30" style={{ borderColor: CARD_BORDER }}>
+          <span>Imported values stay separate from direct edits.</span>
+          <DataSourceExplainer showOverridden={hasOverrides} />
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function SettingsIcon() {
+  return <span className="h-1.5 w-1.5 rounded-full" style={{ background: NEON, boxShadow: `0 0 10px ${NEON}` }} />;
+}
+
 // ─── Main export ───────────────────────────────────────────────────────────────
 export default function GameProfileTab({
   gameId,
@@ -1523,7 +1880,8 @@ export default function GameProfileTab({
   focusRequest?: { field: string } | null;
   isVisible?: boolean;
 }) {
-  const { data } = useQuery<{ profile: Profile; fieldMeta: FieldMeta }>({
+  const { user } = useAuth();
+  const { data, isLoading } = useQuery<{ profile: Profile; fieldMeta: FieldMeta }>({
     queryKey: ["/api/indie/profile", gameId ?? null],
     queryFn: () => apiRequest("GET", `/api/indie/profile${gameId ? `?gameId=${gameId}` : ""}`).then(r => r.json()),
   });
@@ -1531,9 +1889,15 @@ export default function GameProfileTab({
   const profile = (data as any)?.profile ?? null;
   const fieldMeta: FieldMeta = (data as any)?.fieldMeta ?? {};
   const [activeFocusRequest, setActiveFocusRequest] = useState<{ field: string } | null>(null);
+  const [activeSection, setActiveSection] = useState<ProfileSectionId | null>("basics");
 
   useEffect(() => {
-    setActiveFocusRequest(focusRequest ?? null);
+    const nextRequest = focusRequest ?? null;
+    setActiveFocusRequest(nextRequest);
+    if (nextRequest) {
+      const section = PROFILE_SECTION_BY_FIELD[nextRequest.field];
+      if (section) setActiveSection(section);
+    }
   }, [focusRequest]);
 
   useEffect(() => {
@@ -1548,22 +1912,85 @@ export default function GameProfileTab({
     });
   }, [activeFocusRequest, profile?.id, isVisible]);
 
+  const requestFocus = (field: string) => {
+    const section = PROFILE_SECTION_BY_FIELD[field];
+    if (section) setActiveSection(section);
+    setActiveFocusRequest({ field });
+  };
+  const profileUrl = user?.username && profile?.id
+    ? publicUrl(`/studio/${encodeURIComponent(user.username)}?gameId=${profile.id}`)
+    : null;
+  const toggleSection = (section: ProfileSectionId) => {
+    setActiveSection(current => current === section ? null : section);
+  };
+
   return (
     <div className={`space-y-4 pb-10 ${isVisible ? "" : "hidden"}`}>
-      <ProfileHealthCard profile={profile} onSelectField={(field) => setActiveFocusRequest({ field })} />
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl px-4 py-3 text-xs text-white/55"
-        style={{ background: "rgba(102,192,244,0.06)", border: "1px solid rgba(102,192,244,0.18)" }}>
-        <Download size={14} className="shrink-0 text-[#66c0f4]" />
-        <span className="flex-1 min-w-[12rem]">Imported information is kept separate from values you enter directly.</span>
-        <DataSourceExplainer showOverridden={Object.values(fieldMeta).some(meta => meta?.isManualOverride && meta?.importedValue)} />
-      </div>
-      <AboutCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
-      <MediaCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
-      <StoreListingCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
-      <PlatformCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
-      <StudioCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
-      <MetadataCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
-      <AdvancedCard profile={profile} fieldMeta={fieldMeta} />
+      <ProfileEditorHeader
+        profile={profile}
+        publicProfileUrl={profileUrl}
+        onSelectField={requestFocus}
+        hasOverrides={Object.values(fieldMeta).some(meta => meta?.isManualOverride && meta?.importedValue)}
+      />
+      {isLoading ? (
+        <div className="rounded-2xl px-5 py-12 text-center text-sm text-white/40"
+          style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+          Loading your game profile…
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <ProfileAccordion id="basics" title="Game Basics"
+            description="Name, description, release status, genres, and supported platforms"
+            status={getSectionStatus(profile, "basics")} open={activeSection === "basics"}
+            onToggle={() => toggleSection("basics")}>
+            <AboutCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
+            <PlatformCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
+          </ProfileAccordion>
+
+          <ProfileAccordion id="stores" title="Store & Purchase Links"
+            description="Connect the places where players can buy or learn more about your game"
+            status={getSectionStatus(profile, "stores")} open={activeSection === "stores"}
+            onToggle={() => toggleSection("stores")}>
+            <StoreListingCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
+          </ProfileAccordion>
+
+          <ProfileAccordion id="media" title="Media & Branding"
+            description="Banner, capsule artwork, trailer, and screenshots"
+            status={getSectionStatus(profile, "media")} open={activeSection === "media"}
+            onToggle={() => toggleSection("media")}>
+            <MediaCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
+          </ProfileAccordion>
+
+          <ProfileAccordion id="details" title="Game Details"
+            description="Detailed descriptions, features, discovery tags, and store metadata"
+            status={getSectionStatus(profile, "details")} open={activeSection === "details"}
+            onToggle={() => toggleSection("details")}>
+            <GameDetailsSummary profile={profile} onEdit={requestFocus} />
+            <MetadataCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
+          </ProfileAccordion>
+
+          <ProfileAccordion id="community" title="Community & Social"
+            description="Help players follow your game and join the conversation"
+            status={getSectionStatus(profile, "community")} open={activeSection === "community"}
+            onToggle={() => toggleSection("community")}>
+            <CommunitySocialCard profile={profile} focusRequest={activeFocusRequest} />
+          </ProfileAccordion>
+
+          <ProfileAccordion id="developer" title="Developer Information"
+            description="Studio identity, location, team size, and developer website"
+            status={getSectionStatus(profile, "developer")} open={activeSection === "developer"}
+            onToggle={() => toggleSection("developer")}>
+            <StudioCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
+          </ProfileAccordion>
+
+          <ProfileAccordion id="advanced" title="Advanced Settings"
+            description="Import fields from a store or review updates before syncing them"
+            status={getSectionStatus(profile, "advanced")} open={activeSection === "advanced"}
+            onToggle={() => toggleSection("advanced")}>
+            <AdvancedCard profile={profile} fieldMeta={fieldMeta} />
+          </ProfileAccordion>
+        </div>
+      )}
     </div>
   );
 }
