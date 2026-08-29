@@ -2396,6 +2396,11 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
   websiteUrl: text("website_url"),
   twitterUrl: text("twitter_url"),
   discordUrl: text("discord_url"),
+  youtubeUrl: text("youtube_url"),
+  twitchUrl: text("twitch_url"),
+  instagramUrl: text("instagram_url"),
+  facebookUrl: text("facebook_url"),
+  tiktokUrl: text("tiktok_url"),
 
   // Section 9: Store-Specific Info
   ageRating: text("age_rating"),

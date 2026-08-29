@@ -27,8 +27,7 @@ import {
   Gamepad, Monitor, Smartphone,
   Film, MessageSquare, AlertCircle, ShieldCheck, Unlock, Rocket,
 } from "lucide-react";
-import { SiDiscord } from "react-icons/si";
-import { FaXTwitter } from "react-icons/fa6";
+import { GAME_SOCIAL_LINKS } from "@/lib/indie-game-links";
 
 const UploadPage = lazy(() => import("./UploadPage"));
 
@@ -1189,6 +1188,11 @@ interface IndieGameMeta {
   website: string;
   discordUrl: string;
   twitterUrl: string;
+  youtubeUrl: string;
+  twitchUrl: string;
+  instagramUrl: string;
+  facebookUrl: string;
+  tiktokUrl: string;
   steamUrl: string;
   epicUrl: string;
   itchUrl: string;
@@ -1416,6 +1420,11 @@ const IndieGamePage = () => {
     website: igp?.websiteUrl ?? game?.indieMeta?.website ?? "",
     discordUrl: igp?.discordUrl ?? game?.indieMeta?.discordUrl ?? "",
     twitterUrl: igp?.twitterUrl ?? "",
+    youtubeUrl: igp?.youtubeUrl ?? "",
+    twitchUrl: igp?.twitchUrl ?? "",
+    instagramUrl: igp?.instagramUrl ?? "",
+    facebookUrl: igp?.facebookUrl ?? "",
+    tiktokUrl: igp?.tiktokUrl ?? "",
     steamUrl: igp?.steamUrl ?? game?.indieMeta?.steamUrl ?? "",
     epicUrl: igp?.epicUrl ?? game?.indieMeta?.epicUrl ?? "",
     itchUrl: igp?.itchUrl ?? game?.indieMeta?.itchUrl ?? "",
@@ -1659,24 +1668,18 @@ const IndieGamePage = () => {
                 Website
               </button>
             )}
-            {meta.discordUrl && (
-              <button
-                onClick={() => openExternal(meta.discordUrl)}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-80"
-                style={{ background: "#5865F2", border: "1px solid #5865F2" }}>
-                <SiDiscord className="w-3.5 h-3.5" />
-                Discord
-              </button>
-            )}
-            {meta.twitterUrl && (
-              <button
-                onClick={() => openExternal(meta.twitterUrl)}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-80"
-                style={{ background: "#000", border: "1px solid rgba(255,255,255,0.16)" }}>
-                <FaXTwitter className="w-3.5 h-3.5" />
-                X
-              </button>
-            )}
+            {GAME_SOCIAL_LINKS.map(({ field, label, color, borderColor, icon: Icon }) => {
+              const href = meta[field];
+              return href ? (
+                <button key={field}
+                  onClick={() => openExternal(href)}
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition-[filter] hover:brightness-110"
+                  style={{ background: color, border: `1px solid ${borderColor}` }}>
+                  <Icon className="w-3.5 h-3.5" />
+                  {label}
+                </button>
+              ) : null;
+            })}
             <button
               onClick={handleOpenUpload}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/5"
@@ -1936,7 +1939,7 @@ const IndieGamePage = () => {
                 </div>
 
                 {/* Store links */}
-                {(meta.steamUrl || meta.epicUrl || meta.itchUrl || meta.discordUrl || meta.website) && (
+                {(meta.steamUrl || meta.epicUrl || meta.itchUrl || meta.website || GAME_SOCIAL_LINKS.some(({ field }) => meta[field])) && (
                   <div className="rounded-2xl p-5 space-y-3" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
                     <h3 className="text-[9px] uppercase tracking-widest font-bold text-white/40 mb-1">Links</h3>
                     {meta.steamUrl && (

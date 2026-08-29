@@ -11,13 +11,18 @@ import {
   ArrowUpRight, ChevronDown, ChevronRight,
 } from "lucide-react";
 import {
-  SiSteam, SiEpicgames, SiItchdotio, SiDiscord, SiMacos, SiLinux,
+  SiSteam, SiEpicgames, SiItchdotio, SiMacos, SiLinux,
   SiPlaystation, SiNintendoswitch, SiIos, SiAndroid,
 } from "react-icons/si";
-import { FaWindows, FaXbox, FaXTwitter } from "react-icons/fa6";
+import { FaWindows, FaXbox } from "react-icons/fa6";
 import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 import { useAuth } from "@/hooks/use-auth";
 import { publicUrl } from "@/lib/platform";
+import {
+  GAME_SOCIAL_LINKS,
+  emptyGameSocialValues,
+  type GameSocialField,
+} from "@/lib/indie-game-links";
 import { StoreImportPanel } from "./edit-profile/StoreImportPanel";
 import { SyncPanel } from "./edit-profile/SyncPanel";
 import { DataSourceExplainer } from "./edit-profile/DataSourceExplainer";
@@ -72,6 +77,11 @@ const PROFILE_SECTION_BY_FIELD: Record<string, ProfileSectionId> = {
   studioWebsite: "developer",
   twitterUrl: "community",
   discordUrl: "community",
+  youtubeUrl: "community",
+  twitchUrl: "community",
+  instagramUrl: "community",
+  facebookUrl: "community",
+  tiktokUrl: "community",
   ageRating: "details",
   supportedLanguages: "details",
   contentDescriptors: "details",
@@ -81,7 +91,7 @@ const PROFILE_SECTION_FIELDS: Record<Exclude<ProfileSectionId, "stores" | "advan
   basics: ["gameName", "shortDescription", "releaseStatus", "genres", "platforms"],
   media: ["headerImageUrl", "capsuleImageUrl", "trailerUrl", "screenshotUrls"],
   details: ["fullDescription", "tags", "keyFeatures", "releaseDate", "ageRating", "supportedLanguages", "contentDescriptors"],
-  community: ["twitterUrl", "discordUrl"],
+  community: GAME_SOCIAL_LINKS.map(({ field }) => field),
   developer: ["studioName", "studioCountry", "studioFoundedYear", "studioTeamSize", "studioWebsite"],
 };
 
@@ -369,16 +379,17 @@ function FieldInput({ label, value, onChange, type = "text", placeholder, rows, 
   label: string; value: string; onChange: (v: string) => void;
   type?: string; placeholder?: string; rows?: number; fieldName?: string;
 }) {
+  const inputId = useId();
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-medium text-white/50 uppercase tracking-wider">{label}</label>
+      {label && <label htmlFor={inputId} className="text-xs font-medium text-white/50 uppercase tracking-wider">{label}</label>}
       {rows ? (
-          <textarea data-profile-field={fieldName} value={value} onChange={e => onChange(e.target.value)} rows={rows}
+          <textarea id={inputId} data-profile-field={fieldName} value={value} onChange={e => onChange(e.target.value)} rows={rows}
           placeholder={placeholder}
           className="w-full bg-transparent border rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-white/30 resize-none"
           style={{ borderColor: CARD_BORDER }} />
       ) : (
-        <input data-profile-field={fieldName} type={type} value={value} onChange={e => onChange(e.target.value)}
+        <input id={inputId} data-profile-field={fieldName} type={type} value={value} onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           className="w-full bg-transparent border rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-white/30"
           style={{ borderColor: CARD_BORDER }} />
@@ -1263,13 +1274,12 @@ function PlatformCard({
         return (
           <button key={p.id} type="button" onClick={() => toggle(p.id)}
             aria-pressed={on}
-            className="flex flex-col items-center gap-2 p-3 rounded-xl transition-all"
-            style={{
-              background: on ? `${NEON}14` : "rgba(255,255,255,0.03)",
-              border: `1px solid ${on ? `${NEON}55` : CARD_BORDER}`,
-              color: on ? NEON : "rgba(255,255,255,0.3)",
-            }}>
-            <Icon size={18} />
+            className={`flex flex-col items-center gap-2 rounded-xl border p-3 transition-[background-color,border-color,color,transform] hover:-translate-y-0.5 ${
+              on
+                ? "border-[#B7FF18] bg-[#B7FF18] text-[#0F101B]"
+                : "border-[#252938] bg-[#151724] text-[#F8FAFC] hover:border-[#B7FF18] hover:bg-[#1A1D2B]"
+            }`}>
+            <Icon size={21} />
             <span className="text-[10px] font-bold">{p.label}</span>
           </button>
         );
@@ -1563,23 +1573,23 @@ function CommunitySocialCard({
   focusRequest?: { field: string } | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [twitter, setTwitter] = useState("");
-  const [discord, setDiscord] = useState("");
+  const [socialValues, setSocialValues] = useState<Record<GameSocialField, string>>(emptyGameSocialValues);
   const save = useSaveProfile(profile?.id, () => setOpen(false));
 
   const openModal = () => {
-    setTwitter(profile?.twitterUrl ?? "");
-    setDiscord(profile?.discordUrl ?? "");
+    setSocialValues(Object.fromEntries(
+      GAME_SOCIAL_LINKS.map(({ field }) => [field, profile?.[field] ?? ""]),
+    ) as Record<GameSocialField, string>);
     setOpen(true);
   };
 
   useEffect(() => {
-    if (profile && focusRequest && ["twitterUrl", "discordUrl"].includes(focusRequest.field)) {
+    if (profile && focusRequest && GAME_SOCIAL_LINKS.some(({ field }) => field === focusRequest.field)) {
       openModal();
     }
   }, [focusRequest, profile?.id]);
 
-  const hasSocial = !!profile?.twitterUrl || !!profile?.discordUrl;
+  const hasSocial = GAME_SOCIAL_LINKS.some(({ field }) => !!profile?.[field]);
 
   return (
     <>
@@ -1602,20 +1612,16 @@ function CommunitySocialCard({
         <div className="p-5">
           {hasSocial ? (
             <div className="flex flex-wrap gap-2">
-              {profile?.twitterUrl && (
-                <a href={profile.twitterUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-80"
-                  style={{ background: "#000", border: "1px solid rgba(255,255,255,0.16)" }}>
-                  <FaXTwitter size={11} /> X <ExternalLink size={9} />
-                </a>
-              )}
-              {profile?.discordUrl && (
-                <a href={profile.discordUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition-opacity hover:opacity-80"
-                  style={{ background: "#5865F2", border: "1px solid #5865F2" }}>
-                  <SiDiscord size={11} /> Discord <ExternalLink size={9} />
-                </a>
-              )}
+              {GAME_SOCIAL_LINKS.map(({ field, label, color, borderColor, icon: Icon }) => {
+                const href = profile?.[field];
+                return href ? (
+                  <a key={field} href={href} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition-[filter] hover:brightness-110"
+                    style={{ background: color, border: `1px solid ${borderColor}` }}>
+                    <Icon size={11} /> {label} <ExternalLink size={9} />
+                  </a>
+                ) : null;
+              })}
             </div>
           ) : (
             <button type="button" onClick={openModal}
@@ -1630,13 +1636,28 @@ function CommunitySocialCard({
 
       {open && (
         <EditModal title="Game social platforms" onClose={() => setOpen(false)} focusField={focusRequest?.field}
-          onSave={() => save.mutate({ gameId: profile?.id, twitterUrl: twitter, discordUrl: discord })}
+          onSave={() => save.mutate({ gameId: profile?.id, ...socialValues })}
           isSaving={save.isPending}>
           <p className="text-xs leading-relaxed text-white/45">
             These links belong to this game and appear as branded badges in the dashboard and on its public profile.
           </p>
-          <FieldInput fieldName="twitterUrl" label="Twitter / X URL" value={twitter} onChange={setTwitter} type="url" placeholder="https://twitter.com/…" />
-          <FieldInput fieldName="discordUrl" label="Discord Server URL" value={discord} onChange={setDiscord} type="url" placeholder="https://discord.gg/…" />
+          {GAME_SOCIAL_LINKS.map(({ field, inputLabel, placeholder, color, icon: Icon }) => (
+            <div key={field} className="rounded-xl p-3" style={{ background: "#151724", border: "1px solid #252938" }}>
+              <div className="flex items-start gap-2.5">
+                <Icon size={16} className="mt-0.5 shrink-0" style={{ color }} aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <FieldInput
+                    fieldName={field}
+                    label={inputLabel}
+                    value={socialValues[field]}
+                    onChange={(value) => setSocialValues(current => ({ ...current, [field]: value }))}
+                    type="url"
+                    placeholder={placeholder}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
         </EditModal>
       )}
     </>

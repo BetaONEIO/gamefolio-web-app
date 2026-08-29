@@ -4,9 +4,9 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { Loader2, ImagePlus, X, CropIcon, Upload, ArrowUpRight, Edit3 } from "lucide-react";
-import { SiDiscord, SiEpicgames, SiItchdotio, SiSteam } from "react-icons/si";
-import { FaXTwitter } from "react-icons/fa6";
+import { SiEpicgames, SiItchdotio, SiSteam } from "react-icons/si";
 import { publicUrl } from "@/lib/platform";
+import { GAME_PLATFORM_LINKS, GAME_SOCIAL_LINKS } from "@/lib/indie-game-links";
 import { NEON } from "./constants";
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
@@ -404,6 +404,22 @@ export default function GameHeroBanner({
                     {profile.shortDescription || profile.fullDescription}
                   </p>
                 )}
+                {!!profile?.platforms?.length && (
+                  <div className="mb-4 flex flex-wrap gap-2" aria-label="Available platforms">
+                    {profile.platforms.map((platform: string) => {
+                      const definition = GAME_PLATFORM_LINKS[platform.toLowerCase()];
+                      const Icon = definition?.icon;
+                      return (
+                        <span key={platform}
+                          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold text-white"
+                          style={{ background: "#151724", border: "1px solid #252938" }}>
+                          {Icon && <Icon className="h-3 w-3" />}
+                          {definition?.label ?? platform.replace(/_/g, " ")}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
                 <div className="flex flex-wrap items-center gap-3 mb-5">
                   {profile?.releaseStatus && (
                     <span className="text-[11px] font-bold px-2.5 py-1 rounded uppercase tracking-wider"
@@ -411,13 +427,10 @@ export default function GameHeroBanner({
                       {profile.releaseStatus.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
                     </span>
                   )}
-                  {profile?.platforms?.map((platform: string) => (
-                    <span key={platform} className="text-[11px] capitalize text-white/40">{platform.replace(/_/g, " ")}</span>
-                  ))}
                   {profile?.studioName && <span className="text-[11px] text-white/40">{profile.studioName}</span>}
                 </div>
 
-                {(profile?.steamUrl || profile?.epicUrl || profile?.itchUrl || profile?.twitterUrl || profile?.discordUrl) && (
+                {(profile?.steamUrl || profile?.epicUrl || profile?.itchUrl || GAME_SOCIAL_LINKS.some(({ field }) => profile?.[field])) && (
                   <div className="mb-5 flex flex-wrap gap-2">
                     {profile?.steamUrl && (
                       <a href={profile.steamUrl} target="_blank" rel="noopener noreferrer"
@@ -440,20 +453,16 @@ export default function GameHeroBanner({
                         <SiItchdotio className="h-3 w-3" /> itch.io
                       </a>
                     )}
-                    {profile?.twitterUrl && (
-                      <a href={profile.twitterUrl} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold text-white transition-opacity hover:opacity-80"
-                        style={{ background: "#000", border: "1px solid rgba(255,255,255,0.16)" }}>
-                        <FaXTwitter className="h-3 w-3" /> X
-                      </a>
-                    )}
-                    {profile?.discordUrl && (
-                      <a href={profile.discordUrl} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold text-white transition-opacity hover:opacity-80"
-                        style={{ background: "#5865F2", border: "1px solid #5865F2" }}>
-                        <SiDiscord className="h-3 w-3" /> Discord
-                      </a>
-                    )}
+                    {GAME_SOCIAL_LINKS.map(({ field, label, color, borderColor, icon: Icon }) => {
+                      const href = profile?.[field];
+                      return href ? (
+                        <a key={field} href={href} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold text-white transition-[filter] hover:brightness-110"
+                          style={{ background: color, border: `1px solid ${borderColor}` }}>
+                          <Icon className="h-3 w-3" /> {label}
+                        </a>
+                      ) : null;
+                    })}
                   </div>
                 )}
                 <div className="flex flex-wrap items-center gap-2">

@@ -29,7 +29,8 @@ export const ESSENTIAL_FIELDS = ["gameName", "shortDescription", "headerImageUrl
 export const OPTIONAL_FIELDS = [
   "fullDescription", "releaseDate", "studioName", "studioFoundedYear", "studioTeamSize", "studioWebsite",
   "studioCountry", "genres", "tags", "platforms", "capsuleImageUrl", "trailerUrl", "screenshotUrls",
-  "keyFeatures", "websiteUrl", "twitterUrl", "discordUrl", "price",
+  "keyFeatures", "websiteUrl", "twitterUrl", "discordUrl", "youtubeUrl", "twitchUrl",
+  "instagramUrl", "facebookUrl", "tiktokUrl", "price",
   "ageRating", "supportedLanguages", "contentDescriptors",
 ];
 

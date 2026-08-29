@@ -12015,7 +12015,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Store links are validated against their platform's host so a link pasted
   // into the wrong field is rejected rather than silently breaking imports.
-  const { validateStoreUrls } = await import("@shared/store-urls");
+  const { validateStoreUrls, normalizeProfileUrls } = await import("@shared/store-urls");
 
   // Store lookups, factored out so the partner-only preview endpoints and the
   // onboarding-time lookup below share one implementation.
@@ -12141,7 +12141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "headerImageUrl","capsuleImageUrl","trailerUrl","screenshotUrls",
     "platforms",
     "steamUrl","steamAppId","epicUrl","epicSlug","itchUrl",
-    "websiteUrl","twitterUrl","discordUrl",
+    "websiteUrl","twitterUrl","discordUrl","youtubeUrl","twitchUrl","instagramUrl","facebookUrl","tiktokUrl",
     "ageRating","supportedLanguages","contentDescriptors",
     "autoSyncEnabled","preferredSyncSource",
   ];
@@ -12326,6 +12326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (key in req.body) patch[key] = req.body[key];
       }
       if (Object.keys(patch).length === 0) return res.status(400).json({ error: "No valid fields provided" });
+      normalizeProfileUrls(patch);
       const urlErrors = validateStoreUrls(patch);
       if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
       patch.updatedAt = new Date();
@@ -12387,6 +12388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
+      normalizeProfileUrls(patch);
       const urlErrors = validateStoreUrls(patch);
       if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
       patch.updatedAt = new Date();
@@ -12589,6 +12591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (key in req.body && req.body[key] !== "" && req.body[key] != null) patch[key] = req.body[key];
       }
       if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
+      normalizeProfileUrls(patch);
       const urlErrors = validateStoreUrls(patch);
       if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
 
