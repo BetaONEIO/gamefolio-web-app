@@ -1,9 +1,10 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect, useId } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useSignedUrl } from "@/hooks/use-signed-url";
-import { Loader2, ImagePlus, X, CropIcon, Upload } from "lucide-react";
+import { Loader2, ImagePlus, X, CropIcon, Upload, ArrowUpRight, Edit3 } from "lucide-react";
+import { publicUrl } from "@/lib/platform";
 import { NEON } from "./constants";
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
@@ -87,6 +88,39 @@ function ImageCropModal({
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const imgRef = useRef<HTMLImageElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isUploading) {
+        onCancel();
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+      ));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus();
+    };
+  }, [isUploading, onCancel]);
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
@@ -102,16 +136,17 @@ function ImageCropModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.88)", backdropFilter: "blur(6px)" }}>
-      <div className="flex flex-col gap-4 w-full max-w-2xl"
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId}
+        className="flex flex-col gap-4 w-full max-w-2xl"
         style={{ background: "#0d1117", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 16, padding: 24 }}>
 
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CropIcon className="w-4 h-4" style={{ color: NEON }} />
-            <span className="text-sm font-black text-white">{title}</span>
+            <span id={titleId} className="text-sm font-black text-white">{title}</span>
           </div>
-          <button onClick={onCancel} disabled={isUploading}
+          <button ref={closeButtonRef} onClick={onCancel} disabled={isUploading} aria-label={`Close ${title}`}
             className="rounded-lg p-1.5 transition-colors hover:bg-white/10">
             <X className="w-4 h-4 text-white/50" />
           </button>
@@ -167,9 +202,11 @@ function ImageCropModal({
 export default function GameHeroBanner({
   gameId,
   onGoTo,
+  onEditProfile,
 }: {
   gameId?: number;
   onGoTo?: (field: string) => void;
+  onEditProfile?: () => void;
 }) {
   const { user } = useAuth();
   const [imgError, setImgError] = useState(false);
@@ -423,6 +460,23 @@ export default function GameHeroBanner({
                     </button>
                   )}
                 </div>
+                 <div className="flex flex-wrap items-center gap-2 pt-3">
+                   {onEditProfile && (
+                     <button type="button" onClick={onEditProfile}
+                       className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-black transition-all hover:brightness-110"
+                       style={{ background: NEON, color: "#071000" }}>
+                       <Edit3 className="h-3 w-3" /> Edit game profile
+                     </button>
+                   )}
+                   {user?.username && profile?.id && (
+                     <a href={publicUrl(`/studio/${encodeURIComponent(user.username)}?gameId=${profile.id}`)}
+                       target="_blank" rel="noreferrer"
+                       className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-black text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                       style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                       View public page <ArrowUpRight className="h-3 w-3" />
+                     </a>
+                   )}
+                 </div>
               </div>
             </div>
           </div>

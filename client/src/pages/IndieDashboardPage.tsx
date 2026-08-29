@@ -83,6 +83,7 @@ export default function IndieDashboardPage() {
        <GameHeroBanner
          gameId={activeGameId}
          onGoTo={(field) => goTo("game-profile", field)}
+          onEditProfile={() => setQuickEditFocus({ field: "gameName" })}
        />
 
       <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -128,7 +129,7 @@ export default function IndieDashboardPage() {
         )}
 
         {/* ── CONTENT ── */}
-        {tab === "creator-content" && <CreatorContentTab />}
+        {tab === "creator-content" && <CreatorContentTab gameId={activeGameId} />}
 
         {/* ── KEYS ── */}
         {GAME_KEYS_ENABLED && tab === "keys" && <KeyManagementTab />}

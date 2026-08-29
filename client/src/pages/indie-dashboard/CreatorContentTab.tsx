@@ -124,14 +124,16 @@ function ContentCard({ item, showGame }: { item: CreatorContentItem; showGame: b
   );
 }
 
-export default function CreatorContentTab() {
+export default function CreatorContentTab({ gameId }: { gameId?: number }) {
   const [filter, setFilter] = useState("all");
   const [source, setSource] = useState<"all" | "publisher" | "creator">("all");
 
   const { data: contentData } = useQuery<CreatorContentResponse | null>({
-    queryKey: ["/api/indie/creator-content", source],
+    queryKey: ["/api/indie/creator-content", source, gameId ?? null],
     queryFn: async () => {
-      const response = await fetch(`/api/indie/creator-content?source=${source}`, { credentials: "include" });
+      const params = new URLSearchParams({ source });
+      if (gameId != null) params.set("gameId", String(gameId));
+      const response = await fetch(`/api/indie/creator-content?${params.toString()}`, { credentials: "include" });
       if (response.status === 401) return null;
       if (!response.ok) throw new Error("Could not load content for your games");
       return response.json();
