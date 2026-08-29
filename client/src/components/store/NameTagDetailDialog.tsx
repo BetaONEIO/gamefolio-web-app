@@ -94,7 +94,7 @@ export function NameTagDetailDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        className="bg-[#0B1218] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
+        className="bg-popover border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
       >
         <div
           className="flex-1 overflow-y-auto relative"
@@ -104,11 +104,11 @@ export function NameTagDetailDialog({
           <div className="hide-scrollbar flex flex-col">
 
             {/* Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 pt-12 pb-4 bg-[#0B1218]/80 backdrop-blur-md">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-4 pt-12 pb-4 bg-popover/80 backdrop-blur-md">
               <div className="flex items-center gap-4">
                 <button
                   onClick={handleClose}
-                  className="w-10 h-10 rounded-full bg-[#1B2A33]/50 flex items-center justify-center transition-colors hover:bg-[#1B2A33]/80"
+                  className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center transition-colors hover:bg-secondary/80"
                 >
                   <ArrowLeft className="h-6 w-6 text-white" />
                 </button>
@@ -179,18 +179,18 @@ export function NameTagDetailDialog({
 
               {/* Owner & Viewers */}
               <div className="flex items-center gap-3 mb-6">
-                <div className="bg-[#1B2A33]/30 rounded-full flex items-center gap-2 pr-4 pl-1 py-1">
+                <div className="bg-secondary/30 rounded-full flex items-center gap-2 pr-4 pl-1 py-1">
                   {ownerAvatarUrl ? (
-                    <img src={ownerAvatarUrl} alt={ownerName || 'Owner'} className="w-7 h-7 rounded-full border-2 border-[#0B1218] object-cover" />
+                    <img src={ownerAvatarUrl} alt={ownerName || 'Owner'} className="w-7 h-7 rounded-full border-2 border-border object-cover" />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#B7FF1A] to-[#A2F000] border-2 border-[#0B1218]" />
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#B7FF1A] to-[#A2F000] border-2 border-border" />
                   )}
                   <div className="flex flex-col">
                     <span className="text-[10px] text-[#B8C0AE] leading-[10px]">Owner</span>
                     <span className="text-xs font-bold text-[#F5F7F2] leading-4">{ownerName || 'Gamefolio'}</span>
                   </div>
                 </div>
-                <div className="bg-[#1B2A33]/30 border border-[#1B2A33]/50 rounded-full flex items-center gap-2 px-3 py-1.5">
+                <div className="bg-secondary/30 border border-border rounded-full flex items-center gap-2 px-3 py-1.5">
                   <svg width="16" height="11" viewBox="0 0 14 11" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path fillRule="evenodd" clipRule="evenodd" d="M0.849999 7.53066C0.283333 6.79466 0 6.42599 0 5.33333C0 4.24 0.283333 3.87266 0.849999 3.136C1.98133 1.66667 3.87866 0 6.66666 0C9.45466 0 11.352 1.66667 12.4833 3.136C13.05 3.87333 13.3333 4.24066 13.3333 5.33333C13.3333 6.42666 13.05 6.79399 12.4833 7.53066C11.352 8.99999 9.45466 10.6667 6.66666 10.6667C3.87866 10.6667 1.98133 8.99999 0.849999 7.53066Z" stroke="#B8C0AE" strokeWidth="0.999999" />
                     <path fillRule="evenodd" clipRule="evenodd" d="M8.66699 5.33325C8.66699 6.43782 7.77156 7.33325 6.66699 7.33325C5.56242 7.33325 4.66699 6.43782 4.66699 5.33325C4.66699 4.22868 5.56242 3.33325 6.66699 3.33325C7.77156 3.33325 8.66699 4.22868 8.66699 5.33325Z" stroke="#B8C0AE" />
@@ -209,11 +209,11 @@ export function NameTagDetailDialog({
 
               {/* Rarity Chance & Rating Cards */}
               <div className="flex gap-3 mb-6">
-                <div className="flex-1 bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col gap-2">
+                <div className="flex-1 bg-card border border-border rounded-2xl p-4 flex flex-col gap-2">
                   <span className="text-[10px] font-black text-[#B8C0AE] uppercase" style={{ letterSpacing: '1px' }}>Rarity Chance</span>
                   <span className="text-2xl font-black text-[#F5F7F2]">{rarityChance}</span>
                 </div>
-                <div className="flex-1 bg-[#0B1218] border rounded-2xl p-4 flex items-center gap-3 overflow-hidden" style={{ borderColor: `${rarityColor}20` }}>
+                <div className="flex-1 bg-card border rounded-2xl p-4 flex items-center gap-3 overflow-hidden" style={{ borderColor: `${rarityColor}20` }}>
                   <div className="flex flex-col gap-2 flex-1">
                     <span className="text-[10px] font-black text-[#B8C0AE] uppercase" style={{ letterSpacing: '1px' }}>Rating</span>
                     <div className="flex items-baseline gap-1">

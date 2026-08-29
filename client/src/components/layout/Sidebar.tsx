@@ -303,7 +303,7 @@ const Sidebar = () => {
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex w-64 bg-card fixed top-0 left-0 bottom-0 flex-col border-r border-border z-40">
+      <div className="hidden lg:flex w-64 bg-background fixed top-0 left-0 bottom-0 flex-col border-r border-border z-40">
         <nav className="px-4 pt-40 pb-4 space-y-1 flex-1 overflow-y-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {menuItems.map((item) => {
             const isActive = location === item.href;
@@ -544,7 +544,7 @@ const Sidebar = () => {
 
       {/* Mobile/Tablet Your Games Section */}
       {user && (
-        <div className="lg:hidden px-4 py-6 bg-card border-b border-border">
+        <div className="lg:hidden px-4 py-6 bg-background border-b border-border">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-foreground">Your Games</h3>
             <Button

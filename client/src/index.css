@@ -13,19 +13,23 @@
   --keyboard-height: 0px;
   --visual-viewport-height: 100dvh;
 
-  /* Shared solid Gamefolio surface system */
-  /* Shared mobile/web palette: neutral midnight navy with subtle layered surfaces */
-  --gf-bg: #0F1119;
-  --gf-surface-1: #141925;
-  --gf-surface-2: #1A1F2D;
-  --gf-surface-3: #202638;
-  --gf-surface-hover: #2A3040;
-  --gf-border: #2D3547;
-  --gf-border-subtle: #202638;
+  /* Official shared Gamefolio colour system */
+  --gf-background: #0F101B;
+  --gf-surface: #151724;
+  --gf-surface-raised: #1A1D2B;
+  --gf-border: #252938;
+  --gf-accent: #B7FF18;
+
+  /* Backwards-compatible semantic aliases. New UI should use the official names above. */
+  --gf-bg: var(--gf-background);
+  --gf-surface-1: var(--gf-surface);
+  --gf-surface-2: var(--gf-surface-raised);
+  --gf-surface-3: var(--gf-border);
+  --gf-surface-hover: var(--gf-border);
+  --gf-border-subtle: var(--gf-border);
   --gf-text: #FFFFFF;
   --gf-text-secondary: #A9B4BE;
   --gf-text-muted: #73808B;
-  --gf-accent: #B7FF18;
 }
 
 /* Give all inputs scroll-margin so they appear above the keyboard when scrolled into view */
@@ -336,28 +340,6 @@ video:focus {
   z-index: 9999 !important;
 }
 
-/* Apply Gamefolio theme globally to all modals and dialogs */
-[data-radix-popper-content-wrapper],
-[role="dialog"],
-.video-modal-container,
-.clip-dialog-content {
-  /* Apply global Gamefolio theme variables */
-  --profile-accent-color: #6B7280 !important;
-   --profile-primary-color: var(--gf-surface-1) !important;
-  --profile-avatar-border-color: #6B7280 !important;
-  --profile-accent-color-alpha: rgba(107, 114, 128, 0.2) !important;
-
-   background-color: var(--gf-surface-1) !important;
-   border-color: var(--gf-border) !important;
-   color: var(--gf-text) !important;
-}
-
-/* Comment backgrounds - transparent to show theme-aware background */
-.clip-dialog-content .space-y-3 > div,
-[role="dialog"] .space-y-3 > div {
-  background-color: transparent !important;
-}
-
 /* Custom avatar border styling for dynamic colors - only in profile scope */
 .profile-theme-scope .custom-avatar-border {
   ring-color: var(--profile-avatar-border-color) !important;
@@ -390,15 +372,15 @@ video:focus {
 
 :root {
   /* Global Gamefolio theme - solid competitive gaming surfaces */
-  --background: 228 25% 8%;       /* #0F1119 */
+  --background: 235 28.57% 8.24%; /* #0F101B */
   --foreground: 0 0% 100%;        /* #FFFFFF */
 
   /* Card */
-  --card: 222 30% 11%;             /* #141925 */
+  --card: 232 26.32% 11.18%;       /* #151724 */
   --card-foreground: 0 0% 100%;
 
   /* Popover */
-  --popover: 224 27% 14%;          /* #1A1F2D */
+  --popover: 229.41 24.64% 13.53%; /* #1A1D2B */
   --popover-foreground: 0 0% 100%;
 
   /* Primary - Neon green accent */
@@ -406,11 +388,11 @@ video:focus {
   --primary-foreground: 207 56% 6%;
 
   /* Secondary */
-  --secondary: 224 27% 14%;        /* #1A1F2D */
+  --secondary: 229.41 24.64% 13.53%; /* #1A1D2B */
   --secondary-foreground: 0 0% 100%;
 
   /* Muted */
-  --muted: 225 27% 17%;            /* #202638 */
+  --muted: 227.37 20.43% 18.24%;   /* #252938 */
   --muted-foreground: 220 10% 58%; /* #8B93A3 */
 
   /* Accent - Neon green */
@@ -422,8 +404,8 @@ video:focus {
   --destructive-foreground: 0 0% 100%;
 
   /* Border */
-  --border: 222 22% 23%;           /* #2D3547 */
-  --input: 222 30% 11%;            /* #141925 */
+  --border: 227.37 20.43% 18.24%;  /* #252938 */
+  --input: 232 26.32% 11.18%;      /* #151724 */
   --ring: 78 100% 54%;             /* #B7FF18 */
 
   /* Radius - premium rounded feel */
@@ -447,10 +429,10 @@ video:focus {
   --chart-5: 214 100% 55%;  /* Blue */
 
   /* Design system hex tokens */
-  --ds-bg:           var(--gf-bg);
-  --ds-bg-soft:      var(--gf-surface-1);
-  --ds-surface:      var(--gf-surface-1);
-  --ds-surface-el:   var(--gf-surface-2);
+  --ds-bg:           var(--gf-background);
+  --ds-bg-soft:      var(--gf-surface);
+  --ds-surface:      var(--gf-surface);
+  --ds-surface-el:   var(--gf-surface-raised);
   --ds-border:       var(--gf-border);
   --ds-border-muted: var(--gf-border-subtle);
   --ds-primary:      var(--gf-accent);
@@ -459,7 +441,7 @@ video:focus {
   --ds-text:         var(--gf-text);
   --ds-text-sec:     var(--gf-text-secondary);
   --ds-text-muted:   var(--gf-text-muted);
-  --ds-btn-text:     var(--gf-bg);
+  --ds-btn-text:     var(--gf-background);
   --ds-shadow-soft:  0 20px 60px rgba(0,0,0,0.35);
   --ds-shadow-glow:  0 0 30px rgba(183,255,26,0.22);
 }
@@ -476,13 +458,13 @@ video:focus {
   html,
   body {
     overscroll-behavior-y: none;
-    background-color: var(--gf-bg);
+    background-color: var(--gf-background);
   }
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
     font-family: 'Space Grotesk', sans-serif;
-    background-color: var(--gf-bg) !important;
+    background-color: var(--gf-background) !important;
   }
 
   /* Prevent iOS auto-zoom on input focus (triggers when font-size < 16px) */
@@ -506,14 +488,6 @@ video:focus {
     transition: all 0.2s ease;
   }
 
-  /* Ensure all dialogs and modals use Gamefolio theme */
-  [data-radix-popper-content-wrapper],
-  [role="dialog"],
-  .dialog-content {
-    background-color: var(--gf-surface-1) !important;
-    border-color: var(--gf-border) !important;
-    color: var(--gf-text) !important;
-  }
 }
 
 .clip-hover:hover .play-icon {

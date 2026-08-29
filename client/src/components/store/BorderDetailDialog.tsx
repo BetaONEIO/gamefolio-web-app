@@ -93,7 +93,7 @@ export function BorderDetailDialog({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
-        className="bg-[#0B1218] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
+        className="bg-popover border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
       >
         <div
           className="flex-1 overflow-y-auto relative"
@@ -103,11 +103,11 @@ export function BorderDetailDialog({
           <div className="hide-scrollbar flex flex-col">
 
             {/* Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 pt-12 pb-4 bg-[#0B1218]/80 backdrop-blur-md">
+            <div className="sticky top-0 z-10 flex items-center justify-between px-4 pt-12 pb-4 bg-popover/80 backdrop-blur-md">
               <div className="flex items-center gap-4">
                 <button
                   onClick={handleClose}
-                  className="w-10 h-10 rounded-full bg-[#1B2A33]/50 flex items-center justify-center transition-colors hover:bg-[#1B2A33]/80"
+                  className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center transition-colors hover:bg-secondary/80"
                 >
                   <ArrowLeft className="h-6 w-6 text-white" />
                 </button>
@@ -177,8 +177,8 @@ export function BorderDetailDialog({
 
               {/* Owner */}
               <div className="flex items-center gap-3 mb-6">
-                <div className="bg-[#1B2A33]/30 rounded-full flex items-center gap-2 pr-4 pl-1 py-1">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-yellow-500 border-2 border-[#0B1218]" />
+                <div className="bg-secondary/30 rounded-full flex items-center gap-2 pr-4 pl-1 py-1">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-yellow-500 border-2 border-border" />
                   <div className="flex flex-col">
                     <span className="text-[10px] text-[#B8C0AE] leading-[10px]">Creator</span>
                     <span className="text-xs font-bold text-[#F5F7F2] leading-4">Gamefolio Studio</span>
@@ -196,11 +196,11 @@ export function BorderDetailDialog({
 
               {/* Rarity Chance & Rating Cards */}
               <div className="flex gap-3 mb-6">
-                <div className="flex-1 bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col gap-2">
+                <div className="flex-1 bg-card border border-border rounded-2xl p-4 flex flex-col gap-2">
                   <span className="text-[10px] font-black text-[#B8C0AE] uppercase" style={{ letterSpacing: '1px' }}>Rarity Chance</span>
                   <span className="text-2xl font-black text-[#F5F7F2]">{rarityChance}</span>
                 </div>
-                <div className="flex-1 bg-[#0B1218] border rounded-2xl p-4 flex items-center gap-3 overflow-hidden" style={{ borderColor: `${rarityColor}20` }}>
+                <div className="flex-1 bg-card border rounded-2xl p-4 flex items-center gap-3 overflow-hidden" style={{ borderColor: `${rarityColor}20` }}>
                   <div className="flex flex-col gap-2 flex-1">
                     <span className="text-[10px] font-black text-[#B8C0AE] uppercase" style={{ letterSpacing: '1px' }}>Rating</span>
                     <div className="flex items-baseline gap-1">
@@ -214,7 +214,7 @@ export function BorderDetailDialog({
             </div>
 
             {/* Sticky Bottom: Buy Button */}
-            <div className="sticky bottom-0 bg-gradient-to-t from-[#0B1218] via-[#0B1218] to-transparent px-6 pt-4 pb-6 flex flex-col gap-4 items-center">
+            <div className="sticky bottom-0 bg-gradient-to-t from-popover via-popover to-transparent px-6 pt-4 pb-6 flex flex-col gap-4 items-center">
               {border.owned ? (
                 <Button
                   className="w-full h-[68px] rounded-2xl text-[#071013] text-lg font-black uppercase bg-gradient-to-r from-[#B7FF1A] to-[#6FA800] cursor-default"

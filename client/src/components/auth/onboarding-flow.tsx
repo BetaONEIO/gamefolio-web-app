@@ -124,11 +124,11 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
               onClick={() => onSelectGame(game)}
               className={`group flex flex-col items-center p-1.5 rounded-lg transition-all focus:outline-none focus:ring-2 ${
                 isSelected 
-                  ? 'bg-[#071013] border-2 border-primary/70 ring-2 ring-primary/30' 
-                  : 'bg-[#071013] border-2 border-[#1B2A33] hover:border-primary/40 hover:bg-primary/5 focus:ring-primary/30'
+                  ? 'bg-background border-2 border-primary/70 ring-2 ring-primary/30'
+                  : 'bg-background border-2 border-border hover:border-primary/40 hover:bg-primary/5 focus:ring-primary/30'
               }`}
             >
-              <div className="relative w-full aspect-[3/4] mb-1.5 overflow-hidden rounded-md bg-[#071013]">
+              <div className="relative w-full aspect-[3/4] mb-1.5 overflow-hidden rounded-md bg-background">
                 <img
                   src={game.box_art_url ? game.box_art_url.replace('{width}', '300').replace('{height}', '400') : "https://placehold.co/120x160?text=Game"}
                   alt={game.name}
@@ -231,7 +231,7 @@ function PlatformConnectRow({
 }) {
   const connected = !!connectedName;
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-[#1B2A33] bg-[#0B1218] px-3 py-2.5">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2.5">
       <div className="flex items-center gap-2.5 min-w-0">
         <span className="flex-shrink-0" style={{ color: connected ? brand : "rgba(255,255,255,0.45)" }}>{icon}</span>
         <div className="min-w-0">
@@ -292,7 +292,7 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser, selectedPath }: On
                     ? "bg-primary/20 border-primary text-primary"
                     : isActive
                     ? "bg-primary border-primary text-[#071013] font-bold ob-step-active-glow"
-                    : "bg-[#0B1218] border-primary/20 text-gray-500"
+                    : "bg-card border-primary/20 text-gray-500"
                 }`}
               >
                 {isDone ? <Check className="h-4 w-4" /> : index + 1}
@@ -1145,7 +1145,7 @@ export default function OnboardingFlow({
           ? { titleA: 'PROMOTE YOUR', titleB: 'GAME', sub: 'Create a game profile and showcase your indie title to the Gamefolio community.', img: imgIndieGame, imgAlt: 'Indie game cartridge' }
           : { titleA: 'BUILD YOUR', titleB: 'GAMEFOLIO', sub: 'Your gaming legacy, all in one place. Connect accounts and showcase your best moments.', img: imgGamefolioCard, imgAlt: 'Gamefolio profile card' };
         return (
-          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
+          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-background overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
             {/* Visual area */}
             <div className="flex-1 min-h-[240px] sm:min-h-[300px] relative flex items-center justify-center">
               {selectedPath === 'streamer' ? (
@@ -1154,9 +1154,9 @@ export default function OnboardingFlow({
                   {/* Radial background glow */}
                   <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 65% 65% at 50% 48%, rgba(193,255,0,0.10) 0%, rgba(145,71,255,0.08) 45%, transparent 72%)' }} />
                   {/* Top fade */}
-                  <div className="absolute inset-x-0 top-0 h-24 pointer-events-none z-10" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 top-0 h-24 pointer-events-none z-10" style={{ background: 'linear-gradient(to bottom, var(--gf-background), transparent)' }} />
                   {/* Bottom fade */}
-                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, var(--gf-background), transparent)' }} />
                   {/* Orbit system */}
                   <div className="relative z-10 flex flex-col items-center" style={{ gap: '16px' }}>
                     <div className="relative" style={{ width: '270px', height: '270px' }}>
@@ -1196,8 +1196,8 @@ export default function OnboardingFlow({
                   {/* Green/white radiant gradient behind center of image */}
                   <div className="absolute inset-0 pointer-events-none z-0" style={{ background: 'radial-gradient(circle at 50% 45%, rgba(193,255,0,0.22) 0%, rgba(255,255,255,0.06) 25%, transparent 55%)' }} />
                   <img src={(i1 as any).img} alt={(i1 as any).imgAlt} draggable={false} className="select-none absolute inset-0 w-full h-full ob-float z-10" style={{ objectFit:'contain', objectPosition:'center', animationDuration:'4s', paddingTop: '40px' }} />
-                  <div className="absolute inset-x-0 top-0 h-24 pointer-events-none z-10" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
-                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 top-0 h-24 pointer-events-none z-10" style={{ background: 'linear-gradient(to bottom, var(--gf-background), transparent)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, var(--gf-background), transparent)' }} />
                 </>
               )}
             </div>
@@ -1227,7 +1227,7 @@ export default function OnboardingFlow({
           ? { titleA: 'CONNECT WITH', titleB: 'CREATORS', sub: 'Creators upload clips, reels, and screenshots to build community around your game.' }
           : { titleA: 'TRACK YOUR', titleB: 'PROGRESS', sub: 'Watch your skills grow. Every action earns XP and builds your legendary status.', img: imgProgression, imgAlt: 'Track progression' };
         return (
-          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
+          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-background overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
             {/* Visual area */}
             <div className="flex-1 min-h-[240px] sm:min-h-[300px] relative flex items-center justify-center">
               {selectedPath === 'streamer' ? (
@@ -1235,9 +1235,9 @@ export default function OnboardingFlow({
                 <>
                   <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(145,71,255,0.12) 0%, transparent 70%)' }} />
                   {/* Top fade */}
-                  <div className="absolute inset-x-0 top-0 h-20 pointer-events-none z-20" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 top-0 h-20 pointer-events-none z-20" style={{ background: 'linear-gradient(to bottom, var(--gf-background), transparent)' }} />
                   {/* Bottom fade */}
-                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-20" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-20" style={{ background: 'linear-gradient(to top, var(--gf-background), transparent)' }} />
                   {/* 3 rows above the text — each row uses its own exclusive clips */}
                   <div className="relative z-10 flex flex-col gap-2 w-full overflow-hidden" style={{ paddingTop: '8px' }}>
                     {/* Row 1: clips 1-4 only */}
@@ -1271,7 +1271,7 @@ export default function OnboardingFlow({
                 <>
                   {/* Dark navy base with green radial glow between socket and plug */}
                   <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 55%, rgba(120,200,0,0.28) 0%, rgba(60,120,0,0.10) 38%, transparent 65%), #0b1520' }} />
-                  <div className="absolute inset-x-0 bottom-0 h-20 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-20 pointer-events-none" style={{ background: 'linear-gradient(to top, var(--gf-background), transparent)' }} />
                   {/* INDIE socket — lower-left, cable exits bottom */}
                   <img
                     src={imgIndieSocket}
@@ -1305,7 +1305,7 @@ export default function OnboardingFlow({
               ) : (
                 <>
                   <img src={(i2 as any).img} alt={(i2 as any).imgAlt} draggable={false} className="select-none absolute inset-0 w-full h-full" style={{ objectFit:'contain', objectPosition:'top center' }} />
-                  <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, var(--gf-background), transparent)' }} />
                 </>
               )}
             </div>
@@ -1335,11 +1335,11 @@ export default function OnboardingFlow({
           ? { titleA: 'LAUNCH', titleB: 'BOUNTIES', sub: 'Run creator campaigns, offer game keys, and reward players with bounty challenges.' }
           : { titleA: 'EARN', titleB: 'REWARDS', sub: 'Complete daily bounties, join creator challenges, and earn GFT to unlock exclusive legendary gear.' };
         return (
-          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
+          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-background overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
             <div className="flex-1 min-h-[240px] sm:min-h-[300px] relative flex items-center justify-center">
               <img src={imgBountyBg} alt="" aria-hidden draggable={false} className="absolute inset-0 w-full h-full object-cover select-none" style={{ opacity: 0.55 }} />
-              <div className="absolute inset-x-0 top-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
-              <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+              <div className="absolute inset-x-0 top-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to bottom, var(--gf-background), transparent)' }} />
+              <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none" style={{ background: 'linear-gradient(to top, var(--gf-background), transparent)' }} />
               <img src={imgGFBag} alt="GF Token bag" draggable={false} className="ob-float relative z-10 select-none" style={{ height:'85%', width:'auto', objectFit:'contain', animationDuration:'4s', filter:'drop-shadow(0 0 40px rgba(193,255,0,0.35))' }} />
             </div>
             <div className="mt-auto flex-shrink-0 relative z-10 px-6 pt-5 pb-6">
@@ -1502,7 +1502,7 @@ export default function OnboardingFlow({
               </Button>
             </div>
             <Dialog open={showCropModal} onOpenChange={setShowCropModal}>
-              <DialogContent className="sm:max-w-lg max-w-[95vw] max-h-[90vh] bg-slate-900 border-slate-700 overflow-y-auto">
+              <DialogContent className="sm:max-w-lg max-w-[95vw] max-h-[90vh] bg-popover border-border overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="text-white flex items-center gap-2"><Crop className="h-5 w-5" />Crop Profile Picture</DialogTitle>
                   <DialogDescription className="text-slate-400">Drag to reposition, slider to zoom</DialogDescription>
@@ -1807,12 +1807,12 @@ export default function OnboardingFlow({
                         onClick={() => toggleGamerInterest(opt.id)}
                         className={`relative p-3 rounded-lg border-2 transition-all text-left select-none ${
                           isSelected ? "border-primary bg-primary shadow-lg shadow-primary/20 cursor-pointer"
-                          : isLocked ? "border-[#1B2A33] bg-[#0B1218]/60 cursor-not-allowed opacity-40"
-                          : "border-[#1B2A33] bg-[#0B1218] hover:border-primary/40 hover:bg-primary/5 cursor-pointer"
+                          : isLocked ? "border-border bg-card/60 cursor-not-allowed opacity-40"
+                          : "border-border bg-card hover:border-primary/40 hover:bg-primary/5 cursor-pointer"
                         }`}
                       >
                         <div className="flex flex-col items-center text-center space-y-2">
-                          <div className={`p-2.5 rounded-full ${isSelected ? "bg-black/20 text-[#051a08]" : "bg-[#1B2A33] text-gray-500"}`}>
+                          <div className={`p-2.5 rounded-full ${isSelected ? "bg-black/20 text-[#051a08]" : "bg-secondary text-gray-500"}`}>
                             <Icon className="h-5 w-5" />
                           </div>
                           <h3 className={`font-medium text-sm ${isSelected ? "text-[#051a08] font-semibold" : "text-gray-500"}`}>{opt.label}</h3>
@@ -1890,10 +1890,10 @@ export default function OnboardingFlow({
                   <div>
                     <Label className="text-white text-sm mb-1.5 block">Main Platform <span className="text-primary">*</span></Label>
                     <Select value={streamerData.mainPlatform} onValueChange={(v) => setStreamerData({ ...streamerData, mainPlatform: v })}>
-                      <SelectTrigger className="bg-[#0B1218] border-[#1B2A33] text-white">
+                      <SelectTrigger className="bg-card border-border text-white">
                         <SelectValue placeholder="Select your main platform" />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#0B1218] border-[#1B2A33]">
+                      <SelectContent className="bg-popover border-border">
                         <SelectItem value="kick">Kick</SelectItem>
                         <SelectItem value="twitch">Twitch</SelectItem>
                         <SelectItem value="vpzone">VPZone</SelectItem>
@@ -1904,15 +1904,15 @@ export default function OnboardingFlow({
 
                   <div>
                     <Label className="text-gray-400 text-sm mb-1.5 block">Main Game / Category</Label>
-                    <Input value={streamerData.mainGame} onChange={(e) => setStreamerData({ ...streamerData, mainGame: e.target.value })} placeholder="e.g. Fortnite, Just Chatting" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                    <Input value={streamerData.mainGame} onChange={(e) => setStreamerData({ ...streamerData, mainGame: e.target.value })} placeholder="e.g. Fortnite, Just Chatting" className="bg-card border-border text-white" />
                   </div>
                   <div>
                     <Label className="text-gray-400 text-sm mb-1.5 block">Stream Frequency</Label>
                     <Select value={streamerData.streamFrequency} onValueChange={(v) => setStreamerData({ ...streamerData, streamFrequency: v })}>
-                      <SelectTrigger className="bg-[#0B1218] border-[#1B2A33] text-white">
+                      <SelectTrigger className="bg-card border-border text-white">
                         <SelectValue placeholder="How often do you stream?" />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#0B1218] border-[#1B2A33]">
+                      <SelectContent className="bg-popover border-border">
                         <SelectItem value="daily">Daily</SelectItem>
                         <SelectItem value="3-5x">3–5× per week</SelectItem>
                         <SelectItem value="1-2x">1–2× per week</SelectItem>
@@ -1953,7 +1953,7 @@ export default function OnboardingFlow({
               {/* Cover art pulled from the store — shown so it is obvious what
                   was imported, and removable if they would rather upload their own. */}
               {indieGameData.storeImport?.headerImageUrl && (
-                <div className="mb-3 flex items-center gap-3 rounded-lg border border-[#1B2A33] bg-[#0B1218] p-2">
+                <div className="mb-3 flex items-center gap-3 rounded-lg border border-border bg-card p-2">
                   <img
                     src={indieGameData.storeImport.headerImageUrl}
                     alt=""
@@ -1984,7 +1984,7 @@ export default function OnboardingFlow({
               {/* Trailer pulled from the store — same pattern as the cover art
                   card above: visible and removable rather than saved silently. */}
               {indieGameData.storeImport?.trailerUrl && (
-                <div className="mb-3 flex items-center gap-3 rounded-lg border border-[#1B2A33] bg-[#0B1218] p-2">
+                <div className="mb-3 flex items-center gap-3 rounded-lg border border-border bg-card p-2">
                   <video
                     src={indieGameData.storeImport.trailerUrl}
                     muted
@@ -2015,7 +2015,7 @@ export default function OnboardingFlow({
               {/* 1. Game Name */}
               <div>
                 <Label className="text-white text-sm mb-1.5 block">Game Name <span className="text-primary">*</span></Label>
-                <Input value={indieGameData.gameName} onChange={(e) => setIndieGameData({ ...indieGameData, gameName: e.target.value })} placeholder="Your game's name" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                <Input value={indieGameData.gameName} onChange={(e) => setIndieGameData({ ...indieGameData, gameName: e.target.value })} placeholder="Your game's name" className="bg-card border-border text-white" />
               </div>
 
               {/* 2. Store pages — one row per platform, added state replaces the add button */}
@@ -2025,7 +2025,7 @@ export default function OnboardingFlow({
 
                   {/* Steam */}
                   {indieGameData.steamLink && !platformExpanded.steam ? (
-                    <div className="flex items-center gap-2 rounded-lg border border-[#1B2A33] bg-[#0B1218] px-3 py-2.5">
+                    <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5">
                       <SiSteam className="w-4 h-4 flex-shrink-0 text-[#c6d4df]" />
                       <span className="flex-1 text-sm text-white flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
@@ -2053,7 +2053,7 @@ export default function OnboardingFlow({
                         <button
                           type="button"
                           onClick={() => setPlatformExpanded(p => ({ ...p, steam: true }))}
-                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#1B2A33] bg-[#0B1218] text-gray-300 hover:text-white hover:border-[#2A3A44] transition-colors text-sm"
+                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card text-gray-300 hover:text-white hover:border-primary/40 transition-colors text-sm"
                         >
                           <SiSteam className="w-4 h-4 flex-shrink-0 text-[#c6d4df]" />
                           Add Steam page
@@ -2066,7 +2066,7 @@ export default function OnboardingFlow({
                             onChange={(e) => setIndieGameData({ ...indieGameData, steamLink: e.target.value })}
                             onBlur={() => { if (!indieLinkError("steamLink")) void lookupStoreUrl(indieGameData.steamLink); }}
                             placeholder="https://store.steampowered.com/app/..."
-                            className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
+                            className="bg-card border-border text-white text-xs flex-1"
                           />
                           <button
                             type="button"
@@ -2086,7 +2086,7 @@ export default function OnboardingFlow({
 
                   {/* Itch.io */}
                   {indieGameData.itchLink && !platformExpanded.itch ? (
-                    <div className="flex items-center gap-2 rounded-lg border border-[#1B2A33] bg-[#0B1218] px-3 py-2.5">
+                    <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5">
                       <SiItchdotio className="w-4 h-4 flex-shrink-0 text-[#FA5C5C]" />
                       <span className="flex-1 text-sm text-white flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
@@ -2114,7 +2114,7 @@ export default function OnboardingFlow({
                         <button
                           type="button"
                           onClick={() => setPlatformExpanded(p => ({ ...p, itch: true }))}
-                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#1B2A33] bg-[#0B1218] text-gray-300 hover:text-white hover:border-[#2A3A44] transition-colors text-sm"
+                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card text-gray-300 hover:text-white hover:border-primary/40 transition-colors text-sm"
                         >
                           <SiItchdotio className="w-4 h-4 flex-shrink-0 text-[#FA5C5C]" />
                           Add itch.io page
@@ -2127,7 +2127,7 @@ export default function OnboardingFlow({
                             onChange={(e) => setIndieGameData({ ...indieGameData, itchLink: e.target.value })}
                             onBlur={() => { if (!indieLinkError("itchLink")) void lookupStoreUrl(indieGameData.itchLink); }}
                             placeholder="https://yourname.itch.io/your-game"
-                            className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
+                            className="bg-card border-border text-white text-xs flex-1"
                           />
                           <button
                             type="button"
@@ -2147,7 +2147,7 @@ export default function OnboardingFlow({
 
                   {/* Epic Games */}
                   {indieGameData.epicLink && !platformExpanded.epic ? (
-                    <div className="flex items-center gap-2 rounded-lg border border-[#1B2A33] bg-[#0B1218] px-3 py-2.5">
+                    <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5">
                       <SiEpicgames className="w-4 h-4 flex-shrink-0 text-white/70" />
                       <span className="flex-1 text-sm text-white flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
@@ -2175,7 +2175,7 @@ export default function OnboardingFlow({
                         <button
                           type="button"
                           onClick={() => setPlatformExpanded(p => ({ ...p, epic: true }))}
-                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#1B2A33] bg-[#0B1218] text-gray-300 hover:text-white hover:border-[#2A3A44] transition-colors text-sm"
+                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card text-gray-300 hover:text-white hover:border-primary/40 transition-colors text-sm"
                         >
                           <SiEpicgames className="w-4 h-4 flex-shrink-0 text-white/70" />
                           Add Epic Games page
@@ -2188,7 +2188,7 @@ export default function OnboardingFlow({
                             onChange={(e) => setIndieGameData({ ...indieGameData, epicLink: e.target.value })}
                             onBlur={() => { if (!indieLinkError("epicLink")) void lookupStoreUrl(indieGameData.epicLink); }}
                             placeholder="https://store.epicgames.com/..."
-                            className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
+                            className="bg-card border-border text-white text-xs flex-1"
                           />
                           <button
                             type="button"
@@ -2212,10 +2212,10 @@ export default function OnboardingFlow({
               <div>
                 <Label className="text-white text-sm mb-1.5 block">Release Status <span className="text-primary">*</span></Label>
                 <Select value={indieGameData.releaseStatus} onValueChange={(v) => setIndieGameData({ ...indieGameData, releaseStatus: v })}>
-                  <SelectTrigger className="bg-[#0B1218] border-[#1B2A33] text-white">
+                  <SelectTrigger className="bg-card border-border text-white">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#0B1218] border-[#1B2A33]">
+                  <SelectContent className="bg-popover border-border">
                     <SelectItem value="released">Released</SelectItem>
                     <SelectItem value="early_access">Early Access</SelectItem>
                     <SelectItem value="coming_soon">Coming Soon</SelectItem>
@@ -2227,25 +2227,25 @@ export default function OnboardingFlow({
               {/* 4. Genre */}
               <div>
                 <Label className="text-gray-400 text-sm mb-1.5 block">Genre <span className="text-gray-600 font-normal text-xs ml-1">optional</span></Label>
-                <Input value={indieGameData.genre} onChange={(e) => setIndieGameData({ ...indieGameData, genre: e.target.value })} placeholder="e.g. Action RPG, Puzzle, Platformer" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                <Input value={indieGameData.genre} onChange={(e) => setIndieGameData({ ...indieGameData, genre: e.target.value })} placeholder="e.g. Action RPG, Puzzle, Platformer" className="bg-card border-border text-white" />
               </div>
 
               {/* 5. Studio / Developer */}
               <div>
                 <Label className="text-gray-400 text-sm mb-1.5 block">Studio / Developer <span className="text-gray-600 font-normal text-xs ml-1">optional</span></Label>
-                <Input value={indieGameData.studioName} onChange={(e) => setIndieGameData({ ...indieGameData, studioName: e.target.value })} placeholder="Studio or developer name" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                <Input value={indieGameData.studioName} onChange={(e) => setIndieGameData({ ...indieGameData, studioName: e.target.value })} placeholder="Studio or developer name" className="bg-card border-border text-white" />
               </div>
 
               {/* 6. Short Description */}
               <div>
                 <Label className="text-gray-400 text-sm mb-1.5 block">Short Description <span className="text-gray-600 font-normal text-xs ml-1">optional</span></Label>
-                <Textarea value={indieGameData.description} onChange={(e) => setIndieGameData({ ...indieGameData, description: e.target.value })} placeholder="A short description of your game..." className="bg-[#0B1218] border-[#1B2A33] text-white resize-none" rows={3} />
+                <Textarea value={indieGameData.description} onChange={(e) => setIndieGameData({ ...indieGameData, description: e.target.value })} placeholder="A short description of your game..." className="bg-card border-border text-white resize-none" rows={3} />
               </div>
 
               {/* 7. Website */}
               <div>
                 <Label className="text-gray-400 text-sm mb-1.5 block">Website <span className="text-gray-600 font-normal text-xs ml-1">optional</span></Label>
-                <Input value={indieGameData.websiteLink} onChange={(e) => setIndieGameData({ ...indieGameData, websiteLink: e.target.value })} placeholder="https://yourgame.com" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                <Input value={indieGameData.websiteLink} onChange={(e) => setIndieGameData({ ...indieGameData, websiteLink: e.target.value })} placeholder="https://yourgame.com" className="bg-card border-border text-white" />
                 {indieLinkError("websiteLink") && (
                   <p className="text-xs text-red-400 mt-1">{indieLinkError("websiteLink")}</p>
                 )}
@@ -2253,11 +2253,11 @@ export default function OnboardingFlow({
             </div>
 
             {/* Footer navigation — Back on the left, Continue on the right */}
-            <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-[#1B2A33] flex-shrink-0">
+            <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-border flex-shrink-0">
               <button
                 type="button"
                 onClick={goToPrevStep}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 border border-[#1B2A33] hover:border-[#2A3A44] transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 border border-border hover:border-primary/40 transition-colors"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Back
@@ -2486,7 +2486,7 @@ export default function OnboardingFlow({
 
   return (
     <div
-      className={`w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 h-dvh sm:h-[700px] sm:overflow-hidden sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col bg-[#071013]`}
+      className={`w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 h-dvh sm:h-[700px] sm:overflow-hidden sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col bg-background`}
       style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)' }}
     >
       {/* Persistent back control. Sits above the step indicator so every step

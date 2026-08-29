@@ -1,7 +1,7 @@
 export const NEON = "#B7FF18";
-export const CARD_BG = "rgba(255,255,255,0.04)";
-export const CARD_BORDER = "rgba(255,255,255,0.09)";
-export const PAGE_BG = "#070b10";
+export const CARD_BG = "var(--gf-surface)";
+export const CARD_BORDER = "var(--gf-border)";
+export const PAGE_BG = "var(--gf-background)";
 
 // Indie Dashboard palette. Keep dashboard UI chrome on this palette so tabs
 // cannot drift into unrelated per-feature accent colours.
@@ -10,10 +10,10 @@ export const DASHBOARD_THEME = {
   accentRgb: "183,255,24",
   page: PAGE_BG,
   surface: CARD_BG,
-  surfaceRaised: "rgba(255,255,255,0.06)",
-  surfaceSubtle: "rgba(255,255,255,0.02)",
+  surfaceRaised: "var(--gf-surface-raised)",
+  surfaceSubtle: "var(--gf-background)",
   border: CARD_BORDER,
-  borderSubtle: "rgba(255,255,255,0.06)",
+  borderSubtle: "var(--gf-border)",
   text: "#ffffff",
   textMuted: "rgba(255,255,255,0.5)",
   textSubtle: "rgba(255,255,255,0.3)",

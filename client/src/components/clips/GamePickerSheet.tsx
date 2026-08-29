@@ -22,7 +22,7 @@ function GameCard({
       className="relative rounded-xl overflow-hidden flex flex-col justify-end transition-all"
       style={{
         aspectRatio: "3/4",
-        background: "#101923",
+        background: "var(--gf-surface-raised)",
         border: isSelected ? "2.5px solid #B7FF1A" : "2px solid rgba(255,255,255,0.08)",
       }}
       onClick={() => {
@@ -216,7 +216,7 @@ export function GamePickerSheet({
       <div
         className="w-full md:max-w-2xl rounded-t-3xl md:rounded-3xl flex flex-col"
         style={{
-          background: "#0B1218",
+          background: "var(--gf-surface)",
           maxHeight: "82vh",
           marginBottom: keyboardOffset,
           transition: "margin-bottom 0.2s ease",
@@ -299,7 +299,7 @@ export function GamePickerSheet({
                   className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center gap-1 transition-all"
                   style={{
                     aspectRatio: "3/4",
-                    background: "#101923",
+                    background: "var(--gf-surface-raised)",
                     border: "2px dashed rgba(183,255,26,0.4)",
                   }}
                   onClick={() => {
