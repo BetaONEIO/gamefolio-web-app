@@ -67,7 +67,12 @@ const FIELD_LABELS: Record<string, string> = {
   releaseDate: "Set a release date",
   websiteUrl: "Add your game website",
   discordUrl: "Connect your Discord",
-  twitterUrl: "Add your social link",
+  twitterUrl: "Connect your X account",
+  youtubeUrl: "Connect your YouTube channel",
+  twitchUrl: "Connect your Twitch channel",
+  instagramUrl: "Connect your Instagram account",
+  facebookUrl: "Connect your Facebook page",
+  tiktokUrl: "Connect your TikTok account",
   ageRating: "Add an age rating",
   supportedLanguages: "Add supported languages",
   contentDescriptors: "Add content descriptors",
@@ -76,7 +81,8 @@ const FIELD_LABELS: Record<string, string> = {
 const RECOMMENDED_ORDER = [
   "trailerUrl", "fullDescription", "screenshotUrls", "capsuleImageUrl",
   "keyFeatures", "genres", "tags", "platforms", "releaseDate", "websiteUrl",
-  "discordUrl", "twitterUrl", "ageRating", "supportedLanguages", "contentDescriptors",
+  "discordUrl", "twitterUrl", "youtubeUrl", "twitchUrl", "instagramUrl", "facebookUrl", "tiktokUrl",
+  "ageRating", "supportedLanguages", "contentDescriptors",
 ];
 
 function formatNumber(value: number | null | undefined) {

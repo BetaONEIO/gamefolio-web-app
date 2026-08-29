@@ -13325,6 +13325,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public profile associated with a catalogue game. The Indie Game page is
+  // addressed by game slug, not developer username, so resolve by game ID.
+  app.get("/api/games/:gameId/indie-profile", async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.gameId, 10);
+      if (!Number.isFinite(gameId)) return res.status(400).json({ error: "Invalid game ID" });
+      const { db } = await import("./db");
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { and, eq, isNull, sql } = await import("drizzle-orm");
+      let [profile] = await db.select().from(indieGameProfiles)
+        .where(eq(indieGameProfiles.catalogGameId, gameId))
+        .limit(1);
+      if (!profile) {
+        const game = await storage.getGame(gameId);
+        if (!game) return res.status(404).json({ error: "Game not found" });
+        const legacyMatches = await db.select().from(indieGameProfiles)
+          .where(and(
+            isNull(indieGameProfiles.catalogGameId),
+            sql`lower(trim(${indieGameProfiles.gameName})) = lower(trim(${game.name}))`,
+          ))
+          .limit(2);
+        if (legacyMatches.length === 1) {
+          const [linked] = await db.update(indieGameProfiles)
+            .set({ catalogGameId: gameId, updatedAt: new Date() })
+            .where(eq(indieGameProfiles.id, legacyMatches[0].id))
+            .returning();
+          profile = linked;
+        }
+      }
+      if (!profile) return res.status(404).json({ error: "Indie game profile not found" });
+      const user = await storage.getUserById(profile.userId);
+      if (!user) return res.status(404).json({ error: "Developer not found" });
+      res.json({
+        user: {
+          id: user.id,
+          username: user.username,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl,
+          bio: user.bio,
+          level: user.level,
+          totalXP: user.totalXP,
+          currentStreak: user.currentStreak,
+        },
+        profile,
+      });
+    } catch (err) {
+      console.error("GET /api/games/:gameId/indie-profile error:", err);
+      res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
   // GET /api/games/indie/:username/list — public list of a developer's games,
   // for the profile-page game switcher (no auth required).
   app.get("/api/games/indie/:username/list", async (req, res) => {

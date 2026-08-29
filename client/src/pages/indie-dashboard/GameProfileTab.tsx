@@ -30,6 +30,7 @@ import {
   isFieldFilled, RELEASE_STATUS_OPTIONS, PLATFORM_OPTIONS,
   type Profile, type FieldMeta,
 } from "./edit-profile/types";
+import { validateGameSocialUrl } from "@shared/store-urls";
 
 // ─── Health scoring ────────────────────────────────────────────────────────────
 const HEALTH_FIELDS = [
@@ -1574,6 +1575,10 @@ function CommunitySocialCard({
 }) {
   const [socialValues, setSocialValues] = useState<Record<GameSocialField, string>>(emptyGameSocialValues);
   const save = useSaveProfile(profile?.id);
+  const socialErrors = Object.fromEntries(
+    GAME_SOCIAL_LINKS.map(({ field }) => [field, validateGameSocialUrl(field, socialValues[field])]),
+  ) as Record<GameSocialField, string | null>;
+  const hasSocialErrors = Object.values(socialErrors).some(Boolean);
 
   useEffect(() => {
     if (!profile) return;
@@ -1617,6 +1622,9 @@ function CommunitySocialCard({
                     type="url"
                     placeholder={placeholder}
                   />
+                  {socialErrors[field] && (
+                    <p className="mt-1.5 text-[11px] text-red-400">{socialErrors[field]}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1626,7 +1634,7 @@ function CommunitySocialCard({
           <button
             type="button"
             onClick={() => save.mutate({ gameId: profile?.id, ...socialValues })}
-            disabled={save.isPending}
+            disabled={save.isPending || hasSocialErrors}
             className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
             style={{ background: NEON, color: "#0F101B" }}
           >
