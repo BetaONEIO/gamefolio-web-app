@@ -1187,6 +1187,8 @@ interface IndieGameMeta {
   website: string;
   discordUrl: string;
   steamUrl: string;
+  epicUrl: string;
+  itchUrl: string;
   verifiedDeveloper: boolean;
   trailerUrl?: string;
   followers: number;
@@ -1201,6 +1203,7 @@ const IndieGamePage = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const trackedProfileViews = useRef<Set<number>>(new Set());
 
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [timePeriod, setTimePeriod] = useState<"recent" | "1w" | "1m" | "ever">("recent");
@@ -1410,10 +1413,39 @@ const IndieGamePage = () => {
     website: igp?.websiteUrl ?? game?.indieMeta?.website ?? "",
     discordUrl: igp?.discordUrl ?? game?.indieMeta?.discordUrl ?? "",
     steamUrl: igp?.steamUrl ?? game?.indieMeta?.steamUrl ?? "",
+    epicUrl: igp?.epicUrl ?? game?.indieMeta?.epicUrl ?? "",
+    itchUrl: igp?.itchUrl ?? game?.indieMeta?.itchUrl ?? "",
     verifiedDeveloper: game?.indieMeta?.verifiedDeveloper ?? false,
     trailerUrl: igp?.trailerUrl ?? game?.indieMeta?.trailerUrl,
     followers: game?.indieMeta?.followers ?? 0,
     publisher: game?.indieMeta?.publisher ?? "Indie",
+  };
+
+  // Tracking is deliberately non-blocking: the public game page and outbound
+  // links must continue to work if analytics is unavailable.
+  useEffect(() => {
+    if (!igp?.id || trackedProfileViews.current.has(igp.id)) return;
+    trackedProfileViews.current.add(igp.id);
+    void fetch(`/api/games/indie/${igp.id}/analytics-event`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventType: "game_page_view" }),
+    }).catch(() => undefined);
+  }, [igp?.id]);
+
+  const openTrackedStore = (url: string, store: "steam" | "epic" | "itch") => {
+    if (!igp?.id) {
+      void openExternal(url);
+      return;
+    }
+    void fetch(`/api/games/indie/${igp.id}/analytics-event`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventType: "game_store_click", store }),
+    }).catch(() => undefined);
+    void openExternal(url);
   };
 
   if (!match || !gameSlug) return <div className="p-8 text-center text-gray-400">Indie game not found</div>;
@@ -1890,12 +1922,12 @@ const IndieGamePage = () => {
                 </div>
 
                 {/* Store links */}
-                {(meta.steamUrl || meta.discordUrl || meta.website) && (
+                {(meta.steamUrl || meta.epicUrl || meta.itchUrl || meta.discordUrl || meta.website) && (
                   <div className="rounded-2xl p-5 space-y-3" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
                     <h3 className="text-[9px] uppercase tracking-widest font-bold text-white/40 mb-1">Links</h3>
                     {meta.steamUrl && (
                       <button
-                        onClick={() => openExternal(meta.steamUrl)}
+                        onClick={() => openTrackedStore(meta.steamUrl, "steam")}
                         className="w-full flex items-center justify-between p-3 rounded-xl transition-colors group"
                         style={{ background: "#171a21", border: "1px solid rgba(255,255,255,0.06)" }}>
                         <div className="flex items-center gap-3">
@@ -1903,6 +1935,30 @@ const IndieGamePage = () => {
                           <span className="font-bold text-sm text-[#c7d5e0]">Steam</span>
                         </div>
                         <Globe className="w-4 h-4 text-white/20 group-hover:text-white/60 transition-colors" />
+                      </button>
+                    )}
+                    {meta.epicUrl && (
+                      <button
+                        onClick={() => openTrackedStore(meta.epicUrl, "epic")}
+                        className="w-full flex items-center justify-between p-3 rounded-xl transition-colors group"
+                        style={{ background: "#171717", border: "1px solid rgba(255,255,255,0.12)" }}>
+                        <div className="flex items-center gap-3">
+                          <Gamepad2 className="w-5 h-5 text-white/80" />
+                          <span className="font-bold text-sm text-white/90">Epic Games</span>
+                        </div>
+                        <Globe className="w-4 h-4 text-white/20 group-hover:text-white/60 transition-colors" />
+                      </button>
+                    )}
+                    {meta.itchUrl && (
+                      <button
+                        onClick={() => openTrackedStore(meta.itchUrl, "itch")}
+                        className="w-full flex items-center justify-between p-3 rounded-xl transition-colors group"
+                        style={{ background: "#fa5c5c", border: "1px solid rgba(255,255,255,0.12)" }}>
+                        <div className="flex items-center gap-3">
+                          <Gamepad2 className="w-5 h-5 text-white" />
+                          <span className="font-bold text-sm text-white">itch.io</span>
+                        </div>
+                        <Globe className="w-4 h-4 text-white/60 group-hover:text-white transition-colors" />
                       </button>
                     )}
                     {meta.discordUrl && (

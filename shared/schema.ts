@@ -2415,6 +2415,24 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Privacy-preserving, first-party events for an indie game's public hub.
+// visitorKey is a one-way server-generated digest; raw IP and user-agent values
+// must never be persisted here.
+export const indieGameAnalyticsEvents = pgTable("indie_game_analytics_events", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id").notNull().references(() => indieGameProfiles.id, { onDelete: "cascade" }),
+  catalogGameId: integer("catalog_game_id").notNull().references(() => games.id, { onDelete: "cascade" }),
+  eventType: text("event_type").notNull(), // game_page_view | game_store_click
+  store: text("store"), // steam | epic | itch for store-click events
+  visitorKey: text("visitor_key").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  profileCreatedIdx: index("indie_game_analytics_events_profile_created_idx").on(table.profileId, table.createdAt),
+  catalogCreatedIdx: index("indie_game_analytics_events_catalog_created_idx").on(table.catalogGameId, table.createdAt),
+  visitorDedupeIdx: index("indie_game_analytics_events_visitor_dedupe_idx").on(table.profileId, table.eventType, table.visitorKey, table.createdAt),
+  storeCreatedIdx: index("indie_game_analytics_events_store_created_idx").on(table.profileId, table.store, table.createdAt),
+}));
+
 // Per-field import/override metadata — tracks source of truth for each field
 export const indieGameFieldOverrides = pgTable("indie_game_field_overrides", {
   id: serial("id").primaryKey(),
