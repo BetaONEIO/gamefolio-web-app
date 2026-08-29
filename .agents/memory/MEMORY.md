@@ -30,3 +30,4 @@
 - [Async signed-media selection](async-signed-media-selection.md) — select mixed signed/public media by stable identity, never array index, because signed items appear asynchronously.
 - [Indie analytics event privacy](indie-analytics-event-privacy.md) — public game analytics store only hashed visitor identity; owner views are excluded and page views dedupe hourly.
 - [Indie analytics metric scope](indie-analytics-metric-scope.md) — discovery events support date ranges, but legacy content view counters are honest all-time totals.
+- [Raw analytics timestamp binding](raw-analytics-timestamp-binding.md) — raw Drizzle db.execute queries in this project must bind ISO timestamp strings, not JavaScript Date objects.

@@ -13691,10 +13691,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const days = requestedRange === "all" ? null : Number.parseInt(requestedRange, 10);
       const rangeStart = days ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : null;
       const previousStart = days ? new Date(Date.now() - days * 2 * 24 * 60 * 60 * 1000) : null;
-      const currentFilter = rangeStart ? sql`AND created_at >= ${rangeStart}` : sql``;
-      const currentMetricFilter = rangeStart ? sql`AND created_at >= ${rangeStart}` : sql``;
+      // Raw db.execute uses postgres-js parameter binding, which does not accept
+      // JavaScript Date instances in this project. Send ISO timestamps so the
+      // database can infer the timestamp type from created_at.
+      const rangeStartParam = rangeStart?.toISOString() ?? null;
+      const previousStartParam = previousStart?.toISOString() ?? null;
+      const currentFilter = rangeStartParam ? sql`AND created_at >= ${rangeStartParam}` : sql``;
+      const currentMetricFilter = rangeStartParam ? sql`AND created_at >= ${rangeStartParam}` : sql``;
       const previousFilter = previousStart && rangeStart
-        ? sql`AND created_at >= ${previousStart} AND created_at < ${rangeStart}` : sql`AND false`;
+        ? sql`AND created_at >= ${previousStartParam} AND created_at < ${rangeStartParam}` : sql`AND false`;
       const [metricResult, seriesResult, contentResult, topContentResult, storesResult, favoritesResult, creatorsResult, updatesResult] = await Promise.all([
         db.execute(sql`SELECT
           COUNT(*) FILTER (WHERE event_type = 'game_page_view' ${currentMetricFilter})::int AS "pageViews",
