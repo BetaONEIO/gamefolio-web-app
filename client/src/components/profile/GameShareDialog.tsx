@@ -108,7 +108,7 @@ export function GameShareDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 border-[#1B2A33] bg-[#0B1218] w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh]">
+      <DialogContent className="p-0 border-border bg-popover w-[calc(100vw-2rem)] max-w-[384px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh]">
         <div className="flex items-center justify-between px-4 sm:px-5 py-4 sm:py-5 border-b border-[#1B2A33]/50">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <ShareLaunchIcon size={20} className="text-[#B7FF1A] shrink-0" />

@@ -207,7 +207,7 @@ const MobileMenu = () => {
     >
       <div 
         id="mobile-menu-container"
-        className="w-4/5 max-w-xs bg-card shadow-xl h-full transform"
+        className="w-4/5 max-w-xs bg-background border-r border-border shadow-xl h-full transform"
         style={{ animation: isClosing ? 'slideOut 0.28s forwards' : 'slideIn 0.3s forwards' }}
       >
         <div className="flex flex-col h-full">

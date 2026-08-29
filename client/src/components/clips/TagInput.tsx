@@ -190,7 +190,7 @@ const TagInput = ({
       {showDropdown && (
         <div
           className="absolute left-0 right-0 z-50 mt-1 rounded-lg border border-border shadow-lg overflow-hidden"
-          style={{ background: "#0B1218", top: "100%" }}
+          style={{ background: "var(--gf-surface-raised)", top: "100%" }}
           onMouseDown={(e) => e.preventDefault()}
         >
           <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/40">

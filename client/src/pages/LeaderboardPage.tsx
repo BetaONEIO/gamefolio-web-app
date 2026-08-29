@@ -1586,7 +1586,7 @@ export default function LeaderboardPage() {
 
   return (
     <div
-      className="min-h-screen bg-[#0B1218] overflow-y-auto"
+      className="min-h-screen bg-background overflow-y-auto"
       style={{ overscrollBehaviorX: "none" }}
     >
       <style>{RS_STYLES}{CREATOR_CARD_STYLES}</style>

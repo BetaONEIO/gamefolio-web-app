@@ -424,7 +424,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   if (isPro && step !== "success" && !purchaseInProgress) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[430px] w-full bg-[#0B1218] border-none p-0 overflow-hidden [&>button]:hidden">
+        <DialogContent className="max-w-[430px] w-full bg-popover border-none p-0 overflow-hidden [&>button]:hidden">
           <div className="p-8 text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#B7FF1A] to-[#6FA800] mb-6">
               <Crown className="w-10 h-10 text-white" />

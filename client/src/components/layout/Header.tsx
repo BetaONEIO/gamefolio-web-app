@@ -103,7 +103,7 @@ class MobileSearchErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, padding: "16px", zIndex: 99999, background: "rgba(3,8,10,0.93)", backdropFilter: "blur(20px)" }}>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, padding: "16px", zIndex: 99999, background: "color-mix(in srgb, var(--gf-background) 93%, transparent)", backdropFilter: "blur(20px)" }}>
           <p style={{ color: "#fff", textAlign: "center", fontSize: 14, margin: 0 }}>Search could not load. Please try again.</p>
         </div>
       );
@@ -304,7 +304,7 @@ const Header = () => {
   if (isMobile && location === '/trending') return null;
 
   return (
-    <header className="bg-card shadow-md sticky top-0 z-50 w-full safe-area-top">
+    <header className="bg-background border-b border-border shadow-md sticky top-0 z-50 w-full safe-area-top">
       <div className="w-full px-3 sm:px-4 lg:px-8 py-3 sm:py-4 md:py-6 flex items-center justify-between">
         {/* Header left section */}
         <div className="flex items-center flex-shrink-0">
@@ -818,7 +818,7 @@ const Header = () => {
             bottom: 0,
             width: '100vw',
             height: '100vh',
-            background: 'rgba(3, 8, 10, 0.93)',
+            background: 'color-mix(in srgb, var(--gf-background) 93%, transparent)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
             zIndex: 99999,

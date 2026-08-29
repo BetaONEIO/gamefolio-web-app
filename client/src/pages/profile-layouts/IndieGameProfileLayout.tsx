@@ -338,7 +338,6 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const statItems = [
     { label: 'Clips', value: counts?.clips ?? clips.length, icon: Play },
     { label: 'Reels', value: counts?.reels ?? reels.length, icon: Video },
-    { label: 'Screenshots', value: screenshotCount, icon: Camera },
   ].filter((item) => item.value > 0);
   const hasCommunityHighlights = clips.length > 0 || reels.length > 0;
   const uploadHref = canonicalGameId
