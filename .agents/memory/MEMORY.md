@@ -32,3 +32,4 @@
 - [Indie analytics metric scope](indie-analytics-metric-scope.md) — discovery events support date ranges, but legacy content view counters are honest all-time totals.
 - [Raw analytics timestamp binding](raw-analytics-timestamp-binding.md) — raw Drizzle db.execute queries in this project must bind ISO timestamp strings, not JavaScript Date objects.
 - [Public indie game identity](public-indie-game-identity.md) — public game slugs resolve developer profiles through catalogue game IDs, never by treating the slug as a username.
+- [Daily reward session hydration](daily-reward-session-hydration.md) — guarded daily claims must run on authenticated session hydration, not only explicit login, including apps left open overnight.
