@@ -15,7 +15,7 @@
 
   /* Official shared Gamefolio colour system */
   --gf-background: #090C11;
-  --gf-surface: #151724;
+  --gf-surface: #090C11;
   --gf-surface-raised: #1A1D2B;
   --gf-border: #252938;
   --gf-accent: #B7FF18;
@@ -376,7 +376,7 @@ video:focus {
   --foreground: 0 0% 100%;        /* #FFFFFF */
 
   /* Card */
-  --card: 232 26.32% 11.18%;       /* #151724 */
+  --card: 217.5 30.77% 5.10%;      /* #090C11 */
   --card-foreground: 0 0% 100%;
 
   /* Popover */
@@ -405,7 +405,7 @@ video:focus {
 
   /* Border */
   --border: 227.37 20.43% 18.24%;  /* #252938 */
-  --input: 232 26.32% 11.18%;      /* #151724 */
+  --input: 217.5 30.77% 5.10%;     /* #090C11 */
   --ring: 78 100% 54%;             /* #B7FF18 */
 
   /* Radius - premium rounded feel */
