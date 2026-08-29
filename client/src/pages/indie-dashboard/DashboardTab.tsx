@@ -52,9 +52,11 @@ function isFieldFilled(profile: any, f: string): boolean {
 
 export default function DashboardTab({
   onGoTo,
+  onQuickEdit,
   gameId,
 }: {
   onGoTo: (tab: TopTabId, sub?: string) => void;
+  onQuickEdit?: (field: string) => void;
   gameId?: number;
 }) {
   const { user } = useAuth();
@@ -92,9 +94,14 @@ export default function DashboardTab({
   const hasContent = content.length > 0;
   const profileReady = missingEssential.length === 0;
   const firstMissingField = missingEssential[0] ?? missingProfileFields[0];
+  const handleProfileAction = (field?: string) => {
+    if (!field) return;
+    if (onQuickEdit) onQuickEdit(field);
+    else onGoTo("game-profile", field);
+  };
   /* ── LAUNCH CHECKLIST ITEMS ── */
   const checklist = [
-    { label: "Complete your game profile", done: profileReady, action: () => onGoTo("game-profile", firstMissingField), pct: profilePct },
+    { label: "Complete your game profile", done: profileReady, action: () => handleProfileAction(firstMissingField), pct: profilePct },
   ];
 
   const doneCount = checklist.filter((c) => c.done).length;
@@ -209,7 +216,7 @@ export default function DashboardTab({
           style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-black text-white">Profile Strength</h3>
-             <button onClick={() => onGoTo("game-profile", firstMissingField)}
+              <button onClick={() => handleProfileAction(firstMissingField)}
               className="text-[10px] font-bold flex items-center gap-1 text-white/35 hover:text-white/65 transition-colors">
               Edit <ChevronRight className="w-3 h-3" />
             </button>
@@ -236,7 +243,7 @@ export default function DashboardTab({
             <div className="space-y-1.5">
               <p className="text-[10px] text-white/25 mb-1.5">Recommended next steps:</p>
               {nextSteps.map((step, i) => (
-               <button key={step.field ?? i} onClick={() => onGoTo("game-profile", step.field)}
+                <button key={step.field ?? i} onClick={() => handleProfileAction(step.field)}
                   className="w-full flex items-center gap-2 text-left group py-1.5 rounded-lg px-2 transition-colors hover:bg-white/[0.03]">
                   <div className="w-4 h-4 rounded-full border flex items-center justify-center shrink-0"
                     style={{ borderColor: "rgba(255,255,255,0.12)" }}>
