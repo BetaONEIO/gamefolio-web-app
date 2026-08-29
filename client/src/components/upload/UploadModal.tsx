@@ -265,12 +265,28 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
         }
       });
 
+      // `throw` inside an XHR event handler does NOT reach the try/catch below
+      // (it's a separate call stack) — failures were silently swallowed. Route
+      // every failure through this handler so the user actually sees an error.
+      const handleUploadFailure = (context: string) => {
+        console.error('TUS upload error:', context);
+        setUploadStatus('error');
+        setIsUploading(false);
+        toast({ title: 'Error', description: 'Upload failed', variant: 'destructive' });
+      };
+
       xhr.onload = () => {
         if (xhr.status === 200) {
+          let result: any;
+          try {
+            result = JSON.parse(xhr.responseText);
+          } catch {
+            handleUploadFailure('Invalid upload response');
+            return;
+          }
           setUploadStatus('processing');
-          const result = JSON.parse(xhr.responseText);
           setUploadResult(result);
-          
+
           // Process the video
           processVideo.mutate({
             uploadResult: result.result,
@@ -282,12 +298,12 @@ export default function UploadModal({ isOpen, onClose }: UploadModalProps) {
             ageRestricted
           });
         } else {
-          throw new Error('Upload failed');
+          handleUploadFailure(`HTTP ${xhr.status}`);
         }
       };
 
       xhr.onerror = () => {
-        throw new Error('Upload failed');
+        handleUploadFailure('Network error');
       };
 
       xhr.open('POST', '/api/upload/tus');

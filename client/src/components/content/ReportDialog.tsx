@@ -22,6 +22,10 @@ interface ReportDialogProps {
   contentTitle?: string;
   contentAuthor: string;
   trigger?: React.ReactNode;
+  // Optional external control (e.g. opened from a dropdown menu item). When
+  // `open` is provided the component is controlled and no trigger is rendered.
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const REPORT_REASONS = {
@@ -35,14 +39,22 @@ const REPORT_REASONS = {
   'other': 'Other (please specify)'
 };
 
-export function ReportDialog({ 
-  contentType, 
-  contentId, 
-  contentTitle, 
+export function ReportDialog({
+  contentType,
+  contentId,
+  contentTitle,
   contentAuthor,
-  trigger 
+  trigger,
+  open,
+  onOpenChange,
 }: ReportDialogProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = open !== undefined;
+  const isOpen = isControlled ? open : internalOpen;
+  const setIsOpen = (next: boolean) => {
+    if (!isControlled) setInternalOpen(next);
+    onOpenChange?.(next);
+  };
   const [selectedReason, setSelectedReason] = useState<string>('');
   const [additionalDetails, setAdditionalDetails] = useState('');
   const { toast } = useToast();
@@ -90,17 +102,21 @@ export function ReportDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <button 
-            className="focus:outline-none"
-            data-testid={`button-report-${contentType}`}
-          >
-            <Flag className="h-5 w-5 text-red-500 hover:text-red-400 transition-colors" />
-          </button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="max-w-md mx-4 my-8 sm:m-6 max-h-[90vh] overflow-y-auto">
+      {!isControlled && (
+        <DialogTrigger asChild>
+          {trigger || (
+            <button
+              className="focus:outline-none"
+              data-testid={`button-report-${contentType}`}
+            >
+              <Flag className="h-5 w-5 text-red-500 hover:text-red-400 transition-colors" />
+            </button>
+          )}
+        </DialogTrigger>
+      )}
+      {/* z above the fullscreen clip viewers (z-[100001]) so the report form
+          is visible when opened from a clip's ⋯ menu inside the viewer. */}
+      <DialogContent className="z-[200001] max-w-md mx-4 my-8 sm:m-6 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-destructive" />

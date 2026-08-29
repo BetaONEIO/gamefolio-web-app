@@ -41,7 +41,7 @@ export default function PrivacyPage() {
           <ul>
             <li>Gaming clips, screenshots, and reels you upload</li>
             <li>Comments, likes, and reactions</li>
-            <li>Gaming achievements and statistics</li>
+            <li>Gaming achievements and statistics, including XP, levels, streaks, and your ranking on public leaderboards</li>
             <li>Social interactions (follows, messages)</li>
           </ul>
 
@@ -71,17 +71,26 @@ export default function PrivacyPage() {
           
           <h3>4.1 Public Content</h3>
           <p>
-            Content you choose to make public (gaming clips, profile information, comments) 
+            Content you choose to make public (gaming clips, profile information, comments)
             will be visible to other users and may be shared across the platform.
           </p>
 
-          <h3>4.2 Service Providers</h3>
+          <h3>4.2 Global Leaderboards</h3>
+          <p>
+            Gamefolio includes global leaderboards that rank users by XP, points, and other
+            gameplay/engagement statistics. By using the platform, your username, display name,
+            profile picture, and score/ranking data are uploaded to our servers and displayed
+            publicly to other users on the relevant leaderboard. If you'd prefer not to appear on
+            leaderboards, contact us at privacy@gamefolio.com and we can exclude your account.
+          </p>
+
+          <h3>4.3 Service Providers</h3>
           <p>
             We work with trusted service providers who help us operate our platform, 
             including cloud hosting, email services, and analytics providers.
           </p>
 
-          <h3>4.3 Legal Requirements</h3>
+          <h3>4.4 Legal Requirements</h3>
           <p>
             We may disclose information if required by law, legal process, or to protect 
             the rights, property, or safety of Gamefolio, our users, or others.

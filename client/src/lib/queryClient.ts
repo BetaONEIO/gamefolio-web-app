@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import * as Sentry from "@sentry/capacitor";
 import {
   clearTokens,
   getAccessToken,
@@ -6,6 +7,29 @@ import {
   getRefreshToken,
   setTokens,
 } from "./auth-token";
+import { isNative } from "./platform";
+import { getDeviceIdSync } from "./device-id";
+
+// Admin "impersonate user" support tool: when present, this sessionStorage
+// entry (tab-scoped by design — never shared with the admin's own logged-in
+// tab) takes priority over the normal native/session auth token. See
+// client/src/pages/ImpersonateSessionPage.tsx for how it gets set.
+export const IMPERSONATION_TOKEN_KEY = "gf_impersonation_token";
+function getImpersonationToken(): string | null {
+  try {
+    return sessionStorage.getItem(IMPERSONATION_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+// Diagnostic for the "logged out after force-quit" investigation: report the
+// first /api/user call of this app session in detail (token attached, initial
+// status, refresh attempted/outcome, final status) - this is the specific
+// request that decides whether the UI shows logged in or logged out, and it
+// doesn't always win the race to be the literal first authedFetch call, so
+// target it by URL rather than "whichever fires first".
+let userCheckReported = false;
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -57,20 +81,46 @@ async function refreshAccessToken(): Promise<string | null> {
   return inflightRefresh;
 }
 
-async function authedFetch(
+export async function authedFetch(
   url: string,
   init: RequestInit,
 ): Promise<Response> {
+  const shouldReport = isNative && url === "/api/user" && !userCheckReported;
+  if (shouldReport) userCheckReported = true;
+  // Diagnostic: capture the actual call stack so we can see which caller
+  // this specific /api/user request came from - getQueryFn's own diagnostic
+  // never fires despite this one showing a real completed fetch, so the
+  // call must be coming from somewhere other than the main useQuery.
+  const callerStack = shouldReport ? new Error().stack ?? "" : "";
+
   const headers = new Headers(init.headers ?? {});
-  const token = (await getAccessToken()) ?? getAccessTokenSync();
-  if (token && !headers.has("Authorization")) {
+  const impersonationToken = getImpersonationToken();
+  const token = impersonationToken ?? (await getAccessToken()) ?? getAccessTokenSync();
+  const tokenAttached = !!token && !headers.has("Authorization");
+  if (tokenAttached) {
     headers.set("Authorization", `Bearer ${token}`);
   }
+  // Best-effort spam/multi-account signal (see gamefolio-bot) — null until
+  // device-id's startup hydrate() resolves, or on native where the global
+  // fetch patch in platform.ts already set it.
+  if (!headers.has("X-Device-Id")) {
+    const deviceId = getDeviceIdSync();
+    if (deviceId) headers.set("X-Device-Id", deviceId);
+  }
   let res = await fetch(url, { ...init, headers, credentials: "include" });
+  const initialStatus = res.status;
+  const initialUrl = res.url;
 
-  if (res.status === 401 && (await getRefreshToken())) {
+  let refreshAttempted = false;
+  let refreshSucceeded = false;
+  // An expired/invalid impersonation token should just fail through — refreshing
+  // would try to renew the admin's own native refresh token, which is unrelated
+  // and would silently swap the impersonated session back to the admin's.
+  if (!impersonationToken && res.status === 401 && (await getRefreshToken())) {
+    refreshAttempted = true;
     const newToken = await refreshAccessToken();
     if (newToken) {
+      refreshSucceeded = true;
       const retryHeaders = new Headers(init.headers ?? {});
       retryHeaders.set("Authorization", `Bearer ${newToken}`);
       res = await fetch(url, {
@@ -79,6 +129,24 @@ async function authedFetch(
         credentials: "include",
       });
     }
+  }
+
+  if (shouldReport) {
+    Sentry.captureMessage("authedFetch: /api/user call", {
+      level: "info",
+      tags: {
+        module: "queryClient",
+        op: "authedFetch",
+        url,
+        tokenAttached: String(tokenAttached),
+        initialStatus: String(initialStatus),
+        initialUrl,
+        refreshAttempted: String(refreshAttempted),
+        refreshSucceeded: String(refreshSucceeded),
+        finalStatus: String(res.status),
+      },
+      extra: { callerStack },
+    });
   }
 
   return res;
@@ -126,7 +194,49 @@ export const getQueryFn: <T>(options: {
     const res = await authedFetch(url, { method: "GET" });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      if (isNative && url === "/api/user") {
+        Sentry.captureMessage("getQueryFn: /api/user returned 401, returning null", {
+          level: "warning",
+          tags: { module: "queryClient", op: "getQueryFn" },
+        });
+      }
       return null;
+    }
+
+    if (isNative && url === "/api/user") {
+      // Diagnostic for the "logged out after force-quit" investigation: the
+      // request can return 200 while the app still renders as logged out, so
+      // capture what actually happens turning that response into data -
+      // wrapped in its own try/catch since a throw here (e.g. bad JSON) would
+      // otherwise propagate silently past this point with no record of why.
+      try {
+        await throwIfResNotOk(res);
+        const bodyText = await res.text();
+        let data: any = undefined;
+        let parseError: string | null = null;
+        try {
+          data = bodyText ? JSON.parse(bodyText) : undefined;
+        } catch (e) {
+          parseError = e instanceof Error ? e.message : String(e);
+        }
+        Sentry.captureMessage("getQueryFn: /api/user parsed body", {
+          level: "info",
+          tags: {
+            module: "queryClient",
+            op: "getQueryFn",
+            parseError: parseError ?? "",
+            isNullish: String(data == null),
+            isEmptyObject: String(!!data && typeof data === "object" && Object.keys(data).length === 0),
+            hasId: String(!!data?.id),
+            bodyPreview: bodyText.slice(0, 300),
+          },
+        });
+        if (parseError) throw new Error(`Failed to parse /api/user response: ${parseError}`);
+        return data;
+      } catch (e) {
+        Sentry.captureException(e, { tags: { module: "queryClient", op: "getQueryFn", url } });
+        throw e;
+      }
     }
 
     await throwIfResNotOk(res);

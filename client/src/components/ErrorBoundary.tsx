@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import * as Sentry from "@sentry/capacitor";
 import { Button } from "@/components/ui/button";
 
 interface ErrorBoundaryProps {
@@ -26,6 +27,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("[ErrorBoundary] Caught error:", error, errorInfo);
+    // React swallows render errors, so Sentry's global handler never sees them
+    // — forward explicitly. No-op when Sentry is disabled (no DSN).
+    Sentry.captureException(error, {
+      contexts: { react: { componentStack: errorInfo.componentStack } },
+      tags: { boundaryLevel: this.props.level ?? "feature" },
+    });
     this.props.onError?.(error, errorInfo);
     try {
       sessionStorage.setItem('__gf_last_crash__', JSON.stringify({

@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { GameFilterSheet } from "@/components/filters/GameFilterSheet";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
+import { BookmarkButton } from "@/components/engagement/BookmarkButton";
 
 export default function LatestReelsPage() {
   const [timePeriod, setTimePeriod] = useState<string>("recent");
@@ -160,7 +161,8 @@ export default function LatestReelsPage() {
                     >
                       {reel.title}
                     </h3>
-                    <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} className="flex-shrink-0 -mt-0.5">
+                    <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} className="flex-shrink-0 -mt-0.5 flex items-center gap-1">
+                      <BookmarkButton contentId={reel.id} contentType="clip" size={14} />
                       <TrendingClipMenu clip={reel} />
                     </div>
                   </div>

@@ -12,6 +12,25 @@ import { queryClient } from './queryClient';
 let lastBackgroundedAt: number | null = null;
 const RESUME_REFETCH_THRESHOLD_MS = 30_000;
 
+// Tracks live foreground/background state (unlike lastBackgroundedAt, this
+// updates on every transition, not just ones past the refetch threshold).
+// Callers like the upload retry loop use this to avoid retrying a fetch
+// while the WebView's network is suspended in the background.
+let appActive = true;
+
+export function isAppActive(): boolean {
+  return appActive;
+}
+
+function setAppActive(active: boolean): void {
+  appActive = active;
+  try {
+    window.dispatchEvent(new CustomEvent<{ isActive: boolean }>('app-active-changed', { detail: { isActive: active } }));
+  } catch {
+    /* SSR / older webview — safe to ignore */
+  }
+}
+
 function refetchAfterResume(): void {
   // Invalidate the most user-visible queries. Other queries refetch on demand
   // when their owning components mount, so a broad invalidation here would
@@ -42,6 +61,7 @@ export async function initMobileShell(): Promise<void> {
   // the WebView (and any open WebSockets) was paused for a few minutes.
   try {
     await CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      setAppActive(isActive);
       if (isActive) {
         const wasBackgrounded =
           lastBackgroundedAt !== null &&
@@ -58,6 +78,7 @@ export async function initMobileShell(): Promise<void> {
       // Belt-and-braces: some Android OEMs deliver `resume` without a prior
       // `appStateChange(false)`. Honour the same 30 s threshold so a quick
       // app-switcher peek doesn't trigger a refetch storm.
+      setAppActive(true);
       if (
         lastBackgroundedAt !== null &&
         Date.now() - lastBackgroundedAt >= RESUME_REFETCH_THRESHOLD_MS

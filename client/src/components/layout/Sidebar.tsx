@@ -9,7 +9,11 @@ import {
   ChevronDown,
   Gift,
   Users,
+  Rocket,
+  Radio,
+  Bookmark,
 } from "lucide-react";
+import { isPartnerType } from "@shared/partner-access";
 import { GamefolioStoreIcon } from "@/components/icons/GamefolioStoreIcon";
 import { GamefolioCollectionIcon } from "@/components/icons/GamefolioCollectionIcon";
 import { GamefolioHelpIcon } from "@/components/icons/GamefolioHelpIcon";
@@ -19,6 +23,7 @@ import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
 import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
+import { GamefolioDashboardIcon } from "@/components/icons/GamefolioDashboardIcon";
 import { GamefolioMessagesIcon } from "@/components/icons/GamefolioMessagesIcon";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
@@ -253,8 +258,15 @@ const Sidebar = () => {
     return <ZapIconSvg active={false} className={className} />;
   };
 
+  const isIndieDev = user?.userType?.split(",").includes("indie_developer");
+  const canAccessIndieGame = !!user && (
+    user.role === "admin" ||
+    isPartnerType(user, "indie") ||
+    isIndieDev
+  );
   const menuItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
+    ...(user ? [{ icon: GamefolioDashboardIcon, label: "Dashboard", href: "/dashboard" }] : []),
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
@@ -274,6 +286,11 @@ const Sidebar = () => {
     ...(user && user.messagingEnabled !== false ? [{ icon: GamefolioMessagesIcon, label: "Messages", href: "/messages" }] : []),
 
     { icon: GamefolioProfileIcon, label: "My Gamefolio", href: user ? `/profile/${user.username}` : "/auth", themed: true, gamefolioIcon: true },
+
+    // Partner dashboards — visible only to the matching paid partner (admins see both).
+    ...(canAccessIndieGame ? [{ icon: Rocket, label: "Game Dashboard", href: "/indie/dashboard" }] : []),
+    ...(isPartnerType(user, "streamer") || user?.role === "admin" ? [{ icon: Radio, label: "Streamer Dashboard", href: "/streamer/dashboard" }] : []),
+
     { icon: GamefolioHelpIcon, label: "Help & Support", href: "/help" },
 
     // Only show admin panel link for users with admin role
@@ -312,6 +329,12 @@ const Sidebar = () => {
                       <Link href={item.href} onClick={() => { closeClipDialog(); setMyGamefolioExpanded(false); }}>
                         <div className="flex items-center px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors cursor-pointer">
                           View Profile
+                        </div>
+                      </Link>
+                      <Link href="/bookmarks" onClick={() => { closeClipDialog(); setMyGamefolioExpanded(false); }}>
+                        <div className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors cursor-pointer">
+                          <Bookmark className="h-3.5 w-3.5 shrink-0" />
+                          Bookmarks
                         </div>
                       </Link>
                       <button

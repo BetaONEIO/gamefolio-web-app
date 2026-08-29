@@ -9,6 +9,8 @@ import { EmailService } from '../email-service';
 import { removePartnerFromMarketing } from '../marketing-sync';
 import { notifyProPurchase } from '../telegram-notify';
 import { provisionProSubscription, provisionPartnerSubscription, grantGiftPro } from './pro-subscription';
+import { captureRouteError } from '../sentry';
+import { provisionIndieDevSubscription } from './indie-dev-subscription';
 import Stripe from 'stripe';
 
 const router = Router();
@@ -118,10 +120,11 @@ async function processGfOrderDelivery(sessionId: string, paymentIntentId?: strin
       console.error(`[GF Webhook] Order ${order.id} on-chain delivery failed (off-chain credited): ${result.error}`);
     }
   } catch (error: any) {
-    await updateOrderStatus(order.id, 'credited', { 
-      errorReason: error.message || 'On-chain transfer error but off-chain balance credited' 
+    await updateOrderStatus(order.id, 'credited', {
+      errorReason: error.message || 'On-chain transfer error but off-chain balance credited'
     });
     console.error(`[GF Webhook] Order ${order.id} on-chain delivery error (off-chain credited):`, error);
+    captureRouteError(error, { webhook: 'stripe', stage: 'gf_token_transfer', orderId: order.id });
   }
 }
 
@@ -150,6 +153,10 @@ router.post('/api/stripe/webhook',
       event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
     } catch (error: any) {
       console.error('[GF Webhook] Signature verification failed:', error.message);
+      // High-signal failure: a wrong/rotated STRIPE_WEBHOOK_SECRET makes every
+      // event fail here silently otherwise — nobody would notice until a user
+      // reports a missing Pro grant or token delivery.
+      captureRouteError(error, { webhook: 'stripe', stage: 'signature_verification' });
       return res.status(400).json({ error: `Webhook signature verification failed: ${error.message}` });
     }
 
@@ -168,6 +175,7 @@ router.post('/api/stripe/webhook',
           );
         } catch (error) {
           console.error('[GF Webhook] Error processing order delivery:', error);
+          captureRouteError(error, { webhook: 'stripe', stage: 'checkout_session_gf_order', sessionId: session.id });
         }
       }
 
@@ -180,6 +188,7 @@ router.post('/api/stripe/webhook',
           console.log(`[GF Webhook] Granted Gift Pro (${plan}) to user ${recipientId} from user ${session.metadata.gifter_user_id}`);
         } catch (error) {
           console.error('[GF Webhook] Error processing gift_pro:', error);
+          captureRouteError(error, { webhook: 'stripe', stage: 'gift_pro', sessionId: session.id });
         }
       }
 
@@ -197,13 +206,39 @@ router.post('/api/stripe/webhook',
             : session.customer?.id;
 
           if (userId && subscriptionId && customerId) {
-            await provisionProSubscription({ userId, plan, customerId, subscriptionId });
+            await provisionProSubscription({ userId, plan, customerId, subscriptionId, ambassadorCode: session.metadata?.ambassadorCode });
             console.log(`[GF Webhook] Provisioned Pro for user ${userId} via checkout.session.completed`);
           } else {
             console.warn('[GF Webhook] pro_subscription session missing user/subscription/customer ids');
           }
         } catch (error) {
           console.error('[GF Webhook] Error provisioning Pro subscription:', error);
+          captureRouteError(error, { webhook: 'stripe', stage: 'pro_subscription_provision', sessionId: session.id });
+        }
+      }
+
+      // Game Developer subscription checkout — backstop for the client-side
+      // confirm call. Idempotent: safe even if the client already provisioned
+      // this session.
+      if (session.metadata?.type === 'indie_dev_subscription' && session.metadata?.userId) {
+        try {
+          const userId = parseInt(session.metadata.userId, 10);
+          const plan: 'monthly' | 'yearly' = session.metadata.plan === 'yearly' ? 'yearly' : 'monthly';
+          const subscriptionId = typeof session.subscription === 'string'
+            ? session.subscription
+            : session.subscription?.id;
+          const customerId = typeof session.customer === 'string'
+            ? session.customer
+            : session.customer?.id;
+
+          if (userId && subscriptionId && customerId) {
+            await provisionIndieDevSubscription({ userId, plan, customerId, subscriptionId });
+            console.log(`[GF Webhook] Provisioned Game Developer subscription for user ${userId} via checkout.session.completed`);
+          } else {
+            console.warn('[GF Webhook] indie_dev_subscription session missing user/subscription/customer ids');
+          }
+        } catch (error) {
+          console.error('[GF Webhook] Error provisioning Game Developer subscription:', error);
         }
       }
 
@@ -243,6 +278,7 @@ router.post('/api/stripe/webhook',
           );
         } catch (error) {
           console.error('[GF Webhook] Error processing PaymentIntent order delivery:', error);
+          captureRouteError(error, { webhook: 'stripe', stage: 'payment_intent_gf_order', paymentIntentId: paymentIntent.id });
         }
       }
     }
@@ -287,6 +323,7 @@ router.post('/api/stripe/webhook',
           }
         } catch (error) {
           console.error('[GF Webhook] Error processing invoice.paid:', error);
+          captureRouteError(error, { webhook: 'stripe', stage: 'invoice_paid_renewal', subscriptionId });
         }
       }
     }
@@ -329,13 +366,19 @@ router.post('/api/stripe/webhook',
         }
       } catch (error) {
         console.error('[GF Webhook] Error processing subscription deletion:', error);
+        captureRouteError(error, { webhook: 'stripe', stage: 'subscription_deleted', subscriptionId });
       }
     }
 
     if (event.type === 'customer.subscription.updated') {
       const subscription = event.data.object as Stripe.Subscription;
       const subscriptionId = subscription.id;
-      const nonActiveStatuses = ['canceled', 'incomplete', 'incomplete_expired', 'past_due', 'unpaid'];
+      // `past_due` is intentionally excluded: Stripe retries payment for several
+      // days before truly ending a subscription, so the user still has a valid
+      // paid period and must not lose Pro access during that retry window.
+      // `incomplete` is also excluded because it only applies to brand-new
+      // subscriptions that are mid-checkout and have not yet been provisioned.
+      const nonActiveStatuses = ['canceled', 'incomplete_expired', 'unpaid'];
 
       if (nonActiveStatuses.includes(subscription.status)) {
         try {
@@ -361,6 +404,7 @@ router.post('/api/stripe/webhook',
           }
         } catch (error) {
           console.error('[GF Webhook] Error processing subscription update:', error);
+          captureRouteError(error, { webhook: 'stripe', stage: 'subscription_updated', subscriptionId });
         }
       }
     }
@@ -385,6 +429,7 @@ router.post('/api/stripe/webhook',
           }
         } catch (error) {
           console.error('[GF Webhook] Error processing payment_failed:', error);
+          captureRouteError(error, { webhook: 'stripe', stage: 'invoice_payment_failed', subscriptionId });
         }
       }
     }

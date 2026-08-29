@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { useToast } from '@/hooks/use-toast';
 import { handleDiscordCallback, getDiscordCallbackParams } from '@/lib/discord';
@@ -11,8 +11,12 @@ export function DiscordCallback() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { closeModal } = useAuthModal();
+  const hasProcessed = useRef(false);
 
   useEffect(() => {
+    if (hasProcessed.current) return;
+    hasProcessed.current = true;
+
     const processDiscordCallback = async () => {
       try {
         const { code, state, error } = getDiscordCallbackParams();
@@ -43,6 +47,22 @@ export function DiscordCallback() {
           avatar: discordUser.avatar
         });
 
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: 'Discord authentication failed' }));
+          // Check if blocked by developer portal
+          if (errorData.code === 'DEV_PORTAL_NO_REGISTRATION') {
+            toast({
+              title: "Registration not available",
+              description: "New registrations are not available on the developer portal. Please create an account on app.gamefolio.com first.",
+              variant: "destructive",
+            });
+            closeModal();
+            setLocation("/auth");
+            return;
+          }
+          throw new Error(errorData.message || `Server error: ${response.status}`);
+        }
+
         const userData = await response.json();
         queryClient.setQueryData(["/api/user"], userData);
 
@@ -66,11 +86,6 @@ export function DiscordCallback() {
           setLocation("/onboarding");
         } else {
           // Existing user with completed onboarding
-          toast({
-            title: "Welcome back!",
-            description: `You're now signed in with Discord.`,
-            variant: "gamefolioSuccess",
-          });
           closeModal();
           setLocation("/");
         }

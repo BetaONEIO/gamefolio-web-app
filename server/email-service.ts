@@ -292,6 +292,47 @@ export class EmailService {
     });
   }
 
+  // Notifies the moderation team when a user blocks another user, so the
+  // developer is alerted to potentially abusive users/content (App Store
+  // Review Guideline 1.2). Best-effort: never throws into the block flow.
+  static async sendUserBlockedEmail(blockData: {
+    blockerId: number;
+    blockerUsername: string;
+    blockedId: number;
+    blockedUsername: string;
+  }): Promise<boolean> {
+    const { blockerId, blockerUsername, blockedId, blockedUsername } = blockData;
+    const supportEmail = 'support@gamefolio.com';
+    const blockTime = new Date().toLocaleString();
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; background-color: #dc3545; color: white; padding: 20px; border-radius: 8px;">
+              <div style="font-size: 22px; font-weight: bold;">🚫 User Blocked</div>
+            </div>
+            <div style="background:#fff; padding: 24px; border:1px solid #ddd; border-radius: 8px; margin-top: 16px;">
+              <p>A user has blocked another user. This may indicate abusive behavior or objectionable content that needs review.</p>
+              <p><strong>Blocked by:</strong> @${blockerUsername} (ID ${blockerId})</p>
+              <p><strong>Blocked user:</strong> @${blockedUsername} (ID ${blockedId})</p>
+              <p><strong>Time:</strong> ${blockTime}</p>
+              <p style="margin-top:16px;"><a href="${SITE_URL}/admin" style="display:inline-block; background:#007bff; color:#fff; padding:10px 20px; text-decoration:none; border-radius:4px;">Review in Admin Panel</a></p>
+              <p style="color:#dc3545; font-weight:bold; margin-top:16px;">⚠️ Please review within 24 hours and remove content / eject the user if the content is objectionable.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    return await sendEmail({
+      to: supportEmail,
+      subject: `🚫 User Blocked: @${blockedUsername} blocked by @${blockerUsername}`,
+      html,
+    });
+  }
+
   static async sendProWelcomeEmail(email: string, username: string, plan: 'monthly' | 'yearly'): Promise<boolean> {
     const planName = plan === 'monthly' ? 'Monthly' : 'Yearly';
     const renewalDate = plan === 'yearly'
@@ -492,7 +533,7 @@ export class EmailService {
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; color: #333; }
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { text-align: center; margin-bottom: 30px; background-color: #4C8; color: white; padding: 20px; border-radius: 8px; }
+            .header { text-align: center; margin-bottom: 30px; background-color: #B7FF1A; color: #071013; padding: 20px; border-radius: 8px; }
             .logo { color: #ffffff; font-size: 24px; font-weight: bold; }
             .content { background-color: #ffffff; padding: 30px; border-radius: 8px; border: 1px solid #ddd; }
             .user-details { background-color: #f8f9fa; padding: 20px; border-radius: 6px; margin: 20px 0; }
@@ -511,7 +552,7 @@ export class EmailService {
               <p style="margin: 10px 0 0 0;">Gamefolio Platform</p>
             </div>
             <div class="content">
-              <h1 style="color: #4C8;">New User Joined!</h1>
+              <h1 style="color: #B7FF1A;">New User Joined!</h1>
               <p>A new user has successfully registered on the Gamefolio platform.</p>
               
               <div class="user-details">

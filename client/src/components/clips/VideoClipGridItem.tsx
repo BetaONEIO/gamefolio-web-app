@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLazyVideo } from "@/hooks/use-lazy-video";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { ClipWithUser } from "@shared/schema";
-import { Play, Eye } from "lucide-react";
+import { Play, Eye, Loader2, AlertTriangle } from "lucide-react";
 import { Link } from "wouter";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
@@ -45,7 +45,12 @@ const VideoClipGridItem = ({
     }
   };
 
+  const isProcessing = clip.status === "processing";
+  const isFailed = clip.status === "failed";
+
   const handleOpenClip = () => {
+    // Not ready to watch yet — nothing to open.
+    if (isProcessing || isFailed) return;
     const contextList = reelsList || clipsList || [];
     if (onCardClick) {
       onCardClick(clip.id, contextList);
@@ -69,17 +74,30 @@ const VideoClipGridItem = ({
 
   const showBlur = isPortraitThumbnail && !isReel;
 
+  const isInteractive = !isProcessing && !isFailed;
+
   return (
-    <div className="cursor-pointer group" onClick={handleOpenClip}>
+    <div className={`${isInteractive ? "cursor-pointer" : "cursor-default"} group`} onClick={handleOpenClip}>
       <div
-        className={`relative overflow-hidden rounded-xl ${aspectRatioClass} border transition-transform duration-300 group-hover:-translate-y-1.5 group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.55)]`}
+        className={`relative overflow-hidden rounded-xl ${aspectRatioClass} border transition-transform duration-300 ${isInteractive ? "group-hover:-translate-y-1.5 group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.55)]" : ""}`}
         style={{
           borderColor: customAccentColor
             ? `${customAccentColor}30`
             : "rgba(255,255,255,0.05)",
         }}
       >
-        {hasNoThumbnail ? (
+        {(isProcessing || isFailed) && hasNoThumbnail ? (
+          // No preview thumbnail available (generation timed out/failed) —
+          // fall back to a plain placeholder instead of trying to play the
+          // raw, not-yet-processed video.
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-[#0B1218]">
+            {isFailed ? (
+              <AlertTriangle size={compact ? 18 : 24} className="text-red-400" />
+            ) : (
+              <Loader2 size={compact ? 18 : 24} className="text-white/40 animate-spin" />
+            )}
+          </div>
+        ) : hasNoThumbnail ? (
           <video
             ref={lazyVideo.ref}
             src={lazyVideo.visible ? (clip.videoUrl ?? undefined) : undefined}
@@ -87,6 +105,9 @@ const VideoClipGridItem = ({
             preload="none"
             muted
             playsInline
+            onContextMenu={(e) => e.preventDefault()}
+            controlsList="nodownload noremoteplayback noplaybackrate"
+            disablePictureInPicture
           />
         ) : (
           <>
@@ -116,21 +137,43 @@ const VideoClipGridItem = ({
           </>
         )}
 
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10 pointer-events-none">
-          <div
-            className={`bg-primary/90 rounded-full shadow-xl backdrop-blur-sm transform scale-90 group-hover:scale-100 transition-transform duration-500 ${
-              compact ? "p-2" : "p-3"
-            }`}
-          >
-            <Play
-              size={compact ? 20 : 28}
-              className="text-white fill-white"
-            />
+        {isProcessing || isFailed ? (
+          // Content isn't watchable yet — always-on dim + status icon
+          // instead of the hover-to-play affordance below.
+          <div className="absolute inset-0 bg-black/55 flex items-center justify-center z-10 pointer-events-none">
+            {isFailed ? (
+              <AlertTriangle size={compact ? 20 : 28} className="text-red-400" />
+            ) : (
+              <Loader2 size={compact ? 20 : 28} className="text-white/80 animate-spin" />
+            )}
           </div>
-        </div>
+        ) : (
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10 pointer-events-none">
+            <div
+              className={`bg-primary/90 rounded-full shadow-xl backdrop-blur-sm transform scale-90 group-hover:scale-100 transition-transform duration-500 ${
+                compact ? "p-2" : "p-3"
+              }`}
+            >
+              <Play
+                size={compact ? 20 : 28}
+                className="text-white fill-white"
+              />
+            </div>
+          </div>
+        )}
 
         <div className="absolute top-1.5 left-1.5 flex items-center gap-1 z-20">
-          {isNew && (
+          {isProcessing && (
+            <div className="bg-black/70 backdrop-blur-sm text-white/90 font-bold text-[9px] px-1.5 py-0.5 rounded shadow-md flex items-center gap-1">
+              <Loader2 size={9} className="animate-spin" /> PROCESSING
+            </div>
+          )}
+          {isFailed && (
+            <div className="bg-red-500/80 backdrop-blur-sm text-white font-bold text-[9px] px-1.5 py-0.5 rounded shadow-md">
+              FAILED
+            </div>
+          )}
+          {!isProcessing && !isFailed && isNew && (
             <div className="bg-gray-600 text-white font-bold text-[9px] px-1.5 py-0.5 rounded shadow-md">
               NEW
             </div>

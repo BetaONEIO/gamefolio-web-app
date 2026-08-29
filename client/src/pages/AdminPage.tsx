@@ -1,8 +1,10 @@
 import React, { useState } from "react";
-import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useQuery, useMutation, keepPreviousData } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { AlertSettings } from "@/components/admin/AlertSettings";
 import { PushBroadcastPanel } from "@/components/admin/PushBroadcastPanel";
+import { AdminBountiesPanel } from "@/components/admin/AdminBountiesPanel";
+import { AmbassadorManagementPanel } from "@/components/admin/AmbassadorManagementPanel";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
 import AdminContentFilter from "./AdminContentFilter";
@@ -52,6 +54,12 @@ interface HeroTextData {
   buttonText?: string;
   buttonUrl?: string;
   targetAudience?: string;
+}
+
+interface PsnHealth {
+  lastSuccessAt: string | null;
+  hasRefreshToken: boolean;
+  daysSinceLastSuccess: number | null;
 }
 
 interface AssetReward {
@@ -892,6 +900,250 @@ function ProSubscribersManagement() {
   );
 }
 
+// OAuth Developer Platform Management Component
+interface AdminOAuthClient {
+  id: number;
+  clientId: string;
+  name: string;
+  description: string | null;
+  logoUrl: string | null;
+  isActive: boolean;
+  createdAt: string;
+  ownerUserId: number;
+  ownerUsername: string | null;
+  activeTokenCount: number;
+  activeUserCount: number;
+  lastUsedAt: string | null;
+}
+
+interface AdminOAuthAuthorizedUser {
+  userId: number;
+  username: string | null;
+  scope: string;
+  lastUsedAt: string | null;
+  createdAt: string;
+}
+
+function OAuthAppUsersDialog({ clientId, clientName, onClose }: { clientId: number; clientName: string; onClose: () => void }) {
+  const { data, isLoading } = useQuery<{ authorizedUsers: AdminOAuthAuthorizedUser[] }>({
+    queryKey: [`/api/admin/oauth/clients/${clientId}`],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+
+  const authorizedUsers = data?.authorizedUsers || [];
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Authorized users — {clientName}</DialogTitle>
+        </DialogHeader>
+        {isLoading ? (
+          <div className="space-y-2">
+            {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+          </div>
+        ) : authorizedUsers.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">No users currently have an active token for this app.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Scope</TableHead>
+                  <TableHead>Last used</TableHead>
+                  <TableHead>Authorized</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {authorizedUsers.map((u) => (
+                  <TableRow key={u.userId}>
+                    <TableCell>{u.username || `User #${u.userId}`}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{u.scope}</TableCell>
+                    <TableCell>{u.lastUsedAt ? new Date(u.lastUsedAt).toLocaleString() : 'Never'}</TableCell>
+                    <TableCell>{new Date(u.createdAt).toLocaleDateString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function OAuthAppsManagement() {
+  const { toast } = useToast();
+  const [usersDialogClient, setUsersDialogClient] = useState<{ id: number; name: string } | null>(null);
+  const { data, isLoading, refetch } = useQuery<{ clients: AdminOAuthClient[] }>({
+    queryKey: ['/api/admin/oauth/clients'],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+
+  const deactivateMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('PATCH', `/api/admin/oauth/clients/${id}/deactivate`);
+      return res.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({ title: 'App deactivated', description: 'All active tokens for this app were revoked.', variant: 'gamefolioSuccess' });
+    },
+    onError: (error: Error) => toast({ title: 'Failed to deactivate', description: error.message, variant: 'gamefolioError' }),
+  });
+
+  const reactivateMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('PATCH', `/api/admin/oauth/clients/${id}/reactivate`);
+      return res.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({ title: 'App reactivated', variant: 'gamefolioSuccess' });
+    },
+    onError: (error: Error) => toast({ title: 'Failed to reactivate', description: error.message, variant: 'gamefolioError' }),
+  });
+
+  const revokeAllMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest('POST', `/api/admin/oauth/clients/${id}/revoke-all`);
+      return res.json();
+    },
+    onSuccess: () => {
+      refetch();
+      toast({ title: 'All sessions revoked', variant: 'gamefolioSuccess' });
+    },
+    onError: (error: Error) => toast({ title: 'Failed to revoke sessions', description: error.message, variant: 'gamefolioError' }),
+  });
+
+  const clients = data?.clients || [];
+  const totalActiveUsers = clients.reduce((sum, c) => sum + c.activeUserCount, 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-4 pb-3 px-4">
+            <p className="text-xs text-muted-foreground">Registered apps</p>
+            <p className="text-2xl font-bold mt-1">{clients.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3 px-4">
+            <p className="text-xs text-muted-foreground">Active apps</p>
+            <p className="text-2xl font-bold mt-1">{clients.filter(c => c.isActive).length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3 px-4">
+            <p className="text-xs text-muted-foreground">Total connected users</p>
+            <p className="text-2xl font-bold mt-1">{totalActiveUsers}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Registered OAuth Apps</CardTitle>
+          <CardDescription>Every app registered on the developer platform, across all developers.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-2">
+              {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+            </div>
+          ) : clients.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">No apps registered yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>App</TableHead>
+                    <TableHead>Owner</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Active users</TableHead>
+                    <TableHead>Last used</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {clients.map((client) => (
+                    <TableRow key={client.id}>
+                      <TableCell>
+                        <div className="font-medium">{client.name}</div>
+                        {client.description && <div className="text-xs text-muted-foreground">{client.description}</div>}
+                      </TableCell>
+                      <TableCell>{client.ownerUsername || `User #${client.ownerUserId}`}</TableCell>
+                      <TableCell>
+                        <Badge className={client.isActive ? 'bg-primary text-white' : 'bg-red-600 text-white'}>
+                          {client.isActive ? 'Active' : 'Deactivated'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{client.activeUserCount} ({client.activeTokenCount} tokens)</TableCell>
+                      <TableCell>{client.lastUsedAt ? new Date(client.lastUsedAt).toLocaleString() : 'Never'}</TableCell>
+                      <TableCell>{new Date(client.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={client.activeUserCount === 0}
+                            onClick={() => setUsersDialogClient({ id: client.id, name: client.name })}
+                          >
+                            View users
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={revokeAllMutation.isPending}
+                            onClick={() => revokeAllMutation.mutate(client.id)}
+                          >
+                            Revoke sessions
+                          </Button>
+                          {client.isActive ? (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={deactivateMutation.isPending}
+                              onClick={() => deactivateMutation.mutate(client.id)}
+                            >
+                              Deactivate
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={reactivateMutation.isPending}
+                              onClick={() => reactivateMutation.mutate(client.id)}
+                            >
+                              Reactivate
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {usersDialogClient && (
+        <OAuthAppUsersDialog
+          clientId={usersDialogClient.id}
+          clientName={usersDialogClient.name}
+          onClose={() => setUsersDialogClient(null)}
+        />
+      )}
+    </div>
+  );
+}
+
 // Lootbox Management Component
 interface LootboxOpen {
   id: number;
@@ -1112,6 +1364,7 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -1146,6 +1399,7 @@ import {
   UserMinus,
   Award,
   Star,
+  Medal,
   Crown,
   Shield,
   Plus,
@@ -1190,7 +1444,7 @@ const PendingGamesSection = () => {
   const { data: pendingGames = [], isLoading, refetch } = useQuery<PendingGame[]>({
     queryKey: ["/api/admin/games/pending"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/games/pending", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/admin/games/pending");
       if (!res.ok) throw new Error("Failed to fetch pending games");
       return res.json();
     },
@@ -1834,6 +2088,9 @@ const AdminPage = () => {
   const [actionType, setActionType] = useState<"ban" | "suspend">("ban");
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [restoreAction, setRestoreAction] = useState<"unsuspend" | "unban">("unsuspend");
+  const [impersonateDialogOpen, setImpersonateDialogOpen] = useState(false);
+  const [impersonateReason, setImpersonateReason] = useState("");
+  const [isImpersonating, setIsImpersonating] = useState(false);
   const [badgeDialogOpen, setBadgeDialogOpen] = useState(false);
   const [selectedBadgeType, setSelectedBadgeType] = useState("");
   const [badgeUserSearch, setBadgeUserSearch] = useState("");
@@ -2126,6 +2383,13 @@ const AdminPage = () => {
     refetchInterval: 60000, // Refresh every minute
   });
 
+  // Fetch PSN token health
+  const { data: psnHealth, isLoading: psnHealthLoading, refetch: refetchPsnHealth } = useQuery<PsnHealth>({
+    queryKey: ["/api/admin/psn-health"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    refetchInterval: 300000, // Refresh every 5 minutes
+  });
+
   // Fetch users with pagination
   const { data: usersData, isLoading: usersLoading } = useQuery<UsersData>({
     queryKey: ["/api/admin/users", { page: userPage, search: userSearch }],
@@ -2359,6 +2623,34 @@ const AdminPage = () => {
     }
   };
 
+  // Popup blockers treat window.open() as not-a-user-gesture once it happens
+  // after an `await`, so the caller opens a blank tab synchronously on click
+  // and passes the handle in here — we just navigate it once the token is back.
+  const handleImpersonateUser = async (userId: number, targetWindow: Window | null) => {
+    try {
+      const res = await apiRequest("POST", `/api/admin/users/${userId}/impersonate`, {
+        reason: impersonateReason,
+      });
+      const data = await res.json();
+      const url = `/impersonate-session?token=${encodeURIComponent(data.token)}`;
+      if (targetWindow) {
+        targetWindow.location.href = url;
+      } else {
+        window.open(url, "_blank");
+      }
+      setImpersonateDialogOpen(false);
+    } catch (error) {
+      targetWindow?.close();
+      toast({
+        title: "Error",
+        description: "Failed to start impersonation session. Please try again.",
+        variant: "gamefolioError",
+      });
+    } finally {
+      setIsImpersonating(false);
+    }
+  };
+
   const handleUnbanUser = async (userId: number) => {
     try {
       await apiRequest("POST", `/api/admin/users/${userId}/unban`);
@@ -2437,6 +2729,26 @@ const AdminPage = () => {
       toast({ title: "Partner status removed", description: "Partner badge removed from user." });
     } catch (error) {
       toast({ title: "Error", description: "Failed to remove partner status.", variant: "gamefolioError" });
+    }
+  };
+
+  const handleMakeAmbassador = async (userId: number) => {
+    try {
+      await apiRequest("POST", `/api/admin/users/${userId}/make-ambassador`);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"], exact: false });
+      toast({ title: "Ambassador status granted", description: "The user is now a Gamefolio Ambassador." });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to grant ambassador status.", variant: "gamefolioError" });
+    }
+  };
+
+  const handleRemoveAmbassador = async (userId: number) => {
+    try {
+      await apiRequest("POST", `/api/admin/users/${userId}/remove-ambassador`);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"], exact: false });
+      toast({ title: "Ambassador status removed", description: "Ambassador badge removed from user." });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to remove ambassador status.", variant: "gamefolioError" });
     }
   };
 
@@ -2985,10 +3297,13 @@ const AdminPage = () => {
           <TabsTrigger value="store-management" className="text-xs px-3 py-1.5">Store</TabsTrigger>
           <TabsTrigger value="assets" className="text-xs px-3 py-1.5">Assets</TabsTrigger>
           <TabsTrigger value="pro-subscribers" className="text-xs px-3 py-1.5">Pro</TabsTrigger>
+          <TabsTrigger value="ambassadors" className="text-xs px-3 py-1.5">Ambassadors</TabsTrigger>
           <TabsTrigger value="settings" className="text-xs px-3 py-1.5">Settings</TabsTrigger>
           <TabsTrigger value="games" className="text-xs px-3 py-1.5">Games</TabsTrigger>
           <TabsTrigger value="alerts" className="text-xs px-3 py-1.5">Alerts</TabsTrigger>
           <TabsTrigger value="push" className="text-xs px-3 py-1.5">Push</TabsTrigger>
+          <TabsTrigger value="bounties" className="text-xs px-3 py-1.5">Bounties</TabsTrigger>
+          <TabsTrigger value="oauth-apps" className="text-xs px-3 py-1.5">Developer</TabsTrigger>
         </TabsList>
 
         <TabsContent value="alerts" className="space-y-4">
@@ -2998,6 +3313,14 @@ const AdminPage = () => {
 
         <TabsContent value="push" className="space-y-4">
           <PushBroadcastPanel />
+        </TabsContent>
+
+        <TabsContent value="bounties" className="space-y-4">
+          <AdminBountiesPanel />
+        </TabsContent>
+
+        <TabsContent value="ambassadors" className="space-y-4">
+          <AmbassadorManagementPanel />
         </TabsContent>
 
         {/* Dashboard Tab */}
@@ -3072,6 +3395,100 @@ const AdminPage = () => {
             </Card>
           </div>
 
+          {/* PSN Token Health Card */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle className="text-base font-semibold">PSN Token Health</CardTitle>
+                <CardDescription className="mt-1">
+                  Status of the PlayStation Network sync token
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => refetchPsnHealth()}
+                title="Refresh PSN health"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {psnHealthLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Clock className="h-4 w-4 animate-spin" />
+                  Checking PSN token status…
+                </div>
+              ) : !psnHealth ? (
+                <div className="flex items-center gap-2 text-destructive text-sm">
+                  <XCircle className="h-4 w-4" />
+                  Could not retrieve PSN health data.
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-6 items-center">
+                  {/* Colour-coded status badge */}
+                  <div className="flex items-center gap-2">
+                    {psnHealth.daysSinceLastSuccess === null ? (
+                      <>
+                        <XCircle className="h-5 w-5 text-destructive" />
+                        <span className="font-semibold text-destructive">No Data</span>
+                      </>
+                    ) : psnHealth.daysSinceLastSuccess > 50 ? (
+                      <>
+                        <XCircle className="h-5 w-5 text-destructive" />
+                        <span className="font-semibold text-destructive">Critical</span>
+                      </>
+                    ) : psnHealth.daysSinceLastSuccess >= 30 ? (
+                      <>
+                        <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                        <span className="font-semibold text-yellow-500">Warning</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <span className="font-semibold text-green-500">Healthy</span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Last success timestamp */}
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Last success: </span>
+                    <span className="font-medium">
+                      {psnHealth.lastSuccessAt
+                        ? new Date(psnHealth.lastSuccessAt).toLocaleString()
+                        : "Never"}
+                    </span>
+                  </div>
+
+                  {/* Days since last success */}
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Days since last success: </span>
+                    <span className="font-medium">
+                      {psnHealth.daysSinceLastSuccess !== null
+                        ? psnHealth.daysSinceLastSuccess
+                        : "—"}
+                    </span>
+                  </div>
+
+                  {/* Refresh token presence */}
+                  <div className="flex items-center gap-1 text-sm">
+                    <span className="text-muted-foreground">Refresh token: </span>
+                    {psnHealth.hasRefreshToken ? (
+                      <span className="flex items-center gap-1 text-green-500 font-medium">
+                        <CheckCircle className="h-3.5 w-3.5" /> Present
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-destructive font-medium">
+                        <XCircle className="h-3.5 w-3.5" /> Missing
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <div className="grid gap-4 md:grid-cols-2">
             <Card className="col-span-1">
               <CardHeader>
@@ -3140,7 +3557,7 @@ const AdminPage = () => {
                         <XAxis dataKey="name" />
                         <YAxis />
                         <Tooltip />
-                        <Bar dataKey="value" name="Users" fill="#4C8">
+                        <Bar dataKey="value" name="Users" fill="#B7FF1A">
                           {formatAgeRangeData().map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
@@ -3316,7 +3733,23 @@ const AdminPage = () => {
                               >
                                 <User className="h-4 w-4" />
                               </Button>
-                              
+
+                              {user.role !== "admin" && user.role !== "moderator" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setSelectedUser(user);
+                                    setImpersonateReason("");
+                                    setImpersonateDialogOpen(true);
+                                  }}
+                                  title="Impersonate User"
+                                  className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              )}
+
                               {user.status === "active" ? (
                                 <>
                                   <Button
@@ -3449,6 +3882,28 @@ const AdminPage = () => {
                                   className="text-muted-foreground hover:text-yellow-500"
                                 >
                                   <Star className="h-4 w-4" />
+                                </Button>
+                              )}
+
+                              {(user as any).isAmbassador ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoveAmbassador(user.id)}
+                                  title="Remove Ambassador"
+                                  style={{ color: '#38BDF8' }}
+                                >
+                                  <Medal className="h-4 w-4 fill-current" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleMakeAmbassador(user.id)}
+                                  title="Make Ambassador"
+                                  className="text-muted-foreground hover:text-sky-500"
+                                >
+                                  <Medal className="h-4 w-4" />
                                 </Button>
                               )}
                               
@@ -6345,6 +6800,10 @@ const AdminPage = () => {
           <ProSubscribersManagement />
         </TabsContent>
 
+        <TabsContent value="oauth-apps" className="space-y-4">
+          <OAuthAppsManagement />
+        </TabsContent>
+
         {/* Settings Tab */}
         <TabsContent value="settings" className="space-y-4">
           <Card>
@@ -6794,6 +7253,66 @@ const AdminPage = () => {
               onClick={handleStatusAction}
             >
               {actionType === "ban" ? "Ban User" : "Suspend User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Impersonate User Dialog */}
+      <Dialog open={impersonateDialogOpen} onOpenChange={setImpersonateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Impersonate User</DialogTitle>
+            <DialogDescription>
+              Opens a new tab, fully logged in as this user, for up to 45 minutes. Every
+              action taken is attributed to you in the audit log — use only to
+              reproduce/debug a reported issue.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedUser && (
+            <div className="flex items-center gap-3 px-1 py-2 rounded-lg bg-muted/50">
+              <User className="h-5 w-5 text-muted-foreground shrink-0" />
+              <div>
+                <div className="font-medium text-sm">{selectedUser.displayName || selectedUser.username}</div>
+                <div className="text-xs text-muted-foreground">@{selectedUser.username}</div>
+              </div>
+              <Badge variant="outline" className="ml-auto border-amber-500 text-amber-600">
+                45 min session
+              </Badge>
+            </div>
+          )}
+
+          <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <label htmlFor="impersonate-reason" className="text-sm font-medium">
+                Reason <span className="text-muted-foreground font-normal">(required, logged)</span>
+              </label>
+              <Textarea
+                id="impersonate-reason"
+                placeholder="e.g. Ticket #123 — user reports clip upload fails on their account"
+                value={impersonateReason}
+                onChange={(e) => setImpersonateReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setImpersonateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              disabled={isImpersonating || impersonateReason.trim().length < 10}
+              onClick={() => {
+                if (!selectedUser) return;
+                setIsImpersonating(true);
+                const targetWindow = window.open("about:blank", "_blank");
+                handleImpersonateUser(selectedUser.id, targetWindow);
+              }}
+            >
+              {isImpersonating ? "Starting…" : "Start Impersonation"}
             </Button>
           </DialogFooter>
         </DialogContent>

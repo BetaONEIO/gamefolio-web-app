@@ -4,7 +4,7 @@ import { Crown, Loader2, X, Check, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useAuth } from "@/hooks/use-auth";
-import { Package } from "@revenuecat/purchases-js";
+import type { RcPackage } from "@/hooks/use-revenuecat";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import {
   EmbeddedCheckoutProvider,
@@ -12,7 +12,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { isNative } from "@/lib/platform";
+import { isNative, openExternal } from "@/lib/platform";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import ProOnboardingScreen from "@/components/pro/ProOnboardingScreen";
 
@@ -38,8 +38,8 @@ interface ProUpgradeDialogProps {
 
 const premiumBenefits = [
   {
-    title: "Unlimited upload space",
-    description: "Share clips without limits or storage restrictions",
+    title: "Larger uploads",
+    description: "Clips 500MB / 10 min, reels 250MB / 3 min, screenshots 50MB",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M12 16V8M12 8L9 11M12 8L15 11" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -48,8 +48,19 @@ const premiumBenefits = [
     ),
   },
   {
-    title: "Animated profile customization",
-    description: "Custom banners, borders & neon effects",
+    title: "Unlimited uploads",
+    description: "No daily quotas or storage caps",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M17 8L12 3L7 8" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 3V15" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    title: "Animated profiles",
+    description: "Custom banners, neon effects & animated GIF avatars",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M9 3.5V2M15 3.5V2M9 21.5V20M15 21.5V20M20.5 9H22M20.5 15H22M3.5 9H2M3.5 15H2M12 8L13.5 11H16L14 13.5L15 17L12 15L9 17L10 13.5L8 11H10.5L12 8Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -57,32 +68,45 @@ const premiumBenefits = [
     ),
   },
   {
-    title: "100s of exclusive assets",
-    description: "Premium stickers, badges & unique themes",
+    title: "Exclusive borders",
+    description: "Premium avatar borders, visual themes & Pro badge",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 21C12 21 3 13.5 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 12 5C12.09 3.81 13.76 3 15.5 3C18.58 3 21 5.42 21 8.5C21 13.5 12 21 12 21Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 15C15.866 15 19 11.866 19 8C19 4.13401 15.866 1 12 1C8.13401 1 5 4.13401 5 8C5 11.866 8.13401 15 12 15Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M8.21 13.89L7 23L12 20L17 23L15.79 13.88" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    title: "Welcome lootbox",
+    description: "Free bonus reward when you first subscribe",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 12V22H4V12" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M22 7H2V12H22V7Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 22V7" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 7H7.5C6.83696 7 6.20107 6.73661 5.73223 6.26777C5.26339 5.79893 5 5.16304 5 4.5C5 3.83696 5.26339 3.20107 5.73223 2.73223C6.20107 2.26339 6.83696 2 7.5 2C11 2 12 7 12 7Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 7H16.5C17.163 7 17.7989 6.73661 18.2678 6.26777C18.7366 5.79893 19 5.16304 19 4.5C19 3.83696 18.7366 3.20107 18.2678 2.73223C17.7989 2.26339 17.163 2 16.5 2C13 2 12 7 12 7Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
+    title: "Monthly lootboxes",
+    description: "Fresh bonus rewards every month",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 8V12L15 15" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
   },
   {
     title: "Store discounts",
-    description: "Save up to 20% on games and merchandise",
+    description: "Up to 20% off name tags, borders & exclusive items",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M9 15L15 9M21.41 11.41L12.58 2.58C12.21 2.21 11.7 2 11.17 2H4C2.9 2 2 2.9 2 4V11.17C2 11.7 2.21 12.21 2.59 12.58L11.41 21.41C12.19 22.2 13.45 22.2 14.24 21.41L21.41 14.24C22.2 13.45 22.2 12.19 21.41 11.41Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         <circle cx="7" cy="7" r="1.5" fill="#B7FF1A"/>
-      </svg>
-    ),
-  },
-  {
-    title: "Ad-free experience",
-    description: "Pro subscribers are exempt from all video ads",
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22Z" stroke="#B7FF1A" strokeWidth="1.5"/>
-        <path d="M4 4L20 20" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round"/>
-        <path d="M10 9V15L15 12L10 9Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
   },
@@ -197,26 +221,26 @@ const TIER_META: Record<SubscriptionTier, TierMeta> = {
 const TIER_ORDER: SubscriptionTier[] = ["pro", "partner", "indie"];
 
 
-function isYearlyPackage(pkg: Package): boolean {
+function isYearlyPackage(pkg: RcPackage): boolean {
   const id = pkg.identifier.toLowerCase();
   return id.includes("annual") || id.includes("yearly") || id.includes("year");
 }
 
-function isMonthlyPackage(pkg: Package): boolean {
+function isMonthlyPackage(pkg: RcPackage): boolean {
   const id = pkg.identifier.toLowerCase();
   return id.includes("monthly") || id.includes("month");
 }
 
-function formatPrice(pkg: Package): string {
-  return pkg.rcBillingProduct?.currentPrice?.formattedPrice || "";
+function formatPrice(pkg: RcPackage): string {
+  return pkg.priceFormatted || "";
 }
 
-function getPriceAmount(pkg: Package): number {
-  return (pkg.rcBillingProduct?.currentPrice?.amountMicros || 0) / 1000000;
+function getPriceAmount(pkg: RcPackage): number {
+  return pkg.priceAmount || 0;
 }
 
-function getCurrency(pkg: Package): string {
-  return pkg.rcBillingProduct?.currentPrice?.currency || "USD";
+function getCurrency(pkg: RcPackage): string {
+  return pkg.currency || "USD";
 }
 
 function formatCurrency(amount: number, currency: string): string {
@@ -248,6 +272,25 @@ interface PlanView {
 interface LootboxReward {
   reward: { name: string; rarity: string; assetType: string; imageUrl?: string | null };
   isDuplicate: boolean;
+}
+
+// apiRequest throws Error(`${status}: ${bodyText}`) on non-2xx responses —
+// pull the JSON message back out so the UI shows the server's real reason
+// instead of a raw "400: {\"error\":\"...\"}" string.
+function parseApiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) {
+    const jsonStart = error.message.indexOf('{');
+    if (jsonStart !== -1) {
+      try {
+        const parsed = JSON.parse(error.message.slice(jsonStart));
+        if (parsed?.error) return parsed.error;
+        if (parsed?.message) return parsed.message;
+      } catch {
+        // fall through
+      }
+    }
+  }
+  return fallback;
 }
 
 export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthRequired, tier = "pro" }: ProUpgradeDialogProps) {
@@ -282,6 +325,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [webPricing, setWebPricing] = useState<WebPricing | null>(null);
+  const [showCodeInput, setShowCodeInput] = useState(false);
+  const [ambassadorCode, setAmbassadorCode] = useState("");
   const scrollContainerRef = useCallback((node: HTMLDivElement | null) => {
     if (node) {
       node.scrollTop = 0;
@@ -365,7 +410,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   const loadStripeInstance = useCallback(async () => {
     if (stripePromise) return;
     try {
-      const res = await fetch("/api/stripe/config", { credentials: "include" });
+      const res = await apiRequest("GET", "/api/stripe/config");
       const data = await res.json();
       if (data.publishableKey) {
         setStripePromise(loadStripe(data.publishableKey));
@@ -408,7 +453,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     if (indieComingSoon) return;
     (async () => {
       try {
-        const res = await fetch(pricingEndpoint, { credentials: "include" });
+        const res = await apiRequest("GET", pricingEndpoint);
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled && data?.currency) {
@@ -472,13 +517,14 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       await loadStripeInstance();
       const res = await apiRequest("POST", createEndpoint, {
         plan: billingPeriod,
+        ambassadorCode: ambassadorCode.trim() || undefined,
       });
       const data = await res.json();
       setCheckoutClientSecret(data.clientSecret);
       setCheckoutSessionId(data.sessionId);
       setStep("checkout");
     } catch (err: any) {
-      setCheckoutError(err?.message || "Failed to start checkout");
+      setCheckoutError(parseApiErrorMessage(err, "Failed to start checkout"));
     } finally {
       setCheckoutLoading(false);
     }
@@ -502,6 +548,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       // The webhook backstop will still provision the tier server-side.
     }
     await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    await queryClient.invalidateQueries({ queryKey: ["/api/upload/limits"] });
     setProLootboxReward(lootboxReward);
     setStep("success");
   }, [checkoutSessionId, billingPeriod, confirmEndpoint]);
@@ -536,6 +583,27 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
   const canPurchase = !indieComingSoon && (isNative ? !!selectedPackage : !!webPricing);
   const buttonDisabled = indieComingSoon || (!onAuthRequired && (isLoading || purchasing || checkoutLoading || !canPurchase || (isNative && !isInitialized)));
+
+  // On native (iOS/Android), Pro is sold via real StoreKit / Play Billing IAP
+  // (the RevenueCat Capacitor plugin). We only show the purchase UI once
+  // offerings have actually loaded; if RevenueCat isn't configured yet (no
+  // native store key / offline), we fall back to the benefits-only sheet so the
+  // paywall can never regress to an empty/broken state. App Store / Play rules
+  // forbid steering to an external (web) purchase, so there is no web-purchase
+  // fallback on native — the entitlement still syncs from web purchases.
+  const hasNativePackages = !!packages && packages.length > 0;
+  const showPurchaseUI = isNative ? hasNativePackages : true;
+
+  const nativeDismissCta = (
+    <button
+      onClick={() => onOpenChange(false)}
+      className="w-full py-3 bg-[#B7FF1A] hover:bg-[#A2F000] rounded-2xl flex items-center justify-center transition-all mt-1"
+      style={{ boxShadow: "0 0 30px -5px #B7FF1A" }}
+      data-testid="button-pro-dismiss-native"
+    >
+      <span className="text-[#071013] text-base font-bold">Got it</span>
+    </button>
+  );
 
   const planSelector = (compact: boolean = false) => {
     const yearlyPerMonth = yearlyView?.perMonthFormatted ?? null;
@@ -621,7 +689,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                   <Check className="w-2.5 h-2.5 text-[#071013]" strokeWidth={3} />
                 </div>
                 <div>
-                  <div className="text-white font-semibold text-sm">{packages[0].rcBillingProduct?.displayName || "Pro"}</div>
+                  <div className="text-white font-semibold text-sm">{packages[0].displayName || "Pro"}</div>
                 </div>
               </div>
               <div className="text-right">
@@ -685,6 +753,38 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       <div className="text-[#B8C0AE] text-[11px] leading-relaxed">
         Indie Partner launches with the Indie programme. The price shown is indicative.
       </div>
+    </div>
+  );
+
+  // Ambassador referral discount — web/Stripe checkout only, validated
+  // server-side against the ambassador's referral code at checkout time.
+  const ambassadorCodeSection = () => (
+    <div className="text-left">
+      {!showCodeInput ? (
+        <button
+          type="button"
+          onClick={() => setShowCodeInput(true)}
+          className="text-[#B8C0AE] text-[11px] underline hover:text-white"
+        >
+          Have an ambassador code?
+        </button>
+      ) : (
+        <div className="flex flex-col gap-1">
+          <label className="text-[#B8C0AE] text-[10px] font-bold uppercase tracking-[1px]">
+            Ambassador code
+          </label>
+          <input
+            type="text"
+            value={ambassadorCode}
+            onChange={(e) => setAmbassadorCode(e.target.value)}
+            placeholder="e.g. TOWER"
+            className="w-full bg-[#0B1218] border border-[#1B2A33] rounded-lg px-3 py-2 text-white text-sm placeholder:text-[#475569] focus:outline-none focus:border-[#B7FF1A]"
+          />
+          <p className="text-[#B8C0AE] text-[10px]">
+            10% off your first payment.
+          </p>
+        </div>
+      )}
     </div>
   );
 
@@ -764,6 +864,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       </div>
 
       <div className="flex flex-col gap-3 mt-auto">
+        {showPurchaseUI ? (
+        <>
         <div className="mb-0.5">
           <span className="text-[#B8C0AE] text-[10px] font-bold uppercase tracking-[1.2px]">
             Choose your plan
@@ -773,6 +875,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         {tierCards}
 
         {indieComingSoon ? comingSoonNotice : planSelector()}
+
+        {!isNative && ambassadorCodeSection()}
 
         <button
           onClick={handleJoinPro}
@@ -800,8 +904,16 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         )}
 
         <span className="text-[#B8C0AE] text-[11px] text-center">
-          Cancel anytime. Terms and conditions apply.
+          Cancel anytime.{" "}
+          <button type="button" onClick={() => openExternal("https://app.gamefolio.com/terms")} className="underline hover:text-white">Terms of Use</button>
+          {" & "}
+          <button type="button" onClick={() => openExternal("https://app.gamefolio.com/privacy")} className="underline hover:text-white">Privacy Policy</button>
+          {" "}apply.
         </span>
+        </>
+        ) : (
+          nativeDismissCta
+        )}
       </div>
     </div>
   );
@@ -923,6 +1035,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                     ))}
                   </div>
 
+                  {showPurchaseUI ? (
+                  <>
                   <div className="mb-2">
                     <span className="text-[#B8C0AE] text-[10px] font-bold uppercase tracking-[1px]">
                       Choose your plan
@@ -934,6 +1048,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                   <div className="mt-3">
                     {indieComingSoon ? comingSoonNotice : planSelector(true)}
                   </div>
+
+                  {!isNative && ambassadorCodeSection()}
 
                   <button
                     onClick={handleJoinPro}
@@ -956,9 +1072,21 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                     )}
                   </button>
 
+                  {checkoutError && (
+                    <p className="text-red-400 text-xs text-center mt-2">{checkoutError}</p>
+                  )}
+
                   <span className="text-[#B8C0AE] text-[11px] text-center block mt-2">
-                    Cancel anytime. Terms and conditions apply.
+                    Cancel anytime.{" "}
+                    <button type="button" onClick={() => openExternal("https://app.gamefolio.com/terms")} className="underline hover:text-white">Terms of Use</button>
+                    {" & "}
+                    <button type="button" onClick={() => openExternal("https://app.gamefolio.com/privacy")} className="underline hover:text-white">Privacy Policy</button>
+                    {" "}apply.
                   </span>
+                  </>
+                  ) : (
+                    <div className="mt-3">{nativeDismissCta}</div>
+                  )}
                 </div>
               </div>
 

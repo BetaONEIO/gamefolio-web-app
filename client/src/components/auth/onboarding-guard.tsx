@@ -20,6 +20,7 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
     '/onboarding', 
     '/verify-email', 
     '/verify-code',
+    '/oauth/consent',
     '/reset-password', 
     '/terms', 
     '/privacy', 

@@ -32,10 +32,16 @@ import { initEmailJS } from "./services/email-service";
 import { installNativeFetchPatch } from "./lib/platform";
 import { initMobileShell } from "./lib/mobile-init";
 import { ensureHydrated as ensureAuthTokensHydrated } from "./lib/auth-token";
+import { ensureDeviceIdHydrated } from "./lib/device-id";
+import { initSentry } from "./lib/sentry";
+
+// First thing: start crash/error reporting so even startup failures are caught.
+initSentry();
 
 installNativeFetchPatch();
 void initMobileShell();
 void ensureAuthTokensHydrated();
+void ensureDeviceIdHydrated();
 
 const adsenseClientId = import.meta.env.VITE_ADSENSE_CLIENT_ID?.trim();
 if (adsenseClientId) {
@@ -46,30 +52,10 @@ if (adsenseClientId) {
   document.head.appendChild(adsenseScript);
 }
 
-// Set page title
-document.title = "Gamefolio";
-
-// Add meta description for SEO
-const metaDescription = document.createElement('meta');
-metaDescription.name = 'description';
-metaDescription.content = 'Gamefolio is a social platform for gamers to share and discover gaming clips, customize profiles, and connect with other players.';
-document.head.appendChild(metaDescription);
-
-// Add Open Graph tags for better social sharing
-const ogTitle = document.createElement('meta');
-ogTitle.property = 'og:title';
-ogTitle.content = 'Gamefolio - Share Your Gaming Moments';
-document.head.appendChild(ogTitle);
-
-const ogDescription = document.createElement('meta');
-ogDescription.property = 'og:description';
-ogDescription.content = 'Join Gamefolio, the Instagram for gamers. Share your best gaming clips, follow other players, and discover trending games.';
-document.head.appendChild(ogDescription);
-
-const ogType = document.createElement('meta');
-ogType.property = 'og:type';
-ogType.content = 'website';
-document.head.appendChild(ogType);
+// Title, meta description, and Open Graph/Twitter tags are set statically in
+// index.html — they used to be duplicated here at runtime, which clobbered
+// document.title down to a bare "Gamefolio" (dropping the tagline) and left
+// two <meta name="description"> tags in the DOM for crawlers to pick between.
 
 
 // Initialize EmailJS

@@ -8,11 +8,18 @@ import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 import { ContentFilterService } from '../services/content-filter';
-import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides, insertAdminAlertSettingsSchema, KNOWN_ADMIN_ALERT_TYPES } from '@shared/schema';
+import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides, insertAdminAlertSettingsSchema, KNOWN_ADMIN_ALERT_TYPES, serverSettings } from '@shared/schema';
+import { db } from '../db';
+import { eq } from 'drizzle-orm';
 import { sendAdminAlert, postSlack, sendAdminEmail, sendSms, postPagerDuty } from '../admin-alert-service';
 import { POINT_VALUES, XP_SETTINGS_DEFINITION, updatePointValue } from '../leaderboard-service';
 import { z } from 'zod';
 import { supabaseStorage } from '../supabase-storage';
+import { captureRouteError } from "../sentry";
+import { db } from "../db";
+import { eq, and, sql as dsql } from "drizzle-orm";
+import { impersonationAuditLog } from "@shared/schema";
+import { generateImpersonationToken } from "../services/impersonation-service";
 
 // Temporary directory for processing
 const tempDir = path.join(process.cwd(), "temp");
@@ -139,6 +146,7 @@ adminRouter.post("/initialize", async (req: Request, res: Response) => {
       console.log('   ⚠️  CHANGE PASSWORD IMMEDIATELY AFTER FIRST LOGIN');
     }
   } catch (err) {
+    captureRouteError(err);
     console.error("Error initializing super admin:", err);
     res.status(500).json({ message: "Error initializing super admin" });
   }
@@ -168,6 +176,7 @@ adminRouter.get("/users", async (req: Request, res: Response) => {
       }
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching users:", err);
     res.status(500).json({ message: "Error fetching users" });
   }
@@ -185,6 +194,7 @@ adminRouter.get("/users/:id", async (req: Request, res: Response) => {
 
     res.json(user);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching user:", err);
     res.status(500).json({ message: "Error fetching user" });
   }
@@ -204,6 +214,7 @@ adminRouter.patch("/users/:id", async (req: Request, res: Response) => {
     const updatedUser = await storage.updateUser(userId, req.body);
     res.json(updatedUser);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error updating user:", err);
     res.status(500).json({ message: "Error updating user" });
   }
@@ -237,6 +248,7 @@ adminRouter.patch("/users/:id/level", async (req: Request, res: Response) => {
 
     res.json(updatedUser);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error updating user level:", err);
     res.status(500).json({ message: "Error updating user level" });
   }
@@ -271,7 +283,8 @@ adminRouter.patch("/users/:id/streak", async (req: Request, res: Response) => {
         userId,
         currentStreak: parseInt(currentStreak),
         longestStreak: parseInt(longestStreak),
-        lastStreakUpdate: existingLastUpdate
+        lastStreakUpdate: existingLastUpdate,
+        expectedPreviousLastStreakUpdate: user.lastStreakUpdate ?? null
       });
     } else {
       // Fallback if updateUserStreak is not available
@@ -286,6 +299,7 @@ adminRouter.patch("/users/:id/streak", async (req: Request, res: Response) => {
     const updatedUser = await storage.getUser(userId);
     res.json(updatedUser);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error updating user streak:", err);
     res.status(500).json({ message: "Error updating user streak" });
   }
@@ -314,6 +328,7 @@ adminRouter.post("/users/:id/ban", async (req: Request, res: Response) => {
 
     res.json(updatedUser);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error banning user:", err);
     res.status(500).json({ message: "Error banning user" });
   }
@@ -337,6 +352,7 @@ adminRouter.post("/users/:id/unban", async (req: Request, res: Response) => {
 
     res.json(updatedUser);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error unbanning user:", err);
     res.status(500).json({ message: "Error unbanning user" });
   }
@@ -363,6 +379,7 @@ adminRouter.post("/users/:id/suspend", async (req: Request, res: Response) => {
 
     res.json(updatedUser);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error suspending user:", err);
     res.status(500).json({ message: "Error suspending user" });
   }
@@ -385,8 +402,81 @@ adminRouter.post("/users/:id/unsuspend", async (req: Request, res: Response) => 
 
     res.json(updatedUser);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error unsuspending user:", err);
     res.status(500).json({ message: "Error unsuspending user" });
+  }
+});
+
+// POST /api/admin/users/:id/impersonate - Start an impersonation session for
+// support/debugging. Issues a short-lived, single-purpose token the admin's
+// client opens in a new tab; every session is audit-logged (see
+// impersonation_audit_log). See server/middleware/impersonation-auth.ts for how
+// the token is consumed.
+adminRouter.post("/users/:id/impersonate", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const admin = req.user as any;
+    const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+
+    if (reason.length < 10) {
+      return res.status(400).json({ message: "A reason of at least 10 characters is required" });
+    }
+
+    if (userId === admin.id) {
+      return res.status(400).json({ message: "Cannot impersonate yourself" });
+    }
+
+    const target = await storage.getUser(userId);
+    if (!target) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (target.role === "admin" || target.role === "moderator") {
+      return res.status(403).json({ message: "Cannot impersonate an admin or moderator account" });
+    }
+
+    const { token, tokenId } = generateImpersonationToken(admin, target);
+
+    await db.insert(impersonationAuditLog).values({
+      tokenId,
+      adminId: admin.id,
+      adminUsername: admin.username,
+      targetUserId: target.id,
+      targetUsername: target.username,
+      reason,
+      ipAddress: req.ip,
+    });
+
+    res.json({
+      token,
+      targetUser: {
+        id: target.id,
+        username: target.username,
+        displayName: target.displayName,
+        avatarUrl: target.avatarUrl,
+      },
+    });
+  } catch (err) {
+    captureRouteError(err);
+    console.error("Error starting impersonation session:", err);
+    res.status(500).json({ message: "Error starting impersonation session" });
+  }
+});
+
+// POST /api/admin/impersonation/:tokenId/end - Admin-side manual end, in case
+// the admin loses the impersonated tab rather than clicking Exit in it.
+adminRouter.post("/impersonation/:tokenId/end", async (req: Request, res: Response) => {
+  try {
+    const { tokenId } = req.params;
+    await db
+      .update(impersonationAuditLog)
+      .set({ endedAt: new Date(), endReason: "manual" })
+      .where(and(eq(impersonationAuditLog.tokenId, tokenId), dsql`${impersonationAuditLog.endedAt} IS NULL`));
+    res.json({ success: true });
+  } catch (err) {
+    captureRouteError(err);
+    console.error("Error ending impersonation session:", err);
+    res.status(500).json({ message: "Error ending impersonation session" });
   }
 });
 
@@ -426,6 +516,7 @@ adminRouter.post("/users/:id/make-admin", async (req: Request, res: Response) =>
 
     res.json(updatedUser);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error making user admin:", err);
     res.status(500).json({ message: "Error making user admin" });
   }
@@ -461,6 +552,7 @@ adminRouter.post("/users/by-username/:username/make-admin", async (req: Request,
 
     res.json(updatedUser);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error making user admin:", err);
     res.status(500).json({ message: "Error making user admin" });
   }
@@ -497,6 +589,7 @@ adminRouter.post("/users/:id/remove-admin", async (req: Request, res: Response) 
 
     res.json(updatedUser);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error removing admin role:", err);
     res.status(500).json({ message: "Error removing admin role" });
   }
@@ -524,6 +617,7 @@ adminRouter.post("/users/:id/make-partner", async (req: Request, res: Response) 
     }
     res.json(updatedUser);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error granting partner status:", err);
     res.status(500).json({ message: "Error granting partner status" });
   }
@@ -544,8 +638,68 @@ adminRouter.post("/users/:id/remove-partner", async (req: Request, res: Response
     void removePartnerFromMarketing(userId);
     res.json(updatedUser);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error removing partner status:", err);
     res.status(500).json({ message: "Error removing partner status" });
+  }
+});
+
+// POST /api/admin/users/:id/make-ambassador - Grant ambassador status to user
+adminRouter.post("/users/:id/make-ambassador", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const user = await storage.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await storage.updateUser(userId, { isAmbassador: true });
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Error granting ambassador status:", err);
+    res.status(500).json({ message: "Error granting ambassador status" });
+  }
+});
+
+// POST /api/admin/users/:id/remove-ambassador - Remove ambassador status from user
+adminRouter.post("/users/:id/remove-ambassador", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const user = await storage.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await storage.updateUser(userId, { isAmbassador: false });
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Error removing ambassador status:", err);
+    res.status(500).json({ message: "Error removing ambassador status" });
+  }
+});
+
+// GET /api/admin/ambassadors - List all ambassadors with their conversion counts
+adminRouter.get("/ambassadors", async (req: Request, res: Response) => {
+  try {
+    const ambassadors = await storage.getAllAmbassadorsWithStats();
+    res.json(ambassadors);
+  } catch (err) {
+    console.error("Error fetching ambassadors:", err);
+    res.status(500).json({ message: "Error fetching ambassadors" });
+  }
+});
+
+// GET /api/admin/ambassadors/:id/conversions - List one ambassador's conversions
+adminRouter.get("/ambassadors/:id/conversions", async (req: Request, res: Response) => {
+  try {
+    const ambassadorId = parseInt(req.params.id);
+    const conversions = await storage.getAmbassadorConversionsForAdmin(ambassadorId);
+    res.json(conversions);
+  } catch (err) {
+    console.error("Error fetching ambassador conversions:", err);
+    res.status(500).json({ message: "Error fetching ambassador conversions" });
   }
 });
 
@@ -578,6 +732,7 @@ adminRouter.post("/users/:id/reset-password", async (req: Request, res: Response
       ...(isDev && { tempPassword })
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error resetting password:", err);
     res.status(500).json({ message: "Error resetting password" });
   }
@@ -611,6 +766,7 @@ adminRouter.delete("/users/:id", async (req: Request, res: Response) => {
       res.status(500).json({ message: "Failed to delete user" });
     }
   } catch (err) {
+    captureRouteError(err);
     console.error("Error deleting user:", err);
     res.status(500).json({ message: "Error deleting user" });
   }
@@ -647,6 +803,7 @@ adminRouter.get("/stats", async (req: Request, res: Response) => {
       }
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching admin stats:", err);
     res.status(500).json({ message: "Error fetching admin stats" });
   }
@@ -672,6 +829,7 @@ adminRouter.get("/clips", async (req: Request, res: Response) => {
       }
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching clips:", err);
     res.status(500).json({ message: "Error fetching clips" });
   }
@@ -689,8 +847,34 @@ adminRouter.delete("/clips/:id", async (req: Request, res: Response) => {
 
     res.json({ message: "Clip deleted successfully" });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error deleting clip:", err);
     res.status(500).json({ message: "Error deleting clip" });
+  }
+});
+
+// POST /api/admin/clips/bulk-delete - Delete multiple clips by ID array
+adminRouter.post("/clips/bulk-delete", async (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body as { ids: number[] };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "ids must be a non-empty array of clip IDs" });
+    }
+    const results: { id: number; success: boolean }[] = [];
+    for (const id of ids) {
+      const clipId = parseInt(String(id));
+      if (isNaN(clipId)) { results.push({ id, success: false }); continue; }
+      const success = await storage.deleteClip(clipId);
+      results.push({ id: clipId, success });
+    }
+    const deleted = results.filter(r => r.success).map(r => r.id);
+    const failed  = results.filter(r => !r.success).map(r => r.id);
+    console.log(`[admin bulk-delete] deleted=${deleted.join(',')} failed=${failed.join(',')}`);
+    res.json({ deleted, failed });
+  } catch (err) {
+    captureRouteError(err);
+    console.error("Error bulk-deleting clips:", err);
+    res.status(500).json({ message: "Error bulk-deleting clips" });
   }
 });
 
@@ -714,6 +898,7 @@ adminRouter.get("/screenshots", async (req: Request, res: Response) => {
       }
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching screenshots:", err);
     res.status(500).json({ message: "Error fetching screenshots" });
   }
@@ -731,6 +916,7 @@ adminRouter.delete("/screenshots/:id", async (req: Request, res: Response) => {
 
     res.json({ message: "Screenshot deleted successfully" });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error deleting screenshot:", err);
     res.status(500).json({ message: "Error deleting screenshot" });
   }
@@ -756,6 +942,7 @@ adminRouter.get("/recent-content", async (req: Request, res: Response) => {
       }
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching recent content:", err);
     res.status(500).json({ message: "Error fetching recent content" });
   }
@@ -776,6 +963,7 @@ adminRouter.get("/users/:id/badges", async (req: Request, res: Response) => {
     const badges = await storage.getUserBadges(userId);
     res.json(badges);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching user badges:", err);
     res.status(500).json({ message: "Error fetching user badges" });
   }
@@ -826,6 +1014,7 @@ adminRouter.post("/users/:id/badges", async (req: Request, res: Response) => {
 
     res.json(badge);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error assigning badge:", err);
     res.status(500).json({ message: "Error assigning badge" });
   }
@@ -859,6 +1048,7 @@ adminRouter.delete("/users/:id/badges/:badgeType", async (req: Request, res: Res
 
     res.json({ message: "Badge removed successfully" });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error removing badge:", err);
     res.status(500).json({ message: "Error removing badge" });
   }
@@ -870,6 +1060,7 @@ adminRouter.post("/badges/cleanup", async (req: Request, res: Response) => {
     await storage.cleanupExpiredBadges();
     res.json({ message: "Expired badges cleaned up successfully" });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error cleaning up badges:", err);
     res.status(500).json({ message: "Error cleaning up badges" });
   }
@@ -885,6 +1076,7 @@ adminRouter.get("/badges", async (req: Request, res: Response) => {
     const badges = await storage.getAllBadges();
     res.json(badges);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching badges:", err);
     res.status(500).json({ message: "Error fetching badges" });
   }
@@ -896,6 +1088,7 @@ adminRouter.get("/badges/active", async (req: Request, res: Response) => {
     const badges = await storage.getActiveBadges();
     res.json(badges);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching active badges:", err);
     res.status(500).json({ message: "Error fetching active badges" });
   }
@@ -907,6 +1100,7 @@ adminRouter.get("/badges/stats", async (req: Request, res: Response) => {
     const badgesWithStats = await storage.getBadgesWithStats();
     res.json(badgesWithStats);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching badge stats:", err);
     res.status(500).json({ message: "Error fetching badge stats" });
   }
@@ -924,6 +1118,7 @@ adminRouter.get("/badges/:id", async (req: Request, res: Response) => {
     
     res.json(badge);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching badge:", err);
     res.status(500).json({ message: "Error fetching badge" });
   }
@@ -959,6 +1154,7 @@ adminRouter.post("/badges", async (req: Request, res: Response) => {
     const badge = await storage.createBadge(badgeData);
     res.status(201).json(badge);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error creating badge:", err);
     res.status(500).json({ message: "Error creating badge" });
   }
@@ -992,6 +1188,7 @@ adminRouter.patch("/badges/:id", async (req: Request, res: Response) => {
     
     res.json(updatedBadge);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error updating badge:", err);
     res.status(500).json({ message: "Error updating badge" });
   }
@@ -1021,6 +1218,7 @@ adminRouter.delete("/badges/:id", async (req: Request, res: Response) => {
     
     res.json({ message: "Badge deleted successfully" });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error deleting badge:", err);
     res.status(500).json({ message: "Error deleting badge" });
   }
@@ -1087,6 +1285,7 @@ adminRouter.post("/regenerate-thumbnail/:clipId", async (req: Request, res: Resp
     }
     
   } catch (error) {
+    captureRouteError(error);
     console.error('Error regenerating thumbnail:', error);
     res.status(500).json({ 
       message: error instanceof Error ? error.message : 'Thumbnail regeneration failed' 
@@ -1118,6 +1317,7 @@ adminRouter.post("/content-filter/check", async (req: Request, res: Response) =>
       cleanedContent
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error checking content:", err);
     res.status(500).json({ message: "Error checking content" });
   }
@@ -1145,6 +1345,7 @@ adminRouter.post("/content-filter/add-words", async (req: Request, res: Response
       addedWords: words 
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error adding words to filter:", err);
     res.status(500).json({ message: "Error adding words to filter" });
   }
@@ -1172,6 +1373,7 @@ adminRouter.post("/content-filter/remove-words", async (req: Request, res: Respo
       removedWords: words 
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error removing words from filter:", err);
     res.status(500).json({ message: "Error removing words from filter" });
   }
@@ -1199,6 +1401,7 @@ adminRouter.post("/content-filter/validate", async (req: Request, res: Response)
       ...validation
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error validating content:", err);
     res.status(500).json({ message: "Error validating content" });
   }
@@ -1229,6 +1432,7 @@ adminRouter.get("/banner-settings", async (req: Request, res: Response) => {
     
     res.json(bannerSettings);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching banner settings:", err);
     res.status(500).json({ message: "Error fetching banner settings" });
   }
@@ -1283,6 +1487,7 @@ adminRouter.put("/banner-settings", async (req: Request, res: Response) => {
     
     res.json(bannerSettings);
   } catch (err) {
+    captureRouteError(err);
     if (err instanceof z.ZodError) {
       return res.status(400).json({ 
         message: "Invalid input", 
@@ -1321,6 +1526,7 @@ adminRouter.post("/banner-settings/reset", async (req: Request, res: Response) =
     
     res.json(bannerSettings);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error resetting banner settings:", err);
     res.status(500).json({ message: "Error resetting banner settings" });
   }
@@ -1349,6 +1555,7 @@ adminRouter.get("/alert-settings", async (_req: Request, res: Response) => {
       updatedAt: settings?.updatedAt ?? null,
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching alert settings:", err);
     res.status(500).json({ message: "Error fetching alert settings" });
   }
@@ -1401,6 +1608,7 @@ adminRouter.put("/alert-settings", async (req: Request, res: Response) => {
     const updated = await storage.upsertAdminAlertSettings(parsed);
     res.json(updated);
   } catch (err) {
+    captureRouteError(err);
     if (err instanceof z.ZodError) {
       return res.status(400).json({ message: "Invalid alert settings", errors: err.errors });
     }
@@ -1453,6 +1661,7 @@ adminRouter.post("/alert-settings/test-routed", async (req: Request, res: Respon
       suppressed: result.suppressed,
     });
   } catch (err) {
+    captureRouteError(err);
     if (err instanceof z.ZodError) {
       return res.status(400).json({ message: "Invalid request", errors: err.errors });
     }
@@ -1497,6 +1706,7 @@ adminRouter.post("/alert-settings/test", async (req: Request, res: Response) => 
       return res.json({ success });
     }
   } catch (err) {
+    captureRouteError(err);
     if (err instanceof z.ZodError) {
       return res.status(400).json({ message: "Invalid request", errors: err.errors });
     }
@@ -1515,6 +1725,7 @@ adminRouter.post("/fix-leaderboard", async (req: Request, res: Response) => {
       message: "Leaderboard data has been successfully rebuilt from points history" 
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fixing leaderboard data:", err);
     res.status(500).json({ 
       success: false,
@@ -1534,6 +1745,7 @@ adminRouter.post("/regenerate-reel-thumbnails", async (req: Request, res: Respon
       message: "Reel thumbnails have been successfully regenerated with correct 9:16 aspect ratio" 
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error regenerating reel thumbnails:", err);
     res.status(500).json({ 
       success: false,
@@ -1568,6 +1780,7 @@ adminRouter.post("/asset-rewards/upload-image", rewardImageUpload.single('image'
       path: result.path 
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error uploading reward image:", err);
     res.status(500).json({ message: "Error uploading image" });
   }
@@ -1579,6 +1792,7 @@ adminRouter.get("/asset-rewards", async (req: Request, res: Response) => {
     const rewards = await storage.getAllAssetRewards();
     res.json(rewards);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching asset rewards:", err);
     res.status(500).json({ message: "Error fetching asset rewards" });
   }
@@ -1599,6 +1813,7 @@ adminRouter.get("/asset-rewards/:id", async (req: Request, res: Response) => {
 
     res.json(reward);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching asset reward:", err);
     res.status(500).json({ message: "Error fetching asset reward" });
   }
@@ -1615,6 +1830,7 @@ adminRouter.post("/asset-rewards", async (req: Request, res: Response) => {
     const reward = await storage.createAssetReward(validatedData);
     res.status(201).json(reward);
   } catch (err) {
+    captureRouteError(err);
     if (err instanceof z.ZodError) {
       return res.status(400).json({ 
         message: "Invalid input", 
@@ -1667,6 +1883,7 @@ adminRouter.patch("/asset-rewards/:id", async (req: Request, res: Response) => {
     const updated = await storage.updateAssetReward(id, validatedData);
     res.json(updated);
   } catch (err) {
+    captureRouteError(err);
     if (err instanceof z.ZodError) {
       return res.status(400).json({ 
         message: "Invalid input", 
@@ -1694,6 +1911,7 @@ adminRouter.delete("/asset-rewards/:id", async (req: Request, res: Response) => 
     await storage.deleteAssetReward(id);
     res.json({ success: true, message: "Asset reward deleted" });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error deleting asset reward:", err);
     res.status(500).json({ message: "Error deleting asset reward" });
   }
@@ -1710,6 +1928,7 @@ adminRouter.get("/asset-rewards/:id/claims", async (req: Request, res: Response)
     const claims = await storage.getAssetRewardClaims(id);
     res.json(claims);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching asset reward claims:", err);
     res.status(500).json({ message: "Error fetching asset reward claims" });
   }
@@ -1724,6 +1943,7 @@ adminRouter.get("/pro-subscribers", async (req: Request, res: Response) => {
       total: proSubscribers.length
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching Pro subscribers:", err);
     res.status(500).json({ message: "Error fetching Pro subscribers" });
   }
@@ -1736,6 +1956,7 @@ adminRouter.get("/storage/buckets", async (req: Request, res: Response) => {
     const buckets = await supabaseStorage.listAllBuckets();
     res.json(buckets);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching buckets:", err);
     res.status(500).json({ message: "Error fetching buckets" });
   }
@@ -1758,6 +1979,7 @@ adminRouter.get("/storage/buckets/:bucketName/files", async (req: Request, res: 
     
     res.json({ files, folders, bucket: bucketName, currentFolder: folder || '' });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error listing bucket files:", err);
     res.status(500).json({ message: "Error listing bucket files" });
   }
@@ -1855,6 +2077,7 @@ adminRouter.get("/assets/assignments", async (req: Request, res: Response) => {
     
     res.json(assignments);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching asset assignments:", err);
     res.status(500).json({ message: "Error fetching asset assignments" });
   }
@@ -1916,6 +2139,7 @@ adminRouter.post("/assets/assign", async (req: Request, res: Response) => {
       res.json({ message: "Asset assigned successfully", reward: created[0] });
     }
   } catch (err) {
+    captureRouteError(err);
     console.error("Error assigning asset:", err);
     res.status(500).json({ message: "Error assigning asset" });
   }
@@ -1951,6 +2175,7 @@ adminRouter.post("/assets/unassign", async (req: Request, res: Response) => {
       res.status(404).json({ message: "Asset not found in rewards" });
     }
   } catch (err) {
+    captureRouteError(err);
     console.error("Error unassigning asset:", err);
     res.status(500).json({ message: "Error unassigning asset" });
   }
@@ -2017,6 +2242,7 @@ adminRouter.post("/hero-slides/upload-image", rewardImageUpload.single('image'),
       dimensions: { width: processedMeta.width, height: processedMeta.height }
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error uploading hero slide image:", err);
     res.status(500).json({ message: "Error uploading image" });
   }
@@ -2039,6 +2265,7 @@ adminRouter.get("/hero-slides", async (req: Request, res: Response) => {
     );
     res.json(slidesWithSignedUrls);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching hero slides:", err);
     res.status(500).json({ message: "Error fetching hero slides" });
   }
@@ -2052,9 +2279,10 @@ adminRouter.get("/hero-slides/settings", async (req: Request, res: Response) => 
     const { heroTextSettings } = await import('@shared/schema');
     const [config] = await db.select().from(heroTextSettings).where(eq(heroTextSettings.textType, "slide_config"));
     res.json({
-      intervalSeconds: config ? parseInt(config.title) || 6 : 6,
+      intervalSeconds: config ? parseInt(config.title) || 15 : 15,
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching hero slide settings:", err);
     res.status(500).json({ message: "Error fetching hero slide settings" });
   }
@@ -2089,6 +2317,7 @@ adminRouter.patch("/hero-slides/settings", async (req: Request, res: Response) =
 
     res.json({ intervalSeconds });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error updating hero slide settings:", err);
     res.status(500).json({ message: "Error updating hero slide settings" });
   }
@@ -2118,6 +2347,7 @@ adminRouter.post("/hero-slides", async (req: Request, res: Response) => {
     const [slide] = await db.insert(heroSlides).values(parsed.data).returning();
     res.json(slide);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error creating hero slide:", err);
     res.status(500).json({ message: "Error creating hero slide" });
   }
@@ -2145,6 +2375,7 @@ adminRouter.patch("/hero-slides/:id", async (req: Request, res: Response) => {
 
     res.json(updated);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error updating hero slide:", err);
     res.status(500).json({ message: "Error updating hero slide" });
   }
@@ -2168,6 +2399,7 @@ adminRouter.delete("/hero-slides/:id", async (req: Request, res: Response) => {
 
     res.json({ message: "Hero slide deleted successfully" });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error deleting hero slide:", err);
     res.status(500).json({ message: "Error deleting hero slide" });
   }
@@ -2192,6 +2424,7 @@ adminRouter.post("/hero-slides/reorder", async (req: Request, res: Response) => 
 
     res.json({ message: "Hero slides reordered successfully" });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error reordering hero slides:", err);
     res.status(500).json({ message: "Error reordering hero slides" });
   }
@@ -2224,6 +2457,7 @@ adminRouter.get("/xp-config", async (req: Request, res: Response) => {
 
     res.json(result);
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching XP config:", err);
     res.status(500).json({ message: "Error fetching XP config" });
   }
@@ -2263,6 +2497,7 @@ adminRouter.put("/xp-config", async (req: Request, res: Response) => {
 
     res.json({ message: `Updated ${updates.length} XP setting(s) successfully` });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error updating XP config:", err);
     res.status(500).json({ message: "Error updating XP config" });
   }
@@ -2441,6 +2676,7 @@ adminRouter.post("/retroactive-points-migration", async (req: Request, res: Resp
       xpSettingsSeeded: count === 0,
     });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error running retroactive points migration:", err);
     res.status(500).json({ message: "Error running retroactive points migration", error: String(err) });
   }
@@ -2462,6 +2698,7 @@ adminRouter.post("/xp-config/seed", async (req: Request, res: Response) => {
     }
     res.json({ message: `Seeded ${XP_SETTINGS_DEFINITION.length} XP settings successfully` });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error seeding XP config:", err);
     res.status(500).json({ message: "Error seeding XP config" });
   }
@@ -2476,6 +2713,7 @@ adminRouter.get("/alerts", async (req: Request, res: Response) => {
     const alerts = await listRecentAdminAlerts(limit);
     res.json({ alerts });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error fetching admin alerts:", err);
     res.status(500).json({ message: "Error fetching admin alerts" });
   }
@@ -2497,6 +2735,7 @@ adminRouter.post("/alerts/:id/resolve", async (req: Request, res: Response) => {
     if (!updated) return res.status(404).json({ message: "Alert not found" });
     res.json({ alert: updated });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error resolving admin alert:", err);
     res.status(500).json({ message: "Error resolving admin alert" });
   }
@@ -2514,8 +2753,38 @@ adminRouter.post("/alerts/:id/retry", async (req: Request, res: Response) => {
     if (!updated) return res.status(404).json({ message: "Alert not found" });
     res.json({ alert: updated });
   } catch (err) {
+    captureRouteError(err);
     console.error("Error retrying admin alert deliveries:", err);
     res.status(500).json({ message: "Error retrying admin alert deliveries" });
+  }
+});
+
+// GET /api/admin/psn-health — current status of the PSN NPSSO token.
+// Returns the ISO timestamp of the last successful PSN authentication (either via
+// refresh-token chain or the NPSSO bootstrap), so the dashboard can display
+// "PSN token healthy / last used N days ago" without polling PSN itself.
+adminRouter.get("/psn-health", async (req: Request, res: Response) => {
+  try {
+    const rows = await db.select().from(serverSettings)
+      .where(eq(serverSettings.key, 'psn_auth_last_success'));
+    const lastSuccess: string | null = rows[0]?.value ?? null;
+    const hasRefreshToken = await (async () => {
+      const rt = await db.select().from(serverSettings)
+        .where(eq(serverSettings.key, 'psn_refresh_token'));
+      return rt.length > 0 && !!rt[0]?.value;
+    })();
+    res.json({
+      lastSuccessAt: lastSuccess,
+      hasRefreshToken,
+      // Convenience: days since last successful auth (null if never synced)
+      daysSinceLastSuccess: lastSuccess
+        ? Math.floor((Date.now() - new Date(lastSuccess).getTime()) / (1000 * 60 * 60 * 24))
+        : null,
+    });
+  } catch (err) {
+    captureRouteError(err);
+    console.error("Error fetching PSN health:", err);
+    res.status(500).json({ message: "Error fetching PSN health" });
   }
 });
 

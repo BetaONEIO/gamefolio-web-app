@@ -12,7 +12,12 @@
           "package_name": "app.rork.gamefolio"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "717007379643-qnrio1r1rn5fn4sa4mo9lmjfoqeg50s4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyADHhhrl5lI9LgKpbM0gCLXAzrH2ZIZrX8"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "717007379643-qnrio1r1rn5fn4sa4mo9lmjfoqeg50s4.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "717007379643-929qft46fratrnhle7u755l9td828krp.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "app.rork.gamefolio"
+              }
+            }
+          ]
         }
       }
     },
@@ -31,7 +48,20 @@
           "package_name": "com.gamefolio.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "717007379643-ot96lvbrjk9l8uhorqj8ctmhk3ldvm2r.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.gamefolio.app",
+            "certificate_hash": "00ab6ee58041f988da075baae0b24a4caee15d28"
+          }
+        },
+        {
+          "client_id": "717007379643-qnrio1r1rn5fn4sa4mo9lmjfoqeg50s4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyADHhhrl5lI9LgKpbM0gCLXAzrH2ZIZrX8"
@@ -39,7 +69,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "717007379643-qnrio1r1rn5fn4sa4mo9lmjfoqeg50s4.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "717007379643-929qft46fratrnhle7u755l9td828krp.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "app.rork.gamefolio"
+              }
+            }
+          ]
         }
       }
     }

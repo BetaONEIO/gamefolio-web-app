@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ClipWithUser } from '@shared/schema';
-import { BadgeCheck, Bookmark, MessageCircle, BarChart2, ChevronDown, Gamepad2, Play } from 'lucide-react';
+import { BadgeCheck, MessageCircle, BarChart2, ChevronDown, Gamepad2, Play } from 'lucide-react';
+import { BookmarkButton } from '@/components/engagement/BookmarkButton';
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { PartnerBadge } from '@/components/ui/partner-badge';
+import { AmbassadorBadge } from '@/components/ui/ambassador-badge';
 import { useAuth } from '@/hooks/use-auth';
 import { useMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
@@ -31,7 +33,6 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
   const { toast } = useToast();
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [localFollowing, setLocalFollowing] = useState(false);
-  const [bookmarked, setBookmarked] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [isInView, setIsInView] = useState(false);
@@ -119,6 +120,9 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
       setLocalFollowing(true);
       queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/follow-status`] });
     },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update follow status", variant: "destructive" });
+    },
   });
 
   const caption = [clip.title, clip.description].filter(Boolean).join(' — ');
@@ -191,6 +195,7 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
                   <BadgeCheck className="h-4 w-4 flex-shrink-0" style={{ color: '#B7FF1A' }} />
                 )}
                 <PartnerBadge isPartner={(clip.user as any).isPartner} size="sm" />
+                <AmbassadorBadge isAmbassador={(clip.user as any).isAmbassador} size="sm" />
               </div>
               <Link href={`/profile/${clip.user.username}`} className="no-underline">
                 <span className="text-[13px] block leading-tight mt-0.5" style={{ color: '#7E887A' }}>
@@ -300,13 +305,11 @@ const ClipFeedCard: React.FC<ClipFeedCardProps> = ({ clip, clips, isDesktop }) =
               <span className="text-[13px]">{fmt(views)}</span>
             </button>
 
-            <button
-              onClick={() => setBookmarked(v => !v)}
-              className="flex items-center justify-center flex-1 transition-colors"
-              style={{ color: bookmarked ? '#B7FF1A' : '#7E887A' }}
-            >
-              <Bookmark className={`h-[18px] w-[18px] ${bookmarked ? 'fill-current' : ''}`} />
-            </button>
+            <BookmarkButton
+              contentId={clip.id}
+              contentType="clip"
+              className="flex-1"
+            />
 
             <button
               onClick={(e) => { e.stopPropagation(); setShareOpen(true); }}

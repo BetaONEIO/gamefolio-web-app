@@ -13,4 +13,11 @@ ext {
     androidxJunitVersion = '1.1.5'
     androidxEspressoCoreVersion = '3.5.1'
     cordovaAndroidVersion = '10.1.1'
+    // CapacitorFirebaseAuthentication's Android module keeps play-services-auth
+    // as compileOnly unless this is true, which leaves Google sign-in code
+    // referencing classes that are absent from the APK at runtime (see
+    // node_modules/@capacitor-firebase/authentication/android/build.gradle).
+    // Mirrors the CapacitorFirebaseAuthentication/Google CocoaPods subspec
+    // used on iOS (ios/App/Podfile).
+    rgcfaIncludeGoogle = true
 }

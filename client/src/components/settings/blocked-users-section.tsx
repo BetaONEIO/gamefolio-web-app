@@ -250,7 +250,7 @@ export function BlockedUsersSection() {
         ) : (
           <div className="space-y-3">
             {blockedUsers.map((user) => (
-              <div key={user.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <div key={user.id} className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-lg">
                 {user.nftProfileTokenId && user.nftProfileImageUrl && (user as any).activeProfilePicType === 'nft' ? (
                   <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40">
                     <img src={user.nftProfileImageUrl} alt={user.displayName} className="w-full h-full object-cover" />
@@ -265,12 +265,12 @@ export function BlockedUsersSection() {
                 )}
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-medium">{user.displayName}</p>
+                    <p className="font-medium text-foreground">{user.displayName}</p>
                     <Badge variant="secondary" className="text-xs">
                       Blocked
                     </Badge>
                   </div>
-                  <p className="text-sm text-gray-500">@{user.username}</p>
+                  <p className="text-sm text-muted-foreground">@{user.username}</p>
                 </div>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>

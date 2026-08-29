@@ -265,11 +265,14 @@ export default function NotificationsPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const { data: notifications = [], isLoading } = useQuery<NotificationWithUser[]>({
+  const { data: notificationsData, isLoading } = useQuery<NotificationWithUser[] | null>({
     queryKey: ["/api/notifications"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     staleTime: 0,
   });
+  // `data` can be explicitly `null` on a 401 — a destructure default only
+  // covers `undefined`, so guard here to avoid `.length`/`.filter` crashing.
+  const notifications = notificationsData ?? [];
 
   const unreadNotifications = notifications.filter((n) => !n.isRead);
   const readNotifications = notifications.filter((n) => n.isRead);

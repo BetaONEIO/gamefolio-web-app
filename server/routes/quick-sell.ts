@@ -7,6 +7,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { GF_TOKEN_ADDRESS, GF_TOKEN_ABI, NFT_CONTRACT_ADDRESS, NFT_ABI, SKALE_NEBULA_TESTNET } from '../../shared/contracts';
 import { transferGfTokens } from '../gf-token-service';
 import { invalidateTokenMetadata } from './mint-nft';
+import { captureRouteError } from "../sentry";
 
 const GF_DECIMALS = 18;
 const PLATFORM_FEE_PERCENT = 5;
@@ -34,6 +35,7 @@ router.get('/api/nft/quick-sell-intent', async (req: Request, res: Response) => 
     const treasuryAddress = getTreasuryAddress();
     return res.json({ treasuryAddress, sellPrice: QUICK_SELL_PRICE });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('[Quick Sell Intent] Error:', error);
     return res.status(500).json({ error: 'Failed to create sell intent.' });
   }
@@ -112,6 +114,7 @@ router.post('/api/nft/quick-sell', async (req: Request, res: Response) => {
       message: `NFT #${tokenId} listed for quick sale at ${QUICK_SELL_PRICE} GFT.`,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('[Quick Sell] Error:', error);
     return res.status(500).json({ error: 'Quick sell failed. Please try again.' });
   }
@@ -151,6 +154,7 @@ router.get('/api/marketplace/listings', async (req: Request, res: Response) => {
     const rows = (listings as any).rows || listings;
     return res.json({ listings: rows || [] });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('[Marketplace] Listings error:', error);
     return res.status(500).json({ error: 'Failed to fetch listings' });
   }
@@ -182,6 +186,7 @@ router.post('/api/marketplace/buy-intent', async (req: Request, res: Response) =
 
     return res.json({ price, treasuryAddress });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('[Marketplace] Buy intent error:', error);
     return res.status(500).json({ error: 'Failed to create purchase intent' });
   }
@@ -273,6 +278,7 @@ router.post('/api/marketplace/verify-buy', async (req: Request, res: Response) =
       message: `NFT #${tokenId} purchased successfully for ${price} GFT!`,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('[Marketplace] Verify buy error:', error);
     return res.status(500).json({ error: 'Purchase verification failed. Please try again.' });
   }

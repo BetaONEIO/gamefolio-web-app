@@ -9,16 +9,23 @@ const BG = "#081017";
 const CARD_BG = "#0B1218";
 const CARD_BORDER = "#1B2A33";
 
+const isDeveloperSubdomain = window.location.hostname === 'developer.gamefolio.com';
+
 export default function RegisterPage() {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
+    if (isDeveloperSubdomain) {
+      setLocation("/auth");
+      return;
+    }
     if (user && !isLoading) {
       setLocation("/");
     }
   }, [user, isLoading, setLocation]);
 
+  if (isDeveloperSubdomain) return null;
   if (isLoading) return null;
   if (user) return null;
 

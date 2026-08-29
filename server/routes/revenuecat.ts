@@ -6,27 +6,34 @@ import { hybridAuth } from '../middleware/hybrid-auth';
 import { EmailService } from '../email-service';
 import { storage } from '../storage';
 import { notifyProPurchase } from '../telegram-notify';
+import { captureRouteError } from "../sentry";
+import { provisionIndieDevSubscription } from './indie-dev-subscription';
 
 const router = Router();
 
 const REVENUECAT_API_BASE = 'https://api.revenuecat.com/v1';
-const PRO_ENTITLEMENT_ID = 'pro';
+export const PRO_ENTITLEMENT_ID = 'pro';
 // Streamer Partner is a paid tier above Pro (separate RevenueCat offering
 // "Gamefolio Streamer Partner"). An active partner entitlement implies Pro
 // perks too, so we set isPro alongside isPartner everywhere below.
-const PARTNER_ENTITLEMENT_ID = 'streamer_partner';
+export const PARTNER_ENTITLEMENT_ID = 'streamer_partner';
+export const INDIE_DEV_ENTITLEMENT_ID = 'indie_dev';
 
-async function fetchRevenueCatSubscriber(appUserId: string): Promise<any> {
+// The GET /subscribers endpoint returns platform-agnostic entitlements, but
+// RevenueCat still expects an X-Platform header. Pass the buyer's real platform
+// so Android purchases aren't recorded against iOS.
+export async function fetchRevenueCatSubscriber(appUserId: string, platform: string = 'ios'): Promise<any> {
   const apiKey = process.env.REVENUECAT_API_KEY;
   if (!apiKey) {
     throw new Error('REVENUECAT_API_KEY is not configured');
   }
 
+  const xPlatform = platform === 'android' ? 'android' : platform === 'web' ? 'web' : 'ios';
   const response = await fetch(`${REVENUECAT_API_BASE}/subscribers/${encodeURIComponent(appUserId)}`, {
     headers: {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'X-Platform': 'ios',
+      'X-Platform': xPlatform,
     },
   });
 
@@ -38,13 +45,13 @@ async function fetchRevenueCatSubscriber(appUserId: string): Promise<any> {
   return response.json();
 }
 
-function isEntitlementActive(entitlement: any): boolean {
+export function isEntitlementActive(entitlement: any): boolean {
   if (!entitlement) return false;
   if (!entitlement.expires_date) return true;
   return new Date(entitlement.expires_date) > new Date();
 }
 
-function parsePlanFromEntitlement(entitlement: any): 'monthly' | 'yearly' {
+export function parsePlanFromEntitlement(entitlement: any): 'monthly' | 'yearly' {
   const productId: string = entitlement?.product_identifier || '';
   if (productId.includes('annual') || productId.includes('yearly') || productId.includes('year')) {
     return 'yearly';
@@ -52,7 +59,17 @@ function parsePlanFromEntitlement(entitlement: any): 'monthly' | 'yearly' {
   return 'monthly';
 }
 
-function getEndDateFromEntitlement(entitlement: any): Date {
+// Derive plan duration from a webhook product id. NB: RevenueCat's `period_type`
+// is TRIAL/INTRO/NORMAL (not the billing duration), so it must NOT be used here.
+function parsePlanFromProductId(productId: unknown): 'monthly' | 'yearly' {
+  const id = typeof productId === 'string' ? productId.toLowerCase() : '';
+  if (id.includes('annual') || id.includes('yearly') || id.includes('year')) {
+    return 'yearly';
+  }
+  return 'monthly';
+}
+
+export function getEndDateFromEntitlement(entitlement: any): Date {
   if (entitlement?.expires_date) {
     return new Date(entitlement.expires_date);
   }
@@ -66,7 +83,7 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { appUserId } = req.body;
+    const { appUserId, platform } = req.body;
     if (!appUserId || typeof appUserId !== 'string') {
       return res.status(400).json({ error: 'appUserId is required' });
     }
@@ -78,7 +95,7 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
 
     let rcData: any;
     try {
-      rcData = await fetchRevenueCatSubscriber(appUserId);
+      rcData = await fetchRevenueCatSubscriber(appUserId, typeof platform === 'string' ? platform : 'ios');
     } catch (err: any) {
       console.error('[RevenueCat] Failed to fetch subscriber:', err.message);
       return res.status(502).json({ error: 'Failed to verify subscription with RevenueCat', message: err.message });
@@ -129,14 +146,67 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
           plan
         ).catch(err => console.error('[RevenueCat] Failed to send Pro welcome email:', err));
       }
+
+      if (user.referredBy) {
+        storage.recordAmbassadorConversion(userId, user.referredBy, plan, 'revenuecat')
+          .catch(err => console.error('[RevenueCat] Failed to record ambassador conversion:', err));
+      }
     }
 
     console.log(`[RevenueCat] User ${userId} activated ${hasPartner ? 'Streamer Partner' : 'Pro'} via RevenueCat (appUserId: ${appUserId}, plan: ${plan})`);
 
     return res.json({ success: true, isPro: true, isPartner: hasPartner, plan, endDate, lootboxReward });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('[RevenueCat] activate error:', error);
     return res.status(500).json({ error: 'Failed to activate Pro', message: error.message });
+  }
+});
+
+router.post('/api/indie-dev/activate', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { appUserId, platform } = req.body;
+    if (!appUserId || typeof appUserId !== 'string') {
+      return res.status(400).json({ error: 'appUserId is required' });
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    let rcData: any;
+    try {
+      rcData = await fetchRevenueCatSubscriber(appUserId, typeof platform === 'string' ? platform : 'ios');
+    } catch (err: any) {
+      console.error('[RevenueCat] Failed to fetch subscriber:', err.message);
+      return res.status(502).json({ error: 'Failed to verify subscription with RevenueCat', message: err.message });
+    }
+
+    const subscriber = rcData.subscriber;
+    const entitlement = subscriber?.entitlements?.[INDIE_DEV_ENTITLEMENT_ID];
+
+    if (!isEntitlementActive(entitlement)) {
+      return res.status(403).json({ error: 'No active Indie Developer entitlement found' });
+    }
+
+    const plan = parsePlanFromEntitlement(entitlement);
+
+    await provisionIndieDevSubscription({ userId, plan });
+    await db.update(users).set({ revenuecatUserId: appUserId, updatedAt: new Date() }).where(eq(users.id, userId));
+
+    console.log(`[RevenueCat] User ${userId} activated Indie Developer via RevenueCat (appUserId: ${appUserId}, plan: ${plan})`);
+
+    return res.json({ success: true, isIndieDevSubscriber: true, plan });
+  } catch (error: any) {
+    captureRouteError(error);
+    console.error('[RevenueCat] indie-dev activate error:', error);
+    return res.status(500).json({ error: 'Failed to activate Game Developer subscription', message: error.message });
   }
 });
 
@@ -156,19 +226,37 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Missing event payload' });
     }
 
-    const { type, app_user_id, expiration_at_ms, period_type } = event;
-    console.log(`[RevenueCat Webhook] Received event type: ${type}, app_user_id: ${app_user_id}`);
-
-    // Which entitlement(s) this event affects. Older events may omit the array;
-    // treat that as a Pro-only event to preserve the original behavior.
-    const entitlementIds: string[] = event.entitlement_ids || (event.entitlement_id ? [event.entitlement_id] : []);
-    const affectsPartner = entitlementIds.includes(PARTNER_ENTITLEMENT_ID);
+    const { type, app_user_id, expiration_at_ms, product_id, environment, entitlement_ids } = event;
+    // Which entitlement(s) this event is for. Older/edge-case payloads may omit
+    // entitlement_ids — in that case, fall back to treating it as a Pro event
+    // (the only entitlement that existed before Indie Developer was added).
+    const entitlementIds: string[] | undefined = Array.isArray(entitlement_ids) ? entitlement_ids : undefined;
+    const isProEvent = !entitlementIds || entitlementIds.includes(PRO_ENTITLEMENT_ID);
+    const isPartnerEvent = !!entitlementIds?.includes(PARTNER_ENTITLEMENT_ID);
+    const isIndieDevEvent = !!entitlementIds?.includes(INDIE_DEV_ENTITLEMENT_ID);
+    const isSandbox = environment === 'SANDBOX';
+    console.log(`[RevenueCat Webhook] Received event type: ${type}, app_user_id: ${app_user_id}, environment: ${environment}`);
 
     if (!app_user_id) {
       return res.status(200).json({ received: true });
     }
 
-    const [user] = await db.select().from(users).where(eq(users.revenuecatUserId, app_user_id));
+    // Resolve the user. The client configures RevenueCat with a deterministic
+    // appUserID of `gamefolio_<userId>` (users.id is a serial int), so we can
+    // resolve straight from the event — this works even when the client never
+    // hit /api/pro/activate to persist the revenuecatUserId mapping (otherwise
+    // every RENEWAL/CANCELLATION/EXPIRATION would be silently dropped and Pro
+    // would never be revoked). Fall back to the stored mapping for safety.
+    let user;
+    if (typeof app_user_id === 'string' && app_user_id.startsWith('gamefolio_')) {
+      const derivedId = Number(app_user_id.slice('gamefolio_'.length));
+      if (Number.isInteger(derivedId) && derivedId > 0) {
+        [user] = await db.select().from(users).where(eq(users.id, derivedId));
+      }
+    }
+    if (!user) {
+      [user] = await db.select().from(users).where(eq(users.revenuecatUserId, app_user_id));
+    }
     if (!user) {
       console.log(`[RevenueCat Webhook] No user found for app_user_id: ${app_user_id}`);
       return res.status(200).json({ received: true });
@@ -179,55 +267,84 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
 
     if (activatingEvents.includes(type)) {
       const endDate = expiration_at_ms ? new Date(expiration_at_ms) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-      const plan: 'monthly' | 'yearly' = (period_type === 'ANNUAL' || period_type === 'TWO_MONTH' || period_type === 'THREE_MONTH' || period_type === 'SIX_MONTH') ? 'yearly' : 'monthly';
+      const plan: 'monthly' | 'yearly' = parsePlanFromProductId(product_id);
 
-      await db.update(users).set({
-        isPro: true,
-        ...(affectsPartner ? { isPartner: true } : {}),
-        proSubscriptionType: plan,
-        proSubscriptionStartDate: user.proSubscriptionStartDate || new Date(),
-        proSubscriptionEndDate: endDate,
-        updatedAt: new Date(),
-      }).where(eq(users.id, user.id));
+      if (isProEvent || isPartnerEvent) {
+        await db.update(users).set({
+          isPro: true,
+          ...(isPartnerEvent ? { isPartner: true, partnerType: 'streamer' } : {}),
+          proSubscriptionType: plan,
+          proSubscriptionStartDate: user.proSubscriptionStartDate || new Date(),
+          proSubscriptionEndDate: endDate,
+          // Persist the mapping so subsequent REST lookups (and the activate path)
+          // stay consistent for this subscriber.
+          revenuecatUserId: app_user_id,
+          updatedAt: new Date(),
+        }).where(eq(users.id, user.id));
 
-      if (type === 'INITIAL_PURCHASE' && !user.isPro) {
-        try {
-          await storage.grantProLootbox(user.id, 'initial');
-        } catch (err) {
-          console.error('[RevenueCat Webhook] Failed to grant initial pro lootbox:', err);
+        if (type === 'INITIAL_PURCHASE' && !user.isPro) {
+          try {
+            await storage.grantProLootbox(user.id, 'initial');
+          } catch (err) {
+            console.error('[RevenueCat Webhook] Failed to grant initial pro lootbox:', err);
+          }
+
+          if (user.email) {
+            EmailService.sendProWelcomeEmail(
+              user.email,
+              user.username || user.displayName || 'Gamer',
+              plan
+            ).catch(err => console.error('[RevenueCat Webhook] Failed to send Pro welcome email:', err));
+          }
+
+          if (!isSandbox) {
+            notifyProPurchase(user, { kind: 'new', plan, source: 'RevenueCat' });
+          }
         }
 
-        if (user.email) {
-          EmailService.sendProWelcomeEmail(
-            user.email,
-            user.username || user.displayName || 'Gamer',
-            plan
-          ).catch(err => console.error('[RevenueCat Webhook] Failed to send Pro welcome email:', err));
+        if (type === 'RENEWAL') {
+          try {
+            await storage.grantProLootbox(user.id, 'monthly');
+          } catch (err) {
+            console.error('[RevenueCat Webhook] Failed to grant renewal pro lootbox:', err);
+          }
+
+          if (!isSandbox) {
+            notifyProPurchase(user, { kind: 'renewal', plan, source: 'RevenueCat' });
+          }
         }
 
-        notifyProPurchase(user, { kind: 'new', plan, source: 'RevenueCat' });
+        console.log(`[RevenueCat Webhook] User ${user.id} ${isPartnerEvent ? 'Streamer Partner' : 'Pro'} activated/renewed (type: ${type}, plan: ${plan}, until: ${endDate}, sandbox: ${isSandbox})`);
       }
 
-      if (type === 'RENEWAL') {
-        try {
-          await storage.grantProLootbox(user.id, 'monthly');
-        } catch (err) {
-          console.error('[RevenueCat Webhook] Failed to grant renewal pro lootbox:', err);
-        }
-
-        notifyProPurchase(user, { kind: 'renewal', plan, source: 'RevenueCat' });
+      if (isIndieDevEvent) {
+        await provisionIndieDevSubscription({ userId: user.id, plan });
+        await db.update(users).set({ revenuecatUserId: app_user_id, updatedAt: new Date() }).where(eq(users.id, user.id));
+        console.log(`[RevenueCat Webhook] User ${user.id} Indie Developer activated/renewed (type: ${type}, plan: ${plan}, until: ${endDate}, sandbox: ${isSandbox})`);
       }
 
-      console.log(`[RevenueCat Webhook] User ${user.id} ${affectsPartner ? 'Streamer Partner' : 'Pro'} activated/renewed (type: ${type}, plan: ${plan}, until: ${endDate})`);
+      if (!isProEvent && !isPartnerEvent && !isIndieDevEvent) {
+        console.log(`[RevenueCat Webhook] Activating event with no recognized entitlement_ids — ignoring (type: ${type})`);
+      }
     } else if (deactivatingEvents.includes(type)) {
-      // A lapsed partner sub clears both partner + pro perks; a lapsed Pro sub clears Pro.
-      await db.update(users).set({
-        isPro: false,
-        ...(affectsPartner ? { isPartner: false } : {}),
-        updatedAt: new Date(),
-      }).where(eq(users.id, user.id));
+      if (isProEvent || isPartnerEvent) {
+        await db.update(users).set({
+          isPro: false,
+          ...(isPartnerEvent ? { isPartner: false, partnerType: null } : {}),
+          updatedAt: new Date(),
+        }).where(eq(users.id, user.id));
 
-      console.log(`[RevenueCat Webhook] User ${user.id} ${affectsPartner ? 'Streamer Partner' : 'Pro'} deactivated (type: ${type})`);
+        console.log(`[RevenueCat Webhook] User ${user.id} ${isPartnerEvent ? 'Streamer Partner' : 'Pro'} deactivated (type: ${type})`);
+      }
+
+      if (isIndieDevEvent) {
+        await db.update(users).set({
+          isIndieDevSubscriber: false,
+          updatedAt: new Date(),
+        }).where(eq(users.id, user.id));
+
+        console.log(`[RevenueCat Webhook] User ${user.id} Indie Developer deactivated (type: ${type})`);
+      }
     } else {
       console.log(`[RevenueCat Webhook] Unhandled event type: ${type} — ignoring`);
     }

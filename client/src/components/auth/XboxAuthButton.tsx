@@ -50,11 +50,6 @@ export function XboxAuthButton({ disabled = false }: XboxAuthButtonProps) {
           });
           setLocation("/onboarding");
         } else {
-          toast({
-            title: "Welcome back!",
-            description: `You're signed in as ${user?.xboxUsername || user?.displayName || 'gamer'}.`,
-            variant: "gamefolioSuccess",
-          });
           setLocation("/");
         }
         setIsLoading(false);

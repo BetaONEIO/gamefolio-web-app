@@ -15,12 +15,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { useAuthModal } from "@/hooks/use-auth-modal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ReportDialog } from "@/components/content/ReportDialog";
 import { LazyImage } from "@/components/ui/lazy-image";
 import { ProfileHoverCard } from "@/components/ui/ProfileHoverCard";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useSignedUrl } from "@/hooks/use-signed-url";
+import { useBlockedUsers } from "@/hooks/use-blocked-users";
 
 interface ScreenshotWithUser {
   id: number;
@@ -100,7 +102,14 @@ function ScreenshotScrollItem({ item }: { item: ScreenshotWithUser }) {
   );
 }
 
-export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideCloseButton = false, embedded = false, onCommentsVisibilityChange }: MobileTrendingViewerProps) {
+export function MobileTrendingViewer({ content: rawContent, initialIndex = 0, onClose, hideCloseButton = false, embedded = false, onCommentsVisibilityChange }: MobileTrendingViewerProps) {
+  const { blockedUserIds } = useBlockedUsers();
+
+  // Drop blocked authors' content from the viewer. Blocking invalidates
+  // /api/users/blocked, so this recomputes instantly — the blocked clip is
+  // removed and the scroll-snap advances to the next one.
+  const content = rawContent.filter((item: any) => !blockedUserIds.has(item.userId));
+
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showComments, setShowComments] = useState(false);
   const [commentsExpanded, setCommentsExpanded] = useState(false);
@@ -171,6 +180,7 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { openModal } = useAuthModal();
+  const { toast } = useToast();
 
   // Declare currentItem here so it's available to hooks below
   const currentItem = content[currentIndex];
@@ -208,7 +218,9 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/users/follow-status', currentAuthorUsername] });
     },
-    onError: () => {},
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to update follow status", variant: "destructive" });
+    },
   });
 
   const handleFollowPress = (e: React.MouseEvent) => {
@@ -387,19 +399,20 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                 className="absolute left-0 right-0 z-10 px-4 pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent"
                 style={{
                   bottom: '0',
-                  paddingBottom: '20px',
+                  paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
                   pointerEvents: 'none',
                 }}
                 onClick={e => e.stopPropagation()}
               >
                 <div className="pr-14" style={{ pointerEvents: 'auto' }}>
-                  <div className="flex items-center gap-2 mb-1.5">
+                  {/* Creator row — avatar, @gamertag and Follow all on one line */}
+                  <div className="flex items-center gap-2 mb-1.5 min-w-0">
                     <Link
                       href={`/profile/${item.user.username}`}
                       className="flex-shrink-0 no-underline"
                       data-testid={`link-user-${item.user.username}`}
                     >
-                      <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid #B7FF1A' }}>
+                      <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid #B7FF1A' }}>
                         <AuthorAvatar
                           avatarUrl={item.user.avatarUrl}
                           displayName={item.user.displayName}
@@ -409,9 +422,9 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                     <ProfileHoverCard username={item.user.username}>
                       <Link
                         href={`/profile/${item.user.username}`}
-                        className="no-underline flex-shrink-0"
+                        className="no-underline min-w-0 shrink"
                       >
-                        <span className="text-white font-bold text-[13px] drop-shadow leading-tight">
+                        <span className="text-white font-bold text-[13px] drop-shadow leading-tight truncate block">
                           @{item.user.username}
                         </span>
                       </Link>
@@ -420,8 +433,8 @@ export function MobileTrendingViewer({ content, initialIndex = 0, onClose, hideC
                       <button
                         onClick={handleFollowPress}
                         disabled={followMutation.isPending}
-                        className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all"
-                        style={{ background: '#B7FF1A', color: '#000', border: '1px solid transparent' }}
+                        className="text-[12px] font-bold px-3 py-1 rounded-full flex-shrink-0 transition-all"
+                        style={{ background: '#B7FF1A', color: '#071013' }}
                       >
                         {followMutation.isPending ? '…' : 'Follow'}
                       </button>

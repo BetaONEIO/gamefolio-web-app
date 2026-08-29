@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import * as Sentry from "@sentry/capacitor";
 import { PixelHeartReaction } from "@/components/ui/PixelHeartReaction";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { authedFetch } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 
 import { useJoinDialog } from "@/hooks/use-join-dialog";
@@ -45,7 +47,7 @@ export function LikeButton({
   const { data: likeStatus } = useQuery({
     queryKey: [`/api/${contentType}s/${contentId}/likes/status`],
     queryFn: async () => {
-      const res = await fetch(`/api/${contentType}s/${contentId}/likes/status`, { credentials: "include" });
+      const res = await authedFetch(`/api/${contentType}s/${contentId}/likes/status`, {});
       if (!res.ok) throw new Error("Failed to fetch like status");
       return res.json();
     },
@@ -66,9 +68,8 @@ export function LikeButton({
         ? `/api/clips/${contentId}/likes`
         : `/api/screenshots/${contentId}/likes`;
 
-      const response = await fetch(endpoint, {
+      const response = await authedFetch(endpoint, {
         method: 'POST',
-        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -91,12 +92,18 @@ export function LikeButton({
         setLiked(result.liked);
         setCount(result.count);
       }
-      queryClient.invalidateQueries({ 
-        queryKey: [`/api/${contentType}s/${contentId}/likes`] 
+      queryClient.invalidateQueries({
+        queryKey: [`/api/${contentType}s/${contentId}/likes`]
       });
-      queryClient.invalidateQueries({ 
-        queryKey: [`/api/${contentType}s/${contentId}/likes/status`] 
+      queryClient.invalidateQueries({
+        queryKey: [`/api/${contentType}s/${contentId}/likes/status`]
       });
+      // Liking earns daily-challenge XP — refresh the Daily XP Challenges
+      // widget (staleTime: Infinity means it otherwise never refetches).
+      if (user) {
+        queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/daily-activity`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/level-progress`] });
+      }
     },
     onError: (error: Error, _, context) => {
       if (context) {
@@ -110,6 +117,12 @@ export function LikeButton({
           variant: "gamefolioError",
         });
       } else {
+        // Anything reaching here is unexpected (auth/network/server failure,
+        // not a known user-facing case) — report it so a repeat shows up in
+        // Sentry instead of only as a toast nobody sees.
+        Sentry.captureException(error, {
+          tags: { feature: "like", contentType, contentId: String(contentId) },
+        });
         toast({
           title: "Error",
           description: error.message || "Failed to toggle like",

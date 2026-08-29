@@ -91,7 +91,8 @@ export const getAdTagUrl = (): string | undefined => {
 };
 
 export const isAdInventoryConfigured = (): boolean => {
-  return getAdTagUrl() !== undefined;
+  // Ads are currently disabled platform-wide
+  return false;
 };
 
 export function VideoAdPlayer({ 

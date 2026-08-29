@@ -67,6 +67,25 @@ export function GoProIcon({ className }: IconProps) {
   );
 }
 
+export function AmbassadorIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={cn("w-4 h-4", className)}
+      aria-hidden
+    >
+      <path d="M8.5 13.5L5 21L12 18.5L19 21L15.5 13.5" />
+      <circle cx="12" cy="9" r="6.5" />
+      <path d="M12 5.5L13.11 7.86L15.7 8.24L13.85 10.04L14.29 12.62L12 11.41L9.71 12.62L10.15 10.04L8.3 8.24L10.89 7.86L12 5.5Z" />
+    </svg>
+  );
+}
+
 export function ManageProIcon({ className }: IconProps) {
   return (
     <svg

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Video, Film, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { RecommendedIcon } from "@/components/icons/RecommendedIcon";
 import { Link } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
 import { ClipWithUser } from "@shared/schema";
 import VideoClipCard from "@/components/clips/VideoClipCard";
 import { MobileTrendingViewer } from "@/components/clips/MobileTrendingViewer";
@@ -43,9 +44,7 @@ const RecommendedForYou = ({ userId }: RecommendedForYouProps) => {
   const { data: recommendedClips, isLoading } = useQuery<ClipWithUser[]>({
     queryKey: ['/api/recommended-clips'],
     queryFn: async () => {
-      const response = await fetch('/api/recommended-clips?limit=20', {
-        credentials: 'include',
-      });
+      const response = await apiRequest("GET", "/api/recommended-clips?limit=20");
       if (!response.ok) {
         throw new Error('Failed to fetch recommended clips');
       }

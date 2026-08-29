@@ -14,7 +14,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed top-0 right-0 sm:top-auto sm:bottom-0 z-[9999] flex max-h-screen w-full max-w-md flex-col p-4 sm:flex-col-reverse",
+      "fixed top-0 right-0 sm:top-auto sm:bottom-0 z-[9999] flex max-h-screen w-full max-w-md flex-col px-4 pb-4 pt-[calc(env(safe-area-inset-top,0px)+1rem)] sm:pt-4 sm:pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] sm:flex-col-reverse",
       className
     )}
     {...props}
@@ -31,9 +31,9 @@ const toastVariants = cva(
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
         gamefolioError: 
-          "bg-card border-destructive/40 text-foreground rounded-xl shadow-lg shadow-destructive/10 backdrop-blur-sm",
+          "bg-card border-destructive text-foreground rounded-xl shadow-lg shadow-destructive/10",
         gamefolioSuccess:
-          "bg-card border-primary/40 text-foreground rounded-xl shadow-lg shadow-primary/20 backdrop-blur-sm min-w-[300px]",
+          "bg-card border-primary text-foreground rounded-xl shadow-lg shadow-primary/20 min-w-[300px]",
       },
     },
     defaultVariants: {

@@ -4,6 +4,7 @@ import { users } from '@shared/schema';
 import { sql, eq } from 'drizzle-orm';
 import { adminMiddleware } from '../middleware/admin';
 import { invalidateTokenMetadata } from './mint-nft';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 
@@ -69,6 +70,7 @@ router.post('/api/admin/nft-seed', adminMiddleware, async (req: Request, res: Re
       message: `Successfully seeded ${seededCount} NFTs (token IDs 1–${SEED_COUNT}) at ${LISTED_PRICE} GFT each.`,
     });
   } catch (error: any) {
+    captureRouteError(error);
     console.error('[NFT Seed] Error:', error);
     return res.status(500).json({ error: 'Seeding failed', details: error.message });
   }
@@ -97,6 +99,7 @@ router.get('/api/admin/nft-seed/status', adminMiddleware, async (_req: Request, 
       activeListings: Number(activeRows[0]?.cnt || 0),
     });
   } catch (error: any) {
+    captureRouteError(error);
     return res.status(500).json({ error: 'Status check failed', details: error.message });
   }
 });

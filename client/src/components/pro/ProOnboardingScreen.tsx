@@ -48,13 +48,15 @@ const slides = [
     ),
   },
   {
-    title: "Ad-Free Gaming",
-    description: "Enjoy uninterrupted gaming content with zero ads across your entire experience.",
+    title: "Bonus Lootboxes",
+    description: "Get a welcome reward when you subscribe and fresh bonus lootboxes every month.",
     icon: (
       <svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="48" cy="48" r="36" stroke="#B7FF1A" strokeWidth="4" strokeOpacity="0.3"/>
-        <path d="M16 16L80 80" stroke="#B7FF1A" strokeWidth="4" strokeLinecap="round"/>
-        <path d="M40 36V60L60 48L40 36Z" stroke="#B7FF1A" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.6"/>
+        <path d="M80 48V88H16V48" stroke="#B7FF1A" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" strokeOpacity="0.3"/>
+        <path d="M88 28H8V48H88V28Z" stroke="#B7FF1A" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M48 88V28" stroke="#B7FF1A" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M48 28H32C29.8783 28 27.8434 27.1571 26.3431 25.6569C24.8429 24.1566 24 22.1217 24 20C24 17.8783 24.8429 15.8434 26.3431 14.3431C27.8434 12.8429 29.8783 12 32 12C44 12 48 28 48 28Z" stroke="#B7FF1A" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M48 28H64C66.1217 28 68.1566 27.1571 69.6569 25.6569C71.1571 24.1566 72 22.1217 72 20C72 17.8783 71.1571 15.8434 69.6569 14.3431C68.1566 12.8429 66.1217 12 64 12C52 12 48 28 48 28Z" stroke="#B7FF1A" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
   },

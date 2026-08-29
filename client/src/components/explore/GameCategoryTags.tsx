@@ -17,7 +17,6 @@ const CATEGORIES = [
   { id: "racing", name: "Racing", icon: <TrendingUp className="h-3 w-3 mr-1" /> },
   { id: "strategy", name: "Strategy", icon: <Gamepad2 className="h-3 w-3 mr-1" /> },
   { id: "mmo", name: "MMO", icon: <Star className="h-3 w-3 mr-1" /> },
-  { id: "indie", name: "Indie", icon: <Gamepad2 className="h-3 w-3 mr-1" /> }
 ];
 
 interface GameCategoryTagsProps {

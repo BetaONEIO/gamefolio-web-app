@@ -14,6 +14,7 @@ import type { User } from '@shared/schema';
 import { users, serverSettings } from '@shared/schema';
 import { db } from './db';
 import { storage } from './storage';
+import { sendAdminAlert } from './admin-alert-service';
 
 /** Error with a stable code + HTTP status so on-demand routes can map it. */
 export class PlatformSyncError extends Error {
@@ -125,6 +126,18 @@ async function setPsnRefreshToken(token: string): Promise<void> {
   }
 }
 
+/** Record the ISO timestamp of the most-recent successful PSN authentication.
+ *  Used by the admin dashboard to surface "PSN token healthy / last used N days ago". */
+async function setPsnAuthLastSuccess(): Promise<void> {
+  try {
+    const now = new Date().toISOString();
+    await db.insert(serverSettings).values({ key: 'psn_auth_last_success', value: now, updatedAt: new Date() })
+      .onConflictDoUpdate({ target: serverSettings.key, set: { value: now, updatedAt: new Date() } });
+  } catch (e) {
+    console.error('Failed to save PSN auth last-success timestamp:', e);
+  }
+}
+
 export interface PsnSyncResult {
   trophyLevel: number | null;
   totalTrophies: number | null;
@@ -166,6 +179,8 @@ export async function syncPsnForUser(user: User): Promise<PsnSyncResult> {
       accessToken = tokens.accessToken;
       // Save the new refresh token — keeps the chain alive indefinitely
       if (tokens.refreshToken) await setPsnRefreshToken(tokens.refreshToken);
+      // Record successful auth so admin dashboard can show token health
+      await setPsnAuthLastSuccess();
     } catch (refreshErr: any) {
       console.warn('PSN refresh token expired, falling back to NPSSO:', refreshErr?.message);
       accessToken = '';
@@ -189,8 +204,23 @@ export async function syncPsnForUser(user: User): Promise<PsnSyncResult> {
       const tokens = await exchangeCodeForAccessToken(code);
       accessToken = tokens.accessToken;
       if (tokens.refreshToken) await setPsnRefreshToken(tokens.refreshToken);
+      // Record successful NPSSO bootstrap so admin dashboard can show token health
+      await setPsnAuthLastSuccess();
     } catch (authErr: any) {
       console.error('PSN NPSSO auth error:', authErr?.message || authErr);
+      // Alert admins — deduplicated to at most once per hour so a busy scheduler
+      // doesn't flood inboxes. Fire-and-forget so alert failure doesn't mask the error.
+      sendAdminAlert({
+        subject: 'PSN NPSSO token expired — action required',
+        message:
+          'PSN authentication via NPSSO failed. The token has likely expired (typical lifetime: ~60 days). ' +
+          'Please rotate the PSN_NPSSO_TOKEN secret so syncs resume. ' +
+          'Affected users will not receive trophy/game updates until the token is replaced.',
+        details: { error: authErr?.message || String(authErr) },
+        dedupeKey: 'psn_auth_failed_npsso',
+        dedupeWindowMs: 60 * 60 * 1000, // suppress duplicates for 1 hour
+        type: 'system',
+      }).catch((e) => console.error('[platform-sync] Failed to dispatch PSN auth alert:', e));
       throw new PlatformSyncError(
         'AUTH_FAILED',
         503,

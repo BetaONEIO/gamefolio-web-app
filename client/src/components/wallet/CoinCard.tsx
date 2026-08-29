@@ -32,7 +32,7 @@ export default function CoinCard({
       transition={{ delay: index * 0.1 }}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      className="bg-white/5 dark:bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10 dark:border-white/10 cursor-pointer hover:bg-white/10 dark:hover:bg-white/10 transition-colors"
+      className="bg-card rounded-2xl p-4 border border-border cursor-pointer hover:bg-secondary transition-colors"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">

@@ -143,7 +143,7 @@ const ProfileTabs = ({ username, isCyberpunkTheme = false }: ProfileTabsProps) =
           
           {/* Main curved rectangle border */}
           <div 
-            className={`relative flex items-center gap-1 px-2 py-1 backdrop-blur-sm ${isCyberpunkTheme ? 'rounded-none border-0 profile-tabs-cyber-border' : 'rounded-xl border border-border/60 bg-background/50'}`}
+            className={`relative flex items-center gap-1 px-2 py-1 ${isCyberpunkTheme ? 'rounded-none border-0 profile-tabs-cyber-border' : 'rounded-xl border border-border bg-card'}`}
             style={isCyberpunkTheme ? {
               background: '#020617',
               border: '1px solid #00b8db88',

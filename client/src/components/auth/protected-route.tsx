@@ -12,10 +12,14 @@ export function ProtectedRoute({
   path: string; 
   component: React.ComponentType<any>; 
 }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, authResolved } = useAuth();
   const { openModal } = useAuthModal();
 
-  if (isLoading) {
+  // Wait for auth to genuinely resolve, not merely for isLoading to drop.
+  // Before the Firebase check completes the /api/user query is disabled, which
+  // reports isLoading:false with no user — treating that as "logged out" sent
+  // signed-in users away from deep links into guarded routes.
+  if (isLoading || !authResolved) {
     return (
       <Route path={path}>
         {() => <FullScreenLoader isLoading={true} />}

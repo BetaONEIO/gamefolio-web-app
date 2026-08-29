@@ -57,6 +57,7 @@ EXPORT_PATH="$BUILD_DIR/export"
 EXPORT_OPTIONS="$BUILD_DIR/ExportOptions.plist"
 
 BUILD_NUMBER="${BUILD_NUMBER:-$(date -u +%Y%m%d%H%M)}"
+export IOS_BUILD_NUMBER="$BUILD_NUMBER"
 
 # altool finds the API key by looking for AuthKey_<KEYID>.p8 in the directory
 # given by API_PRIVATE_KEYS_DIR. Stage a copy so any source path/name works.

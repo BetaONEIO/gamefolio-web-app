@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Prevent mobile browsers from caching this HTML file. Hashed JS/CSS bundles
+         handle their own caching via server headers; the entry point must always be fresh. -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <link rel="icon" type="image/png" sizes="2048x2048" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="128x128" href="/favicon-128.png" />
+    <link rel="apple-touch-icon" type="image/png" sizes="2048x2048" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Plus+Jakarta+Sans:wght@500;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0B1218" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <script>
+      window.__nativeReplaceState = window.history.replaceState.bind(window.history);
+    </script>
+    <script>
+      window.addEventListener('unhandledrejection', function(event) {
+        var error = event.reason;
+        var errorMessage = (error && error.message) || error || '';
+        if (typeof errorMessage === 'string' && (
+          errorMessage.includes('Failed to construct \'WebSocket\'') ||
+          (errorMessage.includes('WebSocket') && errorMessage.includes('is invalid'))
+        )) {
+          event.preventDefault();
+        }
+      });
+    </script>
+    <script type="module" crossorigin src="/assets/index-DYPkZNjU.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CLe0taG6.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- Cloudflare Web Analytics -->
+    <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "a98d5d60e0cd4806bd7fc527df7425fe"}'></script>
+    <!-- End Cloudflare Web Analytics -->
+  </body>
+</html>

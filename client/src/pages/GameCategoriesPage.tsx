@@ -23,7 +23,6 @@ const CATEGORIES = [
   { id: 'puzzle', name: 'Puzzle', icon: <Gamepad2 className="h-4 w-4 mr-2" /> },
   { id: 'horror', name: 'Horror', icon: <Gamepad2 className="h-4 w-4 mr-2" /> },
   { id: 'battle-royale', name: 'Battle Royale', icon: <Gamepad2 className="h-4 w-4 mr-2" /> },
-  { id: 'indie', name: 'Indie', icon: <Gamepad2 className="h-4 w-4 mr-2" /> },
   { id: 'mmo', name: 'MMO', icon: <Gamepad2 className="h-4 w-4 mr-2" /> },
 ];
 

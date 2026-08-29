@@ -2,6 +2,7 @@ import { useState, KeyboardEvent, useRef, useEffect } from "react";
 import { X, Hash } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 interface TagInputProps {
   tags: string[];
@@ -25,7 +26,7 @@ const TagInput = ({
   const { data: frequentTags = [] } = useQuery<string[]>({
     queryKey: ["/api/user/top-tags"],
     queryFn: async () => {
-      const res = await fetch("/api/user/top-tags");
+      const res = await apiRequest("GET", "/api/user/top-tags");
       if (!res.ok) return [];
       return res.json();
     },
@@ -86,6 +87,22 @@ const TagInput = ({
     }
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData("text");
+    if (!pasted.includes(",")) return;
+    e.preventDefault();
+    const parts = pasted.split(",").map((p) => p.trim()).filter(Boolean);
+    let updated = [...tags];
+    for (const part of parts) {
+      const clean = part.toLowerCase().replace(/^#/, "");
+      if (clean && !updated.includes(clean) && updated.length < maxTags) {
+        updated = [...updated, clean];
+      }
+    }
+    setTags(updated);
+    setInputValue("");
+  };
+
   const handleBlur = (e: React.FocusEvent) => {
     // Delay so clicks inside the dropdown register first
     setTimeout(() => {
@@ -101,6 +118,25 @@ const TagInput = ({
   useEffect(() => {
     setActiveIndex(-1);
   }, [query]);
+
+  // Belt-and-braces close: the dropdown's own onMouseDown below prevents
+  // the browser's default focus-shift on any click inside it (not just on
+  // suggestion buttons), which meant blur never fired for clicks that
+  // landed on its padding/header rather than a button — leaving it stuck
+  // open and, since it's absolutely positioned, visually blocking whatever
+  // sits below it (e.g. the Schedule tab). Closing on any real outside
+  // pointerdown doesn't depend on focus/blur timing at all.
+  useEffect(() => {
+    if (!showDropdown) return;
+    const handlePointerDown = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setDropdownOpen(false);
+        setActiveIndex(-1);
+      }
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [showDropdown]);
 
   return (
     <div ref={containerRef} className="relative">
@@ -138,6 +174,7 @@ const TagInput = ({
           onFocus={() => setDropdownOpen(true)}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
+          onPaste={handlePaste}
           placeholder={tags.length < maxTags ? placeholder : `Max ${maxTags} tags`}
           disabled={tags.length >= maxTags}
           className="flex-1 border-0 outline-none bg-transparent text-sm min-w-[120px] placeholder:text-muted-foreground disabled:cursor-not-allowed"

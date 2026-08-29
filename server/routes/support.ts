@@ -5,6 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { supabaseStorage } from '../supabase-storage';
+import { captureRouteError } from "../sentry";
 
 const router = Router();
 
@@ -42,7 +43,7 @@ const supportUpload = multer({
 // Support form submission schema
 const supportFormSchema = z.object({
   username: z.string().optional(),
-  email: z.string().email().optional(),
+  email: z.string().email('Please provide a valid email address so we can contact you with a resolution'),
   category: z.enum(['Tech Support', 'Business Enquiry', 'Partnership Enquiry', 'Other']),
   subject: z.string().min(1, 'Subject is required'),
   message: z.string().min(10, 'Message must be at least 10 characters long'),
@@ -100,6 +101,7 @@ router.post('/upload-attachments', supportUpload.array('attachments', 5), async 
     });
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Support attachment upload error:', error);
 
     // Clean up temp files on error
@@ -239,6 +241,7 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
   } catch (error) {
+    captureRouteError(error);
     console.error('Support form error:', error);
     
     if (error instanceof z.ZodError) {

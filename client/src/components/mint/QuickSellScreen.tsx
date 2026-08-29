@@ -1,5 +1,6 @@
 import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useWalletClient } from "wagmi";
 import { useAuth } from "@/hooks/use-auth";
@@ -75,7 +76,7 @@ export default function QuickSellScreen({
         }
 
         setStatusMessage("Getting sell details...");
-        const intentRes = await fetch("/api/nft/quick-sell-intent", { credentials: "include" });
+        const intentRes = await apiRequest("GET", "/api/nft/quick-sell-intent");
         if (!intentRes.ok) {
           const err = await intentRes.json();
           throw new Error(err.error || "Failed to get sell details");

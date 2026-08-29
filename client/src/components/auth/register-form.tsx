@@ -3,21 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { GoogleAuthButton } from "./GoogleAuthButton";
 import { DiscordAuthButton } from "./DiscordAuthButton";
 import { PasswordRequirementsDisplay } from "@/components/ui/password-requirements";
 import { FieldError, FieldStatus } from "@/components/ui/field-error";
+import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, ChevronDown, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 const MONTHS = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December"
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
 ];
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: CURRENT_YEAR - 1900 + 1 }, (_, i) => CURRENT_YEAR - i);
@@ -112,10 +111,10 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   });
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [usernameTimer, setUsernameTimer] = useState<NodeJS.Timeout | null>(null);
-  const usernameAbortRef = useRef<AbortController | null>(null);
-  const checkedUsernameRef = useRef<string>("");
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date(2000, 0));
+  const usernameAbortRef = useRef<AbortController | null>(null);
+  const checkedUsernameRef = useRef<string>("");
   const [emailValid, setEmailValid] = useState<boolean | null>(null);
   const [passwordRequirements, setPasswordRequirements] = useState({
     length: false,
@@ -134,6 +133,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     password?: string;
     confirmPassword?: string;
     dateOfBirth?: string;
+    terms?: string;
   }>({});
   const { toast } = useToast();
   const { registerMutation } = useAuth();
@@ -338,7 +338,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       return;
     }
 
-    // Date of birth age validation (must be 13 or older)
+    // Date of birth age validation (must be 15 or older)
     const dob = new Date(formData.dateOfBirth);
     const today = new Date();
     let age = today.getFullYear() - dob.getFullYear();
@@ -346,17 +346,18 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
       age--;
     }
-    if (age < 13) {
-      setFieldErrors({ dateOfBirth: "You must be at least 13 years old to create an account" });
+    if (age < 15) {
+      setFieldErrors({ dateOfBirth: "You must be at least 15 years old to create an account" });
       toast({
         title: "Error",
-        description: "You must be at least 13 years old to create an account",
+        description: "You must be at least 15 years old to create an account",
         variant: "gamefolioError",
       });
       return;
     }
 
     if (!agreedToTerms) {
+      setFieldErrors({ terms: "Please accept the Terms & Conditions and Privacy Policy to continue" });
       toast({
         title: "Error",
         description: "You must agree to the Terms & Conditions and Privacy Policy to register",
@@ -505,7 +506,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             !formData.dateOfBirth && "text-muted-foreground"
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
+          <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
           {formData.dateOfBirth
             ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
             : "Select your date of birth"}
@@ -545,7 +546,11 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                 }
                 setDatePickerOpen(false);
               }}
-              disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+              disabled={(date) => {
+                const minAge = new Date();
+                minAge.setFullYear(minAge.getFullYear() - 13);
+                return date > minAge || date < new Date("1900-01-01");
+              }}
               initialFocus
               className="w-full"
               classNames={{
@@ -559,6 +564,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                 row: "flex w-full mt-2",
                 cell: "flex-1 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
                 day: "w-full h-9 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors",
+                day_disabled: "invisible pointer-events-none",
               }}
             />
           </div>
@@ -579,7 +585,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           onChange={handleChange}
           disabled={isLoading}
           className="auth-input uppercase"
-          maxLength={16}
+          maxLength={8}
         />
         <p className="text-xs text-muted-foreground">Have a friend's referral code? Enter it here to earn bonus XP!</p>
       </div>
@@ -589,7 +595,10 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           type="checkbox"
           id="agree-terms"
           checked={agreedToTerms}
-          onChange={(e) => setAgreedToTerms(e.target.checked)}
+          onChange={(e) => {
+            setAgreedToTerms(e.target.checked);
+            if (e.target.checked) setFieldErrors((prev) => ({ ...prev, terms: undefined }));
+          }}
           disabled={isLoading}
           className="mt-1 h-4 w-4 rounded border-gray-600 bg-gray-800 text-primary focus:ring-primary accent-primary cursor-pointer"
         />
@@ -604,9 +613,11 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           </button>
         </label>
       </div>
+      <FieldError error={fieldErrors.terms} />
 
       <Dialog open={showTerms} onOpenChange={setShowTerms}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700">
+        {/* z above the auth modal (z-[200000]) or the dialog opens behind it and looks like nothing happened */}
+        <DialogContent className="z-[200001] max-w-2xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-primary">Terms and Conditions</DialogTitle>
             <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
@@ -634,16 +645,18 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
               <li>Notify us immediately of unauthorized use of your account</li>
             </ul>
 
-            <h2 className="text-lg font-semibold text-white">4. Content Guidelines</h2>
-            <p>Users are responsible for the content they upload. You agree not to upload content that:</p>
+            <h2 className="text-lg font-semibold text-white">4. Content Guidelines &amp; Zero Tolerance for Objectionable Content</h2>
+            <p><strong className="text-white">Gamefolio has zero tolerance for objectionable content or abusive users.</strong> Objectionable content and abusive behavior are strictly prohibited, and accounts that post such content or engage in such behavior will be removed.</p>
+            <p>Users are responsible for the content they upload. You agree not to upload content, or engage in behavior, that:</p>
             <ul className="list-disc pl-5 space-y-1">
               <li>Is illegal, harmful, or offensive</li>
               <li>Violates intellectual property rights</li>
               <li>Contains malware or harmful code</li>
-              <li>Promotes harassment or discrimination</li>
-              <li>Is sexually explicit or inappropriate</li>
+              <li>Promotes harassment, bullying, discrimination, or abuse of other users</li>
+              <li>Is sexually explicit, obscene, or otherwise inappropriate</li>
               <li>Violates any applicable laws or regulations</li>
             </ul>
+            <p>Every user can flag/report objectionable content and block abusive users directly within the app. Blocking a user immediately removes their content from your feed. We review all reports and act within 24 hours by removing the offending content and ejecting the user who provided it.</p>
 
             <h2 className="text-lg font-semibold text-white">5. Intellectual Property</h2>
             <p>You retain ownership of content you upload, but grant Gamefolio a non-exclusive, worldwide, royalty-free license to use, display, and distribute your content on the platform. The Gamefolio platform, including its design, features, and code, is protected by copyright and other intellectual property laws.</p>
@@ -686,7 +699,8 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       </Dialog>
 
       <Dialog open={showPrivacy} onOpenChange={setShowPrivacy}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700">
+        {/* z above the auth modal (z-[200000]) or the dialog opens behind it and looks like nothing happened */}
+        <DialogContent className="z-[200001] max-w-2xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-primary">Privacy Policy</DialogTitle>
             <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>

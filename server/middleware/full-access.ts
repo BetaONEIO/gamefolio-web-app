@@ -53,10 +53,8 @@ export const onboardingMiddleware = async (req: Request, res: Response, next: Ne
     return next();
   }
   
-  // Demo user bypasses onboarding requirements (use secure ID check)
-  if (user.id === 999) {
-    return next();
-  }
+  // Demo user (id 999) is deliberately NOT bypassed here so that onboarding
+  // pages can be edited and tested while logged in as the demo account.
 
   const needsOnboarding = !user.userType;
 

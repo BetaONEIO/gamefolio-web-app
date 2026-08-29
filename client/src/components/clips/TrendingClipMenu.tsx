@@ -4,8 +4,8 @@ import { useLocation } from "wouter";
 import { ClipWithUser } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import {
   MoreHorizontal,
@@ -16,7 +16,10 @@ import {
   Download,
   Loader2,
   User,
+  Flag,
+  Bookmark,
 } from "lucide-react";
+import { ReportDialog } from "@/components/content/ReportDialog";
 import {
   Popover,
   PopoverContent,
@@ -99,10 +102,19 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
   const [isMobile, setIsMobile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showBlockConfirm, setShowBlockConfirm] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showEditCaption, setShowEditCaption] = useState(false);
   const [editTitle, setEditTitle] = useState(clip.title);
   const [editDescription, setEditDescription] = useState((clip as any).description ?? "");
+
+  const { data: bookmarkStatus } = useQuery<{ isBookmarked: boolean }>({
+    queryKey: [`/api/bookmarks/check/${contentType}/${clip.id}`],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!user,
+    staleTime: 30000,
+  });
+  const isBookmarked = !!bookmarkStatus?.isBookmarked;
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -120,7 +132,13 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
         title: "User blocked",
         description: `You won't see content from @${clip.user.username} anymore.`,
       });
+      // Refresh the blocked-users list so the feed filter (useBlockedUsers)
+      // removes this author's content immediately.
+      queryClient.invalidateQueries({ queryKey: ["/api/users/blocked"] });
       setShowBlockConfirm(false);
+      // Close the clip viewer if the block happened while watching the blocked
+      // user's clip, so we don't leave the user staring at content they blocked.
+      closeClipDialog();
       onHide?.();
     },
     onError: (err: Error) => {
@@ -139,19 +157,24 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
         variant: "gamefolioSuccess",
       });
       // Immediately remove from all caches for instant UI update
-      const removeClip = (old: any) => {
+      const removeItem = (old: any) => {
         if (!old) return old;
         if (Array.isArray(old)) return old.filter((c: any) => c.id !== clip.id);
         if (old?.clips && Array.isArray(old.clips)) return { ...old, clips: old.clips.filter((c: any) => c.id !== clip.id) };
+        if (old?.screenshots && Array.isArray(old.screenshots)) return { ...old, screenshots: old.screenshots.filter((c: any) => c.id !== clip.id) };
         return old;
       };
-      queryClient.setQueryData([`/api/users/${clip.user.username}/clips`], removeClip);
-      queryClient.setQueryData(['/api/clips/latest'], removeClip);
-      queryClient.setQueryData(['/api/reels/latest'], removeClip);
+      queryClient.setQueryData([`/api/users/${clip.user.username}/clips`], removeItem);
+      queryClient.setQueryData([`/api/users/${clip.user.username}/screenshots`], removeItem);
+      queryClient.setQueryData([`/api/users/${clip.userId}/screenshots`], removeItem);
+      queryClient.setQueryData(['/api/clips/latest'], removeItem);
+      queryClient.setQueryData(['/api/reels/latest'], removeItem);
       // Background invalidations
       queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
       queryClient.invalidateQueries({ queryKey: ["/api/trending"] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/clips`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/screenshots`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.userId}/screenshots`] });
       queryClient.invalidateQueries({ queryKey: ['/api/clips/latest'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });
       setShowDeleteConfirm(false);
@@ -201,6 +224,22 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
     },
     onError: (err: Error) => {
       toast({ title: "Failed to update caption", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const bookmarkMutation = useMutation({
+    mutationFn: () => {
+      if (isBookmarked) {
+        return apiRequest("DELETE", `/api/bookmarks/${contentType}/${clip.id}`);
+      }
+      return apiRequest("POST", "/api/bookmarks", { contentType, contentId: clip.id });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/bookmarks/check/${contentType}/${clip.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bookmarks"] });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Bookmark failed", description: err.message, variant: "destructive" });
     },
   });
 
@@ -330,6 +369,30 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
       />
       <MenuDivider />
       <MenuItem
+        icon={
+          <Bookmark
+            className="h-4 w-4"
+            fill={isBookmarked ? "currentColor" : "none"}
+          />
+        }
+        label={isBookmarked ? "Remove Bookmark" : `Bookmark ${Noun}`}
+        onClick={() => {
+          close();
+          bookmarkMutation.mutate();
+        }}
+      />
+      <MenuDivider />
+      <MenuItem
+        icon={<Flag className="h-4 w-4" />}
+        label={`Report ${Noun}`}
+        destructive
+        onClick={() => {
+          close();
+          setShowReport(true);
+        }}
+      />
+      <MenuDivider />
+      <MenuItem
         icon={<Ban className="h-4 w-4" />}
         label="Block User"
         destructive
@@ -375,6 +438,19 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
           onClick={handleDownload}
         />
       )}
+      <MenuItem
+        icon={
+          <Bookmark
+            className="h-4 w-4"
+            fill={isBookmarked ? "currentColor" : "none"}
+          />
+        }
+        label={isBookmarked ? "Remove Bookmark" : `Bookmark ${Noun}`}
+        onClick={() => {
+          close();
+          bookmarkMutation.mutate();
+        }}
+      />
       <MenuDivider />
       <MenuItem
         icon={<Trash2 className="h-4 w-4" />}
@@ -583,6 +659,15 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ReportDialog
+        contentType={isScreenshot ? 'screenshot' : 'clip'}
+        contentId={clip.id}
+        contentTitle={clip.title}
+        contentAuthor={clip.user.username}
+        open={showReport}
+        onOpenChange={setShowReport}
+      />
 
       {/* Flashing download indicator — fixed bottom-right, visible on all screen sizes */}
       {isDownloading && createPortal(

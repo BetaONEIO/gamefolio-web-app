@@ -1,7 +1,7 @@
 import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
   monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, userXPHistory, notifications, userBadges, contentFilterSettings, bannedWords,
-  heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist, assetRewards, assetRewardClaims,
+  heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist, bookmarks, assetRewards, assetRewardClaims,
   proLootboxGrants, nameTags, userUnlockedNameTags, userDailyFires, profileBorders, userUnlockedBorders, verificationBadges, userUnlockedVerificationBadges, xpSettings,
   type User, type InsertUser,
   type Game, type InsertGame,
@@ -29,13 +29,18 @@ import {
   type CommentMention, type InsertCommentMention,
   type ScreenshotCommentMention, type InsertScreenshotCommentMention,
   type NftWatchlist, type InsertNftWatchlist,
+  type Bookmark, type InsertBookmark,
   type AssetReward, type InsertAssetReward,
   type AssetRewardClaim, type InsertAssetRewardClaim,
   type AssetRewardWithClaims,
   type ProLootboxGrant, type InsertProLootboxGrant,
   type UploadLimits,
+  type UserUploadUsage,
+  type ScheduledPost, type InsertScheduledPost, type ScheduledPostLimits,
   type UserDailyFires, type InsertUserDailyFires,
   type FireLimits,
+  type UserDailyImports,
+  type ImportLimits,
   type NameTag, type InsertNameTag,
   type UserUnlockedNameTag, type InsertUserUnlockedNameTag,
   type ProfileBorder, type InsertProfileBorder,
@@ -56,7 +61,9 @@ import {
   adminAlertSettings,
   type AdminAlertSettings, type InsertAdminAlertSettings,
   type PushToken, type InsertPushToken,
-  type PushBroadcast, type PushAudience
+  type PushBroadcast, type PushAudience,
+  type IndieGameProfile, type InsertIndieGameProfile,
+  type IndieGameFieldOverride
 } from "@shared/schema";
 
 export interface IStorage {
@@ -73,13 +80,26 @@ export interface IStorage {
   getUserByReferralCode(referralCode: string): Promise<User | null>;
   getReferralStats(userId: number): Promise<{ referralCount: number; totalXpEarned: number; referralCode: string | null; referralCodeCustomized: boolean }>;
   customizeReferralCode(userId: number, newCode: string): Promise<{ success: boolean; message: string }>;
+  // Records a Pro purchase against the ambassador whose referral code was used
+  // (no-op if the code's owner isn't an ambassador). Idempotent per referred user.
+  recordAmbassadorConversion(referredUserId: number, referralCodeUsed: string, subscriptionType: string | null, source: string): Promise<void>;
+  getAmbassadorDashboardStats(ambassadorUserId: number): Promise<{
+    referralCode: string | null;
+    totalConversions: number;
+    conversions: Array<{ userId: number; username: string; displayName: string | null; avatarUrl: string | null; subscriptionType: string | null; convertedAt: Date }>;
+  }>;
+  getAllAmbassadorsWithStats(): Promise<Array<{ id: number; username: string; displayName: string | null; avatarUrl: string | null; referralCode: string | null; totalConversions: number }>>;
+  getAmbassadorConversionsForAdmin(ambassadorUserId: number): Promise<Array<{ userId: number; username: string; displayName: string | null; avatarUrl: string | null; subscriptionType: string | null; convertedAt: Date }>>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<User>): Promise<User | null>;
   updateUserType(id: number, userType: string): Promise<User | null>;
   deleteUser(id: number): Promise<boolean>;
   getUserWithStats(id: number): Promise<UserWithStats | null>;
   getFeaturedUsers(limit?: number): Promise<User[]>;
-  updateUserStreak?(data: {userId: number, currentStreak: number, longestStreak: number, lastStreakUpdate: Date}): Promise<void>;
+  // Returns false if `expectedPreviousLastStreakUpdate` no longer matches the
+  // stored value (a concurrent request already claimed this update), so the
+  // caller can skip re-awarding points/notifications instead of racing.
+  updateUserStreak?(data: {userId: number, currentStreak: number, longestStreak: number, lastStreakUpdate: Date, expectedPreviousLastStreakUpdate: Date | null}): Promise<boolean>;
 
   // Admin operations
   getAllUsers(limit?: number, offset?: number, search?: string): Promise<UserWithBadges[]>;
@@ -88,7 +108,7 @@ export interface IStorage {
   getClipCount(): Promise<number>;
   getGameCount(): Promise<number>;
   getAllClips(limit?: number, offset?: number, currentUserId?: number): Promise<ClipWithUser[]>;
-  getLatestClips(limit?: number, since?: Date, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]>;
+  getLatestClips(limit?: number, since?: Date, gameId?: number): Promise<ClipWithUser[]>;
   getUserTypeDistribution(): Promise<{type: string, count: number}[]>;
   getAgeRangeDistribution(): Promise<{range: string, count: number}[]>;
   getTopGames(limit?: number): Promise<Game[]>;
@@ -127,17 +147,21 @@ export interface IStorage {
   getClipByShareCode(shareCode: string): Promise<Clip | null>;
   createClip(clipData: InsertClip): Promise<Clip>;
   updateClip(id: number, clip: Partial<Clip>): Promise<Clip | null>;
+  // Rows stuck in background video processing (status "processing", not
+  // touched since `before`) for the periodic reconciler to retry.
+  getStuckProcessingClips(before: Date, limit?: number): Promise<Clip[]>;
   updateClipDuration(id: number, duration: number): Promise<boolean>;
   deleteClip(id: number): Promise<boolean>;
   incrementClipViews(id: number): Promise<void>;
   incrementScreenshotViews(id: number): Promise<void>;
   getClipsByUserId(userId: number): Promise<ClipWithUser[]>;
+  getClipsByUserIdPaginated(userId: number, opts: { limit: number; offset: number }): Promise<{ clips: ClipWithUser[]; total: number }>;
   getClipsByGameId(gameId: number, limit?: number): Promise<ClipWithUser[]>;
   getClipsWithDuration(duration: number): Promise<Clip[]>;
   getFeedClips(period?: string, limit?: number): Promise<ClipWithUser[]>;
-  getTrendingClips(period: string, limit: number, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]>;
-  getTrendingReels(period: string, limit: number, gameId?: number, currentUserId?: number): Promise<ClipWithUser[]>;
-  getLatestReels(limit: number, currentUserId?: number): Promise<ClipWithUser[]>;
+  getTrendingClips(period: string, limit: number, gameId?: number): Promise<ClipWithUser[]>;
+  getTrendingReels(period: string, limit: number, gameId?: number): Promise<ClipWithUser[]>;
+  getLatestReels(limit: number): Promise<ClipWithUser[]>;
   getLatestScreenshots(limit: number, gameId?: number): Promise<any[]>;
   getClipById(id: number): Promise<ClipWithUser | null>;
 
@@ -271,6 +295,7 @@ export interface IStorage {
 
   // XP operations (legacy - kept for backward compatibility, totalXP now stores points)
   addUserXPHistory(xpHistory: InsertUserXPHistory): Promise<UserXPHistory>;
+  addUserXPHistoryIfAbsent(xpHistory: InsertUserXPHistory): Promise<UserXPHistory | null>;
   incrementUserXP(userId: number, xpAmount: number): Promise<void>;
   getUserXPHistory(userId: number, limit?: number): Promise<(UserXPHistory & { clip?: Clip | null })[]>;
   getXPLeaderboard(limit?: number): Promise<Array<{ id: number; username: string; displayName: string; avatarUrl: string | null; totalXP: number }>>;
@@ -279,6 +304,8 @@ export interface IStorage {
   getUserPointsHistory(userId: number, limit?: number): Promise<UserPointsHistory[]>;
   incrementUserPoints(userId: number, points: number): Promise<void>;
   hasUserEarnedPointsForContent(userId: number, action: string, contentType: string, contentId: number): Promise<boolean>;
+  hasUserEarnedXPForContent(userId: number, source: string, contentType: string, contentId: number): Promise<boolean>;
+  hasUserEarnedXPForReaction(creatorId: number, source: string, contentType: string, contentId: number, reactorId: number): Promise<boolean>;
 
   // Notification operations
   createNotification(notification: InsertNotification): Promise<Notification>;
@@ -297,6 +324,7 @@ export interface IStorage {
   deletePushToken(token: string): Promise<boolean>;
   deletePushTokensByUser(userId: number): Promise<number>;
   getPushTokensByUserIds(userIds: number[]): Promise<PushToken[]>;
+  hasReceivedXPSourceSince(userId: number, source: string, since: Date): Promise<boolean>;
   getAllPushTokens(): Promise<PushToken[]>;
   getPushTokensByRole(role: string): Promise<PushToken[]>;
   getPushTokensForProUsers(): Promise<PushToken[]>;
@@ -399,6 +427,12 @@ export interface IStorage {
   getNftWatchlist(userId: number): Promise<NftWatchlist[]>;
   isNftInWatchlist(userId: number, nftId: number): Promise<boolean>;
 
+  // Bookmark operations
+  addBookmark(bookmarkData: InsertBookmark): Promise<Bookmark>;
+  removeBookmark(userId: number, contentType: string, contentId: number): Promise<boolean>;
+  getBookmarks(userId: number): Promise<Bookmark[]>;
+  isBookmarked(userId: number, contentType: string, contentId: number): Promise<boolean>;
+
   // Leaderboard operations
   getEngagementLeaderboard(limit?: number): Promise<Array<{
     user: User;
@@ -478,6 +512,17 @@ export interface IStorage {
 
   // Daily upload quota operations
   getUploadLimits(userId: number): Promise<UploadLimits>;
+  incrementUploadUsage(userId: number, contentType: 'clip' | 'reel' | 'screenshot'): Promise<UserUploadUsage>;
+
+  // Scheduled posts operations
+  createScheduledPost(data: InsertScheduledPost): Promise<ScheduledPost>;
+  getScheduledPost(id: number): Promise<ScheduledPost | undefined>;
+  getScheduledPostsByUser(userId: number): Promise<ScheduledPost[]>;
+  countPendingScheduledPosts(userId: number): Promise<number>;
+  getDueScheduledPosts(now: Date, limit?: number): Promise<ScheduledPost[]>;
+  updateScheduledPost(id: number, updates: Partial<ScheduledPost>): Promise<ScheduledPost | undefined>;
+  deleteScheduledPost(id: number): Promise<void>;
+  getScheduledPostLimits(userId: number): Promise<ScheduledPostLimits>;
 
   // Pro lootbox grant operations
   hasProLootboxGrant(userId: number, grantType: 'initial' | 'monthly', month?: string): Promise<boolean>;
@@ -518,14 +563,27 @@ export interface IStorage {
   updateUserVerificationBadge(userId: number, badgeId: number | null): Promise<void>;
 
   // Daily fire limit operations (1/day for regular users, 3/day for Pro users)
-  getUserDailyFires(userId: number, date: string): Promise<UserDailyFires | null>;
+  getUserDailyFires(userId: number): Promise<UserDailyFires | null>;
   incrementDailyFireCount(userId: number): Promise<UserDailyFires>;
   getFireLimits(userId: number): Promise<FireLimits>;
+  getUserDailyImports(userId: number, date: string): Promise<UserDailyImports | null>;
+  incrementDailyImportCount(userId: number): Promise<UserDailyImports>;
+  getImportLimits(userId: number): Promise<ImportLimits>;
 
   // XP settings operations
   getXpSettings(): Promise<XpSetting[]>;
   updateXpSetting(key: string, value: number, updatedBy?: number): Promise<XpSetting>;
   upsertXpSetting(setting: InsertXpSetting): Promise<XpSetting>;
+
+  // Indie game profile operations
+  // gameId is optional throughout: omitting it targets the user's primary game,
+  // which keeps every pre-multi-game caller working unchanged (migration 0020).
+  getIndieGameProfile(userId: number, gameId?: number | null): Promise<IndieGameProfile | null>;
+  upsertIndieGameProfile(userId: number, patch: Partial<InsertIndieGameProfile>, gameId?: number | null): Promise<IndieGameProfile>;
+  getIndieFieldMeta(userId: number, gameId?: number | null): Promise<Record<string, IndieGameFieldOverride>>;
+  upsertIndieFieldMeta(userId: number, fieldName: string, patch: Partial<Omit<IndieGameFieldOverride, "id" | "userId" | "fieldName" | "createdAt">>, gameId?: number | null): Promise<void>;
+  getIndieGameProfileByUsername(username: string, gameId?: number | null): Promise<{ profile: IndieGameProfile | null; user: User } | null>;
+  getIndieGameProfilesByUsername(username: string): Promise<{ profiles: IndieGameProfile[]; user: User } | null>;
 }
 
 // Use DatabaseStorage with Supabase - no fallback to in-memory storage

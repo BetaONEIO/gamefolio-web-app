@@ -31,6 +31,7 @@ import ShareLaunchIcon from "@/components/ui/ShareIcon";
 
 const supportFormSchema = z.object({
   username: z.string().min(1, 'Username is required'),
+  email: z.string().email('Please provide a valid email address so we can contact you with a resolution'),
   category: z.enum(['Tech Support', 'Business Enquiry', 'Partnership Enquiry', 'Other']),
   subject: z.string().min(1, 'Subject is required').max(100, 'Subject must be 100 characters or less'),
   message: z.string().min(10, 'Message must be at least 10 characters').max(1000, 'Message must be 1000 characters or less')
@@ -113,7 +114,7 @@ const faqData: FAQItem[] = [
   {
     id: 'pro-subscription',
     question: 'What benefits do Pro subscribers get?',
-    answer: 'Gamefolio Pro unlocks premium features including: larger file size allowances (clips up to 500MB / 10 min, reels up to 250MB / 3 min, screenshots up to 50MB), an exclusive Pro badge on your profile, access to all avatar borders, a free lootbox reward upon subscribing, a monthly bonus lootbox reward, early access to new features and tools, and priority support. Pro subscribers help support the platform while enjoying enhanced visibility in the community. Subscribe through your account settings.',
+    answer: 'Gamefolio Pro unlocks premium features including: larger file size allowances (clips up to 500MB / 10 min, reels up to 250MB / 3 min, screenshots up to 50MB), unlimited uploads with no daily quotas, animated profile customization with custom banners, neon effects and animated GIF avatars, exclusive avatar borders and premium visual themes, a Pro badge on your profile, a free welcome lootbox reward upon subscribing, monthly bonus lootbox rewards, and store discounts of up to 20% on name tags, borders and other exclusive items. Subscribe through your account settings.',
     category: 'Subscription',
     keywords: ['pro', 'premium', 'subscription', 'benefits', 'upgrade', 'paid', 'features', 'unlimited', 'lootbox', 'rewards']
   },
@@ -234,6 +235,7 @@ export default function HelpPage() {
     resolver: zodResolver(supportFormSchema),
     defaultValues: {
       username: user?.username || '',
+      email: user?.email || '',
       category: undefined,
       subject: '',
       message: ''
@@ -244,12 +246,17 @@ export default function HelpPage() {
     form.setValue('username', user.username);
   }
 
+  if (user?.email && form.getValues().email !== user.email) {
+    form.setValue('email', user.email);
+  }
+
   const submitSupportForm = useMutation({
     mutationFn: (data: SupportFormData) => apiRequest("POST", "/api/support", data),
     onSuccess: () => {
       setIsSubmitted(true);
       form.reset({
         username: user?.username || '',
+        email: user?.email || '',
         category: undefined,
         subject: '',
         message: ''
@@ -439,6 +446,29 @@ export default function HelpPage() {
                           data-testid="input-support-username"
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email <span className="text-destructive">*</span></FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="email"
+                          placeholder="your@email.com"
+                          disabled={!!user?.email}
+                          data-testid="input-support-email"
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        We ask for an email so you can be contacted with a resolution.
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}

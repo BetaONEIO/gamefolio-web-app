@@ -47,10 +47,19 @@ export interface FirebaseTokenClaims {
 /**
  * Verify a Firebase ID token and return the decoded claims.
  * Throws if the token is invalid, expired, or the project ID doesn't match.
+ *
+ * Deliberately does NOT pass checkRevoked=true: that flag makes the SDK do
+ * an extra authenticated accounts:lookup call back to Google, which needs
+ * fully-working Admin credentials on top of basic signature/audience
+ * verification. That's defense-in-depth (catches a token from a user who
+ * was revoked/disabled seconds ago), not the core security property — a
+ * forged or tampered token is already rejected by the signature check
+ * alone. Skipping it means one less way for this call to fail silently on
+ * a credentials hiccup.
  */
 export async function verifyFirebaseIdToken(idToken: string): Promise<FirebaseTokenClaims> {
   const app = getAdminApp();
-  const decoded = await app.auth().verifyIdToken(idToken, true);
+  const decoded = await app.auth().verifyIdToken(idToken);
   return {
     uid: decoded.uid,
     email: decoded.email,

@@ -3,8 +3,13 @@ import { getQueryFn } from "@/lib/queryClient";
 import { useState, useEffect, useRef, useCallback } from "react";
 
 const xpIcon = "/attached_assets/XP-text_1779960376768.png";
+const streakIcon = "/attached_assets/upload_streak.png";
+const firstPlaceIcon = "/attached_assets/1st-icon_1784739835624.png";
+const secondPlaceIcon = "/attached_assets/Silver-2nd_1784739835625.png";
+const thirdPlaceIcon = "/attached_assets/bronze-3rd_1784739835625.png";
+const otherRankIcon = "/attached_assets/Green-bars_1784740690797.png";
 
-type EventKind = "xp" | "streak" | "trending" | "follow" | "levelup";
+type EventKind = "xp" | "streak" | "trending" | "levelup";
 
 interface FeedItem {
   id: string;
@@ -23,20 +28,22 @@ interface RailItem extends FeedItem {
 
 const KIND_EMOJI: Record<EventKind, string> = {
   xp:      "",
-  streak:  "🔥",
+  streak:  "",
   trending:"📈",
-  follow:  "👥",
-  levelup: "🏆",
+  levelup: "",
 };
 
 const MAX_ITEMS = 8;
 const ANIM_DURATION = 450;
 
+// The rail should only show activity from actual users returned by the API.
+const SEED_ITEMS: FeedItem[] = [];
+
 function XPIcon() {
   return (
     <span
       className="relative flex-shrink-0"
-      style={{ width: 16, height: 16, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+      style={{ width: 28, height: 28, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
     >
       <span
         className="xp-glow-ring"
@@ -44,24 +51,88 @@ function XPIcon() {
       />
       <span
         className="xp-pulse-bg"
-        style={{ position: "absolute", width: 8, height: 8, borderRadius: "50%", background: "rgba(183,255,24,0.08)", zIndex: 1 }}
+        style={{ position: "absolute", width: 14, height: 14, borderRadius: "50%", background: "rgba(183,255,24,0.08)", zIndex: 1 }}
       />
       <img
         src={xpIcon}
         alt="XP"
-        style={{ position: "relative", zIndex: 2, width: 14, height: 14, objectFit: "contain", display: "block", filter: "drop-shadow(0 0 2px rgba(183,255,24,0.7))" }}
+        style={{ position: "relative", zIndex: 2, width: 26, height: 26, objectFit: "contain", display: "block", filter: "drop-shadow(0 0 3px rgba(183,255,24,0.7))" }}
       />
     </span>
   );
 }
 
+function StreakIcon() {
+  return (
+    <span
+      className="relative flex-shrink-0"
+      style={{ width: 28, height: 28, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+    >
+      <img
+        src={streakIcon}
+        alt="Streak"
+        style={{ position: "relative", zIndex: 1, width: 28, height: 28, objectFit: "contain", display: "block" }}
+      />
+    </span>
+  );
+}
+
+function PlaceIcon({ place }: { place: 1 | 2 | 3 | 4 }) {
+  const icon = place === 1 ? firstPlaceIcon : place === 2 ? secondPlaceIcon : thirdPlaceIcon;
+  const glowColor = place === 1 ? "255,215,0" : place === 2 ? "192,192,192" : "205,127,50";
+  const iconSize = place === 1 ? 43.75 : 35;
+  return (
+    <span
+      className="relative flex-shrink-0"
+      style={{ width: iconSize, height: iconSize, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+    >
+      <img
+        src={icon}
+        alt={`${place}${place === 1 ? "st" : place === 2 ? "nd" : "rd"}`}
+        style={{ position: "relative", zIndex: 1, width: iconSize, height: iconSize, objectFit: "contain", display: "block", filter: `drop-shadow(0 0 4px rgba(${glowColor},0.8))` }}
+      />
+    </span>
+  );
+}
+
+function getPlaceFromText(text: string): 1 | 2 | 3 | 4 {
+  if (text.includes("#1") || text.includes("1st") || text.includes("first")) return 1;
+  if (text.includes("#2") || text.includes("2nd") || text.includes("second")) return 2;
+  if (text.includes("#3") || text.includes("3rd") || text.includes("third")) return 3;
+  // Any rank #4 or higher -> use the "other" icon
+  const match = text.match(/#(\d+)/);
+  if (match && parseInt(match[1], 10) >= 4) return 4;
+  if (text.includes("4th") || text.includes("fourth")) return 4;
+  return 1;
+}
+
+function OtherRankIcon() {
+  return (
+    <span
+      className="relative flex-shrink-0"
+      style={{ width: 35, height: 35, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+    >
+      <img
+        src={otherRankIcon}
+        alt="Rank"
+        style={{ position: "relative", zIndex: 1, width: 35, height: 35, objectFit: "contain", display: "block", filter: "drop-shadow(0 0 4px rgba(183,255,24,0.6))" }}
+      />
+    </span>
+  );
+}
+
+const seedRailItems: RailItem[] = SEED_ITEMS.map(u => ({ ...u, uid: u.id, status: 'visible' as ItemStatus }));
+const seedKeySet = new Set<string>(SEED_ITEMS.map(u => u.id));
+
 export function EcosystemActivityRail() {
-  const [items, setItems] = useState<RailItem[]>([]);
-  const knownKeys = useRef(new Set<string>());
+  const [items, setItems] = useState<RailItem[]>(seedRailItems);
+  const knownKeys = useRef(seedKeySet);
   const queue = useRef<FeedItem[]>([]);
   const animating = useRef(false);
+  const lastKind = useRef<EventKind | undefined>(undefined);
+  const hasInitialFeed = useRef(false);
 
-  const { data: feedItems = [] } = useQuery<FeedItem[]>({
+  const { data: feedItems } = useQuery<FeedItem[]>({
     queryKey: ["/api/activity-feed"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     staleTime: 1000 * 120,
@@ -72,8 +143,12 @@ export function EcosystemActivityRail() {
     if (animating.current || queue.current.length === 0) return;
     animating.current = true;
 
-    const next = queue.current.shift()!;
+    // Prefer a different activity type from the last shown item
+    // so XP notifications do not stack together.
+    const nextIndex = queue.current.findIndex(item => item.kind !== lastKind.current);
+    const [next] = queue.current.splice(nextIndex >= 0 ? nextIndex : 0, 1);
     const uid = `${next.id}-${Date.now()}`;
+    lastKind.current = next.kind;
 
     setItems(prev => {
       const withLeaving = prev.length >= MAX_ITEMS
@@ -94,20 +169,26 @@ export function EcosystemActivityRail() {
   }, []);
 
   useEffect(() => {
-    if (!feedItems.length) return;
+    const safeItems = Array.isArray(feedItems) ? feedItems : [];
+    if (safeItems.length === 0) return;
 
-    if (knownKeys.current.size === 0) {
-      const initial = feedItems.slice(0, MAX_ITEMS).map(u => ({
-        ...u,
-        uid: u.id,
-        status: 'visible' as ItemStatus,
-      }));
-      setItems(initial);
-      feedItems.forEach(u => knownKeys.current.add(u.id));
+    // The first response is the current snapshot, not a stream of new events.
+    // Render it without animation so historical activity cannot play through
+    // rapidly on every page load.
+    if (!hasInitialFeed.current) {
+      hasInitialFeed.current = true;
+      safeItems.forEach(u => knownKeys.current.add(u.id));
+      setItems(
+        safeItems.slice(0, MAX_ITEMS).map(u => ({
+          ...u,
+          uid: u.id,
+          status: 'visible' as ItemStatus,
+        })),
+      );
       return;
     }
 
-    const newItems = feedItems.filter(u => !knownKeys.current.has(u.id));
+    const newItems = safeItems.filter(u => !knownKeys.current.has(u.id));
     newItems.forEach(u => knownKeys.current.add(u.id));
 
     if (newItems.length > 0) {
@@ -115,8 +196,6 @@ export function EcosystemActivityRail() {
       processQueue();
     }
   }, [feedItems, processQueue]);
-
-  if (items.length === 0) return null;
 
   return (
     <>
@@ -141,6 +220,13 @@ export function EcosystemActivityRail() {
         }
         .xp-pulse-bg {
           animation: xp-bg-pulse 2.4s ease-in-out infinite;
+        }
+        @keyframes place-glow {
+          0%, 100% { opacity: 0.6; box-shadow: 0 0 4px 1px rgba(var(--glow-color),0.5); }
+          50%       { opacity: 1;   box-shadow: 0 0 10px 3px rgba(var(--glow-color),0.9); }
+        }
+        .place-glow {
+          animation: place-glow 2.4s ease-in-out infinite;
         }
       `}</style>
 
@@ -173,6 +259,13 @@ export function EcosystemActivityRail() {
               >
                 {item.kind === "xp" ? (
                   <XPIcon />
+                ) : item.kind === "streak" ? (
+                  <StreakIcon />
+                ) : item.kind === "levelup" ? (
+                  (() => {
+                    const place = getPlaceFromText(item.text);
+                    return place >= 4 ? <OtherRankIcon /> : <PlaceIcon place={place} />;
+                  })()
                 ) : (
                   <span className="text-sm leading-none select-none">
                     {KIND_EMOJI[item.kind]}

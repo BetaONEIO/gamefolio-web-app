@@ -3,8 +3,9 @@ import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { X, Plus, Gift, Users } from "lucide-react";
+import { X, Plus, Gift, Users, Bookmark, ChevronDown, Radio } from "lucide-react";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
+import { GamefolioDashboardIcon } from "@/components/icons/GamefolioDashboardIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import { GamefolioCollectionIcon } from "@/components/icons/GamefolioCollectionIcon";
@@ -23,6 +24,7 @@ import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Game } from "@shared/schema";
+import { isPartnerType } from "@shared/partner-access";
 import { GiftProSearchDialog } from "@/components/profile/GiftProSearchDialog";
 
 const LEVEL_THRESHOLDS = [
@@ -126,6 +128,7 @@ const MobileMenu = () => {
   }, [close]);
 
   const [showGiftProDialog, setShowGiftProDialog] = useState(false);
+  const [myGamefolioExpanded, setMyGamefolioExpanded] = useState(false);
 
   const { data: ownProfileData } = useQuery({
     queryKey: [`/api/users/${user?.username}`],
@@ -138,6 +141,7 @@ const MobileMenu = () => {
   });
   const followerCount = (ownProfileData as any)?._count?.followers ?? 0;
   const followingCount = (ownProfileData as any)?._count?.following ?? 0;
+  const isStreamerPartner = isPartnerType(user, "streamer");
 
   const { data: favoriteGames } = useQuery<Game[]>({
     queryKey: [`/api/users/${user?.id}/favorites`],
@@ -277,6 +281,30 @@ const MobileMenu = () => {
                   <span className="font-medium">Home</span>
                 </Link>
               </li>
+              {user && (
+                <li>
+                  <Link
+                    href="/dashboard"
+                    onClick={handleClose}
+                    className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
+                  >
+                    <GamefolioDashboardIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                    <span className="font-medium">Dashboard</span>
+                  </Link>
+                </li>
+              )}
+              {user && (isStreamerPartner || user.role === "admin") && (
+                <li>
+                  <Link
+                    href="/streamer/dashboard"
+                    onClick={handleClose}
+                    className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
+                  >
+                    <Radio className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                    <span className="font-medium">Streamer Dashboard</span>
+                  </Link>
+                </li>
+              )}
               <li>
                 <Link 
                   href="/explore"
@@ -288,12 +316,12 @@ const MobileMenu = () => {
                 </Link>
               </li>
               <li>
-                <Link 
+                <Link
                   href="/trending"
                   onClick={handleClose}
                   className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                 >
-                  <ZapIconSvg className="mr-3 h-5 w-5" active={true} />
+                  <ZapIconSvg className="mr-3 h-5 w-5 text-primary" active={false} />
                   <span className="font-medium">Trending</span>
                 </Link>
               </li>
@@ -357,14 +385,49 @@ const MobileMenu = () => {
               )}
               {user && (
                 <li>
-                  <Link 
-                    href={`/profile/${user.username}`}
-                    onClick={handleClose}
-                    className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
+                  <div
+                    className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left cursor-pointer"
+                    onClick={() => setMyGamefolioExpanded((prev) => !prev)}
                   >
                     <GamefolioIcon glow={location === `/${user?.username}` || location === `/@${user?.username}`} className="mr-3 h-5 w-5 scale-[1.8] flex-shrink-0" />
-                    <span className="font-medium">My Gamefolio</span>
-                  </Link>
+                    <span className="font-medium flex-1">My Gamefolio</span>
+                    <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", myGamefolioExpanded ? "rotate-180" : "")} />
+                  </div>
+                  {myGamefolioExpanded && (
+                    <div className="ml-3 mt-0.5 space-y-0.5 pl-5 border-l border-border">
+                      <Link
+                        href={`/profile/${user.username}`}
+                        onClick={handleClose}
+                        className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors no-underline"
+                      >
+                        View Profile
+                      </Link>
+                      <Link
+                        href="/bookmarks"
+                        onClick={handleClose}
+                        className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors no-underline"
+                      >
+                        <Bookmark className="h-3.5 w-3.5 shrink-0" />
+                        Bookmarks
+                      </Link>
+                      <button
+                        onClick={() => { setLocation(`/profile/${user.username}/followers`); handleClose(); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors"
+                      >
+                        <Users className="h-3.5 w-3.5 shrink-0" />
+                        <span className="font-semibold">{followerCount.toLocaleString()}</span>
+                        <span>Followers</span>
+                      </button>
+                      <button
+                        onClick={() => { setLocation(`/profile/${user.username}/followers?tab=following`); handleClose(); }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors"
+                      >
+                        <Users className="h-3.5 w-3.5 shrink-0" />
+                        <span className="font-semibold">{followingCount.toLocaleString()}</span>
+                        <span>Following</span>
+                      </button>
+                    </div>
+                  )}
                 </li>
               )}
             </ul>
@@ -458,7 +521,7 @@ const MobileMenu = () => {
           </nav>
 
           {/* Footer */}
-          <div className="p-4 border-t border-border">
+          <div className="p-4">
             {user ? (
               <Button 
                 variant="default" 

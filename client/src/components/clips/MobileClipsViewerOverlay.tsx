@@ -98,7 +98,7 @@ const MobileClipsViewerOverlay = ({ clips, startClipId, onBack, viewAllHref }: M
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
-                marginTop: 'calc(env(safe-area-inset-top, 0px) + 155px)',
+                marginTop: 'calc(env(safe-area-inset-top, 0px) + 64px)',
                 marginBottom: '16px',
               }}
             >
