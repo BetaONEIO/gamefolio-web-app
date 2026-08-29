@@ -14,6 +14,7 @@ import HlsVideo from '@/components/media/HlsVideo';
 import { getVideoEmbedUrl } from '@/lib/video-embed';
 import { useSignedUrl, useSignedUrls } from '@/hooks/use-signed-url';
 import { publicUrl } from '@/lib/platform';
+import { GAME_SOCIAL_LINKS } from '@/lib/indie-game-links';
 import {
   SiAndroid,
   SiApple,
@@ -376,6 +377,10 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     ...storeLinks,
     gameProfile?.websiteUrl ? { name: 'Official website', url: gameProfile.websiteUrl, icon: Globe } : null,
   ].filter(Boolean) as { name: string; url: string; icon: React.ElementType }[];
+  const gameSocialLinks = GAME_SOCIAL_LINKS.flatMap(({ field, label, color, borderColor, icon }) => {
+    const url = gameProfile?.[field];
+    return url ? [{ field, label, url, color, borderColor, icon }] : [];
+  });
   const primaryStore = storeLinks[0];
   const statItems = [
     { label: 'Clips', value: counts?.clips ?? clips.length, icon: Play },
@@ -731,6 +736,28 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                     <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Platforms</p>
                     <div className="mt-4 flex flex-wrap gap-2">
                       {platforms.map((platform) => <span key={platform} className="flex items-center gap-1.5 rounded-full bg-white/[0.06] px-2.5 py-1 text-xs text-white/75"><PlatformIcon value={platform} />{formatPlatform(platform)}</span>)}
+                    </div>
+                  </section>
+                )}
+
+                {gameSocialLinks.length > 0 && (
+                  <section className="p-5" style={surfaceStyle}>
+                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Follow the game</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {gameSocialLinks.map(({ field, label, url, color, borderColor, icon: Icon }) => (
+                        <a
+                          key={field}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`Open ${gameName} on ${label}`}
+                          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition-[filter] hover:brightness-110"
+                          style={{ background: color, border: `1px solid ${borderColor}` }}
+                        >
+                          <Icon size={13} aria-hidden="true" />
+                          {label}
+                        </a>
+                      ))}
                     </div>
                   </section>
                 )}
