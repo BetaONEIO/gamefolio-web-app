@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -208,7 +209,7 @@ function EditModal({
     return () => document.removeEventListener("keydown", down);
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto p-4 overscroll-contain"
       style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)", paddingTop: "calc(env(safe-area-inset-top, 0px) + 4.5rem)" }}>
       <div className="relative w-full max-w-2xl max-h-[calc(100dvh-7rem)] flex flex-col rounded-2xl overflow-hidden"
@@ -243,7 +244,8 @@ function EditModal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -1438,9 +1440,11 @@ function AdvancedCard({ profile, fieldMeta }: { profile: Profile | null; fieldMe
 export default function GameProfileTab({
   gameId,
   focusRequest,
+  isVisible = true,
 }: {
   gameId?: number;
   focusRequest?: { field: string } | null;
+  isVisible?: boolean;
 }) {
   const { data } = useQuery<{ profile: Profile; fieldMeta: FieldMeta }>({
     queryKey: ["/api/indie/profile", gameId ?? null],
@@ -1452,11 +1456,11 @@ export default function GameProfileTab({
   const [activeFocusRequest, setActiveFocusRequest] = useState<{ field: string } | null>(null);
 
   useEffect(() => {
-    if (focusRequest) setActiveFocusRequest(focusRequest);
+    setActiveFocusRequest(focusRequest ?? null);
   }, [focusRequest]);
 
   useEffect(() => {
-    if (!activeFocusRequest || !profile) return;
+    if (!isVisible || !activeFocusRequest || !profile) return;
     const section = PROFILE_SECTION_BY_FIELD[activeFocusRequest.field];
     if (!section) return;
     window.requestAnimationFrame(() => {
@@ -1465,10 +1469,10 @@ export default function GameProfileTab({
         block: "start",
       });
     });
-  }, [activeFocusRequest, profile?.id]);
+  }, [activeFocusRequest, profile?.id, isVisible]);
 
   return (
-    <div className="space-y-4 pb-10">
+    <div className={`space-y-4 pb-10 ${isVisible ? "" : "hidden"}`}>
       <ProfileHealthCard profile={profile} onSelectField={(field) => setActiveFocusRequest({ field })} />
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl px-4 py-3 text-xs text-white/55"
         style={{ background: "rgba(102,192,244,0.06)", border: "1px solid rgba(102,192,244,0.18)" }}>

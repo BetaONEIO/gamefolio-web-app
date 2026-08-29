@@ -42,6 +42,7 @@ export default function IndieDashboardPage() {
   const [campaignSub, setCampaignSub] = useState<CampaignSubTab>("my");
   const [runWizardTemplate, setRunWizardTemplate] = useState<any>(null);
   const [profileFocus, setProfileFocus] = useState<ProfileFocusRequest | null>(null);
+  const [quickEditFocus, setQuickEditFocus] = useState<ProfileFocusRequest | null>(null);
 
   const search = useSearch();
   const [, setLocation] = useLocation();
@@ -107,7 +108,11 @@ export default function IndieDashboardPage() {
 
         {/* ── OVERVIEW ── */}
         {tab === "overview" && (
-          <DashboardTab onGoTo={goTo} gameId={activeGameId} />
+          <DashboardTab
+            onGoTo={goTo}
+            onQuickEdit={(field) => setQuickEditFocus({ field })}
+            gameId={activeGameId}
+          />
         )}
 
         {/* ── CAMPAIGNS ── */}
@@ -131,8 +136,15 @@ export default function IndieDashboardPage() {
         {/* ── ANALYTICS ── */}
         {tab === "analytics" && <AnalyticsTab gameId={activeGameId} />}
 
-        {/* ── GAME PROFILE ── */}
-         {tab === "game-profile" && <GameProfileTab gameId={activeGameId} focusRequest={profileFocus} />}
+        {/* ── GAME PROFILE ──
+            Keep the editor mounted while another tab is active so Overview
+            can open its existing field dialogs without navigating away. The
+            dialog itself is portaled to document.body by GameProfileTab. */}
+        <GameProfileTab
+          gameId={activeGameId}
+          focusRequest={tab === "game-profile" ? profileFocus : quickEditFocus}
+          isVisible={tab === "game-profile"}
+        />
 
       </div>
 
