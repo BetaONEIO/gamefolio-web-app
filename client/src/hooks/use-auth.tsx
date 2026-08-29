@@ -199,11 +199,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // On native, exchange the freshly-created session for a JWT pair.
         await issueNativeTokens();
 
-        const streakInfo = userData.streakInfo;
-        // Mark reward as shown so the session-restore useEffect doesn't double-fire
-        if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
-          dailyRewardShownRef.current = true;
-        }
+        // Updating the shared user cache lets the daily-reward effect display
+        // any newly-awarded streak data for Google sign-in as well.
         queryClient.setQueryData(["/api/user"], userData);
 
         const pendingOAuthRedirect = consumePendingOAuthRedirect();
@@ -371,23 +368,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    if (!user || dailyRewardShownRef.current) return;
+    if (!user) return;
     const userData = user as any;
     const streakInfo = userData.streakInfo;
-    if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
-      dailyRewardShownRef.current = true;
-      setTimeout(() => {
-        showDailyXp({
-          dailyXP: streakInfo.dailyXP,
-          bonusAwarded: streakInfo.bonusAwarded,
-          currentStreak: streakInfo.currentStreak,
-          longestStreak: streakInfo.longestStreak || userData.longestStreak || 0,
-          isNewMilestone: streakInfo.isNewMilestone,
-          message: streakInfo.message,
-          nextMilestone: streakInfo.nextMilestone || 5,
-        });
-      }, 800);
+    const hasNewReward = streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0);
+    if (!hasNewReward) {
+      // A later hydration that reports no new claim arms the overlay for the
+      // next rolling reward window, including apps left open overnight.
+      dailyRewardShownRef.current = false;
+      return;
     }
+    if (dailyRewardShownRef.current) return;
+
+    dailyRewardShownRef.current = true;
+    void queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/daily-activity`] });
+    setTimeout(() => {
+      showDailyXp({
+        dailyXP: streakInfo.dailyXP,
+        bonusAwarded: streakInfo.bonusAwarded,
+        currentStreak: streakInfo.currentStreak,
+        longestStreak: streakInfo.longestStreak || userData.longestStreak || 0,
+        isNewMilestone: streakInfo.isNewMilestone,
+        message: streakInfo.message,
+        nextMilestone: streakInfo.nextMilestone || 5,
+      });
+    }, 800);
   }, [user, showDailyXp]);
 
 
@@ -419,8 +424,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const user = responseData as User;
       const streakInfo = responseData.streakInfo;
 
-      // Mark reward as shown so the session-restore useEffect doesn't double-fire
-      dailyRewardShownRef.current = true;
+      // Local login receives the newly-awarded streak data directly. Show it
+      // here before refreshUser replaces the cache with the hydrated user.
+      if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
+        dailyRewardShownRef.current = true;
+        setTimeout(() => {
+          showDailyXp({
+            dailyXP: streakInfo.dailyXP,
+            bonusAwarded: streakInfo.bonusAwarded,
+            currentStreak: streakInfo.currentStreak,
+            longestStreak: streakInfo.longestStreak || user.longestStreak || 0,
+            isNewMilestone: streakInfo.isNewMilestone,
+            message: streakInfo.message,
+            nextMilestone: streakInfo.nextMilestone || 5,
+          });
+        }, 800);
+      }
 
       // On native, grab JWT tokens before any further requests so the
       // queryClient can use them when the session cookie is unavailable.

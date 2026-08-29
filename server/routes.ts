@@ -2814,7 +2814,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       : undefined;
 
     try {
-      const freshUser = await storage.getUserById((req.user as any).id);
+      const authenticatedUserId = (req.user as any).id;
+      // Users who remain signed in restore their existing session through this
+      // endpoint instead of running a login handler. Claim the daily streak
+      // here too; updateLoginStreak's atomic 20-hour guard prevents repeats.
+      const streakInfo = impersonation
+        ? null
+        : await StreakService.updateLoginStreak(authenticatedUserId);
+      const freshUser = await storage.getUserById(authenticatedUserId);
       if (freshUser) {
         const { password, ...u } = freshUser as any;
         if (u.username === 'busyguy') {
@@ -2929,6 +2936,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           vpzoneShowOnProfile: u.vpzoneShowOnProfile ?? true,
           referralCode: u.referralCode || null,
           referredBy: u.referredBy || null,
+          ...(streakInfo && !streakInfo.isFirstLogin ? {
+            streakInfo: {
+              currentStreak: streakInfo.currentStreak,
+              bonusAwarded: streakInfo.bonusAwarded,
+              dailyXP: streakInfo.dailyXP,
+              longestStreak: u.longestStreak || 0,
+              nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
+              message: streakInfo.message,
+              isNewMilestone: streakInfo.isNewMilestone,
+            },
+          } : {}),
           impersonatedBy,
         });
       }
