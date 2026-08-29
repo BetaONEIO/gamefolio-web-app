@@ -28,7 +28,6 @@ import {
 import { FaWindows, FaXbox } from 'react-icons/fa6';
 import {
   Camera,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -335,20 +334,17 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const gameName = gameProfile?.gameName?.trim() || canonicalGame?.name || profile.displayName;
   const description = gameProfile?.fullDescription || gameProfile?.shortDescription || null;
   const profileScreenshots: PublicGameScreenshot[] = profileScreenshotSources
-    .map((url, index) => {
+    .flatMap((url, index) => {
       const imageUrl = getProfileScreenshotUrl(url);
-      return imageUrl
-        ? {
+      return imageUrl ? [{
             id: `indie-profile-screenshot-${index}`,
             imageUrl,
             title: `${gameName} screenshot ${index + 1}`,
             userId: profile.id,
             views: 0,
             uploadSource: 'publisher' as const,
-          }
-        : null;
-    })
-    .filter((screenshot): screenshot is PublicGameScreenshot => screenshot !== null);
+          }] : [];
+    });
   const gameScreenshots = [...profileScreenshots, ...communityScreenshots];
   const screenshotCount = profileScreenshotSources.length + Number(counts?.screenshots ?? 0);
   const selectedScreenshotIndex = selectedScreenshotId === null
@@ -381,7 +377,6 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     const url = gameProfile?.[field];
     return url ? [{ field, label, url, color, borderColor, icon }] : [];
   });
-  const primaryStore = storeLinks[0];
   const statItems = [
     { label: 'Clips', value: counts?.clips ?? clips.length, icon: Play },
     { label: 'Reels', value: counts?.reels ?? reels.length, icon: Video },
@@ -563,23 +558,26 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                     </div>
                   ))}
                 </div>
-                {!isOwnProfile ? (
-                  <button
-                    type="button"
-                    onClick={() => currentUser ? followMutation.mutate() : setLocation('/auth')}
-                    disabled={followMutation.isPending}
-                    aria-label={`${isFollowing ? 'Following' : isRequested ? 'Follow request pending for' : 'Follow'} @${profile.username}`}
-                    className="flex items-center gap-2 rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black transition hover:brightness-110 disabled:cursor-wait disabled:opacity-60"
-                  >
-                    {isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}
-                    {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
-                  </button>
-                ) : primaryStore ? (
-                  <a href={primaryStore.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black hover:brightness-110">
-                    <Play size={16} fill="currentColor" />
-                    Play / buy
-                  </a>
-                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isOwnProfile) return;
+                    if (currentUser) {
+                      followMutation.mutate();
+                    } else {
+                      setLocation('/auth');
+                    }
+                  }}
+                  disabled={followMutation.isPending || isOwnProfile}
+                  aria-label={isOwnProfile
+                    ? 'You cannot follow your own profile'
+                    : `${isFollowing ? 'Following' : isRequested ? 'Follow request pending for' : 'Follow'} @${profile.username}`}
+                  title={isOwnProfile ? 'You cannot follow your own profile' : undefined}
+                  className="flex items-center gap-2 rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}
+                  {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
+                </button>
                 <div className="ml-2 flex items-center gap-2">
                   {!isOwnProfile && (
                     <button onClick={() => currentUser ? setMessageDialogOpen(true) : setLocation('/auth')} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Message developer">
@@ -725,7 +723,12 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                     <div className="mt-5">
                       <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-white/35">Key features</p>
                       <ul className="space-y-2 text-sm text-white/70">
-                        {gameProfile.keyFeatures.map((feature) => <li key={feature} className="flex gap-2"><CheckCircle2 size={15} className="mt-0.5 shrink-0 text-[#B7FF18]" />{feature}</li>)}
+                        {gameProfile.keyFeatures.map((feature) => (
+                          <li key={feature} className="flex items-center gap-2.5">
+                            <img src="/attached_assets/gamefolio-logo-green.png" alt="" className="h-5 w-5 shrink-0 object-contain" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
                       </ul>
                     </div>
                   ) : null}
@@ -742,7 +745,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
 
                 {gameSocialLinks.length > 0 && (
                   <section className="p-5" style={surfaceStyle}>
-                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Follow the game</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Connect with us</p>
                     <div className="mt-4 flex flex-wrap gap-2">
                       {gameSocialLinks.map(({ field, label, url, color, borderColor, icon: Icon }) => (
                         <a
@@ -754,7 +757,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                           className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition-[filter] hover:brightness-110"
                           style={{ background: color, border: `1px solid ${borderColor}` }}
                         >
-                          <Icon size={13} aria-hidden="true" />
+                          <Icon size={13} style={{ color: "#fff" }} aria-hidden="true" />
                           {label}
                         </a>
                       ))}
@@ -884,7 +887,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
           <figure className="flex max-h-full max-w-6xl flex-col items-center gap-3" onClick={(event) => event.stopPropagation()}>
             <img
               src={selectedScreenshot.imageUrl}
-              alt={selectedScreenshot.title}
+              alt={selectedScreenshot.title ?? gameName}
               className="max-h-[calc(100vh-7rem)] max-w-full rounded-lg object-contain shadow-2xl"
             />
             <figcaption className="text-center text-xs font-semibold text-white/60">

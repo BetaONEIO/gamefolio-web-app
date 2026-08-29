@@ -7,7 +7,7 @@ import { useSignedUrl, useSignedUrls } from "@/hooks/use-signed-url";
 import {
   Pencil, X, Check, Loader2, Upload, Plus, Trash2, ExternalLink,
   Image as ImageIcon, Video, Globe, Gamepad2,
-  Play, Sparkles, Building2, Package, Download, Twitter,
+  Play, Sparkles, Building2, Package, Download,
   ArrowUpRight, ChevronDown, ChevronRight, Share2,
 } from "lucide-react";
 import {
@@ -1607,7 +1607,7 @@ function CommunitySocialCard({
           {GAME_SOCIAL_LINKS.map(({ field, inputLabel, placeholder, color, icon: Icon }) => (
             <div key={field} className="rounded-xl p-3" style={{ background: "#151724", border: "1px solid #252938" }}>
               <div className="flex items-start gap-2.5">
-                <Icon size={18} className="mt-0.5 shrink-0" style={{ color }} aria-hidden="true" />
+                <Icon size={18} className="mt-0.5 shrink-0 text-white" style={{ color: "#fff" }} aria-hidden="true" />
                 <div className="min-w-0 flex-1">
                   <FieldInput
                     fieldName={field}
