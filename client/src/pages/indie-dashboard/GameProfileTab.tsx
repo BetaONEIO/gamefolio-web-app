@@ -1573,8 +1573,9 @@ function CommunitySocialCard({
   profile: Profile | null;
   focusRequest?: { field: string } | null;
 }) {
+  const [open, setOpen] = useState(false);
   const [socialValues, setSocialValues] = useState<Record<GameSocialField, string>>(emptyGameSocialValues);
-  const save = useSaveProfile(profile?.id);
+  const save = useSaveProfile(profile?.id, () => setOpen(false));
   const socialErrors = Object.fromEntries(
     GAME_SOCIAL_LINKS.map(({ field }) => [field, validateGameSocialUrl(field, socialValues[field])]),
   ) as Record<GameSocialField, string | null>;
@@ -1587,63 +1588,92 @@ function CommunitySocialCard({
     ) as Record<GameSocialField, string>);
   }, [profile?.id]);
 
-  useEffect(() => {
-    if (!focusRequest || !GAME_SOCIAL_LINKS.some(({ field }) => field === focusRequest.field)) return;
-    window.requestAnimationFrame(() => {
-      document.querySelector<HTMLElement>(`[data-profile-field="${focusRequest.field}"]`)?.focus();
-    });
-  }, [focusRequest]);
+  const openModal = () => {
+    if (!profile) return;
+    setSocialValues(Object.fromEntries(
+      GAME_SOCIAL_LINKS.map(({ field }) => [field, profile[field] ?? ""]),
+    ) as Record<GameSocialField, string>);
+    setOpen(true);
+  };
 
-  return (
-    <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
-      <div className="flex items-center gap-2.5 px-5 py-4"
-        style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
-        <Share2 size={16} style={{ color: NEON }} aria-hidden="true" />
-        <div>
-          <span className="text-sm font-bold text-white">Social platforms</span>
-          <p className="mt-0.5 text-[11px] text-white/35">Add the social spaces that belong to this game.</p>
-        </div>
-      </div>
-      <div className="space-y-4 p-5">
-        <p className="text-xs leading-relaxed text-white/45">
-          These links appear as branded badges in the dashboard and on the game’s public profile.
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {GAME_SOCIAL_LINKS.map(({ field, inputLabel, placeholder, color, icon: Icon }) => (
-            <div key={field} className="rounded-xl p-3" style={{ background: "#151724", border: "1px solid #252938" }}>
-              <div className="flex items-start gap-2.5">
-                <Icon size={18} className="mt-0.5 shrink-0 text-white" style={{ color: "#fff" }} aria-hidden="true" />
-                <div className="min-w-0 flex-1">
-                  <FieldInput
-                    fieldName={field}
-                    label={inputLabel}
-                    value={socialValues[field]}
-                    onChange={(value) => setSocialValues(current => ({ ...current, [field]: value }))}
-                    type="url"
-                    placeholder={placeholder}
-                  />
-                  {socialErrors[field] && (
-                    <p className="mt-1.5 text-[11px] text-red-400">{socialErrors[field]}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-end border-t pt-4" style={{ borderColor: CARD_BORDER }}>
-          <button
-            type="button"
-            onClick={() => save.mutate({ gameId: profile?.id, ...socialValues })}
-            disabled={save.isPending || hasSocialErrors}
-            className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-            style={{ background: NEON, color: "#0F101B" }}
-          >
-            {save.isPending ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-            {save.isPending ? "Saving…" : "Save social platforms"}
-          </button>
+  useEffect(() => {
+    if (profile && focusRequest && GAME_SOCIAL_LINKS.some(({ field }) => field === focusRequest.field)) {
+      openModal();
+    }
+  }, [focusRequest, profile?.id]);
+
+  const renderSocialFields = () => GAME_SOCIAL_LINKS.map(({ field, inputLabel, placeholder, color, icon: Icon }) => (
+    <div key={field} className="rounded-xl p-3" style={{ background: "#151724", border: "1px solid #252938" }}>
+      <div className="flex items-start gap-2.5">
+        <Icon size={18} className="mt-0.5 shrink-0 text-white" style={{ color: "#fff" }} aria-hidden="true" />
+        <div className="min-w-0 flex-1">
+          <FieldInput
+            fieldName={field}
+            label={inputLabel}
+            value={socialValues[field]}
+            onChange={(value) => setSocialValues(current => ({ ...current, [field]: value }))}
+            type="url"
+            placeholder={placeholder}
+          />
+          {socialErrors[field] && (
+            <p className="mt-1.5 text-[11px] text-red-400">{socialErrors[field]}</p>
+          )}
         </div>
       </div>
     </div>
+  ));
+
+  return (
+    <>
+      <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
+        <div className="flex items-center gap-2.5 px-5 py-4"
+          style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
+          <Share2 size={16} style={{ color: NEON }} aria-hidden="true" />
+          <div>
+            <span className="text-sm font-bold text-white">Social platforms</span>
+            <p className="mt-0.5 text-[11px] text-white/35">Add the social spaces that belong to this game.</p>
+          </div>
+        </div>
+        <div className="space-y-4 p-5">
+          <p className="text-xs leading-relaxed text-white/45">
+            These links appear as branded badges in the dashboard and on the game’s public profile.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {renderSocialFields()}
+          </div>
+          <div className="flex justify-end border-t pt-4" style={{ borderColor: CARD_BORDER }}>
+            <button
+              type="button"
+              onClick={() => save.mutate({ gameId: profile?.id, ...socialValues })}
+              disabled={save.isPending || hasSocialErrors}
+              className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              style={{ background: NEON, color: "#0F101B" }}
+            >
+              {save.isPending ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+              {save.isPending ? "Saving…" : "Save social platforms"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {open && (
+        <EditModal
+          title="Social Platforms"
+          onClose={() => setOpen(false)}
+          focusField={focusRequest?.field}
+          onSave={() => save.mutate({ gameId: profile?.id, ...socialValues })}
+          isSaving={save.isPending}
+          saveLabel="Save social platforms"
+        >
+          <p className="text-xs leading-relaxed text-white/45">
+            These links belong to this game and appear on its public profile.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {renderSocialFields()}
+          </div>
+        </EditModal>
+      )}
+    </>
   );
 }
 
