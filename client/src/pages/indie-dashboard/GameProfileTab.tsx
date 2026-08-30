@@ -139,16 +139,30 @@ function getSectionStatus(profile: Profile | null, section: ProfileSectionId) {
 }
 
 // ─── Save hook ─────────────────────────────────────────────────────────────────
-function updateMatchingProfileCaches(data: any) {
-  const savedProfileId = data?.profile?.id;
+function profileId(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function updateMatchingProfileCaches(data: any, submittedFields: Record<string, any> = {}) {
+  const savedProfileId = profileId(submittedFields.gameId ?? data?.profile?.id);
+  const submittedProfileFields = Object.fromEntries(
+    Object.entries(submittedFields).filter(([field]) => field !== "gameId"),
+  );
+
   queryClient.setQueriesData(
-    { queryKey: ["/api/indie/profile"] },
+    {
+      predicate: (query) => {
+        if (query.queryKey[0] !== "/api/indie/profile") return false;
+        if (savedProfileId == null) return true;
+
+        const queryGameId = profileId(query.queryKey[1]);
+        const cachedProfileId = profileId((query.state.data as any)?.profile?.id);
+        return queryGameId === savedProfileId || cachedProfileId === savedProfileId;
+      },
+    },
     (cached: any) => {
       if (!cached) return cached;
-      const cachedProfileId = cached?.profile?.id;
-      if (savedProfileId != null && cachedProfileId != null && cachedProfileId !== savedProfileId) {
-        return cached;
-      }
       // Merge the returned profile into each active profile query. The
       // dashboard and editor can both be mounted with slightly different
       // resolved values, so replacing the whole cache can make a multi-field
@@ -156,7 +170,11 @@ function updateMatchingProfileCaches(data: any) {
       return {
         ...cached,
         ...data,
-        profile: { ...(cached.profile ?? {}), ...(data?.profile ?? {}) },
+        profile: {
+          ...(cached.profile ?? {}),
+          ...submittedProfileFields,
+          ...(data?.profile ?? {}),
+        },
         fieldMeta: { ...(cached.fieldMeta ?? {}), ...(data?.fieldMeta ?? {}) },
       };
     },
@@ -168,8 +186,8 @@ function useSaveProfile(_gameId?: number, onSuccess?: () => void) {
   return useMutation({
     mutationFn: (fields: Record<string, any>) =>
       apiRequest("PUT", "/api/indie/profile", fields).then(r => r.json()),
-    onSuccess: async (data) => {
-      updateMatchingProfileCaches(data);
+    onSuccess: async (data, submittedFields) => {
+      updateMatchingProfileCaches(data, submittedFields);
       await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       toast({ description: "Saved" });
       onSuccess?.();
