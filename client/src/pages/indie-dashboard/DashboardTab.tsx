@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useState, type ComponentType, type SVGProps } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { publicUrl } from "@/lib/platform";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import {
   ArrowUpRight, BarChart3, CheckCircle2, ChevronRight, CircleAlert,
-  Edit3, Eye, Film, Gamepad2, ImagePlus, Loader2, MousePointerClick,
-  Plus, Settings2, Sparkles, Users, Video,
+  Edit3, Eye, Film, Gamepad2, ImagePlus, Loader2,
+  Plus, Settings2, Sparkles, Video,
 } from "lucide-react";
 import { NEON, CARD_BG, DASHBOARD_THEME, rgbaAccent } from "./constants";
 import { ESSENTIAL_FIELDS, OPTIONAL_FIELDS, isFieldFilled } from "./edit-profile/types";
@@ -112,6 +112,52 @@ function getProfileProgress(profile: any) {
   };
 }
 
+type MetricIcon = ComponentType<SVGProps<SVGSVGElement>>;
+
+function PageViewsMetricIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M4.5 8.5v-3h3M19.5 8.5v-3h-3M4.5 15.5v3h3M19.5 15.5v3h-3" />
+      <circle cx="12" cy="12" r="3.5" />
+      <circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none" />
+      <path d="M12 3.5v1.2M12 19.3v1.2" strokeOpacity="0.45" />
+    </svg>
+  );
+}
+
+function ContentViewsMetricIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <rect x="5" y="4.5" width="13.5" height="15" rx="2.2" />
+      <path d="M8.5 4.5v-1h7v1M8.5 17h6.5" strokeOpacity="0.5" />
+      <path d="m10 9 4.5 3-4.5 3V9Z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function StoreClicksMetricIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M4 8.5h16l-1.5-3.5h-13L4 8.5Z" />
+      <path d="M4.5 8.5v2.2a2 2 0 0 0 3.8.9 2 2 0 0 0 3.7 0 2 2 0 0 0 3.7 0 2 2 0 0 0 3.8-.9V8.5" />
+      <path d="M6 12.2v5.8h9.3M6 18h11.2M9.5 15h3" strokeOpacity="0.55" />
+      <path d="m15 12.3 4.5 1.5-2.2 1.1 1.3 2.2-1.2.7-1.3-2.2-1.3 1.8.2-5.1Z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function CommunityPostsMetricIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M5 14.5a4 4 0 0 1 4-4h5a4 4 0 0 1 0 8h-4.8L6 20.5v-2.8a4 4 0 0 1-1-3.2Z" />
+      <path d="M10 10.5V8.8a3.3 3.3 0 0 1 3.3-3.3h2.4A3.3 3.3 0 0 1 19 8.8v1.4" strokeOpacity="0.6" />
+      <circle cx="9.5" cy="14.5" r="0.7" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="14.5" r="0.7" fill="currentColor" stroke="none" />
+      <circle cx="14.5" cy="14.5" r="0.7" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 function MetricCard({
   label,
   value,
@@ -124,7 +170,7 @@ function MetricCard({
   value?: number | null;
   scope: string;
   changePct?: number | null;
-  icon: typeof Eye;
+  icon: MetricIcon;
   isLoading?: boolean;
 }) {
   return (
@@ -339,10 +385,10 @@ export default function DashboardTab({
           <button type="button" onClick={() => onGoTo("analytics")} className="flex items-center gap-1 text-[11px] font-bold text-white/35 hover:text-white/70">Full analytics <ChevronRight className="h-3.5 w-3.5" /></button>
         </div>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <MetricCard label="Page views" value={metrics?.pageViews?.value} changePct={metrics?.pageViews?.changePct} scope={periodLabel(analyticsData?.range?.key)} icon={Eye} isLoading={analyticsLoading} />
-          <MetricCard label="Content views" value={metrics?.contentViews?.value} scope="All-time total" icon={Film} isLoading={analyticsLoading} />
-          <MetricCard label="Store clicks" value={metrics?.storeClicks?.value} changePct={metrics?.storeClicks?.changePct} scope={periodLabel(analyticsData?.range?.key)} icon={MousePointerClick} isLoading={analyticsLoading} />
-          <MetricCard label="Community posts" value={communityContentTotal} scope="All-time uploads" icon={Users} isLoading={contentLoading} />
+          <MetricCard label="Page views" value={metrics?.pageViews?.value} changePct={metrics?.pageViews?.changePct} scope={periodLabel(analyticsData?.range?.key)} icon={PageViewsMetricIcon} isLoading={analyticsLoading} />
+          <MetricCard label="Content views" value={metrics?.contentViews?.value} scope="All-time total" icon={ContentViewsMetricIcon} isLoading={analyticsLoading} />
+          <MetricCard label="Store clicks" value={metrics?.storeClicks?.value} changePct={metrics?.storeClicks?.changePct} scope={periodLabel(analyticsData?.range?.key)} icon={StoreClicksMetricIcon} isLoading={analyticsLoading} />
+          <MetricCard label="Community posts" value={communityContentTotal} scope="All-time uploads" icon={CommunityPostsMetricIcon} isLoading={contentLoading} />
         </div>
       </section>
 

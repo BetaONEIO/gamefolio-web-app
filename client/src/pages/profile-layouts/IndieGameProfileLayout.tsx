@@ -607,7 +607,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                 <Gamepad2 size={14} />
                 <span>Indie game</span>
                 {gameProfile?.releaseStatus && (
-                  <span className="rounded-full border border-white/15 bg-white/[0.06] px-2 py-1 tracking-[0.12em] text-white/65">
+                  <span className="tracking-[0.12em] text-[#B7FF18]">
                     {gameProfile.releaseStatus === 'coming_soon' ? 'Coming soon' : gameProfile.releaseStatus === 'early_access' ? 'Early access' : gameProfile.releaseStatus === 'released' ? 'Available now' : gameProfile.releaseStatus}
                   </span>
                 )}
