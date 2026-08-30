@@ -196,6 +196,8 @@ function FinishSettingUp({
   progress: ReturnType<typeof getProfileProgress>;
   onEdit: (field: string) => void;
 }) {
+  const [showAllRecommendations, setShowAllRecommendations] = useState(false);
+
   if (progress.percent >= 100) {
     return (
       <section className="rounded-2xl px-4 py-3.5 sm:px-5" style={{ background: rgbaAccent(0.07), border: `1px solid ${rgbaAccent(0.2)}` }}>
@@ -213,6 +215,7 @@ function FinishSettingUp({
 
   const required = progress.missingRequired;
   const recommended = progress.missingRecommended;
+  const visibleRecommendations = showAllRecommendations ? recommended : recommended.slice(0, 5);
   return (
     <section className="overflow-hidden rounded-2xl" style={{ background: CARD_BG, border: `1px solid ${DASHBOARD_THEME.border}` }}>
       <div className="flex flex-wrap items-start justify-between gap-4 border-b px-4 py-4 sm:px-5" style={{ borderColor: DASHBOARD_THEME.borderSubtle }}>
@@ -241,10 +244,11 @@ function FinishSettingUp({
         </div>
         <div>
           <div className="px-3 pb-1 text-[10px] font-black uppercase tracking-[0.14em] text-white/35">Recommended</div>
-          {recommended.slice(0, 5).map((field) => <SetupRow key={field} field={field} onEdit={() => onEdit(field)} />)}
+          {visibleRecommendations.map((field) => <SetupRow key={field} field={field} onEdit={() => onEdit(field)} />)}
           {recommended.length > 5 && (
-            <button type="button" onClick={() => onEdit(recommended[5])} className="px-3 py-2 text-[11px] font-bold text-white/35 hover:text-white/70">
-              View more recommendations <ArrowUpRight className="ml-1 inline h-3 w-3" />
+            <button type="button" onClick={() => setShowAllRecommendations((visible) => !visible)} className="px-3 py-2 text-[11px] font-bold text-white/35 hover:text-white/70">
+              {showAllRecommendations ? "Show fewer recommendations" : "View more recommendations"}
+              <ArrowUpRight className="ml-1 inline h-3 w-3" />
             </button>
           )}
           {!recommended.length && <div className="px-3 py-3 text-xs text-white/35">Everything recommended is complete.</div>}
