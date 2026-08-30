@@ -1,19 +1,21 @@
 import { type ElementType } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Upload, Video, Image, Film } from "lucide-react";
 import { useClipDialog } from "@/hooks/use-clip-dialog";
 import { Link, useLocation } from "wouter";
 
 interface RecentUpload {
-  id: number;
-  contentType: 'clip' | 'reel' | 'screenshot';
+  id: number | string;
+  contentType: 'clip' | 'reel' | 'screenshot' | 'follower-milestone';
   username: string;
   displayName: string;
-  title: string;
+  title?: string;
   uploadedAt: string | null;
   thumbnailUrl?: string | null;
+  followerCount?: number;
+  followerMilestone?: number;
 }
 
 const CONTENT_LABELS: Record<string, string> = {
@@ -28,81 +30,119 @@ const CONTENT_ICONS: Record<string, ElementType> = {
   screenshot: Image,
 };
 
+const FOLLOW_ICON = "/attached_assets/Follow-icon_1785852557979.png";
+
+function makeKey(u: RecentUpload) {
+  return `${u.id}-${u.contentType}`;
+}
+
 export function ActivityScrollBanner() {
-  const scrollRef = useRef<HTMLDivElement>(null);
   const { openClipDialog } = useClipDialog();
   const [, setLocation] = useLocation();
+
+  const [displayedItems, setDisplayedItems] = useState<RecentUpload[]>([]);
+  const knownKeys = useRef(new Set<string>());
 
   const { data: recentUploads = [] } = useQuery<RecentUpload[]>({
     queryKey: ["/api/recent-uploads"],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    staleTime: 1000 * 30,
-    refetchInterval: 1000 * 30,
+    staleTime: 1000 * 60,
+    refetchInterval: 1000 * 60,
   });
 
   useEffect(() => {
-    const scrollContainer = scrollRef.current;
-    if (!scrollContainer || recentUploads.length === 0) return;
+    if (!recentUploads.length) return;
 
-    const scroll = () => {
-      if (scrollContainer.scrollLeft >= scrollContainer.scrollWidth / 2) {
-        scrollContainer.scrollLeft = 0;
-      } else {
-        scrollContainer.scrollLeft += 1;
-      }
-    };
+    const newItems = recentUploads.filter(u => !knownKeys.current.has(makeKey(u)));
+    if (newItems.length === 0) return;
 
-    const intervalId = setInterval(scroll, 30);
-
-    return () => clearInterval(intervalId);
+    newItems.forEach(u => knownKeys.current.add(makeKey(u)));
+    setDisplayedItems(prev => {
+      const merged = [...newItems, ...prev];
+      return merged.slice(0, 20);
+    });
   }, [recentUploads]);
 
-  if (recentUploads.length === 0) return null;
+  if (displayedItems.length === 0) return null;
 
-  const duplicatedUploads = [...recentUploads, ...recentUploads];
+  const duplicated = [...displayedItems, ...displayedItems];
 
   return (
-    <div className="bg-[#B7FF1A] border-b border-[#A2F000] overflow-hidden py-2 pointer-events-none">
-      <div
-        ref={scrollRef}
-        className="flex gap-8 whitespace-nowrap overflow-hidden"
-        style={{ scrollBehavior: "auto" }}
-      >
-        {duplicatedUploads.map((upload, index) => {
-          const Icon = CONTENT_ICONS[upload.contentType] || Upload;
-          const label = CONTENT_LABELS[upload.contentType] || 'just uploaded content';
+    <div className="bg-[#B7FF1A] border-b border-[#A2F000] overflow-hidden py-2">
+      <style>{`
+        @keyframes banner-marquee {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-50%); }
+        }
+        .banner-track {
+          display: flex;
+          width: max-content;
+          animation: banner-marquee 160s linear infinite;
+          will-change: transform;
+        }
+        .banner-track:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+      <div className="overflow-hidden">
+        <div className="banner-track gap-8 whitespace-nowrap flex">
+          {duplicated.map((upload, index) => {
+            const Icon = CONTENT_ICONS[upload.contentType] || Upload;
+            const label = CONTENT_LABELS[upload.contentType] || 'just uploaded content';
 
-          return (
-            <div
-              key={`${upload.id}-${upload.contentType}-${index}`}
-              className="inline-flex items-center gap-2 text-sm font-medium pointer-events-auto"
-              style={{ color: '#071013' }}
-            >
-              <Icon className="h-4 w-4" />
-              <Link
-                href={`/profile/${upload.username}`}
-                className="font-semibold hover:underline"
+            return (
+              <div
+                key={`${makeKey(upload)}-${index}`}
+                className="inline-flex items-center gap-2 text-sm font-medium px-4"
                 style={{ color: '#071013' }}
               >
-                {upload.displayName || upload.username}
-              </Link>
-              <span>{label}</span>
-              <button
-                onClick={() => {
-                  if (upload.contentType === 'screenshot') {
-                    setLocation(`/view/screenshot/${upload.id}`);
-                  } else {
-                    openClipDialog(upload.id);
-                  }
-                }}
-                className="hover:underline cursor-pointer font-semibold bg-transparent border-none p-0"
-                style={{ color: '#071013' }}
-              >
-                "{upload.title}"
-              </button>
-            </div>
-          );
-        })}
+                {upload.contentType === "follower-milestone" ? (
+                  <img
+                    src={FOLLOW_ICON}
+                    alt=""
+                    className="h-5 w-5 flex-shrink-0 object-contain"
+                  />
+                ) : (
+                  <Icon className="h-4 w-4 flex-shrink-0" />
+                )}
+                {upload.contentType === "follower-milestone" ? (
+                  <>
+                    <span className="font-semibold">
+                      {upload.displayName || upload.username}
+                    </span>
+                    <span>
+                      reached {upload.followerMilestone?.toLocaleString()} followers
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href={`/profile/${upload.username}`}
+                      className="font-semibold hover:underline"
+                      style={{ color: '#071013' }}
+                    >
+                      {upload.displayName || upload.username}
+                    </Link>
+                    <span>{label}</span>
+                    <button
+                      onClick={() => {
+                        if (upload.contentType === 'screenshot') {
+                          setLocation(`/view/screenshot/${upload.id}`);
+                        } else {
+                          openClipDialog(upload.id);
+                        }
+                      }}
+                      className="hover:underline cursor-pointer font-semibold bg-transparent border-none p-0"
+                      style={{ color: '#071013' }}
+                    >
+                      "{upload.title}"
+                    </button>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

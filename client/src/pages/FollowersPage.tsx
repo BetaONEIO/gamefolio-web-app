@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProBadge } from "@/components/ui/pro-badge";
+import { AmbassadorBadge } from "@/components/ui/ambassador-badge";
 import { apiRequest, getQueryFn, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -77,6 +78,7 @@ function FollowUserRow({ user }: { user: FollowUser }) {
             {user.selectedVerificationBadgeId && (
               <ProBadge selectedVerificationBadgeId={user.selectedVerificationBadgeId} size="sm" />
             )}
+            <AmbassadorBadge isAmbassador={(user as any).isAmbassador} size="sm" />
           </div>
           <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
         </button>
@@ -277,6 +279,7 @@ export default function FollowersPage() {
                     {profile.selectedVerificationBadgeId && (
                       <ProBadge selectedVerificationBadgeId={profile.selectedVerificationBadgeId} size="sm" />
                     )}
+                    <AmbassadorBadge isAmbassador={(profile as any).isAmbassador} size="sm" />
                   </div>
                   <p className="text-xs text-muted-foreground">@{profile.username}</p>
                 </div>

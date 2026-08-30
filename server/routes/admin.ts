@@ -7,12 +7,18 @@ import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
 import { ContentFilterService } from '../services/content-filter';
-import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides, insertAdminAlertSettingsSchema, KNOWN_ADMIN_ALERT_TYPES } from '@shared/schema';
+import { insertBannerSettingsSchema, insertAssetRewardSchema, insertHeroSlideSchema, heroSlides, insertAdminAlertSettingsSchema, KNOWN_ADMIN_ALERT_TYPES, serverSettings } from '@shared/schema';
+import { db } from '../db';
+import { eq } from 'drizzle-orm';
 import { sendAdminAlert, postSlack, sendAdminEmail, sendSms, postPagerDuty } from '../admin-alert-service';
 import { POINT_VALUES, XP_SETTINGS_DEFINITION, updatePointValue } from '../leaderboard-service';
 import { z } from 'zod';
 import { supabaseStorage } from '../supabase-storage';
 import { captureRouteError } from "../sentry";
+import { db } from "../db";
+import { eq, and, sql as dsql } from "drizzle-orm";
+import { impersonationAuditLog } from "@shared/schema";
+import { generateImpersonationToken } from "../services/impersonation-service";
 
 // Temporary directory for processing
 const tempDir = path.join(process.cwd(), "temp");
@@ -401,6 +407,78 @@ adminRouter.post("/users/:id/unsuspend", async (req: Request, res: Response) => 
   }
 });
 
+// POST /api/admin/users/:id/impersonate - Start an impersonation session for
+// support/debugging. Issues a short-lived, single-purpose token the admin's
+// client opens in a new tab; every session is audit-logged (see
+// impersonation_audit_log). See server/middleware/impersonation-auth.ts for how
+// the token is consumed.
+adminRouter.post("/users/:id/impersonate", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const admin = req.user as any;
+    const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+
+    if (reason.length < 10) {
+      return res.status(400).json({ message: "A reason of at least 10 characters is required" });
+    }
+
+    if (userId === admin.id) {
+      return res.status(400).json({ message: "Cannot impersonate yourself" });
+    }
+
+    const target = await storage.getUser(userId);
+    if (!target) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (target.role === "admin" || target.role === "moderator") {
+      return res.status(403).json({ message: "Cannot impersonate an admin or moderator account" });
+    }
+
+    const { token, tokenId } = generateImpersonationToken(admin, target);
+
+    await db.insert(impersonationAuditLog).values({
+      tokenId,
+      adminId: admin.id,
+      adminUsername: admin.username,
+      targetUserId: target.id,
+      targetUsername: target.username,
+      reason,
+      ipAddress: req.ip,
+    });
+
+    res.json({
+      token,
+      targetUser: {
+        id: target.id,
+        username: target.username,
+        displayName: target.displayName,
+        avatarUrl: target.avatarUrl,
+      },
+    });
+  } catch (err) {
+    captureRouteError(err);
+    console.error("Error starting impersonation session:", err);
+    res.status(500).json({ message: "Error starting impersonation session" });
+  }
+});
+
+// POST /api/admin/impersonation/:tokenId/end - Admin-side manual end, in case
+// the admin loses the impersonated tab rather than clicking Exit in it.
+adminRouter.post("/impersonation/:tokenId/end", async (req: Request, res: Response) => {
+  try {
+    const { tokenId } = req.params;
+    await db
+      .update(impersonationAuditLog)
+      .set({ endedAt: new Date(), endReason: "manual" })
+      .where(and(eq(impersonationAuditLog.tokenId, tokenId), dsql`${impersonationAuditLog.endedAt} IS NULL`));
+    res.json({ success: true });
+  } catch (err) {
+    captureRouteError(err);
+    console.error("Error ending impersonation session:", err);
+    res.status(500).json({ message: "Error ending impersonation session" });
+  }
+});
+
 // POST /api/admin/users/:id/make-admin - Make user an admin
 adminRouter.post("/users/:id/make-admin", async (req: Request, res: Response) => {
   try {
@@ -554,6 +632,65 @@ adminRouter.post("/users/:id/remove-partner", async (req: Request, res: Response
   }
 });
 
+// POST /api/admin/users/:id/make-ambassador - Grant ambassador status to user
+adminRouter.post("/users/:id/make-ambassador", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const user = await storage.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await storage.updateUser(userId, { isAmbassador: true });
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Error granting ambassador status:", err);
+    res.status(500).json({ message: "Error granting ambassador status" });
+  }
+});
+
+// POST /api/admin/users/:id/remove-ambassador - Remove ambassador status from user
+adminRouter.post("/users/:id/remove-ambassador", async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const user = await storage.getUser(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const updatedUser = await storage.updateUser(userId, { isAmbassador: false });
+    res.json(updatedUser);
+  } catch (err) {
+    console.error("Error removing ambassador status:", err);
+    res.status(500).json({ message: "Error removing ambassador status" });
+  }
+});
+
+// GET /api/admin/ambassadors - List all ambassadors with their conversion counts
+adminRouter.get("/ambassadors", async (req: Request, res: Response) => {
+  try {
+    const ambassadors = await storage.getAllAmbassadorsWithStats();
+    res.json(ambassadors);
+  } catch (err) {
+    console.error("Error fetching ambassadors:", err);
+    res.status(500).json({ message: "Error fetching ambassadors" });
+  }
+});
+
+// GET /api/admin/ambassadors/:id/conversions - List one ambassador's conversions
+adminRouter.get("/ambassadors/:id/conversions", async (req: Request, res: Response) => {
+  try {
+    const ambassadorId = parseInt(req.params.id);
+    const conversions = await storage.getAmbassadorConversionsForAdmin(ambassadorId);
+    res.json(conversions);
+  } catch (err) {
+    console.error("Error fetching ambassador conversions:", err);
+    res.status(500).json({ message: "Error fetching ambassador conversions" });
+  }
+});
+
 // POST /api/admin/users/:id/reset-password - Reset user password
 adminRouter.post("/users/:id/reset-password", async (req: Request, res: Response) => {
   try {
@@ -701,6 +838,31 @@ adminRouter.delete("/clips/:id", async (req: Request, res: Response) => {
     captureRouteError(err);
     console.error("Error deleting clip:", err);
     res.status(500).json({ message: "Error deleting clip" });
+  }
+});
+
+// POST /api/admin/clips/bulk-delete - Delete multiple clips by ID array
+adminRouter.post("/clips/bulk-delete", async (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body as { ids: number[] };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: "ids must be a non-empty array of clip IDs" });
+    }
+    const results: { id: number; success: boolean }[] = [];
+    for (const id of ids) {
+      const clipId = parseInt(String(id));
+      if (isNaN(clipId)) { results.push({ id, success: false }); continue; }
+      const success = await storage.deleteClip(clipId);
+      results.push({ id: clipId, success });
+    }
+    const deleted = results.filter(r => r.success).map(r => r.id);
+    const failed  = results.filter(r => !r.success).map(r => r.id);
+    console.log(`[admin bulk-delete] deleted=${deleted.join(',')} failed=${failed.join(',')}`);
+    res.json({ deleted, failed });
+  } catch (err) {
+    captureRouteError(err);
+    console.error("Error bulk-deleting clips:", err);
+    res.status(500).json({ message: "Error bulk-deleting clips" });
   }
 });
 
@@ -2105,7 +2267,7 @@ adminRouter.get("/hero-slides/settings", async (req: Request, res: Response) => 
     const { heroTextSettings } = await import('@shared/schema');
     const [config] = await db.select().from(heroTextSettings).where(eq(heroTextSettings.textType, "slide_config"));
     res.json({
-      intervalSeconds: config ? parseInt(config.title) || 6 : 6,
+      intervalSeconds: config ? parseInt(config.title) || 15 : 15,
     });
   } catch (err) {
     captureRouteError(err);
@@ -2582,6 +2744,35 @@ adminRouter.post("/alerts/:id/retry", async (req: Request, res: Response) => {
     captureRouteError(err);
     console.error("Error retrying admin alert deliveries:", err);
     res.status(500).json({ message: "Error retrying admin alert deliveries" });
+  }
+});
+
+// GET /api/admin/psn-health — current status of the PSN NPSSO token.
+// Returns the ISO timestamp of the last successful PSN authentication (either via
+// refresh-token chain or the NPSSO bootstrap), so the dashboard can display
+// "PSN token healthy / last used N days ago" without polling PSN itself.
+adminRouter.get("/psn-health", async (req: Request, res: Response) => {
+  try {
+    const rows = await db.select().from(serverSettings)
+      .where(eq(serverSettings.key, 'psn_auth_last_success'));
+    const lastSuccess: string | null = rows[0]?.value ?? null;
+    const hasRefreshToken = await (async () => {
+      const rt = await db.select().from(serverSettings)
+        .where(eq(serverSettings.key, 'psn_refresh_token'));
+      return rt.length > 0 && !!rt[0]?.value;
+    })();
+    res.json({
+      lastSuccessAt: lastSuccess,
+      hasRefreshToken,
+      // Convenience: days since last successful auth (null if never synced)
+      daysSinceLastSuccess: lastSuccess
+        ? Math.floor((Date.now() - new Date(lastSuccess).getTime()) / (1000 * 60 * 60 * 24))
+        : null,
+    });
+  } catch (err) {
+    captureRouteError(err);
+    console.error("Error fetching PSN health:", err);
+    res.status(500).json({ message: "Error fetching PSN health" });
   }
 });
 

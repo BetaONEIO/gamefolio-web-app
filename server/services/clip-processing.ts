@@ -1,18 +1,15 @@
-import path from 'path';
-import fs from 'fs';
 import sharp from 'sharp';
 import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
 import { supabaseStorage } from '../supabase-storage';
 import { storage } from '../storage';
-import { insertClipSchema } from '@shared/schema';
+import { db } from '../db';
+import { indieGameProfiles } from '@shared/schema';
+import { and, eq } from 'drizzle-orm';
+import { insertClipSchema, type Clip } from '@shared/schema';
 import { VideoProcessor } from '../video-processor';
-import { LeaderboardService, POINT_VALUES } from '../leaderboard-service';
-
-const tempDir = path.join(process.cwd(), "temp");
-if (!fs.existsSync(tempDir)) {
-  fs.mkdirSync(tempDir, { recursive: true });
-}
+import { XPService } from '../xp-service';
+import { CreatorMilestoneService } from '../creator-milestone-service';
 
 // Thrown for the "expected" failure cases (bad input, over limits) so both the
 // in-app upload route and the OAuth public API can map it back to the exact same
@@ -37,6 +34,59 @@ export interface ProcessAndCreateClipParams {
   ageRestricted?: boolean | string;
   trimStart?: string | number;
   trimEnd?: string | number;
+  // When set, the fully-processed clip is stored as a scheduled post instead
+  // of being published immediately — see routes/upload.ts for the pre-check
+  // that rejects invalid/over-limit schedules before this expensive pipeline runs.
+  scheduledAt?: Date;
+  // Spam/multi-account detection signals — caller derives these from the
+  // request (see server/lib/request-meta.ts) since this service has no req.
+  uploadIp?: string;
+  uploadDeviceId?: string | null;
+  // Browser-generated durable key for reconciling an interrupted response.
+  uploadAttemptId?: string;
+}
+
+// Keep this intentionally narrow: it is used as a database lookup key and
+// comes from an authenticated browser/API request.
+export function isValidUploadAttemptId(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-zA-Z0-9_-]{16,128}$/.test(value);
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const databaseError = error as { code?: string; cause?: { code?: string } };
+  return databaseError.code === '23505' || databaseError.cause?.code === '23505';
+}
+
+async function buildLiveClipResponse(clip: Clip, userId: number, reconciled = false) {
+  const baseUrl = 'https://app.gamefolio.com';
+  const user = await storage.getUser(userId);
+  const username = user?.username || 'unknown';
+  const contentType = clip.videoType === 'reel' ? 'reel' : 'clip';
+  const clipUrl = `${baseUrl}/@${username}/${contentType}/${clip.shareCode}`;
+  const qrCodeDataUrl = await QRCode.toDataURL(clipUrl);
+
+  return {
+    success: true,
+    reconciled,
+    clip: {
+      ...clip,
+      qrCode: qrCodeDataUrl,
+      shareUrl: clipUrl,
+      socialMediaLinks: {
+        facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(clipUrl)}`,
+        twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out my ${contentType}!`)}&url=${encodeURIComponent(clipUrl)}`,
+        reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(clipUrl)}&title=${encodeURIComponent(`Check out this gaming ${contentType}!`)}`,
+        discord: clipUrl,
+      },
+    },
+    xpGained: reconciled ? 0 : 250,
+    userXP: user?.totalXP || 0,
+    userLevel: user?.level || 1,
+    message: reconciled
+      ? 'This upload was already received and is processing.'
+      : 'Upload received — your clip is processing and will appear on your profile shortly.',
+  };
 }
 
 /**
@@ -47,7 +97,7 @@ export interface ProcessAndCreateClipParams {
  * pipeline instead of a second, divergent copy of this logic.
  */
 export async function processAndCreateClip(userId: number, params: ProcessAndCreateClipParams) {
-  const { uploadResult, title, description, gameId, tags, ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd } = params;
+  const { uploadResult, title, description, gameId, tags, ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd, scheduledAt, uploadIp, uploadDeviceId, uploadAttemptId } = params;
   const videoType = params.videoType || 'clip';
 
   if (!uploadResult || !title) {
@@ -56,8 +106,33 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   if (!uploadResult.url || !uploadResult.path) {
     throw new ClipProcessingError(400, { error: 'Invalid upload result' });
   }
+  if (uploadAttemptId !== undefined && !isValidUploadAttemptId(uploadAttemptId)) {
+    throw new ClipProcessingError(400, { error: 'Invalid upload attempt identifier' });
+  }
   if (!['clip', 'reel'].includes(videoType)) {
     throw new ClipProcessingError(400, { error: 'Invalid video type. Must be "clip" or "reel"' });
+  }
+  const gameAccess = await validateDeveloperGameSelection(userId, gameId);
+  if (!gameAccess.allowed) {
+    throw new ClipProcessingError(403, { error: gameAccess.message });
+  }
+
+  // A response can be lost after the server has created the clip. Return that
+  // owner-scoped record rather than consuming quota or creating it again.
+  if (uploadAttemptId) {
+    const existingClip = await storage.getClipByUserAndUploadAttemptId(userId, uploadAttemptId);
+    if (existingClip) {
+      return buildLiveClipResponse(existingClip, userId, true);
+    }
+    const existingScheduledPost = await storage.getScheduledPostByUserAndUploadAttemptId(userId, uploadAttemptId);
+    if (existingScheduledPost) {
+      return {
+        success: true,
+        reconciled: true,
+        scheduled: existingScheduledPost,
+        message: 'This upload was already scheduled.',
+      };
+    }
   }
 
   // Check upload limits before processing (size already validated at the raw-upload
@@ -67,6 +142,19 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   const maxDurationSeconds = isReel ? limits.maxReelDurationSeconds : limits.maxClipDurationSeconds;
   const maxSizeMB = isReel ? limits.maxReelSizeMB : limits.maxClipSizeMB;
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
+
+  // Rolling 24h upload-count cap - reject before any expensive
+  // download/transcode work below. Covers both the browser upload route and
+  // the OAuth public API, since both call through this shared function.
+  const usedInWindow = isReel ? limits.reelsUsedInWindow : limits.clipsUsedInWindow;
+  const maxPerWindow = isReel ? limits.maxReelsPerWindow : limits.maxClipsPerWindow;
+  if (usedInWindow >= maxPerWindow) {
+    throw new ClipProcessingError(403, {
+      error: 'Upload limit reached',
+      message: `You've reached your ${maxPerWindow} ${isReel ? 'reel' : 'clip'} upload limit for now.${limits.isPro ? '' : ' Upgrade to Pro for a higher limit.'}`,
+      limits,
+    });
+  }
 
   // Handle game ID - ensure game exists in database
   let finalGameId = null;
@@ -164,150 +252,309 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
     });
   }
 
-  let processedVideoUrl = uploadResult.url;
-  let thumbnailUrl = '';
-  let actualDuration = 0;
-
   const generateShareCode = () => nanoid(8);
 
+  // Fast probe only: size (HEAD) + duration/codec (ffprobe reading just the
+  // header via range requests) — both quick, unlike the trim/transcode/
+  // thumbnail work below. Doing this up front lets us reject an over-limit
+  // upload immediately instead of accepting it and only discovering the
+  // problem in the background.
+  let downloadUrl = uploadResult.url;
   try {
-    const tempVideoPath = path.join(tempDir, `video-${Date.now()}.mp4`);
-
-    let downloadUrl = uploadResult.url;
-    try {
-      const signedUrl = await supabaseStorage.convertToSignedUrl(uploadResult.url, 300);
-      if (signedUrl) {
-        downloadUrl = signedUrl;
-        console.log(`🔑 Using signed URL for video download`);
-      }
-    } catch (signError) {
-      console.warn('Could not generate signed URL, falling back to public URL:', signError);
+    const signedUrl = await supabaseStorage.convertToSignedUrl(uploadResult.url, 300);
+    if (signedUrl) {
+      downloadUrl = signedUrl;
+      console.log(`🔑 Using signed URL for video processing`);
     }
-    console.log(`🎬 Downloading video for thumbnail generation from: ${downloadUrl.substring(0, 80)}...`);
-    const videoResponse = await fetch(downloadUrl);
-    console.log(`📥 Video download response: ${videoResponse.status} ${videoResponse.statusText}`);
+  } catch (signError) {
+    console.warn('Could not generate signed URL, falling back to public URL:', signError);
+  }
 
-    if (videoResponse.ok) {
-      const videoBuffer = await videoResponse.arrayBuffer();
-      console.log(`📦 Video downloaded: ${(videoBuffer.byteLength / (1024 * 1024)).toFixed(2)} MB`);
+  const headResp = await fetch(downloadUrl, { method: 'HEAD' });
+  const sizeBytes = parseInt(headResp.headers.get('content-length') || '0', 10);
+  if (sizeBytes > maxSizeBytes) {
+    try { await supabaseStorage.deleteFile(uploadResult.path); } catch {}
+    const actualSizeMB = (sizeBytes / (1024 * 1024)).toFixed(1);
+    throw new ClipProcessingError(403, {
+      error: 'File size exceeds limit',
+      message: `Maximum ${isReel ? 'reel' : 'clip'} size is ${maxSizeMB}MB (your file is ${actualSizeMB}MB).${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`,
+      limits
+    });
+  }
 
-      if (videoBuffer.byteLength > maxSizeBytes) {
-        try { await supabaseStorage.deleteFile(uploadResult.path); } catch {}
-        const actualSizeMB = (videoBuffer.byteLength / (1024 * 1024)).toFixed(1);
-        throw new ClipProcessingError(403, {
-          error: 'File size exceeds limit',
-          message: `Maximum ${isReel ? 'reel' : 'clip'} size is ${maxSizeMB}MB (your file is ${actualSizeMB}MB).${limits.isPro ? '' : ' Upgrade to Pro for larger uploads.'}`,
-          limits
-        });
+  let sourceVideoCodec = '';
+  let sourceAudioCodec: string | null = null;
+  let actualDuration = 0;
+  try {
+    const videoInfo = await VideoProcessor.getVideoInfo(downloadUrl);
+    actualDuration = Math.round(videoInfo.duration);
+    sourceVideoCodec = videoInfo.videoCodec;
+    sourceAudioCodec = videoInfo.audioCodec;
+    console.log(`📹 Video actual duration: ${actualDuration}s, codec: ${sourceVideoCodec || 'unknown'}/${sourceAudioCodec || 'none'}`);
+  } catch (probeError) {
+    console.warn('Failed to extract video info, using fallback:', probeError);
+    actualDuration = 60;
+  }
+
+  if (actualDuration > maxDurationSeconds) {
+    throw new ClipProcessingError(403, {
+      error: 'Video duration exceeds limit',
+      message: `Maximum ${isReel ? 'reel' : 'clip'} duration is ${maxDurationSeconds} seconds (your video is ${actualDuration}s).${limits.isPro ? '' : ' Upgrade to Pro for longer videos.'}`,
+      limits
+    });
+  }
+
+  const requestedTrimStart = rawTrimStart !== undefined && rawTrimStart !== null ? parseInt(String(rawTrimStart)) : 0;
+  const requestedTrimEnd = rawTrimEnd !== undefined && rawTrimEnd !== null ? parseInt(String(rawTrimEnd)) : actualDuration;
+
+  const pipelineCtx: ClipPipelineContext = {
+    downloadUrl, requestedTrimStart, requestedTrimEnd, videoType, userId,
+    sourceVideoCodec, sourceAudioCodec, sizeBytes, actualDuration,
+  };
+
+  // A quick single-frame grab (ffmpeg seeks + reads one frame via an HTTP
+  // range request — not a download) so the profile page has something real
+  // to show immediately instead of a bare "processing" placeholder box.
+  // Best-effort and bounded: if it's slow or fails for any reason, the row
+  // just starts with no thumbnail and the background pipeline's own
+  // (possibly better, e.g. post-crop) thumbnail fills it in once ready.
+  let previewThumbnailUrl = '';
+  try {
+    previewThumbnailUrl = await Promise.race([
+      VideoProcessor.generateAutoThumbnail(downloadUrl, userId, `${videoType}_thumb_preview`, videoType),
+      new Promise<string>((_, reject) => setTimeout(() => reject(new Error('preview thumbnail timed out')), 15000)),
+    ]);
+  } catch (previewError) {
+    console.warn('Preview thumbnail generation failed, continuing without one:', previewError);
+  }
+
+  const shareCode = generateShareCode();
+  const placeholderClipData = {
+    userId,
+    title,
+    description: description || '',
+    gameId: finalGameId,
+    tags: tags || [],
+    videoUrl: uploadResult.url,
+    videoType,
+    thumbnailUrl: previewThumbnailUrl,
+    duration: actualDuration || 60,
+    trimStart: requestedTrimStart,
+    trimEnd: requestedTrimEnd,
+    ageRestricted: ageRestricted === true || ageRestricted === 'true',
+    shareCode,
+    uploadIp: uploadIp ?? null,
+    uploadDeviceId: uploadDeviceId ?? null,
+    uploadAttemptId: uploadAttemptId ?? null,
+  };
+  const validatedClipData = insertClipSchema.parse(placeholderClipData);
+
+  // Scheduled path: unchanged — runs the full pipeline synchronously up
+  // front (still processed now, just not published live). A scheduled post
+  // isn't shown anywhere until its publish time, so there's no "processing"
+  // state that needs to be surfaced to the user in the meantime.
+  if (scheduledAt) {
+    const { videoUrl, thumbnailUrl, duration } = await runClipProcessingPipeline({
+      ...pipelineCtx, uploadResultUrl: uploadResult.url, uploadResultPath: uploadResult.path,
+    });
+    let scheduled;
+    try {
+      scheduled = await storage.createScheduledPost({
+        userId,
+        contentType: 'clip',
+        scheduledAt,
+        payload: { ...validatedClipData, videoUrl, thumbnailUrl, duration },
+        title: validatedClipData.title,
+        thumbnailUrl: thumbnailUrl || null,
+        videoType,
+        uploadAttemptId: uploadAttemptId ?? null,
+      });
+    } catch (error) {
+      if (uploadAttemptId && isUniqueViolation(error)) {
+        const existing = await storage.getScheduledPostByUserAndUploadAttemptId(userId, uploadAttemptId);
+        if (existing) {
+          return {
+            success: true,
+            reconciled: true,
+            scheduled: existing,
+            message: 'This upload was already scheduled.',
+          };
+        }
       }
+      throw error;
+    }
+    // The file was actually processed/uploaded now, not at the future
+    // publish time, so it consumes the window now.
+    await storage.incrementUploadUsage(userId, videoType);
+    return {
+      success: true,
+      scheduled,
+      message: `${videoType === 'reel' ? 'Reel' : 'Clip'} scheduled for ${scheduledAt.toISOString()}`,
+    };
+  }
 
-      await fs.promises.writeFile(tempVideoPath, Buffer.from(videoBuffer));
+  // Live path: create the row now with status "processing" — videoUrl still
+  // points at the raw upload — and return immediately. The heavy
+  // trim/transcode/thumbnail work runs in the background via
+  // finishClipProcessing below (with a periodic reconciler as a safety net
+  // if the process restarts mid-job; see server/clip-processing-worker.ts).
+  let clip: Clip;
+  try {
+    clip = await storage.createClip({
+      ...validatedClipData,
+      status: 'processing',
+      rawUploadPath: uploadResult.path,
+    });
+  } catch (error) {
+    if (uploadAttemptId && isUniqueViolation(error)) {
+      const existing = await storage.getClipByUserAndUploadAttemptId(userId, uploadAttemptId);
+      if (existing) return buildLiveClipResponse(existing, userId, true);
+    }
+    throw error;
+  }
+  await storage.incrementUploadUsage(userId, videoType);
 
-      let sourceVideoCodec = '';
-      let sourceAudioCodec: string | null = null;
-      try {
-        const videoInfo = await VideoProcessor.getVideoInfo(tempVideoPath);
-        actualDuration = Math.round(videoInfo.duration);
-        sourceVideoCodec = videoInfo.videoCodec;
-        sourceAudioCodec = videoInfo.audioCodec;
-        console.log(`📹 Video actual duration: ${actualDuration}s, codec: ${sourceVideoCodec || 'unknown'}/${sourceAudioCodec || 'none'}`);
-      } catch (durationError) {
-        console.warn('Failed to extract video info, using fallback:', durationError);
-        actualDuration = 60;
-      }
+  await XPService.awardXP(
+    userId,
+    250,
+    'upload',
+    `Earned 250 XP for uploading a ${videoType === 'reel' ? 'reel' : 'clip'}`,
+    clip.id
+  );
+  // "Upload Today" daily challenge bonus — separate from the flat upload XP above.
+  CreatorMilestoneService.checkFirstUploadOfDay(userId).catch((err) => {
+    console.error('Error checking first-upload-of-day milestone:', err);
+  });
 
-      if (actualDuration > maxDurationSeconds) {
-        fs.unlink(tempVideoPath, () => {});
-        throw new ClipProcessingError(403, {
-          error: 'Video duration exceeds limit',
-          message: `Maximum ${isReel ? 'reel' : 'clip'} duration is ${maxDurationSeconds} seconds (your video is ${actualDuration}s).${limits.isPro ? '' : ' Upgrade to Pro for longer videos.'}`,
-          limits
-        });
-      }
+  finishClipProcessing(clip, pipelineCtx).catch((err) => {
+    console.error(`Background processing failed to even start for clip ${clip.id}:`, err);
+  });
 
-      const tempClipId = Date.now();
+  return buildLiveClipResponse(clip, userId);
+}
 
-      const requestedTrimStart = rawTrimStart !== undefined && rawTrimStart !== null ? parseInt(String(rawTrimStart)) : 0;
-      const requestedTrimEnd = rawTrimEnd !== undefined && rawTrimEnd !== null ? parseInt(String(rawTrimEnd)) : actualDuration;
-      const hasTrimming = requestedTrimStart > 0 || requestedTrimEnd < actualDuration;
+function isGameDeveloper(user: { userType?: string | null; isPartner?: boolean | null; partnerType?: string | null } | null | undefined) {
+  const personas = user?.userType?.split(",").map((type) => type.trim()) ?? [];
+  return personas.includes("indie_developer") || (user?.isPartner === true && user.partnerType === "indie");
+}
 
-      if (videoType === 'reel') {
-        console.log(`🎬 Processing reel with 9:16 aspect ratio cropping (trim: ${requestedTrimStart}s - ${requestedTrimEnd}s)`);
-        const { videoUrl: croppedVideoUrl, thumbnailUrl: reelThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
-          tempVideoPath, tempClipId, requestedTrimStart, requestedTrimEnd, true, userId, 'reel'
+export async function validateDeveloperGameSelection(userId: number, gameId: unknown): Promise<{ allowed: boolean; message?: string }> {
+  const user = await storage.getUser(userId);
+  if (!isGameDeveloper(user)) return { allowed: true };
+
+  const parsedGameId = Number(gameId);
+  if (!Number.isInteger(parsedGameId) || parsedGameId <= 0) {
+    return { allowed: false, message: "Select one of your own games before uploading." };
+  }
+  const [ownedProfile] = await db.select({ id: indieGameProfiles.id })
+    .from(indieGameProfiles)
+    .where(and(eq(indieGameProfiles.userId, userId), eq(indieGameProfiles.catalogGameId, parsedGameId)))
+    .limit(1);
+  return ownedProfile
+    ? { allowed: true }
+    : { allowed: false, message: "Game Developers can only upload content for games they manage." };
+}
+
+interface ClipPipelineContext {
+  downloadUrl: string;
+  requestedTrimStart: number;
+  requestedTrimEnd: number;
+  videoType: 'clip' | 'reel';
+  userId: number;
+  sourceVideoCodec: string;
+  sourceAudioCodec: string | null;
+  sizeBytes: number;
+  actualDuration: number;
+}
+
+/**
+ * The actual trim/crop/re-encode/thumbnail work — the part that can take
+ * minutes for a large clip. Shared by the synchronous scheduled-post path
+ * and the background finishClipProcessing path below. Never throws for a
+ * processing failure (falls back to the raw upload + a placeholder
+ * thumbnail, same as it always has) — only for the upstream limit checks
+ * that already ran before this is called.
+ */
+async function runClipProcessingPipeline(
+  ctx: ClipPipelineContext & { uploadResultUrl: string; uploadResultPath: string }
+): Promise<{ videoUrl: string; thumbnailUrl: string; duration: number }> {
+  const {
+    downloadUrl, requestedTrimStart, requestedTrimEnd, videoType, userId,
+    sourceVideoCodec, sourceAudioCodec, sizeBytes, uploadResultUrl, uploadResultPath,
+  } = ctx;
+  let processedVideoUrl = uploadResultUrl;
+  let thumbnailUrl = '';
+  let actualDuration = ctx.actualDuration;
+  const tempClipId = Date.now();
+  const hasTrimming = requestedTrimStart > 0 || requestedTrimEnd < actualDuration;
+
+  try {
+    if (videoType === 'reel') {
+      console.log(`🎬 Processing reel with 9:16 aspect ratio cropping (trim: ${requestedTrimStart}s - ${requestedTrimEnd}s)`);
+      const { videoUrl: croppedVideoUrl, thumbnailUrl: reelThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
+        downloadUrl, tempClipId, requestedTrimStart, requestedTrimEnd, true, userId, 'reel'
+      );
+      processedVideoUrl = croppedVideoUrl;
+      thumbnailUrl = reelThumbnailUrl || '';
+      actualDuration = processedDuration;
+      console.log(`✅ Reel processed successfully. Thumbnail: ${thumbnailUrl ? thumbnailUrl.substring(0, 60) + '...' : 'NONE'}`);
+    } else if (hasTrimming) {
+      console.log(`✂️ Trimming clip: ${requestedTrimStart}s - ${requestedTrimEnd}s`);
+      const { videoUrl: trimmedVideoUrl, thumbnailUrl: clipThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
+        downloadUrl, tempClipId, requestedTrimStart, requestedTrimEnd, true, userId, 'clip'
+      );
+      processedVideoUrl = trimmedVideoUrl;
+      thumbnailUrl = clipThumbnailUrl || '';
+      actualDuration = processedDuration;
+      console.log(`✅ Clip trimmed successfully. Duration: ${actualDuration}s`);
+    } else if (sourceVideoCodec && !VideoProcessor.isBrowserPlayable(sourceVideoCodec, sourceAudioCodec)) {
+      console.log(`🔄 Re-encoding clip — source codec ${sourceVideoCodec}/${sourceAudioCodec || 'none'} is not browser-playable`);
+      const { videoUrl: reencodedUrl, thumbnailUrl: clipThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
+        downloadUrl, tempClipId, 0, actualDuration, true, userId, 'clip'
+      );
+      processedVideoUrl = reencodedUrl;
+      thumbnailUrl = clipThumbnailUrl || '';
+      actualDuration = processedDuration;
+      console.log(`✅ Clip re-encoded to H.264. Duration: ${actualDuration}s`);
+    } else {
+      // No trim and already browser-playable, but raw phone/console/OBS
+      // captures are frequently 20-50+ Mbps — far above what's needed for
+      // feed/mobile playback. Re-encoding at CRF 23 (same target reels
+      // always get) cuts storage + per-view egress with no visible quality
+      // loss, so only genuinely already-efficient clips skip it.
+      const sourceBitrateMbps = actualDuration > 0
+        ? (sizeBytes * 8) / actualDuration / 1_000_000
+        : 0;
+      const MAX_CLIP_BITRATE_MBPS = 6;
+      if (sourceBitrateMbps > MAX_CLIP_BITRATE_MBPS) {
+        console.log(`📉 Compressing clip — source bitrate ~${sourceBitrateMbps.toFixed(1)} Mbps exceeds ${MAX_CLIP_BITRATE_MBPS} Mbps target`);
+        const { videoUrl: compressedUrl, thumbnailUrl: clipThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
+          downloadUrl, tempClipId, 0, actualDuration, true, userId, 'clip'
         );
-        processedVideoUrl = croppedVideoUrl;
-        thumbnailUrl = reelThumbnailUrl || '';
-        actualDuration = processedDuration;
-        console.log(`✅ Reel processed successfully. Thumbnail: ${thumbnailUrl ? thumbnailUrl.substring(0, 60) + '...' : 'NONE'}`);
-      } else if (hasTrimming) {
-        console.log(`✂️ Trimming clip: ${requestedTrimStart}s - ${requestedTrimEnd}s`);
-        const { videoUrl: trimmedVideoUrl, thumbnailUrl: clipThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
-          tempVideoPath, tempClipId, requestedTrimStart, requestedTrimEnd, true, userId, 'clip'
-        );
-        processedVideoUrl = trimmedVideoUrl;
+        processedVideoUrl = compressedUrl;
         thumbnailUrl = clipThumbnailUrl || '';
         actualDuration = processedDuration;
-        console.log(`✅ Clip trimmed successfully. Duration: ${actualDuration}s`);
-      } else if (sourceVideoCodec && !VideoProcessor.isBrowserPlayable(sourceVideoCodec, sourceAudioCodec)) {
-        console.log(`🔄 Re-encoding clip — source codec ${sourceVideoCodec}/${sourceAudioCodec || 'none'} is not browser-playable`);
-        const { videoUrl: reencodedUrl, thumbnailUrl: clipThumbnailUrl, duration: processedDuration } = await VideoProcessor.processVideo(
-          tempVideoPath, tempClipId, 0, actualDuration, true, userId, 'clip'
-        );
-        processedVideoUrl = reencodedUrl;
-        thumbnailUrl = clipThumbnailUrl || '';
-        actualDuration = processedDuration;
-        console.log(`✅ Clip re-encoded to H.264. Duration: ${actualDuration}s`);
+        console.log(`✅ Clip compressed. Duration: ${actualDuration}s`);
       } else {
-        console.log('🖼️ Generating clip thumbnail (no trimming/re-encode needed)...');
-        thumbnailUrl = await VideoProcessor.generateAutoThumbnail(tempVideoPath, userId, `${videoType}_thumb`);
+        // No download at all here — ffmpeg pulls only the header + the
+        // one seeked-to frame it needs via HTTP range requests.
+        console.log(`🖼️ Generating clip thumbnail (bitrate ~${sourceBitrateMbps.toFixed(1)} Mbps already efficient, no re-encode needed)...`);
+        thumbnailUrl = await VideoProcessor.generateAutoThumbnail(downloadUrl, userId, `${videoType}_thumb`);
         console.log(`✅ Clip thumbnail generated: ${thumbnailUrl ? thumbnailUrl.substring(0, 60) + '...' : 'NONE'}`);
       }
+    }
 
-      fs.unlink(tempVideoPath, (err) => {
-        if (err) console.warn('Could not delete temp video file:', err);
-      });
-    } else {
-      console.warn('Could not download video for thumbnail generation, using fallback');
+    // Re-encoding (reel crop, trim, or compression above) uploads a new
+    // processed file and the clip row stores processedVideoUrl — the raw
+    // upload this replaced is no longer referenced anywhere, so leaving it
+    // in Supabase storage is pure orphaned cost. Safe to delete: nothing
+    // still points at it.
+    if (processedVideoUrl !== uploadResultUrl) {
       try {
-        console.log('Attempting alternative video download for duration extraction...');
-        const response = await fetch(downloadUrl);
-        if (response.ok) {
-          const videoBuffer = await response.arrayBuffer();
-          const retryTempPath = path.join(tempDir, `retry-video-${Date.now()}.mp4`);
-          await fs.promises.writeFile(retryTempPath, Buffer.from(videoBuffer));
-
-          try {
-            const videoInfo = await VideoProcessor.getVideoInfo(retryTempPath);
-            actualDuration = Math.round(videoInfo.duration);
-            console.log(`📹 Successfully extracted duration on retry: ${actualDuration} seconds`);
-            fs.unlink(retryTempPath, (err) => {
-              if (err) console.warn('Could not delete retry temp file:', err);
-            });
-          } catch (retryDurationError) {
-            console.warn('Retry duration extraction also failed, using conservative fallback');
-            actualDuration = 30;
-            fs.unlink(retryTempPath, (err) => {
-              if (err) console.warn('Could not delete retry temp file:', err);
-            });
-          }
-        } else {
-          throw new Error('Retry download failed');
-        }
-      } catch (retryError) {
-        console.warn('Could not extract duration with retry, using fallback');
-        actualDuration = 30;
+        await supabaseStorage.deleteFile(uploadResultPath);
+      } catch (cleanupError) {
+        console.warn('Could not delete superseded raw upload:', cleanupError);
       }
-
-      const thumbnailBuffer = await sharp({
-        create: { width: 1280, height: 720, channels: 3, background: { r: 30, g: 30, b: 30 } }
-      }).jpeg({ quality: 80 }).toBuffer();
-
-      const thumbnailResult = await supabaseStorage.uploadBuffer(
-        thumbnailBuffer, `fallback_thumb_${Date.now()}.jpg`, 'image/jpeg', 'thumbnail', userId
-      );
-
-      thumbnailUrl = thumbnailResult.url;
     }
   } catch (thumbnailError) {
     if (thumbnailError instanceof ClipProcessingError) throw thumbnailError;
@@ -334,54 +581,36 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
     }
   }
 
-  const shareCode = generateShareCode();
+  return { videoUrl: processedVideoUrl, thumbnailUrl, duration: actualDuration || 60 };
+}
 
-  const finalClipData = {
-    userId,
-    title,
-    description: description || '',
-    gameId: finalGameId,
-    tags: tags || [],
-    videoUrl: processedVideoUrl,
-    videoType,
-    thumbnailUrl,
-    duration: actualDuration || 60,
-    trimStart: rawTrimStart !== undefined && rawTrimStart !== null ? parseInt(String(rawTrimStart)) : 0,
-    trimEnd: rawTrimEnd !== undefined && rawTrimEnd !== null ? parseInt(String(rawTrimEnd)) : actualDuration,
-    ageRestricted: ageRestricted === true || ageRestricted === 'true',
-    shareCode,
-  };
+const MAX_PROCESSING_ATTEMPTS = 3;
 
-  const validatedClipData = insertClipSchema.parse(finalClipData);
-  const clip = await storage.createClip(validatedClipData);
-
-  await LeaderboardService.awardPoints(
-    userId,
-    'upload',
-    `Upload: ${videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`
-  );
-
-  const baseUrl = 'https://app.gamefolio.com';
-  const user = await storage.getUser(userId);
-  console.log(`🎯 XP Debug - User after award: ID=${user?.id}, totalXP=${user?.totalXP}, level=${user?.level}`);
-  const username = user?.username || 'unknown';
-  const contentType = videoType === 'reel' ? 'reel' : 'clip';
-  const clipUrl = `${baseUrl}/@${username}/${contentType}/${clip.shareCode}`;
-  const qrCodeDataUrl = await QRCode.toDataURL(clipUrl);
-
-  const socialMediaLinks = {
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(clipUrl)}`,
-    twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out my ${videoType}!`)}&url=${encodeURIComponent(clipUrl)}`,
-    reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(clipUrl)}&title=${encodeURIComponent(`Check out this gaming ${videoType}!`)}`,
-    discord: clipUrl
-  };
-
-  return {
-    success: true,
-    clip: { ...clip, qrCode: qrCodeDataUrl, shareUrl: clipUrl, socialMediaLinks },
-    xpGained: POINT_VALUES['upload'] ?? 200,
-    userXP: user?.totalXP || 0,
-    userLevel: user?.level || 1,
-    message: 'Video processed successfully'
-  };
+/**
+ * Finishes background processing for a clip created with status
+ * "processing" (videoUrl still the raw upload). Called immediately after
+ * upload (fire-and-forget) and again by the periodic reconciler
+ * (server/clip-processing-worker.ts) for any row that's still "processing"
+ * after the in-process attempt should have finished — e.g. because the
+ * server restarted mid-job.
+ */
+export async function finishClipProcessing(clip: Clip, ctx: ClipPipelineContext) {
+  try {
+    const { videoUrl, thumbnailUrl, duration } = await runClipProcessingPipeline({
+      ...ctx, uploadResultUrl: clip.videoUrl, uploadResultPath: clip.rawUploadPath || '',
+    });
+    await storage.updateClip(clip.id, {
+      videoUrl, thumbnailUrl, duration,
+      status: 'ready', rawUploadPath: null, updatedAt: new Date(),
+    });
+  } catch (err) {
+    const attempts = (clip.processingAttempts ?? 0) + 1;
+    console.error(`Background processing failed for clip ${clip.id} (attempt ${attempts}):`, err);
+    await storage.updateClip(clip.id, {
+      status: attempts >= MAX_PROCESSING_ATTEMPTS ? 'failed' : 'processing',
+      processingError: err instanceof Error ? err.message : String(err),
+      processingAttempts: attempts,
+      updatedAt: new Date(),
+    });
+  }
 }

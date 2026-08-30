@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { openExternal, openShareWindow, nativeShare, isNative } from "@/lib/platform";
+import { openExternal, openShareWindow, nativeShare, isNative, publicUrl } from '@/lib/platform';
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { 
   CheckCircle, 
@@ -81,12 +81,12 @@ const PostUploadSuccessPage = () => {
   });
 
   const generateShareUrl = (contentType: 'clip' | 'reel' | 'screenshot', contentId: number) => {
-    // Use the current window location origin, which will be the custom domain when deployed
-    const baseUrl = window.location.origin;
+    // Absolute public URL. window.location.origin is capacitor://localhost on
+    // native, so every share link from an upload was unopenable.
     if (contentType === 'screenshot') {
-      return `${baseUrl}/screenshot/${contentId}`;
+      return publicUrl(`/screenshot/${contentId}`);
     }
-    return `${baseUrl}/clip/${contentId}`;
+    return publicUrl(`/clip/${contentId}`);
   };
 
   // Next step suggestions based on content type and user behavior

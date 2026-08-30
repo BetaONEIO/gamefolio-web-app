@@ -10,7 +10,7 @@ import session from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { storage } from "./storage";
-import { LeaderboardService } from "./leaderboard-service";
+import { LeaderboardService, getSeasonLeagueTiers, POINT_VALUES } from "./leaderboard-service";
 import { recordView } from "./view-rate-limiter";
 import { StreakService } from "./streak-service";
 import { PerformanceMilestoneService } from "./performance-milestone-service";
@@ -20,14 +20,16 @@ import { XPService } from "./xp-service";
 import { createInsertSchema } from "drizzle-zod";
 import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema, insertBookmarkSchema } from "@shared/schema";
 import { promisify } from "util";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
 import { eq, sql, desc, inArray, and } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
 import { captureRouteError } from "./sentry";
-import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory } from "@shared/schema";
+import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
+import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog } from "@shared/schema";
+import { hasIndieDeveloperAccess } from "@shared/partner-access";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -58,7 +60,8 @@ import twitchGamesRouter from "./routes/twitch-games";
 import authRouter from "./routes/auth-routes";
 import tokenAuthRouter from "./routes/token-auth";
 import { JWTService } from "./services/jwt-service";
-import uploadRouter from "./routes/upload";
+import uploadRouter, { parseScheduledAt } from "./routes/upload";
+import scheduledPostsRouter from "./routes/scheduled-posts";
 import migrationRouter from "./routes/migration";
 import viewRouter from "./routes/view";
 import supportRouter from "./routes/support";
@@ -76,6 +79,11 @@ import quickSellRouter from "./routes/quick-sell";
 import adminNftSeedRouter from "./routes/admin-nft-seed";
 import adminWalletAuditRouter from "./routes/admin-wallet-audit";
 import { pushRouter, adminPushRouter } from "./routes/push";
+import gameBountiesRouter from "./routes/game-bounties";
+import campaignProgrammeRouter from "./routes/campaign-programme";
+import bountyMarketplaceRouter, { ensureBountyMarketplaceTables } from "./routes/bounty-marketplace";
+import steamVerificationRouter from "./routes/steam-verification";
+import adminBountiesRouter from "./routes/admin-bounties";
 import { twitchApi } from "./services/twitch-api";
 import { VideoProcessor } from "./video-processor";
 import ffmpeg from "fluent-ffmpeg";
@@ -89,6 +97,7 @@ import { initializeRealtimeNotificationService } from './realtime-notification-s
 import { adminMiddleware } from "./middleware/admin";
 import { optionalHybridAuth } from "./middleware/optional-hybrid-auth";
 import { hybridAuth, hybridEmailVerification } from "./middleware/hybrid-auth";
+import { impersonationAuthMiddleware } from "./middleware/impersonation-auth";
 import { isDeveloperSubdomainRequest } from "./middleware/subdomain-check";
 import QRCode from "qrcode";
 import { supabaseStorage } from "./supabase-storage";
@@ -101,6 +110,7 @@ import { createPublicClient, http, parseUnits, decodeEventLog, type Address as V
 import { privateKeyToAccount } from "viem/accounts";
 import { GF_TOKEN_ADDRESS as NFT_GF_TOKEN_ADDRESS, GF_TOKEN_ABI as NFT_GF_TOKEN_ABI, SKALE_NEBULA_TESTNET as NFT_SKALE_CHAIN } from "../shared/contracts";
 import { TwoFactorService } from "./services/two-factor-service";
+import { getRequestMeta } from "./lib/request-meta";
 
 // Import upload middlewares from upload router
 import multer from "multer";
@@ -131,34 +141,45 @@ async function hashPassword(password: string): Promise<string> {
 }
 
 async function comparePasswords(password: string, hashedPassword: string | null | undefined): Promise<boolean> {
-  console.log(`🔐 comparePasswords called with password length: ${password?.length}, hashedPassword length: ${hashedPassword?.length}`);
-  
   // Handle case where user doesn't have a password (e.g., OAuth users)
   if (!hashedPassword) {
-    console.log(`🔐 No hashed password provided`);
     return false;
   }
   
   const [hash, salt] = hashedPassword.split('.');
   if (!hash || !salt) {
-    console.log(`🔐 Invalid hash format - hash: ${!!hash}, salt: ${!!salt}`);
     return false;
   }
-  
-  console.log(`🔐 Hash parts - hash length: ${hash.length}, salt length: ${salt.length}`);
   
   try {
     const buf = (await scryptAsync(password, salt, 64)) as Buffer;
     const storedHash = Buffer.from(hash, 'hex');
-    const result = timingSafeEqual(storedHash, buf);
-    console.log(`🔐 Password comparison result: ${result}`);
-    console.log(`🔐 Generated hash: ${buf.toString('hex').substring(0, 20)}...`);
-    console.log(`🔐 Stored hash: ${hash.substring(0, 20)}...`);
-    return result;
+    return timingSafeEqual(storedHash, buf);
   } catch (error) {
     console.error(`🔐 Error in password comparison:`, error);
     return false;
   }
+}
+
+function validatePlatformUrl(value: unknown, platform: "steam" | "epic"): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  let url: URL;
+  try {
+    url = new URL(value.trim());
+  } catch {
+    return `Invalid ${platform} URL`;
+  }
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return `Invalid ${platform} URL protocol`;
+  }
+
+  const hostname = url.hostname.toLowerCase();
+  const valid = platform === "steam"
+    ? hostname === "store.steampowered.com" || hostname === "steamcommunity.com"
+    : hostname === "store.epicgames.com" || hostname.endsWith(".epicgames.com");
+
+  return valid ? null : `URL must belong to ${platform === "steam" ? "Steam" : "Epic Games"}`;
 }
 
 // QR Code and social media utilities
@@ -253,6 +274,23 @@ const screenshotUpload = multer({
   }
 });
 
+// Indie profile artwork can be substantially larger than avatars. Keep this
+// separate from the general `upload` middleware, whose 5MB limit is intended
+// for avatars and legacy image uploads.
+const indieProfileImageUpload = multer({
+  storage: screenshotStorage,
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25MB for banners and capsule artwork
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed for indie profile artwork'));
+    }
+  }
+});
+
 // Video upload configuration for desktop app
 const videoUploadStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -276,6 +314,38 @@ const videoUpload = multer({
       cb(null, true);
     } else {
       cb(new Error(`Only video files are allowed. Supported formats: ${allowedVideoTypes.join(', ')}`));
+    }
+  }
+});
+
+// Indie game trailer upload configuration — memory storage, straight to
+// supabaseStorage.uploadBuffer, mirroring the bounty trailer upload pattern.
+const indieTrailerUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 250 * 1024 * 1024, // 250MB max for legacy trailer uploads
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only video files are allowed for trailers'));
+    }
+  }
+});
+
+// The game dashboard has its own profile trailer route and can accept the
+// larger files advertised by that page without changing the legacy route.
+const indieProfileTrailerUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 500 * 1024 * 1024, // 500MB max for dashboard trailers
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('video/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only video files are allowed for trailers'));
     }
   }
 });
@@ -311,6 +381,8 @@ declare global {
       authProvider?: string | null;
       externalId?: string | null;
       isPrivate?: boolean;
+      isPartner?: boolean | null;
+      partnerType?: string | null;
     }
   }
 }
@@ -332,6 +404,8 @@ function toPublicUser(user: any): Record<string, unknown> {
     isPrivate: user.isPrivate,
     isPro: user.isPro,
     isPartner: user.isPartner,
+    partnerType: user.partnerType,
+    isAmbassador: user.isAmbassador,
     isStreamer: user.isStreamer,
     role: user.role,
     status: user.status,
@@ -392,7 +466,7 @@ function toPublicUser(user: any): Record<string, unknown> {
 // Use this on any endpoint that returns a full user row.
 function stripUserSecrets<T extends Record<string, any>>(user: T): Partial<T> {
   const {
-    password, twoFactorSecret, encryptedPrivateKey,
+    password, email, twoFactorSecret, encryptedPrivateKey,
     stripeCustomerId, stripeSubscriptionId, revenuecatUserId,
     twitchAccessToken, kickAccessToken,
     walletAddress, dateOfBirth, birthday, externalId,
@@ -498,6 +572,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // Admin "impersonate user" bridge: if a valid impersonation token is present,
+  // authenticate as the *target* user (not the admin) for this request. Runs
+  // before the generic native-JWT bridge below, which no-ops once req.user is
+  // set. Deliberately not applied to /api/admin/* — see the middleware's own
+  // docblock for why that matters.
+  app.use(impersonationAuthMiddleware);
 
   // Bearer-token bridge: if the session didn't authenticate the request but a
   // valid Authorization: Bearer JWT is present, populate req.user from it.
@@ -660,16 +741,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Error blocking user" });
     }
   });
-
-  // Add debugging middleware for production
-  if (process.env.NODE_ENV === "production") {
-    app.use('/api/user', (req, res, next) => {
-      console.log('User endpoint - Session ID:', req.sessionID);
-      console.log('User endpoint - Is authenticated:', req.isAuthenticated());
-      console.log('User endpoint - Session user:', req.user);
-      next();
-    });
-  }
 
   // Configure passport
   passport.use(
@@ -998,7 +1069,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           externalId: uid,
           // Set userType and ageRange to null to force onboarding
           userType: null,
-          ageRange: null
+          ageRange: null,
+          signupIp: getRequestMeta(req).ip,
+          signupDeviceId: getRequestMeta(req).deviceId,
         });
 
         // Send welcome email for new Google users
@@ -1318,7 +1391,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           externalId: id,
           // Set userType and ageRange to null to force onboarding
           userType: null,
-          ageRange: null
+          ageRange: null,
+          signupIp: getRequestMeta(req).ip,
+          signupDeviceId: getRequestMeta(req).deviceId,
         });
 
         // Send welcome email for new Discord users
@@ -1593,7 +1668,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           xboxUsername: gamertag,
           xboxXuid: xuid,
           userType: null,
-          ageRange: null
+          ageRange: null,
+          signupIp: getRequestMeta(req).ip,
+          signupDeviceId: getRequestMeta(req).deviceId,
         });
 
         // Send new user notification to admin
@@ -1849,6 +1926,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ── Twitch clip import ───────────────────────────────────────────────────
+  //
+  // Lets a connected streamer pull their recent Twitch clips and import one
+  // into their gamefolio. Listing uses the app token (no user token / extra
+  // scope needed — only the broadcaster_id, which we already store). The file
+  // proxy re-derives the MP4 server-side and streams it so the client can drop
+  // it straight into the normal upload pipeline as if it were a picked file.
+
+  // Resolve a Twitch game id to our internal games row, creating it if missing.
+  // Mirrors the game-resolution logic used by the upload pipeline so an imported
+  // clip's game maps to the same row a manual upload would produce.
+  async function resolveInternalGame(
+    twitchGameId: string,
+    fallback?: { name: string; box_art_url: string },
+  ): Promise<{ id: number; name: string; imageUrl: string | null } | null> {
+    if (!twitchGameId) return null;
+    try {
+      let game = await storage.getGameByTwitchId(twitchGameId);
+      if (!game) {
+        const data = fallback?.name
+          ? { id: twitchGameId, name: fallback.name, box_art_url: fallback.box_art_url }
+          : await twitchApi.getGameById(twitchGameId);
+        if (!data?.name) return null;
+        const existingByName = await storage.getGameByName(data.name);
+        if (existingByName) {
+          game = existingByName;
+        } else {
+          try {
+            game = await storage.createGame({
+              name: data.name,
+              imageUrl: data.box_art_url
+                ? data.box_art_url.replace('{width}', '600').replace('{height}', '800')
+                : '',
+              twitchId: twitchGameId,
+            });
+          } catch (createErr: any) {
+            // Race: another request created it — fetch by name.
+            if (createErr?.code === '23505') {
+              game = await storage.getGameByName(data.name);
+            } else {
+              throw createErr;
+            }
+          }
+        }
+      }
+      return game ? { id: game.id, name: game.name, imageUrl: game.imageUrl } : null;
+    } catch (err) {
+      console.error('Failed to resolve Twitch game', twitchGameId, err);
+      return null;
+    }
+  }
+
+  // List the signed-in user's recent Twitch clips, each enriched with our
+  // internal game id so the upload screen can prefill the game correctly.
+  app.get("/api/twitch/clips", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const user = req.user as any;
+      // The Twitch broadcaster id is stored in twitchUserId (set by the OAuth
+      // connect flow in social-oauth.ts). twitchChannelId is a legacy column
+      // from this branch's original design and is not populated — fall back to
+      // it only for safety.
+      const broadcasterId = user.twitchUserId || user.twitchChannelId;
+      if (!user.twitchVerified || !broadcasterId) {
+        return res.status(400).json({ message: "Connect your Twitch account first", code: "twitch_not_connected" });
+      }
+
+      const clips = await twitchApi.getClipsForBroadcaster(broadcasterId, 30);
+
+      // Resolve internal games once per unique Twitch game id.
+      const internalByTwitchId = new Map<string, { id: number; name: string; imageUrl: string | null } | null>();
+      for (const clip of clips) {
+        if (clip.gameId && !internalByTwitchId.has(clip.gameId)) {
+          internalByTwitchId.set(
+            clip.gameId,
+            await resolveInternalGame(clip.gameId, { name: clip.gameName, box_art_url: clip.gameBoxArtUrl }),
+          );
+        }
+      }
+
+      const enriched = clips.map((clip) => {
+        const game = clip.gameId ? internalByTwitchId.get(clip.gameId) : null;
+        return {
+          id: clip.id,
+          title: clip.title,
+          thumbnailUrl: clip.thumbnailUrl,
+          duration: clip.duration,
+          viewCount: clip.viewCount,
+          createdAt: clip.createdAt,
+          gameId: game?.id ?? null,
+          gameName: game?.name ?? clip.gameName ?? null,
+          gameImage: game?.imageUrl ?? clip.gameBoxArtUrl ?? null,
+        };
+      });
+
+      res.json({ clips: enriched });
+    } catch (err: any) {
+      console.error("Twitch clips list error:", err);
+      res.status(500).json({ message: "Failed to fetch Twitch clips" });
+    }
+  });
+
+  // Stream a clip's MP4 to the client. We re-resolve the clip by id and derive
+  // the MP4 URL server-side (never trusting a client-supplied URL), so the only
+  // reachable origin is Twitch's clip CDN.
+  app.get("/api/twitch/clips/file", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    const clipId = String(req.query.clipId || "");
+    if (!clipId) return res.status(400).json({ message: "Missing clipId" });
+    try {
+      const mp4Url = await twitchApi.getClipDownloadUrl(clipId);
+      if (!mp4Url) {
+        return res.status(404).json({ message: "Clip not found or not importable" });
+      }
+
+      const upstream = await fetch(mp4Url, { signal: AbortSignal.timeout(30000) });
+      if (!upstream.ok || !upstream.body) {
+        console.warn(`Twitch clip MP4 fetch failed ${upstream.status} for ${clipId}`);
+        return res.status(502).json({ message: "Could not download clip from Twitch" });
+      }
+
+      // Clips are short; buffering keeps this simple and avoids stream plumbing.
+      const buffer = Buffer.from(await upstream.arrayBuffer());
+      res.setHeader("Content-Type", "video/mp4");
+      res.setHeader("Content-Length", buffer.length);
+      res.setHeader("Content-Disposition", `inline; filename="twitch-clip-${clipId}.mp4"`);
+      res.send(buffer);
+    } catch (err: any) {
+      console.error("Twitch clip file proxy error:", err);
+      res.status(500).json({ message: "Failed to download Twitch clip" });
+    }
+  });
+
+  // Daily Twitch-clip import allowance (free: 2/day, Pro: 10/day). Counted only
+  // when an imported clip is successfully posted (see /api/upload/process-video).
+  // The Upload page reads this to show "imported X of N today" + a Pro upsell.
+  app.get("/api/twitch/import-limits", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Unauthorized" });
+    try {
+      const limits = await storage.getImportLimits((req.user as any).id);
+      res.json(limits);
+    } catch (err) {
+      console.error("Twitch import-limits error:", err);
+      res.status(500).json({ message: "Failed to load import limits" });
+    }
+  });
+
   // ── Kick OAuth ───────────────────────────────────────────────────────────
 
   // Kick Connect — redirect to Kick OAuth authorization
@@ -2092,12 +2316,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create user — referralCode is always server-generated; referredBy records which code was used at signup
       // storage.createUser() hashes the password itself (like every other
       // caller here - OAuth/admin paths), so pass it through in plain text.
+      // signupIp/signupDeviceId are server-derived (never from parsed client
+      // body) — spam/multi-account detection signal, see gamefolio-bot.
+      const { ip: signupIp, deviceId: signupDeviceId } = getRequestMeta(req);
       const user = await storage.createUser({
         ...userData,
         username: userData.username.toLowerCase(),
         email: userData.email.toLowerCase(),
         emailVerified: false,
         ...(usedReferralCode && { referredBy: usedReferralCode }),
+        signupIp,
+        signupDeviceId,
       });
 
       // Generate verification code and store it in the database
@@ -2107,9 +2336,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const emailSent = await EmailService.sendVerificationEmail(user.email, verificationCode);
 
       if (emailSent) {
-        console.log(`Verification email sent to ${user.email}`);
+        console.log(`Verification email sent to user ${user.id}`);
       } else {
-        console.warn(`Failed to send verification email to ${user.email}`);
+        console.warn(`Failed to send verification email to user ${user.id}`);
       }
 
       // Send new user notification to admin
@@ -2577,8 +2806,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json(null);
     }
 
+    const impersonation = (req as any).impersonation as
+      | { tokenId: string; adminId: number; adminUsername: string }
+      | undefined;
+    const impersonatedBy = impersonation
+      ? { adminId: impersonation.adminId, adminUsername: impersonation.adminUsername }
+      : undefined;
+
     try {
-      const freshUser = await storage.getUserById((req.user as any).id);
+      const authenticatedUserId = (req.user as any).id;
+      // Users who remain signed in restore their existing session through this
+      // endpoint instead of running a login handler. Claim the daily streak
+      // here too; updateLoginStreak's atomic 20-hour guard prevents repeats.
+      const streakInfo = impersonation
+        ? null
+        : await StreakService.updateLoginStreak(authenticatedUserId);
+      const freshUser = await storage.getUserById(authenticatedUserId);
       if (freshUser) {
         const { password, ...u } = freshUser as any;
         if (u.username === 'busyguy') {
@@ -2610,6 +2853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           level: u.level || 1,
           totalXP: u.totalXP || 0,
           isPro: u.isPro || false,
+          isAmbassador: u.isAmbassador || false,
           walletAddress: u.walletAddress || null,
           walletChain: u.walletChain || null,
           gfTokenBalance: u.gfTokenBalance || 0,
@@ -2633,6 +2877,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           twitterUsername: u.twitterUsername || null,
           youtubeUsername: u.youtubeUsername || null,
           rumbleUsername: u.rumbleUsername || null,
+          instagramUsername: u.instagramUsername || null,
+          facebookUsername: u.facebookUsername || null,
           nftProfileTokenId: u.nftProfileTokenId || null,
           nftProfileImageUrl: u.nftProfileImageUrl || null,
           activeProfilePicType: u.activeProfilePicType || 'upload',
@@ -2648,6 +2894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hideBanner: u.hideBanner || false,
           statsGlassEffect: u.statsGlassEffect || false,
           profileBackgroundGradient: u.profileBackgroundGradient !== false,
+          profileBackgroundGradientCss: u.profileBackgroundGradientCss || '',
           profileBackgroundType: u.profileBackgroundType || 'solid',
           profileBackgroundTheme: u.profileBackgroundTheme || 'default',
           profileBackgroundAnimation: u.profileBackgroundAnimation || 'none',
@@ -2665,6 +2912,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           selectedVerificationBadgeId: u.selectedVerificationBadgeId || null,
           canMintNfts: u.canMintNfts || false,
           canSellNfts: u.canSellNfts || false,
+          isPartner: u.isPartner || false,
+          partnerType: u.partnerType || null,
+          isIndieDevSubscriber: u.isIndieDevSubscriber || false,
+          indieDevSubscriptionType: u.indieDevSubscriptionType || null,
           isStreamer: u.isStreamer || false,
           streamPlatform: u.streamPlatform || null,
           streamChannelName: u.streamChannelName || null,
@@ -2678,8 +2929,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           liveEnabled: u.liveEnabled || false,
           twitchShowOnProfile: u.twitchShowOnProfile ?? true,
           kickShowOnProfile: u.kickShowOnProfile ?? true,
+          youtubeChannelName: u.youtubeChannelName || null,
+          youtubeVerified: u.youtubeVerified || false,
+          youtubeShowOnProfile: u.youtubeShowOnProfile ?? true,
+          vpzoneChannelName: u.vpzoneChannelName || null,
+          vpzoneVerified: u.vpzoneVerified || false,
+          vpzoneShowOnProfile: u.vpzoneShowOnProfile ?? true,
           referralCode: u.referralCode || null,
           referredBy: u.referredBy || null,
+          ...(streakInfo && !streakInfo.isFirstLogin ? {
+            streakInfo: {
+              currentStreak: streakInfo.currentStreak,
+              bonusAwarded: streakInfo.bonusAwarded,
+              dailyXP: streakInfo.dailyXP,
+              longestStreak: u.longestStreak || 0,
+              nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
+              message: streakInfo.message,
+              isNewMilestone: streakInfo.isNewMilestone,
+            },
+          } : {}),
+          impersonatedBy,
         });
       }
     } catch (error) {
@@ -2712,6 +2981,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       level: u.level || 1,
       totalXP: u.totalXP || 0,
       isPro: u.isPro || false,
+      isAmbassador: u.isAmbassador || false,
       walletAddress: u.walletAddress || null,
       walletChain: u.walletChain || null,
       gfTokenBalance: u.gfTokenBalance || 0,
@@ -2730,6 +3000,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       twitterUsername: u.twitterUsername || null,
       youtubeUsername: u.youtubeUsername || null,
       rumbleUsername: u.rumbleUsername || null,
+      instagramUsername: u.instagramUsername || null,
+      facebookUsername: u.facebookUsername || null,
       nftProfileTokenId: u.nftProfileTokenId || null,
       nftProfileImageUrl: u.nftProfileImageUrl || null,
       activeProfilePicType: u.activeProfilePicType || 'upload',
@@ -2749,7 +3021,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       liveEnabled: u.liveEnabled || false,
       twitchShowOnProfile: u.twitchShowOnProfile ?? true,
       kickShowOnProfile: u.kickShowOnProfile ?? true,
+      youtubeChannelName: u.youtubeChannelName || null,
+      youtubeVerified: u.youtubeVerified || false,
+      youtubeShowOnProfile: u.youtubeShowOnProfile ?? true,
+      vpzoneChannelName: u.vpzoneChannelName || null,
+      vpzoneVerified: u.vpzoneVerified || false,
+      vpzoneShowOnProfile: u.vpzoneShowOnProfile ?? true,
+      impersonatedBy,
     });
+  });
+
+  // Self-service end of an impersonation session — callable by the impersonated
+  // request itself (i.e. the admin's impersonation-token tab clicking "Exit"),
+  // not admin-gated. Closes out the audit row so it has an endedAt.
+  app.post("/api/impersonation/end", async (req, res) => {
+    const impersonation = (req as any).impersonation as { tokenId: string } | undefined;
+    if (!impersonation) {
+      return res.status(400).json({ message: "Not an impersonation session" });
+    }
+    try {
+      await db
+        .update(impersonationAuditLog)
+        .set({ endedAt: new Date(), endReason: "manual" })
+        .where(and(eq(impersonationAuditLog.tokenId, impersonation.tokenId), sql`${impersonationAuditLog.endedAt} IS NULL`));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error ending impersonation session:", error);
+      res.status(500).json({ message: "Error ending impersonation session" });
+    }
   });
 
   // ==========================================
@@ -2774,12 +3073,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   })();
 
+  // Run migration to ensure the is_ambassador column exists
+  (async () => {
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_ambassador BOOLEAN NOT NULL DEFAULT false`);
+    } catch (err) {
+      // Column already exists or other harmless error
+    }
+  })();
+
   // Run migration to ensure portrait outro column exists
   (async () => {
     try {
       await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS outro_video_path_portrait TEXT`);
     } catch (err) {
       // Column already exists or other harmless error
+    }
+  })();
+
+  // Run migration to ensure indie_game_profiles has all required columns
+  (async () => {
+    try {
+      await db.execute(sql`
+        ALTER TABLE indie_game_profiles
+          ADD COLUMN IF NOT EXISTS age_rating TEXT,
+          ADD COLUMN IF NOT EXISTS supported_languages TEXT[],
+          ADD COLUMN IF NOT EXISTS content_descriptors TEXT[],
+          ADD COLUMN IF NOT EXISTS catalog_game_id INTEGER REFERENCES games(id) ON DELETE SET NULL
+      `);
+      await db.execute(sql`
+        CREATE UNIQUE INDEX IF NOT EXISTS indie_game_profiles_catalog_game_id_unique
+        ON indie_game_profiles (catalog_game_id)
+        WHERE catalog_game_id IS NOT NULL
+      `);
+    } catch (err) {
+      // Columns already exist or other harmless error
     }
   })();
 
@@ -3102,6 +3430,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get featured Gamefolio (official profile) banner data
+  app.get("/api/featured/gamefolio", async (req, res) => {
+    try {
+      // Pick the #1 user from this week's leaderboard dynamically
+      const weeklyTop = await LeaderboardService.getCurrentWeekLeaderboard(1);
+      let featuredUserId: number | null = weeklyTop.length > 0 ? weeklyTop[0].userId : null;
+      let weeklyUploadsCount = weeklyTop.length > 0 ? weeklyTop[0].uploadsCount : 0;
+      let weeklyTotalPoints = weeklyTop.length > 0 ? weeklyTop[0].totalPoints : 0;
+
+      // Fallback: if no weekly leaders, use most-prolific all-time uploader
+      if (!featuredUserId) {
+        const fallbackRows = await db
+          .select({ userId: clips.userId, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(clips)
+          .groupBy(clips.userId)
+          .orderBy(desc(sql`COUNT(*)`))
+          .limit(1);
+        featuredUserId = fallbackRows[0]?.userId ?? null;
+      }
+
+      if (!featuredUserId) return res.status(404).json({ message: "No featured user found" });
+
+      const user = await storage.getUser(featuredUserId);
+      if (!user) return res.status(404).json({ message: "Not found" });
+
+      // Batch all stats queries in parallel
+      const [clipRows, reelRows, ssRows, followerRows, followingRows, xpRows, topGameRows, favGames] = await Promise.all([
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(clips).where(and(eq(clips.userId, featuredUserId), eq(clips.videoType, 'clip'))),
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(clips).where(and(eq(clips.userId, featuredUserId), eq(clips.videoType, 'reel'))),
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(screenshots).where(eq(screenshots.userId, featuredUserId)),
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(follows).where(eq(follows.followingId, featuredUserId)),
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(follows).where(eq(follows.followerId, featuredUserId)),
+        db.select({ total: sql<number>`CAST(COALESCE(SUM(xp_amount), 0) AS INTEGER)` })
+          .from(userXPHistory).where(eq(userXPHistory.userId, featuredUserId)),
+        // Most-uploaded game this user has content for
+        db.select({ gameId: clips.gameId, gameName: games.name, gameImageUrl: games.imageUrl, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(clips)
+          .innerJoin(games, eq(clips.gameId, games.id))
+          .where(eq(clips.userId, featuredUserId))
+          .groupBy(clips.gameId, games.name, games.imageUrl)
+          .orderBy(desc(sql`COUNT(*)`))
+          .limit(1),
+        storage.getUserGameFavorites(featuredUserId),
+      ]);
+
+      const clipsCount = clipRows[0]?.count ?? 0;
+      const reelsCount = reelRows[0]?.count ?? 0;
+      const screenshotsCount = ssRows[0]?.count ?? 0;
+      const followersCount = followerRows[0]?.count ?? 0;
+      const followingCount = followingRows[0]?.count ?? 0;
+      const totalPoints = xpRows[0]?.total ?? weeklyTotalPoints;
+      const topGame = topGameRows[0] ? {
+        id: topGameRows[0].gameId,
+        name: topGameRows[0].gameName,
+        imageUrl: topGameRows[0].gameImageUrl,
+        uploadCount: topGameRows[0].count,
+      } : null;
+
+      // Favourite games list (excluding topGame to avoid duplication)
+      const gamesPlayed = favGames
+        .filter(g => !topGame || g.id !== topGame.id)
+        .slice(0, 3)
+        .map(g => ({ id: g.id, name: g.name }));
+
+      // Get latest clip/reel for the user with full metadata
+      const userClips = await storage.getClipsByUserId(featuredUserId);
+      let latestClip: {
+        id: number; title: string; thumbnailUrl: string | null; videoUrl: string;
+        views: number; createdAt: Date | null; gameName: string | null; duration: number;
+        videoType: string; likesCount: number;
+      } | null = null;
+      if (userClips.length > 0) {
+        const c = userClips[0];
+        const [likeRows] = await Promise.all([
+          db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+            .from(likes).where(eq(likes.clipId, c.id)),
+        ]);
+        latestClip = {
+          id: c.id,
+          title: c.title,
+          thumbnailUrl: c.thumbnailUrl ?? null,
+          videoUrl: c.videoUrl,
+          views: c.views ?? 0,
+          createdAt: c.createdAt ?? null,
+          gameName: (c as any).gameName ?? null,
+          duration: (c as any).duration ?? 0,
+          videoType: (c as any).videoType ?? 'clip',
+          likesCount: likeRows[0]?.count ?? 0,
+        };
+      }
+
+      const { password: _p, ...publicUser } = user;
+      res.json({
+        user: publicUser,
+        weeklyUploadsCount,
+        topGame,
+        gamesPlayed,
+        latestClip,
+        clipCount: clipsCount + reelsCount,
+        clipsCount,
+        reelsCount,
+        screenshotsCount,
+        followersCount,
+        followingCount,
+        totalPoints,
+      });
+    } catch (err) {
+      console.error("Error getting featured gamefolio:", err);
+      res.status(500).json({ message: "Error getting featured gamefolio" });
+    }
+  });
+
   // Get featured users endpoint
   app.get("/api/users/featured", async (req, res) => {
     try {
@@ -3262,7 +3707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { heroTextSettings } = await import('@shared/schema');
       const [config] = await db.select().from(heroTextSettings).where(eq(heroTextSettings.textType, "slide_config"));
-      res.json({ intervalSeconds: config ? parseInt(config.title) || 6 : 6 });
+      res.json({ intervalSeconds: config ? parseInt(config.title) || 15 : 15 });
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching hero slide settings:", err);
@@ -3270,207 +3715,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GET /api/hero-carousel - Dynamic community data for the homepage hero carousel
-  app.get("/api/hero-carousel", async (_req: Request, res: Response) => {
+  // ── Community Activity Carousel Data ───────────────────────────────────────
+  app.get("/api/hero-carousel", async (req, res) => {
     try {
-      const { supabaseStorage } = await import('./supabase-storage');
+      const limit = Math.min(parseInt(req.query.limit as string) || 5, 20);
 
-      const signUrl = async (url: string | null | undefined): Promise<string | null> => {
-        if (!url) return null;
-        if (!url.includes('supabase.co')) return url;
-        return (await supabaseStorage.convertToSignedUrl(url, 3600)) ?? url;
+      // 1. Trending Clip — most popular by views
+      let trendingClip: any = null;
+      const trendingClipResult = await db.execute(sql`
+        SELECT * FROM clips
+        WHERE (video_type = 'clip' OR video_type IS NULL)
+        ORDER BY views DESC
+        LIMIT 1
+      `);
+      if (trendingClipResult.length > 0) {
+        const c = trendingClipResult[0] as any;
+        const [u] = await db.select({
+          id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl,
+        }).from(users).where(eq(users.id, c.user_id)).limit(1);
+        const [g] = c.game_id ? await db.select({ name: games.name, imageUrl: games.imageUrl }).from(games).where(eq(games.id, c.game_id)).limit(1) : [null];
+        const likeCountResult = await db.execute(sql`SELECT COUNT(*)::int as count FROM likes WHERE clip_id = ${c.id}`);
+        trendingClip = {
+          id: c.id, title: c.title, thumbnailUrl: c.thumbnail_url, videoUrl: c.video_url || null,
+          views: c.views, likes: Number((likeCountResult[0] as any)?.count || 0),
+          gameId: c.game_id || null,
+          creator: u ? { username: u.username, displayName: u.displayName, avatarUrl: u.avatarUrl } : null,
+          game: g ? { name: g.name, imageUrl: g.imageUrl } : null,
+        };
+      }
+
+      // 2. Top Gamefolios — top 3 leaderboard entries
+      const leaderboardEntries = await LeaderboardService.getAllTimeLeaderboard(limit);
+      const topGamefolios = leaderboardEntries.slice(0, 3).map((entry: any) => ({
+        userId: entry.userId,
+        username: entry.user?.username,
+        displayName: entry.user?.displayName,
+        avatarUrl: entry.user?.avatarUrl,
+        level: entry.user?.level,
+        xp: entry.user?.totalXP,
+        rank: entry.rank,
+      }));
+
+      // 3. Trending Game — most clips + views
+      let trendingGame: any = null;
+      const trendingGameResult = await db.execute(sql`
+        SELECT game_id, COUNT(*)::int as clip_count, COALESCE(SUM(views), 0)::int as total_views
+        FROM clips
+        WHERE game_id IS NOT NULL AND (video_type = 'clip' OR video_type IS NULL)
+        GROUP BY game_id
+        ORDER BY total_views DESC
+        LIMIT 1
+      `);
+      if (trendingGameResult.length > 0) {
+        const tg = trendingGameResult[0] as any;
+        const [g] = await db.select({
+          id: games.id, name: games.name, imageUrl: games.imageUrl,
+        }).from(games).where(eq(games.id, tg.game_id)).limit(1);
+        const creatorCountResult = await db.execute(sql`SELECT COUNT(DISTINCT user_id)::int as value FROM clips WHERE game_id = ${tg.game_id}`);
+        if (g) {
+          trendingGame = {
+            id: g.id, name: g.name, imageUrl: g.imageUrl,
+            clips: Number(tg.clip_count || 0), creators: Number((creatorCountResult[0] as any)?.value || 0), views: Number(tg.total_views || 0),
+          };
+        }
+      }
+
+      // 4. Live Right Now — users with liveEnabled
+      const liveRows = await db
+        .select({
+          id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl,
+          streamPlatform: users.streamPlatform, twitchChannelName: users.twitchChannelName,
+          kickChannelName: users.kickChannelName, rumbleChannelName: users.rumbleChannelName,
+        })
+        .from(users)
+        .where(and(eq(users.liveEnabled, true), eq(users.status, "active")))
+        .limit(3);
+      const liveStreams = liveRows.map((u: any) => ({
+        userId: u.id, username: u.username, displayName: u.displayName, avatarUrl: u.avatarUrl,
+        platform: u.streamPlatform,
+        channelUrl: u.streamPlatform === 'twitch' ? `https://twitch.tv/${u.twitchChannelName}`
+          : u.streamPlatform === 'kick' ? `https://kick.com/${u.kickChannelName}`
+          : u.streamPlatform === 'rumble' ? `https://rumble.com/${u.rumbleChannelName}`
+          : null,
+      }));
+
+      // 5. Creator Spotlight — top performer by clips + views
+      let creatorSpotlight: any = null;
+      const creatorResult = await db.execute(sql`
+        SELECT user_id, COUNT(*)::int as clip_count, COALESCE(SUM(views), 0)::int as total_views
+        FROM clips
+        WHERE video_type = 'clip' OR video_type IS NULL
+        GROUP BY user_id
+        ORDER BY total_views DESC
+        LIMIT 1
+      `);
+      if (creatorResult.length > 0) {
+        const cr = creatorResult[0] as any;
+        const [u] = await db.select({
+          id: users.id, username: users.username, displayName: users.displayName, avatarUrl: users.avatarUrl,
+          level: users.level, totalXP: users.totalXP,
+        }).from(users).where(eq(users.id, cr.user_id)).limit(1);
+        if (u) {
+          creatorSpotlight = {
+            userId: u.id, username: u.username, displayName: u.displayName, avatarUrl: u.avatarUrl,
+            level: u.level, clips: Number(cr.clip_count || 0), views: Number(cr.total_views || 0),
+          };
+        }
+      }
+
+      // 6. Community Milestones
+      const totalClipsResult = await db.execute(sql`SELECT COUNT(*)::int as value FROM clips`);
+      const totalCreatorsResult = await db.execute(sql`SELECT COUNT(*)::int as value FROM users WHERE status = 'active'`);
+      const totalProfilesResult = await db.execute(sql`SELECT COUNT(*)::int as value FROM users WHERE status = 'active'`);
+      const communityMilestone = {
+        totalClips: Number((totalClipsResult[0] as any)?.value || 0),
+        totalCreators: Number((totalCreatorsResult[0] as any)?.value || 0),
+        totalProfiles: Number((totalProfilesResult[0] as any)?.value || 0),
       };
 
-      const [
-        trendingClipRows,
-        leaderboardEntries,
-        trendingGameRows,
-        liveNowRows,
-        spotlightRows,
-        milestoneRows,
-        discoverRows,
-      ] = await Promise.all([
-        // 1. Trending clip — highest views, non-age-restricted clips
-        db.execute(sql`
-          SELECT c.id, c.title, c.thumbnail_url, c.views,
-                 u.username, u.display_name, u.avatar_url, u.is_pro, u.is_partner,
-                 g.name as game_name, g.image_url as game_image_url
-          FROM clips c
-          JOIN users u ON c.user_id = u.id
-          LEFT JOIN games g ON c.game_id = g.id
-          WHERE c.age_restricted = false AND c.video_type = 'clip' AND c.thumbnail_url IS NOT NULL
-          ORDER BY c.views DESC NULLS LAST
-          LIMIT 1
-        `),
-        // 2. Top gamefolios — all-time leaderboard top 3
-        LeaderboardService.getAllTimeLeaderboard(3),
-        // 3. Trending game — most clips uploaded in last 30 days
-        db.execute(sql`
-          SELECT g.id, g.name, g.image_url, COUNT(c.id)::int as clip_count
-          FROM clips c
-          JOIN games g ON c.game_id = g.id
-          WHERE c.created_at > NOW() - INTERVAL '30 days'
-          GROUP BY g.id, g.name, g.image_url
-          ORDER BY clip_count DESC
-          LIMIT 1
-        `),
-        // 4. Live right now — active streamers with live enabled
-        db.execute(sql`
-          SELECT id, username, display_name, avatar_url, stream_platform,
-                 twitch_channel_name, kick_channel_name, is_pro, is_partner
-          FROM users
-          WHERE live_enabled = true AND is_streamer = true AND status = 'active'
-          ORDER BY RANDOM()
-          LIMIT 4
-        `),
-        // 5. Creator spotlight — highest total XP user
-        db.execute(sql`
-          SELECT u.id, u.username, u.display_name, u.avatar_url, u.total_xp, u.level,
-                 u.is_pro, u.is_partner,
-                 COUNT(c.id)::int as clip_count
-          FROM users u
-          LEFT JOIN clips c ON c.user_id = u.id
-          WHERE u.status = 'active' AND u.hide_from_leaderboard = false
-          GROUP BY u.id
-          ORDER BY u.total_xp DESC NULLS LAST
-          LIMIT 1
-        `),
-        // 6. Community milestone — aggregate platform stats
-        db.execute(sql`
-          SELECT
-            (SELECT COUNT(*)::int FROM users WHERE status = 'active') as total_users,
-            (SELECT COUNT(*)::int FROM clips) as total_clips,
-            (SELECT COUNT(*)::int FROM screenshots) as total_screenshots,
-            (SELECT COALESCE(SUM(views), 0)::bigint FROM clips) as total_views
-        `),
-        // 7. Discover something new — random recent content with a thumbnail
-        db.execute(sql`
-          SELECT content_type, id, title, image_url, views FROM (
-            (SELECT 'clip' as content_type, id, title, thumbnail_url as image_url, views
-             FROM clips
-             WHERE age_restricted = false AND thumbnail_url IS NOT NULL
-             ORDER BY created_at DESC LIMIT 20)
-            UNION ALL
-            (SELECT 'screenshot' as content_type, id, title, thumbnail_url as image_url, views
-             FROM screenshots
-             WHERE age_restricted = false AND thumbnail_url IS NOT NULL
-             ORDER BY created_at DESC LIMIT 20)
-          ) sub
-          ORDER BY RANDOM()
-          LIMIT 1
-        `),
-      ]);
-
-      const slides: any[] = [];
-
-      // 1. Trending Clip
-      const tc = (trendingClipRows as any[])[0];
-      if (tc) {
-        slides.push({
-          type: 'trending_clip',
-          clipId: tc.id,
-          title: tc.title,
-          thumbnailUrl: await signUrl(tc.thumbnail_url),
-          views: tc.views ?? 0,
-          username: tc.username,
-          displayName: tc.display_name,
-          avatarUrl: await signUrl(tc.avatar_url),
-          gameName: tc.game_name ?? null,
-          gameImageUrl: await signUrl(tc.game_image_url),
-        });
+      // 7. Discover Something New — random clip
+      let discover: any = null;
+      const discoverResult = await db.execute(sql`
+        SELECT id, title, thumbnail_url, user_id, game_id
+        FROM clips
+        WHERE video_type = 'clip' OR video_type IS NULL
+        ORDER BY RANDOM()
+        LIMIT 1
+      `);
+      if (discoverResult.length > 0) {
+        const dc = discoverResult[0] as any;
+        const [u] = await db.select({
+          id: users.id, username: users.username, displayName: users.displayName,
+        }).from(users).where(eq(users.id, dc.user_id)).limit(1);
+        const [g] = dc.game_id ? await db.select({ name: games.name }).from(games).where(eq(games.id, dc.game_id)).limit(1) : [null];
+        discover = {
+          id: dc.id, title: dc.title, thumbnailUrl: dc.thumbnail_url,
+          creator: u ? { username: u.username, displayName: u.displayName } : null,
+          game: g ? { name: g.name } : null,
+        };
       }
 
-      // 2. Top Gamefolios
-      const topGamefolios = await Promise.all(
-        leaderboardEntries.slice(0, 3).map(async (entry: any) => ({
-          rank: entry.rank,
-          username: entry.user?.username,
-          displayName: entry.user?.displayName,
-          avatarUrl: await signUrl(entry.user?.avatarUrl),
-          totalPoints: entry.totalPoints ?? 0,
-          level: entry.user?.level ?? 1,
-          isPro: entry.user?.isPro ?? false,
-        }))
-      );
-      if (topGamefolios.length > 0) {
-        slides.push({ type: 'top_gamefolios', entries: topGamefolios });
-      }
-
-      // 3. Trending Game
-      const tg = (trendingGameRows as any[])[0];
-      if (tg) {
-        slides.push({
-          type: 'trending_game',
-          gameId: tg.id,
-          gameName: tg.name,
-          gameImageUrl: await signUrl(tg.image_url),
-          clipCount: tg.clip_count ?? 0,
-        });
-      }
-
-      // 4. Live Right Now
-      const liveUsers = await Promise.all(
-        (liveNowRows as any[]).map(async (u: any) => ({
-          id: u.id,
-          username: u.username,
-          displayName: u.display_name,
-          avatarUrl: await signUrl(u.avatar_url),
-          streamPlatform: u.stream_platform,
-          channelName: u.twitch_channel_name || u.kick_channel_name,
-          isPro: u.is_pro,
-        }))
-      );
-      if (liveUsers.length > 0) {
-        slides.push({ type: 'live_now', streamers: liveUsers });
-      }
-
-      // 5. Creator Spotlight
-      const sp = (spotlightRows as any[])[0];
-      if (sp) {
-        slides.push({
-          type: 'creator_spotlight',
-          userId: sp.id,
-          username: sp.username,
-          displayName: sp.display_name,
-          avatarUrl: await signUrl(sp.avatar_url),
-          totalXP: Math.round(Number(sp.total_xp ?? 0)),
-          level: sp.level ?? 1,
-          clipCount: sp.clip_count ?? 0,
-          isPro: sp.is_pro,
-          isPartner: sp.is_partner,
-        });
-      }
-
-      // 6. Community Milestone
-      const ms = (milestoneRows as any[])[0];
-      if (ms) {
-        slides.push({
-          type: 'community_milestone',
-          totalUsers: ms.total_users ?? 0,
-          totalClips: ms.total_clips ?? 0,
-          totalScreenshots: ms.total_screenshots ?? 0,
-          totalViews: Number(ms.total_views ?? 0),
-        });
-      }
-
-      // 7. Discover Something New
-      const disc = (discoverRows as any[])[0];
-      if (disc) {
-        slides.push({
-          type: 'discover_new',
-          contentType: disc.content_type,
-          contentId: disc.id,
-          title: disc.title,
-          imageUrl: await signUrl(disc.image_url),
-          views: disc.views ?? 0,
-        });
-      }
-
-      res.json(slides);
-    } catch (err) {
+      res.json({
+        trendingClip,
+        topGamefolios,
+        trendingGame,
+        liveStreams,
+        creatorSpotlight,
+        communityMilestone,
+        discover,
+      });
+    } catch (err: any) {
       captureRouteError(err);
-      console.error('[hero-carousel] Error:', err);
-      res.status(500).json({ message: 'Failed to load carousel data' });
+      console.error("Error fetching hero carousel:", err?.message || err, err?.stack || "");
+      res.status(500).json({ message: "Error fetching hero carousel data", error: err?.message || String(err) });
     }
   });
 
@@ -3478,7 +3875,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Short-lived in-memory cache for trending feeds (DB query + signed URLs).
   // Keyed by route+normalized-params+user. Bounded LRU so user-controlled
   // query params can't blow up memory.
-  const TRENDING_CACHE_TTL_MS = 30_000;
+  // Now that this cache is genuinely shared across every requester (no more
+  // per-user key), a longer TTL multiplies its payoff instead of just
+  // trading staleness for a marginal hit-rate bump on a handful of
+  // per-user entries.
+  const TRENDING_CACHE_TTL_MS = 90_000;
   const TRENDING_CACHE_MAX_ENTRIES = 500;
   // Map preserves insertion order — re-inserting on hit gives us LRU semantics.
   const trendingCache = new Map<string, { expires: number; data: any }>();
@@ -3501,12 +3902,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const promise = (async () => {
       try {
         const data = await loader();
-        trendingCache.set(key, { expires: Date.now() + TRENDING_CACHE_TTL_MS, data });
-        // Evict oldest entries when over capacity (insertion-order iteration).
-        while (trendingCache.size > TRENDING_CACHE_MAX_ENTRIES) {
-          const oldest = trendingCache.keys().next().value;
-          if (oldest === undefined) break;
-          trendingCache.delete(oldest);
+        // Don't cache empty arrays — they may be transient DB startup issues.
+        // Next request will retry the loader immediately.
+        const isEmpty = Array.isArray(data) && data.length === 0;
+        if (!isEmpty) {
+          trendingCache.set(key, { expires: Date.now() + TRENDING_CACHE_TTL_MS, data });
+          // Evict oldest entries when over capacity (insertion-order iteration).
+          while (trendingCache.size > TRENDING_CACHE_MAX_ENTRIES) {
+            const oldest = trendingCache.keys().next().value;
+            if (oldest === undefined) break;
+            trendingCache.delete(oldest);
+          }
         }
         return data;
       } finally {
@@ -3524,15 +3930,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     period: unknown,
     limit: unknown,
     gameId: unknown,
-    currentUserId: number | undefined,
   ): string {
-    const allowedPeriods = new Set(['all', 'recent', 'day', 'week', 'month', 'year']);
+    const allowedPeriods = new Set(['all', 'recent', 'day', 'week', 'month', 'year', '1d', '1w', 'ever']);
     const periodStr = typeof period === 'string' && allowedPeriods.has(period) ? period : 'all';
     const parsedLimit = Math.max(1, Math.min(50, parseInt(String(limit ?? '10'), 10) || 10));
     const parsedGameId = gameId !== undefined && gameId !== '' && !Number.isNaN(parseInt(String(gameId), 10))
       ? parseInt(String(gameId), 10)
       : '';
-    return `${route}:${periodStr}:${parsedLimit}:${parsedGameId}:${currentUserId ?? 'guest'}`;
+    // No per-user component — trending results are now identical for every
+    // requester (public accounts only, see getTrendingClips), so one cache
+    // entry serves everyone instead of fragmenting per logged-in user.
+    return `${route}:${periodStr}:${parsedLimit}:${parsedGameId}`;
   }
 
   // Evict all trending cache entries whose key starts with a given route prefix.
@@ -3569,7 +3977,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const signed = await supabaseStorage.convertToSignedUrl(clip.user.avatarUrl, 3600);
           if (signed) user = { ...clip.user, avatarUrl: signed };
         }
-        return { ...clip, ...updates, user };
+        // Every caller of this helper is a public feed route (trending,
+        // latest, hashtag, etc.) — uploadIp/uploadDeviceId are spam-
+        // detection signals meant for internal use only and must never
+        // reach an anonymous client.
+        const { uploadIp, uploadDeviceId, ...rest } = clip as any;
+        return { ...rest, ...updates, user };
       })
     );
   }
@@ -3582,7 +3995,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     'stripeCustomerId', 'stripeSubscriptionId',
   ] as const;
 
-  async function signLeaderboardAvatars<T extends { user: { avatarUrl?: string | null } }>(entries: T[]): Promise<T[]> {
+  async function signLeaderboardAvatars<T extends { user: { avatarUrl?: string | null; bannerUrl?: string | null; profileBackgroundImageUrl?: string | null } }>(entries: T[]): Promise<T[]> {
     return Promise.all(
       entries.map(async (entry) => {
         let userData = { ...entry.user };
@@ -3594,6 +4007,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (userData.avatarUrl && userData.avatarUrl.includes('supabase.co/storage')) {
           const signed = await supabaseStorage.convertToSignedUrl(userData.avatarUrl, 3600);
           if (signed) userData.avatarUrl = signed;
+        }
+        // Sign banner URL if needed
+        if (userData.bannerUrl && userData.bannerUrl.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(userData.bannerUrl, 3600);
+          if (signed) userData.bannerUrl = signed;
+        }
+        // Sign profile background image URL if needed
+        if (userData.profileBackgroundImageUrl && userData.profileBackgroundImageUrl.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(userData.profileBackgroundImageUrl, 3600);
+          if (signed) userData.profileBackgroundImageUrl = signed;
         }
         return { ...entry, user: userData };
       })
@@ -3617,7 +4040,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/leaderboard/monthly/current", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 100;
-      const leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
+      let leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
+      if (!leaderboardData || leaderboardData.length === 0) {
+        leaderboardData = await LeaderboardService.getPreviousMonthLeaderboard(limit);
+      }
       res.json(await signLeaderboardAvatars(leaderboardData));
     } catch (error) {
       captureRouteError(error);
@@ -3641,9 +4067,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Weekly leaderboard routes
   app.get("/api/leaderboard/weekly/current", async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit as string) || 100;
-      const leaderboardData = await LeaderboardService.getCurrentWeekLeaderboard(limit);
-      res.json(await signLeaderboardAvatars(leaderboardData));
+      const limit = Math.min(parseInt(req.query.limit as string) || 100, 500);
+
+      // Calendar week: Monday 00:00 through the next Monday 00:00.
+      // This must match the weekly award/cache key so XP resets on Mondays.
+      const weekStart = LeaderboardService.getWeekStart();
+      const weekEnd = LeaderboardService.getWeekEnd();
+
+      // Weekly XP is split across the modern XP ledger and the legacy points
+      // ledger. Aggregate them independently before joining so a user with
+      // events in both tables is not multiplied by a cross join.
+      const rows = await db.execute(sql`
+        SELECT
+          u.id                                    AS "userId",
+          COALESCE(xh.xp, 0) + COALESCE(ph.points, 0) AS "weekXP",
+          u.username,
+          u.display_name                          AS "displayName",
+          u.avatar_url                            AS "avatarUrl",
+          u.banner_url                            AS "bannerUrl",
+          u.hide_banner                           AS "hideBanner",
+          u.accent_color                          AS "accentColor",
+          u.level,
+          u.background_color                      AS "backgroundColor",
+          u.primary_color                         AS "primaryColor",
+          u.profile_background_gradient           AS "profileBackgroundGradient",
+          u.profile_background_gradient_css       AS "profileBackgroundGradientCss",
+          u.profile_background_image_url          AS "profileBackgroundImageUrl",
+          u.nft_profile_token_id                  AS "nftProfileTokenId",
+          u.nft_profile_image_url                 AS "nftProfileImageUrl",
+          u.active_profile_pic_type               AS "activeProfilePicType"
+        FROM users u
+        LEFT JOIN (
+          SELECT user_id, SUM(xp_amount) AS xp
+          FROM user_xp_history
+          WHERE created_at >= ${weekStart.toISOString()}
+            AND created_at < ${weekEnd.toISOString()}
+            AND xp_amount > 0
+          GROUP BY user_id
+        ) xh ON xh.user_id = u.id
+        LEFT JOIN (
+          SELECT user_id, SUM(points) AS points
+          FROM user_points_history
+          WHERE created_at >= ${weekStart.toISOString()}
+            AND created_at < ${weekEnd.toISOString()}
+            AND points > 0
+          GROUP BY user_id
+        ) ph ON ph.user_id = u.id
+        WHERE u.role NOT IN ('admin', 'moderator', 'system')
+          AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+          AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+        ORDER BY "weekXP" DESC, u.id ASC
+        LIMIT ${limit}
+      `);
+
+      const topRows = rows as any[];
+      const userIds = topRows.map(r => Number(r.userId));
+
+      const [clipRows, reelRows, ssRows, followerRows, followingRows] = await Promise.all([
+        userIds.length ? db.execute(sql`SELECT user_id AS "userId", COUNT(*)::int AS count FROM clips WHERE user_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) AND (video_type='clip' OR video_type IS NULL) GROUP BY user_id`) : [],
+        userIds.length ? db.execute(sql`SELECT user_id AS "userId", COUNT(*)::int AS count FROM clips WHERE user_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) AND video_type='reel' GROUP BY user_id`) : [],
+        userIds.length ? db.execute(sql`SELECT user_id AS "userId", COUNT(*)::int AS count FROM screenshots WHERE user_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) GROUP BY user_id`) : [],
+        userIds.length ? db.execute(sql`SELECT following_id AS "userId", COUNT(*)::int AS count FROM follows WHERE following_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) GROUP BY following_id`) : [],
+        userIds.length ? db.execute(sql`SELECT follower_id AS "userId", COUNT(*)::int AS count FROM follows WHERE follower_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) GROUP BY follower_id`) : [],
+      ]);
+
+      const clipMap: Record<number,number> = Object.fromEntries((clipRows as any[]).map(r => [r.userId, r.count]));
+      const reelMap: Record<number,number> = Object.fromEntries((reelRows as any[]).map(r => [r.userId, r.count]));
+      const ssMap: Record<number,number>   = Object.fromEntries((ssRows   as any[]).map(r => [r.userId, r.count]));
+      const followerMap: Record<number,number>  = Object.fromEntries((followerRows  as any[]).map(r => [r.userId, r.count]));
+      const followingMap: Record<number,number> = Object.fromEntries((followingRows as any[]).map(r => [r.userId, r.count]));
+
+      const results = await Promise.all(topRows.map(async (r, idx) => {
+        let avatarUrl = r.avatarUrl || null;
+        let bannerUrl = r.hideBanner ? null : (r.bannerUrl || null);
+        let profileBackgroundImageUrl = r.profileBackgroundImageUrl || null;
+
+        if (avatarUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(avatarUrl, 3600);
+          if (signed) avatarUrl = signed;
+        }
+        if (bannerUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(bannerUrl, 3600);
+          if (signed) bannerUrl = signed;
+        }
+        if (profileBackgroundImageUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(profileBackgroundImageUrl, 3600);
+          if (signed) profileBackgroundImageUrl = signed;
+        }
+
+        const uid = Number(r.userId);
+        const clipsCount      = clipMap[uid]      || 0;
+        const reelsCount      = reelMap[uid]      || 0;
+        const screenshotsCount = ssMap[uid]       || 0;
+
+        return {
+          userId: uid,
+          rank: idx + 1,
+          totalPoints: Number(r.weekXP),
+          uploadsCount: clipsCount + reelsCount + screenshotsCount,
+          clipsCount,
+          reelsCount,
+          screenshotsCount,
+          followersCount:  followerMap[uid]  || 0,
+          followingCount:  followingMap[uid] || 0,
+          user: {
+            id: uid,
+            username: r.username,
+            displayName: r.displayName || null,
+            avatarUrl,
+            bannerUrl,
+            accentColor: r.accentColor || null,
+            avatarBorderColor: null,
+            level: r.level || null,
+            backgroundColor: r.backgroundColor || null,
+            primaryColor: r.primaryColor || null,
+            profileBackgroundGradient: r.profileBackgroundGradient ?? false,
+            profileBackgroundGradientCss: r.profileBackgroundGradientCss || null,
+            profileBackgroundImageUrl,
+          },
+        };
+      }));
+
+      res.json(results);
     } catch (error) {
       captureRouteError(error);
       console.error("Error fetching current week leaderboard:", error);
@@ -3669,17 +4214,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const period = (req.query.period as string) || 'week';
       const limit = Math.min(parseInt(req.query.limit as string) || 10, 20);
 
+      const cacheKey = `trending-gamefolios:${period}:${limit}`;
+      const enriched = await getCachedTrending(cacheKey, async () => {
+      // Minimum entries needed for a meaningful podium display
+      const MIN_PODIUM = 3;
+
+      // ── Qualified by real XP earned in the chosen window ────────────────────
+      // Helper: query user_xp_history for the given time window and return the
+      // top users by XP, together with their full user record.
+      const fetchXpWindow = async (windowStart: string | null, fetchLimit: number) => {
+        const timeFilter = windowStart
+          ? sql`AND xh.created_at >= ${windowStart}`
+          : sql``;
+        const rows = await db.execute(sql`
+          SELECT
+            u.id          AS "userId",
+            COALESCE(SUM(xh.xp_amount), 0)::int AS "totalPoints"
+          FROM user_xp_history xh
+          JOIN users u ON u.id = xh.user_id
+          WHERE xh.xp_amount > 0
+            ${timeFilter}
+            AND u.role NOT IN ('admin', 'moderator', 'system')
+            AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+            AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+          GROUP BY u.id
+          ORDER BY "totalPoints" DESC
+          LIMIT ${fetchLimit}
+        `);
+        const result = ((rows as any).rows ?? rows) as Array<{ userId: string | number; totalPoints: number }>;
+        if (result.length === 0) return [];
+        const ids = result.map(r => Number(r.userId));
+        const userRows = await db.select().from(users).where(inArray(users.id, ids));
+        const userMap: Record<number, any> = Object.fromEntries(userRows.map(u => [u.id, u]));
+        return result
+          .map(row => ({
+            userId: Number(row.userId),
+            uploadsCount: 0,
+            totalPoints: Number(row.totalPoints),
+            user: userMap[Number(row.userId)],
+          }))
+          .filter(e => !!e.user);
+      };
+
+      const now = new Date();
       let leaderboardData: Array<{ userId: number; uploadsCount: number; totalPoints: number; rank?: number; user: any }>;
+      // Track which window was actually used so the frontend can label XP correctly
+      let effectivePeriod: string = period;
+
       if (period === 'month') {
-        leaderboardData = await LeaderboardService.getCurrentMonthLeaderboard(limit);
+        // Last 30 days of XP
+        const monthStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        leaderboardData = await fetchXpWindow(monthStart, limit);
+        // Fall back to all-time if too sparse
+        if (leaderboardData.length < MIN_PODIUM) {
+          leaderboardData = await fetchXpWindow(null, limit);
+          effectivePeriod = 'alltime';
+        }
       } else if (period === 'week') {
-        leaderboardData = await LeaderboardService.getCurrentWeekLeaderboard(limit);
+        // Monday-to-Monday XP window
+        const weekStart = LeaderboardService.getWeekStart(now).toISOString();
+        leaderboardData = await fetchXpWindow(weekStart, limit);
+        // Keep the homepage populated when a new weekly window has not
+        // accumulated enough activity for a meaningful podium.
+        if (leaderboardData.length < MIN_PODIUM) {
+          leaderboardData = await fetchXpWindow(null, limit);
+          effectivePeriod = 'alltime';
+        }
       } else {
-        leaderboardData = await LeaderboardService.getAllTimeLeaderboard(limit);
+        // All-time XP
+        leaderboardData = await fetchXpWindow(null, limit);
       }
 
       if (!leaderboardData || leaderboardData.length === 0) {
-        return res.json([]);
+        return [];
       }
 
       const userIds = leaderboardData.map(e => e.userId);
@@ -3712,12 +4319,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(inArray(follows.followingId, userIds))
         .groupBy(follows.followingId);
 
+      // Batch: following count per user (who these users follow)
+      const followingRows = await db
+        .select({ userId: follows.followerId, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+        .from(follows)
+        .where(inArray(follows.followerId, userIds))
+        .groupBy(follows.followerId);
+
       const clipsMap: Record<number, number> = Object.fromEntries(clipRows.map(r => [r.userId, r.count]));
       const reelsMap: Record<number, number> = Object.fromEntries(reelRows.map(r => [r.userId, r.count]));
       const ssMap: Record<number, number> = Object.fromEntries(ssRows.map(r => [r.userId, r.count]));
       const followerMap: Record<number, number> = Object.fromEntries(followerRows.map(r => [r.userId, r.count]));
+      const followingMap: Record<number, number> = Object.fromEntries(followingRows.map(r => [r.userId, r.count]));
 
-      const enriched = await Promise.all(
+      // Batch: most-played game per user (clips + screenshots, grouped by game)
+      const [clipGameRows, ssGameRows, recentClipRows, recentSsRows] = await Promise.all([
+        db.select({ userId: clips.userId, gameId: clips.gameId, cnt: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(clips)
+          .where(and(inArray(clips.userId, userIds), sql`${clips.gameId} IS NOT NULL`))
+          .groupBy(clips.userId, clips.gameId),
+        db.select({ userId: screenshots.userId, gameId: screenshots.gameId, cnt: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(screenshots)
+          .where(and(inArray(screenshots.userId, userIds), sql`${screenshots.gameId} IS NOT NULL`))
+          .groupBy(screenshots.userId, screenshots.gameId),
+        db.selectDistinctOn([clips.userId], { userId: clips.userId, id: clips.id, createdAt: clips.createdAt, videoType: clips.videoType, gameId: clips.gameId, title: clips.title })
+          .from(clips)
+          .where(inArray(clips.userId, userIds))
+          .orderBy(clips.userId, desc(clips.createdAt)),
+        db.selectDistinctOn([screenshots.userId], { userId: screenshots.userId, id: screenshots.id, createdAt: screenshots.createdAt, gameId: screenshots.gameId })
+          .from(screenshots)
+          .where(inArray(screenshots.userId, userIds))
+          .orderBy(screenshots.userId, desc(screenshots.createdAt)),
+      ]);
+
+      // Find top game per user
+      const gameCounts: Record<number, Record<number, number>> = {};
+      for (const r of [...clipGameRows, ...ssGameRows]) {
+        if (r.gameId == null) continue;
+        if (!gameCounts[r.userId]) gameCounts[r.userId] = {};
+        gameCounts[r.userId][r.gameId] = (gameCounts[r.userId][r.gameId] || 0) + r.cnt;
+      }
+      const topGameIdByUser: Record<number, number> = {};
+      for (const [uidStr, gMap] of Object.entries(gameCounts)) {
+        const top = Object.entries(gMap).sort((a, b) => b[1] - a[1])[0];
+        if (top) topGameIdByUser[parseInt(uidStr)] = parseInt(top[0]);
+      }
+
+      // Find most recent upload per user
+      type RecentRaw = { id: number; createdAt: string; contentType: string; gameId: number | null; title: string | null };
+      const recentByUser: Record<number, RecentRaw> = {};
+      for (const c of recentClipRows) {
+        if (!c.createdAt) continue;
+        const dt = new Date(c.createdAt as unknown as string);
+        const ex = recentByUser[c.userId];
+        if (!ex || dt > new Date(ex.createdAt)) {
+          const ca = c.createdAt as unknown as (Date | string);
+          recentByUser[c.userId] = { id: c.id, createdAt: ca instanceof Date ? ca.toISOString() : ca, contentType: c.videoType === 'reel' ? 'reel' : 'clip', gameId: c.gameId, title: c.title };
+        }
+      }
+      for (const s of recentSsRows) {
+        if (!s.createdAt) continue;
+        const dt = new Date(s.createdAt as unknown as string);
+        const ex = recentByUser[s.userId];
+        if (!ex || dt > new Date(ex.createdAt)) {
+          const sca = s.createdAt as unknown as (Date | string);
+          recentByUser[s.userId] = { id: s.id, createdAt: sca instanceof Date ? sca.toISOString() : sca, contentType: 'screenshot', gameId: s.gameId, title: null };
+        }
+      }
+
+      // Batch-fetch all needed game details
+      const neededGameIds = [...new Set([
+        ...Object.values(topGameIdByUser),
+        ...Object.values(recentByUser).map(r => r.gameId).filter((g): g is number => g != null),
+      ])];
+      const gameDetailRows = neededGameIds.length > 0
+        ? await db.select({ id: games.id, name: games.name, imageUrl: games.imageUrl })
+            .from(games).where(inArray(games.id, neededGameIds))
+        : [];
+      const gameDetailMap: Record<number, { name: string; imageUrl: string | null }> =
+        Object.fromEntries(gameDetailRows.map(g => [g.id, { name: g.name, imageUrl: g.imageUrl }]));
+
+      const entries = await Promise.all(
         leaderboardData.map(async (entry, index) => {
           let userData = { ...entry.user };
           for (const field of SENSITIVE_USER_FIELDS) {
@@ -3727,23 +4409,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const signed = await supabaseStorage.convertToSignedUrl(userData.avatarUrl, 3600);
             if (signed) userData.avatarUrl = signed;
           }
+          if (userData.hideBanner) {
+            userData.bannerUrl = null;
+          }
           if (userData.bannerUrl && userData.bannerUrl.includes('supabase.co/storage')) {
             const signed = await supabaseStorage.convertToSignedUrl(userData.bannerUrl, 3600);
             if (signed) userData.bannerUrl = signed;
           }
+          if (userData.profileBackgroundImageUrl && userData.profileBackgroundImageUrl.includes('supabase.co/storage')) {
+            const signed = await supabaseStorage.convertToSignedUrl(userData.profileBackgroundImageUrl, 3600);
+            if (signed) userData.profileBackgroundImageUrl = signed;
+          }
+
+          const topGid = topGameIdByUser[entry.userId];
+          const mostPlayedGame = topGid != null ? (gameDetailMap[topGid] ?? null) : null;
+          const recent = recentByUser[entry.userId];
+          const recentUpload = recent ? {
+            id: recent.id,
+            contentType: recent.contentType,
+            createdAt: recent.createdAt,
+            gameTitle: recent.gameId != null && gameDetailMap[recent.gameId] ? gameDetailMap[recent.gameId].name : null,
+            title: recent.title,
+          } : null;
+
           return {
             userId: entry.userId,
-            rank: (entry.rank ?? index + 1),
+            rank: index + 1,  // Always use position in results array, not stale stored rank
             uploadsCount: entry.uploadsCount,
             totalPoints: entry.totalPoints,
-            user: userData,
+            effectivePeriod,   // actual window used (may differ from requested period on fallback)
+            user: { id: entry.userId, ...userData },
             clipsCount: clipsMap[entry.userId] || 0,
             reelsCount: reelsMap[entry.userId] || 0,
             screenshotsCount: ssMap[entry.userId] || 0,
             followersCount: followerMap[entry.userId] || 0,
+            followingCount: followingMap[entry.userId] || 0,
+            mostPlayedGame,
+            recentUpload,
           };
         })
       );
+
+      return entries;
+      }); // end getCachedTrending
 
       res.json(enriched);
     } catch (error) {
@@ -3782,6 +4490,282 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching user weekly stats:", error);
       res.status(500).json({ message: "Error fetching user weekly stats" });
     }
+  });
+
+  // Season history — top 3 per season, aggregated from monthly_leaderboard
+  const SEASON_DEFS = [
+    { num: 8, name: "Summer Showdown", icon: "sun",    dateRange: "Jun – Aug 2026",      months: ["2026-06","2026-07","2026-08"] },
+    { num: 7, name: "Spring Clash",    icon: "leaf",   dateRange: "Mar – May 2026",      months: ["2026-03","2026-04","2026-05"] },
+    { num: 6, name: "Winter Warzone",  icon: "snow",   dateRange: "Dec 2025 – Feb 2026", months: ["2025-12","2026-01","2026-02"] },
+    { num: 5, name: "Autumn Assault",  icon: "flame",  dateRange: "Sep – Nov 2025",      months: ["2025-09","2025-10","2025-11"] },
+    { num: 4, name: "Summer Heat",     icon: "sun",    dateRange: "Jun – Aug 2025",      months: ["2025-06","2025-07","2025-08"] },
+    { num: 3, name: "Spring Surge",    icon: "leaf",   dateRange: "Mar – May 2025",      months: ["2025-03","2025-04","2025-05"] },
+  ];
+
+  app.get("/api/leaderboard/season-history", async (req, res) => {
+    try {
+      const seasons = await Promise.all(
+        SEASON_DEFS.map(async (s) => {
+          const rows = await db.execute(sql`
+            SELECT
+              ml.user_id                         AS "userId",
+              SUM(ml.total_points)               AS "seasonPoints",
+              u.username,
+              u.display_name                     AS "displayName",
+              u.avatar_url                       AS "avatarUrl",
+              u.nft_profile_token_id             AS "nftProfileTokenId",
+              u.nft_profile_image_url            AS "nftProfileImageUrl",
+              u.active_profile_pic_type          AS "activeProfilePicType"
+            FROM monthly_leaderboard ml
+            JOIN users u ON u.id = ml.user_id
+            WHERE ml.month = ANY(ARRAY[${sql.join(s.months.map(m => sql`${m}`), sql`, `)}])
+              AND u.role NOT IN ('admin', 'moderator', 'system')
+              AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+              AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+            GROUP BY ml.user_id, u.username, u.display_name, u.avatar_url,
+                     u.nft_profile_token_id, u.nft_profile_image_url, u.active_profile_pic_type
+            ORDER BY "seasonPoints" DESC
+            LIMIT 3
+          `);
+          const top3 = await Promise.all((rows as any[]).map(async (r, idx) => {
+            let avatarUrl = r.avatarUrl || null;
+            let nftProfileImageUrl = r.nftProfileImageUrl || null;
+            if (avatarUrl?.includes('supabase.co/storage')) {
+              const signed = await supabaseStorage.convertToSignedUrl(avatarUrl, 3600);
+              if (signed) avatarUrl = signed;
+            }
+            if (nftProfileImageUrl?.includes('supabase.co/storage')) {
+              const signed = await supabaseStorage.convertToSignedUrl(nftProfileImageUrl, 3600);
+              if (signed) nftProfileImageUrl = signed;
+            }
+            return {
+              rank: idx + 1,
+              userId: Number(r.userId),
+              seasonPoints: Number(r.seasonPoints),
+              user: {
+                username: r.username,
+                displayName: r.displayName,
+                avatarUrl,
+                nftProfileTokenId: r.nftProfileTokenId || null,
+                nftProfileImageUrl,
+                activeProfilePicType: r.activeProfilePicType || null,
+              },
+            };
+          }));
+          return { ...s, top3 };
+        })
+      );
+      res.json(seasons);
+    } catch (error) {
+      console.error("Error fetching season history:", error);
+      res.status(500).json({ message: "Error fetching season history" });
+    }
+  });
+
+  // Current season top players — used by the homepage leaderboard slide podium
+  app.get("/api/leaderboard/current-season/top", async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 10, 500);
+      // Derive season date window from the current season definition so XP is
+      // sourced directly from user_xp_history (the real creator-XP system).
+      const seasonDef = SEASON_DEFS[0];
+      const [sYear, sMonth] = seasonDef.months[0].split('-').map(Number);
+      const lastKey = seasonDef.months[seasonDef.months.length - 1];
+      const [eYear, eMonth] = lastKey.split('-').map(Number);
+      const seasonStart = new Date(Date.UTC(sYear, sMonth - 1, 1)).toISOString();
+      const seasonEnd   = new Date(Date.UTC(eYear, eMonth, 1)).toISOString(); // first day after season
+
+      // LEFT JOIN from users so every member appears, even those with 0 season XP
+      const rows = await db.execute(sql`
+        SELECT
+          u.id                                    AS "userId",
+          COALESCE(SUM(xh.xp_amount), 0)         AS "seasonPoints",
+          u.username,
+          u.display_name                          AS "displayName",
+          u.avatar_url                            AS "avatarUrl",
+          u.banner_url                            AS "bannerUrl",
+          u.hide_banner                           AS "hideBanner",
+          u.accent_color                          AS "accentColor",
+          u.level,
+          u.background_color                      AS "backgroundColor",
+          u.primary_color                         AS "primaryColor",
+          u.profile_background_gradient           AS "profileBackgroundGradient",
+          u.profile_background_gradient_css       AS "profileBackgroundGradientCss",
+          u.profile_background_image_url          AS "profileBackgroundImageUrl",
+          u.nft_profile_token_id                  AS "nftProfileTokenId",
+          u.nft_profile_image_url                 AS "nftProfileImageUrl",
+          u.active_profile_pic_type               AS "activeProfilePicType"
+        FROM users u
+        LEFT JOIN user_xp_history xh
+          ON xh.user_id = u.id
+          AND xh.created_at >= ${seasonStart}
+          AND xh.created_at < ${seasonEnd}
+        WHERE u.role NOT IN ('admin', 'moderator', 'system')
+          AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+          AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+        GROUP BY u.id, u.username, u.display_name, u.avatar_url,
+                 u.banner_url, u.hide_banner, u.accent_color, u.level, u.background_color,
+                 u.primary_color, u.profile_background_gradient, u.profile_background_gradient_css,
+                 u.profile_background_image_url, u.nft_profile_token_id, u.nft_profile_image_url,
+                 u.active_profile_pic_type
+        ORDER BY "seasonPoints" DESC, u.id ASC
+        LIMIT ${limit}
+      `);
+
+      const topRows = rows as any[];
+      const userIds = topRows.map(r => Number(r.userId));
+
+      // Batch-fetch counts for all returned users
+      const userIdArr = userIds.length ? sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]` : sql`ARRAY[]::int[]`;
+      const [clipRows, reelRows, ssRows, followerRows, followingRows, mostPlayedRows, recentUploadRows] = await Promise.all([
+        userIds.length ? db.execute(sql`SELECT user_id AS "userId", COUNT(*)::int AS count FROM clips WHERE user_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) AND (video_type='clip' OR video_type IS NULL) GROUP BY user_id`) : [],
+        userIds.length ? db.execute(sql`SELECT user_id AS "userId", COUNT(*)::int AS count FROM clips WHERE user_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) AND video_type='reel' GROUP BY user_id`) : [],
+        userIds.length ? db.execute(sql`SELECT user_id AS "userId", COUNT(*)::int AS count FROM screenshots WHERE user_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) GROUP BY user_id`) : [],
+        userIds.length ? db.execute(sql`SELECT following_id AS "userId", COUNT(*)::int AS count FROM follows WHERE following_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) GROUP BY following_id`) : [],
+        userIds.length ? db.execute(sql`SELECT follower_id AS "userId", COUNT(*)::int AS count FROM follows WHERE follower_id = ANY(${sql`ARRAY[${sql.join(userIds.map(id => sql`${id}`), sql`, `)}]::int[]`}) GROUP BY follower_id`) : [],
+        // Most played game per user (game with the most clips/reels uploaded)
+        userIds.length ? db.execute(sql`
+          SELECT DISTINCT ON (c.user_id)
+            c.user_id      AS "userId",
+            g.name         AS "gameName",
+            g.image_url    AS "gameImageUrl"
+          FROM clips c
+          JOIN games g ON g.id = c.game_id
+          WHERE c.user_id = ANY(${userIdArr})
+            AND c.game_id IS NOT NULL
+          ORDER BY c.user_id,
+            (SELECT COUNT(*) FROM clips c2 WHERE c2.user_id = c.user_id AND c2.game_id = c.game_id) DESC
+        `) : [],
+        // Most recent upload (clip, reel, or screenshot) per user
+        userIds.length ? db.execute(sql`
+          SELECT DISTINCT ON ("userId") "userId", id, title, "contentType", "createdAt", "gameTitle"
+          FROM (
+            SELECT
+              c.user_id   AS "userId",
+              c.id,
+              c.title,
+              c.video_type AS "contentType",
+              c.created_at AS "createdAt",
+              g.name       AS "gameTitle"
+            FROM clips c
+            LEFT JOIN games g ON g.id = c.game_id
+            WHERE c.user_id = ANY(${userIdArr})
+            UNION ALL
+            SELECT
+              s.user_id    AS "userId",
+              s.id,
+              s.title,
+              'screenshot' AS "contentType",
+              s.created_at AS "createdAt",
+              g.name       AS "gameTitle"
+            FROM screenshots s
+            LEFT JOIN games g ON g.id = s.game_id
+            WHERE s.user_id = ANY(${userIdArr})
+          ) combined
+          ORDER BY "userId", "createdAt" DESC
+        `) : [],
+      ]);
+
+      const clipMap: Record<number,number> = Object.fromEntries((clipRows as any[]).map(r => [r.userId, r.count]));
+      const reelMap: Record<number,number> = Object.fromEntries((reelRows as any[]).map(r => [r.userId, r.count]));
+      const ssMap: Record<number,number> = Object.fromEntries((ssRows as any[]).map(r => [r.userId, r.count]));
+      const followerMap: Record<number,number> = Object.fromEntries((followerRows as any[]).map(r => [r.userId, r.count]));
+      const followingMap: Record<number,number> = Object.fromEntries((followingRows as any[]).map(r => [r.userId, r.count]));
+      const mostPlayedMap: Record<number,{name:string;imageUrl:string|null}> = Object.fromEntries(
+        (mostPlayedRows as any[]).map(r => [Number(r.userId), { name: r.gameName, imageUrl: r.gameImageUrl || null }])
+      );
+      const recentUploadMap: Record<number,{id:number;contentType:string;createdAt:string;gameTitle:string|null;title:string|null}> = Object.fromEntries(
+        (recentUploadRows as any[]).map(r => [Number(r.userId), {
+          id: Number(r.id),
+          contentType: r.contentType,
+          createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+          gameTitle: r.gameTitle || null,
+          title: r.title || null,
+        }])
+      );
+
+      const results = await Promise.all(topRows.map(async (r, idx) => {
+        let avatarUrl = r.avatarUrl || null;
+        let bannerUrl = r.hideBanner ? null : (r.bannerUrl || null);
+        let profileBackgroundImageUrl = r.profileBackgroundImageUrl || null;
+
+        if (avatarUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(avatarUrl, 3600);
+          if (signed) avatarUrl = signed;
+        }
+        if (bannerUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(bannerUrl, 3600);
+          if (signed) bannerUrl = signed;
+        }
+        if (profileBackgroundImageUrl?.includes('supabase.co/storage')) {
+          const signed = await supabaseStorage.convertToSignedUrl(profileBackgroundImageUrl, 3600);
+          if (signed) profileBackgroundImageUrl = signed;
+        }
+
+        const uid = Number(r.userId);
+        const clipsCount = clipMap[uid] || 0;
+        const reelsCount = reelMap[uid] || 0;
+        const screenshotsCount = ssMap[uid] || 0;
+
+        return {
+          userId: uid,
+          rank: idx + 1,
+          totalPoints: Number(r.seasonPoints),
+          uploadsCount: clipsCount + reelsCount + screenshotsCount,
+          clipsCount,
+          reelsCount,
+          screenshotsCount,
+          followersCount: followerMap[uid] || 0,
+          followingCount: followingMap[uid] || 0,
+          mostPlayedGame: mostPlayedMap[uid] || null,
+          recentUpload: recentUploadMap[uid] || null,
+          user: {
+            id: uid,
+            username: r.username,
+            displayName: r.displayName || null,
+            avatarUrl,
+            bannerUrl,
+            accentColor: r.accentColor || null,
+            avatarBorderColor: null,
+            level: r.level || null,
+            backgroundColor: r.backgroundColor || null,
+            primaryColor: r.primaryColor || null,
+            profileBackgroundGradient: r.profileBackgroundGradient ?? false,
+            profileBackgroundGradientCss: r.profileBackgroundGradientCss || null,
+            profileBackgroundImageUrl,
+          },
+        };
+      }));
+
+      res.json(results);
+    } catch (error) {
+      console.error("Error fetching current season top:", error);
+      res.status(500).json({ message: "Error fetching current season top" });
+    }
+  });
+
+  // Active season player count — all valid users on the platform
+  app.get("/api/leaderboard/season-player-count", async (req, res) => {
+    try {
+      const rows = await db.execute(sql`
+        SELECT COUNT(*)::int AS count
+        FROM users
+        WHERE role NOT IN ('admin', 'moderator', 'system')
+          AND (status IS NULL OR status NOT IN ('suspended', 'banned'))
+          AND (hide_from_leaderboard IS NULL OR hide_from_leaderboard = false)
+      `);
+      const count = Number((rows as any[])[0]?.count ?? 0);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching season player count:", error);
+      res.status(500).json({ message: "Error fetching season player count" });
+    }
+  });
+
+  // Public ranked-league configuration — keeps leaderboard displays aligned
+  // with the admin-configurable thresholds used by the dashboard.
+  app.get("/api/leaderboard/league-config", (_req, res) => {
+    res.json({ tiers: getSeasonLeagueTiers() });
   });
 
   // Top contributors routes
@@ -3914,8 +4898,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const limit = parseInt(req.query.limit as string) || 50;
-      const xpHistory = await storage.getUserXPHistory(userId, limit);
-      res.json(xpHistory);
+      // Merge both ledgers that feed totalXP — user_xp_history (views, uploads,
+      // fires received, ...) and user_points_history (likes, comments, shares,
+      // daily login, streak bonuses, watch-5/watch-20, ...) — and drop zero/
+      // negative bookkeeping rows like watch_clip_counted, which are internal
+      // counters (not real XP) and would otherwise spam this list. Mirrors the
+      // merge already done for /api/dashboard's "Recent XP Activity" widget.
+      const [xpHistory, pointsHistory] = await Promise.all([
+        storage.getUserXPHistory(userId, 500),
+        storage.getUserPointsHistory(userId, 500),
+      ]);
+      const merged = [
+        ...xpHistory
+          .filter((h) => h.xpAmount > 0)
+          .map((h) => ({
+            id: h.id,
+            userId: h.userId,
+            clipId: h.clipId,
+            xpAmount: h.xpAmount,
+            viewCount: h.viewCount,
+            source: h.source,
+            description: h.description,
+            createdAt: h.createdAt,
+            clip: h.clip,
+          })),
+        ...pointsHistory
+          .filter((h) => h.points > 0)
+          .map((h) => ({
+            id: -h.id,
+            userId: h.userId,
+            clipId: null,
+            xpAmount: h.points,
+            viewCount: null,
+            source: h.action,
+            description: h.description,
+            createdAt: h.createdAt,
+            clip: null,
+          })),
+      ]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, limit);
+      res.json(merged);
     } catch (error) {
       captureRouteError(error);
       console.error("Error fetching user XP history:", error);
@@ -3973,6 +4996,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { BonusEventsService: BES } = await import("./bonus-events-service");
       const isWeekend = BES.isWeekend();
 
+      // All-challenges bonus — matches the 8 cards in the Daily XP
+      // Challenges widget exactly (login, watch5, watch20, comment, like,
+      // share, upload, lootbox). Idempotent, so safe to check on every load.
+      const allChallengesDone =
+        loginXPToday > 0 &&
+        watch5Done &&
+        watch20Done &&
+        commentedToday &&
+        likedToday &&
+        sharedToday &&
+        lootboxOpenedToday &&
+        creatorStatus.firstUploadOfDayDone;
+      BES.awardAllChallengesBonus(userId, allChallengesDone).catch((err: unknown) => {
+        console.error('Error awarding all-challenges bonus:', err);
+      });
+
       res.json({
         clipsWatchedToday,
         watch5Done,
@@ -3991,6 +5030,660 @@ export async function registerRoutes(app: Express): Promise<Server> {
       captureRouteError(error);
       console.error("Error fetching daily activity:", error);
       res.status(500).json({ message: "Error fetching daily activity" });
+    }
+  });
+
+  // ─── Dashboard Aggregate Endpoint ─────────────────────────────────────────
+  // League order: Bronze -> Silver -> Gold -> Platinum -> Onyx -> Diamond -> Champion.
+  // Thresholds and rank gates are configurable through the XP settings table.
+  function buildSeasonLeague(
+    seasonXP: number,
+    seasonRank: number | null,
+    championCutoffXP: number | null,
+    totalSeasonPlayers: number
+  ) {
+    const seasonTiers = getSeasonLeagueTiers();
+    // Diamond/Champion are rank-gated, but only once a player has actually
+    // reached their XP threshold — rank gates prevent low-XP players from
+    // skipping straight to Diamond/Champion.
+    const championTier = seasonTiers.find((t) => t.name === "Champion")!;
+    const diamondTier = seasonTiers.find((t) => t.name === "Diamond")!;
+    const onyxTier = seasonTiers.find((t) => t.name === "Onyx")!;
+    const hasReachedOnyx = seasonXP >= onyxTier.min;
+    const isChampion = seasonXP >= championTier.min && seasonRank !== null && seasonRank <= championTier.rankGate!;
+    const isDiamond = seasonXP >= diamondTier.min && !isChampion && seasonRank !== null && seasonRank <= diamondTier.rankGate!;
+
+    if (isChampion) {
+      return {
+        tier: "Champion",
+        league: "Champion",
+        leagueIcon: "🏆",
+        leagueColor: "#B7FF1A",
+        seasonXP,
+        seasonRank,
+        totalSeasonPlayers,
+        championCutoffXP,
+        isTopRank: seasonRank === 1,
+        currentThreshold: championTier.min,
+        nextThreshold: null,
+        xpToNext: 0,
+        progressPercent: 100,
+      };
+    }
+
+    if (isDiamond) {
+      const needed = championCutoffXP !== null ? Math.max(0, championCutoffXP - seasonXP) : null;
+      return {
+        tier: "Diamond",
+        league: "Diamond",
+        leagueIcon: "💠",
+        leagueColor: "#E0E7FF",
+        seasonXP,
+        seasonRank,
+        totalSeasonPlayers,
+        championCutoffXP,
+        xpToChampion: needed,
+        rankToChampion: seasonRank !== null ? Math.max(0, seasonRank - 10) : null,
+        currentThreshold: diamondTier.min,
+        nextLeague: "Champion",
+        nextLeagueIcon: championTier.icon,
+        nextThreshold: championTier.min,
+        xpToNext: Math.max(0, championTier.min - seasonXP),
+        progressPercent: Math.min(100, (seasonXP / championTier.min) * 100),
+      };
+    }
+
+    // Bronze -> Onyx, determined by season XP thresholds
+    let current = seasonTiers[0];
+    for (const tier of seasonTiers.slice(0, 5)) {
+      if (seasonXP >= tier.min) current = tier;
+    }
+    const currentIndex = seasonTiers.findIndex((t) => t.name === current.name);
+    const isOnyx = current.name === "Onyx";
+
+    if (isOnyx) {
+      const rankToDiamond = seasonRank !== null ? Math.max(0, seasonRank - diamondTier.rankGate!) : null;
+      return {
+        tier: "Onyx",
+        league: "Onyx",
+        leagueIcon: current.icon,
+        leagueColor: current.color,
+        seasonXP,
+        seasonRank,
+        totalSeasonPlayers,
+        nextLeague: diamondTier.name,
+        nextLeagueIcon: diamondTier.icon,
+        nextThreshold: diamondTier.min,
+        currentThreshold: current.min,
+        xpToNext: Math.max(0, diamondTier.min - seasonXP),
+        progressPercent: Math.min(100, (seasonXP / diamondTier.min) * 100),
+        rankToNext: rankToDiamond,
+      };
+    }
+
+    const nextTier = seasonTiers[currentIndex + 1];
+    const nextThreshold = nextTier ? nextTier.min : current.max + 1;
+    const xpToNext = Math.max(0, nextThreshold - seasonXP);
+    const progressPercent = Math.min(100, Math.max(0, ((seasonXP - current.min) / Math.max(1, nextThreshold - current.min)) * 100));
+
+    return {
+      tier: current.name,
+      league: current.name,
+      leagueIcon: current.icon,
+      leagueColor: current.color,
+      seasonXP,
+      seasonRank,
+      totalSeasonPlayers,
+      nextLeague: nextTier ? nextTier.name : "Onyx",
+      nextLeagueIcon: nextTier ? nextTier.icon : "🖤",
+      nextThreshold,
+      xpToNext,
+      progressPercent,
+      currentThreshold: current.min,
+    };
+  }
+
+  app.get("/api/dashboard", authMiddleware, async (req, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const { getLevelProgress } = await import("./level-system");
+      const progress = getLevelProgress(user.totalXP, user.level);
+
+      // Daily activity
+      const [xpHistory, pointsHistory] = await Promise.all([
+        storage.getUserXPHistory(userId, 500),
+        storage.getUserPointsHistory(userId, 500),
+      ]);
+      const today = new Date();
+      const isSameDay = (d1: Date, d2: Date) =>
+        d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate();
+      const todayXP = xpHistory.filter((h) => isSameDay(new Date(h.createdAt), today));
+      const todayPts = pointsHistory.filter((h) => isSameDay(new Date(h.createdAt), today));
+
+      const clipsWatchedToday = todayXP.filter((h) => h.source === "watch_clip_counted").length;
+      const watch5Done = todayPts.some((h) => h.action === "watch_5_clips");
+      const watch20Done = todayPts.some((h) => h.action === "watch_20_clips");
+      const commentedToday = todayPts.some((h) => h.action === "comment");
+      const likedToday = todayPts.some((h) => h.action === "like");
+      const sharedToday = todayPts.some((h) => h.action === "share_given");
+      const loginXPToday = todayPts.filter((h) => h.action === "daily_login").reduce((s, h) => s + h.points, 0);
+      const streakBonusToday = todayPts.filter((h) => h.action === "streak_milestone").reduce((s, h) => s + h.points, 0);
+      const lootboxOpenedToday = todayPts.some((h) => h.action === "lootbox_bonus");
+      const firstUploadOfDayDone = todayPts.some((h) => h.action === "first_upload_of_day");
+
+      // All-challenges bonus — matches the 8 cards in the Daily XP
+      // Challenges widget exactly. Idempotent, so safe to check on every load.
+      const allChallengesDone =
+        loginXPToday > 0 &&
+        watch5Done &&
+        watch20Done &&
+        commentedToday &&
+        likedToday &&
+        sharedToday &&
+        lootboxOpenedToday &&
+        firstUploadOfDayDone;
+      BonusEventsService.awardAllChallengesBonus(userId, allChallengesDone).catch((err) => {
+        console.error('Error awarding all-challenges bonus:', err);
+      });
+
+      // Streak
+      const { StreakService: SS } = await import("./streak-service");
+      const streakInfo = await SS.getUserStreak(userId);
+
+      // Lootbox
+      const lootboxStatus = await storage.getDailyLootboxStatus(userId);
+
+      // Rivals — mirror the exact ranking used by /api/leaderboard/current-season/top:
+      // season XP from user_xp_history, all qualifying users included (no HAVING),
+      // ordered by seasonXP DESC then user id ASC so ties are deterministic.
+      // Removing the HAVING clause means users with 0 season XP still get a rank
+      // (near the bottom) instead of disappearing from the board entirely, which
+      // was causing the user to show as #1 when they had 0 XP because my_entry
+      // was empty and the fallback render put them first.
+      const rivalsSeasonDef = SEASON_DEFS[0];
+      const [rivSYear, rivSMonth] = rivalsSeasonDef.months[0].split('-').map(Number);
+      const rivLastKey = rivalsSeasonDef.months[rivalsSeasonDef.months.length - 1];
+      const [rivEYear, rivEMonth] = rivLastKey.split('-').map(Number);
+      const rivalsSeasonStart = new Date(Date.UTC(rivSYear, rivSMonth - 1, 1)).toISOString();
+      const rivalsSeasonEnd   = new Date(Date.UTC(rivEYear, rivEMonth, 1)).toISOString();
+
+      const rivalsResult = await db.execute(sql`
+        WITH season_board AS (
+          -- All qualifying users, LEFT JOIN so 0-XP users are included
+          SELECT
+            u.id                                          AS "userId",
+            COALESCE(SUM(xh.xp_amount), 0)               AS "seasonXP",
+            u.username,
+            u.display_name                                AS "displayName",
+            u.avatar_url                                  AS "avatarUrl",
+            ROW_NUMBER() OVER (
+              ORDER BY COALESCE(SUM(xh.xp_amount), 0) DESC, u.id ASC
+            )                                             AS rank
+          FROM users u
+          LEFT JOIN user_xp_history xh
+            ON  xh.user_id    = u.id
+            AND xh.created_at >= ${rivalsSeasonStart}
+            AND xh.created_at <  ${rivalsSeasonEnd}
+            AND xh.xp_amount  >  0
+          WHERE u.role NOT IN ('admin', 'moderator', 'system')
+            AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+            AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+          GROUP BY u.id, u.username, u.display_name, u.avatar_url
+        ),
+        my_entry AS (
+          SELECT rank AS my_rank FROM season_board WHERE "userId" = ${userId}
+        )
+        SELECT sb."userId", sb."seasonXP", sb.username, sb."displayName", sb."avatarUrl", sb.rank
+        FROM season_board sb, my_entry me
+        WHERE sb.rank BETWEEN GREATEST(1, me.my_rank - 2) AND me.my_rank + 2
+        ORDER BY sb.rank ASC
+      `);
+      const rivalsData: any[] = (rivalsResult as any).rows ?? (rivalsResult as any);
+      const rank = rivalsData.find((r: any) => Number(r.userId) === userId)?.rank ?? null;
+
+      // Recent XP activity (last 20) — merges both ledgers that feed
+      // totalXP: user_xp_history (views, uploads, fires received, ...) and
+      // user_points_history (likes, comments, shares, daily login, streak
+      // bonuses, watch-5/watch-20, ...). Reading only one made most activity
+      // (anything routed through LeaderboardService) invisible here even
+      // though it had already been added to the user's total XP.
+      // Points-history ids are negated so they can't collide with
+      // xp-history ids, which come from a different table/sequence.
+      const recentActivity = [
+        ...xpHistory
+          .filter((h) => h.xpAmount > 0)
+          .map((h) => ({
+            id: h.id,
+            xpAmount: h.xpAmount,
+            source: h.source,
+            description: h.description,
+            createdAt: h.createdAt,
+          })),
+        ...pointsHistory
+          .filter((h) => h.points > 0)
+          .map((h) => ({
+            id: -h.id,
+            xpAmount: h.points,
+            source: h.action,
+            description: h.description,
+            createdAt: h.createdAt,
+          })),
+      ]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 20);
+
+      // XP earned today
+      const xpEarnedToday = todayXP.reduce((s, h) => s + h.xpAmount, 0);
+
+      // Joined bounties
+      const joinedBountiesResult = await db.execute(sql`
+        SELECT
+          gb.id, gb.title, gb.campaign_title AS "campaignTitle",
+          gb.description, gb.end_date AS "endDate", gb.status,
+          gb.required_clips AS "requiredClips", gb.required_reels AS "requiredReels",
+          gb.required_screenshots AS "requiredScreenshots", gb.required_views AS "requiredViews",
+          gba.clips_uploaded AS "clipsUploaded", gba.reels_uploaded AS "reelsUploaded",
+          gba.screenshots_uploaded AS "screenshotsUploaded", gba.total_views AS "totalViews",
+          gba.xp_earned AS "xpEarned", gba.progress_percent AS "progressPercent",
+          gba.status AS "joinStatus",
+          g.name AS "gameName", g.image_url AS "gameImage"
+        FROM game_bounty_acceptances gba
+        JOIN game_bounties gb ON gb.id = gba.bounty_id
+        LEFT JOIN games g ON g.id = gb.game_id
+        WHERE gba.user_id = ${userId} AND gba.status = 'active' AND gb.status = 'active'
+        ORDER BY gb.end_date ASC NULLS LAST
+        LIMIT 5
+      `);
+      const joinedBounties = (joinedBountiesResult as any).rows ?? joinedBountiesResult;
+
+      // Followers / following counts
+      const [followerRows, followingRows] = await Promise.all([
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` }).from(follows).where(eq(follows.followingId, userId)),
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` }).from(follows).where(eq(follows.followerId, userId)),
+      ]);
+      const followersCount = followerRows[0]?.count ?? 0;
+      const followingCount = followingRows[0]?.count ?? 0;
+
+      // Nearby leaderboard entries (rivals) — built from the live XP query above
+      const nearbyRivals = rivalsData
+        .map((e: any) => ({
+          rank: Number(e.rank),
+          userId: Number(e.userId),
+          username: typeof e.username === "string" ? e.username.trim() : "",
+          displayName: e.displayName ?? null,
+          avatarUrl: e.avatarUrl ?? null,
+          totalXP: Math.round(Number(e.seasonXP ?? 0)),
+          isMe: Number(e.userId) === userId,
+        }))
+        .filter((r: any) => r.userId > 0 && r.rank > 0 && r.username.length > 0);
+
+      // Next rewards preview
+      const nextLevel = user.level + 1;
+      const nextLevelXP = getLevelProgress(user.totalXP, user.level).pointsForNextLevel;
+      const nextRewards = [
+        { type: "level", name: `Level ${nextLevel}`, description: "New level unlock", xpNeeded: nextLevelXP - user.totalXP },
+        { type: "lootbox", name: "Daily Lootbox", description: lootboxStatus.canOpen ? "Ready to open!" : "Available tomorrow", available: lootboxStatus.canOpen },
+      ];
+
+      // Season League progress (Bronze -> Silver -> Gold -> Platinum -> Diamond -> Master -> Champion)
+      const nowKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+      const currentSeasonDef = SEASON_DEFS.find((s) => s.months.includes(nowKey)) || SEASON_DEFS[0];
+      const [seasonStartYear, seasonStartMonth] = currentSeasonDef.months[0].split("-").map(Number);
+      const seasonEndKey = currentSeasonDef.months[currentSeasonDef.months.length - 1];
+      const [seasonEndYear, seasonEndMonth] = seasonEndKey.split("-").map(Number);
+      const seasonStart = new Date(Date.UTC(seasonStartYear, seasonStartMonth - 1, 1)).toISOString();
+      const seasonEnd = new Date(Date.UTC(seasonEndYear, seasonEndMonth, 1)).toISOString();
+      const seasonRankRows = await db.execute(sql`
+        WITH season_totals AS (
+          SELECT u.id AS "userId", COALESCE(SUM(xh.xp_amount), 0) AS "seasonXP"
+          FROM users u
+          LEFT JOIN user_xp_history xh
+            ON xh.user_id = u.id
+            AND xh.created_at >= ${seasonStart}
+            AND xh.created_at < ${seasonEnd}
+            AND xh.xp_amount > 0
+          WHERE u.role NOT IN ('admin', 'moderator', 'system')
+            AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+            AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+          GROUP BY u.id
+        )
+        SELECT
+          "userId",
+          u.username,
+          u.display_name AS "displayName",
+          "seasonXP",
+          RANK() OVER (ORDER BY "seasonXP" DESC) AS "seasonRank"
+        FROM season_totals
+        JOIN users u ON u.id = season_totals."userId"
+        ORDER BY "seasonRank" ASC
+      `);
+      const seasonRankList = ((seasonRankRows as any).rows ?? seasonRankRows) as any[];
+      const totalSeasonPlayers = seasonRankList.length;
+      const myRow = seasonRankList.find((r) => Number(r.userId) === userId);
+      const seasonXP = myRow ? Math.round(Number(myRow.seasonXP)) : 0;
+      const seasonRank = myRow ? Number(myRow.seasonRank) : null;
+      const championCutoffXP = seasonRankList[9] ? Math.round(Number(seasonRankList[9].seasonXP)) : null;
+
+      const seasonLeague = buildSeasonLeague(seasonXP, seasonRank, championCutoffXP, totalSeasonPlayers);
+      const seasonTiers = getSeasonLeagueTiers();
+      const currentTier = seasonTiers.find((tier) => tier.name === seasonLeague.league) ?? seasonTiers[0];
+      const nextPlayer = seasonRank && seasonRank > 1
+        ? seasonRankList.find((row) => (
+            Number(row.seasonRank) === seasonRank - 1
+            && Number.isFinite(Number(row.userId))
+            && Number(row.userId) > 0
+            && typeof row.username === "string"
+            && row.username.trim().length > 0
+            && Number.isFinite(Number(row.seasonRank))
+            && Number.isFinite(Number(row.seasonXP))
+          ))
+        : null;
+      const top100Entry = seasonRankList[99] ?? null;
+      const top50Entry = seasonRankList[49] ?? null;
+      const microGoals = [
+        ...(nextPlayer ? [{
+          type: "overtake",
+          label: `Overtake ${nextPlayer.displayName || nextPlayer.username}`,
+          detail: `${Math.max(1, Math.round(Number(nextPlayer.seasonXP) - seasonXP + 1)).toLocaleString()} XP to move to Rank #${Number(nextPlayer.seasonRank)}`,
+          current: seasonXP,
+          target: Math.round(Number(nextPlayer.seasonXP) + 1),
+          progressPercent: Math.min(100, Math.round((seasonXP / Math.max(1, Number(nextPlayer.seasonXP) + 1)) * 100)),
+          href: `/profile/${nextPlayer.username}`,
+        }] : []),
+        ...(seasonRank && seasonRank > 100 && top100Entry ? [{
+          type: "top_100",
+          label: "Reach Top 100",
+          detail: `${Math.max(1, Math.round(Number(top100Entry.seasonXP) - seasonXP + 1)).toLocaleString()} XP to reach Rank #100`,
+          current: seasonXP,
+          target: Math.round(Number(top100Entry.seasonXP) + 1),
+          progressPercent: Math.min(100, Math.round((seasonXP / Math.max(1, Number(top100Entry.seasonXP) + 1)) * 100)),
+          href: "/leaderboard",
+        }] : []),
+        ...(seasonRank && seasonRank > 50 && top50Entry ? [{
+          type: "top_50",
+          label: "Push toward Top 50",
+          detail: `${Math.max(1, Math.round(Number(top50Entry.seasonXP) - seasonXP + 1)).toLocaleString()} XP to reach Rank #50`,
+          current: seasonXP,
+          target: Math.round(Number(top50Entry.seasonXP) + 1),
+          progressPercent: Math.min(100, Math.round((seasonXP / Math.max(1, Number(top50Entry.seasonXP) + 1)) * 100)),
+          href: "/leaderboard",
+        }] : []),
+        ...(seasonLeague.nextLeague && (seasonLeague.xpToNext || seasonLeague.rankToNext) ? [{
+          type: "next_league",
+          label: `Reach ${seasonLeague.nextLeague}`,
+          detail: seasonLeague.rankToNext
+            ? `${seasonLeague.rankToNext.toLocaleString()} place${seasonLeague.rankToNext === 1 ? "" : "s"} until ${seasonLeague.nextLeague} eligibility`
+            : `${(seasonLeague.xpToNext ?? 0).toLocaleString()} XP until ${seasonLeague.nextLeague}${seasonLeague.nextLeague === "Diamond" || seasonLeague.nextLeague === "Champion" ? " eligibility" : ""}`,
+          current: seasonXP,
+          target: seasonLeague.nextThreshold ?? seasonXP,
+          progressPercent: Math.min(100, Math.round(seasonLeague.progressPercent ?? 0)),
+          href: "/leaderboard",
+        }] : []),
+      ];
+      const seasonBreakdownRows = await db.execute(sql`
+        SELECT
+          source,
+          COUNT(*)::int AS "eventCount",
+          COALESCE(SUM(xp_amount), 0)::int AS "totalXP"
+        FROM user_xp_history
+        WHERE user_id = ${userId}
+          AND created_at >= ${seasonStart}
+          AND created_at < ${seasonEnd}
+          AND xp_amount > 0
+        GROUP BY source
+        ORDER BY "totalXP" DESC, source ASC
+      `);
+      const seasonBreakdown = (((seasonBreakdownRows as any).rows ?? seasonBreakdownRows) as any[]).map((row) => ({
+        source: row.source,
+        eventCount: Number(row.eventCount),
+        totalXP: Math.round(Number(row.totalXP)),
+      }));
+
+      // ── Creator analytics ──────────────────────────────────────────────────
+      const [
+        clipStatsRows,
+        screenshotStatsRows,
+        clipLikesRows,
+        screenshotLikesRows,
+        clipCommentsRows,
+        screenshotCommentsRows,
+        newFollowersRows,
+        topClipRows,
+        topReelRows,
+        topScreenshotRows,
+        recentUploadsRows,
+      ] = await Promise.all([
+        db.execute(sql`
+          SELECT COALESCE(SUM(views),0)::int AS total_views, COUNT(*)::int AS total_clips
+          FROM clips WHERE user_id = ${userId}
+        `),
+        db.execute(sql`
+          SELECT COALESCE(SUM(views),0)::int AS total_views, COUNT(*)::int AS total_screenshots
+          FROM screenshots WHERE user_id = ${userId}
+        `),
+        db.execute(sql`
+          SELECT COUNT(*)::int AS total FROM likes l
+          JOIN clips c ON c.id = l.clip_id WHERE c.user_id = ${userId}
+        `),
+        db.execute(sql`
+          SELECT COUNT(*)::int AS total FROM screenshot_likes sl
+          JOIN screenshots s ON s.id = sl.screenshot_id WHERE s.user_id = ${userId}
+        `),
+        db.execute(sql`
+          SELECT COUNT(*)::int AS total FROM comments
+          WHERE clip_id IN (SELECT id FROM clips WHERE user_id = ${userId})
+        `),
+        db.execute(sql`
+          SELECT COUNT(*)::int AS total FROM screenshot_comments
+          WHERE screenshot_id IN (SELECT id FROM screenshots WHERE user_id = ${userId})
+        `),
+        db.execute(sql`
+          SELECT COUNT(*)::int AS total FROM follows
+          WHERE following_id = ${userId} AND created_at >= NOW() - INTERVAL '7 days'
+        `),
+        // Top clip (not reel)
+        db.execute(sql`
+          SELECT c.id, c.title, c.thumbnail_url AS "thumbnailUrl", COALESCE(c.views,0) AS views,
+                 c.created_at AS "createdAt", COUNT(l.id)::int AS "likeCount",
+                 (SELECT COUNT(*)::int FROM comments WHERE clip_id = c.id) AS "commentCount"
+          FROM clips c LEFT JOIN likes l ON l.clip_id = c.id
+          WHERE c.user_id = ${userId} AND (c.video_type IS NULL OR c.video_type = 'clip')
+          GROUP BY c.id ORDER BY c.views DESC NULLS LAST LIMIT 1
+        `),
+        // Top reel
+        db.execute(sql`
+          SELECT c.id, c.title, c.thumbnail_url AS "thumbnailUrl", COALESCE(c.views,0) AS views,
+                 c.created_at AS "createdAt", COUNT(l.id)::int AS "likeCount",
+                 (SELECT COUNT(*)::int FROM comments WHERE clip_id = c.id) AS "commentCount"
+          FROM clips c LEFT JOIN likes l ON l.clip_id = c.id
+          WHERE c.user_id = ${userId} AND c.video_type = 'reel'
+          GROUP BY c.id ORDER BY c.views DESC NULLS LAST LIMIT 1
+        `),
+        // Top screenshot
+        db.execute(sql`
+          SELECT s.id, s.title, COALESCE(s.thumbnail_url, s.image_url) AS "thumbnailUrl",
+                 COALESCE(s.views,0) AS views, s.created_at AS "createdAt",
+                 COUNT(sl.id)::int AS "likeCount",
+                 (SELECT COUNT(*)::int FROM screenshot_comments WHERE screenshot_id = s.id) AS "commentCount"
+          FROM screenshots s LEFT JOIN screenshot_likes sl ON sl.screenshot_id = s.id
+          WHERE s.user_id = ${userId}
+          GROUP BY s.id ORDER BY s.views DESC NULLS LAST, COUNT(sl.id) DESC LIMIT 1
+        `),
+        // Recent uploads (clips + screenshots, last 6)
+        db.execute(sql`
+          SELECT * FROM (
+            SELECT c.id, c.title, c.thumbnail_url AS "thumbnailUrl", COALESCE(c.views,0) AS views,
+                   c.created_at AS "createdAt", c.video_type AS "videoType",
+                   COUNT(l.id)::int AS "likeCount",
+                   (SELECT COUNT(*)::int FROM comments WHERE clip_id = c.id) AS "commentCount"
+            FROM clips c LEFT JOIN likes l ON l.clip_id = c.id
+            WHERE c.user_id = ${userId}
+            GROUP BY c.id
+            UNION ALL
+            SELECT s.id, s.title, COALESCE(s.thumbnail_url, s.image_url) AS "thumbnailUrl",
+                   COALESCE(s.views,0) AS views, s.created_at AS "createdAt", 'screenshot' AS "videoType",
+                   COUNT(sl.id)::int AS "likeCount",
+                   (SELECT COUNT(*)::int FROM screenshot_comments WHERE screenshot_id = s.id) AS "commentCount"
+            FROM screenshots s LEFT JOIN screenshot_likes sl ON sl.screenshot_id = s.id
+            WHERE s.user_id = ${userId}
+            GROUP BY s.id
+          ) combined ORDER BY "createdAt" DESC NULLS LAST LIMIT 6
+        `),
+      ]);
+
+      const gr = (r: any) => (r as any).rows ?? r;
+      const clipStats       = gr(clipStatsRows)[0]       ?? { total_views: 0, total_clips: 0 };
+      const screenshotStats = gr(screenshotStatsRows)[0] ?? { total_views: 0, total_screenshots: 0 };
+      const totalCreatorViews   = Number(clipStats.total_views) + Number(screenshotStats.total_views);
+      const totalCreatorUploads = Number(clipStats.total_clips) + Number(screenshotStats.total_screenshots);
+      const totalLikesReceived  = Number((gr(clipLikesRows)[0] ?? { total: 0 }).total) + Number((gr(screenshotLikesRows)[0] ?? { total: 0 }).total);
+      const totalComments  = Number((gr(clipCommentsRows)[0] ?? { total: 0 }).total) + Number((gr(screenshotCommentsRows)[0] ?? { total: 0 }).total);
+      const newFollowersThisWeek = Number((gr(newFollowersRows)[0] ?? { total: 0 }).total);
+      const topClip        = gr(topClipRows)[0]        ? { ...gr(topClipRows)[0],        contentType: "clip"        } : null;
+      const topReel        = gr(topReelRows)[0]        ? { ...gr(topReelRows)[0],        contentType: "reel"        } : null;
+      const topScreenshot  = gr(topScreenshotRows)[0]  ? { ...gr(topScreenshotRows)[0],  contentType: "screenshot"  } : null;
+      const recentUploads  = gr(recentUploadsRows).map((r: any) => ({
+        ...r,
+        contentType: r.videoType === "reel" ? "reel" : r.videoType === "screenshot" ? "screenshot" : "clip",
+      }));
+
+      // ── Goals ──────────────────────────────────────────────────────────────
+      const followerMilestones = [50, 100, 250, 500, 1000, 2500, 5000, 10000, 50000];
+      const nextFollowerTarget = followerMilestones.find((m) => m > followersCount) ?? null;
+      const viewMilestones = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000];
+      const nextViewTarget = viewMilestones.find((m) => m > totalCreatorViews) ?? null;
+
+      const dashGoals: any[] = [];
+      if (seasonLeague.xpToNext && seasonLeague.nextLeague && seasonLeague.nextThreshold) {
+        dashGoals.push({
+          type: "league",
+          label: `Reach ${seasonLeague.nextLeague} League`,
+          detail: `${seasonLeague.xpToNext.toLocaleString()} more Season XP`,
+          current: seasonXP,
+          target: seasonLeague.nextThreshold,
+          percent: Math.min(Math.round(seasonLeague.progressPercent ?? 0), 100),
+          unit: "XP",
+          href: "/leaderboard",
+        });
+      }
+      if (nextFollowerTarget) {
+        dashGoals.push({
+          type: "followers",
+          label: `${nextFollowerTarget >= 1000 ? `${nextFollowerTarget / 1000}K` : nextFollowerTarget} Followers`,
+          detail: `${nextFollowerTarget - followersCount} more followers needed`,
+          current: followersCount,
+          target: nextFollowerTarget,
+          percent: Math.min(Math.round((followersCount / nextFollowerTarget) * 100), 100),
+          unit: "Followers",
+          href: null,
+        });
+      }
+      if (nextViewTarget) {
+        dashGoals.push({
+          type: "views",
+          label: `${nextViewTarget >= 1000 ? `${Math.round(nextViewTarget / 1000)}K` : nextViewTarget} Total Views`,
+          detail: `${(nextViewTarget - totalCreatorViews).toLocaleString()} views to go`,
+          current: totalCreatorViews,
+          target: nextViewTarget,
+          percent: Math.min(Math.round((totalCreatorViews / nextViewTarget) * 100), 100),
+          unit: "Views",
+          href: null,
+        });
+      }
+      dashGoals.push({
+        type: "daily_upload",
+        label: "Upload Content Today",
+        detail: firstUploadOfDayDone ? "Done! +100 XP earned" : "Earn 100 XP with your first upload",
+        current: firstUploadOfDayDone ? 1 : 0,
+        target: 1,
+        percent: firstUploadOfDayDone ? 100 : 0,
+        unit: "Upload",
+        href: "/upload",
+        completed: firstUploadOfDayDone,
+      });
+      dashGoals.push({
+        type: "lootbox",
+        label: "Open Daily Lootbox",
+        detail: lootboxOpenedToday ? "Done! XP claimed" : lootboxStatus.canOpen ? "Ready to claim!" : "Opens tomorrow",
+        current: lootboxOpenedToday ? 1 : 0,
+        target: 1,
+        percent: lootboxOpenedToday ? 100 : lootboxStatus.canOpen ? 50 : 0,
+        unit: "Lootbox",
+        href: "/level-tracker",
+        completed: lootboxOpenedToday,
+        ready: lootboxStatus.canOpen,
+      });
+
+      res.json({
+        player: {
+          username: user.username,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl,
+          level: user.level,
+          totalXP: user.totalXP,
+          currentPoints: progress.currentPoints,
+          pointsForNextLevel: progress.pointsForNextLevel,
+          pointsRemaining: progress.pointsRemaining,
+          progressPercent: progress.progressPercent,
+          league: seasonLeague.league,
+          leagueColor: seasonLeague.leagueColor,
+          rank: rank,
+          currentStreak: streakInfo.currentStreak,
+          longestStreak: streakInfo.longestStreak,
+          lootboxReady: lootboxStatus.canOpen,
+        },
+        seasonLeague: {
+          ...seasonLeague,
+          seasonName: currentSeasonDef.name,
+          seasonDateRange: currentSeasonDef.dateRange,
+          seasonEnd,
+          breakdown: seasonBreakdown,
+          tiers: seasonTiers,
+          currentTier,
+          microGoals,
+        },
+        today: {
+          clipsWatchedToday,
+          watch5Done,
+          watch20Done,
+          commentedToday,
+          likedToday,
+          sharedToday,
+          loginXPToday,
+          streakBonusToday,
+          lootboxOpenedToday,
+          firstUploadOfDayDone,
+          xpEarnedToday,
+        },
+        bounties: joinedBounties,
+        recentActivity,
+        social: {
+          followersCount,
+          followingCount,
+          nearbyRivals,
+        },
+        nextRewards,
+        creator: {
+          totalViews: totalCreatorViews,
+          totalLikes: totalLikesReceived,
+          totalComments,
+          totalUploads: totalCreatorUploads,
+          newFollowersThisWeek,
+          topClip,
+          topReel,
+          topScreenshot,
+          recentUploads,
+        },
+        goals: dashGoals,
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard:", error);
+      res.status(500).json({ message: "Error fetching dashboard" });
     }
   });
 
@@ -4112,6 +5805,149 @@ export async function registerRoutes(app: Express): Promise<Server> {
       captureRouteError(error);
       console.error("Error recalculating levels:", error);
       res.status(500).json({ message: "Error recalculating levels" });
+    }
+  });
+
+  // One-time repair: re-sync users.banner_url from active uploaded banners and
+  // recompute users.total_xp (points) + level from user_points_history.
+  // Fixes historical drift where history and totals fell out of sync.
+  app.post("/api/admin/repair-user-data", authMiddleware, async (req, res) => {
+    try {
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+
+      // 0) Fix user_points_history id sequence (production logs show duplicate-key
+      // failures on insert — the sequence fell behind max(id), blocking new awards)
+      await db.execute(sql`
+        SELECT setval(
+          pg_get_serial_sequence('user_points_history', 'id'),
+          GREATEST((SELECT COALESCE(MAX(id), 0) FROM user_points_history), 1)
+        )
+      `);
+
+      // db.execute returns rows directly with the postgres-js driver, but be
+      // defensive in case of a `.rows` wrapper
+      const asRows = (r: any): any[] => (Array.isArray(r) ? r : r?.rows ?? []);
+
+      // 1) Banner repair: users.banner_url must match their active uploaded banner
+      const bannerResult = asRows(await db.execute(sql`
+        UPDATE users u
+        SET banner_url = b.banner_url
+        FROM uploaded_banners b
+        WHERE b.user_id = u.id
+          AND b.is_active
+          AND u.banner_url IS DISTINCT FROM b.banner_url
+        RETURNING u.id, u.username
+      `));
+
+      // 2) XP repair: totalXP is fed by BOTH ledgers — user_points_history
+      // (leaderboard-service points) AND user_xp_history (xp-service: views,
+      // lootboxes, referrals...). It must equal the sum of both (0 for users
+      // with no history); recompute level. Only touch users whose totals
+      // drifted by more than 1 point (view points are fractional).
+      const driftedResult = asRows(await db.execute(sql`
+        UPDATE users u
+        SET total_xp = h.hist
+        FROM (
+          SELECT u2.id AS user_id,
+                 COALESCE(p.pts, 0) + COALESCE(x.xp, 0) AS hist
+          FROM users u2
+          LEFT JOIN (
+            SELECT user_id, SUM(points) AS pts FROM user_points_history GROUP BY user_id
+          ) p ON p.user_id = u2.id
+          LEFT JOIN (
+            SELECT user_id, SUM(xp_amount) AS xp FROM user_xp_history GROUP BY user_id
+          ) x ON x.user_id = u2.id
+        ) h
+        WHERE h.user_id = u.id
+          AND ABS(u.total_xp - h.hist) > 1
+        RETURNING u.id, u.username, u.total_xp, u.level
+      `));
+
+      // Recalculate levels for the repaired users
+      const { calculateLevel } = await import("./level-system");
+      let levelsUpdated = 0;
+      for (const row of driftedResult) {
+        const newLevel = calculateLevel(Number(row.total_xp));
+        if (newLevel !== Number(row.level)) {
+          await db.execute(sql`UPDATE users SET level = ${newLevel} WHERE id = ${row.id}`);
+          levelsUpdated++;
+          console.log(`✨ Repaired ${row.username}: level ${row.level} -> ${newLevel} (${row.total_xp} pts)`);
+        }
+      }
+
+      const bannersFixed = bannerResult.length;
+      const xpFixed = driftedResult.length;
+      console.log(`✅ Repair complete: ${bannersFixed} banners re-synced, ${xpFixed} XP totals recomputed, ${levelsUpdated} levels changed`);
+      res.json({ bannersFixed, xpTotalsFixed: xpFixed, levelsUpdated });
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error repairing user data:", error);
+      res.status(500).json({ message: "Error repairing user data" });
+    }
+  });
+
+  // One-time merge of legacy data from the pre-remix project's database dump
+  // (missing clips/users/history/ambassador flags). See server/legacy-import.ts.
+  app.post("/api/admin/import-legacy-data", authMiddleware, async (req, res) => {
+    try {
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      const { db } = await import("./db");
+      const { runLegacyImport } = await import("./legacy-import");
+      const result = await runLegacyImport(db);
+      console.log("✅ Legacy import complete:", JSON.stringify(result));
+      res.json(result);
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error importing legacy data:", error);
+      res.status(500).json({ message: "Error importing legacy data", detail: (error as Error).message });
+    }
+  });
+
+  // Deactivate duplicate active banners and remove exact duplicate clip rows.
+  // This remains admin-triggered so production data is never changed by boot.
+  app.post("/api/admin/cleanup-duplicate-uploads", authMiddleware, async (req, res) => {
+    try {
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      const { runDuplicateUploadCleanup } = await import("./duplicate-upload-cleanup");
+      const result = await runDuplicateUploadCleanup();
+      console.log("✅ Duplicate upload cleanup complete:", JSON.stringify(result));
+      res.json(result);
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error cleaning duplicate uploads:", error);
+      res.status(500).json({
+        message: "Error cleaning duplicate uploads",
+        detail: (error as Error).message,
+      });
+    }
+  });
+
+  // One-time repair: rebuild weekly/monthly leaderboard tables from the XP history ledgers
+  app.post("/api/admin/rebuild-leaderboards", authMiddleware, async (req, res) => {
+    try {
+      if (req.user!.role !== 'admin') {
+        return res.status(403).json({ message: "Unauthorized - Admin access required" });
+      }
+      const { runLeaderboardRebuild } = await import("./leaderboard-rebuild");
+      const result = await runLeaderboardRebuild();
+      console.log("✅ Leaderboard rebuild complete:", JSON.stringify(result));
+      res.json(result);
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error rebuilding leaderboards:", error);
+      res.status(500).json({
+        message: "Error rebuilding leaderboards",
+        detail: (error as Error).message,
+      });
     }
   });
 
@@ -4275,20 +6111,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         pointValues: {
-          upload: 20,
-          screenshot_upload: 2,
+          upload: 250,
+          screenshot_upload: 100,
           like: 1,
           comment: 1,
-          fire: 5,
-          view: 0.01
+          fire: 50,
+          view: 1
         },
         description: {
-          upload: "Points awarded for uploading clips or reels",
-          screenshot_upload: "Points awarded for uploading screenshots",
+          upload: "XP awarded for uploading clips or reels",
+          screenshot_upload: "XP awarded for uploading screenshots",
           like: "Points awarded for liking content",
           comment: "Points awarded for commenting on content",
-          fire: "Points awarded for fire reactions (permanent, 1/day for regular users, 3/day for Pro)",
-          view: "Points awarded when content receives views (0.01 points per view, 1 point per 100 views)"
+          fire: "50 XP awarded to the content creator for each unique fire reaction",
+          view: "1 XP awarded per valid content view"
         }
       });
     } catch (error) {
@@ -4519,6 +6355,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Escapes text interpolated into the hand-built SVG below — user-supplied
+  // display names/bios containing a bare &, <, or > otherwise break librsvg's
+  // XML parser and 500 the whole preview image.
+  function escapeSvgText(text: string): string {
+    return text.replace(/[&<>"']/g, (m) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
+    }[m]!));
+  }
+
   // Social media preview image generator
   app.get('/api/social-preview/:username', async (req: Request, res: Response) => {
     try {
@@ -4703,24 +6548,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ${!avatarLoaded ? `
           <!-- Initials fallback when no avatar photo -->
           <circle cx="${profileX + profilePicSize/2}" cy="${profileY + profilePicSize/2}" r="${profilePicSize/2}" fill="${accentColor}22"/>
-          <text x="${profileX + profilePicSize/2}" y="${profileY + profilePicSize/2 + 20}" text-anchor="middle" fill="${accentColor}" font-family="Arial, sans-serif" font-size="60" font-weight="bold">${(user.displayName || user.username || '?').substring(0, 2).toUpperCase()}</text>
+          <text x="${profileX + profilePicSize/2}" y="${profileY + profilePicSize/2 + 20}" text-anchor="middle" fill="${accentColor}" font-family="Arial, sans-serif" font-size="60" font-weight="bold">${escapeSvgText((user.displayName || user.username || '?').substring(0, 2).toUpperCase())}</text>
           ` : ''}
           
           <!-- Profile info section - positioned to the right of profile picture -->
           <g transform="translate(${profileX + profilePicSize + 40}, ${profileY + 20})">
             <!-- Username (much larger) with verified badge if applicable -->
             <g>
-              <text x="0" y="0" class="username">${displayName}</text>
+              <text x="0" y="0" class="username">${escapeSvgText(displayName)}</text>
               ${user.emailVerified ? `
                 <!-- Verified badge icon -->
                 <image x="${displayName.length * 29}" y="-32" width="32" height="32" href="/attached_assets/green_badge_128_1758978841463.png"/>
               ` : ''}
             </g>
             <!-- Handle -->
-            <text x="0" y="35" class="handle">@${user.username}</text>
-            
+            <text x="0" y="35" class="handle">@${escapeSvgText(user.username)}</text>
+
             <!-- Bio (larger and more prominent) -->
-            <text x="0" y="75" class="bio-text">${bio.length > 60 ? bio.substring(0, 60) + '...' : bio}</text>
+            <text x="0" y="75" class="bio-text">${escapeSvgText(bio.length > 60 ? bio.substring(0, 60) + '...' : bio)}</text>
             
             <!-- Stats in a row (aligned under bio text) -->
             <g transform="translate(0, 120)">
@@ -4745,7 +6590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const x = index === 0 ? 0 : displayUserTypes.slice(0, index).reduce((acc, type) => acc + Math.max(type.length * 8 + 20, 80) + 10, 0);
                 return `
                   <rect x="${x}" y="0" width="${width}" height="32" rx="16" fill="#8b5cf6"/>
-                  <text x="${x + width / 2}" y="21" class="badge-text" text-anchor="middle">${userType}</text>
+                  <text x="${x + width / 2}" y="21" class="badge-text" text-anchor="middle">${escapeSvgText(userType)}</text>
                 `;
               }).join('')}
               
@@ -4759,7 +6604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }, 0);
                 return `
                   <rect x="${x}" y="40" width="${width}" height="28" rx="14" fill="#059669"/>
-                  <text x="${x + width / 2}" y="58" class="badge-text" text-anchor="middle" style="font-size: 14px;">${gameName}</text>
+                  <text x="${x + width / 2}" y="58" class="badge-text" text-anchor="middle" style="font-size: 14px;">${escapeSvgText(gameName)}</text>
                 `;
               }).join('')}
               
@@ -5150,19 +6995,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('[outro] Failed to resolve outro (non-fatal):', outroErr?.message ?? outroErr);
       }
 
-      // Probe outro for audio stream — cached outros generated before audio support may lack it
+      // ── Step 3: Download outro to a local temp file so FFmpeg reads reliably ──
+      // ffprobe/ffmpeg on remote signed URLs can fail or hang; a local file is always safe.
+      let outroLocalPath: string | null = null;
       let outroHasAudio = false;
       if (outroSignedUrl) {
-        const outroProbe = await new Promise<any>((resolve) => {
-          (ffmpeg as any).ffprobe(outroSignedUrl, (err: any, data: any) => resolve(err ? null : data));
-        });
-        if (outroProbe?.streams) {
-          outroHasAudio = outroProbe.streams.some((s: any) => s.codec_type === 'audio');
+        try {
+          const outroResp = await fetch(outroSignedUrl);
+          if (outroResp.ok) {
+            const { VideoProcessor } = await import('./video-processor');
+            await (VideoProcessor as any).ensureDirectories();
+            const outroTmpPath = path.join(process.cwd(), 'temp', `outro_dl_${clipId}_${Date.now()}.mp4`);
+            const outroBuf = Buffer.from(await outroResp.arrayBuffer());
+            await (await import('fs/promises')).writeFile(outroTmpPath, outroBuf);
+            outroLocalPath = outroTmpPath;
+            console.log(`[outro] Downloaded outro to temp file (${Math.round(outroBuf.length / 1024)} KB)`);
+
+            // Probe the local file for audio
+            const outroProbe = await new Promise<any>((resolve) => {
+              (ffmpeg as any).ffprobe(outroTmpPath, (err: any, data: any) => resolve(err ? null : data));
+            });
+            if (outroProbe?.streams) {
+              outroHasAudio = outroProbe.streams.some((s: any) => s.codec_type === 'audio');
+            }
+            console.log(`[outro] outroHasAudio=${outroHasAudio}`);
+          } else {
+            console.warn(`[outro] Could not download outro (${outroResp.status}) — skipping`);
+          }
+        } catch (dlErr: any) {
+          console.warn('[outro] Failed to download outro to temp — skipping:', dlErr?.message);
+          outroLocalPath = null;
         }
       }
 
-      // Audio concat is only safe when BOTH the clip AND the outro have audio streams
-      const concatWithAudio = clipHasAudio && outroHasAudio;
+      // Clean up the outro temp file after the response ends
+      const cleanupOutroTemp = () => {
+        if (outroLocalPath) {
+          import('fs/promises').then(fsp => fsp.unlink(outroLocalPath!).catch(() => {}));
+        }
+      };
+      res.on('finish', cleanupOutroTemp);
+      res.on('close', cleanupOutroTemp);
+
+      // ── Build audio concat filters ───────────────────────────────────────
+      // When the clip has audio but the outro doesn't, fill the outro segment
+      // with generated silence so the clip audio is never silenced.
+      const concatWithAudio = clipHasAudio;  // always include audio track when clip has one
 
       // ── Build watermark filters ──────────────────────────────────────────
       const sgFont = path.join(process.cwd(), 'server', 'assets', 'fonts', 'SpaceGrotesk-Bold.ttf');
@@ -5205,16 +7083,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         `scale=${clipW}:${clipH}:force_original_aspect_ratio=increase,` +
         `crop=${clipW}:${clipH},setsar=1,fps=fps=30`;
 
-      if (logoExists && outroSignedUrl) {
+      if (logoExists && outroLocalPath) {
         // Watermark + outro concat
-        // Inputs: 0=clip, 1=logo, 2=outro (outro has audio baked in)
-        const audioFilters = concatWithAudio ? [
-          '[clip_wm]setsar=1,fps=fps=30[clip_n]',
-          `[2:v]${outroScaleFilter}[outro_n]`,
-          '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
-          '[2:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
-          '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
-        ] : [
+        // Inputs: 0=clip, 1=logo, 2=outro (local file)
+        // Audio strategy: if clip has audio, always output audio.
+        //   - if outro also has audio → resample both and concat
+        //   - if outro has no audio  → use anullsrc silence for the outro segment
+        const audioFilters = concatWithAudio ? (
+          outroHasAudio ? [
+            '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+            `[2:v]${outroScaleFilter}[outro_n]`,
+            '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
+            '[2:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
+            '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
+          ] : [
+            '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+            `[2:v]${outroScaleFilter}[outro_n]`,
+            '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
+            'anullsrc=r=44100:cl=stereo,atrim=duration=4,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
+            '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
+          ]
+        ) : [
           '[clip_wm]setsar=1,fps=fps=30[clip_n]',
           `[2:v]${outroScaleFilter}[outro_n]`,
           '[clip_n][outro_n]concat=n=2:v=1:a=0[outv]',
@@ -5225,7 +7114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const command = (ffmpeg as any)()
           .input(freshUrl)
           .input(logoPath)
-          .input(outroSignedUrl)
+          .input(outroLocalPath)
           .complexFilter([
             `[1:v]scale=-1:${logoH}[logo]`,
             `[0:v][logo]overlay=x=W-w-20:y=${logoY}[wl]`,
@@ -5243,7 +7132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         command.pipe(res, { end: true });
 
       } else if (logoExists) {
-        // Watermark only (existing behaviour)
+        // Watermark only (no outro available)
         const command = (ffmpeg as any)()
           .input(freshUrl)
           .input(logoPath)
@@ -5262,16 +7151,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         command.pipe(res, { end: true });
 
-      } else if (outroSignedUrl) {
+      } else if (outroLocalPath) {
         // Text watermark + outro concat (no logo)
-        // Inputs: 0=clip, 1=outro (outro has audio baked in)
-        const audioFilters2 = concatWithAudio ? [
-          '[clip_wm]setsar=1,fps=fps=30[clip_n]',
-          `[1:v]${outroScaleFilter}[outro_n]`,
-          '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
-          '[1:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
-          '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
-        ] : [
+        // Inputs: 0=clip, 1=outro (local file)
+        const audioFilters2 = concatWithAudio ? (
+          outroHasAudio ? [
+            '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+            `[1:v]${outroScaleFilter}[outro_n]`,
+            '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
+            '[1:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
+            '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
+          ] : [
+            '[clip_wm]setsar=1,fps=fps=30[clip_n]',
+            `[1:v]${outroScaleFilter}[outro_n]`,
+            '[0:a]aresample=44100,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[ca]',
+            'anullsrc=r=44100:cl=stereo,atrim=duration=4,aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[oa]',
+            '[clip_n][ca][outro_n][oa]concat=n=2:v=1:a=1[outv][outa]',
+          ]
+        ) : [
           '[clip_wm]setsar=1,fps=fps=30[clip_n]',
           `[1:v]${outroScaleFilter}[outro_n]`,
           '[clip_n][outro_n]concat=n=2:v=1:a=0[outv]',
@@ -5281,7 +7178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           : ['-map', '[outv]', '-c:v', 'libx264', '-an', ...outroBaseOpts];
         const command = (ffmpeg as any)()
           .input(freshUrl)
-          .input(outroSignedUrl)
+          .input(outroLocalPath)
           .complexFilter([
             `[0:v]${line1Filter}[wl]`,
             `[wl]${line2Filter}[clip_wm]`,
@@ -5425,9 +7322,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      const steamUrlError = validatePlatformUrl(req.body.gameSteamUrl, "steam");
+      if (steamUrlError) validationErrors.push(`Steam: ${steamUrlError}`);
+      const epicUrlError = validatePlatformUrl(req.body.gameEpicUrl, "epic");
+      if (epicUrlError) validationErrors.push(`Epic Games: ${epicUrlError}`);
+
       if (validationErrors.length > 0) {
         return res.status(400).json({
-          message: "Profile update failed",
+          message: "Profile contains invalid content or links",
           errors: validationErrors
         });
       }
@@ -5449,10 +7351,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "discordUsername", "epicUsername", "twitchUsername", "youtubeUsername",
         "twitterUsername", "instagramUsername", "facebookUsername", "nintendoUsername", "rumbleUsername",
         "streamPlatform", "streamChannelName", "showLiveOverlay",
+        "gameDescription", "gameKeyFeatures", "studioFoundedYear", "studioTeamSize",
+        "gameReleaseDate", "gameSteamUrl", "gameEpicUrl",
+        "gameTrailerUrl", "gameScreenshotUrls",
       ]);
       const safeBody = Object.fromEntries(
         Object.entries(req.body).filter(([key]) => ALLOWED_PROFILE_FIELDS.has(key))
       );
+
+      // Guard against stale banner overwrites: uploaded-banner activation goes
+      // through PUT /api/user/banners/:id/activate. If the PATCH carries a
+      // bannerUrl that matches one of the user's *inactive* uploaded banners,
+      // it's a stale cached profile object — drop it so it can't clobber the
+      // currently active banner. Preset/external/empty banner URLs still apply.
+      if (typeof safeBody.bannerUrl === "string" && safeBody.bannerUrl) {
+        try {
+          const uploaded = await storage.getUserUploadedBanners(userId);
+          const match = uploaded.find(b => b.bannerUrl === safeBody.bannerUrl);
+          if (match && !match.isActive) {
+            delete safeBody.bannerUrl;
+          }
+        } catch (e) {
+          console.error("Banner staleness check failed, dropping bannerUrl from update:", e);
+          delete safeBody.bannerUrl;
+        }
+      }
 
       // Prevent the onboarding test account from ever completing onboarding
       if (req.user?.email === 'onboarding@gamefolio.com') {
@@ -5735,9 +7658,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get actual clips from database for all users including demo
       let clips = await storage.getClipsByUserId(user.id);
 
-      // For non-owners, hide clips associated with unapproved custom games
+      // For non-owners, hide clips associated with unapproved custom games,
+      // plus anything not fully processed yet (or that failed processing) —
+      // only the uploader sees the "processing"/"failed" state on their own
+      // profile; other visitors just won't see it until it's ready.
       if (!isOwnProfile) {
-        clips = clips.filter((c) => !c.game || c.game.isApproved !== false);
+        clips = clips.filter((c) => (!c.game || c.game.isApproved !== false) && c.status === 'ready');
       }
 
       // For demo user, also include the demo clips if no real clips exist
@@ -5750,6 +7676,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       captureRouteError(err);
       console.error("Error fetching user clips:", err);
       return res.status(500).json({ message: "Error fetching user clips" });
+    }
+  });
+
+  app.get("/api/users/:username/bounties", async (req, res) => {
+    try {
+      const username = req.params.username.startsWith('@') ? req.params.username.slice(1) : req.params.username;
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const result = await db.execute(sql`
+        SELECT
+          gb.id, gb.game_id AS "gameId", gb.created_by_user_id AS "createdByUserId",
+          gb.title, gb.campaign_title AS "campaignTitle", gb.description,
+          gb.reward_type AS "rewardType", gb.reward_value AS "rewardValue",
+          gb.difficulty, gb.end_date AS "endDate", gb.status,
+          gb.max_participants AS "maxParticipants",
+          gb.required_clips AS "requiredClips", gb.required_reels AS "requiredReels",
+          gb.required_screenshots AS "requiredScreenshots", gb.required_views AS "requiredViews",
+          gb.total_xp_available AS "totalXpAvailable",
+          gb.demo_keys_remaining AS "demoKeysRemaining", gb.full_keys_remaining AS "fullKeysRemaining",
+          gb.completion_badge AS "completionBadge", gb.created_at AS "createdAt",
+          COUNT(DISTINCT gba.user_id)::int AS "participantCount",
+          g.name AS "gameName", g.image_url AS "gameImageUrl"
+        FROM game_bounties gb
+        LEFT JOIN game_bounty_acceptances gba ON gba.bounty_id = gb.id AND gba.status = 'active'
+        LEFT JOIN games g ON g.id = gb.game_id
+        WHERE gb.created_by_user_id = ${user.id} AND gb.status != 'cancelled'
+        GROUP BY gb.id, g.name, g.image_url
+        ORDER BY gb.created_at DESC
+      `);
+      res.json((result as any).rows ?? result);
+    } catch (err) {
+      console.error("Error fetching user bounties:", err);
+      res.json([]);
     }
   });
 
@@ -6218,10 +8180,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Search for additional clips with hashtags
         const hashtagClips = await storage.searchClips(gameHashtag);
 
-        // Merge clips and remove duplicates
+        // Merge clips and remove duplicates.
+        // Only include hashtag-matched clips that have no game tag or are
+        // explicitly tagged to this game — clips tagged to a different game
+        // are unrelated content and must not appear on this game's page.
         const clipIds = new Set(clips.map(c => c.id));
         for (const hashtagClip of hashtagClips) {
-          if (!clipIds.has(hashtagClip.id)) {
+          if (!clipIds.has(hashtagClip.id) && (hashtagClip.gameId === null || hashtagClip.gameId === gameId)) {
             clips.push(hashtagClip);
             clipIds.add(hashtagClip.id);
           }
@@ -6238,6 +8203,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       captureRouteError(err);
       console.error("Error fetching game clips:", err);
       return res.status(500).json({ message: "Error fetching game clips" });
+    }
+  });
+
+  // Game content counts (clips, reels, screenshots)
+  app.get("/api/games/:id/content-counts", async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.id);
+      if (isNaN(gameId)) return res.status(400).json({ message: "Invalid game id" });
+      const [clipRows, screenshotRows] = await Promise.all([
+        db.select({ videoType: clips.videoType, count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(clips).where(eq(clips.gameId, gameId)).groupBy(clips.videoType),
+        db.select({ count: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(screenshots).where(eq(screenshots.gameId, gameId)),
+      ]);
+      let clipsCount = 0, reelsCount = 0;
+      for (const row of clipRows) {
+        if (row.videoType === "reel") reelsCount = row.count;
+        else clipsCount = row.count;
+      }
+      res.json({ clips: clipsCount, reels: reelsCount, screenshots: screenshotRows[0]?.count ?? 0 });
+    } catch (err) {
+      console.error("Error fetching game content counts:", err);
+      res.status(500).json({ message: "Error fetching counts" });
     }
   });
 
@@ -6261,7 +8249,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clips/latest", async (req, res) => {
     try {
       const { limit = '50', period, gameId } = req.query;
-      const currentUserId = (req.user as any)?.id;
 
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
@@ -6273,13 +8260,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       else if (period === '1w') since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       else if (period === 'ever') since = undefined;
 
-      const latestClips = await storage.getLatestClips(
-        parseInt(limit as string) || 50,
-        since,
-        gameId ? parseInt(gameId as string) : undefined,
-        currentUserId
-      );
-      const signed = await signClipUrls(latestClips);
+      const cacheKey = trendingCacheKey('clips-latest', period, limit, gameId);
+      const signed = await getCachedTrending(cacheKey, async () => {
+        const latestClips = await storage.getLatestClips(
+          parseInt(limit as string) || 50,
+          since,
+          gameId ? parseInt(gameId as string) : undefined
+        );
+        return await signClipUrls(latestClips);
+      });
       res.json(signed);
     } catch (err) {
       captureRouteError(err);
@@ -6292,20 +8281,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/recent-uploads", async (req, res) => {
     try {
       const limit = 8;
-      const [clips, reels, screenshots] = await Promise.all([
+      const [clips, reels, screenshots, followerMilestoneRows] = await Promise.all([
         storage.getAllClips(limit, 0),
         storage.getLatestReels(limit),
         storage.getLatestScreenshots(limit),
+        db.execute(sql`
+          WITH numbered_follows AS (
+            SELECT
+              f.id,
+              f.following_id AS user_id,
+              f.created_at,
+              COUNT(*) OVER (
+                PARTITION BY f.following_id
+                ORDER BY f.created_at, f.id
+                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+              )::int AS follower_count
+            FROM follows f
+          ),
+          milestones(threshold) AS (
+            VALUES (10), (25), (50), (100), (250), (500), (1000)
+          )
+          SELECT
+            nf.id AS follow_id,
+            u.id AS user_id,
+            u.username,
+            u.display_name,
+            nf.follower_count,
+            m.threshold AS follower_milestone,
+            nf.created_at
+          FROM numbered_follows nf
+          JOIN users u ON u.id = nf.user_id
+          JOIN milestones m ON nf.follower_count = m.threshold
+          WHERE u.status = 'active'
+          ORDER BY nf.created_at DESC, nf.id DESC
+          LIMIT ${limit * 4}
+        `),
       ]);
 
       const items: Array<{
-        id: number;
-        contentType: 'clip' | 'reel' | 'screenshot';
+        id: number | string;
+        contentType: 'clip' | 'reel' | 'screenshot' | 'follower-milestone';
         username: string;
         displayName: string;
-        title: string;
+        title?: string;
         uploadedAt: Date | null;
         thumbnailUrl?: string | null;
+        followerCount?: number;
+        followerMilestone?: number;
       }> = [];
 
       clips
@@ -6344,6 +8366,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           thumbnailUrl: s.imageUrl || (s as any).thumbnailUrl,
         }));
 
+      for (const row of (followerMilestoneRows as any).rows ?? followerMilestoneRows) {
+        items.push({
+          id: `follower-milestone-${row.follow_id}`,
+          contentType: 'follower-milestone',
+          username: row.username,
+          displayName: row.display_name || row.username,
+          uploadedAt: row.last_follow_at || null,
+          followerCount: Number(row.follower_count),
+          followerMilestone: Number(row.follower_milestone),
+        });
+      }
+
       items.sort((a, b) => {
         const ta = a.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
         const tb = b.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
@@ -6367,7 +8401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Fetch all real data sources in parallel
       // Dates are expressed as SQL intervals (no JS Date binding) to avoid postgres.js serialisation issues
-      const [xpRows, streakRows, leaderboardRows, followRows] = await Promise.all([
+      const [xpRows, streakRows, leaderboardRows] = await Promise.all([
         // Recent meaningful XP gains (not "view" — too noisy), last 7 days
         db.execute(sql`
           SELECT xh.id, xh.user_id, xh.xp_amount, xh.source, xh.created_at,
@@ -6408,26 +8442,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ORDER BY ml.rank ASC
           LIMIT 8
         `),
-
-        // Recent follows (last 7 days)
-        db.execute(sql`
-          SELECT f.id, f.created_at,
-                 follower.username AS follower_username, follower.display_name AS follower_display,
-                 following.username AS following_username, following.display_name AS following_display
-          FROM follows f
-          JOIN users follower ON follower.id = f.follower_id
-          JOIN users following ON following.id = f.following_id
-          WHERE f.created_at >= NOW() - INTERVAL '7 days'
-            AND follower.status = 'active'
-            AND following.status = 'active'
-          ORDER BY f.created_at DESC
-          LIMIT 12
-        `),
       ]);
 
       type FeedItem = {
         id: string;
-        kind: 'xp' | 'streak' | 'trending' | 'follow' | 'levelup';
+        kind: 'xp' | 'streak' | 'trending' | 'levelup';
         username: string;
         text: string;
         timestamp?: string | null;
@@ -6437,7 +8456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // XP events
       for (const row of (xpRows as any).rows ?? xpRows) {
-        const name = row.display_name || row.username;
+        const name = `@${row.username}`;
         const xp = Number(row.xp_amount);
         const source: string = row.source;
         let text = '';
@@ -6458,7 +8477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Streak events
       for (const row of (streakRows as any).rows ?? streakRows) {
-        const name = row.display_name || row.username;
+        const name = `@${row.username}`;
         const days = Number(row.current_streak);
         activities.push({
           id: `streak-${row.id}`,
@@ -6470,27 +8489,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Leaderboard events
       for (const row of (leaderboardRows as any).rows ?? leaderboardRows) {
-        const name = row.display_name || row.username;
+        const name = `@${row.username}`;
         const rank = Number(row.rank);
         const pts = Math.round(Number(row.total_points)).toLocaleString();
         activities.push({
           id: `trending-${row.user_id}`,
-          kind: rank <= 3 ? 'levelup' : 'trending',
+          kind: 'levelup',
           username: row.username,
           text: `${name} is #${rank} this month · ${pts} XP`,
-        });
-      }
-
-      // Follow events
-      for (const row of (followRows as any).rows ?? followRows) {
-        const followerName = row.follower_display || row.follower_username;
-        const followingName = row.following_display || row.following_username;
-        activities.push({
-          id: `follow-${row.id}`,
-          kind: 'follow',
-          username: row.follower_username,
-          text: `${followerName} started following ${followingName}`,
-          timestamp: row.created_at ? new Date(row.created_at).toISOString() : null,
         });
       }
 
@@ -6562,20 +8568,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clips/trending", async (req, res) => {
     try {
       const { period = 'all', limit = 10, gameId } = req.query;
-      const currentUserId = (req.user as any)?.id;
 
       // Force no caching for privacy-sensitive content
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
 
-      const cacheKey = trendingCacheKey('clips', period, limit, gameId, currentUserId);
+      const cacheKey = trendingCacheKey('clips', period, limit, gameId);
       const signed = await getCachedTrending(cacheKey, async () => {
         const clips = await storage.getTrendingClips(
           period as string,
           parseInt(limit as string) || 10,
-          gameId ? parseInt(gameId as string) : undefined,
-          currentUserId
+          gameId ? parseInt(gameId as string) : undefined
         );
         return await signClipUrls(clips);
       });
@@ -6591,14 +8595,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/clips/reels/trending", async (req, res) => {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
-      const currentUserId = (req.user as any)?.id;
-      const cacheKey = trendingCacheKey('reels-home', period, limit, gameId, currentUserId);
-      const reels = await getCachedTrending(cacheKey, () => storage.getTrendingReels(
-        period as string,
-        parseInt(limit as string) || 10,
-        gameId ? parseInt(gameId as string) : undefined,
-        currentUserId
-      ));
+      const cacheKey = trendingCacheKey('reels-home', period, limit, gameId);
+      const reels = await getCachedTrending(cacheKey, async () => {
+        const raw = await storage.getTrendingReels(
+          period as string,
+          parseInt(limit as string) || 10,
+          gameId ? parseInt(gameId as string) : undefined
+        );
+        return await signClipUrls(raw);
+      });
       res.json(reels);
     } catch (err) {
       captureRouteError(err);
@@ -6611,9 +8616,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reels/latest", async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 6;
-      const currentUserId = (req.user as any)?.id;
-      const reels = await storage.getLatestReels(limit, currentUserId);
-      res.json(await signClipUrls(reels));
+      const cacheKey = trendingCacheKey('reels-latest', 'all', limit, undefined);
+      const reels = await getCachedTrending(cacheKey, async () => {
+        const raw = await storage.getLatestReels(limit);
+        return await signClipUrls(raw);
+      });
+      res.json(reels);
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching latest reels:", err);
@@ -6625,14 +8633,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reels/trending", async (req, res) => {
     try {
       const { period = 'day', limit = 10, gameId } = req.query;
-      const currentUserId = (req.user as any)?.id;
-      const cacheKey = trendingCacheKey('reels', period, limit, gameId, currentUserId);
+      const cacheKey = trendingCacheKey('reels', period, limit, gameId);
       const result = await getCachedTrending(cacheKey, async () => {
         const reels = await storage.getTrendingReels(
           period as string,
           parseInt(limit as string) || 10,
-          gameId ? parseInt(gameId as string) : undefined,
-          currentUserId
+          gameId ? parseInt(gameId as string) : undefined
         );
         return await Promise.all(
           reels.map(async (reel) => {
@@ -6912,6 +8918,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Short-link resolver for the gft.gg domain: gft.gg/<code> is redirected
+  // (via a Cloudflare redirect rule) to app.gamefolio.com/go/<code>, which
+  // looks the code up across clips/reels and screenshots and 302s to the
+  // canonical pretty URL. Falls back to the homepage if the code is unknown
+  // so a bad/expired link never dead-ends.
+  app.get("/go/:code", async (req, res) => {
+    const baseUrl = "https://app.gamefolio.com";
+    try {
+      const { code } = req.params;
+
+      const clip = await storage.getClipByShareCode(code);
+      if (clip) {
+        const user = await storage.getUser(clip.userId);
+        const username = user?.username || "unknown";
+        const segment = clip.videoType === "reel" ? "reel" : "clip";
+        return res.redirect(302, `${baseUrl}/@${username}/${segment}/${code}`);
+      }
+
+      const screenshot = await storage.getScreenshotByShareCode(code);
+      if (screenshot) {
+        const user = await storage.getUser(screenshot.userId);
+        const username = user?.username || "unknown";
+        return res.redirect(302, `${baseUrl}/@${username}/screenshot/${code}`);
+      }
+
+      return res.redirect(302, baseUrl);
+    } catch (err) {
+      captureRouteError(err);
+      console.error(`Error resolving short link for code ${req.params.code}:`, err);
+      return res.redirect(302, baseUrl);
+    }
+  });
+
   // Get clip by shareCode - used for nice URLs like /@username/clip/shareCode
   app.get("/api/clips/share/:shareCode", async (req, res) => {
     try {
@@ -6943,6 +8982,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Generate QR code and social media links for existing clip
+  // GET /api/users/:username/share — share payload for a profile.
+  //
+  // This endpoint did not exist, so GamefolioShareDialog's fetch always 404'd
+  // and fell back to building the URL from window.location.origin. On native
+  // that is capacitor://localhost, which is how "capacitor://localhost/@user"
+  // ended up in shared links. Mirrors the clip/screenshot share endpoints:
+  // absolute production URLs and a server-rendered QR code.
+  app.get("/api/users/:username/share", async (req, res) => {
+    try {
+      const username = String(req.params.username || "").replace(/^@+/, "");
+      if (!username) return res.status(400).json({ message: "Username required" });
+
+      const user = await storage.getUserByUsername(username);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const baseUrl = "https://app.gamefolio.com";
+      const profileUrl = `${baseUrl}/@${user.username}`;
+      const displayName = user.displayName || user.username;
+
+      const qrCode = await QRCode.toDataURL(profileUrl, {
+        errorCorrectionLevel: "M",
+        type: "image/png",
+        // No `quality` here: it is only meaningful for lossy output, and the
+        // typings reject it for image/png.
+        margin: 1,
+        color: { dark: "#10b981", light: "#ffffff" },
+        width: 256,
+      });
+
+      const caption = `Check out ${displayName}'s Gamefolio!`;
+      const socialMediaLinks = {
+        twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(caption)}&url=${encodeURIComponent(profileUrl)}`,
+        facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(profileUrl)}&quote=${encodeURIComponent(caption)}`,
+        reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(profileUrl)}&title=${encodeURIComponent(caption)}`,
+        linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(profileUrl)}&summary=${encodeURIComponent(caption)}`,
+        whatsapp: `https://wa.me/?text=${encodeURIComponent(`${caption} ${profileUrl}`)}`,
+        telegram: `https://t.me/share/url?url=${encodeURIComponent(profileUrl)}&text=${encodeURIComponent(caption)}`,
+        bluesky: `https://bsky.app/intent/compose?text=${encodeURIComponent(`${caption} ${profileUrl}`)}`,
+        threads: `https://www.threads.net/intent/post?text=${encodeURIComponent(`${caption} ${profileUrl}`)}`,
+        pinterest: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(profileUrl)}&description=${encodeURIComponent(caption)}`,
+        email: `mailto:?subject=${encodeURIComponent(caption)}&body=${encodeURIComponent(`${caption}\n\n${profileUrl}`)}`,
+        // Platforms with no web share intent — the dialog copies the link instead.
+        discord: profileUrl,
+        instagram: profileUrl,
+        tiktok: profileUrl,
+        snapchat: profileUrl,
+        youtube: profileUrl,
+      };
+
+      res.json({
+        profileUrl,
+        username: user.username,
+        displayName,
+        avatarUrl: user.avatarUrl ?? null,
+        qrCode,
+        socialMediaLinks,
+      });
+    } catch (err) {
+      console.error("GET /api/users/:username/share error:", err);
+      res.status(500).json({ message: "Failed to build share links" });
+    }
+  });
+
   app.get("/api/clips/:id/share", async (req, res) => {
     try {
       const clipId = parseInt(req.params.id);
@@ -6977,8 +9079,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clip.shareCode = shareCode;
       }
 
-      // Always use username-based URL format with alphanumeric share code
-      const clipUrl = `${baseUrl}/@${username}/clip/${clip.shareCode}`;
+      // Short gft.gg link resolved server-side by /go/:code to the full
+      // username-based URL — keeps share links short across all surfaces.
+      const clipUrl = `https://gft.gg/${clip.shareCode}`;
 
       const qrCodeDataUrl = await QRCode.toDataURL(clipUrl, {
         errorCorrectionLevel: 'M',
@@ -7003,25 +9106,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gamefolioProfileUrl = `${baseUrl}/profile/${user.username}`;
       const displayName = user.displayName || user.username;
 
-      // Generate social media sharing links with personalized messaging
+      // Generate social media sharing links with personalized messaging.
+      // Each caption mentions the clip but deliberately does NOT embed
+      // gamefolioProfileUrl inline — every platform here already gets the
+      // clip link via its own dedicated url param, and a second link
+      // stuffed into the caption text produces a double-link post (X shows
+      // both the caption's link and the url param's link) and can confuse
+      // which URL the platform unfurls a preview card for.
       const socialMediaLinks = {
         twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! Visit their profile for more amazing content: ${gamefolioProfileUrl}`
+          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio!`
         )}&url=${encodeURIComponent(clipUrl)}`,
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(clipUrl)}&quote=${encodeURIComponent(
-          `🎮 Amazing gaming clip from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
+          `🎮 Amazing gaming clip from ${displayName}'s Gamefolio!`
         )}`,
         reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(clipUrl)}&title=${encodeURIComponent(
           `🎮 Epic gaming clip from ${displayName}'s Gamefolio!`
         )}`,
         linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(clipUrl)}&summary=${encodeURIComponent(
-          `🎮 Check out this gaming clip from ${displayName}'s Gamefolio: ${gamefolioProfileUrl}`
+          `🎮 Check out this gaming clip from ${displayName}'s Gamefolio!`
         )}`,
         whatsapp: `https://wa.me/?text=${encodeURIComponent(
-          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! ${clipUrl} - See more on their profile: ${gamefolioProfileUrl}`
+          `🎮 Check out this epic gaming clip from ${displayName}'s Gamefolio! ${clipUrl}`
         )}`,
         telegram: `https://t.me/share/url?url=${encodeURIComponent(clipUrl)}&text=${encodeURIComponent(
-          `🎮 Epic gaming clip from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
+          `🎮 Epic gaming clip from ${displayName}'s Gamefolio!`
         )}`,
         discord: clipUrl,
         instagram: clipUrl,
@@ -7345,19 +9454,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         videoType: req.body.videoType || "clip", // "clip" or "reel"
         ageRestricted: req.body.ageRestricted === 'true' || req.body.ageRestricted === true,
         shareCode: generateShareCode(), // This generates 8-character alphanumeric codes
+        uploadIp: getRequestMeta(req).ip,
+        uploadDeviceId: getRequestMeta(req).deviceId,
       };
 
       // Create the clip
       const clip = await storage.createClip(clipData);
 
-      // Fire-and-forget: XP awards, bonuses, milestones, and mentions don't block the upload response
+      // Fire-and-forget: the upload XP award and mention processing don't block the response
       void (async () => {
         try {
-          await LeaderboardService.awardPoints(userId, 'upload', `Upload: ${clipData.videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`);
-          await BonusEventsService.awardWeekendUploadBonus(userId, 200);
+          // Upload XP is recorded in the real leaderboard XP ledger only.
+          const uploadXpAmount = 250;
+          const uploadLabel = clipData.videoType === 'reel' ? 'reel' : 'clip';
+          await XPService.awardXP(userId, uploadXpAmount, 'upload', `Earned ${uploadXpAmount} XP for uploading a ${uploadLabel}`, clip.id);
+          // "Upload Today" daily challenge bonus — separate from the flat upload XP above.
           await CreatorMilestoneService.checkFirstUploadOfDay(userId);
-          await CreatorMilestoneService.checkWeeklyUploadMilestones(userId);
-          await BonusEventsService.checkConsecutiveUploadBonus(userId);
         } catch (e) { console.error('[clip upload] XP/bonus side-effects failed:', e); }
         try {
           const titleMentions = await mentionService.parseMentions(title);
@@ -7453,16 +9565,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Generate QR code and social media links
           try {
-            const username = req.user?.username || 'unknown';
-            const contentType = clipData.videoType === 'reel' ? 'reel' : 'clip';
-            const qrCodeDataUrl = await generateContentQRCode(clipData.shareCode || clip.shareCode || '', username, contentType);
-            const socialMediaLinks = generateSocialMediaLinks(clipData.shareCode || clip.shareCode || '', username, clip.title, clip.description, contentType);
+            const contentUrl = `https://gft.gg/${clipData.shareCode || clip.shareCode || ''}`;
+            const qrCodeDataUrl = await generateContentQRCode(contentUrl);
+            const socialMediaLinks = generateSocialMediaLinks(contentUrl, clip.title);
 
             res.status(201).json({
               ...updatedClip,
               qrCode: qrCodeDataUrl,
               socialMediaLinks,
-              xpGained: 5, // Upload XP reward
+              xpGained: 250,
               userXP: updatedUser?.totalXP || 0,
               userLevel: updatedUser?.level || 1
             });
@@ -7471,7 +9582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Return without QR code if generation fails
             res.status(201).json({ 
               ...updatedClip, 
-              xpGained: 5,
+              xpGained: 250,
               userXP: updatedUser?.totalXP || 0,
               userLevel: updatedUser?.level || 1
             });
@@ -7501,17 +9612,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Generate QR code and social media links
           try {
-            const username = req.user?.username || 'unknown';
-            const contentType = clipData.videoType === 'reel' ? 'reel' : 'clip';
-            const qrCodeDataUrl = await generateContentQRCode(clipData.shareCode || clip.shareCode || '', username, contentType);
-            const socialMediaLinks = generateSocialMediaLinks(clipData.shareCode || clip.shareCode || '', username, clip.title, clip.description, contentType);
+            const contentUrl = `https://gft.gg/${clipData.shareCode || clip.shareCode || ''}`;
+            const qrCodeDataUrl = await generateContentQRCode(contentUrl);
+            const socialMediaLinks = generateSocialMediaLinks(contentUrl, clip.title);
 
             res.status(201).json({
               ...updatedClip,
               qrCode: qrCodeDataUrl,
               socialMediaLinks,
               thumbnailOptions: thumbnailOptions || [],
-              xpGained: 5, // Upload XP reward
+              xpGained: 250,
               userXP: updatedUser?.totalXP || 0,
               userLevel: updatedUser?.level || 1
             });
@@ -7521,7 +9631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             res.status(201).json({
               ...updatedClip,
               thumbnailOptions: thumbnailOptions || [],
-              xpGained: 5, // Upload XP reward
+              xpGained: 250,
               userXP: updatedUser?.totalXP || 0,
               userLevel: updatedUser?.level || 1
             });
@@ -7533,7 +9643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Return the clip with original video if processing fails
         res.status(201).json({ 
           ...clip, 
-          xpGained: 5,
+          xpGained: 250,
           userXP: updatedUser?.totalXP || 0,
           userLevel: updatedUser?.level || 1
         });
@@ -7596,19 +9706,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only delete your own clips" });
       }
 
-      // Delete the clip from Supabase storage
-      if (clip.videoUrl) {
+      // Delete the clip from Supabase storage. deleteFile() takes a
+      // bucket-relative path, not the public URL stored on the row — must
+      // extract it first or Supabase silently no-ops (no matching object,
+      // no error), which is why deleted clips were never actually removed
+      // from storage.
+      const clipVideoPath = clip.videoUrl ? supabaseStorage.extractStoragePath(clip.videoUrl) : null;
+      if (clipVideoPath) {
         try {
-          await supabaseStorage.deleteFile(clip.videoUrl);
+          await supabaseStorage.deleteFile(clipVideoPath);
         } catch (error) {
           console.warn("Could not delete video file from Supabase:", error);
         }
       }
 
       // Delete the thumbnail from Supabase storage
-      if (clip.thumbnailUrl) {
+      const clipThumbnailPath = clip.thumbnailUrl ? supabaseStorage.extractStoragePath(clip.thumbnailUrl) : null;
+      if (clipThumbnailPath) {
         try {
-          await supabaseStorage.deleteFile(clip.thumbnailUrl);
+          await supabaseStorage.deleteFile(clipThumbnailPath);
         } catch (error) {
           console.warn("Could not delete thumbnail file from Supabase:", error);
         }
@@ -7620,13 +9736,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(500).json({ message: "Failed to delete clip" });
       }
-
-      // Deduct upload points (5 XP for clips/reels)
-      await LeaderboardService.deductPoints(
-        clip.userId,
-        'upload',
-        `Deleted: ${clip.videoType === 'reel' ? 'Reel' : 'Clip'} - ${clip.title}`
-      );
 
       res.status(200).json({ message: "Clip deleted successfully" });
     } catch (err) {
@@ -8028,8 +10137,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateScreenshot(screenshotId, { shareCode });
       }
 
-      // Always use username-based URL format with alphanumeric share code
-      const screenshotUrl = `${baseUrl}/@${username}/screenshot/${shareCode}`;
+      // Short gft.gg link resolved server-side by /go/:code to the full
+      // username-based URL — keeps share links short across all surfaces.
+      const screenshotUrl = `https://gft.gg/${shareCode}`;
 
       const qrCodeDataUrl = await QRCode.toDataURL(screenshotUrl);
 
@@ -8045,25 +10155,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gamefolioProfileUrl = `${baseUrl}/profile/${shareUsername}`;
       const displayName = shareUser?.displayName || shareUsername;
 
-      // Generate social media sharing links for screenshot with personalized messaging
+      // Generate social media sharing links for screenshot with personalized
+      // messaging. Same rule as the clip-share links above: no
+      // gamefolioProfileUrl embedded in the caption text — every platform
+      // here already gets the screenshot link via its own dedicated url
+      // param, and a second link in the caption produces a double-link post.
       const socialMediaLinks = {
         twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! Visit their profile for more amazing content: ${gamefolioProfileUrl}`
+          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio!`
         )}&url=${encodeURIComponent(screenshotUrl)}`,
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(screenshotUrl)}&quote=${encodeURIComponent(
-          `📸 Amazing gaming screenshot from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
+          `📸 Amazing gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
         reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(screenshotUrl)}&title=${encodeURIComponent(
           `📸 Epic gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
         linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(screenshotUrl)}&summary=${encodeURIComponent(
-          `📸 Check out this gaming screenshot from ${displayName}'s Gamefolio: ${gamefolioProfileUrl}`
+          `📸 Check out this gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
         whatsapp: `https://wa.me/?text=${encodeURIComponent(
-          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! ${screenshotUrl} - See more on their profile: ${gamefolioProfileUrl}`
+          `📸 Check out this epic gaming screenshot from ${displayName}'s Gamefolio! ${screenshotUrl}`
         )}`,
         telegram: `https://t.me/share/url?url=${encodeURIComponent(screenshotUrl)}&text=${encodeURIComponent(
-          `📸 Epic gaming screenshot from ${displayName}'s Gamefolio! Check out their profile: ${gamefolioProfileUrl}`
+          `📸 Epic gaming screenshot from ${displayName}'s Gamefolio!`
         )}`,
         discord: screenshotUrl,
         instagram: screenshotUrl,
@@ -8343,8 +10457,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!fireLimits.canFire) {
           return res.status(400).json({ 
             message: fireLimits.isPro 
-              ? "You've used all 3 zaps for today. Come back tomorrow!" 
-              : "You've used your daily zap. Pro users can zap 3 times a day!",
+              ? "You've used all 3 zaps. Come back in 24 hours!" 
+              : "You've used your zap. Come back in 24 hours! Pro users get 3 zaps a day.",
             firesRemaining: 0,
             maxFires: fireLimits.maxFiresPerDay
           });
@@ -8380,14 +10494,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
           maxFires: fireLimits.maxFiresPerDay
         });
 
-        // Background: XP, leaderboard points, and notification
+        // Background: reactor points, creator XP, and notification
         (async () => {
           try {
-            const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'clip', clipId);
-            if (!hasEarnedPoints) {
-              await LeaderboardService.awardPoints(userId, 'fire', `Fire reaction given to clip #${clipId}`);
+            // The response above already promises the reactor `xpAwarded: 50`
+            // — this used to be a lie, since only the clip owner (fire_received,
+            // via XPService) was ever actually paid. Fire reactions are
+            // permanent and one-per-user-per-clip (enforced above), so no
+            // extra dedupe check is needed here.
+            await LeaderboardService.awardPoints(
+              userId,
+              'fire',
+              `Fired on clip #${clipId}`
+            );
+
+            const hasEarnedXP = await storage.hasUserEarnedXPForReaction(
+              clip.userId,
+              'fire_received',
+              'clip',
+              clipId,
+              userId
+            );
+            if (!hasEarnedXP) {
+              await XPService.awardXP(
+                clip.userId,
+                50,
+                'fire_received',
+                `Received 50 XP for a fire reaction from user #${userId} on clip #${clipId}`,
+                clipId,
+                {
+                  contentType: 'clip',
+                  contentId: clipId,
+                  reactorId: userId,
+                  dedupeKey: `fire_received:clip:${clipId}:${userId}`,
+                }
+              );
             }
-            await XPService.awardXP(userId, 50, 'other', `Earned 50 XP for giving a fire reaction on clip #${clipId}`, clipId);
             await NotificationService.createReactionNotification(clipId, userId, emoji);
           } catch (bgErr) {
             console.error('Error in fire reaction side-effects for clip', clipId, bgErr);
@@ -8440,37 +10582,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Respond immediately so the client isn't blocked.
       res.json({ success: true });
 
-      // Run all XP / milestone side-effects in the background (fire-and-forget).
-      if (clip) {
-        const viewerId: number | undefined = (req as any).user?.id;
-        (async () => {
-          try {
-            await LeaderboardService.awardPoints(
-              clip.userId,
-              'view',
-              `Clip #${clipId} received a view`
-            );
-
-            const updatedClip = await storage.getClip(clipId);
-            const newViewCount = updatedClip?.views || 0;
-
-            await PerformanceMilestoneService.checkAndAwardViewMilestones(clipId, clip.userId, newViewCount);
-
-            if (newViewCount >= 100) {
-              await CreatorMilestoneService.checkFirst100Views(clip.userId, clipId);
-            }
-            if (newViewCount >= 1000) {
-              await CreatorMilestoneService.checkFirst1000Views(clip.userId, clipId);
-            }
-
-            if (viewerId && viewerId !== clip.userId) {
-              await BonusEventsService.awardWatchClipXP(viewerId);
-            }
-          } catch (bgErr) {
-            console.error('Error in view side-effects for clip', clipId, bgErr);
-          }
-        })();
+      // Award the viewer (not the clip owner — that's handled inside
+      // incrementClipViews) their daily watch-progress XP in the background.
+      // req.user is populated here by the app-level Bearer/session bridge
+      // even though this route has no auth middleware of its own.
+      const viewerId = (req.user as any)?.id;
+      if (clip && viewerId && viewerId !== clip.userId) {
+        BonusEventsService.awardWatchClipXP(viewerId).catch((err) => {
+          console.error('Error awarding watch-clip XP:', err);
+        });
       }
+
     } catch (error) {
       captureRouteError(error);
       console.error('Error incrementing clip views:', error);
@@ -8504,20 +10626,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Respond immediately so the client isn't blocked.
       res.json({ success: true });
 
-      // Run XP side-effects in the background (fire-and-forget).
-      if (screenshot) {
-        (async () => {
-          try {
-            await LeaderboardService.awardPoints(
-              screenshot.userId,
-              'view',
-              `Screenshot #${screenshotId} received a view`
-            );
-          } catch (bgErr) {
-            console.error('Error in view side-effects for screenshot', screenshotId, bgErr);
-          }
-        })();
-      }
     } catch (error) {
       captureRouteError(error);
       console.error('Error incrementing screenshot views:', error);
@@ -9594,6 +11702,2286 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+  // Upload a game screenshot for the indie developer's Overview gallery
+  app.post("/api/upload/game-screenshot", upload.single('screenshot'), async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.sendStatus(401);
+    }
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      if (!req.file.path || !fs.existsSync(req.file.path)) {
+        return res.status(400).json({ message: "Uploaded file not found" });
+      }
+      const sharpInstance = sharp(req.file.path);
+      const metadata = await sharpInstance.metadata();
+      if (!metadata.width || !metadata.height) {
+        return res.status(400).json({ message: "Invalid image file" });
+      }
+      const processedBuffer = await sharpInstance
+        .resize(1920, undefined, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+      const fileName = `game-screenshot-${req.user.id}-${Date.now()}.jpg`;
+      const { url: imageUrl } = await supabaseStorage.uploadBuffer(
+        processedBuffer,
+        fileName,
+        'image/jpeg',
+        'image',
+        req.user.id
+      );
+      const existingUser = await storage.getUser(req.user.id);
+      const existingUrls = (existingUser as any)?.gameScreenshotUrls || [];
+      const updatedUrls = [...existingUrls, imageUrl];
+      await storage.updateUser(req.user.id, { gameScreenshotUrls: updatedUrls } as any);
+      try { await fsPromises.unlink(req.file.path); } catch {}
+      res.json({ url: imageUrl, gameScreenshotUrls: updatedUrls, message: "Screenshot uploaded successfully" });
+    } catch (err) {
+      console.error("Error uploading game screenshot:", err);
+      return res.status(500).json({ message: "Error uploading game screenshot" });
+    }
+  });
+
+  // POST /api/indie/profile/upload-image — upload capsule or header image for the indie game profile
+  app.post("/api/indie/profile/upload-image", indieProfileImageUpload.single('image'), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file provided" });
+      if (!req.file.path || !fs.existsSync(req.file.path)) return res.status(400).json({ message: "Uploaded file not found" });
+      const field = (req.body?.field === "headerImageUrl") ? "headerImageUrl" : "capsuleImageUrl";
+      const uploadGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !uploadGameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
+      const sharpInstance = sharp(req.file.path);
+      const metadata = await sharpInstance.metadata();
+      if (!metadata.width || !metadata.height) return res.status(400).json({ message: "Invalid image" });
+      const processedBuffer = await sharpInstance
+        .resize(field === "headerImageUrl" ? 1920 : 460, undefined, { fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+      const fileName = `indie-${field === "headerImageUrl" ? "header" : "capsule"}-${req.user.id}-${Date.now()}.jpg`;
+      const { url: imageUrl } = await supabaseStorage.uploadBuffer(processedBuffer, fileName, "image/jpeg", "image", req.user.id);
+      try { await fsPromises.unlink(req.file.path); } catch {}
+      const { indieGameProfiles } = await import("@shared/schema");
+      let targetGameId = uploadGameId;
+      if (targetGameId) {
+        await db.update(indieGameProfiles).set({ [field]: imageUrl }).where(eq(indieGameProfiles.id, targetGameId));
+      } else {
+        const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, [field]: imageUrl, isPrimary: true }).returning({ id: indieGameProfiles.id });
+        targetGameId = created?.id ?? null;
+      }
+      // Clear useImported so GET /api/indie/profile returns the uploaded URL, not a stale imported value
+      await _indieUpsertMeta(req.user.id, field, { isManualOverride: true, useImported: false, lastEditedAt: new Date() }, targetGameId);
+      const [updatedProfile] = targetGameId
+        ? await db.select().from(indieGameProfiles).where(eq(indieGameProfiles.id, targetGameId)).limit(1)
+        : [];
+      const catalogue = updatedProfile ? await _syncIndieGameCatalogue(updatedProfile) : { game: null };
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
+      res.json({ url: imageUrl, field, catalogueGame: catalogue.game });
+    } catch (err) {
+      console.error("Error uploading indie profile image:", err);
+      res.status(500).json({ message: "Upload failed" });
+    }
+  });
+
+  // POST /api/indie/profile/upload-trailer — upload a trailer video for the
+  // GameProfileTab.tsx dashboard (mirrors POST /api/indie/upload/trailer,
+  // used by IndieGameDashboard.tsx — two separate dashboard implementations
+  // share the same underlying indie_game_profiles data).
+  app.post("/api/indie/profile/upload-trailer", indieProfileTrailerUpload.single('video'), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    try {
+      if (!req.file) return res.status(400).json({ message: "No file provided" });
+      const uploadGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !uploadGameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
+      const ext = (req.file.originalname.split('.').pop() || 'mp4').toLowerCase();
+      const fileName = `indie-trailer-${req.user.id}-${Date.now()}.${ext}`;
+      const { url: trailerUrl } = await supabaseStorage.uploadBuffer(req.file.buffer, fileName, req.file.mimetype, 'video', req.user.id);
+      const { indieGameProfiles } = await import("@shared/schema");
+      let targetGameId = uploadGameId;
+      if (targetGameId) {
+        await db.update(indieGameProfiles).set({ trailerUrl, updatedAt: new Date() }).where(eq(indieGameProfiles.id, targetGameId));
+      } else {
+        const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, trailerUrl, isPrimary: true }).returning({ id: indieGameProfiles.id });
+        targetGameId = created?.id ?? null;
+      }
+      await _indieUpsertMeta(req.user.id, "trailerUrl", { isManualOverride: true, useImported: false, lastEditedAt: new Date() }, targetGameId);
+      res.json({ url: trailerUrl, field: "trailerUrl" });
+    } catch (err) {
+      console.error("Error uploading indie profile trailer:", err);
+      res.status(500).json({ message: "Upload failed" });
+    }
+  });
+
+  // ─── Indie Game Profile API ──────────────────────────────────────────────────
+
+  // Internal helpers for indie profile
+  // Indie helpers delegate to storage layer for proper architecture separation
+  // gameId omitted => the user's primary game (migration 0020).
+  async function _indieGetOrCreate(userId: number, gameId?: number | null) {
+    const existing = await storage.getIndieGameProfile(userId, gameId);
+    if (existing) return existing;
+    return storage.upsertIndieGameProfile(userId, {}, gameId);
+  }
+
+  async function _indieFieldMetaMap(userId: number, gameId?: number | null) {
+    return storage.getIndieFieldMeta(userId, gameId);
+  }
+
+  async function _indieUpsertMeta(userId: number, fieldName: string, patch: Partial<{ importedValue: string; importSource: string; isManualOverride: boolean; useImported: boolean; lastImportedAt: Date; lastEditedAt: Date }>, gameId?: number | null) {
+    return storage.upsertIndieFieldMeta(userId, fieldName, patch, gameId);
+  }
+
+  async function _readStoredItchApiKey(profileId: number, storedValue: string | null): Promise<string | null> {
+    if (!storedValue) return null;
+    const credential = decryptItchApiKey(storedValue);
+    if (credential.isLegacyPlaintext) {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      await db.update(indieGameProfiles)
+        .set({ itchApiKey: encryptItchApiKey(credential.apiKey), updatedAt: new Date() })
+        .where(eq(indieGameProfiles.id, profileId));
+    }
+    return credential.apiKey;
+  }
+
+  function _stripHtml(html: string): string {
+    return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  function _mapSteamData(g: any): Record<string, any> {
+    const platforms: string[] = [];
+    if (g.platforms?.windows) platforms.push("windows");
+    if (g.platforms?.mac) platforms.push("mac");
+    if (g.platforms?.linux) platforms.push("linux");
+    let releaseStatus = "coming_soon";
+    if (g.release_date?.coming_soon === false && g.release_date?.date) releaseStatus = "released";
+    if ((g.genres || []).some((gr: any) => gr.description === "Early Access")) releaseStatus = "early_access";
+    const genres = (g.genres || []).map((gr: any) => gr.description).filter(Boolean);
+    const tags = (g.categories || []).map((c: any) => c.description).filter(Boolean).slice(0, 10);
+    const screenshotUrls = (g.screenshots || []).slice(0, 8).map((s: any) => s.path_full).filter(Boolean);
+    // Steam retired the flat webm/mp4 movie URLs; appdetails now only returns
+    // streaming manifests (hls_h264 plays broadly via hls.js + natively in
+    // Safari). Keep the old fields as a harmless fallback in case Valve ever
+    // serves them again for some titles.
+    let trailerUrl: string | null = null;
+    if (g.movies?.length > 0) {
+      trailerUrl = g.movies[0].webm?.max || g.movies[0].mp4?.max || g.movies[0].hls_h264 || null;
+    }
+    let price = g.is_free ? "Free" : null;
+    if (g.price_overview?.final_formatted) price = g.price_overview.final_formatted;
+    return {
+      gameName: g.name || null,
+      studioName: (g.developers || []).filter(Boolean).join(", ") || null,
+      studioWebsite: g.website || null,
+      websiteUrl: g.website || null,
+      shortDescription: g.short_description || null,
+      fullDescription: g.detailed_description ? _stripHtml(g.detailed_description).slice(0, 5000) : null,
+      headerImageUrl: g.header_image || null,
+      capsuleImageUrl: g.capsule_image || null,
+      trailerUrl,
+      screenshotUrls: screenshotUrls.length > 0 ? screenshotUrls : null,
+      genres: genres.length > 0 ? genres : null,
+      tags: tags.length > 0 ? tags : null,
+      platforms: platforms.length > 0 ? platforms : null,
+      releaseDate: g.release_date?.date || null,
+      releaseStatus,
+      price,
+      isFree: !!g.is_free,
+    };
+  }
+
+  function _mapItchData(g: any): Record<string, any> {
+    const platforms: string[] = [];
+    if (g.p_windows) platforms.push("windows");
+    if (g.p_osx) platforms.push("mac");
+    if (g.p_linux) platforms.push("linux");
+    if (g.p_android) platforms.push("android");
+
+    const fields: Record<string, any> = {
+      gameName: g.title || null,
+      shortDescription: g.short_text || null,
+      fullDescription: g.description ? _stripHtml(String(g.description)).slice(0, 5000) : null,
+      headerImageUrl: g.cover_url || null,
+      capsuleImageUrl: g.cover_url || null,
+      itchUrl: g.url || null,
+      releaseDate: g.published_at || null,
+      releaseStatus: g.published ? "released" : "coming_soon",
+      platforms: platforms.length > 0 ? platforms : null,
+    };
+
+    if (g.classification && g.classification !== "game") fields.genres = [g.classification];
+    if (g.min_price !== undefined && g.min_price !== null) {
+      const cents = Number(g.min_price);
+      if (Number.isFinite(cents) && cents === 0) {
+        fields.price = "Free";
+        fields.isFree = true;
+      } else if (Number.isFinite(cents)) {
+        fields.price = `$${(cents / 100).toFixed(2)}`;
+        fields.isFree = false;
+      }
+    }
+    return fields;
+  }
+
+  function _asStringList(value: unknown): string[] {
+    if (!Array.isArray(value)) return [];
+    return value.flatMap((item: any) => {
+      if (typeof item === "string") return [item];
+      if (typeof item?.name === "string") return [item.name];
+      if (typeof item?.title === "string") return [item.title];
+      if (typeof item?.displayName === "string") return [item.displayName];
+      return [];
+    }).map(value => value.trim()).filter(Boolean);
+  }
+
+  function _asText(value: unknown, maxLength = 5000): string | null {
+    if (typeof value !== "string") return null;
+    const text = value.trim();
+    return text ? text.slice(0, maxLength) : null;
+  }
+
+  function _mapEpicPlatform(value: string): string | null {
+    const platform = value.toLowerCase();
+    if (platform.includes("windows") || platform === "pc") return "windows";
+    if (platform.includes("mac") || platform.includes("osx")) return "mac";
+    if (platform.includes("linux")) return "linux";
+    if (platform.includes("android")) return "android";
+    if (platform.includes("ios")) return "ios";
+    if (platform.includes("playstation") || platform.includes("ps5") || platform.includes("ps4")) return "ps5";
+    if (platform.includes("xbox")) return "xbox";
+    if (platform.includes("switch")) return "switch";
+    return null;
+  }
+
+  function _mapEpicData(json: any, main: any): Record<string, any> {
+    const data = main?.data || {};
+    const about = data.about || {};
+    const hero = data.hero || {};
+    const requirements = data.requirements || {};
+    const galleryItems = data.gallery?.items || [];
+    const screenshots = galleryItems
+      .filter((item: any) => item?.type === "image")
+      .map((item: any) => item.src)
+      .filter(Boolean)
+      .slice(0, 8);
+    const trailer = _asText(galleryItems.find((item: any) => item?.type === "video")?.src, 2000)
+      || _asText(hero.video?.src, 2000);
+    const genreCandidates = [
+      ..._asStringList(about.genres),
+      ..._asStringList(data.genres),
+      ..._asStringList(json.genres),
+    ];
+    const tagCandidates = [
+      ..._asStringList(about.tags),
+      ..._asStringList(data.tags),
+      ..._asStringList(json.tags),
+    ];
+    const platformCandidates = [
+      ..._asStringList(about.platforms),
+      ..._asStringList(data.platforms),
+      ..._asStringList(json.platforms),
+      ..._asStringList(
+        Array.isArray(requirements.systems)
+          ? requirements.systems.map((system: any) => system.systemType)
+          : [],
+      ),
+    ];
+    const platforms = [...new Set(platformCandidates
+      .map(_mapEpicPlatform)
+      .filter((platform): platform is string => !!platform))];
+    const rawPrice = about.price ?? data.price ?? json.price ?? json.totalPrice;
+    const price = _asText(rawPrice, 100)
+      || _asText(rawPrice?.fmtPrice?.totalPrice, 100)
+      || _asText(rawPrice?.totalPrice, 100)
+      || _asText(rawPrice?.originalPrice, 100);
+    const isFree = about.isFree ?? data.isFree ?? json.isFree ?? (typeof price === "string" && /^(free|\$?0(?:\.00)?)$/i.test(price));
+    const releaseDate = _asText(about.releaseDate ?? data.releaseDate ?? json.releaseDate ?? main?.releaseDate, 100);
+    const fullDescription = _asText(about.description, 10000);
+    const releaseStatus = about.comingSoon || data.comingSoon || json.comingSoon
+      ? "coming_soon"
+      : releaseDate ? "released" : null;
+
+    return {
+      gameName: _asText(json.productName || main?.productName || about.title, 300),
+      studioName: _asText(about.developerAttribution || data.developerAttribution || json.developer, 300),
+      studioWebsite: _asText(about.developerWebsite || data.developerWebsite, 2000),
+      websiteUrl: _asText(about.website || data.website || json.website, 2000),
+      shortDescription: _asText(about.shortDescription, 1000),
+      fullDescription: fullDescription ? _stripHtml(fullDescription).slice(0, 5000) : null,
+      headerImageUrl: _asText(hero.backgroundImageUrl || about.image?.src || hero.logoImage?.src, 2000),
+      capsuleImageUrl: _asText(about.image?.src || hero.portraitBackgroundImageUrl || hero.logoImage?.src, 2000),
+      trailerUrl: trailer,
+      screenshotUrls: screenshots.length > 0 ? screenshots : null,
+      genres: genreCandidates.length > 0 ? [...new Set(genreCandidates)] : null,
+      tags: tagCandidates.length > 0 ? [...new Set(tagCandidates)].slice(0, 10) : null,
+      platforms: platforms.length > 0 ? platforms : null,
+      releaseDate,
+      releaseStatus,
+      price,
+      isFree: typeof isFree === "boolean" ? isFree : null,
+    };
+  }
+
+  function _canonicalStoreUrl(value: string): string | null {
+    try {
+      const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+      url.hash = "";
+      url.search = "";
+      return url.toString().replace(/\/$/, "").toLowerCase();
+    } catch {
+      return null;
+    }
+  }
+
+  // Store links are validated against their platform's host so a link pasted
+  // into the wrong field is rejected rather than silently breaking imports.
+  const { validateStoreUrls, normalizeProfileUrls } = await import("@shared/store-urls");
+
+  // Store lookups, factored out so the partner-only preview endpoints and the
+  // onboarding-time lookup below share one implementation.
+  async function _fetchSteamPreview(appId: string) {
+    const steamRes = await fetch(`https://store.steampowered.com/api/appdetails?appids=${appId}&l=english`, { signal: AbortSignal.timeout(10000) });
+    if (!steamRes.ok) return { ok: false as const, error: "Steam API unavailable", status: 502 };
+    const json = await steamRes.json() as any;
+    const appData = json[appId];
+    if (!appData?.success) return { ok: false as const, error: "Steam app not found — check the App ID", status: 404 };
+    return {
+      ok: true as const,
+      payload: {
+        source: "steam",
+        appId,
+        steamUrl: `https://store.steampowered.com/app/${appId}/`,
+        fields: _mapSteamData(appData.data),
+      },
+    };
+  }
+
+  async function _fetchEpicPreview(slug: string) {
+    const epicRes = await fetch(`https://store-content-ipv4.ak.epicgames.com/api/en-US/content/products/${encodeURIComponent(slug)}`, { signal: AbortSignal.timeout(10000) });
+    if (!epicRes.ok) return { ok: false as const, error: "Epic product not found — check the slug", status: 404 };
+    const json = await epicRes.json() as any;
+    const pages = json.pages || [];
+    const main = pages.find((p: any) => p.type === "productHome") || pages[0];
+    return {
+      ok: true as const,
+      payload: {
+        source: "epic",
+        slug,
+        epicUrl: `https://store.epicgames.com/en-US/p/${slug}`,
+        fields: _mapEpicData(json, main),
+      },
+    };
+  }
+
+  async function _fetchItchPreview(apiKey: string, requestedUrl: string) {
+    const gamesRes = await fetch("https://api.itch.io/profile/games", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!gamesRes.ok) {
+      return {
+        ok: false as const,
+        error: gamesRes.status === 401 || gamesRes.status === 403
+          ? "Reconnect your itch.io account before importing."
+          : "itch.io API unavailable",
+        status: gamesRes.status === 401 || gamesRes.status === 403 ? 403 : 502,
+      };
+    }
+
+    const gamesJson = await gamesRes.json() as any;
+    const requested = _canonicalStoreUrl(requestedUrl);
+    const game = (gamesJson.games || []).find((candidate: any) =>
+      requested && candidate?.url && _canonicalStoreUrl(candidate.url) === requested);
+    if (!game?.id) {
+      return {
+        ok: false as const,
+        error: "That itch.io game was not found in your connected account.",
+        status: 404,
+      };
+    }
+
+    const gameRes = await fetch(`https://api.itch.io/games/${game.id}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!gameRes.ok) {
+      return {
+        ok: false as const,
+        error: gameRes.status === 404 ? "itch.io game not found" : "itch.io API unavailable",
+        status: gameRes.status === 404 ? 404 : 502,
+      };
+    }
+    const json = await gameRes.json() as any;
+    const fullGame = json.game || json;
+    return {
+      ok: true as const,
+      payload: {
+        source: "itch",
+        gameId: fullGame.id || game.id,
+        itchUrl: fullGame.url || game.url || requestedUrl,
+        fields: _mapItchData(fullGame),
+      },
+    };
+  }
+
+  // Pulls the store identifier out of a pasted URL. Steam app pages carry a
+  // numeric id (/app/367520/...), Epic product pages a slug (/p/<slug>).
+  function _identifyStoreUrl(raw: string): { source: "steam"; appId: string } | { source: "epic"; slug: string } | { source: "itch"; url: string } | null {
+    const value = String(raw || "").trim();
+    if (!value) return null;
+    let url: URL;
+    try {
+      url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+    } catch {
+      return null;
+    }
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    if (host === "store.steampowered.com") {
+      const m = url.pathname.match(/\/app\/(\d+)/);
+      if (m) return { source: "steam", appId: m[1] };
+      return null;
+    }
+    if (host === "store.epicgames.com" || host.endsWith(".epicgames.com")) {
+      // /p/<slug> and /<locale>/p/<slug> are both in the wild.
+      const m = url.pathname.match(/\/p\/([^/?#]+)/);
+      if (m) return { source: "epic", slug: decodeURIComponent(m[1]).toLowerCase() };
+      return null;
+    }
+    if (host === "itch.io" || host.endsWith(".itch.io")) {
+      return { source: "itch", url: url.toString() };
+    }
+    return null;
+  }
+
+  const INDIE_ALLOWED_FIELDS = [
+    "gameName","releaseStatus","releaseDate","price","isFree",
+    "studioName","studioFoundedYear","studioTeamSize","studioWebsite","studioCountry",
+    "shortDescription","fullDescription",
+    "keyFeatures","genres","tags",
+    "headerImageUrl","capsuleImageUrl","trailerUrl","screenshotUrls",
+    "platforms",
+    "steamUrl","steamAppId","epicUrl","epicSlug","itchUrl",
+    "websiteUrl","twitterUrl","discordUrl","youtubeUrl","twitchUrl","instagramUrl","facebookUrl","tiktokUrl",
+    "ageRating","supportedLanguages","contentDescriptors",
+    "autoSyncEnabled","preferredSyncSource",
+  ];
+
+  // Game quotas: a free developer gets two games; an indie-dev subscriber gets ten.
+  // Read the flag from the database rather than the session user, so a
+  // subscription that changed mid-session is reflected immediately.
+  const INDIE_FREE_GAME_LIMIT = 2;
+  const INDIE_SUBSCRIBER_GAME_LIMIT = 10;
+
+  async function _indieGameQuota(userId: number): Promise<{ limit: number; subscribed: boolean }> {
+    const { users } = await import("@shared/schema");
+    const { db } = await import("./db");
+    const { eq } = await import("drizzle-orm");
+    const [row] = await db.select({ subscribed: users.isIndieDevSubscriber })
+      .from(users).where(eq(users.id, userId));
+    const subscribed = !!row?.subscribed;
+    return { subscribed, limit: subscribed ? INDIE_SUBSCRIBER_GAME_LIMIT : INDIE_FREE_GAME_LIMIT };
+  }
+
+  // Resolves which game a request refers to. A developer may own several games
+  // (migration 0020); callers that predate multi-game send no gameId, so fall
+  // back to the primary game. Returns null when the id is not the caller's —
+  // never trust a client-supplied gameId without this ownership check.
+  async function _indieResolveGameId(userId: number, requested?: unknown): Promise<number | null> {
+    const { indieGameProfiles } = await import("@shared/schema");
+    const { db } = await import("./db");
+    const { eq, and, asc } = await import("drizzle-orm");
+
+    const isExplicitlyRequested = requested !== undefined && requested !== null && requested !== "";
+    const wanted = Number(requested);
+    if (isExplicitlyRequested && (!Number.isInteger(wanted) || wanted <= 0)) {
+      return null;
+    }
+    if (isExplicitlyRequested) {
+      const [owned] = await db.select({ id: indieGameProfiles.id })
+        .from(indieGameProfiles)
+        .where(and(eq(indieGameProfiles.id, wanted), eq(indieGameProfiles.userId, userId)));
+      return owned?.id ?? null;
+    }
+
+    const [primary] = await db.select({ id: indieGameProfiles.id })
+      .from(indieGameProfiles)
+      .where(and(eq(indieGameProfiles.userId, userId), eq(indieGameProfiles.isPrimary, true)));
+    if (primary) return primary.id;
+
+    // No primary flagged (rows created before 0020's backfill, or primary deleted).
+    const [first] = await db.select({ id: indieGameProfiles.id })
+      .from(indieGameProfiles)
+      .where(eq(indieGameProfiles.userId, userId))
+      .orderBy(asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id))
+      .limit(1);
+    return first?.id ?? null;
+  }
+
+  type IndieCatalogueSyncResult = {
+    game: { id: number; name: string; imageUrl: string | null } | null;
+    conflict?: string;
+  };
+
+  // An Indie profile is the source of truth for a developer-owned game, while
+  // `games` is the catalogue used by uploads and community content. Reconcile
+  // the two through an explicit ID link so renaming a game never disconnects
+  // its clips/screenshots and title matches cannot attach another dev's game.
+  async function _syncIndieGameCatalogue(profile: any): Promise<IndieCatalogueSyncResult> {
+    const name = String(profile?.gameName ?? "").trim();
+    if (!name) return { game: null };
+
+    const { indieGameProfiles } = await import("@shared/schema");
+    const artwork = profile.capsuleImageUrl || profile.headerImageUrl || null;
+    const matchingName = async () => {
+      const [match] = await db.select().from(games)
+        .where(sql`lower(${games.name}) = lower(${name})`)
+        .limit(1);
+      return match ?? null;
+    };
+
+    const linked = profile.catalogGameId ? await storage.getGame(profile.catalogGameId) : null;
+    if (linked) {
+      const sameName = await matchingName();
+      if (sameName && sameName.id !== linked.id) {
+        return { game: null, conflict: "A different Gamefolio catalogue entry already uses this game name. Rename your game or contact support to merge the entries." };
+      }
+
+      // Only modify metadata for the catalogue row created by this indie flow.
+      // A pre-existing provider catalogue entry may be linked below, but its
+      // metadata must remain provider-owned.
+      if (linked.isUserAdded && !linked.showContactBanner) {
+        const updated = await storage.updateGame(linked.id, {
+          name,
+          imageUrl: artwork ?? linked.imageUrl,
+          isApproved: true,
+          showContactBanner: false,
+        });
+        if (updated) return { game: updated };
+      }
+      return { game: linked };
+    }
+
+    const existing = await matchingName();
+    if (existing) {
+      const [linkedElsewhere] = await db.select({ id: indieGameProfiles.id })
+        .from(indieGameProfiles)
+        .where(eq(indieGameProfiles.catalogGameId, existing.id))
+        .limit(1);
+      if (linkedElsewhere && linkedElsewhere.id !== profile.id) {
+        return { game: null, conflict: "This catalogue game is already managed by another indie profile. Choose a distinct title or contact support." };
+      }
+      if (existing.isUserAdded) {
+        return { game: null, conflict: "A community-submitted game already uses this title. Rename your game or contact support to safely merge the entries." };
+      }
+
+      await db.update(indieGameProfiles)
+        .set({ catalogGameId: existing.id, updatedAt: new Date() })
+        .where(eq(indieGameProfiles.id, profile.id));
+      profile.catalogGameId = existing.id;
+      return { game: existing };
+    }
+
+    const created = await storage.createGame({
+      name,
+      imageUrl: artwork,
+      isUserAdded: true,
+      isApproved: true,
+      showContactBanner: false,
+    });
+    await db.update(indieGameProfiles)
+      .set({ catalogGameId: created.id, updatedAt: new Date() })
+      .where(eq(indieGameProfiles.id, profile.id));
+    profile.catalogGameId = created.id;
+    return { game: created };
+  }
+
+  // GET /api/indie/profile — owner: full profile + field meta
+  // Resolution model: when useImported is true for a field, the resolved profile value
+  // should reflect the importedValue rather than the manually-edited value.
+  app.get("/api/indie/profile", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    try {
+      // ?gameId= selects one of the developer's games; omitted means primary.
+      const gameId = await _indieResolveGameId(req.user.id, req.query.gameId);
+      if (req.query.gameId != null && req.query.gameId !== "" && !gameId) return res.status(404).json({ error: "Game not found" });
+      // Read-only: do NOT create a profile here. Auto-creating was harmless when
+      // a user could only ever have one, but now it spends a slot from their
+      // quota on a nameless placeholder just for opening the dashboard — a free
+      // developer would lose one of their two games without doing anything.
+      // The write paths (PUT, uploads, onboarding) still create on demand.
+      const profile = (await storage.getIndieGameProfile(req.user.id, gameId)) ?? {};
+      const fieldMeta = await _indieFieldMetaMap(req.user.id, gameId);
+
+      // Apply useImported resolution: for each field that has useImported=true,
+      // return the importedValue as the effective field value in a resolvedProfile.
+      const resolvedProfile: Record<string, any> = { ...(profile as any) };
+      for (const [fieldName, meta] of Object.entries(fieldMeta)) {
+        if ((meta as any).useImported && (meta as any).importedValue) {
+          try {
+            resolvedProfile[fieldName] = JSON.parse((meta as any).importedValue);
+          } catch {
+            resolvedProfile[fieldName] = (meta as any).importedValue;
+          }
+        }
+      }
+
+      res.json({ profile: resolvedProfile, fieldMeta });
+    } catch (err) {
+      console.error("GET /api/indie/profile error:", err);
+      res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
+  // PUT /api/indie/profile — owner: manually update profile fields
+  app.put("/api/indie/profile", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const patch: Record<string, any> = {};
+      for (const key of INDIE_ALLOWED_FIELDS) {
+        if (key in req.body) patch[key] = req.body[key];
+      }
+      if (Object.keys(patch).length === 0) return res.status(400).json({ error: "No valid fields provided" });
+      normalizeProfileUrls(patch);
+      const urlErrors = validateStoreUrls(patch);
+      if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
+      patch.updatedAt = new Date();
+      // Resolve which game is being edited before writing. Updating by userId
+      // alone would rewrite every game the developer owns, now that migration
+      // 0020 has removed the UNIQUE(user_id) constraint.
+      const requestedGameId = req.body.gameId ?? req.query.gameId;
+      const gameId = await _indieResolveGameId(req.user.id, requestedGameId);
+      if (requestedGameId != null && requestedGameId !== "" && !gameId) return res.status(404).json({ error: "Game not found" });
+      let profile;
+      if (gameId) {
+        const up = await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, gameId)).returning();
+        profile = up[0];
+      } else {
+        const ins = await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch, isPrimary: true }).returning();
+        profile = ins[0];
+      }
+      const now = new Date();
+      for (const key of Object.keys(patch)) {
+        if (key === "updatedAt") continue;
+        await _indieUpsertMeta(req.user.id, key, { isManualOverride: true, useImported: false, lastEditedAt: now }, profile?.id);
+      }
+      // Catalogue reconciliation only depends on the game's name and artwork.
+      // Avoid doing those extra lookups for unrelated fields such as platforms,
+      // which should feel like an immediate multi-select interaction.
+      const catalogueFields = new Set(["gameName", "capsuleImageUrl", "headerImageUrl"]);
+      const needsCatalogueSync = Object.keys(patch).some((key) => catalogueFields.has(key));
+      const catalogue = profile && needsCatalogueSync
+        ? await _syncIndieGameCatalogue(profile)
+        : { game: null };
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
+      const fieldMeta = await _indieFieldMetaMap(req.user.id, profile?.id);
+      res.json({ profile, fieldMeta, catalogueGame: catalogue.game });
+    } catch (err) {
+      console.error("PUT /api/indie/profile error:", err);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
+  // POST /api/indie/onboarding-profile — seed the game profile from the onboarding flow.
+  // Deliberately does NOT require isPartner: this runs while a brand-new user is still
+  // completing onboarding, before any partner/subscriber entitlement exists. Always scoped
+  // to req.user.id, and fields are whitelisted through INDIE_ALLOWED_FIELDS exactly as
+  // PUT /api/indie/profile does. Upserts so re-running onboarding overwrites cleanly.
+  app.post("/api/indie/onboarding-profile", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+
+      const patch: Record<string, any> = {};
+      for (const key of INDIE_ALLOWED_FIELDS) {
+        if (key in req.body && req.body[key] !== "" && req.body[key] != null) {
+          patch[key] = req.body[key];
+        }
+      }
+      if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
+      normalizeProfileUrls(patch);
+      const urlErrors = validateStoreUrls(patch);
+      if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
+      patch.updatedAt = new Date();
+
+      // Target the primary game so re-running onboarding overwrites it rather
+      // than editing every game a returning developer owns.
+      const primaryId = await _indieResolveGameId(userId, undefined);
+      let profile;
+      if (primaryId) {
+        const up = await db.update(indieGameProfiles).set(patch)
+          .where(eq(indieGameProfiles.id, primaryId)).returning();
+        profile = up[0];
+      } else {
+        // First game for this user — it becomes their primary, so later
+        // additions through POST /api/indie/games slot in behind it.
+        const ins = await db.insert(indieGameProfiles)
+          .values({ userId: userId, ...patch, isPrimary: true }).returning();
+        profile = ins[0];
+      }
+      const catalogue = await _syncIndieGameCatalogue(profile);
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
+      res.json({ profile, catalogueGame: catalogue.game });
+    } catch (err) {
+      console.error("POST /api/indie/onboarding-profile error:", err);
+      res.status(500).json({ error: "Failed to save game profile" });
+    }
+  });
+
+  // POST /api/streamer/onboarding-profile — persist the streamer setup step.
+  //
+  // Verification is emphatically NOT granted here: twitchVerified / kickVerified
+  // / vpzoneVerified are only ever set by the OAuth callbacks in
+  // server/routes/social-oauth.ts, which prove ownership. This endpoint writes
+  // self-reported names only, and refuses to overwrite a channel name that OAuth
+  // already verified — otherwise typing a name would silently displace a proven
+  // one and inherit its verified badge.
+  app.post("/api/streamer/onboarding-profile", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const { validateStreamerHandle, normalizeStreamerHandle } = await import("@shared/streamer-handles");
+      const { users } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+
+      const handles = {
+        twitch: req.body.twitchUsername,
+        kick: req.body.kickUsername,
+        vpzone: req.body.vpzoneUsername,
+      } as const;
+
+      const errors: string[] = [];
+      for (const [platform, value] of Object.entries(handles)) {
+        const err = validateStreamerHandle(platform as any, value);
+        if (err) errors.push(err);
+      }
+      if (errors.length > 0) {
+        return res.status(400).json({ error: errors[0], errors, code: "INVALID_STREAMER_HANDLE" });
+      }
+
+      const [existing] = await db.select({
+        twitchVerified: users.twitchVerified,
+        kickVerified: users.kickVerified,
+        vpzoneVerified: users.vpzoneVerified,
+        twitchChannelName: users.twitchChannelName,
+        kickChannelName: users.kickChannelName,
+        vpzoneChannelName: users.vpzoneChannelName,
+      }).from(users).where(eq(users.id, userId));
+
+      const patch: Record<string, any> = { isStreamer: true, updatedAt: new Date() };
+
+      const clean = (v: unknown) => {
+        const h = normalizeStreamerHandle(v as string);
+        return h === "" ? null : h;
+      };
+
+      // Only fill a channel name that OAuth has not already proven.
+      if (!existing?.twitchVerified && clean(handles.twitch)) patch.twitchChannelName = clean(handles.twitch);
+      if (!existing?.kickVerified && clean(handles.kick)) patch.kickChannelName = clean(handles.kick);
+      if (!existing?.vpzoneVerified && clean(handles.vpzone)) patch.vpzoneChannelName = clean(handles.vpzone);
+
+      const mainPlatform = typeof req.body.mainPlatform === "string" ? req.body.mainPlatform.trim() : "";
+      if (["twitch", "kick", "vpzone", "other"].includes(mainPlatform)) {
+        patch.streamPlatform = mainPlatform;
+        const named =
+          mainPlatform === "twitch" ? (existing?.twitchChannelName ?? clean(handles.twitch)) :
+          mainPlatform === "kick"   ? (existing?.kickChannelName   ?? clean(handles.kick)) :
+          mainPlatform === "vpzone" ? (existing?.vpzoneChannelName ?? clean(handles.vpzone)) : null;
+        if (named) patch.streamChannelName = named;
+      }
+
+      if (typeof req.body.mainGame === "string" && req.body.mainGame.trim()) {
+        patch.streamMainGame = req.body.mainGame.trim().slice(0, 200);
+      }
+      if (typeof req.body.streamFrequency === "string" && req.body.streamFrequency.trim()) {
+        patch.streamFrequency = req.body.streamFrequency.trim().slice(0, 50);
+      }
+
+      await db.update(users).set(patch).where(eq(users.id, userId));
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("POST /api/streamer/onboarding-profile error:", err);
+      res.status(500).json({ error: "Failed to save streamer profile" });
+    }
+  });
+
+  // GET /api/indie/store-lookup?url= — resolve a pasted Steam, Epic, or an
+  // authenticated itch.io store URL into fields that onboarding can prefill.
+  // into the fields we can prefill from. Authentication only, deliberately no
+  // isPartner gate: this runs during onboarding, before any entitlement exists.
+  // Read-only and nothing is saved — the client decides what to apply.
+  //
+  // itch.io is only resolved through an already connected account. The API key
+  // stays server-side, and a URL for another developer's game is rejected.
+  app.get("/api/indie/store-lookup", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const identified = _identifyStoreUrl(String(req.query.url || ""));
+    if (!identified) {
+      return res.status(400).json({
+        error: "Paste a Steam, Epic Games, or connected itch.io game URL.",
+        code: "UNSUPPORTED_STORE_URL",
+      });
+    }
+    try {
+      let result;
+      if (identified.source === "steam") {
+        result = await _fetchSteamPreview(identified.appId);
+      } else if (identified.source === "epic") {
+        result = await _fetchEpicPreview(identified.slug);
+      } else {
+        const { indieGameProfiles } = await import("@shared/schema");
+        const { db } = await import("./db");
+        const { eq } = await import("drizzle-orm");
+        const profiles = await db.select({ id: indieGameProfiles.id, itchApiKey: indieGameProfiles.itchApiKey })
+          .from(indieGameProfiles)
+          .where(eq(indieGameProfiles.userId, req.user.id));
+        const keyProfile = profiles.find(profile => !!profile.itchApiKey);
+        const apiKey = keyProfile
+          ? await _readStoredItchApiKey(keyProfile.id, keyProfile.itchApiKey)
+          : null;
+        if (!apiKey) {
+          return res.status(403).json({
+            error: "Connect your itch.io account in your game dashboard before importing its game details.",
+            code: "ITCH_NOT_CONNECTED",
+          });
+        }
+        result = await _fetchItchPreview(apiKey, identified.url);
+      }
+      if (!result.ok) return res.status(result.status).json({ error: result.error });
+      res.json(result.payload);
+    } catch (err) {
+      console.error("GET /api/indie/store-lookup error:", err);
+      res.status(502).json({ error: "Could not reach the store. Try again, or fill the details in yourself." });
+    }
+  });
+
+  // GET /api/indie/games — every game the developer owns, for the switcher.
+  app.get("/api/indie/games", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, asc, desc } = await import("drizzle-orm");
+      const games = await db.select({
+          id: indieGameProfiles.id,
+          gameName: indieGameProfiles.gameName,
+          releaseStatus: indieGameProfiles.releaseStatus,
+          headerImageUrl: indieGameProfiles.headerImageUrl,
+          capsuleImageUrl: indieGameProfiles.capsuleImageUrl,
+          isPrimary: indieGameProfiles.isPrimary,
+          sortOrder: indieGameProfiles.sortOrder,
+          updatedAt: indieGameProfiles.updatedAt,
+        })
+        .from(indieGameProfiles)
+        .where(eq(indieGameProfiles.userId, userId))
+        .orderBy(desc(indieGameProfiles.isPrimary), asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id));
+      const { limit, subscribed } = await _indieGameQuota(userId);
+      res.json({ games, limit, subscribed, canAddMore: games.length < limit });
+    } catch (err) {
+      console.error("GET /api/indie/games error:", err);
+      res.status(500).json({ error: "Failed to load games" });
+    }
+  });
+
+  // POST /api/indie/games — add another game. The first one a user creates
+  // becomes their primary automatically.
+  app.post("/api/indie/games", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+
+      const patch: Record<string, any> = {};
+      for (const key of INDIE_ALLOWED_FIELDS) {
+        if (key in req.body && req.body[key] !== "" && req.body[key] != null) patch[key] = req.body[key];
+      }
+      if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
+      normalizeProfileUrls(patch);
+      const urlErrors = validateStoreUrls(patch);
+      if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
+
+      const existing = await db.select({ id: indieGameProfiles.id })
+        .from(indieGameProfiles).where(eq(indieGameProfiles.userId, userId));
+
+      const { limit, subscribed } = await _indieGameQuota(userId);
+      if (existing.length >= limit) {
+        return res.status(403).json({
+          error: subscribed
+            ? `You have reached the maximum of ${limit} games.`
+            : `Free accounts can add ${INDIE_FREE_GAME_LIMIT} games. Subscribe to add up to ${INDIE_SUBSCRIBER_GAME_LIMIT}.`,
+          code: "GAME_LIMIT_REACHED",
+          limit,
+          subscribed,
+          current: existing.length,
+        });
+      }
+
+      const [game] = await db.insert(indieGameProfiles).values({
+        userId,
+        ...patch,
+        isPrimary: existing.length === 0,
+        sortOrder: existing.length,
+        updatedAt: new Date(),
+      }).returning();
+      const catalogue = await _syncIndieGameCatalogue(game);
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
+      res.status(201).json({ game, catalogueGame: catalogue.game });
+    } catch (err) {
+      console.error("POST /api/indie/games error:", err);
+      res.status(500).json({ error: "Failed to create game" });
+    }
+  });
+
+  // POST /api/indie/games/:gameId/primary — promote a game to primary.
+  // Demote-then-promote in a transaction: the partial unique index
+  // indie_game_profiles_one_primary_per_user rejects two primaries at once.
+  app.post("/api/indie/games/:gameId/primary", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const gameId = await _indieResolveGameId(userId, req.params.gameId);
+      if (!gameId) return res.status(404).json({ error: "Game not found" });
+
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and } = await import("drizzle-orm");
+
+      await db.transaction(async (tx) => {
+        await tx.update(indieGameProfiles).set({ isPrimary: false })
+          .where(and(eq(indieGameProfiles.userId, userId), eq(indieGameProfiles.isPrimary, true)));
+        await tx.update(indieGameProfiles).set({ isPrimary: true, updatedAt: new Date() })
+          .where(eq(indieGameProfiles.id, gameId));
+      });
+      res.json({ ok: true, primaryGameId: gameId });
+    } catch (err) {
+      console.error("POST /api/indie/games/:gameId/primary error:", err);
+      res.status(500).json({ error: "Failed to set primary game" });
+    }
+  });
+
+  // DELETE /api/indie/games/:gameId — remove a game. If it was the primary,
+  // promote the next one so the developer is never left without one.
+  app.delete("/api/indie/games/:gameId", async (req, res) => {
+    if (!req.isAuthenticated() || !req.user) return res.sendStatus(401);
+    const userId = req.user.id;
+    try {
+      const gameId = await _indieResolveGameId(userId, req.params.gameId);
+      if (!gameId) return res.status(404).json({ error: "Game not found" });
+
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, and, ne, asc } = await import("drizzle-orm");
+
+      await db.transaction(async (tx) => {
+        const [removed] = await tx.delete(indieGameProfiles)
+          .where(eq(indieGameProfiles.id, gameId)).returning({ isPrimary: indieGameProfiles.isPrimary });
+        if (removed?.isPrimary) {
+          const [next] = await tx.select({ id: indieGameProfiles.id })
+            .from(indieGameProfiles)
+            .where(eq(indieGameProfiles.userId, userId))
+            .orderBy(asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id))
+            .limit(1);
+          if (next) {
+            await tx.update(indieGameProfiles).set({ isPrimary: true })
+              .where(eq(indieGameProfiles.id, next.id));
+          }
+        }
+      });
+      res.json({ ok: true, deletedGameId: gameId });
+    } catch (err) {
+      console.error("DELETE /api/indie/games/:gameId error:", err);
+      res.status(500).json({ error: "Failed to delete game" });
+    }
+  });
+
+  // GET /api/indie/steam/preview?appId= — preview Steam data without saving
+  app.get("/api/indie/steam/preview", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    const appId = (req.query.appId as string || "").replace(/\D/g, "");
+    if (!appId) return res.status(400).json({ error: "Valid numeric appId required" });
+    try {
+      const result = await _fetchSteamPreview(appId);
+      if (!result.ok) return res.status(result.status).json({ error: result.error });
+      res.json(result.payload);
+    } catch (err) {
+      console.error("GET /api/indie/steam/preview error:", err);
+      res.status(502).json({ error: "Failed to fetch from Steam" });
+    }
+  });
+
+  // GET /api/indie/epic/preview?slug= — preview Epic Games data without saving
+  app.get("/api/indie/epic/preview", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    const slug = (req.query.slug as string || "").trim().toLowerCase();
+    if (!slug) return res.status(400).json({ error: "slug required (from Epic store URL)" });
+    try {
+      const result = await _fetchEpicPreview(slug);
+      if (!result.ok) return res.status(result.status).json({ error: result.error });
+      res.json(result.payload);
+    } catch (err) {
+      console.error("GET /api/indie/epic/preview error:", err);
+      res.status(502).json({ error: "Failed to fetch from Epic Games" });
+    }
+  });
+
+  // POST /api/indie/itch/preview — list dev's itch.io games (API key proves ownership)
+  app.post("/api/indie/itch/preview", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { apiKey } = req.body;
+    if (!apiKey) return res.status(400).json({ error: "apiKey required" });
+    try {
+      const itchRes = await fetch("https://api.itch.io/profile/games", { headers: { Authorization: `Bearer ${apiKey}` }, signal: AbortSignal.timeout(10000) });
+      if (itchRes.status === 401 || itchRes.status === 403) return res.status(401).json({ error: "Invalid itch.io API key" });
+      if (!itchRes.ok) return res.status(502).json({ error: "itch.io API unavailable" });
+      const json = await itchRes.json() as any;
+      const games = (json.games || []).map((g: any) => ({
+        id: g.id, title: g.title, shortText: g.short_text, coverUrl: g.cover_url,
+        url: g.url, published: g.published, classification: g.classification,
+      }));
+      res.json({ source: "itch", games });
+    } catch (err) {
+      console.error("POST /api/indie/itch/preview error:", err);
+      res.status(502).json({ error: "Failed to fetch from itch.io" });
+    }
+  });
+
+  // POST /api/indie/itch/connect — validate API key, save to profile, return username + games
+  app.post("/api/indie/itch/connect", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { apiKey } = req.body;
+    if (!apiKey || typeof apiKey !== "string") return res.status(400).json({ error: "apiKey required" });
+    try {
+      // First verify the key is valid and fetch the user's profile
+      const meRes = await fetch("https://api.itch.io/profile", {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (meRes.status === 401 || meRes.status === 403) return res.status(401).json({ error: "Invalid itch.io API key" });
+      if (!meRes.ok) return res.status(502).json({ error: "itch.io API unavailable" });
+      const meJson = await meRes.json() as any;
+      const itchUsername = meJson.user?.username || meJson.user?.display_name || null;
+
+      // Fetch their games
+      const gamesRes = await fetch("https://api.itch.io/profile/games", {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(10000),
+      });
+      const gamesJson = gamesRes.ok ? (await gamesRes.json() as any) : { games: [] };
+      const games = (gamesJson.games || []).map((g: any) => ({
+        id: g.id, title: g.title, shortText: g.short_text, coverUrl: g.cover_url,
+        url: g.url, published: g.published, classification: g.classification,
+      }));
+
+      // Save the API key and username to indie_game_profiles
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const itchGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      const patch = { itchApiKey: encryptItchApiKey(apiKey), itchUsername, updatedAt: new Date() };
+      if (itchGameId) {
+        await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, itchGameId));
+      } else {
+        await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch, isPrimary: true });
+      }
+
+      res.json({ connected: true, itchUsername, games });
+    } catch (err) {
+      console.error("POST /api/indie/itch/connect error:", err);
+      res.status(502).json({ error: "Failed to connect itch.io account" });
+    }
+  });
+
+  // GET /api/indie/itch/status — returns itch.io connection status for the current user
+  app.get("/api/indie/itch/status", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const [profile] = await db.select({ id: indieGameProfiles.id, itchApiKey: indieGameProfiles.itchApiKey, itchUsername: indieGameProfiles.itchUsername, itchUrl: indieGameProfiles.itchUrl })
+        .from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      const apiKey = profile ? await _readStoredItchApiKey(profile.id, profile.itchApiKey) : null;
+      const connected = !!apiKey;
+
+      if (!connected) return res.json({ connected: false });
+
+      // If connected, also return their games from itch.io (best-effort)
+      let games: any[] = [];
+      try {
+        const gamesRes = await fetch("https://api.itch.io/profile/games", {
+          headers: { Authorization: `Bearer ${apiKey}` },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (gamesRes.ok) {
+          const gamesJson = await gamesRes.json() as any;
+          games = (gamesJson.games || []).map((g: any) => ({
+            id: g.id, title: g.title, shortText: g.short_text, coverUrl: g.cover_url,
+            url: g.url, published: g.published,
+          }));
+        }
+      } catch { /* key may have been revoked — still return connected=true */ }
+
+      res.json({ connected: true, itchUsername: profile.itchUsername, itchUrl: profile.itchUrl, games });
+    } catch (err) {
+      console.error("GET /api/indie/itch/status error:", err);
+      res.status(500).json({ error: "server_error" });
+    }
+  });
+
+  // DELETE /api/indie/itch/disconnect — remove saved itch.io API key
+  app.delete("/api/indie/itch/disconnect", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      // Disconnect only the selected game's itch credentials, not every game's.
+      const disconnectGameId = await _indieResolveGameId(req.user.id, req.body?.gameId ?? req.query.gameId);
+      if (disconnectGameId) {
+        await db.update(indieGameProfiles)
+          .set({ itchApiKey: null, itchUsername: null, updatedAt: new Date() })
+          .where(eq(indieGameProfiles.id, disconnectGameId));
+      }
+      res.json({ connected: false });
+    } catch (err) {
+      console.error("DELETE /api/indie/itch/disconnect error:", err);
+      res.status(500).json({ error: "server_error" });
+    }
+  });
+
+  // GET /api/indie/itch/game/:gameId — fetch full details of one itch.io game using the
+  // stored API key. Returns a fields object in the same shape as steam/epic preview so
+  // the frontend can show the same field-picker UI before importing.
+  app.get("/api/indie/itch/game/:gameId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const gameId = req.params.gameId;
+    if (!gameId || isNaN(Number(gameId))) return res.status(400).json({ error: "valid gameId required" });
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const [profile] = await db.select({ id: indieGameProfiles.id, itchApiKey: indieGameProfiles.itchApiKey })
+        .from(indieGameProfiles).where(eq(indieGameProfiles.userId, req.user.id));
+      const apiKey = profile ? await _readStoredItchApiKey(profile.id, profile.itchApiKey) : null;
+      if (!apiKey) return res.status(403).json({ error: "Connect your itch.io account first" });
+
+      const gameRes = await fetch(`https://api.itch.io/games/${gameId}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!gameRes.ok) {
+        if (gameRes.status === 404) return res.status(404).json({ error: "Game not found" });
+        return res.status(502).json({ error: "itch.io API unavailable" });
+      }
+      const json = await gameRes.json() as any;
+      const g = json.game || json;
+
+      const fields = _mapItchData(g);
+
+      res.json({
+        source: "itch",
+        gameId: g.id,
+        name: g.title,
+        coverUrl: g.cover_url,
+        url: g.url,
+        fields,
+      });
+    } catch (err) {
+      console.error("GET /api/indie/itch/game/:gameId error:", err);
+      res.status(500).json({ error: "server_error" });
+    }
+  });
+
+  // POST /api/indie/import — apply selected fields from a store preview into indie_game_profiles
+  // Manual overrides (isManualOverride=true) are ALWAYS preserved — import cannot overwrite them.
+  // The importedValue for each field is updated in the meta table regardless, so the user can
+  // later choose to revert to it via the Revert button or sync-apply.
+  app.post("/api/indie/import", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    const { source, fields, steamAppId: reqAppId, epicSlug: reqSlug, itchGameUrl } = req.body;
+    if (!source || !fields || typeof fields !== "object") return res.status(400).json({ error: "source and fields object required" });
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const now = new Date();
+      const importGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !importGameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
+
+      // Fetch override state for the selected game before building the patch.
+      // A developer can own more than one game, and one game's manual choices
+      // must never suppress or replace another game's store import.
+      const existingMeta = await _indieFieldMetaMap(req.user.id, importGameId);
+
+      const patch: Record<string, any> = {};
+      const protected_fields: string[] = [];  // fields skipped due to manual override
+
+      for (const key of INDIE_ALLOWED_FIELDS) {
+        if (!(key in fields) || fields[key] === undefined || fields[key] === null) continue;
+        if (existingMeta[key]?.isManualOverride) {
+          // User has manually edited this field — preserve their value, only update importedValue metadata
+          protected_fields.push(key);
+        } else {
+          patch[key] = fields[key];
+        }
+      }
+
+      // Always update source-specific IDs + timestamps regardless of field protection
+      if (source === "steam") {
+        if (reqAppId) {
+          if (!existingMeta.steamAppId?.isManualOverride) patch.steamAppId = reqAppId;
+          if (!existingMeta.steamUrl?.isManualOverride) patch.steamUrl = `https://store.steampowered.com/app/${reqAppId}/`;
+        }
+        patch.steamLastImportedAt = now;
+      } else if (source === "epic") {
+        if (reqSlug) {
+          if (!existingMeta.epicSlug?.isManualOverride) patch.epicSlug = reqSlug;
+          if (!existingMeta.epicUrl?.isManualOverride) patch.epicUrl = `https://store.epicgames.com/en-US/p/${reqSlug}`;
+        }
+        patch.epicLastImportedAt = now;
+      } else if (source === "itch") {
+        if (itchGameUrl && !existingMeta.itchUrl?.isManualOverride) patch.itchUrl = itchGameUrl;
+        patch.itchLastImportedAt = now;
+      }
+      patch.updatedAt = now;
+
+      let profile;
+      if (importGameId) {
+        const up = await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, importGameId)).returning();
+        profile = up[0];
+      } else {
+        const ins = await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch, isPrimary: true }).returning();
+        profile = ins[0];
+      }
+
+      // Update metadata for ALL incoming fields (including protected ones) so the user can see
+      // the latest importedValue and choose to revert to it if they wish.
+      const metaGameId = importGameId ?? profile?.id;
+      for (const key of Object.keys(fields)) {
+        if (!INDIE_ALLOWED_FIELDS.includes(key) || key === "updatedAt") continue;
+        const wasProtected = protected_fields.includes(key);
+        // For protected fields: update importedValue/importSource but keep isManualOverride=true
+        // For applied fields: clear isManualOverride so source badge shows the store source
+        await _indieUpsertMeta(req.user.id, key, {
+          importedValue: JSON.stringify(fields[key]),
+          importSource: source,
+          isManualOverride: wasProtected ? true : false,  // preserve override flag for protected fields
+          lastImportedAt: now,
+        }, metaGameId);
+      }
+
+      const catalogue = profile ? await _syncIndieGameCatalogue(profile) : { game: null };
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
+      const fieldMeta = await _indieFieldMetaMap(req.user.id, metaGameId);
+      res.json({
+        profile,
+        fieldMeta,
+        catalogueGame: catalogue.game,
+        imported: Object.keys(patch).length - 2,  // subtract updatedAt + timestamp fields
+        protected: protected_fields,
+        message: protected_fields.length
+          ? `${Object.keys(fields).length - protected_fields.length} fields imported. ${protected_fields.length} field${protected_fields.length !== 1 ? "s" : ""} preserved (manual override active): ${protected_fields.join(", ")}.`
+          : `${Object.keys(fields).length} fields imported successfully.`,
+      });
+    } catch (err) {
+      console.error("POST /api/indie/import error:", err);
+      res.status(500).json({ error: "Failed to apply import" });
+    }
+  });
+
+  // POST /api/indie/sync-check — diff current profile vs live store data
+  app.post("/api/indie/sync-check", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    try {
+      const gameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !gameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
+      const profile = await _indieGetOrCreate(req.user.id, gameId);
+      const fieldMeta = await _indieFieldMetaMap(req.user.id, gameId);
+      let storeData: Record<string, any> | null = null;
+      let source = "";
+      if (profile.steamAppId) {
+        source = "steam";
+        const r = await fetch(`https://store.steampowered.com/api/appdetails?appids=${profile.steamAppId}&l=english`, { signal: AbortSignal.timeout(10000) });
+        if (r.ok) { const j = await r.json() as any; const d = j[profile.steamAppId]; if (d?.success) storeData = _mapSteamData(d.data); }
+      } else if (profile.epicSlug) {
+        source = "epic";
+        const r = await fetch(`https://store-content-ipv4.ak.epicgames.com/api/en-US/content/products/${encodeURIComponent(profile.epicSlug)}`, { signal: AbortSignal.timeout(10000) });
+        if (r.ok) {
+          const j = await r.json() as any;
+          const pages = j.pages || [];
+          const main = pages.find((p: any) => p.type === "productHome") || pages[0];
+          const data = main?.data?.about || {};
+          storeData = { gameName: j.productName || null, shortDescription: data.shortDescription || null, fullDescription: data.description ? _stripHtml(data.description) : null };
+        }
+      }
+      if (!storeData) return res.status(404).json({ error: "No linked store found. Add a Steam App ID or Epic slug first." });
+      const changes: Array<{ fieldName: string; currentValue: any; newValue: any; hasOverride: boolean }> = [];
+      for (const [fieldName, newValue] of Object.entries(storeData)) {
+        if (newValue === null || newValue === undefined) continue;
+        const currentValue = (profile as any)[fieldName];
+        const meta = fieldMeta[fieldName];
+        const lastImported = meta?.importedValue ? JSON.parse(meta.importedValue) : undefined;
+        if (JSON.stringify(lastImported) !== JSON.stringify(newValue)) {
+          changes.push({ fieldName, currentValue, newValue, hasOverride: !!(meta?.isManualOverride) });
+        }
+      }
+      res.json({ source, hasChanges: changes.length > 0, changes });
+    } catch (err) {
+      console.error("POST /api/indie/sync-check error:", err);
+      res.status(500).json({ error: "Sync check failed" });
+    }
+  });
+
+  // POST /api/indie/sync-apply — apply explicit user field decisions (keep/use/defer).
+  // The client sends only the fields the user chose "use" for — server trusts that selection
+  // and always applies them, clearing isManualOverride so the field tracks the store source.
+  app.post("/api/indie/sync-apply", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    const { fields, source } = req.body;
+    if (!Array.isArray(fields)) return res.status(400).json({ error: "fields array required" });
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const syncGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !syncGameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
+      const patch: Record<string, any> = {};
+      const applied: string[] = [];
+      const now = new Date();
+      for (const { fieldName, newValue } of fields) {
+        if (!INDIE_ALLOWED_FIELDS.includes(fieldName)) continue;
+        patch[fieldName] = newValue;
+        applied.push(fieldName);
+      }
+      if (Object.keys(patch).length > 0) {
+        patch.updatedAt = now;
+        // Write by resolved row id — a userId-scoped update would apply the
+        // imported store data to every game the developer owns.
+        if (syncGameId) { await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, syncGameId)); }
+        else { await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch, isPrimary: true }); }
+        // Clear isManualOverride for applied fields — they now track the store source
+        for (const fieldName of applied) {
+          await _indieUpsertMeta(req.user.id, fieldName, {
+            importedValue: JSON.stringify(patch[fieldName]),
+            importSource: source || "store",
+            isManualOverride: false,
+            lastImportedAt: now,
+          }, syncGameId);
+        }
+      }
+      const profile = await _indieGetOrCreate(req.user.id, syncGameId);
+      const catalogue = await _syncIndieGameCatalogue(profile);
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
+      const fieldMetaNew = await _indieFieldMetaMap(req.user.id, syncGameId);
+      res.json({ profile, fieldMeta: fieldMetaNew, applied, skipped: [], catalogueGame: catalogue.game });
+    } catch (err) {
+      console.error("POST /api/indie/sync-apply error:", err);
+      res.status(500).json({ error: "Sync apply failed" });
+    }
+  });
+
+  // POST /api/indie/field-revert — reset one field to its last imported value and clear manual override.
+  // This is the "Revert to store value" button action. Unlike sync-apply which trusts batch decisions,
+  // this is a single-field explicit revert that always succeeds if there is an importedValue.
+  app.post("/api/indie/field-revert", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    const { fieldName } = req.body;
+    if (!fieldName || typeof fieldName !== "string" || !INDIE_ALLOWED_FIELDS.includes(fieldName)) {
+      return res.status(400).json({ error: "Valid fieldName required" });
+    }
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const revertGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      const fieldMeta = await _indieFieldMetaMap(req.user.id, revertGameId);
+      const meta = fieldMeta[fieldName];
+      if (!meta?.importedValue) {
+        return res.status(404).json({ error: `No imported value to revert to for field "${fieldName}"` });
+      }
+      const importedValue = JSON.parse(meta.importedValue);
+      const now = new Date();
+      const patch: Record<string, any> = { [fieldName]: importedValue, updatedAt: now };
+      if (revertGameId) {
+        await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, revertGameId));
+      } else {
+        await db.insert(indieGameProfiles).values({ userId: req.user.id, ...patch, isPrimary: true });
+      }
+      // Clear the manual override — field now uses the imported (store) value
+      await _indieUpsertMeta(req.user.id, fieldName, {
+        isManualOverride: false,
+        importedValue: meta.importedValue,
+        importSource: meta.importSource ?? "store",
+        lastImportedAt: meta.lastImportedAt ? new Date(meta.lastImportedAt) : now,
+        lastEditedAt: now,
+      });
+      const profile = await _indieGetOrCreate(req.user.id, revertGameId);
+      const catalogue = await _syncIndieGameCatalogue(profile);
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
+      const fieldMetaNew = await _indieFieldMetaMap(req.user.id, revertGameId);
+      res.json({ profile, fieldMeta: fieldMetaNew, reverted: fieldName, value: importedValue, catalogueGame: catalogue.game });
+    } catch (err) {
+      console.error("POST /api/indie/field-revert error:", err);
+      res.status(500).json({ error: "Revert failed" });
+    }
+  });
+
+  // POST /api/indie/upload/image — upload header or capsule image for indie profile
+  app.post("/api/indie/upload/image", upload.single('image'), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    const field = req.body?.field === 'capsule' ? 'capsuleImageUrl' : 'headerImageUrl';
+    try {
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+      const sharpInstance = sharp(req.file.path);
+      const meta = await sharpInstance.metadata();
+      if (!meta.width || !meta.height) return res.status(400).json({ error: "Invalid image" });
+      const processedBuffer = await sharpInstance
+        .resize(field === 'headerImageUrl' ? 1920 : 600, undefined, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+      const slug = field === 'headerImageUrl' ? 'header' : 'capsule';
+      const fileName = `indie-${slug}-${req.user.id}-${Date.now()}.jpg`;
+      const { url: imageUrl } = await supabaseStorage.uploadBuffer(processedBuffer, fileName, 'image/jpeg', 'image', req.user.id);
+      try { await fsPromises.unlink(req.file.path); } catch {}
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const imgGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      let imgTargetId = imgGameId;
+      if (imgTargetId) {
+        await db.update(indieGameProfiles).set({ [field]: imageUrl, updatedAt: new Date() }).where(eq(indieGameProfiles.id, imgTargetId));
+      } else {
+        const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, [field]: imageUrl, isPrimary: true }).returning({ id: indieGameProfiles.id });
+        imgTargetId = created?.id ?? null;
+      }
+      await _indieUpsertMeta(req.user.id, field, { isManualOverride: true, lastEditedAt: new Date() }, imgTargetId);
+      const [updatedProfile] = imgTargetId
+        ? await db.select().from(indieGameProfiles).where(eq(indieGameProfiles.id, imgTargetId)).limit(1)
+        : [];
+      const catalogue = updatedProfile ? await _syncIndieGameCatalogue(updatedProfile) : { game: null };
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
+      res.json({ url: imageUrl, field, catalogueGame: catalogue.game });
+    } catch (err) {
+      console.error("POST /api/indie/upload/image error:", err);
+      try { if (req.file?.path) await fsPromises.unlink(req.file.path); } catch {}
+      res.status(500).json({ error: "Upload failed" });
+    }
+  });
+
+  // POST /api/indie/upload/trailer — upload a trailer video for an indie game
+  app.post("/api/indie/upload/trailer", indieTrailerUpload.single('video'), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    try {
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+      const ext = (req.file.originalname.split('.').pop() || 'mp4').toLowerCase();
+      const fileName = `indie-trailer-${req.user.id}-${Date.now()}.${ext}`;
+      const { url: trailerUrl } = await supabaseStorage.uploadBuffer(req.file.buffer, fileName, req.file.mimetype, 'video', req.user.id);
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const trailerGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      let trailerTargetId = trailerGameId;
+      if (trailerTargetId) {
+        await db.update(indieGameProfiles).set({ trailerUrl, updatedAt: new Date() }).where(eq(indieGameProfiles.id, trailerTargetId));
+      } else {
+        const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, trailerUrl, isPrimary: true }).returning({ id: indieGameProfiles.id });
+        trailerTargetId = created?.id ?? null;
+      }
+      await _indieUpsertMeta(req.user.id, "trailerUrl", { isManualOverride: true, lastEditedAt: new Date() }, trailerTargetId);
+      res.json({ url: trailerUrl, field: "trailerUrl" });
+    } catch (err) {
+      console.error("POST /api/indie/upload/trailer error:", err);
+      res.status(500).json({ error: "Upload failed" });
+    }
+  });
+
+  // POST /api/indie/upload/screenshot — upload and append a screenshot
+  app.post("/api/indie/upload/screenshot", screenshotUpload.array('screenshot', 20), async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    try {
+      const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+      if (files.length === 0) return res.status(400).json({ error: "No file uploaded" });
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq, sql } = await import("drizzle-orm");
+      const shotGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !shotGameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
+      const ex = shotGameId
+        ? await db.select({ screenshotUrls: indieGameProfiles.screenshotUrls }).from(indieGameProfiles).where(eq(indieGameProfiles.id, shotGameId))
+        : [];
+      const existing = ex[0]?.screenshotUrls ?? [];
+      const remaining = Math.max(0, 20 - existing.length);
+      const uploadedUrls: string[] = [];
+      for (const [index, file] of files.slice(0, remaining).entries()) {
+        const processedBuffer = await sharp(file.path)
+          .resize(1920, undefined, { fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 88 })
+          .toBuffer();
+        const fileName = `indie-screenshot-${req.user.id}-${Date.now()}-${index}.jpg`;
+        const { url: imageUrl } = await supabaseStorage.uploadBuffer(processedBuffer, fileName, 'image/jpeg', 'image', req.user.id);
+        uploadedUrls.push(imageUrl);
+      }
+      for (const file of files) {
+        try { await fsPromises.unlink(file.path); } catch {}
+      }
+      const updated = [...existing, ...uploadedUrls].slice(0, 20);
+      let shotTargetId = shotGameId;
+      if (shotTargetId) {
+        await db.update(indieGameProfiles).set({ screenshotUrls: updated, updatedAt: new Date() }).where(eq(indieGameProfiles.id, shotTargetId));
+      } else {
+        const [created] = await db.insert(indieGameProfiles).values({ userId: req.user.id, screenshotUrls: updated, isPrimary: true }).returning({ id: indieGameProfiles.id });
+        shotTargetId = created?.id ?? null;
+      }
+      await _indieUpsertMeta(req.user.id, 'screenshotUrls', { isManualOverride: true, lastEditedAt: new Date() }, shotTargetId);
+      res.json({ urls: uploadedUrls, url: uploadedUrls[0] ?? null, screenshotUrls: updated });
+    } catch (err) {
+      console.error("POST /api/indie/upload/screenshot error:", err);
+      const files = (req.files as Express.Multer.File[] | undefined) ?? [];
+      for (const file of files) {
+        try { await fsPromises.unlink(file.path); } catch {}
+      }
+      res.status(500).json({ error: "Upload failed" });
+    }
+  });
+
+  // DELETE /api/indie/screenshot — remove a screenshot URL from the array
+  app.delete("/api/indie/screenshot", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    const { url } = req.body;
+    if (!url || typeof url !== 'string') return res.status(400).json({ error: "url required" });
+    try {
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { db } = await import("./db");
+      const { eq } = await import("drizzle-orm");
+      const delShotGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      const ex = delShotGameId
+        ? await db.select({ screenshotUrls: indieGameProfiles.screenshotUrls }).from(indieGameProfiles).where(eq(indieGameProfiles.id, delShotGameId))
+        : [];
+      const existing = ex[0]?.screenshotUrls ?? [];
+      const updated = existing.filter((u: string) => u !== url);
+      if (delShotGameId) {
+        await db.update(indieGameProfiles).set({ screenshotUrls: updated, updatedAt: new Date() }).where(eq(indieGameProfiles.id, delShotGameId));
+      }
+      res.json({ screenshotUrls: updated });
+    } catch (err) {
+      console.error("DELETE /api/indie/screenshot error:", err);
+      res.status(500).json({ error: "Failed to remove screenshot" });
+    }
+  });
+
+  // GET /api/games/indie/:username — public enriched indie profile (no auth required)
+  // ?gameId= selects a specific game; omitted means the developer's primary game.
+  app.get("/api/games/indie/:username", async (req, res) => {
+    try {
+      const gameId = req.query.gameId ? parseInt(req.query.gameId as string, 10) : null;
+      const result = await storage.getIndieGameProfileByUsername(req.params.username, gameId);
+      if (!result) return res.status(404).json({ error: "Indie game profile not found" });
+      const { user, profile } = result;
+      if (!profile) return res.status(404).json({ error: "Indie game profile not found" });
+      // Prefer the explicit relationship created by the indie write paths.
+      // Legacy profiles receive the same idempotent reconciliation the next
+      // time their public hub is opened, so they are not left with a permanent
+      // “waiting for catalogue” state after this feature ships.
+      let canonicalGame = profile.catalogGameId
+        ? await storage.getGame(profile.catalogGameId)
+        : null;
+      if (!canonicalGame && profile.gameName?.trim()) {
+        const catalogue = await _syncIndieGameCatalogue(profile);
+        canonicalGame = catalogue.game;
+      }
+      res.json({
+        user: { id: user.id, username: user.username, displayName: user.displayName, avatarUrl: user.avatarUrl, bio: user.bio, level: user.level, totalXP: user.totalXP, currentStreak: user.currentStreak },
+        profile,
+        game: canonicalGame
+          ? { id: canonicalGame.id, name: canonicalGame.name, imageUrl: canonicalGame.imageUrl }
+          : null,
+      });
+    } catch (err) {
+      console.error("GET /api/games/indie/:username error:", err);
+      res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
+  // Public profile associated with a catalogue game. The Indie Game page is
+  // addressed by game slug, not developer username, so resolve by game ID.
+  app.get("/api/games/:gameId/indie-profile", async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.gameId, 10);
+      if (!Number.isFinite(gameId)) return res.status(400).json({ error: "Invalid game ID" });
+      const { db } = await import("./db");
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { and, eq, isNull, sql } = await import("drizzle-orm");
+      let [profile] = await db.select().from(indieGameProfiles)
+        .where(eq(indieGameProfiles.catalogGameId, gameId))
+        .limit(1);
+      if (!profile) {
+        const game = await storage.getGame(gameId);
+        if (!game) return res.status(404).json({ error: "Game not found" });
+        const legacyMatches = await db.select().from(indieGameProfiles)
+          .where(and(
+            isNull(indieGameProfiles.catalogGameId),
+            sql`lower(trim(${indieGameProfiles.gameName})) = lower(trim(${game.name}))`,
+          ))
+          .limit(2);
+        if (legacyMatches.length === 1) {
+          const [linked] = await db.update(indieGameProfiles)
+            .set({ catalogGameId: gameId, updatedAt: new Date() })
+            .where(eq(indieGameProfiles.id, legacyMatches[0].id))
+            .returning();
+          profile = linked;
+        }
+      }
+      if (!profile) return res.status(404).json({ error: "Indie game profile not found" });
+      const user = await storage.getUserById(profile.userId);
+      if (!user) return res.status(404).json({ error: "Developer not found" });
+      res.json({
+        user: {
+          id: user.id,
+          username: user.username,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl,
+          bio: user.bio,
+          level: user.level,
+          totalXP: user.totalXP,
+          currentStreak: user.currentStreak,
+        },
+        profile,
+      });
+    } catch (err) {
+      console.error("GET /api/games/:gameId/indie-profile error:", err);
+      res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
+  // GET /api/games/indie/:username/list — public list of a developer's games,
+  // for the profile-page game switcher (no auth required).
+  app.get("/api/games/indie/:username/list", async (req, res) => {
+    try {
+      const result = await storage.getIndieGameProfilesByUsername(req.params.username);
+      if (!result) return res.status(404).json({ error: "Indie game profile not found" });
+      res.json({
+        games: result.profiles.map(p => ({
+          id: p.id,
+          catalogGameId: p.catalogGameId,
+          gameName: p.gameName,
+          headerImageUrl: p.headerImageUrl,
+          capsuleImageUrl: p.capsuleImageUrl,
+          isPrimary: p.isPrimary,
+        })),
+      });
+    } catch (err) {
+      console.error("GET /api/games/indie/:username/list error:", err);
+      res.status(500).json({ error: "Failed to fetch games" });
+    }
+  });
+
+  // GET /api/steam/app-info/:appId — public Steam Store proxy (no auth needed)
+  // Returns mapped game data for a given Steam App ID. Responses are cached in-process
+  // for 10 minutes to avoid hammering the Steam API on every profile page view.
+  const _steamCache = new Map<string, { data: any; ts: number }>();
+  const STEAM_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+  app.get("/api/steam/app-info/:appId", async (req, res) => {
+    const appId = (req.params.appId || "").replace(/\D/g, "");
+    if (!appId) return res.status(400).json({ error: "Invalid appId" });
+    const cached = _steamCache.get(appId);
+    if (cached && Date.now() - cached.ts < STEAM_CACHE_TTL) {
+      return res.json(cached.data);
+    }
+    try {
+      const steamRes = await fetch(
+        `https://store.steampowered.com/api/appdetails?appids=${appId}&l=english`,
+        { signal: AbortSignal.timeout(10000) }
+      );
+      if (!steamRes.ok) return res.status(502).json({ error: "Steam API unavailable" });
+      const json = await steamRes.json() as any;
+      const entry = json[appId];
+      if (!entry?.success || !entry.data) return res.status(404).json({ error: "Steam app not found" });
+      const fields = _mapSteamData(entry.data);
+      const result = {
+        appId,
+        steamUrl: `https://store.steampowered.com/app/${appId}/`,
+        name: entry.data.name || null,
+        headerImageUrl: entry.data.header_image || null,
+        capsuleImageUrl: entry.data.capsule_image || null,
+        developerName: (entry.data.developers || [])[0] || null,
+        publisherName: (entry.data.publishers || [])[0] || null,
+        website: entry.data.website || null,
+        fields,
+      };
+      _steamCache.set(appId, { data: result, ts: Date.now() });
+      return res.json(result);
+    } catch (err) {
+      console.error("GET /api/steam/app-info/:appId error:", err);
+      return res.status(502).json({ error: "Failed to fetch from Steam" });
+    }
+  });
+
+  // ─── End Indie Game Profile API ───────────────────────────────────────────────
+
+  // Legacy redirect: old endpoint now returns 410 Gone
+  app.get("/api/indie/game-profile", (_req, res) => res.status(410).json({ error: "Use /api/indie/profile" }));
+
+  // ─── Indie Game Management: Creator Content ───────────────────────────────
+  app.get("/api/indie/creator-content", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    const { type = "all", sort = "newest", source = "all", gameId: rawGameId } = req.query as any;
+    const requestedProfileId = rawGameId == null || rawGameId === "" ? null : Number.parseInt(String(rawGameId), 10);
+    if (requestedProfileId != null && (!Number.isInteger(requestedProfileId) || requestedProfileId <= 0)) {
+      return res.status(400).json({ error: "Invalid gameId" });
+    }
+    let ownedGames: Array<{ id: number; name: string | null; imageUrl: string | null }> = [];
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+
+      // Use the explicit catalogue relationship rather than title matching. A
+      // developer can manage more than one game, and a renamed game must not
+      // accidentally pick up a different catalogue title's content.
+      const profileFilter = requestedProfileId == null ? sql`` : sql`AND igp.id = ${requestedProfileId}`;
+      const profileRows = await db.execute(sql`
+        SELECT igp.catalog_game_id AS "catalogGameId",
+               COALESCE(g.name, igp.game_name, CONCAT('Game ', igp.catalog_game_id::text)) AS "gameName",
+               g.image_url AS "imageUrl"
+        FROM indie_game_profiles igp
+        LEFT JOIN games g ON g.id = igp.catalog_game_id
+         WHERE igp.user_id = ${req.user.id} AND igp.catalog_game_id IS NOT NULL ${profileFilter}
+      `);
+      ownedGames = (profileRows.rows ?? [])
+        .map((row: any) => ({ id: Number(row.catalogGameId), name: row.gameName ?? null, imageUrl: row.imageUrl ?? null }))
+        .filter((game: { id: number }) => Number.isInteger(game.id) && game.id > 0);
+      const ownedGameIds = ownedGames.map((game: { id: number }) => game.id);
+      const ownedGameIdsSql = sql`ARRAY[${sql.join(ownedGameIds.map((id: number) => sql`${id}`), sql`, `)}]::int[]`;
+
+      const normalizedType = String(type).toLowerCase();
+      const normalizedSort = String(sort).toLowerCase();
+      const normalizedSource = String(source).toLowerCase();
+      const sourceFilter = normalizedSource === "publisher" || normalizedSource === "creator"
+        ? normalizedSource
+        : "all";
+      const wantsClips = normalizedType === "all" || normalizedType === "clip" || normalizedType === "clips";
+      const wantsReels = normalizedType === "all" || normalizedType === "reel" || normalizedType === "reels";
+      const wantsScreenshots = normalizedType === "all" || normalizedType === "screenshot" || normalizedType === "screenshots";
+      const videoTypeFilter = wantsClips && wantsReels
+        ? sql``
+        : wantsReels
+          ? sql`AND c.video_type = 'reel'`
+          : sql`AND (c.video_type = 'clip' OR c.video_type IS NULL)`;
+      const videoSourceFilter = sourceFilter === "publisher"
+        ? sql`AND c.user_id = ${req.user.id}`
+        : sourceFilter === "creator"
+          ? sql`AND c.user_id <> ${req.user.id}`
+          : sql``;
+      const screenshotSourceFilter = sourceFilter === "publisher"
+        ? sql`AND s.user_id = ${req.user.id}`
+        : sourceFilter === "creator"
+          ? sql`AND s.user_id <> ${req.user.id}`
+          : sql``;
+      const clipSort = normalizedSort === "most_viewed"
+        ? sql`c.views DESC, c.created_at DESC`
+        : normalizedSort === "most_liked"
+          ? sql`c.created_at DESC`
+          : sql`c.created_at DESC`;
+      const screenshotSort = normalizedSort === "most_viewed"
+        ? sql`s.views DESC, s.created_at DESC`
+        : sql`s.created_at DESC`;
+
+      const emptyResponse = {
+        ownedGames,
+        ownedGameContent: [] as any[],
+        ownedGameContentTotal: 0,
+        // Keep older callers working while they migrate to the grouped fields.
+        items: [] as any[],
+      };
+
+      const loadVideos = async () => {
+        if (!wantsClips && !wantsReels) return [];
+        if (ownedGameIds.length === 0) return [];
+        const rows = await db.execute(sql`
+          SELECT
+            c.id,
+            CASE WHEN c.video_type = 'reel' THEN 'reel' ELSE 'clip' END AS type,
+            c.title,
+            c.thumbnail_url AS "thumbnailUrl",
+            COALESCE(c.views, 0) AS views,
+            0 AS likes,
+            c.user_id = ${req.user.id} AS "isDeveloperUpload",
+            u.username AS "creatorUsername",
+            g.id AS "gameId",
+            g.name AS "gameName",
+            c.created_at AS "createdAt"
+          FROM clips c
+          JOIN users u ON u.id = c.user_id
+          JOIN games g ON g.id = c.game_id
+          WHERE c.game_id = ANY(${ownedGameIdsSql}) ${videoTypeFilter} ${videoSourceFilter}
+          ORDER BY ${clipSort}
+          LIMIT 30
+        `);
+        return rows.rows ?? [];
+      };
+
+      const loadScreenshots = async () => {
+        if (!wantsScreenshots) return [];
+        if (ownedGameIds.length === 0) return [];
+        const rows = await db.execute(sql`
+          SELECT
+            s.id,
+            'screenshot' AS type,
+            s.title,
+            COALESCE(s.thumbnail_url, s.image_url) AS "thumbnailUrl",
+            COALESCE(s.views, 0) AS views,
+            0 AS likes,
+            s.user_id = ${req.user.id} AS "isDeveloperUpload",
+            u.username AS "creatorUsername",
+            g.id AS "gameId",
+            g.name AS "gameName",
+            s.created_at AS "createdAt"
+          FROM screenshots s
+          JOIN users u ON u.id = s.user_id
+          JOIN games g ON g.id = s.game_id
+          WHERE s.game_id = ANY(${ownedGameIdsSql}) ${screenshotSourceFilter}
+          ORDER BY ${screenshotSort}
+          LIMIT 30
+        `);
+        return rows.rows ?? [];
+      };
+
+      const loadVideoCount = async () => {
+        if ((!wantsClips && !wantsReels) || ownedGameIds.length === 0) return 0;
+        const result = await db.execute(sql`
+          SELECT COUNT(*)::int AS count
+          FROM clips c
+          WHERE c.game_id = ANY(${ownedGameIdsSql}) ${videoTypeFilter} ${videoSourceFilter}
+        `);
+        return Number((result.rows ?? [])[0]?.count ?? 0);
+      };
+
+      const loadScreenshotCount = async () => {
+        if (!wantsScreenshots || ownedGameIds.length === 0) return 0;
+        const result = await db.execute(sql`
+          SELECT COUNT(*)::int AS count
+          FROM screenshots s
+          WHERE s.game_id = ANY(${ownedGameIdsSql}) ${screenshotSourceFilter}
+        `);
+        return Number((result.rows ?? [])[0]?.count ?? 0);
+      };
+
+      const sortAndLimit = (items: any[]) => items
+        .sort((a, b) => {
+          if (normalizedSort === "most_viewed") return Number(b.views ?? 0) - Number(a.views ?? 0);
+          if (normalizedSort === "most_liked") return Number(b.likes ?? 0) - Number(a.likes ?? 0);
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        })
+        .slice(0, 30);
+
+      const [ownedVideos, ownedScreenshots, videoCount, screenshotCount] = await Promise.all([
+        loadVideos(),
+        loadScreenshots(),
+        loadVideoCount(),
+        loadScreenshotCount(),
+      ]);
+      const ownedGameContent = sortAndLimit([...ownedVideos, ...ownedScreenshots]);
+
+      res.json({
+        ownedGames,
+        ownedGameContent,
+        ownedGameContentTotal: videoCount + screenshotCount,
+        // Compatibility response for the older settings implementation.
+        items: ownedGameContent,
+      });
+    } catch (err) {
+      console.error("GET /api/indie/creator-content error:", err);
+      res.json({
+        ownedGames,
+        ownedGameContent: [],
+        ownedGameContentTotal: 0,
+        items: [],
+      });
+    }
+  });
+
+  // ─── Indie Game Management: Game Updates ──────────────────────────────────
+  // Ensure table exists
+  (async () => {
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS indie_game_updates (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          title TEXT NOT NULL,
+          type TEXT NOT NULL DEFAULT 'Announcement',
+          summary TEXT,
+          content TEXT,
+          publish_date TEXT,
+          status TEXT NOT NULL DEFAULT 'draft',
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+      `);
+    } catch (e) { /* table may already exist */ }
+  })();
+
+  app.get("/api/indie/updates", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      const rows = await db.execute(sql`
+        SELECT id, title, type, summary, content, publish_date AS "publishDate", status, created_at AS "createdAt"
+        FROM indie_game_updates WHERE user_id = ${req.user.id} ORDER BY created_at DESC LIMIT 50
+      `);
+      res.json({ updates: rows.rows ?? [] });
+    } catch (err) {
+      console.error("GET /api/indie/updates error:", err);
+      res.json({ updates: [] });
+    }
+  });
+
+  app.post("/api/indie/updates", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    const { title, type = "Announcement", summary = "", content = "", publishDate = "", status = "draft" } = req.body;
+    if (!title?.trim()) return res.status(400).json({ error: "title required" });
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      const rows = await db.execute(sql`
+        INSERT INTO indie_game_updates (user_id, title, type, summary, content, publish_date, status)
+        VALUES (${req.user.id}, ${title.trim()}, ${type}, ${summary}, ${content}, ${publishDate || null}, ${status})
+        RETURNING id, title, type, summary, publish_date AS "publishDate", status, created_at AS "createdAt"
+      `);
+      res.status(201).json({ update: rows.rows?.[0] });
+    } catch (err) {
+      console.error("POST /api/indie/updates error:", err);
+      res.status(500).json({ error: "Failed to create update" });
+    }
+  });
+
+  app.delete("/api/indie/updates/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    const id = parseInt(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid id" });
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      await db.execute(sql`DELETE FROM indie_game_updates WHERE id = ${id} AND user_id = ${req.user.id}`);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("DELETE /api/indie/updates error:", err);
+      res.status(500).json({ error: "Failed to delete update" });
+    }
+  });
+
+  // First-party analytics collection for public indie game pages. This route is
+  // deliberately public: visitors do not need an account to view a game.
+  app.post("/api/games/indie/:profileId/analytics-event", async (req, res) => {
+    const profileId = Number.parseInt(req.params.profileId, 10);
+    const eventType = req.body?.eventType;
+    const store = req.body?.store;
+    const allowedStores = new Set(["steam", "epic", "itch"]);
+    if (!Number.isInteger(profileId) || profileId <= 0) return res.status(400).json({ error: "Invalid profile id" });
+    if (eventType !== "game_page_view" && eventType !== "game_store_click") {
+      return res.status(400).json({ error: "Unsupported analytics event" });
+    }
+    if (eventType === "game_store_click" && (!allowedStores.has(store) || typeof store !== "string")) {
+      return res.status(400).json({ error: "Unsupported store" });
+    }
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      const profiles = await db.execute(sql`
+        SELECT id, user_id AS "userId", catalog_game_id AS "catalogGameId"
+        FROM indie_game_profiles WHERE id = ${profileId} LIMIT 1
+      `);
+      const profile = ((profiles as any).rows ?? profiles as any[])[0] as any;
+      if (!profile || !profile.catalogGameId) return res.status(404).json({ error: "Indie game profile not found" });
+      const authenticatedUserId = req.isAuthenticated() ? req.user?.id : undefined;
+      if (authenticatedUserId === Number(profile.userId)) {
+        return res.status(204).send();
+      }
+      const fingerprint = authenticatedUserId
+        ? `user:${authenticatedUserId}`
+        : `anonymous:${req.ip}|${req.get("user-agent") ?? ""}`;
+      const visitorKey = createHash("sha256").update(fingerprint).digest("hex");
+      if (eventType === "game_page_view") {
+        const duplicate = await db.execute(sql`
+          SELECT 1 FROM indie_game_analytics_events
+          WHERE profile_id = ${profileId} AND event_type = 'game_page_view'
+            AND visitor_key = ${visitorKey} AND created_at >= now() - interval '1 hour'
+          LIMIT 1
+        `);
+        if ((((duplicate as any).rows ?? duplicate as any[]) as any[]).length > 0) return res.status(204).send();
+      }
+      await db.execute(sql`
+        INSERT INTO indie_game_analytics_events
+          (profile_id, catalog_game_id, event_type, store, visitor_key)
+        VALUES (${profileId}, ${Number(profile.catalogGameId)}, ${eventType},
+          ${eventType === "game_store_click" ? store : null}, ${visitorKey})
+      `);
+      return res.status(204).send();
+    } catch (err) {
+      console.error("POST /api/games/indie/:profileId/analytics-event error:", err);
+      return res.status(500).json({ error: "Failed to record analytics event" });
+    }
+  });
+
+  // ─── Indie Game Management: Analytics ─────────────────────────────────────
+  app.get("/api/indie/analytics", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    const developerId = req.user!.id;
+    const rawGameId = req.query.gameId;
+    const gameId = rawGameId == null || rawGameId === "" ? null : Number.parseInt(String(rawGameId), 10);
+    const requestedRange = String(req.query.range ?? "30d");
+    if (gameId != null && (!Number.isInteger(gameId) || gameId <= 0)) return res.status(400).json({ error: "Invalid gameId" });
+    if (!["7d", "30d", "90d", "all"].includes(requestedRange)) return res.status(400).json({ error: "Invalid range" });
+    try {
+      // Ownership is resolved through storage, not a client-supplied catalogue id.
+      const profile = await storage.getIndieGameProfile(developerId, gameId);
+      if (!profile) return res.status(404).json({ error: "Indie game profile not found" });
+      if (!profile.catalogGameId) return res.status(409).json({ error: "This profile is not linked to a catalogue game" });
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      const days = requestedRange === "all" ? null : Number.parseInt(requestedRange, 10);
+      const rangeStart = days ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : null;
+      const previousStart = days ? new Date(Date.now() - days * 2 * 24 * 60 * 60 * 1000) : null;
+      // Raw db.execute uses postgres-js parameter binding, which does not accept
+      // JavaScript Date instances in this project. Send ISO timestamps so the
+      // database can infer the timestamp type from created_at.
+      const rangeStartParam = rangeStart?.toISOString() ?? null;
+      const previousStartParam = previousStart?.toISOString() ?? null;
+      const currentFilter = rangeStartParam ? sql`AND created_at >= ${rangeStartParam}` : sql``;
+      const currentMetricFilter = rangeStartParam ? sql`AND created_at >= ${rangeStartParam}` : sql``;
+      const previousFilter = previousStart && rangeStart
+        ? sql`AND created_at >= ${previousStartParam} AND created_at < ${rangeStartParam}` : sql`AND false`;
+      const [metricResult, seriesResult, contentResult, topContentResult, storesResult, favoritesResult, creatorsResult, updatesResult] = await Promise.all([
+        db.execute(sql`SELECT
+          COUNT(*) FILTER (WHERE event_type = 'game_page_view' ${currentMetricFilter})::int AS "pageViews",
+          COUNT(DISTINCT visitor_key) FILTER (WHERE event_type = 'game_page_view' ${currentMetricFilter})::int AS "uniqueVisitors",
+          COUNT(*) FILTER (WHERE event_type = 'game_store_click' ${currentMetricFilter})::int AS "storeClicks",
+          COUNT(*) FILTER (WHERE event_type = 'game_page_view' ${previousFilter})::int AS "previousPageViews",
+          COUNT(DISTINCT visitor_key) FILTER (WHERE event_type = 'game_page_view' ${previousFilter})::int AS "previousUniqueVisitors",
+          COUNT(*) FILTER (WHERE event_type = 'game_store_click' ${previousFilter})::int AS "previousStoreClicks"
+          FROM indie_game_analytics_events WHERE profile_id = ${profile.id}`),
+        db.execute(sql`SELECT date_trunc('day', created_at)::date AS day,
+          COUNT(*) FILTER (WHERE event_type = 'game_page_view')::int AS "pageViews",
+          COUNT(DISTINCT visitor_key) FILTER (WHERE event_type = 'game_page_view')::int AS "uniqueVisitors",
+          COUNT(*) FILTER (WHERE event_type = 'game_store_click')::int AS "storeClicks"
+          FROM indie_game_analytics_events WHERE profile_id = ${profile.id} ${currentFilter}
+          GROUP BY 1 ORDER BY 1`),
+        db.execute(sql`SELECT
+          COUNT(*) FILTER (WHERE type = 'clip')::int AS clips,
+          COUNT(*) FILTER (WHERE type = 'reel')::int AS reels,
+          COUNT(*) FILTER (WHERE type = 'screenshot')::int AS screenshots,
+          COALESCE(SUM(views), 0)::int AS "totalContentViews"
+          FROM (
+            SELECT CASE WHEN video_type = 'reel' THEN 'reel' ELSE 'clip' END AS type, COALESCE(views, 0) AS views FROM clips WHERE game_id = ${profile.catalogGameId}
+            UNION ALL SELECT 'screenshot', COALESCE(views, 0) FROM screenshots WHERE game_id = ${profile.catalogGameId}
+          ) content`),
+        db.execute(sql`SELECT * FROM (
+          SELECT c.id, CASE WHEN c.video_type = 'reel' THEN 'reel' ELSE 'clip' END AS type, c.title,
+            c.thumbnail_url AS "thumbnailUrl", COALESCE(c.views, 0)::int AS views, c.video_url AS url,
+            u.username AS "creatorUsername", u.avatar_url AS "creatorAvatarUrl",
+            (COALESCE(u.twitch_verified,false) OR COALESCE(u.kick_verified,false) OR COALESCE(u.youtube_verified,false) OR COALESCE(u.rumble_verified,false) OR COALESCE(u.vpzone_verified,false)) AS verified,
+            (SELECT COUNT(*)::int FROM clip_reactions cr WHERE cr.clip_id = c.id) AS reactions
+          FROM clips c JOIN users u ON u.id = c.user_id WHERE c.game_id = ${profile.catalogGameId}
+          UNION ALL
+          SELECT s.id, 'screenshot', s.title, COALESCE(s.thumbnail_url, s.image_url), COALESCE(s.views, 0)::int, s.image_url,
+            u.username, u.avatar_url,
+            (COALESCE(u.twitch_verified,false) OR COALESCE(u.kick_verified,false) OR COALESCE(u.youtube_verified,false) OR COALESCE(u.rumble_verified,false) OR COALESCE(u.vpzone_verified,false)),
+            (SELECT COUNT(*)::int FROM screenshot_reactions sr WHERE sr.screenshot_id = s.id)
+          FROM screenshots s JOIN users u ON u.id = s.user_id WHERE s.game_id = ${profile.catalogGameId}
+        ) content ORDER BY views DESC, reactions DESC LIMIT 5`),
+        db.execute(sql`SELECT store, COUNT(*)::int AS clicks FROM indie_game_analytics_events
+          WHERE profile_id = ${profile.id} AND event_type = 'game_store_click' ${currentFilter} GROUP BY store`),
+        db.execute(sql`SELECT COUNT(*)::int AS favorites FROM user_game_favorites WHERE game_id = ${profile.catalogGameId}`),
+        db.execute(sql`SELECT "creatorId", "creatorUsername", "creatorAvatarUrl", verified, COUNT(*)::int AS "contentCount", SUM(views)::int AS views, SUM(reactions)::int AS reactions FROM (
+          SELECT u.id AS "creatorId", u.username AS "creatorUsername", u.avatar_url AS "creatorAvatarUrl",
+            (COALESCE(u.twitch_verified,false) OR COALESCE(u.kick_verified,false) OR COALESCE(u.youtube_verified,false) OR COALESCE(u.rumble_verified,false) OR COALESCE(u.vpzone_verified,false)) AS verified,
+            COALESCE(c.views,0) AS views, (SELECT COUNT(*) FROM clip_reactions WHERE clip_id=c.id) AS reactions
+          FROM clips c JOIN users u ON u.id=c.user_id WHERE c.game_id=${profile.catalogGameId} AND c.user_id <> ${developerId}
+          UNION ALL SELECT u.id, u.username, u.avatar_url, (COALESCE(u.twitch_verified,false) OR COALESCE(u.kick_verified,false) OR COALESCE(u.youtube_verified,false) OR COALESCE(u.rumble_verified,false) OR COALESCE(u.vpzone_verified,false)), COALESCE(s.views,0), (SELECT COUNT(*) FROM screenshot_reactions WHERE screenshot_id=s.id)
+          FROM screenshots s JOIN users u ON u.id=s.user_id WHERE s.game_id=${profile.catalogGameId} AND s.user_id <> ${developerId}
+        ) creators GROUP BY "creatorId", "creatorUsername", "creatorAvatarUrl", verified ORDER BY views DESC, reactions DESC LIMIT 5`),
+        db.execute(sql`SELECT COUNT(*)::int AS count FROM indie_game_updates WHERE user_id = ${developerId}`),
+      ]);
+      const rowsOf = (result: any): any[] => result.rows ?? result ?? [];
+      const metrics = rowsOf(metricResult)[0] ?? {};
+      const content = rowsOf(contentResult)[0] ?? {};
+      const percent = (current: any, previous: any) => Number(previous) > 0 ? Math.round(((Number(current) - Number(previous)) / Number(previous)) * 10000) / 100 : null;
+      const pageViews = Number(metrics.pageViews ?? 0), storeClicks = Number(metrics.storeClicks ?? 0);
+      const connectedStores = [
+        { key: "steam", label: "Steam", url: profile.steamUrl, clicks: 0 },
+        { key: "epic", label: "Epic Games", url: profile.epicUrl, clicks: 0 },
+        { key: "itch", label: "itch.io", url: profile.itchUrl, clicks: 0 },
+      ].filter((entry) => Boolean(entry.url)) as Array<{ key: string; label: string; url: string; clicks: number }>;
+      for (const row of rowsOf(storesResult)) {
+        const target = connectedStores.find((entry) => entry.key === (row as any).store);
+        if (target) target.clicks = Number((row as any).clicks ?? 0);
+      }
+      const timeSeries = rowsOf(seriesResult).map((row: any) => {
+        const date = row.day instanceof Date
+          ? row.day.toISOString().slice(0, 10)
+          : String(row.day ?? "").slice(0, 10);
+        return {
+          date,
+          label: requestedRange === "all"
+            ? new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", year: "2-digit", timeZone: "UTC" })
+            : new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }),
+          pageViews: Number(row.pageViews ?? 0),
+          uniqueVisitors: Number(row.uniqueVisitors ?? 0),
+          storeClicks: Number(row.storeClicks ?? 0),
+        };
+      });
+      const topContent = rowsOf(topContentResult).map((row: any) => ({
+        id: Number(row.id),
+        type: row.type,
+        title: row.title,
+        thumbnail: row.thumbnailUrl ?? null,
+        thumbnailUrl: row.thumbnailUrl ?? null,
+        creator: {
+          username: row.creatorUsername,
+          avatarUrl: row.creatorAvatarUrl ?? null,
+        },
+        verified: Boolean(row.verified),
+        views: Number(row.views ?? 0),
+        reactions: Number(row.reactions ?? 0),
+        url: row.url,
+      }));
+      res.json({
+        game: { id: profile.id, catalogGameId: profile.catalogGameId, name: profile.gameName ?? "Your game" },
+        range: { key: requestedRange, start: rangeStart?.toISOString() ?? null, contentPerformanceScope: "all_time" },
+        metrics: {
+          pageViews: { value: pageViews, changePct: percent(pageViews, metrics.previousPageViews) },
+          uniqueVisitors: { value: Number(metrics.uniqueVisitors ?? 0), changePct: percent(metrics.uniqueVisitors, metrics.previousUniqueVisitors) },
+          contentViews: { value: Number(content.totalContentViews ?? 0), changePct: null, scope: "All-time total" },
+          storeClicks: { value: storeClicks, changePct: percent(storeClicks, metrics.previousStoreClicks) },
+        },
+        discovery: { availability: "available", series: timeSeries, sourcesAvailable: false, sources: [] },
+        content: { scope: "All-time current totals", clips: Number(content.clips ?? 0), reels: Number(content.reels ?? 0), screenshots: Number(content.screenshots ?? 0), totalContentViews: Number(content.totalContentViews ?? 0) },
+        topContent,
+        stores: {
+          connected: connectedStores,
+          totalClicks: storeClicks,
+          ctr: pageViews > 0 ? Math.round((storeClicks / pageViews) * 10000) / 100 : null,
+        },
+        engagement: [{ name: "Game saves", value: Number(rowsOf(favoritesResult)[0]?.favorites ?? 0) }],
+        topCreators: rowsOf(creatorsResult).map((row: any) => ({
+          id: Number(row.creatorId),
+          username: row.creatorUsername,
+          avatarUrl: row.creatorAvatarUrl ?? null,
+          verified: Boolean(row.verified),
+          contentCount: Number(row.contentCount ?? 0),
+          totalViews: Number(row.views ?? 0),
+          reactions: Number(row.reactions ?? 0),
+        })),
+        insight: pageViews > 0 && storeClicks > 0 ? `${storeClicks} store clicks were recorded in the selected period.` : null,
+        clipsGenerated: Number(content.clips ?? 0), screenshotsGenerated: Number(content.screenshots ?? 0), reelsGenerated: Number(content.reels ?? 0),
+        publishedUpdates: Number(rowsOf(updatesResult)[0]?.count ?? 0),
+      });
+    } catch (err) {
+      console.error("GET /api/indie/analytics error:", err);
+      res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  });
+
+  // ─── Indie Game Management: Bounty Status ─────────────────────────────────
+  app.get("/api/indie/bounty-status", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    try {
+      res.json({ status: "not_enrolled", demoKeys: { uploaded: 0, valid: 0, available: 0, claimed: 0 }, fullGameKeys: { uploaded: 0, valid: 0, available: 0, awarded: 0 } });
+    } catch (err) {
+      res.json({ status: "not_enrolled" });
+    }
+  });
+
+  // ─── Indie Game Management: Verification ──────────────────────────────────
+  app.get("/api/indie/verification", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      const profileRows = await db.execute(sql`SELECT steam_app_id, itch_url FROM indie_game_profiles WHERE user_id = ${req.user.id} LIMIT 1`);
+      const p = profileRows.rows?.[0] as any;
+      res.json({
+        developerIdentity: req.user.emailVerified ? "pending" : "not_started",
+        gameOwnership: "not_started",
+        steamOwnership: p?.steam_app_id ? "pending" : "not_started",
+        epicOwnership: "not_started",
+        itchOwnership: p?.itch_url ? "pending" : "not_started",
+        websiteDomain: "not_started",
+      });
+    } catch (err) {
+      res.json({});
+    }
+  });
+
+  // Legacy stubs — return 410 Gone
+  app.post("/api/indie/store-import/preview", (_req, res) => res.status(410).json({ error: "Use /api/indie/steam/preview, /api/indie/epic/preview, or /api/indie/itch/preview" }));
+
+  // Legacy stubs — return 410 Gone
+  app.post("/api/indie/store-import/apply", (_req, res) => res.status(410).json({ error: "Use /api/indie/import" }));
+  app.put("/api/indie/field-override/:fieldName", (_req, res) => res.status(410).json({ error: "Use PUT /api/indie/profile" }));
+
   // Get user's uploaded banners
   app.get("/api/user/banners", async (req, res) => {
     if (!req.isAuthenticated()) {
@@ -9923,14 +14311,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // All users get default tags + their individually unlocked tags
+      // All users get default tags + their individually unlocked tags.
+      // Also retain an active tag that was selected before ownership records
+      // were introduced (for example, an admin-assigned legacy tag). Without
+      // this, the profile can render the selected tag while its owner cannot
+      // see or remove it in Profile & Appearance.
       const allTags = await storage.getAllNameTags();
       const defaultTags = allTags.filter(t => t.isDefault);
       const unlockedTags = await storage.getUserUnlockedNameTags(req.user.id);
+      const currentUser = await storage.getUserById(req.user.id);
+      const selectedTag = currentUser?.selectedNameTagId
+        ? allTags.find(t => t.id === currentUser.selectedNameTagId && t.isActive)
+        : undefined;
       
-      // Merge default and unlocked tags, avoiding duplicates
+      // Merge default, unlocked, and legacy-selected tags, avoiding duplicates.
       const unlockedIds = new Set(unlockedTags.map(t => t.id));
-      const mergedTags = [...defaultTags.filter(t => !unlockedIds.has(t.id)), ...unlockedTags];
+      const mergedTags = [
+        ...defaultTags.filter(t => !unlockedIds.has(t.id)),
+        ...unlockedTags,
+      ];
+      if (selectedTag && !mergedTags.some(t => t.id === selectedTag.id)) {
+        mergedTags.push(selectedTag);
+      }
       
       res.json(mergedTags);
     } catch (err) {
@@ -10841,6 +15243,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Title is required" });
       }
 
+      // Resolve scheduling intent up front so we reject before sharp/Supabase work.
+      const { date: scheduledAt, error: scheduleError } = parseScheduledAt(req.body.scheduledAt);
+      if (scheduleError) {
+        if (req.file?.path) fs.unlink(req.file.path, () => {});
+        return res.status(400).json({ message: scheduleError });
+      }
+      if (scheduledAt) {
+        const scheduleLimits = await storage.getScheduledPostLimits(req.user!.id);
+        if (!scheduleLimits.isUnlimited && scheduleLimits.remaining !== null && scheduleLimits.remaining <= 0) {
+          if (req.file?.path) fs.unlink(req.file.path, () => {});
+          return res.status(403).json({
+            error: 'Scheduled post limit reached',
+            message: `Your plan allows ${scheduleLimits.max} scheduled posts at a time. Publish or cancel one to schedule another.`,
+            scheduleLimits,
+          });
+        }
+      }
+
       // Validate text content for profanity and inappropriate language
       const validationErrors: string[] = [];
 
@@ -10944,19 +15364,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: description || null,
         tags: tags ? JSON.parse(tags) : [],
         ageRestricted: req.body.ageRestricted === 'true' || req.body.ageRestricted === true,
-        shareCode: generateShareCode()
+        shareCode: generateShareCode(),
+        uploadIp: getRequestMeta(req).ip,
+        uploadDeviceId: getRequestMeta(req).deviceId,
       };
+
+      // Scheduled path: store the processed screenshot for later publishing.
+      if (scheduledAt) {
+        await fsPromises.unlink(originalPath).catch(() => {});
+        const scheduled = await storage.createScheduledPost({
+          userId,
+          contentType: 'screenshot',
+          scheduledAt,
+          payload: screenshotData,
+          title: screenshotData.title,
+          thumbnailUrl: screenshotData.thumbnailUrl || null,
+          videoType: null,
+        });
+        return res.json({
+          success: true,
+          scheduled,
+          message: `Screenshot scheduled for ${scheduledAt.toISOString()}`,
+        });
+      }
 
       const screenshot = await storage.createScreenshot(screenshotData);
 
       // Fire-and-forget: XP awards, bonuses, and milestones don't block the upload response
       void (async () => {
         try {
-          await LeaderboardService.awardPoints(userId, 'screenshot_upload', `Upload: Screenshot - ${title}`);
-          await BonusEventsService.awardWeekendUploadBonus(userId, 100);
-          await CreatorMilestoneService.checkFirstUploadOfDay(userId);
-          await CreatorMilestoneService.checkWeeklyUploadMilestones(userId);
-          await BonusEventsService.checkConsecutiveUploadBonus(userId);
+          await XPService.awardXP(
+            userId,
+            100,
+            'upload',
+            `Earned 100 XP for uploading a screenshot`
+          );
         } catch (e) { console.error('[screenshot upload] XP/bonus side-effects failed:', e); }
       })();
 
@@ -10994,7 +15436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         qrCode: qrCodeDataUrl,
         socialMediaLinks,
         screenshotUrl,
-        xpGained: 2, // Screenshot upload XP reward (changed from 5 to 2)
+        xpGained: 100,
         userXP: updatedUser?.totalXP || 0,
         userLevel: updatedUser?.level || 1
       });
@@ -11177,14 +15619,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You can only delete your own screenshots" });
       }
 
-      // Delete screenshot files from Supabase storage
+      // Delete screenshot files from Supabase storage. deleteFile() takes a
+      // bucket-relative path, not the public URL stored on the row — must
+      // extract it first or Supabase silently no-ops (no matching object,
+      // no error), which is why deleted screenshots were never actually
+      // removed from storage.
       console.log(`🗑️ Deleting files from Supabase for screenshot ${screenshotId}`);
       try {
-        if (screenshot.imageUrl) {
-          await supabaseStorage.deleteFile(screenshot.imageUrl);
+        const imagePath = screenshot.imageUrl ? supabaseStorage.extractStoragePath(screenshot.imageUrl) : null;
+        if (imagePath) {
+          await supabaseStorage.deleteFile(imagePath);
         }
-        if (screenshot.thumbnailUrl) {
-          await supabaseStorage.deleteFile(screenshot.thumbnailUrl);
+        const thumbPath = screenshot.thumbnailUrl ? supabaseStorage.extractStoragePath(screenshot.thumbnailUrl) : null;
+        if (thumbPath) {
+          await supabaseStorage.deleteFile(thumbPath);
         }
         console.log(`✅ Files deleted from Supabase`);
       } catch (fileErr) {
@@ -11209,20 +15657,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "Failed to delete screenshot from database" });
       }
       console.log(`✅ Screenshot ${screenshotId} deleted from database`);
-
-      // Deduct upload points (2 XP for screenshots)
-      console.log(`📉 Deducting points for screenshot deletion`);
-      try {
-        await LeaderboardService.deductPoints(
-          screenshot.userId,
-          'screenshot_upload',
-          `Deleted: Screenshot - ${screenshot.title}`
-        );
-        console.log(`✅ Points deducted successfully`);
-      } catch (pointsErr) {
-        console.error("Error deducting points (continuing anyway):", pointsErr);
-        // Continue even if points deduction fails
-      }
 
       console.log(`✅ Screenshot ${screenshotId} deleted successfully`);
       res.status(200).json({ message: "Screenshot deleted successfully" });
@@ -11604,6 +16038,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/admin', adminRouter);
   app.use('/api/admin/content-filter', adminContentFilterRouter);
   app.use('/api/admin/push', adminPushRouter);
+  app.use('/api/admin/bounties', adminBountiesRouter);
 
   // Push notifications (token register/unregister, self-test)
   app.use('/api/push', pushRouter);
@@ -11616,9 +16051,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mount Twitch games routes
   app.use('/api', twitchGamesRouter);
+  app.use('/api/games', gameBountiesRouter);
+  app.use('/api/campaigns', campaignProgrammeRouter);
+  app.use('/api/bounties', bountyMarketplaceRouter);
+  ensureBountyMarketplaceTables();
+  app.use('/api/indie/steam', steamVerificationRouter);
 
   // Mount upload routes
   app.use('/api/upload', uploadRouter);
+
+  // Mount scheduled posts routes
+  app.use('/api/scheduled-posts', scheduledPostsRouter);
 
   // Mount mint NFT routes
   app.use(mintNftRouter);
@@ -11882,24 +16325,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         duration: actualDuration || 30,
         shareCode: shareCode,
         ageRestricted: false,
+        // Desktop app doesn't send a device id — IP-only signal here.
+        uploadIp: getRequestMeta(req).ip,
       };
 
       const validatedClipData = insertClipSchema.parse(clipData);
       const clip = await storage.createClip(validatedClipData);
 
-      // Award upload points
-      const leaderboardService = new LeaderboardService();
-      await LeaderboardService.awardPoints(
+      // Award real creator XP for desktop uploads only.
+      await XPService.awardXP(
         req.user!.id,
+        250,
         'upload',
-        `Upload: ${videoType === 'reel' ? 'Reel' : 'Clip'} - ${title}`
+        `Earned 250 XP for uploading a ${videoType === 'reel' ? 'reel' : 'clip'}`,
+        clip.id
       );
 
       // Get updated user data
       const user = await storage.getUser(req.user!.id);
-      const username = user?.username || 'unknown';
-      const baseUrl = 'https://app.gamefolio.com';
-      const shareUrl = `${baseUrl}/@${username}/${videoType}/${shareCode}`;
+      const shareUrl = `https://gft.gg/${shareCode}`;
 
       console.log(`✅ Desktop video upload complete: ID=${clip.id}, shareCode=${shareCode}`);
 
@@ -11908,7 +16352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: clip.id,
         shareCode: shareCode,
         shareUrl: shareUrl,
-        xpGained: 5,
+        xpGained: 250,
         userXP: user?.totalXP || 0,
         userLevel: user?.level || 1
       });
@@ -11952,7 +16396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Test database connection (result intentionally not returned —
       // a public health check must not disclose business data).
-      await storage.getClipStats();
+      await db.execute(sql`SELECT 1`);
 
       res.json({
         status: "healthy",
@@ -12031,7 +16475,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         LIMIT 20
       `);
 
-      res.json((rows.rows as any[]).map((r) => r.tag));
+      const tagRows = ((rows as any).rows ?? rows) as any[];
+      res.json(tagRows.map((r) => r.tag));
     } catch (err) {
       console.error("Error fetching user top tags:", err);
       captureRouteError(err, { route: "/api/user/top-tags" });
@@ -12064,7 +16509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         LIMIT 6
       `);
 
-      res.json(rows.rows);
+      res.json(Array.isArray(rows) ? rows : (rows as any)?.rows ?? []);
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching user top games:", err);
@@ -12541,8 +16986,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!fireLimits.canFire) {
             return res.status(400).json({ 
               message: fireLimits.isPro 
-                ? "You've used all 3 zaps for today. Come back tomorrow!" 
-                : "You've used your daily zap. Pro users can zap 3 times a day!",
+                ? "You've used all 3 zaps. Come back in 24 hours!" 
+                : "You've used your zap. Come back in 24 hours! Pro users get 3 zaps a day.",
               firesRemaining: 0,
               maxFires: fireLimits.maxFiresPerDay
             });
@@ -12561,24 +17006,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const reaction = await storage.createScreenshotReaction(reactionData);
         
-        // Award 5 points for fire reactions (only if they haven't earned points for this screenshot before)
+        // Award 50 XP to the screenshot creator for this unique reactor/content pair.
         if (emoji === '🔥') {
-          const hasEarnedPoints = await storage.hasUserEarnedPointsForContent(userId, 'fire', 'screenshot', screenshotId);
-          if (!hasEarnedPoints) {
-            await LeaderboardService.awardPoints(
-              userId,
-              'fire',
-              `Fire reaction given to screenshot #${screenshotId}`
+          // The response below promises the reactor `xpAwarded: 50`, but that
+          // was never actually paid — only the screenshot owner (fire_received,
+          // via XPService) was. Fire reactions are permanent and
+          // one-per-user-per-content (enforced above), so no extra dedupe
+          // check is needed for the reactor's own award.
+          await LeaderboardService.awardPoints(
+            userId,
+            'fire',
+            `Fired on screenshot #${screenshotId}`
+          );
+
+          const hasEarnedXP = await storage.hasUserEarnedXPForReaction(
+            screenshot.userId,
+            'fire_received',
+            'screenshot',
+            screenshotId,
+            userId
+          );
+          if (!hasEarnedXP) {
+            await XPService.awardXP(
+              screenshot.userId,
+              50,
+              'fire_received',
+              `Received 50 XP for a fire reaction from user #${userId} on screenshot #${screenshotId}`,
+              undefined,
+              {
+                contentType: 'screenshot',
+                contentId: screenshotId,
+                reactorId: userId,
+                dedupeKey: `fire_received:screenshot:${screenshotId}:${userId}`,
+              }
             );
           }
-
-          // Award 50 XP to the reactor for giving a fire reaction
-          await XPService.awardXP(
-            userId,
-            50,
-            'other',
-            `Earned 50 XP for giving a fire reaction on screenshot #${screenshotId}`
-          );
           
           // Get updated fire limits to return
           const fireLimits = await storage.getFireLimits(userId);
@@ -12917,18 +17379,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Credit 100 GFT welcome reward to new wallet (on-chain transfer)
+      let gftReward: { success: boolean; txHash?: string; error?: string } | undefined;
+      if (!result.sweepTxHash && !user.welcomePackClaimed) {
+        const { transferGfTokens } = await import('./gf-token-service');
+        gftReward = await transferGfTokens(walletAddress, 100);
+        if (gftReward.success) {
+          console.log(`[Onboarding] 100 GFT welcome reward sent to ${walletAddress} (tx: ${gftReward.txHash})`);
+        } else {
+          console.error(`[Onboarding] Failed to send 100 GFT welcome reward: ${gftReward.error}`);
+        }
+      }
+
       console.log(`Wallet created for user ${userId}: ${walletAddress}`);
 
       res.json({
         address: walletAddress,
         chain: 'skale-nebula-testnet',
-        message: result.sweepTxHash
-          ? `Wallet created. ${result.sweepAmount} GFT moved from your previous wallet.`
-          : "Wallet created successfully",
+        message: gftReward?.success
+          ? "Wallet created and 100 GFT welcome reward sent!"
+          : result.sweepTxHash
+            ? `Wallet created. ${result.sweepAmount} GFT moved from your previous wallet.`
+            : "Wallet created successfully",
         isExisting: false,
-        sweepTxHash: result.sweepTxHash,
-        sweepAmount: result.sweepAmount,
+        sweepTxHash: result.sweepTxHash || gftReward?.txHash,
+        sweepAmount: result.sweepAmount || (gftReward?.success ? '100' : undefined),
         previousWalletAddress: result.oldWalletAddress,
+        gftRewardSent: gftReward?.success || false,
       });
     } catch (error) {
       captureRouteError(error);
@@ -13034,9 +17511,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const aggregated = await getAggregatedGfBalance(userId);
 
       if (aggregated.perWallet.length === 0) {
-        return res.status(404).json({
-          message: "No wallet found",
+        return res.json({
           balance: "0",
+          walletAddress: null,
+          wallets: [],
         });
       }
 
@@ -13778,13 +18256,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const result = await storage.openDailyLootbox(userId);
-      
+
       if (!result) {
         return res.status(404).json({ message: "No rewards available in lootbox" });
       }
 
-      // Award the lootbox bonus XP (+100 XP for opening the lootbox)
-      await BonusEventsService.awardLootboxBonus(userId);
+      // "Open Lootbox" daily challenge bonus — separate from whatever the
+      // lootbox itself rewards (a cosmetic item, or its own XP roll). Gated
+      // naturally by the once-per-day `canOpen` check above.
+      BonusEventsService.awardLootboxBonus(userId).catch((err) => {
+        console.error('Error awarding lootbox-open daily bonus:', err);
+      });
 
       // Determine the appropriate message based on reward type
       let message: string;

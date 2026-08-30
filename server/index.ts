@@ -31,6 +31,7 @@ async function ensureBabyTomlinsonAccount() {
       status: 'active',
       isPro: false,
       isPartner: false,
+      isAmbassador: false,
       level: 1,
       totalXP: 0,
       messagingEnabled: true,
@@ -84,6 +85,7 @@ import uploadRoutes from './routes/upload';
 import twitchGamesRoutes from './routes/twitch-games';
 import gfCheckoutRoutes from './routes/gf-checkout';
 import proSubscriptionRoutes from './routes/pro-subscription';
+import indieDevSubscriptionRoutes from './routes/indie-dev-subscription';
 import gfWebhookRoutes from './routes/gf-webhook';
 import gfStakingRoutes from './routes/gf-staking';
 import { blockCryptoOnNative } from './middleware/block-crypto-on-native';
@@ -91,6 +93,7 @@ import { requestContextMiddleware } from './request-context';
 import storeRoutes from './routes/store';
 import gamefolioPurchaseRoutes from './routes/gamefolio-purchases';
 import revenuecatRoutes from './routes/revenuecat';
+import { ambassadorRouter } from './routes/ambassador';
 import oauthProviderRoutes from './routes/oauth-provider';
 import developerPortalRoutes from './routes/developer-portal';
 import publicApiV1Routes from './routes/public-api-v1';
@@ -186,6 +189,18 @@ app.use((req, res, next) => {
   next();
 });
 
+// Prevent browsers from caching HTML responses in development so Vite HMR
+// changes are always visible without manual cache clearing.
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/@') && !req.path.includes('.')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+    }
+    next();
+  });
+}
+
 // IMPORTANT: Register webhook routes BEFORE express.json() middleware
 // Webhooks need raw body for signature verification
 app.use(gfWebhookRoutes);
@@ -257,10 +272,12 @@ app.use((req, res, next) => {
     app.use('/api/twitch', twitchGamesRoutes);
     app.use(gfCheckoutRoutes);
     app.use(proSubscriptionRoutes);
+    app.use(indieDevSubscriptionRoutes);
     app.use(gfStakingRoutes);
     app.use(storeRoutes);
     app.use(gamefolioPurchaseRoutes);
     app.use(revenuecatRoutes);
+    app.use(ambassadorRouter);
     app.use(oauthProviderRoutes); // /oauth/authorize, /oauth/token, /oauth/revoke — unprefixed, standard OAuth issuer paths
     app.use('/api/developer', developerPortalRoutes);
     app.use('/api/public/v1', publicApiV1Routes);
@@ -406,12 +423,24 @@ app.use((req, res, next) => {
     // ALWAYS serve the app on port 5000
     // this serves both the API and the client.
     // It is the only port that is not firewalled.
+    // (Overridable via PORT for local dev — macOS AirPlay squats 5000.)
     const port = process.env.NODE_ENV === "development" && process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
-    server.listen({
+    // reusePort uses SO_REUSEPORT, which macOS sockets reject with ENOTSUP —
+    // only enable it off-darwin (Linux/Replit), where it's supported.
+    // Overridable via HOST for local dev — on at least one dev machine, some
+    // local network/security software silently intercepted connections to a
+    // *specific* port (5050) with no error and no visible LISTEN socket;
+    // switching PORT resolved it, HOST=127.0.0.1 didn't independently confirm
+    // as necessary. Left here as a defensive knob for the same symptom
+    // elsewhere. Production/Replit still needs 0.0.0.0, so default unchanged.
+    const listenOptions: { port: number; host: string; reusePort?: boolean } = {
       port,
-      host: "0.0.0.0",
-      reusePort: process.env.NODE_ENV !== "development",
-    }, () => {
+      host: process.env.HOST || "0.0.0.0",
+    };
+    if (process.platform !== "darwin") {
+      listenOptions.reusePort = true;
+    }
+    server.listen(listenOptions, () => {
       log(`serving on port ${port}`);
 
       LeaderboardService.processPeriodicLeaderboardClosures()
@@ -476,7 +505,66 @@ app.use((req, res, next) => {
         setTimeout(tick, 2 * 60 * 1000);
         setInterval(tick, SYNC_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule platform sync:', err));
+
+      // Publish scheduled posts whose time has come. Posts are processed up
+      // front (thumbnails/transcode/upload), so this tick just inserts the real
+      // clip/screenshot record and runs the upload XP side-effects. 60s cadence
+      // keeps publish latency low; each tick only touches due rows.
+      import('./scheduled-posts-service').then(({ publishDueScheduledPosts }) => {
+        const SCHEDULE_INTERVAL_MS = 60 * 1000;
+        const tick = () => {
+          publishDueScheduledPosts()
+            .catch((err: any) => {
+              // Suppress noisy "relation does not exist" error when the
+              // scheduled_posts table hasn't been migrated yet.
+              const msg: string = err?.cause?.message ?? err?.message ?? '';
+              if (!msg.includes('relation "scheduled_posts" does not exist')) {
+                console.error('scheduled-posts publish failed:', err);
+              }
+            });
+        };
+        setTimeout(tick, 30 * 1000);
+        setInterval(tick, SCHEDULE_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule scheduled-posts worker:', err));
+
+      // Safety net for clips left stuck in "processing" — normally
+      // finishClipProcessing runs immediately in-process right after upload
+      // and this never finds anything; it only matters if the server
+      // restarted mid-job. Grace period (10 min, in the worker itself) keeps
+      // this from racing a legitimately still-running in-process attempt.
+      import('./clip-processing-worker').then(({ reconcileStuckClipProcessing }) => {
+        const RECONCILE_INTERVAL_MS = 5 * 60 * 1000;
+        const tick = () => {
+          reconcileStuckClipProcessing()
+            .catch((err) => console.error('clip-processing-reconcile failed:', err));
+        };
+        setTimeout(tick, 2 * 60 * 1000);
+        setInterval(tick, RECONCILE_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule clip-processing reconciler:', err));
     });
+
+    // Reserved VM deploys stop the old process before the new one boots —
+    // there's no second instance to keep serving traffic in the meantime —
+    // so without this, the SIGTERM Replit sends kills every in-flight
+    // request immediately. A request that had already written its result
+    // (e.g. a clip finishing processing) but hadn't sent its response yet
+    // would leave the client seeing a hard failure for work the server
+    // actually completed, with no way to tell the two apart. Draining lets
+    // in-flight requests finish and respond normally; the timeout is a
+    // safety net so one stuck request can't block a deploy forever.
+    const gracefulShutdown = (signal: string) => {
+      log(`${signal} received, draining in-flight requests before exit`);
+      server.close(() => {
+        log('all connections drained, exiting');
+        process.exit(0);
+      });
+      setTimeout(() => {
+        console.warn('Graceful shutdown timed out after 25s, forcing exit');
+        process.exit(1);
+      }, 25_000);
+    };
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   } catch (error) {
     console.error("Fatal server error:", error);
     process.exit(1);

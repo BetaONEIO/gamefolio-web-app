@@ -4,6 +4,7 @@ import { Crown, Loader2, X, Check, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useAuth } from "@/hooks/use-auth";
+import { useIndieMode } from "@/hooks/use-indie-mode";
 import type { RcPackage } from "@/hooks/use-revenuecat";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import {
@@ -162,9 +163,30 @@ interface LootboxReward {
   isDuplicate: boolean;
 }
 
+// apiRequest throws Error(`${status}: ${bodyText}`) on non-2xx responses —
+// pull the JSON message back out so the UI shows the server's real reason
+// instead of a raw "400: {\"error\":\"...\"}" string.
+function parseApiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) {
+    const jsonStart = error.message.indexOf('{');
+    if (jsonStart !== -1) {
+      try {
+        const parsed = JSON.parse(error.message.slice(jsonStart));
+        if (parsed?.error) return parsed.error;
+        if (parsed?.message) return parsed.message;
+      } catch {
+        // fall through
+      }
+    }
+  }
+  return fallback;
+}
+
 export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthRequired }: ProUpgradeDialogProps) {
   const { isInitialized, isLoading, isPro, getCurrentOffering, purchasePackage } = useRevenueCat();
   const { user } = useAuth();
+  const { isIndieMode } = useIndieMode();
+  const proProductName = isIndieMode ? "Developer Pro" : "Gamefolio Pro";
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
   const [purchasing, setPurchasing] = useState(false);
   const [step, setStep] = useState<"plans" | "checkout" | "success">("plans");
@@ -176,6 +198,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [webPricing, setWebPricing] = useState<WebPricing | null>(null);
+  const [showCodeInput, setShowCodeInput] = useState(false);
+  const [ambassadorCode, setAmbassadorCode] = useState("");
   const scrollContainerRef = useCallback((node: HTMLDivElement | null) => {
     if (node) {
       node.scrollTop = 0;
@@ -361,13 +385,14 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       await loadStripeInstance();
       const res = await apiRequest("POST", "/api/stripe/create-pro-subscription", {
         plan: billingPeriod,
+        ambassadorCode: ambassadorCode.trim() || undefined,
       });
       const data = await res.json();
       setCheckoutClientSecret(data.clientSecret);
       setCheckoutSessionId(data.sessionId);
       setStep("checkout");
     } catch (err: any) {
-      setCheckoutError(err?.message || "Failed to start checkout");
+      setCheckoutError(parseApiErrorMessage(err, "Failed to start checkout"));
     } finally {
       setCheckoutLoading(false);
     }
@@ -399,14 +424,14 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   if (isPro && step !== "success" && !purchaseInProgress) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[430px] w-full bg-[#0B1218] border-none p-0 overflow-hidden [&>button]:hidden">
+        <DialogContent className="max-w-[430px] w-full bg-popover border-none p-0 overflow-hidden [&>button]:hidden">
           <div className="p-8 text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#B7FF1A] to-[#6FA800] mb-6">
               <Crown className="w-10 h-10 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">You're already Pro!</h2>
             <p className="text-[#B8C0AE] mb-6">
-              You have full access to all Gamefolio Pro features. Thank you for your support!
+              You have full access to all {proProductName} features. Thank you for your support!
             </p>
             <button
               onClick={() => onOpenChange(false)}
@@ -549,12 +574,44 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     );
   };
 
+  // Ambassador referral discount — web/Stripe checkout only, validated
+  // server-side against the ambassador's referral code at checkout time.
+  const ambassadorCodeSection = () => (
+    <div className="text-left">
+      {!showCodeInput ? (
+        <button
+          type="button"
+          onClick={() => setShowCodeInput(true)}
+          className="text-[#B8C0AE] text-[11px] underline hover:text-white"
+        >
+          Have an ambassador code?
+        </button>
+      ) : (
+        <div className="flex flex-col gap-1">
+          <label className="text-[#B8C0AE] text-[10px] font-bold uppercase tracking-[1px]">
+            Ambassador code
+          </label>
+          <input
+            type="text"
+            value={ambassadorCode}
+            onChange={(e) => setAmbassadorCode(e.target.value)}
+            placeholder="e.g. TOWER"
+            className="w-full bg-[#0B1218] border border-[#1B2A33] rounded-lg px-3 py-2 text-white text-sm placeholder:text-[#475569] focus:outline-none focus:border-[#B7FF1A]"
+          />
+          <p className="text-[#B8C0AE] text-[10px]">
+            10% off your first payment.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
   const leftPanel = (
     <div className="relative w-full h-full min-h-0">
       <div className="absolute inset-0">
         <img
           src={proHeroImage}
-          alt="Gamefolio Pro"
+          alt={proProductName}
           className="w-full h-full object-cover"
           style={{ objectPosition: "center 70%" }}
         />
@@ -587,7 +644,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         <div className="text-center md:text-left mb-1">
           <h2 className="text-xl font-bold leading-tight whitespace-nowrap">
             <span className="text-white">Unlock </span>
-            <span className="text-[#B7FF1A]">Gamefolio Pro</span>
+            <span className="text-[#B7FF1A]">{proProductName}</span>
           </h2>
         </div>
 
@@ -635,6 +692,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
         {planSelector()}
 
+        {!isNative && ambassadorCodeSection()}
+
         <button
           onClick={handleJoinPro}
           disabled={buttonDisabled}
@@ -646,7 +705,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
             <Loader2 className="w-5 h-5 animate-spin text-[#071013]" />
           ) : (
             <>
-              <span className="text-[#071013] text-base font-bold">Join Gamefolio Pro</span>
+              <span className="text-[#071013] text-base font-bold">Join {proProductName}</span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#022C22" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -728,7 +787,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                 <div className="relative w-full flex-shrink-0" style={{ height: "56vh" }}>
                   <img
                     src={proHeroImage}
-                    alt="Gamefolio Pro"
+                    alt={proProductName}
                     className="w-full h-full object-cover"
                     style={{ objectPosition: "center 70%" }}
                   />
@@ -759,7 +818,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
                   <h2 className="text-center text-xl font-bold leading-tight mb-0.5">
                     <span className="text-white">Unlock </span>
-                    <span className="text-[#B7FF1A]">Gamefolio Pro</span>
+                    <span className="text-[#B7FF1A]">{proProductName}</span>
                   </h2>
 
                   <p className="text-[#B8C0AE] text-xs text-center leading-relaxed mb-3 max-w-[260px] mx-auto">
@@ -800,6 +859,8 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
                   {planSelector(true)}
 
+                  {!isNative && ambassadorCodeSection()}
+
                   <button
                     onClick={handleJoinPro}
                     disabled={buttonDisabled}
@@ -811,13 +872,17 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                       <Loader2 className="w-5 h-5 animate-spin text-[#071013]" />
                     ) : (
                       <>
-                        <span className="text-[#071013] text-base font-bold">Join Gamefolio Pro</span>
+                        <span className="text-[#071013] text-base font-bold">Join {proProductName}</span>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#022C22" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </>
                     )}
                   </button>
+
+                  {checkoutError && (
+                    <p className="text-red-400 text-xs text-center mt-2">{checkoutError}</p>
+                  )}
 
                   <span className="text-[#B8C0AE] text-[11px] text-center block mt-2">
                     Cancel anytime.{" "}

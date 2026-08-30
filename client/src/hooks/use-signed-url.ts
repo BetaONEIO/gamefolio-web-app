@@ -5,8 +5,35 @@ const signedUrlCache = new Map<string, { url: string; expires: number }>();
 const CACHE_BUFFER = 5 * 60 * 1000; // Refresh 5 minutes before expiry
 const URL_EXPIRY = 60 * 60 * 1000; // 1 hour
 
+// A URL the server has already signed. Fresh URLs are left alone so the
+// identical image is not downloaded twice. Expired legacy signed URLs still
+// need to be sent through the signing endpoint again.
+function isAlreadySignedUrl(url: string): boolean {
+  return url.includes('/object/sign/') && url.includes('token=');
+}
+
+function signedUrlIsStillFresh(url: string): boolean {
+  try {
+    const token = new URL(url).searchParams.get('token');
+    const payload = token?.split('.')[1];
+    if (!payload) return false;
+
+    const paddedPayload = payload.replace(/-/g, '+').replace(/_/g, '/')
+      .padEnd(Math.ceil(payload.length / 4) * 4, '=');
+    const { exp } = JSON.parse(atob(paddedPayload));
+    return typeof exp === 'number' && exp * 1000 > Date.now() + CACHE_BUFFER;
+  } catch {
+    // A malformed or opaque token is safer to refresh than to treat as valid.
+    return false;
+  }
+}
+
 function isSupabaseStorageUrl(url: string): boolean {
   if (!url) return false;
+  // Keep current signed URLs, but refresh legacy URLs that have already
+  // expired. The signing endpoint extracts the bucket/path without using the
+  // old token, so it can issue a new URL for the same object.
+  if (isAlreadySignedUrl(url) && signedUrlIsStillFresh(url)) return false;
   return url.includes('gamefolio-media') || url.includes('gamefolio-assets') || url.includes('gamefolio-name-tags');
 }
 

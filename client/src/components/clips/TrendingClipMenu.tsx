@@ -157,19 +157,24 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
         variant: "gamefolioSuccess",
       });
       // Immediately remove from all caches for instant UI update
-      const removeClip = (old: any) => {
+      const removeItem = (old: any) => {
         if (!old) return old;
         if (Array.isArray(old)) return old.filter((c: any) => c.id !== clip.id);
         if (old?.clips && Array.isArray(old.clips)) return { ...old, clips: old.clips.filter((c: any) => c.id !== clip.id) };
+        if (old?.screenshots && Array.isArray(old.screenshots)) return { ...old, screenshots: old.screenshots.filter((c: any) => c.id !== clip.id) };
         return old;
       };
-      queryClient.setQueryData([`/api/users/${clip.user.username}/clips`], removeClip);
-      queryClient.setQueryData(['/api/clips/latest'], removeClip);
-      queryClient.setQueryData(['/api/reels/latest'], removeClip);
+      queryClient.setQueryData([`/api/users/${clip.user.username}/clips`], removeItem);
+      queryClient.setQueryData([`/api/users/${clip.user.username}/screenshots`], removeItem);
+      queryClient.setQueryData([`/api/users/${clip.userId}/screenshots`], removeItem);
+      queryClient.setQueryData(['/api/clips/latest'], removeItem);
+      queryClient.setQueryData(['/api/reels/latest'], removeItem);
       // Background invalidations
       queryClient.invalidateQueries({ queryKey: ["/api/clips"] });
       queryClient.invalidateQueries({ queryKey: ["/api/trending"] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/clips`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.user.username}/screenshots`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${clip.userId}/screenshots`] });
       queryClient.invalidateQueries({ queryKey: ['/api/clips/latest'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reels/latest'] });
       setShowDeleteConfirm(false);
@@ -508,7 +513,7 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
             <DrawerPrimitive.Portal>
               <DrawerPrimitive.Overlay className="fixed inset-0 z-[9999] bg-black/60" />
               <DrawerPrimitive.Content
-                className="fixed inset-x-0 bottom-0 z-[9999] flex flex-col rounded-t-2xl bg-[#0B1218] border-t border-white/10 outline-none"
+                className="fixed inset-x-0 bottom-0 z-[9999] flex flex-col rounded-t-2xl bg-popover border-t border-border outline-none"
               >
                 <DrawerPrimitive.Title className="sr-only">{menuLabel}</DrawerPrimitive.Title>
                 {/* Drag handle */}
@@ -531,7 +536,7 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
           <PopoverContent
             align="end"
             sideOffset={6}
-            className="w-52 p-0 bg-[#0B1218] border border-white/10 shadow-2xl rounded-xl overflow-hidden"
+            className="w-52 p-0 bg-popover border border-border shadow-2xl rounded-xl overflow-hidden"
           >
             {menuContent}
           </PopoverContent>
@@ -541,7 +546,7 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
       {/* Edit Caption dialog */}
       <Dialog open={showEditCaption} onOpenChange={setShowEditCaption}>
         <DialogContent
-          className="bg-[#0B1218] border border-white/10 text-foreground sm:max-w-md"
+          className="bg-popover border border-border text-foreground sm:max-w-md"
           onClick={(e) => e.stopPropagation()}
         >
           <DialogHeader>

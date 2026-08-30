@@ -159,6 +159,9 @@ router.post('/oauth/token', tokenRateLimiter, async (req: Request, res: Response
     const { grant_type } = req.body || {};
 
     // Client auth: HTTP Basic (client_id:client_secret) or POST body fields.
+    // Public clients (RFC 8252 §8.5 — desktop/mobile/CLI apps, which can't
+    // keep a secret confidential) skip this entirely and prove themselves
+    // with PKCE instead, enforced below per grant type.
     let clientId = req.body?.client_id;
     let clientSecret = req.body?.client_secret;
     const authHeader = req.headers.authorization;
@@ -171,13 +174,18 @@ router.post('/oauth/token', tokenRateLimiter, async (req: Request, res: Response
       }
     }
 
-    if (typeof clientId !== 'string' || typeof clientSecret !== 'string') {
+    if (typeof clientId !== 'string') {
       return res.status(401).json({ error: 'invalid_client' });
     }
 
     const client = await findActiveClientByClientId(clientId);
-    if (!client || !(await verifyClientSecret(clientSecret, client.clientSecretHash))) {
+    if (!client) {
       return res.status(401).json({ error: 'invalid_client' });
+    }
+    if (client.clientType !== 'public') {
+      if (typeof clientSecret !== 'string' || !(await verifyClientSecret(clientSecret, client.clientSecretHash))) {
+        return res.status(401).json({ error: 'invalid_client' });
+      }
     }
 
     if (grant_type === 'authorization_code') {
@@ -306,13 +314,18 @@ router.post('/oauth/revoke', tokenRateLimiter, async (req: Request, res: Respons
     }
 
     const { token } = req.body || {};
-    if (typeof clientId !== 'string' || typeof clientSecret !== 'string' || typeof token !== 'string') {
+    if (typeof clientId !== 'string' || typeof token !== 'string') {
       return res.status(200).json({});
     }
 
     const client = await findActiveClientByClientId(clientId);
-    if (!client || !(await verifyClientSecret(clientSecret, client.clientSecretHash))) {
+    if (!client) {
       return res.status(200).json({});
+    }
+    if (client.clientType !== 'public') {
+      if (typeof clientSecret !== 'string' || !(await verifyClientSecret(clientSecret, client.clientSecretHash))) {
+        return res.status(200).json({});
+      }
     }
 
     const tokenHash = hashToken(token);

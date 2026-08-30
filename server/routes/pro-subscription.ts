@@ -114,6 +114,33 @@ async function getOrCreatePriceId(
   return price.id;
 }
 
+// Ambassador referral discount — a single shared 10%-off, first-payment-only
+// coupon reused for every ambassador/buyer. Which ambassador's code was used
+// is tracked in our own DB (ambassador_conversions), not as separate Stripe
+// objects per ambassador.
+const AMBASSADOR_COUPON_ID = 'ambassador-referral-10-once';
+let cachedAmbassadorCouponId: string | null = null;
+
+async function getOrCreateAmbassadorCoupon(stripe: any): Promise<string> {
+  if (cachedAmbassadorCouponId) return cachedAmbassadorCouponId;
+
+  try {
+    const existing = await stripe.coupons.retrieve(AMBASSADOR_COUPON_ID);
+    cachedAmbassadorCouponId = existing.id;
+    return existing.id;
+  } catch {
+    const coupon = await stripe.coupons.create({
+      id: AMBASSADOR_COUPON_ID,
+      percent_off: 10,
+      duration: 'once',
+      name: 'Ambassador Referral 10% Off',
+    });
+    console.log(`✅ Created Stripe coupon: ${coupon.id}`);
+    cachedAmbassadorCouponId = coupon.id;
+    return coupon.id;
+  }
+}
+
 // Shared, idempotent Pro provisioning. Called by the client-side confirm
 // endpoint (so the success screen + lootbox appear immediately) and by the
 // Stripe webhook (`checkout.session.completed`) as a backstop in case the
@@ -124,8 +151,9 @@ export async function provisionProSubscription(opts: {
   plan: 'monthly' | 'yearly';
   customerId: string;
   subscriptionId: string;
+  ambassadorCode?: string;
 }): Promise<{ lootboxReward: { reward: any; isDuplicate: boolean } | null }> {
-  const { userId, plan, customerId, subscriptionId } = opts;
+  const { userId, plan, customerId, subscriptionId, ambassadorCode } = opts;
 
   const [before] = await db.select().from(users).where(eq(users.id, userId));
   const alreadyProvisioned = !!before?.isPro && before?.stripeSubscriptionId === subscriptionId;
@@ -153,6 +181,11 @@ export async function provisionProSubscription(opts: {
     }
     if (updatedUser) {
       notifyProPurchase(updatedUser, { kind: 'new', plan, source: 'Stripe' });
+    }
+    const codeToAttribute = ambassadorCode || updatedUser?.referredBy;
+    if (codeToAttribute) {
+      storage.recordAmbassadorConversion(userId, codeToAttribute, plan, 'stripe')
+        .catch(err => console.error('Failed to record ambassador conversion:', err));
     }
   }
 
@@ -212,7 +245,7 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { plan } = req.body;
+    const { plan, ambassadorCode } = req.body;
     if (!plan || !['monthly', 'yearly'].includes(plan)) {
       return res.status(400).json({ error: 'Invalid plan. Must be "monthly" or "yearly".' });
     }
@@ -220,6 +253,18 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
     const [user] = await db.select().from(users).where(eq(users.id, userId));
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Ambassador referral discount — entered manually at checkout, separate
+    // from whatever `referredBy` the account already has from signup.
+    let validatedAmbassadorCode: string | null = null;
+    if (typeof ambassadorCode === 'string' && ambassadorCode.trim()) {
+      const normalizedCode = ambassadorCode.trim().toUpperCase();
+      const codeOwner = await storage.getUserByReferralCode(normalizedCode);
+      if (!codeOwner || !codeOwner.isAmbassador || codeOwner.id === userId) {
+        return res.status(400).json({ error: 'Invalid ambassador code' });
+      }
+      validatedAmbassadorCode = normalizedCode;
     }
 
     const stripe = await getUncachableStripeClient();
@@ -259,6 +304,7 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
     }
 
     const priceId = await getOrCreatePriceId(stripe, plan);
+    const couponId = validatedAmbassadorCode ? await getOrCreateAmbassadorCoupon(stripe) : null;
 
     // Embedded Checkout Session (subscription mode). Adaptive Pricing (enabled
     // in the Dashboard) localises the displayed + charged amount. We keep the
@@ -269,6 +315,7 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
       redirect_on_completion: 'never',
+      ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
       subscription_data: {
         metadata: { userId: String(userId), plan },
       },
@@ -276,6 +323,7 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
         userId: String(userId),
         plan,
         type: 'pro_subscription',
+        ...(validatedAmbassadorCode ? { ambassadorCode: validatedAmbassadorCode } : {}),
       },
     });
 
@@ -340,6 +388,7 @@ router.post('/api/stripe/confirm-pro-subscription', hybridAuth, async (req: Requ
       plan: resolvedPlan,
       customerId,
       subscriptionId,
+      ambassadorCode: session.metadata?.ambassadorCode,
     });
 
     return res.json({ success: true, isPro: true, subscriptionId, lootboxReward });

@@ -3,21 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { GoogleAuthButton } from "./GoogleAuthButton";
 import { DiscordAuthButton } from "./DiscordAuthButton";
 import { PasswordRequirementsDisplay } from "@/components/ui/password-requirements";
 import { FieldError, FieldStatus } from "@/components/ui/field-error";
+import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, ChevronDown, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 const MONTHS = [
-  "January","February","March","April","May","June",
-  "July","August","September","October","November","December"
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
 ];
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: CURRENT_YEAR - 1900 + 1 }, (_, i) => CURRENT_YEAR - i);
@@ -112,10 +111,10 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
   });
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken" | "invalid">("idle");
   const [usernameTimer, setUsernameTimer] = useState<NodeJS.Timeout | null>(null);
-  const usernameAbortRef = useRef<AbortController | null>(null);
-  const checkedUsernameRef = useRef<string>("");
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date(2000, 0));
+  const usernameAbortRef = useRef<AbortController | null>(null);
+  const checkedUsernameRef = useRef<string>("");
   const [emailValid, setEmailValid] = useState<boolean | null>(null);
   const [passwordRequirements, setPasswordRequirements] = useState({
     length: false,
@@ -339,7 +338,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
       return;
     }
 
-    // Date of birth age validation (must be 13 or older)
+    // Date of birth age validation (must be 15 or older)
     const dob = new Date(formData.dateOfBirth);
     const today = new Date();
     let age = today.getFullYear() - dob.getFullYear();
@@ -347,11 +346,11 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
       age--;
     }
-    if (age < 13) {
-      setFieldErrors({ dateOfBirth: "You must be at least 13 years old to create an account" });
+    if (age < 15) {
+      setFieldErrors({ dateOfBirth: "You must be at least 15 years old to create an account" });
       toast({
         title: "Error",
-        description: "You must be at least 13 years old to create an account",
+        description: "You must be at least 15 years old to create an account",
         variant: "gamefolioError",
       });
       return;
@@ -507,7 +506,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
             !formData.dateOfBirth && "text-muted-foreground"
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
+          <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
           {formData.dateOfBirth
             ? format(new Date(formData.dateOfBirth + "T00:00:00"), "dd MMMM yyyy")
             : "Select your date of birth"}
@@ -547,7 +546,11 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                 }
                 setDatePickerOpen(false);
               }}
-              disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+              disabled={(date) => {
+                const minAge = new Date();
+                minAge.setFullYear(minAge.getFullYear() - 13);
+                return date > minAge || date < new Date("1900-01-01");
+              }}
               initialFocus
               className="w-full"
               classNames={{
@@ -561,6 +564,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
                 row: "flex w-full mt-2",
                 cell: "flex-1 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
                 day: "w-full h-9 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors",
+                day_disabled: "invisible pointer-events-none",
               }}
             />
           </div>
@@ -583,7 +587,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           className="auth-input uppercase"
           maxLength={16}
         />
-        <p className="text-xs text-muted-foreground">Have a friend's referral code? Enter it here to earn bonus XP!</p>
+        <p className="text-xs text-muted-foreground">Have a friend's referral code? Enter it here to earn bonus XP! (3–16 characters)</p>
       </div>
 
       <div className="flex items-start gap-2">
@@ -613,7 +617,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <Dialog open={showTerms} onOpenChange={setShowTerms}>
         {/* z above the auth modal (z-[200000]) or the dialog opens behind it and looks like nothing happened */}
-        <DialogContent className="z-[200001] max-w-2xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700">
+        <DialogContent className="z-[200001] max-w-2xl max-h-[80vh] overflow-y-auto bg-popover border-border">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-primary">Terms and Conditions</DialogTitle>
             <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
@@ -696,7 +700,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <Dialog open={showPrivacy} onOpenChange={setShowPrivacy}>
         {/* z above the auth modal (z-[200000]) or the dialog opens behind it and looks like nothing happened */}
-        <DialogContent className="z-[200001] max-w-2xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700">
+        <DialogContent className="z-[200001] max-w-2xl max-h-[80vh] overflow-y-auto bg-popover border-border">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-primary">Privacy Policy</DialogTitle>
             <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>

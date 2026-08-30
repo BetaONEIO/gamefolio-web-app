@@ -15,7 +15,7 @@ import { CustomAvatar } from '@/components/ui/custom-avatar';
 import { VerificationBadge } from '@/components/ui/verification-badge';
 import { Badge } from '@/components/ui/badge';
 import { useSignedUrl } from '@/hooks/use-signed-url';
-import { openShareWindow, nativeShare, isNative } from '@/lib/platform';
+import { openShareWindow, nativeShare, isNative, publicUrl, PUBLIC_WEB_BASE } from '@/lib/platform';
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
   streamer: { label: "Streamer", icon: Video, color: "bg-primary/20 text-primary border-primary/30" },
@@ -146,8 +146,10 @@ export function GamefolioShareDialog({
   };
 
   const generateFallbackData = () => {
-    const baseUrl = window.location.origin;
-    const profileUrl = `${baseUrl}/@${username}`;
+    // Not window.location.origin: on native that is capacitor://localhost,
+    // which is exactly what shipped in shared profile links.
+    const baseUrl = PUBLIC_WEB_BASE;
+    const profileUrl = publicUrl(`/@${username}`);
     setShareData({
       profileUrl,
       username,

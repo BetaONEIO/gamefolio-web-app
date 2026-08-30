@@ -6,17 +6,17 @@ import { InsertUserPointsHistory, InsertWeeklyLeaderboard, InsertTopContributor 
 // Every point earned contributes to user's level progression
 // NOTE: These are mutable — they are overwritten at startup from the xp_settings DB table
 export let POINT_VALUES: Record<string, number> = {
-  upload: 200,                    // 200 XP for uploading clips/reels
+  upload: 250,                    // Legacy compatibility value; real upload XP uses XPService
   screenshot_upload: 100,         // 100 XP for uploading screenshots
   like: 5,                        // 5 XP for liking content (like_given)
   like_received: 10,              // 10 XP when your content receives a like
   comment: 15,                    // 15 XP for commenting on a clip (comment_given)
   comment_received: 20,           // 20 XP when your content receives a comment
-  fire: 15,                       // 15 XP for fire reactions received
+  fire: 50,                       // Legacy compatibility value; real fire XP uses XPService
   share_received: 40,             // 40 XP when your clip is shared
   follow_received: 50,            // 50 XP when someone follows you
   share_given: 20,                // 20 XP for sharing a clip
-  view: 0.02,                     // 0.02 points per view (+2 XP per view)
+  view: 1,                        // Legacy compatibility value; real view XP uses XPService
   daily_login: 25,                // 25 XP for daily login
   streak_milestone: 0,            // Variable XP for streak milestones (set dynamically)
   watch_5_clips: 10,              // 10 XP for watching 5 clips in a day
@@ -29,7 +29,29 @@ export let POINT_VALUES: Record<string, number> = {
   lootbox_bonus: 100,             // 100 XP for opening the daily lootbox
   consecutive_upload_bonus: 75,   // 75 XP for uploading within 24h of last upload
   weekend_upload_bonus: 0,        // Variable - 50% of upload XP on weekends
+  mobile_app_daily: 10,           // 10 XP per day for having the mobile app installed
+  // Ranked season league thresholds — configurable through the admin XP settings
+  league_silver_threshold: 5000,
+  league_gold_threshold: 12500,
+  league_platinum_threshold: 22500,
+  league_onyx_threshold: 35000,
+  league_diamond_threshold: 50000,
+  league_champion_threshold: 70000,
 };
+
+export type SeasonLeagueName = "Bronze" | "Silver" | "Gold" | "Platinum" | "Onyx" | "Diamond" | "Champion";
+
+export function getSeasonLeagueTiers() {
+  return [
+    { name: "Bronze" as const, icon: "🥉", color: "#CD7F32", min: 0, max: POINT_VALUES.league_silver_threshold - 1, philosophy: "The starting point of every ranked season.", reward: "Basic profile border" },
+    { name: "Silver" as const, icon: "🥈", color: "#C0C0C0", min: POINT_VALUES.league_silver_threshold, max: POINT_VALUES.league_gold_threshold - 1, philosophy: "An active community member.", reward: "Exclusive profile theme" },
+    { name: "Gold" as const, icon: "🥇", color: "#FFD700", min: POINT_VALUES.league_gold_threshold, max: POINT_VALUES.league_platinum_threshold - 1, philosophy: "A dedicated creator.", reward: "Animated badge" },
+    { name: "Platinum" as const, icon: "💎", color: "#4FC3F7", min: POINT_VALUES.league_platinum_threshold, max: POINT_VALUES.league_onyx_threshold - 1, philosophy: "An elite contributor.", reward: "Exclusive avatar frame" },
+    { name: "Onyx" as const, icon: "🖤", color: "#8B5CF6", min: POINT_VALUES.league_onyx_threshold, max: POINT_VALUES.league_diamond_threshold - 1, philosophy: "Among the platform's best creators.", reward: "Animated profile effect" },
+    { name: "Diamond" as const, icon: "💠", color: "#E0E7FF", min: POINT_VALUES.league_diamond_threshold, max: POINT_VALUES.league_champion_threshold - 1, philosophy: "Reserved for the best creators.", reward: "Diamond badge + season cosmetic", rankGate: 100 },
+    { name: "Champion" as const, icon: "🏆", color: "#B7FF1A", min: POINT_VALUES.league_champion_threshold, max: Infinity, philosophy: "Reserved for the very best players.", reward: "Champion badge, profile border + title", rankGate: 10 },
+  ];
+}
 
 // The canonical XP settings definition used to seed the database and label each setting
 export const XP_SETTINGS_DEFINITION: Array<{
@@ -59,12 +81,32 @@ export const XP_SETTINGS_DEFINITION: Array<{
   { key: "first_1000_views", label: "First Clip to 1,000 Views", description: "XP awarded when your first clip reaches 1,000 views", category: "creator_milestones" },
   { key: "lootbox_bonus", label: "Daily Lootbox Opened", description: "XP awarded for opening the daily lootbox", category: "bonus_events" },
   { key: "consecutive_upload_bonus", label: "Upload Within 24h Bonus", description: "XP bonus for uploading within 24h of your last upload", category: "bonus_events" },
+  { key: "mobile_app_daily", label: "Mobile App Daily Bonus", description: "10 XP per day awarded to users who have the mobile app installed", category: "daily_activity" },
+  { key: "league_silver_threshold", label: "Silver League Threshold", description: "Season XP required to enter Silver League", category: "ranked_league" },
+  { key: "league_gold_threshold", label: "Gold League Threshold", description: "Season XP required to enter Gold League", category: "ranked_league" },
+  { key: "league_platinum_threshold", label: "Platinum League Threshold", description: "Season XP required to enter Platinum League", category: "ranked_league" },
+  { key: "league_onyx_threshold", label: "Onyx League Threshold", description: "Season XP required to enter Onyx League", category: "ranked_league" },
+  { key: "league_diamond_threshold", label: "Diamond League Threshold", description: "Season XP required for Diamond, alongside a top-100 rank", category: "ranked_league" },
+  { key: "league_champion_threshold", label: "Champion League Threshold", description: "Season XP required for Champion, alongside a top-10 rank", category: "ranked_league" },
 ];
 
 // Load XP settings from the DB and update POINT_VALUES in memory
 export async function loadXpSettingsFromDB(): Promise<void> {
   try {
     const settings = await storage.getXpSettings();
+    const existingKeys = new Set(settings.map((setting) => setting.key));
+    for (const definition of XP_SETTINGS_DEFINITION) {
+      if (!existingKeys.has(definition.key)) {
+        await storage.upsertXpSetting({
+          key: definition.key,
+          value: POINT_VALUES[definition.key] ?? 0,
+          label: definition.label,
+          description: definition.description,
+          category: definition.category,
+          updatedBy: null,
+        });
+      }
+    }
     for (const setting of settings) {
       POINT_VALUES[setting.key] = setting.value;
     }
@@ -80,17 +122,30 @@ export function updatePointValue(key: string, value: number): void {
 }
 
 export class LeaderboardService {
+  // Weekly XP windows are calendar weeks: Monday 00:00 through the next
+  // Monday 00:00 in the server's configured timezone.
+  static getWeekStart(date: Date = new Date()): Date {
+    const start = new Date(date);
+    const dayOfWeek = start.getDay();
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    start.setDate(start.getDate() - daysFromMonday);
+    start.setHours(0, 0, 0, 0);
+    return start;
+  }
+
+  static getWeekEnd(date: Date = new Date()): Date {
+    const end = this.getWeekStart(date);
+    end.setDate(end.getDate() + 7);
+    return end;
+  }
+
   // Get current week in ISO format (e.g., "2024-W01")
   // Week starts on Monday per ISO 8601 standard
   static getCurrentWeek(date?: Date): { week: string; year: number } {
     const now = date || new Date();
     
     // Calculate start of week (Monday)
-    const dayOfWeek = now.getDay();
-    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - daysFromMonday);
-    startOfWeek.setHours(0, 0, 0, 0);
+    const startOfWeek = this.getWeekStart(now);
     
     // Calculate week number using ISO 8601 (Monday start)
     const startOfYear = new Date(now.getFullYear(), 0, 1);
@@ -343,13 +398,9 @@ export class LeaderboardService {
 
   // Get previous week leaderboard
   static async getPreviousWeekLeaderboard(limit: number = 10) {
-    const now = new Date();
-    const prevWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const startOfYear = new Date(prevWeek.getFullYear(), 0, 1);
-    const days = Math.floor((prevWeek.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
-    const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
-    const week = `${prevWeek.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
-    const year = prevWeek.getFullYear();
+    const previousWeek = new Date(this.getWeekStart());
+    previousWeek.setDate(previousWeek.getDate() - 7);
+    const { week, year } = this.getCurrentWeek(previousWeek);
 
     return await storage.getWeeklyLeaderboard(week, year, limit);
   }

@@ -7,6 +7,7 @@
 // Disabled by design when VITE_SENTRY_DSN is unset — same no-op pattern as the
 // Firebase service account (see CLAUDE.md). Every Sentry.* call elsewhere is
 // safe to make even when init() was never run; it just does nothing.
+import { Capacitor } from "@capacitor/core";
 import * as Sentry from "@sentry/capacitor";
 import { init as reactInit } from "@sentry/react";
 
@@ -52,6 +53,15 @@ export function initSentry(): void {
       // Crash-capture focus for QA: errors on, performance tracing off (it
       // burns quota fast and isn't what we're after). Raise later if wanted.
       tracesSampleRate: 0,
+      // The same bundle ships to the Replit web deploy and to both native
+      // shells, and every event lands as Sentry platform "javascript" — so
+      // without a tag there is no way to tell a browser error from an Android
+      // one. The `release` doesn't help either: vite.config.ts derives it from
+      // android/app/build.gradle, so web deploys get stamped with whatever
+      // Android versionCode was last committed. getPlatform() returns
+      // "web" | "ios" | "android", which joins the server's `runtime: server`
+      // (server/sentry.ts) to make one tag that separates all four.
+      initialScope: { tags: { runtime: Capacitor.getPlatform() } },
       beforeSend(event) {
         const msg =
           event.exception?.values?.[0]?.value ?? event.message ?? "";
@@ -71,4 +81,58 @@ export function setSentryUser(
   Sentry.setUser(
     user ? { id: user.id, username: user.username ?? undefined } : null,
   );
+}
+
+export type BulkUploadTelemetry = {
+  batchId: string;
+  itemIndex: number;
+  itemKind: "video" | "screenshot" | "batch";
+  videoType?: "clip" | "reel";
+  mimeType?: string;
+  fileSizeBytes?: number;
+  durationSeconds?: number | null;
+  stage:
+    | "selection"
+    | "validation"
+    | "storage-credentials"
+    | "storage-transfer"
+    | "processing"
+    | "reconciliation"
+    | "complete";
+  outcome: "started" | "rejected" | "failed" | "recovered" | "succeeded";
+  errorCategory?: string;
+  httpStatus?: number;
+};
+
+export type BulkUploadTelemetryDetails = Omit<
+  BulkUploadTelemetry,
+  "batchId" | "itemIndex" | "itemKind" | "videoType" | "mimeType" | "fileSizeBytes" | "durationSeconds"
+>;
+
+// Bulk upload diagnostics intentionally accept only a closed set of fields.
+// Never add filenames, titles, descriptions, tags, URLs, request bodies, or
+// provider credentials here: this event is meant to be useful without copying
+// user-generated content into Sentry.
+export function captureBulkUploadEvent(
+  event: BulkUploadTelemetry,
+): void {
+  Sentry.captureMessage(`bulk_upload.${event.stage}.${event.outcome}`, {
+    level: event.outcome === "failed" || event.outcome === "rejected" ? "warning" : "info",
+    tags: {
+      feature: "bulk_upload",
+      batch_id: event.batchId,
+      item_index: String(event.itemIndex),
+      item_kind: event.itemKind,
+      stage: event.stage,
+      outcome: event.outcome,
+      ...(event.videoType ? { video_type: event.videoType } : {}),
+      ...(event.errorCategory ? { error_category: event.errorCategory } : {}),
+      ...(event.httpStatus !== undefined ? { http_status: String(event.httpStatus) } : {}),
+    },
+    extra: {
+      ...(event.mimeType ? { mime_type: event.mimeType } : {}),
+      ...(event.fileSizeBytes !== undefined ? { file_size_bytes: event.fileSizeBytes } : {}),
+      ...(event.durationSeconds !== undefined ? { duration_seconds: event.durationSeconds } : {}),
+    },
+  });
 }

@@ -50,3 +50,14 @@ export function captureRouteError(
   if (!initialized) return;
   Sentry.captureException(err, context ? { tags: context } : undefined);
 }
+
+export function captureRouteMessage(
+  message: string,
+  context?: Record<string, string>,
+): void {
+  if (!initialized) return;
+  Sentry.captureMessage(message, {
+    level: "info",
+    ...(context ? { tags: context } : {}),
+  });
+}

@@ -39,6 +39,32 @@ export interface TwitchStream {
   is_mature: boolean;
 }
 
+// Interface for a Twitch clip (Helix Get Clips), enriched with the derived
+// downloadable MP4 URL and resolved game metadata for the picker UI.
+export interface TwitchClip {
+  id: string;
+  title: string;
+  url: string;            // public twitch.tv clip page
+  embedUrl: string;
+  thumbnailUrl: string;
+  duration: number;       // seconds
+  viewCount: number;
+  createdAt: string;
+  gameId: string;
+  gameName: string;
+  gameBoxArtUrl: string;
+}
+
+// Twitch's public web client-id. The Helix API exposes no official clip-download
+// URL, so the actual MP4 is fetched from Twitch's GraphQL endpoint, which mints a
+// short-lived signed playback token for a clip slug (see getClipDownloadUrl).
+// This is the same anonymous client-id the Twitch web player uses.
+const TWITCH_GQL_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko';
+
+// Twitch clip slugs are restricted to these chars; validated before being
+// interpolated into the GraphQL query as a defensive measure.
+const CLIP_SLUG_RE = /^[\w-]+$/;
+
 // Resolve Twitch box art URL to a specific size, handling all URL formats:
 // 1. Template {width}x{height} → e.g. "...Game-{width}x{height}.jpg"
 // 2. Separate {width} / {height} tokens
@@ -218,19 +244,34 @@ class TwitchApiService {
     }
     
     try {
-      const token = await this.getAccessToken();
-      
-      // Use the search API which supports partial matches
-      const response = await axios.get('https://api.twitch.tv/helix/search/categories', {
-        headers: {
-          'Client-ID': this.clientId,
-          'Authorization': `Bearer ${token}`
+      const requestSearch = async (token: string) => axios.get(
+        'https://api.twitch.tv/helix/search/categories',
+        {
+          headers: {
+            'Client-ID': this.clientId,
+            'Authorization': `Bearer ${token}`,
+          },
+          params: {
+            query,
+            first: limit,
+          },
         },
-        params: {
-          query: query,
-          first: limit
+      );
+
+      let response;
+      try {
+        response = await requestSearch(await this.getAccessToken());
+      } catch (error) {
+        // A token can be revoked before its expiry (for example after a
+        // credential rotation). Clear it and retry once with a fresh token.
+        if (!axios.isAxiosError(error) || error.response?.status !== 401) {
+          throw error;
         }
-      });
+        console.warn('Twitch game search received a 401; refreshing app access token');
+        this.accessToken = null;
+        this.tokenExpiresAt = 0;
+        response = await requestSearch(await this.getAccessToken());
+      }
       
       return response.data.data.map((game: any) => ({
         id: game.id,
@@ -239,7 +280,7 @@ class TwitchApiService {
         igdb_id: game.igdb_id || ''
       }));
     } catch (error) {
-      console.error('Error searching games on Twitch:', error);
+      logTwitchError('Error searching games on Twitch', error);
       throw new Error('Failed to search games on Twitch API');
     }
   }
@@ -371,6 +412,182 @@ class TwitchApiService {
     } catch (error) {
       console.error('Error checking Twitch live status:', error);
       return false;
+    }
+  }
+
+  /**
+   * Resolve game id → name + box art for a set of game ids in a single Helix
+   * call (Get Games accepts up to 100 `id` params). Returns a map keyed by id.
+   */
+  async getGamesByIds(gameIds: string[]): Promise<Map<string, TwitchGame>> {
+    const result = new Map<string, TwitchGame>();
+    const unique = Array.from(new Set(gameIds.filter(Boolean))).slice(0, 100);
+    if (unique.length === 0) return result;
+    try {
+      const token = await this.getAccessToken();
+      const response = await axios.get('https://api.twitch.tv/helix/games', {
+        headers: {
+          'Client-ID': this.clientId,
+          'Authorization': `Bearer ${token}`,
+        },
+        // axios serialises array params as id=a&id=b which Helix expects
+        params: { id: unique },
+        paramsSerializer: { indexes: null },
+      });
+      for (const game of response.data.data || []) {
+        result.set(game.id, {
+          id: game.id,
+          name: game.name,
+          box_art_url: resolveBoxArtUrl(game.box_art_url),
+          igdb_id: game.igdb_id,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching games by ids from Twitch:', error);
+    }
+    return result;
+  }
+
+  /**
+   * Get a broadcaster's recent clips, newest first. Uses the app access token
+   * (client credentials) — listing a channel's public clips needs only the
+   * broadcaster_id, no user token or extra OAuth scope. Each clip is enriched
+   * with a derived MP4 URL and resolved game metadata; clips whose MP4 URL
+   * cannot be derived are dropped (they aren't importable).
+   *
+   * Twitch's Get Clips endpoint has no sort/order param and, within whatever
+   * date range you give it, returns clips most-viewed-first — not most
+   * recent. Without a date range at all it's the broadcaster's all-time
+   * most-viewed clips, where a single old viral clip can permanently crowd
+   * out anything new. Bounding to a rolling 30-day window keeps that view
+   * from reaching back forever, but doesn't fix the ordering: within that
+   * window we still only get back a "top N by views" page, and sorting that
+   * page by date would just reorder an already-popularity-filtered subset,
+   * not surface the actual newest clips. So this fetches a full max-size
+   * page (100, Twitch's per-request cap) and only then sorts by createdAt
+   * descending and trims to `limit` — a real latest-first result from a
+   * much larger sample, not a re-sort of an already-narrow one.
+   */
+  async getClipsForBroadcaster(broadcasterId: string, limit: number = 20): Promise<TwitchClip[]> {
+    if (!this.isConfigured()) {
+      throw new Error('Twitch API credentials not configured');
+    }
+    if (!broadcasterId) return [];
+
+    const token = await this.getAccessToken();
+    // Twitch defaults ended_at to started_at + 1 week when only started_at is
+    // given, not "through now" — both must be passed explicitly or the window
+    // ends up stuck in the past instead of covering recent activity.
+    const endedAt = new Date();
+    const startedAt = new Date(endedAt.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const response = await axios.get('https://api.twitch.tv/helix/clips', {
+      headers: {
+        'Client-ID': this.clientId,
+        'Authorization': `Bearer ${token}`,
+      },
+      params: {
+        broadcaster_id: broadcasterId,
+        first: 100,
+        started_at: startedAt.toISOString(),
+        ended_at: endedAt.toISOString(),
+      },
+    });
+
+    const rawClips: any[] = response.data.data || [];
+    // Newest first. Twitch's created_at is an ISO string, so a plain string
+    // comparison sorts correctly without needing to parse to a Date first.
+    rawClips.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+    const trimmedClips = rawClips.slice(0, Math.min(Math.max(limit, 1), 100));
+
+    const gameMap = await this.getGamesByIds(trimmedClips.map((c) => c.game_id));
+
+    // All clips are importable — the MP4 is resolved on demand via GraphQL when
+    // the user actually picks one (getClipDownloadUrl), so nothing is filtered here.
+    return trimmedClips.map((c): TwitchClip => {
+      const game = gameMap.get(c.game_id);
+      return {
+        id: c.id,
+        title: c.title || 'Untitled clip',
+        url: c.url,
+        embedUrl: c.embed_url,
+        thumbnailUrl: c.thumbnail_url,
+        duration: Math.round(c.duration || 0),
+        viewCount: c.view_count || 0,
+        createdAt: c.created_at,
+        gameId: c.game_id || '',
+        gameName: game?.name || '',
+        gameBoxArtUrl: game?.box_art_url || '',
+      };
+    });
+  }
+
+  /**
+   * Resolve a single clip by its id (used by the download proxy to re-derive
+   * the MP4 URL server-side rather than trusting a client-supplied URL).
+   * Returns null if the clip doesn't exist or its MP4 can't be derived.
+   */
+  async getClipById(clipId: string): Promise<TwitchClip | null> {
+    if (!this.isConfigured() || !clipId) return null;
+    const token = await this.getAccessToken();
+    const response = await axios.get('https://api.twitch.tv/helix/clips', {
+      headers: {
+        'Client-ID': this.clientId,
+        'Authorization': `Bearer ${token}`,
+      },
+      params: { id: clipId },
+    });
+    const c = (response.data.data || [])[0];
+    if (!c) return null;
+    return {
+      id: c.id,
+      title: c.title || 'Untitled clip',
+      url: c.url,
+      embedUrl: c.embed_url,
+      thumbnailUrl: c.thumbnail_url,
+      duration: Math.round(c.duration || 0),
+      viewCount: c.view_count || 0,
+      createdAt: c.created_at,
+      gameId: c.game_id || '',
+      gameName: '',
+      gameBoxArtUrl: '',
+    };
+  }
+
+  /**
+   * Resolve a clip's directly-downloadable MP4 URL via Twitch's GraphQL API.
+   * Helix exposes no official clip-download endpoint, so we query gql.twitch.tv
+   * with the public web client-id to mint a short-lived signed playback token,
+   * then return the highest-quality source URL with that token appended. Returns
+   * null if the clip can't be resolved. The URL is short-lived — the caller
+   * should fetch it promptly, server-side.
+   */
+  async getClipDownloadUrl(slug: string): Promise<string | null> {
+    if (!slug || !CLIP_SLUG_RE.test(slug)) return null;
+    try {
+      const query = `{
+  clip(slug: "${slug}") {
+    playbackAccessToken(params: {platform: "web", playerBackend: "mediaplayer", playerType: "site"}) {
+      signature
+      value
+    }
+    videoQualities { frameRate quality sourceURL }
+  }
+}`;
+      const resp = await axios.post(
+        'https://gql.twitch.tv/gql',
+        { query },
+        { headers: { 'Client-ID': TWITCH_GQL_CLIENT_ID, 'Content-Type': 'application/json' }, timeout: 10000 },
+      );
+      const clip = resp.data?.data?.clip;
+      const token = clip?.playbackAccessToken;
+      const qualities: any[] = clip?.videoQualities ?? [];
+      // videoQualities are returned highest-resolution first.
+      const best = qualities[0];
+      if (!token?.signature || !token?.value || !best?.sourceURL) return null;
+      return `${best.sourceURL}?sig=${token.signature}&token=${encodeURIComponent(token.value)}`;
+    } catch (err: any) {
+      console.warn('Twitch GQL clip download lookup failed:', err?.message);
+      return null;
     }
   }
 }

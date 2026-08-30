@@ -1,9 +1,11 @@
 import type { User } from '@shared/schema';
 import { getSignupSource } from './request-context';
+import { captureRouteError } from './sentry';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const SIGNUP_CHAT_ID = process.env.TELEGRAM_SIGNUP_CHAT_ID;
 const SEND_TIMEOUT_MS = 5_000;
+const MAX_ATTEMPTS = 3;
 
 if (!BOT_TOKEN || !SIGNUP_CHAT_ID) {
   console.warn(
@@ -31,9 +33,15 @@ function providerLabel(authProvider: string | null | undefined): string {
   }
 }
 
-async function postToTelegram(text: string): Promise<void> {
-  if (!BOT_TOKEN || !SIGNUP_CHAT_ID) return;
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
+type SendResult =
+  | { ok: true }
+  | { ok: false; status: number; retryAfterMs?: number; body: string };
+
+async function sendOnce(text: string): Promise<SendResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), SEND_TIMEOUT_MS);
   try {
@@ -48,13 +56,54 @@ async function postToTelegram(text: string): Promise<void> {
       }),
       signal: controller.signal,
     });
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      console.error(`[Telegram] sendMessage failed (${res.status}): ${body.slice(0, 200)}`);
+    if (res.ok) return { ok: true };
+    const body = await res.text().catch(() => '');
+    // Telegram's 429 responses include `parameters.retry_after` (seconds) —
+    // honor it when present instead of guessing a backoff.
+    let retryAfterMs: number | undefined;
+    try {
+      const parsed = JSON.parse(body);
+      if (typeof parsed?.parameters?.retry_after === 'number') {
+        retryAfterMs = parsed.parameters.retry_after * 1000;
+      }
+    } catch {
+      /* not JSON — no retry_after available */
     }
+    return { ok: false, status: res.status, retryAfterMs, body: body.slice(0, 200) };
   } finally {
     clearTimeout(timeout);
   }
+}
+
+// Telegram throttles sendMessage to roughly 1/sec per chat, so two signups
+// landing in the same second used to silently drop one notification with only
+// a console.error — no retry and no trace anywhere queryable afterward. This
+// retries transient failures (429s, timeouts, network errors) with backoff,
+// and reports a final failure to Sentry so it's actually visible instead of
+// silent.
+async function postToTelegram(text: string): Promise<void> {
+  if (!BOT_TOKEN || !SIGNUP_CHAT_ID) return;
+
+  let lastError = 'unknown error';
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const result = await sendOnce(text);
+      if (result.ok) return;
+      lastError = `HTTP ${result.status}: ${result.body}`;
+      if (attempt < MAX_ATTEMPTS) {
+        await sleep(result.retryAfterMs ?? attempt * 1000);
+      }
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+      if (attempt < MAX_ATTEMPTS) {
+        await sleep(attempt * 1000);
+      }
+    }
+  }
+
+  const finalError = new Error(`[Telegram] sendMessage failed after ${MAX_ATTEMPTS} attempts: ${lastError}`);
+  console.error(finalError.message);
+  captureRouteError(finalError, { context: 'telegram-notify' });
 }
 
 function userLine(user: User): string {

@@ -10,7 +10,7 @@ import { HexColorPicker } from "react-colorful";
 import { Palette, Eye, RotateCcw } from "lucide-react";
 
 const DEFAULT_COLORS = {
-  accentColor: "#4C8",
+  accentColor: "#B7FF1A",
   primaryColor: "#071013", 
   backgroundColor: "#071013",
   cardColor: "#1E3A8A"
@@ -26,7 +26,7 @@ const PRESET_THEMES = [
   },
   {
     name: "Default",
-    accentColor: "#4C8",
+    accentColor: "#B7FF1A",
     backgroundColor: "#071013",
     cardColor: "#1E3A8A"
   },

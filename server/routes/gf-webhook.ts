@@ -8,6 +8,9 @@ import { transferGfTokens } from '../gf-token-service';
 import { EmailService } from '../email-service';
 import { notifyProPurchase } from '../telegram-notify';
 import { provisionProSubscription, grantGiftPro } from './pro-subscription';
+import { captureRouteError } from '../sentry';
+import { provisionIndieDevSubscription } from './indie-dev-subscription';
+import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
 import Stripe from 'stripe';
 
 const router = Router();
@@ -117,10 +120,11 @@ async function processGfOrderDelivery(sessionId: string, paymentIntentId?: strin
       console.error(`[GF Webhook] Order ${order.id} on-chain delivery failed (off-chain credited): ${result.error}`);
     }
   } catch (error: any) {
-    await updateOrderStatus(order.id, 'credited', { 
-      errorReason: error.message || 'On-chain transfer error but off-chain balance credited' 
+    await updateOrderStatus(order.id, 'credited', {
+      errorReason: error.message || 'On-chain transfer error but off-chain balance credited'
     });
     console.error(`[GF Webhook] Order ${order.id} on-chain delivery error (off-chain credited):`, error);
+    captureRouteError(error, { webhook: 'stripe', stage: 'gf_token_transfer', orderId: order.id });
   }
 }
 
@@ -149,6 +153,10 @@ router.post('/api/stripe/webhook',
       event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
     } catch (error: any) {
       console.error('[GF Webhook] Signature verification failed:', error.message);
+      // High-signal failure: a wrong/rotated STRIPE_WEBHOOK_SECRET makes every
+      // event fail here silently otherwise — nobody would notice until a user
+      // reports a missing Pro grant or token delivery.
+      captureRouteError(error, { webhook: 'stripe', stage: 'signature_verification' });
       return res.status(400).json({ error: `Webhook signature verification failed: ${error.message}` });
     }
 
@@ -167,6 +175,7 @@ router.post('/api/stripe/webhook',
           );
         } catch (error) {
           console.error('[GF Webhook] Error processing order delivery:', error);
+          captureRouteError(error, { webhook: 'stripe', stage: 'checkout_session_gf_order', sessionId: session.id });
         }
       }
 
@@ -179,6 +188,7 @@ router.post('/api/stripe/webhook',
           console.log(`[GF Webhook] Granted Gift Pro (${plan}) to user ${recipientId} from user ${session.metadata.gifter_user_id}`);
         } catch (error) {
           console.error('[GF Webhook] Error processing gift_pro:', error);
+          captureRouteError(error, { webhook: 'stripe', stage: 'gift_pro', sessionId: session.id });
         }
       }
 
@@ -196,13 +206,47 @@ router.post('/api/stripe/webhook',
             : session.customer?.id;
 
           if (userId && subscriptionId && customerId) {
-            await provisionProSubscription({ userId, plan, customerId, subscriptionId });
+            await provisionProSubscription({ userId, plan, customerId, subscriptionId, ambassadorCode: session.metadata?.ambassadorCode });
             console.log(`[GF Webhook] Provisioned Pro for user ${userId} via checkout.session.completed`);
           } else {
             console.warn('[GF Webhook] pro_subscription session missing user/subscription/customer ids');
           }
         } catch (error) {
           console.error('[GF Webhook] Error provisioning Pro subscription:', error);
+          captureRouteError(error, { webhook: 'stripe', stage: 'pro_subscription_provision', sessionId: session.id });
+        }
+      }
+
+      // Game Developer subscription checkout — backstop for the client-side
+      // confirm call. Idempotent: safe even if the client already provisioned
+      // this session.
+      if (session.metadata?.type === 'indie_dev_subscription' && session.metadata?.userId) {
+        if (!GAME_DEVELOPER_PRO_PURCHASES_ENABLED) {
+          console.warn(`[GF Webhook] Ignoring disabled Game Developer checkout session ${session.id}`);
+          return;
+        }
+        if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
+          console.warn(`[GF Webhook] Ignoring unpaid Game Developer checkout session ${session.id} (payment_status: ${session.payment_status})`);
+          return;
+        }
+        try {
+          const userId = parseInt(session.metadata.userId, 10);
+          const plan: 'monthly' | 'yearly' = session.metadata.plan === 'yearly' ? 'yearly' : 'monthly';
+          const subscriptionId = typeof session.subscription === 'string'
+            ? session.subscription
+            : session.subscription?.id;
+          const customerId = typeof session.customer === 'string'
+            ? session.customer
+            : session.customer?.id;
+
+          if (userId && subscriptionId && customerId) {
+            await provisionIndieDevSubscription({ userId, plan, customerId, subscriptionId });
+            console.log(`[GF Webhook] Provisioned Game Developer subscription for user ${userId} via checkout.session.completed`);
+          } else {
+            console.warn('[GF Webhook] indie_dev_subscription session missing user/subscription/customer ids');
+          }
+        } catch (error) {
+          console.error('[GF Webhook] Error provisioning Game Developer subscription:', error);
         }
       }
     }
@@ -218,6 +262,7 @@ router.post('/api/stripe/webhook',
           );
         } catch (error) {
           console.error('[GF Webhook] Error processing PaymentIntent order delivery:', error);
+          captureRouteError(error, { webhook: 'stripe', stage: 'payment_intent_gf_order', paymentIntentId: paymentIntent.id });
         }
       }
     }
@@ -231,6 +276,9 @@ router.post('/api/stripe/webhook',
           console.log(`[GF Webhook] Processing renewal for subscription: ${subscriptionId}`);
 
           const [user] = await db.select().from(users).where(eq(users.stripeSubscriptionId, subscriptionId));
+          const [developer] = user
+            ? [undefined]
+            : await db.select().from(users).where(eq(users.indieDevStripeSubscriptionId, subscriptionId));
 
           if (user) {
             const plan = user.proSubscriptionType as 'monthly' | 'yearly' || 'monthly';
@@ -257,11 +305,24 @@ router.post('/api/stripe/webhook',
             }
 
             notifyProPurchase(user, { kind: 'renewal', plan, source: 'Stripe' });
+          } else if (developer) {
+            const plan = developer.indieDevSubscriptionType === 'yearly' ? 'yearly' : 'monthly';
+            const newEndDate = plan === 'yearly'
+              ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            await provisionIndieDevSubscription({
+              userId: developer.id,
+              plan,
+              subscriptionId,
+              endDate: newEndDate,
+            });
+            console.log(`[GF Webhook] Renewed Game Developer Pro for user ${developer.id} until ${newEndDate.toISOString()}`);
           } else {
             console.warn(`[GF Webhook] No user found for subscription: ${subscriptionId}`);
           }
         } catch (error) {
           console.error('[GF Webhook] Error processing invoice.paid:', error);
+          captureRouteError(error, { webhook: 'stripe', stage: 'invoice_paid_renewal', subscriptionId });
         }
       }
     }
@@ -274,6 +335,9 @@ router.post('/api/stripe/webhook',
         console.log(`[GF Webhook] Processing subscription deletion: ${subscriptionId}`);
 
         const [user] = await db.select().from(users).where(eq(users.stripeSubscriptionId, subscriptionId));
+        const [developer] = user
+          ? [undefined]
+          : await db.select().from(users).where(eq(users.indieDevStripeSubscriptionId, subscriptionId));
 
         if (user) {
           await db.update(users).set({
@@ -293,11 +357,21 @@ router.post('/api/stripe/webhook',
               new Date()
             ).catch(err => console.error('[GF Webhook] Failed to send cancellation email:', err));
           }
+        } else if (developer) {
+          await db.update(users).set({
+            isIndieDevSubscriber: false,
+            indieDevStripeSubscriptionId: null,
+            indieDevSubscriptionType: null,
+            indieDevSubscriptionEndDate: null,
+            updatedAt: new Date(),
+          }).where(eq(users.id, developer.id));
+          console.log(`[GF Webhook] Removed Game Developer Pro status for user ${developer.id} (subscription deleted)`);
         } else {
           console.warn(`[GF Webhook] No user found for deleted subscription: ${subscriptionId}`);
         }
       } catch (error) {
         console.error('[GF Webhook] Error processing subscription deletion:', error);
+        captureRouteError(error, { webhook: 'stripe', stage: 'subscription_deleted', subscriptionId });
       }
     }
 
@@ -316,6 +390,9 @@ router.post('/api/stripe/webhook',
           console.log(`[GF Webhook] Subscription ${subscriptionId} moved to non-active status: ${subscription.status}`);
 
           const [user] = await db.select().from(users).where(eq(users.stripeSubscriptionId, subscriptionId));
+          const [developer] = user
+            ? [undefined]
+            : await db.select().from(users).where(eq(users.indieDevStripeSubscriptionId, subscriptionId));
 
           if (user) {
             await db.update(users).set({
@@ -324,11 +401,18 @@ router.post('/api/stripe/webhook',
             }).where(eq(users.id, user.id));
 
             console.log(`[GF Webhook] Revoked Pro for user ${user.id} due to subscription status: ${subscription.status}`);
+          } else if (developer) {
+            await db.update(users).set({
+              isIndieDevSubscriber: false,
+              updatedAt: new Date(),
+            }).where(eq(users.id, developer.id));
+            console.log(`[GF Webhook] Revoked Game Developer Pro for user ${developer.id} due to subscription status: ${subscription.status}`);
           } else {
             console.warn(`[GF Webhook] No user found for subscription: ${subscriptionId}`);
           }
         } catch (error) {
           console.error('[GF Webhook] Error processing subscription update:', error);
+          captureRouteError(error, { webhook: 'stripe', stage: 'subscription_updated', subscriptionId });
         }
       }
     }
@@ -353,6 +437,7 @@ router.post('/api/stripe/webhook',
           }
         } catch (error) {
           console.error('[GF Webhook] Error processing payment_failed:', error);
+          captureRouteError(error, { webhook: 'stripe', stage: 'invoice_payment_failed', subscriptionId });
         }
       }
     }

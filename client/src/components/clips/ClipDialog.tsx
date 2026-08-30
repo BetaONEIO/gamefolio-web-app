@@ -58,6 +58,7 @@ import { TrendingClipMenu } from "@/components/clips/TrendingClipMenu";
 import { AgeRestrictionDialog } from "@/components/content/AgeRestrictionDialog";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
+import { AmbassadorBadge } from "@/components/ui/ambassador-badge";
 import { VideoAdPlayer } from "@/components/ads/VideoAdPlayer";
 import { useClipAdDecision } from "@/hooks/use-ad-manager";
 import {
@@ -1044,7 +1045,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     <div
                       className="flex-1 flex flex-col overflow-hidden"
                       style={{
-                        background: '#0B1218',
+                        background: 'var(--gf-surface-raised)',
                         borderRadius: '20px 20px 0 0',
                         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
                         transform: isClosingComments ? 'translateY(100%)' : 'translateY(0)',
@@ -1156,7 +1157,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                   {/* Drag handle + header */}
                   <div
                     className="flex-shrink-0 px-4 pt-3 pb-3"
-                    style={{ background: '#0B1218', borderRadius: '20px 20px 0 0', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
+                    style={{ background: 'var(--gf-surface-raised)', borderRadius: '20px 20px 0 0', borderBottom: '1px solid var(--gf-border)' }}
                   >
                     <div className="flex justify-center mb-3">
                       <div className="w-10 h-1 rounded-full" style={{ background: 'rgba(255,255,255,0.18)' }} />
@@ -1177,7 +1178,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                     </div>
                   </div>
                   {/* Scrollable comments list */}
-                  <div className="flex-1 min-h-0 overflow-y-auto" style={{ background: '#0B1218' }}>
+                  <div className="flex-1 min-h-0 overflow-y-auto" style={{ background: 'var(--gf-surface-raised)' }}>
                     <CommentSection
                       clipId={clip.id}
                       currentUserId={user?.id || null}
@@ -1215,6 +1216,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                               @{clip.user.username}
                               <ModeratorBadge isModerator={((clip.user as any).role === "moderator" || (clip.user as any).role === "admin") && !(clip.user as any).selectedVerificationBadgeId} size="sm" />
                               <ProBadge selectedVerificationBadgeId={(clip.user as any).selectedVerificationBadgeId} size="sm" />
+                              <AmbassadorBadge isAmbassador={(clip.user as any).isAmbassador} size="sm" />
                             </div>
                           </Link>
                         ) : (

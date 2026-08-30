@@ -9,6 +9,7 @@ import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
+import { AmbassadorBadge } from "@/components/ui/ambassador-badge";
 import { LikeButton } from "@/components/engagement/LikeButton";
 import { FireButton } from "@/components/engagement/FireButton";
 import { ClipShareDialog } from "@/components/clip/ClipShareDialog";
@@ -244,7 +245,7 @@ const ClipPage = () => {
   // ── Loading skeleton ──
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#071013]">
+      <div className="min-h-screen bg-background">
         <div className="flex items-center px-4 py-2 border-b border-white/10 bg-[#081017]">
           <button onClick={goBack} className="flex items-center gap-2 group">
             <div className="w-9 h-9 rounded-full flex items-center justify-center transition-transform group-hover:scale-105" style={{ background: "rgba(183,255,26,0.18)", border: "1.5px solid rgba(183,255,26,0.65)" }}>
@@ -253,7 +254,7 @@ const ClipPage = () => {
             <span className="text-sm font-semibold text-white group-hover:text-[#B7FF1A] transition-colors">Trending Clips</span>
           </button>
         </div>
-        <div className="flex h-[calc(100vh-53px)]">
+        <div className="flex h-[calc(100dvh-53px-var(--mobile-nav-height,0px))]">
           <div className="flex-1 bg-black">
             <Skeleton className="w-full h-full rounded-none" />
           </div>
@@ -286,7 +287,7 @@ const ClipPage = () => {
   // ── Error / not found ──
   if (error || !clip) {
     return (
-      <div className="min-h-screen bg-[#071013] flex flex-col items-center justify-center p-8 text-center">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8 text-center">
         <h2 className="text-2xl font-bold mb-2 text-white">{error ? "Error loading clip" : "Clip not found"}</h2>
         <p className="text-muted-foreground mb-4">
           {error instanceof Error ? error.message : "This clip doesn't exist or has been removed."}
@@ -398,7 +399,7 @@ const ClipPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#071013]" data-testid="clip-page-container">
+    <div className="min-h-screen bg-background" data-testid="clip-page-container">
       {/* ── Top nav bar ── */}
       <div className="flex items-center px-4 py-2 border-b border-white/10 bg-[#081017]">
         <button onClick={goBack} className="flex items-center gap-2 group" aria-label="Back">
@@ -415,7 +416,7 @@ const ClipPage = () => {
       </div>
 
       {/* ── Main split layout ── */}
-      <div className="flex flex-col lg:flex-row h-[calc(100vh-53px)] overflow-hidden">
+      <div className="flex flex-col lg:flex-row h-[calc(100dvh-53px-var(--mobile-nav-height,0px))] overflow-hidden">
 
         {/* ════ VIDEO PANEL ════ */}
         <div
@@ -707,6 +708,7 @@ const ClipPage = () => {
                             size="sm"
                           />
                           <ProBadge selectedVerificationBadgeId={(clip.user as any).selectedVerificationBadgeId} size="sm" />
+                          <AmbassadorBadge isAmbassador={(clip.user as any).isAmbassador} size="sm" />
                         </div>
                       </Link>
                     ) : (

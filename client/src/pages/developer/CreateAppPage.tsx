@@ -8,8 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Copy } from 'lucide-react';
+import type { OAuthClientType } from '@shared/schema';
 
 export default function CreateAppPage() {
   const [, setLocation] = useLocation();
@@ -17,8 +19,8 @@ export default function CreateAppPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [redirectUri, setRedirectUri] = useState('');
-  const [createdSecret, setCreatedSecret] = useState<string | null>(null);
-  const [createdAppId, setCreatedAppId] = useState<number | null>(null);
+  const [clientType, setClientType] = useState<OAuthClientType>('confidential');
+  const [createdApp, setCreatedApp] = useState<{ id: number; clientSecret: string | null } | null>(null);
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -26,13 +28,19 @@ export default function CreateAppPage() {
         name,
         description: description || undefined,
         redirectUris: [redirectUri],
+        clientType,
       });
       return res.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/developer/apps'] });
-      setCreatedSecret(data.clientSecret);
-      setCreatedAppId(data.id);
+      if (data.clientSecret) {
+        setCreatedApp({ id: data.id, clientSecret: data.clientSecret });
+      } else {
+        // Public clients get no secret — nothing to show/save, go straight
+        // to the app page.
+        setLocation(`/developer/apps/${data.id}`);
+      }
     },
     onError: (error: Error) => {
       toast({ title: 'Failed to create app', description: error.message, variant: 'gamefolioError' });
@@ -74,6 +82,31 @@ export default function CreateAppPage() {
               />
               <p className="text-xs text-muted-foreground">Must be https:// (or http://localhost for local development).</p>
             </div>
+            <div className="space-y-2">
+              <Label>Client type</Label>
+              <RadioGroup value={clientType} onValueChange={(v) => setClientType(v as OAuthClientType)} className="space-y-2">
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="confidential" id="type-confidential" className="mt-1" />
+                  <Label htmlFor="type-confidential" className="font-normal cursor-pointer">
+                    <span className="block">Confidential</span>
+                    <span className="block text-xs text-muted-foreground font-normal">
+                      A server-side app that can keep a client secret private. Issues a client secret.
+                    </span>
+                  </Label>
+                </div>
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="public" id="type-public" className="mt-1" />
+                  <Label htmlFor="type-public" className="font-normal cursor-pointer">
+                    <span className="block">Public</span>
+                    <span className="block text-xs text-muted-foreground font-normal">
+                      A desktop, mobile, or CLI app whose code ships to users — no client secret can stay
+                      secret in that context. Authenticates with PKCE only (RFC 8252).
+                    </span>
+                  </Label>
+                </div>
+              </RadioGroup>
+              <p className="text-xs text-muted-foreground">Fixed once the app is created.</p>
+            </div>
             <Button type="submit" className="w-full" disabled={createMutation.isPending}>
               {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create app'}
             </Button>
@@ -81,8 +114,8 @@ export default function CreateAppPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!createdSecret} onOpenChange={(open) => {
-        if (!open && createdAppId) setLocation(`/developer/apps/${createdAppId}`);
+      <Dialog open={!!createdApp} onOpenChange={(open) => {
+        if (!open && createdApp) setLocation(`/developer/apps/${createdApp.id}`);
       }}>
         <DialogContent>
           <DialogHeader>
@@ -92,13 +125,13 @@ export default function CreateAppPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center gap-2 bg-muted rounded-md p-3 font-mono text-sm break-all">
-            {createdSecret}
+            {createdApp?.clientSecret}
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => {
-                if (createdSecret) navigator.clipboard.writeText(createdSecret);
+                if (createdApp?.clientSecret) navigator.clipboard.writeText(createdApp.clientSecret);
                 toast({ title: 'Copied to clipboard', variant: 'gamefolioSuccess' });
               }}
             >
@@ -106,7 +139,7 @@ export default function CreateAppPage() {
             </Button>
           </div>
           <DialogFooter>
-            <Button onClick={() => createdAppId && setLocation(`/developer/apps/${createdAppId}`)}>
+            <Button onClick={() => createdApp && setLocation(`/developer/apps/${createdApp.id}`)}>
               I've saved it
             </Button>
           </DialogFooter>

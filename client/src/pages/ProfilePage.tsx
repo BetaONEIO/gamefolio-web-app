@@ -75,6 +75,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
+import IndieGameProfileLayout from "@/pages/profile-layouts/IndieGameProfileLayout";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
 import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
 import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreenshotsViewer";
@@ -83,6 +84,7 @@ import { FireButton } from "@/components/engagement/FireButton";
 import { ModeratorIcon } from "@/components/ui/moderator-icon";
 import { ModeratorBadge } from "@/components/ui/moderator-badge";
 import { PartnerBadge } from "@/components/ui/partner-badge";
+import { AmbassadorBadge } from "@/components/ui/ambassador-badge";
 import { ProBadge } from "@/components/ui/pro-badge";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { ReportButton } from "@/components/reporting/ReportButton";
@@ -551,11 +553,17 @@ const ProfilePage = () => {
   const isPrivateProfile = profile?.isPrivate && !isOwnProfile;
   const canViewContent = !isPrivateProfile || isFollowing;
 
-  // Fetch user clips (only if allowed to view content)
+  // Fetch user clips (only if allowed to view content). While any clip/reel
+  // is still background-processing, poll so the "processing" badge clears
+  // and the real thumbnail/playback appears without a manual refresh.
   const { data: clips, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/users/${username}/clips`],
     queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!username && canViewContent,
+    refetchInterval: (query) => {
+      const data = query.state.data as ClipWithUser[] | undefined;
+      return data?.some((c) => c.status === "processing") ? 5000 : false;
+    },
   });
 
   // Fetch user favorite games (only if allowed to view content)
@@ -2033,6 +2041,11 @@ const ProfilePage = () => {
     );
   })() : null;
 
+  const isIndieDeveloperProfile = !!(profile.userType?.split(',').map((t: string) => t.trim()).includes('indie_developer'));
+  if (profile.layoutStyle === 'indie-game' || isIndieDeveloperProfile) {
+    return <IndieGameProfileLayout profile={profile} isOwnProfile={isOwnProfile} />;
+  }
+
   return (
     <>
     {selectedProfileNftDetail}
@@ -3285,6 +3298,7 @@ const ProfilePage = () => {
                 size="lg" 
               />
               <PartnerBadge isPartner={(profile as any).isPartner} size="lg" />
+              <AmbassadorBadge isAmbassador={(profile as any).isAmbassador} size="lg" />
             </div>
             <span className="text-sm font-normal" style={{ color: isLightBackground ? accentColor : 'rgba(255,255,255,0.6)' }}>@{profile.username}</span>
             {/* User type badges on their own line */}
@@ -3707,6 +3721,8 @@ const ProfilePage = () => {
                   size="xl" 
                 />
               </span>
+              <PartnerBadge isPartner={(profile as any).isPartner} size="xl" />
+              <AmbassadorBadge isAmbassador={(profile as any).isAmbassador} size="xl" />
               {profile.userType && profile.showUserType !== false && (() => {
                 const userTypes = profile.userType!.split(',').map(t => t.trim()).filter(Boolean);
                 return userTypes.map((type, index) => {
@@ -5597,7 +5613,19 @@ const ProfilePage = () => {
         {/* Screenshot viewer — mobile snap-scroll or desktop lightbox */}
         {selectedScreenshot && isMobile ? (
           <MobileScreenshotsViewer
-            screenshots={(screenshots as any[]) || [selectedScreenshot]}
+            screenshots={((screenshots as any[]) || [selectedScreenshot]).map((s: any) => ({
+              ...s,
+              user: s.user || {
+                id: profile?.id,
+                username: profile?.username,
+                displayName: profile?.displayName,
+                avatarUrl: profile?.avatarUrl,
+                isPro: profile?.isPro,
+                isPartner: profile?.isPartner,
+                isAmbassador: profile?.isAmbassador,
+                selectedVerificationBadgeId: profile?.selectedVerificationBadgeId,
+              },
+            }))}
             startId={selectedScreenshot.id}
             onBack={() => setSelectedScreenshot(null)}
           />

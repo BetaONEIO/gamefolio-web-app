@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { apiRequest, queryClient, getQueryFn } from '@/lib/queryClient';
 import { useQuery } from '@tanstack/react-query';
 import { Redirect, useLocation } from 'wouter';
 import { Loader2, Upload, Image as ImageIcon, X, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ToastAction } from '@/components/ui/toast';
 import ProUpgradeDialog from '@/components/ProUpgradeDialog';
 import ImageCropModal from '@/components/shared/ImageCropModal';
+import { ScheduleControl, type ScheduleLimits } from '@/components/upload/ScheduleControl';
 import type { UploadLimits } from '@shared/schema';
 
 // Shape of the structured error payload returned by /api/screenshots/upload
@@ -46,6 +48,8 @@ const ScreenshotUploadPage: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [showProUpgrade, setShowProUpgrade] = useState(false);
   const [cropQueue, setCropQueue] = useState<File[]>([]);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState('');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const dragCounterRef = React.useRef(0);
 
@@ -57,11 +61,11 @@ const ScreenshotUploadPage: React.FC = () => {
 
   const addFileToState = (file: File) => {
     setSelectedFiles(prev => {
-      if (prev.length >= 3) return prev;
+      if (prev.length >= maxScreenshots) return prev;
       return [...prev, file];
     });
     setPreviews(prev => {
-      if (prev.length >= 3) return prev;
+      if (prev.length >= maxScreenshots) return prev;
       const reader = new FileReader();
       reader.onload = (e) => {
         setPreviews(p => [...p, e.target?.result as string]);
@@ -85,6 +89,20 @@ const ScreenshotUploadPage: React.FC = () => {
   // copy until the limits arrive.
   const { data: uploadLimits } = useQuery<UploadLimits>({
     queryKey: ['/api/upload/limits'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
+    enabled: !!user,
+  });
+
+  // Remaining allowance in the current rolling 24h window. Falls back to the
+  // Free-tier number while limits are still loading so the UI doesn't
+  // briefly allow an over-cap selection.
+  const maxScreenshots = uploadLimits
+    ? Math.max(0, uploadLimits.maxScreenshotsPerWindow - uploadLimits.screenshotsUsedInWindow)
+    : 3;
+
+  const { data: scheduleLimits } = useQuery<ScheduleLimits>({
+    queryKey: ['/api/scheduled-posts/limits'],
+    queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
   });
 
@@ -112,10 +130,12 @@ const ScreenshotUploadPage: React.FC = () => {
       return;
     }
 
-    if (selectedFiles.length + imageFiles.length > 3) {
+    if (selectedFiles.length + imageFiles.length > maxScreenshots) {
       toast({
         title: "Too many files",
-        description: "You can upload a maximum of 3 screenshots at once",
+        description: maxScreenshots <= 0
+          ? `You've reached your ${uploadLimits?.maxScreenshotsPerWindow ?? 3} screenshot upload limit for now.${uploadLimits && !uploadLimits.isPro ? ' Upgrade to Pro for a higher limit.' : ''}`
+          : `You can upload a maximum of ${maxScreenshots} more screenshot${maxScreenshots === 1 ? '' : 's'} right now`,
         variant: "destructive",
       });
       return;
@@ -156,7 +176,7 @@ const ScreenshotUploadPage: React.FC = () => {
     e.stopPropagation();
     dragCounterRef.current = 0;
     setIsDragging(false);
-    if (isUploading || selectedFiles.length >= 3) return;
+    if (isUploading || selectedFiles.length >= maxScreenshots) return;
     const files = Array.from(e.dataTransfer.files);
     processFiles(files);
   };
@@ -196,6 +216,21 @@ const ScreenshotUploadPage: React.FC = () => {
       return;
     }
 
+    // Validate scheduling selection before uploading.
+    let scheduledIso: string | undefined;
+    if (scheduleEnabled) {
+      const d = scheduledAt ? new Date(scheduledAt) : null;
+      if (!d || isNaN(d.getTime())) {
+        toast({ title: "Pick a time", description: "Choose a date and time to schedule.", variant: "destructive" });
+        return;
+      }
+      if (d.getTime() <= Date.now()) {
+        toast({ title: "Time must be in the future", description: "Pick a later date and time.", variant: "destructive" });
+        return;
+      }
+      scheduledIso = d.toISOString();
+    }
+
     setIsUploading(true);
 
     try {
@@ -205,6 +240,7 @@ const ScreenshotUploadPage: React.FC = () => {
         formData.append('gameId', selectedGameId);
         formData.append('title', title.trim());
         formData.append('description', description);
+        if (scheduledIso) formData.append('scheduledAt', scheduledIso);
 
         const response = await fetch('/api/screenshots/upload', {
           method: 'POST',
@@ -228,16 +264,11 @@ const ScreenshotUploadPage: React.FC = () => {
         return response.json();
       });
 
-      await Promise.all(uploadPromises);
+      const results = await Promise.all(uploadPromises);
 
       // Refresh tier-aware upload limits so the hint reflects any change
       // (e.g. user just hit their cap or upgraded to Pro mid-session).
       queryClient.invalidateQueries({ queryKey: ['/api/upload/limits'] });
-
-      toast({
-        title: "Success",
-        description: `${selectedFiles.length} screenshot${selectedFiles.length > 1 ? 's' : ''} uploaded successfully`,
-      });
 
       // Reset form
       setSelectedFiles([]);
@@ -245,7 +276,26 @@ const ScreenshotUploadPage: React.FC = () => {
       setSelectedGameId('');
       setTitle('');
       setDescription('');
-      
+      setScheduleEnabled(false);
+      setScheduledAt('');
+
+      // Scheduled path: nothing went live — send the user to their queue.
+      if (scheduledIso) {
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduled-posts'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/scheduled-posts/limits'] });
+        toast({
+          title: "Scheduled",
+          description: `${results.length} screenshot${results.length > 1 ? 's' : ''} will publish on ${new Date(scheduledIso).toLocaleString()}.`,
+        });
+        navigate('/scheduled-posts');
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: `${results.length} screenshot${results.length > 1 ? 's' : ''} uploaded successfully`,
+      });
+
       // Navigate to user's profile page to view the uploaded content
       navigate(`/profile/${user?.username}`);
 
@@ -279,7 +329,18 @@ const ScreenshotUploadPage: React.FC = () => {
       
       <Card>
         <CardHeader>
-          <CardTitle>Share your gaming moments</CardTitle>
+          <div className="flex items-start justify-between gap-2">
+            <CardTitle>Share your gaming moments</CardTitle>
+            {uploadLimits && (
+              <Badge
+                variant={maxScreenshots > 0 ? "secondary" : "destructive"}
+                className="shrink-0 whitespace-nowrap"
+                data-testid="badge-screenshots-remaining"
+              >
+                {maxScreenshots}/{uploadLimits.maxScreenshotsPerWindow} left today
+              </Badge>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Tier-aware upload-limit hint shown BEFORE the user opens
@@ -320,7 +381,7 @@ const ScreenshotUploadPage: React.FC = () => {
 
           {/* File Upload Area - Always Show */}
           <div className="space-y-4">
-            <Label>Screenshots ({selectedFiles.length}/3 selected)</Label>
+            <Label>Screenshots ({selectedFiles.length}/{maxScreenshots} selected)</Label>
             
             {/* Single hidden input for all file selections */}
             <input
@@ -348,17 +409,17 @@ const ScreenshotUploadPage: React.FC = () => {
                 <div className="space-y-2">
                   <p className="text-lg font-medium">{isDragging ? 'Drop files here' : 'Drag & drop or click to browse'}</p>
                   <p className="text-sm text-muted-foreground">
-                    Select up to 3 screenshots • PNG, JPG, JPEG • Hold Ctrl/Cmd to select multiple
+                    Select up to {maxScreenshots} screenshot{maxScreenshots === 1 ? '' : 's'} • PNG, JPG, JPEG • Hold Ctrl/Cmd to select multiple
                   </p>
                 </div>
               </div>
             ) : (
               <div
-                className={`space-y-4 rounded-lg transition-colors ${selectedFiles.length < 3 && isDragging ? 'border-2 border-dashed border-primary bg-primary/5 p-4' : ''}`}
-                onDragOver={selectedFiles.length < 3 ? handleDragOver : undefined}
-                onDragEnter={selectedFiles.length < 3 ? handleDragEnter : undefined}
-                onDragLeave={selectedFiles.length < 3 ? handleDragLeave : undefined}
-                onDrop={selectedFiles.length < 3 ? handleDrop : undefined}
+                className={`space-y-4 rounded-lg transition-colors ${selectedFiles.length < maxScreenshots && isDragging ? 'border-2 border-dashed border-primary bg-primary/5 p-4' : ''}`}
+                onDragOver={selectedFiles.length < maxScreenshots ? handleDragOver : undefined}
+                onDragEnter={selectedFiles.length < maxScreenshots ? handleDragEnter : undefined}
+                onDragLeave={selectedFiles.length < maxScreenshots ? handleDragLeave : undefined}
+                onDrop={selectedFiles.length < maxScreenshots ? handleDrop : undefined}
               >
                 {/* Preview Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -390,10 +451,10 @@ const ScreenshotUploadPage: React.FC = () => {
                 </div>
 
                 {/* Add Another Button or drop hint */}
-                {selectedFiles.length < 3 && (
+                {selectedFiles.length < maxScreenshots && (
                   isDragging ? (
                     <p className="text-center text-sm font-medium text-primary py-2">
-                      Drop to add screenshot ({3 - selectedFiles.length} remaining)
+                      Drop to add screenshot ({maxScreenshots - selectedFiles.length} remaining)
                     </p>
                   ) : (
                     <label htmlFor="screenshot-upload" className="block">
@@ -408,7 +469,7 @@ const ScreenshotUploadPage: React.FC = () => {
                       >
                         <span className="cursor-pointer flex items-center justify-center gap-2">
                           <Upload className="h-5 w-5" />
-                          Add Another Screenshot ({3 - selectedFiles.length} remaining)
+                          Add Another Screenshot ({maxScreenshots - selectedFiles.length} remaining)
                         </span>
                       </Button>
                     </label>
@@ -461,6 +522,16 @@ const ScreenshotUploadPage: React.FC = () => {
               data-testid="input-description"
             />
           </div>
+
+          {/* Schedule for later */}
+          <ScheduleControl
+            enabled={scheduleEnabled}
+            onEnabledChange={setScheduleEnabled}
+            value={scheduledAt}
+            onValueChange={setScheduledAt}
+            limits={scheduleLimits}
+            contentNoun="screenshot"
+          />
 
           {/* Upload Button */}
           <Button

@@ -9,8 +9,12 @@ import {
   ChevronDown,
   Gift,
   Users,
+  Rocket,
+  Radio,
   Bookmark,
 } from "lucide-react";
+import { isPartnerType } from "@shared/partner-access";
+import { GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
 import { GamefolioStoreIcon } from "@/components/icons/GamefolioStoreIcon";
 import { GamefolioCollectionIcon } from "@/components/icons/GamefolioCollectionIcon";
 import { GamefolioHelpIcon } from "@/components/icons/GamefolioHelpIcon";
@@ -20,6 +24,7 @@ import { GamefolioExploreIcon } from "@/components/icons/GamefolioExploreIcon";
 import { GamefolioIcon } from "@/components/icons/GamefolioIcon";
 import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
+import { GamefolioDashboardIcon } from "@/components/icons/GamefolioDashboardIcon";
 import { GamefolioMessagesIcon } from "@/components/icons/GamefolioMessagesIcon";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
@@ -77,9 +82,9 @@ const Sidebar = () => {
   });
 
   const { data: trendingGames } = useQuery<Game[]>({
-    queryKey: ["/api/twitch/games/top"],
+    queryKey: ["/api/game-catalog/top"],
     queryFn: async () => {
-      const response = await fetch("/api/twitch/games/top");
+      const response = await fetch("/api/game-catalog/top");
       if (!response.ok) {
         throw new Error('Failed to fetch trending games from Twitch');
       }
@@ -107,10 +112,10 @@ const Sidebar = () => {
 
   // Search for games to add
   const { data: searchResults } = useQuery<TwitchGame[]>({
-    queryKey: ["/api/twitch/games/search", gameSearchQuery],
+    queryKey: ["/api/game-catalog/search", gameSearchQuery],
     queryFn: async () => {
       if (!gameSearchQuery.trim()) return [];
-      const response = await fetch(`/api/twitch/games/search?q=${encodeURIComponent(gameSearchQuery)}`);
+      const response = await fetch(`/api/game-catalog/search?q=${encodeURIComponent(gameSearchQuery)}`);
       if (!response.ok) throw new Error("Failed to search games");
       return response.json();
     },
@@ -254,8 +259,17 @@ const Sidebar = () => {
     return <ZapIconSvg active={false} className={className} />;
   };
 
+  const isIndieDev = user?.userType?.split(",").includes("indie_developer");
+  const canAccessIndieGame = GAME_DEVELOPER_FEATURES_ENABLED && !!user && (
+    user.role === "admin" ||
+    isPartnerType(user, "indie") ||
+    isIndieDev
+  );
   const menuItems = [
     { icon: GamefolioHomeIcon, label: "Home", href: "/" },
+    ...(user && (!canAccessIndieGame || user.role === "admin")
+      ? [{ icon: GamefolioDashboardIcon, label: "Dashboard", href: "/dashboard" }]
+      : []),
     { icon: GamefolioExploreIcon, label: "Explore", href: "/explore" },
     { icon: TrendingNavIcon, label: "Trending", href: "/trending" },
     { icon: GamefolioLeaderboardIcon, label: "Leaderboard", href: "/leaderboard" },
@@ -275,6 +289,11 @@ const Sidebar = () => {
     ...(user && user.messagingEnabled !== false ? [{ icon: GamefolioMessagesIcon, label: "Messages", href: "/messages" }] : []),
 
     { icon: GamefolioProfileIcon, label: "My Gamefolio", href: user ? `/profile/${user.username}` : "/auth", themed: true, gamefolioIcon: true },
+
+    // Partner dashboards — visible only to the matching paid partner (admins see both).
+    ...(canAccessIndieGame ? [{ icon: Rocket, label: "Game Dashboard", href: "/game-dashboard" }] : []),
+    ...(isPartnerType(user, "streamer") || user?.role === "admin" ? [{ icon: Radio, label: "Streamer Dashboard", href: "/streamer/dashboard" }] : []),
+
     { icon: GamefolioHelpIcon, label: "Help & Support", href: "/help" },
 
     // Only show admin panel link for users with admin role
@@ -284,7 +303,7 @@ const Sidebar = () => {
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex w-64 bg-card fixed top-0 left-0 bottom-0 flex-col border-r border-border z-40">
+      <div className="hidden lg:flex w-64 bg-background fixed top-0 left-0 bottom-0 flex-col border-r border-border z-40">
         <nav className="px-4 pt-40 pb-4 space-y-1 flex-1 overflow-y-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {menuItems.map((item) => {
             const isActive = location === item.href;
@@ -525,7 +544,7 @@ const Sidebar = () => {
 
       {/* Mobile/Tablet Your Games Section */}
       {user && (
-        <div className="lg:hidden px-4 py-6 bg-card border-b border-border">
+        <div className="lg:hidden px-4 py-6 bg-background border-b border-border">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-foreground">Your Games</h3>
             <Button

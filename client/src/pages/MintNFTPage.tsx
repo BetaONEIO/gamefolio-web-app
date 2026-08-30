@@ -243,7 +243,7 @@ export default function MintNFTPage() {
 
   if (mintState === "processing") {
     return (
-      <div className="fixed inset-0 z-[100] bg-[#0B1218] flex flex-col items-center justify-center px-6">
+      <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center px-6">
         <div className="w-full max-w-md md:max-w-4xl flex flex-col md:flex-row md:items-center md:gap-16 items-center">
           <div className="md:flex-1 flex flex-col items-center">
             <div className="relative mb-8 md:mb-0">
@@ -262,7 +262,7 @@ export default function MintNFTPage() {
               </div>
               
               <div className="absolute -bottom-4 left-1/2 -translate-x-1/2">
-                <div className="bg-[#0B1218] border border-[#1B2A33] rounded-full px-4 py-2 shadow-lg flex items-center gap-2">
+                <div className="bg-card border border-border rounded-full px-4 py-2 shadow-lg flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-[#B7FF1A] animate-pulse" />
                   <span className="text-xs font-bold text-[#B7FF1A]">On-Chain Processing</span>
                 </div>
@@ -280,7 +280,7 @@ export default function MintNFTPage() {
               </p>
             </div>
 
-            <div className="w-full max-w-sm bg-[#0B1218] border border-[#1B2A33]/50 rounded-3xl p-6">
+            <div className="w-full max-w-sm bg-card border border-border rounded-3xl p-6">
               <div className="flex flex-col gap-4">
                 {mintSteps.map((step, index) => (
                   <div key={step.id} className="flex items-start gap-4">
@@ -414,8 +414,8 @@ export default function MintNFTPage() {
     }
     
     return (
-      <div className="min-h-screen bg-[#0B1218] flex flex-col">
-        <header className="sticky top-0 z-40 backdrop-blur-md bg-[#0B1218]/80 border-b border-[#1B2A33]/50">
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="sticky top-0 z-40 bg-[var(--gf-surface-1)] border-b border-[var(--gf-border)]">
           <div className="flex items-center justify-between w-full max-w-[430px] md:max-w-5xl mx-auto px-6 pt-12 md:pt-6 pb-4">
             <div className="w-10 h-10" />
             <span className="text-lg font-bold text-[#F5F7F2]">Mint Complete</span>
@@ -540,7 +540,7 @@ export default function MintNFTPage() {
               </div>
 
               <div className="flex gap-3 w-full max-w-[382px]">
-                <div className="flex-1 bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col gap-1">
+                <div className="flex-1 bg-card border border-border rounded-2xl p-4 flex flex-col gap-1">
                   <span className="text-[10px] font-bold text-[#B8C0AE] uppercase tracking-tight">
                     Rarity Score
                   </span>
@@ -552,7 +552,7 @@ export default function MintNFTPage() {
                   </div>
                 </div>
                 
-                <div className="flex-1 bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col gap-1">
+                <div className="flex-1 bg-card border border-border rounded-2xl p-4 flex flex-col gap-1">
                   <span className="text-[10px] font-bold text-[#B8C0AE] uppercase tracking-tight">
                     Mint Number
                   </span>
@@ -589,8 +589,8 @@ export default function MintNFTPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B1218] flex flex-col">
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-[#0B1218]/80">
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="sticky top-0 z-40 bg-[var(--gf-surface-1)]">
         <div className="flex items-center justify-between w-full max-w-7xl mx-auto px-4 pt-12 pb-4">
           <Button
             variant="ghost"
@@ -685,7 +685,7 @@ export default function MintNFTPage() {
             )}
 
             {/* Balance & Allowance Card */}
-            <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-3xl overflow-hidden">
+            <div className="bg-card border border-border rounded-3xl overflow-hidden">
               {/* Balance Header */}
               <div className="flex items-center justify-between p-5 bg-[#14532d]/5 border-b border-[#1B2A33]/50">
                 <div className="flex items-center gap-3">

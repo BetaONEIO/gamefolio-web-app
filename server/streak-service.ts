@@ -158,6 +158,30 @@ export class StreakService {
         );
       }
 
+      // Mobile app daily bonus — 10 XP for users who have the app installed
+      try {
+        const mobileXP = POINT_VALUES.mobile_app_daily ?? 10;
+        const tokens = await storage.getPushTokensByUserIds([userId]);
+        const hasMobile = tokens.some(t => t.platform === 'ios' || t.platform === 'android');
+        if (hasMobile) {
+          // Same 20-hour rolling window as the streak claim above, so the two
+          // bonuses stay in step and reset relative to the user's own last
+          // claim rather than midnight in the server's timezone.
+          const since = new Date(now.getTime() - MIN_HOURS_BETWEEN_CLAIMS * 60 * 60 * 1000);
+          const alreadyAwarded = await storage.hasReceivedXPSourceSince(userId, 'mobile_app_daily', since);
+          if (!alreadyAwarded) {
+            await LeaderboardService.awardCustomPoints(
+              userId,
+              'mobile_app_daily',
+              mobileXP,
+              'Daily mobile app bonus'
+            );
+          }
+        }
+      } catch (mobileErr) {
+        console.warn('[streak-service] mobile app daily XP failed:', mobileErr);
+      }
+
       if (!isFirstLogin) {
         try {
           const notif = await storage.createNotification({
