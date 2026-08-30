@@ -149,7 +149,16 @@ function updateMatchingProfileCaches(data: any) {
       if (savedProfileId != null && cachedProfileId != null && cachedProfileId !== savedProfileId) {
         return cached;
       }
-      return data;
+      // Merge the returned profile into each active profile query. The
+      // dashboard and editor can both be mounted with slightly different
+      // resolved values, so replacing the whole cache can make a multi-field
+      // save appear to undo unrelated fields until the refetch finishes.
+      return {
+        ...cached,
+        ...data,
+        profile: { ...(cached.profile ?? {}), ...(data?.profile ?? {}) },
+        fieldMeta: { ...(cached.fieldMeta ?? {}), ...(data?.fieldMeta ?? {}) },
+      };
     },
   );
 }
