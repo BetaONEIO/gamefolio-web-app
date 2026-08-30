@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { publicUrl } from "@/lib/platform";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import {
-  ArrowUpRight, BarChart3, CheckCircle2, ChevronRight, CircleAlert,
+  ArrowUpRight, CheckCircle2, ChevronRight, CircleAlert,
   Edit3, Eye, Film, Gamepad2, ImagePlus, Loader2,
   Plus, Settings2, Sparkles, Video,
 } from "lucide-react";
@@ -158,6 +158,20 @@ function CommunityPostsMetricIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+function AnalyticsMetricIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M4.5 18.5h15" strokeOpacity="0.45" />
+      <path d="m5.5 15 3-3 2.7 2.3 5.3-6 2 2" />
+      <circle cx="5.5" cy="15" r="1" fill="currentColor" stroke="none" />
+      <circle cx="8.5" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="11.2" cy="14.3" r="1" fill="currentColor" stroke="none" />
+      <circle cx="16.5" cy="8.3" r="1" fill="currentColor" stroke="none" />
+      <circle cx="18.5" cy="10.3" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 function MetricCard({
   label,
   value,
@@ -175,17 +189,15 @@ function MetricCard({
 }) {
   return (
     <div className="min-w-0 rounded-2xl p-4 sm:p-5" style={{ background: CARD_BG, border: `1px solid ${DASHBOARD_THEME.border}` }}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex h-8 w-8 items-center justify-center">
-          <Icon className="h-5 w-5" style={{ color: NEON }} />
-        </div>
+      <div className="flex h-5 items-start justify-between gap-2">
+        <Icon className="h-4 w-4 shrink-0" style={{ color: NEON }} />
         {changePct != null && (
           <span className="text-[10px] font-black" style={{ color: changePct >= 0 ? NEON : DASHBOARD_THEME.danger }}>
             {changePct >= 0 ? "+" : ""}{changePct}%
           </span>
         )}
       </div>
-      <div className="mt-5 text-2xl font-black tracking-tight text-white">
+      <div className="mt-3 text-2xl font-black tracking-tight text-white">
         {isLoading ? <Loader2 className="h-5 w-5 animate-spin text-white/30" /> : formatNumber(value)}
       </div>
       <div className="mt-1 text-[10px] font-black uppercase tracking-[0.12em] text-white/55">{label}</div>
@@ -430,7 +442,7 @@ export default function DashboardTab({
             <div className="space-y-2">
               <QuickAction icon={Edit3} label="Edit game profile" onClick={() => editProfile("gameName")} />
               <QuickAction icon={ImagePlus} label="Add screenshots" onClick={() => editProfile("screenshotUrls")} />
-              <QuickAction icon={BarChart3} label="Open analytics" onClick={() => onGoTo("analytics")} />
+              <QuickAction icon={AnalyticsMetricIcon} label="Open analytics" onClick={() => onGoTo("analytics")} />
               <QuickAction icon={Plus} label="Review community content" onClick={() => onGoTo("creator-content")} />
               {profileUrl ? (
                 <a href={profileUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-white/55 transition-colors hover:bg-white/[0.04] hover:text-white">
