@@ -11,7 +11,6 @@ import {
   GoProIcon,
   ManageProIcon,
   AccountSettingsIcon,
-  ProfileAppearanceIcon,
   AdminPanelIcon,
   LogoutIcon,
 } from "@/components/icons/DropdownIcons";
@@ -744,13 +743,6 @@ const Header = () => {
                       >
                         <AccountSettingsIcon className="mr-2 h-4 w-4" />
                         <span>Account Settings</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => setLocation("/settings/profile")}
-                      >
-                        <ProfileAppearanceIcon className="mr-2 h-4 w-4" />
-                        <span>Profile & Appearance</span>
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
 
