@@ -176,8 +176,8 @@ function MetricCard({
   return (
     <div className="min-w-0 rounded-2xl p-4 sm:p-5" style={{ background: CARD_BG, border: `1px solid ${DASHBOARD_THEME.border}` }}>
       <div className="flex items-start justify-between gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: rgbaAccent(0.1) }}>
-          <Icon className="h-4 w-4" style={{ color: NEON }} />
+        <div className="flex h-8 w-8 items-center justify-center">
+          <Icon className="h-5 w-5" style={{ color: NEON }} />
         </div>
         {changePct != null && (
           <span className="text-[10px] font-black" style={{ color: changePct >= 0 ? NEON : DASHBOARD_THEME.danger }}>
