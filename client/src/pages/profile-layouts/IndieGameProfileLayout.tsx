@@ -977,6 +977,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                       screenshot={screenshot}
                       profile={profile}
                       showUserInfo
+                      authorDisplayName={gameName}
                       onSelect={(selected) => openScreenshot(selected)}
                     />
                   ))}

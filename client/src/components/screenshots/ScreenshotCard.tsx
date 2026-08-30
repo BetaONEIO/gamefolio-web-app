@@ -16,6 +16,7 @@ interface ScreenshotCardProps {
   onDelete?: (id: number) => void;
   onSelect?: (screenshot: any) => void;
   showUserInfo?: boolean;
+  authorDisplayName?: string;
 }
 
 function ScreenshotAvatar({ avatarUrl, username }: { avatarUrl?: string | null; username: string }) {
@@ -37,7 +38,8 @@ export function ScreenshotCard({
   profile, 
   onDelete, 
   onSelect,
-  showUserInfo = false
+  showUserInfo = false,
+  authorDisplayName,
 }: ScreenshotCardProps) {
   const screenshotUser = (screenshot as any).user;
 
@@ -136,7 +138,7 @@ export function ScreenshotCard({
               <ScreenshotAvatar avatarUrl={screenshotUser.avatarUrl} username={screenshotUser.username} />
               <div className="flex flex-col min-w-0">
                 <span className="text-xs font-medium leading-tight truncate" style={{ color: '#F5F7F2' }}>
-                  {screenshotUser.displayName || screenshotUser.username}
+                  {authorDisplayName || screenshotUser.displayName || screenshotUser.username}
                 </span>
                 <span className="text-[10px] leading-tight" style={{ color: 'rgba(245,247,242,0.45)' }}>
                   @{screenshotUser.username}
