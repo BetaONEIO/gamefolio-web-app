@@ -625,26 +625,24 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                     </div>
                   ))}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isOwnProfile) return;
-                    if (currentUser) {
-                      followMutation.mutate();
-                    } else {
-                      setLocation('/auth');
-                    }
-                  }}
-                  disabled={followMutation.isPending || isOwnProfile}
-                  aria-label={isOwnProfile
-                    ? 'You cannot follow your own profile'
-                    : `${isFollowing ? 'Following' : isRequested ? 'Follow request pending for' : 'Follow'} @${profile.username}`}
-                  title={isOwnProfile ? 'You cannot follow your own profile' : undefined}
-                  className="flex items-center gap-2 rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}
-                  {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
-                </button>
+                {!isOwnProfile && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (currentUser) {
+                        followMutation.mutate();
+                      } else {
+                        setLocation('/auth');
+                      }
+                    }}
+                    disabled={followMutation.isPending}
+                    aria-label={`${isFollowing ? 'Following' : isRequested ? 'Follow request pending for' : 'Follow'} @${profile.username}`}
+                    className="flex items-center gap-2 rounded-xl bg-[#B7FF18] px-5 py-3 text-sm font-black text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isFollowing ? <UserCheck size={16} /> : <UserPlus size={16} />}
+                    {isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
+                  </button>
+                )}
                 <div className="ml-2 flex items-center gap-2">
                   {!isOwnProfile && (
                     <button onClick={() => currentUser ? setMessageDialogOpen(true) : setLocation('/auth')} className="rounded-xl border border-white/20 bg-black/20 p-3 hover:bg-white/10" aria-label="Message developer">
