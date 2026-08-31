@@ -241,6 +241,7 @@ export function GameSocialBadges({
               Icon={Icon}
               label={label}
               onClick={() => onOpen(url)}
+              connected={false}
             >
             </GamefolioPlatformButton>
           );
@@ -252,6 +253,7 @@ export function GameSocialBadges({
             Icon={Icon}
             label={label}
             href={url}
+            connected={false}
           />
         );
       })}
