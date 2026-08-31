@@ -194,7 +194,7 @@ export function GamefolioPlatformButton({
       {connected && <Check className="ml-0.5 h-3 w-3 text-[#B7FF18]" aria-hidden="true" />}
     </>
   );
-  const sharedClassName = `group inline-flex items-center gap-1.5 rounded-lg border border-white/[0.14] bg-[#0F101B] px-3 py-1.5 text-[11px] font-bold text-white/85 transition-colors hover:border-[#B7FF18]/70 hover:bg-[#171A29] hover:text-white ${className}`;
+  const sharedClassName = `group inline-flex items-center gap-2 rounded-full border border-[#2B3040] bg-[#0F101B] px-4 py-2 text-xs font-bold tracking-[0.01em] text-white/85 transition-colors hover:border-[#B7FF18]/70 hover:bg-[#171A29] hover:text-white ${className}`;
 
   if (onClick) {
     return (
