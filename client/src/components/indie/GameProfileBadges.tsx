@@ -16,7 +16,7 @@ import {
   SiYoutube,
 } from "react-icons/si";
 import { FaWindows, FaXbox, FaXTwitter } from "react-icons/fa6";
-import { Gamepad2 } from "lucide-react";
+import { Check, Gamepad2 } from "lucide-react";
 import { normalizeGameSocialUrl } from "@shared/store-urls";
 
 export type GameSocialField =
@@ -159,8 +159,8 @@ export function GamePlatformBadges({ platforms }: { platforms?: string[] | null 
             key={`${key}-${index}`}
             className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-bold text-white/85"
             style={{
-              background: "rgba(255,255,255,0.08)",
-              border: "1px solid rgba(255,255,255,0.16)",
+              background: "#0F101B",
+              border: "1px solid rgba(255,255,255,0.14)",
             }}
           >
             <Icon className="h-3.5 w-3.5 text-white/75" aria-hidden="true" />
@@ -169,6 +169,51 @@ export function GamePlatformBadges({ platforms }: { platforms?: string[] | null 
         );
       })}
     </div>
+  );
+}
+
+export function GamefolioPlatformButton({
+  Icon,
+  label,
+  href,
+  onClick,
+  connected = true,
+  className = "",
+}: {
+  Icon: ElementType;
+  label: string;
+  href?: string;
+  onClick?: () => void;
+  connected?: boolean;
+  className?: string;
+}) {
+  const content = (
+    <>
+      <Icon className="h-3.5 w-3.5 shrink-0 text-white/85 transition-colors group-hover:text-[#B7FF18]" aria-hidden="true" />
+      <span>{label}</span>
+      {connected && <Check className="ml-0.5 h-3 w-3 text-[#B7FF18]" aria-hidden="true" />}
+    </>
+  );
+  const sharedClassName = `group inline-flex items-center gap-1.5 rounded-lg border border-white/[0.14] bg-[#0F101B] px-3 py-1.5 text-[11px] font-bold text-white/85 transition-colors hover:border-[#B7FF18]/70 hover:bg-[#171A29] hover:text-white ${className}`;
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} aria-label={`Open ${label}`} className={sharedClassName}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`Open ${label}`}
+      className={sharedClassName}
+    >
+      {content}
+    </a>
   );
 }
 
@@ -186,44 +231,28 @@ export function GameSocialBadges({
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
-      {connected.map(({ field, label, Icon, color, background, border }) => {
+      {connected.map(({ field, label, Icon }) => {
         const url = normalizeGameSocialUrl(links[field]);
-        const content = (
-          <>
-            <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-            {label}
-          </>
-        );
-        const className = "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold transition-opacity hover:opacity-80";
-        const style = { background, color, border: `1px solid ${border}` };
 
         if (onOpen) {
           return (
-            <button
+            <GamefolioPlatformButton
               key={field}
-              type="button"
+              Icon={Icon}
+              label={label}
               onClick={() => onOpen(url)}
-              aria-label={`Open ${label}`}
-              className={className}
-              style={style}
             >
-              {content}
-            </button>
+            </GamefolioPlatformButton>
           );
         }
 
         return (
-          <a
+          <GamefolioPlatformButton
             key={field}
+            Icon={Icon}
+            label={label}
             href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Open ${label}`}
-            className={className}
-            style={style}
-          >
-            {content}
-          </a>
+          />
         );
       })}
     </div>

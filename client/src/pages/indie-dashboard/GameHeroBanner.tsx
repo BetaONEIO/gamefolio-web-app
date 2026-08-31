@@ -7,7 +7,7 @@ import { Loader2, ImagePlus, X, CropIcon, Upload, ArrowUpRight, Edit3 } from "lu
 import { SiEpicgames, SiItchdotio, SiSteam } from "react-icons/si";
 import { publicUrl } from "@/lib/platform";
 import { NEON } from "./constants";
-import { GamePlatformBadges, GameSocialBadges } from "@/components/indie/GameProfileBadges";
+import { GamePlatformBadges, GameSocialBadges, GamefolioPlatformButton } from "@/components/indie/GameProfileBadges";
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 
@@ -417,32 +417,6 @@ export default function GameHeroBanner({
                   {profile?.studioName && <span className="text-[11px] text-white/40">{profile.studioName}</span>}
                 </div>
 
-                {(profile?.steamUrl || profile?.epicUrl || profile?.itchUrl) && (
-                  <div className="mb-5 flex flex-wrap gap-2">
-                    {profile?.steamUrl && (
-                      <a href={profile.steamUrl} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold transition-opacity hover:opacity-80"
-                        style={{ background: "#1b2838", color: "#c6d4df", border: "1px solid #1b2838" }}>
-                        <SiSteam className="h-3 w-3" /> Steam
-                      </a>
-                    )}
-                    {profile?.epicUrl && (
-                      <a href={profile.epicUrl} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold transition-opacity hover:opacity-80"
-                        style={{ background: "#2a2a2a", color: "#fff", border: "1px solid #444" }}>
-                        <SiEpicgames className="h-3 w-3" /> Epic Games
-                      </a>
-                    )}
-                    {profile?.itchUrl && (
-                      <a href={profile.itchUrl} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold text-white transition-opacity hover:opacity-80"
-                        style={{ background: "#fa5c5c", border: "1px solid #fa5c5c" }}>
-                        <SiItchdotio className="h-3 w-3" /> itch.io
-                      </a>
-                    )}
-                  </div>
-                )}
-                <GameSocialBadges links={profile ?? {}} className="mb-5" />
                 <div className="flex flex-wrap items-center gap-2">
                    {onEditProfile && (
                      <button type="button" onClick={onEditProfile}
@@ -460,6 +434,20 @@ export default function GameHeroBanner({
                      </a>
                    )}
                  </div>
+                 {(profile?.steamUrl || profile?.epicUrl || profile?.itchUrl) && (
+                   <div className="mt-4 flex flex-wrap gap-2">
+                     {profile?.steamUrl && (
+                       <GamefolioPlatformButton Icon={SiSteam} label="Steam" href={profile.steamUrl} />
+                     )}
+                     {profile?.epicUrl && (
+                       <GamefolioPlatformButton Icon={SiEpicgames} label="Epic Games" href={profile.epicUrl} />
+                     )}
+                     {profile?.itchUrl && (
+                       <GamefolioPlatformButton Icon={SiItchdotio} label="itch.io" href={profile.itchUrl} />
+                     )}
+                   </div>
+                 )}
+                 <GameSocialBadges links={profile ?? {}} className="mt-2" />
               </div>
             </div>
           </div>

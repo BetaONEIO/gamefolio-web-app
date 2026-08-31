@@ -1122,10 +1122,10 @@ function StoreListingCard({
   }, [focusRequest, profile?.id]);
 
   const stores = [
-     { key: "steam", fieldName: "steamUrl", icon: <SiSteam size={20} className="text-[#66c0f4]" />, label: "Steam", filled: !!(profile?.steamUrl || profile?.steamAppId), url: profile?.steamUrl, bg: "rgba(102,192,244,0.08)", border: "rgba(102,192,244,0.2)" },
-     { key: "epic",  fieldName: "epicUrl", icon: <SiEpicgames size={20} className="text-white" />, label: "Epic Games", filled: !!(profile?.epicUrl || profile?.epicSlug), url: profile?.epicUrl, bg: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.12)" },
-     { key: "itch",  fieldName: "itchUrl", icon: <SiItchdotio size={20} className="text-[#fa5c5c]" />, label: "itch.io", filled: !!(profile?.itchUrl), url: profile?.itchUrl, bg: "rgba(250,92,92,0.08)", border: "rgba(250,92,92,0.2)" },
-     { key: "web",   fieldName: "websiteUrl", icon: <Globe size={20} className="text-white/50" />, label: "Website", filled: !!(profile?.websiteUrl), url: profile?.websiteUrl, bg: "rgba(255,255,255,0.04)", border: CARD_BORDER },
+     { key: "steam", fieldName: "steamUrl", icon: <SiSteam size={20} className="text-white/85" />, label: "Steam", filled: !!(profile?.steamUrl || profile?.steamAppId), url: profile?.steamUrl },
+     { key: "epic",  fieldName: "epicUrl", icon: <SiEpicgames size={20} className="text-white/85" />, label: "Epic Games", filled: !!(profile?.epicUrl || profile?.epicSlug), url: profile?.epicUrl },
+     { key: "itch",  fieldName: "itchUrl", icon: <SiItchdotio size={20} className="text-white/85" />, label: "itch.io", filled: !!(profile?.itchUrl), url: profile?.itchUrl },
+     { key: "web",   fieldName: "websiteUrl", icon: <Globe size={20} className="text-white/85" />, label: "Website", filled: !!(profile?.websiteUrl), url: profile?.websiteUrl },
   ];
 
   return (
@@ -1147,7 +1147,7 @@ function StoreListingCard({
      {stores.map(s => (
             <div key={s.key}
               className="flex items-center gap-3 p-4 rounded-xl transition-all"
-              style={{ background: s.filled ? s.bg : "rgba(255,255,255,0.02)", border: `1px solid ${s.filled ? s.border : CARD_BORDER}` }}>
+               style={{ background: "#0F101B", border: `1px solid ${CARD_BORDER}` }}>
               <div className="shrink-0">{s.icon}</div>
               <div className="flex-1 min-w-0">
                  <div className="flex items-center gap-2 text-xs font-bold text-white/70">
@@ -1176,8 +1176,8 @@ function StoreListingCard({
           onSave={() => save.mutate({ gameId: profile?.id, steamAppId, steamUrl, epicSlug, epicUrl, itchUrl, websiteUrl })}
           isSaving={save.isPending}>
           <div className="space-y-3">
-            <div className="flex items-center gap-2 mb-1">
-              <SiSteam size={14} className="text-[#66c0f4]" />
+             <div className="flex items-center gap-2 mb-1">
+               <SiSteam size={14} className="text-white/85" />
               <span className="text-xs font-bold text-white/70 uppercase tracking-wider">Steam</span>
             </div>
             <FieldInput fieldName="steamAppId" label="Steam App ID" value={steamAppId} onChange={setSteamAppId} placeholder="e.g. 730" />
@@ -1196,8 +1196,8 @@ function StoreListingCard({
           </div>
           <div className="h-px" style={{ background: CARD_BORDER }} />
           <div className="space-y-3">
-            <div className="flex items-center gap-2 mb-1">
-              <SiItchdotio size={14} className="text-[#fa5c5c]" />
+             <div className="flex items-center gap-2 mb-1">
+               <SiItchdotio size={14} className="text-white/85" />
               <span className="text-xs font-bold text-white/70 uppercase tracking-wider">itch.io</span>
             </div>
             <FieldInput fieldName="itchUrl" label="itch.io URL" value={itchUrl} onChange={setItchUrl} type="url"
@@ -1867,24 +1867,24 @@ function ProfileEditorHeader({
             <SettingsIcon />
             Game Profile
           </div>
-          <h1 className="truncate text-xl font-black tracking-tight text-white sm:text-2xl">
-            {profile?.gameName || "Set up your game profile"}
-          </h1>
-          <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-white/40">
-            Keep the details players see in one place. Start with the essentials, then add the finishing touches.
+           <h1 className="text-xl font-black tracking-tight text-white sm:text-2xl">
+             Game profile
+           </h1>
+           <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-white/40">
+             Manage the information players see on your public game page.
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
-          <button type="button" onClick={() => onSelectField("gameName")}
-            className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-xs font-black text-white transition-colors hover:bg-white/10"
-            style={{ border: `1px solid ${CARD_BORDER}` }}>
-            <Pencil size={13} /> Edit profile
+           <button type="button" onClick={() => onSelectField("gameName")}
+             className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-xs font-black transition-all hover:brightness-110"
+             style={{ background: NEON, color: "#071000" }}>
+             <Pencil size={13} /> Edit game profile
           </button>
           {publicProfileUrl && (
             <a href={publicProfileUrl} target="_blank" rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-xs font-black transition-colors hover:brightness-110"
-              style={{ background: NEON, color: "#071000" }}>
-              Preview page <ArrowUpRight size={13} />
+               className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-xs font-black text-white transition-colors hover:bg-white/10"
+               style={{ background: "#0F101B", border: `1px solid ${CARD_BORDER}` }}>
+               View public page <ArrowUpRight size={13} />
             </a>
           )}
         </div>
