@@ -16,6 +16,7 @@ import { getVideoEmbedUrl } from '@/lib/video-embed';
 import { useSignedUrl, useSignedUrls } from '@/hooks/use-signed-url';
 import { publicUrl } from '@/lib/platform';
 import { GAME_SOCIAL_LINKS } from '@/lib/indie-game-links';
+import { GamefolioPlatformButton } from '@/components/indie/GameProfileBadges';
 import {
   SiAndroid,
   SiApple,
@@ -438,9 +439,9 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     ...storeLinks,
     gameProfile?.websiteUrl ? { name: 'Official website', url: gameProfile.websiteUrl, icon: Globe } : null,
   ].filter(Boolean) as { name: string; url: string; icon: React.ElementType }[];
-  const gameSocialLinks = GAME_SOCIAL_LINKS.flatMap(({ field, label, color, borderColor, icon }) => {
+  const gameSocialLinks = GAME_SOCIAL_LINKS.flatMap(({ field, label, icon }) => {
     const url = gameProfile?.[field];
-    return url ? [{ field, label, url, color, borderColor, icon }] : [];
+    return url ? [{ field, label, url, icon }] : [];
   });
   const statItems = [
     { label: 'Clips', value: counts?.clips ?? clips.length, icon: Play },
@@ -812,19 +813,14 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
                   <section className="p-5" style={surfaceStyle}>
                     <p className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">Connect with us</p>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      {gameSocialLinks.map(({ field, label, url, color, borderColor, icon: Icon }) => (
-                        <a
+                      {gameSocialLinks.map(({ field, label, url, icon: Icon }) => (
+                        <GamefolioPlatformButton
                           key={field}
+                          Icon={Icon}
+                          label={label}
                           href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label={`Open ${gameName} on ${label}`}
-                          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-white transition-[filter] hover:brightness-110"
-                          style={{ background: color, border: `1px solid ${borderColor}` }}
-                        >
-                          <Icon size={13} style={{ color: "#fff" }} aria-hidden="true" />
-                          {label}
-                        </a>
+                          connected={false}
+                        />
                       ))}
                     </div>
                   </section>
