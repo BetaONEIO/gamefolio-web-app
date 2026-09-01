@@ -1370,6 +1370,26 @@ export const topContributors = pgTable("top_contributors", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// One durable record per seasonal rank payout. The unique season/rank key makes
+// the close job safe to run repeatedly without double-sending a transfer.
+export const leaderboardRewardPayouts = pgTable("leaderboard_reward_payouts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  seasonNumber: integer("season_number").notNull(),
+  rank: integer("rank").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  amount: real("amount").notNull(),
+  walletAddress: text("wallet_address"),
+  status: text("status").notNull().default("pending"), // pending, paid, skipped_no_wallet, failed
+  txHash: text("tx_hash"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  paidAt: timestamp("paid_at"),
+}, (table) => ({
+  seasonRankUnique: unique("leaderboard_reward_payouts_season_rank_unique").on(table.seasonNumber, table.rank),
+  seasonIdx: index("leaderboard_reward_payouts_season_idx").on(table.seasonNumber),
+  userIdx: index("leaderboard_reward_payouts_user_idx").on(table.userId),
+}));
+
 // Schema for inserting monthly leaderboard entries
 export const insertMonthlyLeaderboardSchema = createInsertSchema(monthlyLeaderboard).omit({
   id: true,
@@ -1405,6 +1425,12 @@ export const insertTopContributorSchema = createInsertSchema(topContributors).om
   id: true,
   achievedAt: true,
   createdAt: true,
+});
+
+export const insertLeaderboardRewardPayoutSchema = createInsertSchema(leaderboardRewardPayouts).omit({
+  id: true,
+  createdAt: true,
+  paidAt: true,
 });
 
 // Schema for inserting clip reactions
@@ -1694,6 +1720,8 @@ export type WeeklyLeaderboard = typeof weeklyLeaderboard.$inferSelect;
 export type InsertWeeklyLeaderboard = z.infer<typeof insertWeeklyLeaderboardSchema>;
 export type TopContributor = typeof topContributors.$inferSelect;
 export type InsertTopContributor = z.infer<typeof insertTopContributorSchema>;
+export type LeaderboardRewardPayout = typeof leaderboardRewardPayouts.$inferSelect;
+export type InsertLeaderboardRewardPayout = z.infer<typeof insertLeaderboardRewardPayoutSchema>;
 export type UserPointsHistory = typeof userPointsHistory.$inferSelect;
 export type InsertUserPointsHistory = z.infer<typeof insertUserPointsHistorySchema>;
 export type UserXPHistory = typeof userXPHistory.$inferSelect;

@@ -23,6 +23,7 @@ import {
   MonthlyLeaderboard, InsertMonthlyLeaderboard,
   WeeklyLeaderboard, InsertWeeklyLeaderboard,
   TopContributor, InsertTopContributor,
+  LeaderboardRewardPayout, InsertLeaderboardRewardPayout,
   UserPointsHistory, InsertUserPointsHistory,
   UserXPHistory, InsertUserXPHistory,
   ContentFilterSettings, InsertContentFilterSettings,
@@ -80,6 +81,7 @@ import {
   monthlyLeaderboard,
   weeklyLeaderboard,
   topContributors,
+  leaderboardRewardPayouts,
   userPointsHistory,
   userXPHistory,
   emailVerificationTokens,
@@ -4152,6 +4154,66 @@ export class DatabaseStorage implements IStorage {
       ...row.top_contributors,
       user: row.users!
     }));
+  }
+
+  async getSeasonLeaderboardForRewards(start: Date, end: Date, limit: number): Promise<Array<{
+    userId: number;
+    rank: number;
+    seasonPoints: number;
+    walletAddress: string | null;
+  }>> {
+    const rows = await db.execute(sql`
+      SELECT
+        u.id AS "userId",
+        COALESCE(SUM(xh.xp_amount), 0) AS "seasonPoints",
+        COALESCE(primary_wallet.address, u.wallet_address) AS "walletAddress"
+      FROM users u
+      LEFT JOIN user_xp_history xh
+        ON xh.user_id = u.id
+        AND xh.created_at >= ${start.toISOString()}
+        AND xh.created_at < ${end.toISOString()}
+      LEFT JOIN user_wallets primary_wallet
+        ON primary_wallet.user_id = u.id
+        AND primary_wallet.is_primary = true
+      WHERE u.role NOT IN ('admin', 'moderator', 'system')
+        AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+        AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+      GROUP BY u.id, primary_wallet.address
+      ORDER BY "seasonPoints" DESC, u.id ASC
+      LIMIT ${limit}
+    `);
+
+    return (rows as any[]).map((row, index) => ({
+      userId: Number(row.userId),
+      rank: index + 1,
+      seasonPoints: Number(row.seasonPoints),
+      walletAddress: row.walletAddress || null,
+    }));
+  }
+
+  async createLeaderboardRewardPayoutIfAbsent(
+    payout: InsertLeaderboardRewardPayout,
+  ): Promise<LeaderboardRewardPayout | null> {
+    const [created] = await db
+      .insert(leaderboardRewardPayouts)
+      .values(payout)
+      .onConflictDoNothing({
+        target: [leaderboardRewardPayouts.seasonNumber, leaderboardRewardPayouts.rank],
+      })
+      .returning();
+    return created ?? null;
+  }
+
+  async updateLeaderboardRewardPayout(
+    id: string,
+    updates: Partial<LeaderboardRewardPayout>,
+  ): Promise<LeaderboardRewardPayout | null> {
+    const [updated] = await db
+      .update(leaderboardRewardPayouts)
+      .set(updates)
+      .where(eq(leaderboardRewardPayouts.id, id))
+      .returning();
+    return updated ?? null;
   }
 
   // XP operations
