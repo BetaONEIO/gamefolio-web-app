@@ -7,3 +7,8 @@ export const SEASON_DEFS = [
 ] as const;
 
 export type SeasonDefinition = (typeof SEASON_DEFS)[number];
+
+export function getPublicSeasonNumber(internalSeasonNumber: number): number {
+  const newestFirstIndex = SEASON_DEFS.findIndex((season) => season.num === internalSeasonNumber);
+  return newestFirstIndex === -1 ? internalSeasonNumber : SEASON_DEFS.length - newestFirstIndex;
+}

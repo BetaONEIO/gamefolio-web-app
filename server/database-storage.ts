@@ -3861,7 +3861,17 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(monthlyLeaderboard.month, month),
         eq(monthlyLeaderboard.year, year),
-        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`
+        sql`NOT EXISTS (
+          SELECT 1 FROM users u
+          WHERE u.id = ${monthlyLeaderboard.userId}
+            AND (
+              u.status IN ('suspended', 'banned')
+              OR u.role IN ('admin', 'moderator', 'system')
+              OR u.hide_from_leaderboard = TRUE
+              OR LOWER(u.username) LIKE '%test%'
+              OR COALESCE(u.user_type, '') ILIKE '%indie_developer%'
+            )
+        )`
       ))
       .orderBy(desc(monthlyLeaderboard.totalPoints));
 
@@ -3876,7 +3886,9 @@ export class DatabaseStorage implements IStorage {
         entryUserIds.length > 0 ? notInArray(users.id, entryUserIds) : sql`TRUE`,
         or(isNull(users.status), notInArray(users.status, ['suspended', 'banned'])),
         notInArray(users.role, ['admin', 'moderator', 'system']),
-        or(isNull(users.hideFromLeaderboard), eq(users.hideFromLeaderboard, false))
+        or(isNull(users.hideFromLeaderboard), eq(users.hideFromLeaderboard, false)),
+        sql`LOWER(${users.username}) NOT LIKE '%test%'`,
+        sql`COALESCE(${users.userType}, '') NOT ILIKE '%indie_developer%'`
       ))
       .orderBy(asc(users.id));
 
@@ -3936,7 +3948,17 @@ export class DatabaseStorage implements IStorage {
         totalPoints: sql<number>`CAST(SUM(${monthlyLeaderboard.totalPoints}) AS INTEGER)`,
       })
       .from(monthlyLeaderboard)
-      .where(sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`)
+      .where(sql`NOT EXISTS (
+        SELECT 1 FROM users u
+        WHERE u.id = ${monthlyLeaderboard.userId}
+          AND (
+            u.status IN ('suspended', 'banned')
+            OR u.role IN ('admin', 'moderator', 'system')
+            OR u.hide_from_leaderboard = TRUE
+            OR LOWER(u.username) LIKE '%test%'
+            OR COALESCE(u.user_type, '') ILIKE '%indie_developer%'
+          )
+      )`)
       .groupBy(monthlyLeaderboard.userId)
       // No HAVING filter — include users with 0 aggregated points too
       .orderBy(desc(sql`SUM(${monthlyLeaderboard.totalPoints})`));
@@ -3951,7 +3973,9 @@ export class DatabaseStorage implements IStorage {
         entryUserIds.length > 0 ? notInArray(users.id, entryUserIds) : sql`TRUE`,
         notInArray(users.status, ['suspended', 'banned']),
         notInArray(users.role, ['admin', 'moderator', 'system']),
-        eq(users.hideFromLeaderboard, false)
+        eq(users.hideFromLeaderboard, false),
+        sql`LOWER(${users.username}) NOT LIKE '%test%'`,
+        sql`COALESCE(${users.userType}, '') NOT ILIKE '%indie_developer%'`
       ))
       .orderBy(asc(users.id));
 
@@ -4037,7 +4061,17 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(weeklyLeaderboard.week, week),
         eq(weeklyLeaderboard.year, year),
-        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${weeklyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`
+        sql`NOT EXISTS (
+          SELECT 1 FROM users u
+          WHERE u.id = ${weeklyLeaderboard.userId}
+            AND (
+              u.status IN ('suspended', 'banned')
+              OR u.role IN ('admin', 'moderator', 'system')
+              OR u.hide_from_leaderboard = TRUE
+              OR LOWER(u.username) LIKE '%test%'
+              OR COALESCE(u.user_type, '') ILIKE '%indie_developer%'
+            )
+        )`
       ))
       .orderBy(desc(weeklyLeaderboard.totalPoints));
 
@@ -4052,7 +4086,9 @@ export class DatabaseStorage implements IStorage {
         entryUserIds.length > 0 ? notInArray(users.id, entryUserIds) : sql`TRUE`,
         or(isNull(users.status), notInArray(users.status, ['suspended', 'banned'])),
         notInArray(users.role, ['admin', 'moderator', 'system']),
-        or(isNull(users.hideFromLeaderboard), eq(users.hideFromLeaderboard, false))
+        or(isNull(users.hideFromLeaderboard), eq(users.hideFromLeaderboard, false)),
+        sql`LOWER(${users.username}) NOT LIKE '%test%'`,
+        sql`COALESCE(${users.userType}, '') NOT ILIKE '%indie_developer%'`
       ))
       .orderBy(asc(users.id));
 
@@ -4103,7 +4139,17 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(topContributors.userId, users.id))
       .where(and(
         eq(topContributors.periodType, periodType),
-        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${topContributors.userId} AND (u.status IN ('suspended', 'banned') OR u.hide_from_leaderboard = TRUE))`
+        sql`NOT EXISTS (
+          SELECT 1 FROM users u
+          WHERE u.id = ${topContributors.userId}
+            AND (
+              u.status IN ('suspended', 'banned')
+              OR u.role IN ('admin', 'moderator', 'system')
+              OR u.hide_from_leaderboard = TRUE
+              OR LOWER(u.username) LIKE '%test%'
+              OR COALESCE(u.user_type, '') ILIKE '%indie_developer%'
+            )
+        )`
       ))
       .orderBy(desc(topContributors.achievedAt), desc(topContributors.totalPoints));
 
@@ -4147,7 +4193,17 @@ export class DatabaseStorage implements IStorage {
         eq(topContributors.periodType, periodType),
         eq(topContributors.period, period),
         eq(topContributors.year, year),
-        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${topContributors.userId} AND u.status IN ('suspended', 'banned'))`
+        sql`NOT EXISTS (
+          SELECT 1 FROM users u
+          WHERE u.id = ${topContributors.userId}
+            AND (
+              u.status IN ('suspended', 'banned')
+              OR u.role IN ('admin', 'moderator', 'system')
+              OR u.hide_from_leaderboard = TRUE
+              OR LOWER(u.username) LIKE '%test%'
+              OR COALESCE(u.user_type, '') ILIKE '%indie_developer%'
+            )
+        )`
       ))
       .orderBy(desc(topContributors.totalPoints));
 
@@ -4179,6 +4235,8 @@ export class DatabaseStorage implements IStorage {
       WHERE u.role NOT IN ('admin', 'moderator', 'system')
         AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
         AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+        AND LOWER(u.username) NOT LIKE '%test%'
+        AND COALESCE(u.user_type, '') NOT ILIKE '%indie_developer%'
       GROUP BY u.id, primary_wallet.address
       HAVING COALESCE(SUM(xh.xp_amount), 0) > 0
       ORDER BY "seasonPoints" DESC, u.id ASC

@@ -30,7 +30,7 @@ import { captureRouteError } from "./sentry";
 import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
 import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog } from "@shared/schema";
 import { hasIndieDeveloperAccess } from "@shared/partner-access";
-import { SEASON_DEFS } from "@shared/season-definitions";
+import { getPublicSeasonNumber, SEASON_DEFS } from "@shared/season-definitions";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -4117,6 +4117,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WHERE u.role NOT IN ('admin', 'moderator', 'system')
           AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
           AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+          AND LOWER(u.username) NOT LIKE '%test%'
+          AND COALESCE(u.user_type, '') NOT ILIKE '%indie_developer%'
         ORDER BY "weekXP" DESC, u.id ASC
         LIMIT ${limit}
       `);
@@ -4496,16 +4498,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Season history — top 3 per season, aggregated from authoritative XP history.
   app.get("/api/leaderboard/season-history", async (req, res) => {
     try {
-      // Seasons 4 and 3 have no usable historical data. Keep their internal
-      // IDs out of this public list and collapse the displayed numbering so
-      // the current and previous seasons read as 7 and 6.
-      const seasonHistoryDefs = SEASON_DEFS
-        .filter((season) => season.num >= 5)
-        .map((season) => ({ ...season, num: season.num - 2 }));
+      // Internal season IDs remain stable for payout-ledger compatibility.
+      // Public numbering starts at Season 1 for Autumn Assault 2025.
+      const seasonHistoryDefs = SEASON_DEFS.filter((season) => season.num >= 5);
 
       const seasons = await Promise.all(
-        seasonHistoryDefs.map(async (s) => {
-          const sourceSeason = SEASON_DEFS.find((season) => season.num === s.num + 2)!;
+        seasonHistoryDefs.map(async (sourceSeason) => {
           const [startYear, startMonth] = sourceSeason.months[0].split("-").map(Number);
           const lastMonth = sourceSeason.months[sourceSeason.months.length - 1];
           const [endYear, endMonth] = lastMonth.split("-").map(Number);
@@ -4529,6 +4527,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             WHERE u.role NOT IN ('admin', 'moderator', 'system')
               AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
               AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+              AND LOWER(u.username) NOT LIKE '%test%'
+              AND COALESCE(u.user_type, '') NOT ILIKE '%indie_developer%'
             GROUP BY u.id, u.username, u.display_name, u.avatar_url,
                      u.nft_profile_token_id, u.nft_profile_image_url, u.active_profile_pic_type
             HAVING SUM(xh.xp_amount) > 0
@@ -4560,7 +4560,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               },
             };
           }));
-          return { ...s, top3 };
+          return {
+            ...sourceSeason,
+            num: getPublicSeasonNumber(sourceSeason.num),
+            top3,
+          };
         })
       );
       res.json(seasons);
@@ -4611,6 +4615,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WHERE u.role NOT IN ('admin', 'moderator', 'system')
           AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
           AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+          AND LOWER(u.username) NOT LIKE '%test%'
+          AND COALESCE(u.user_type, '') NOT ILIKE '%indie_developer%'
         GROUP BY u.id, u.username, u.display_name, u.avatar_url,
                  u.banner_url, u.hide_banner, u.accent_color, u.level, u.background_color,
                  u.primary_color, u.profile_background_gradient, u.profile_background_gradient_css,
@@ -4761,6 +4767,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         WHERE role NOT IN ('admin', 'moderator', 'system')
           AND (status IS NULL OR status NOT IN ('suspended', 'banned'))
           AND (hide_from_leaderboard IS NULL OR hide_from_leaderboard = false)
+          AND LOWER(username) NOT LIKE '%test%'
+          AND COALESCE(user_type, '') NOT ILIKE '%indie_developer%'
       `);
       const count = Number((rows as any[])[0]?.count ?? 0);
       res.json({ count });
@@ -5241,6 +5249,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           WHERE u.role NOT IN ('admin', 'moderator', 'system')
             AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
             AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+            AND LOWER(u.username) NOT LIKE '%test%'
+            AND COALESCE(u.user_type, '') NOT ILIKE '%indie_developer%'
           GROUP BY u.id, u.username, u.display_name, u.avatar_url
         ),
         my_entry AS (
@@ -5358,6 +5368,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           WHERE u.role NOT IN ('admin', 'moderator', 'system')
             AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
             AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+            AND LOWER(u.username) NOT LIKE '%test%'
+            AND COALESCE(u.user_type, '') NOT ILIKE '%indie_developer%'
           GROUP BY u.id
         )
         SELECT
