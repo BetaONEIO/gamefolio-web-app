@@ -109,12 +109,12 @@ function getLeagueFromEntry(tiers: LeagueConfigTier[], totalPoints: number, rank
   return { ...current, ...getLeagueStyle(current.name) };
 }
 
-// Mirrors server SEASON_DEFS — update when a new season begins
+// Mirrors the current entry in server SEASON_DEFS.
 const CURRENT_SEASON = {
-  num: 8,
-  name: "Summer Showdown",
-  startDate: new Date("2026-06-01T00:00:00"),
-  endDate:   new Date("2026-08-31T23:59:59"),
+  num: 9,
+  name: "Autumn Assault",
+  startDate: new Date("2026-09-01T00:00:00"),
+  endDate:   new Date("2026-11-30T23:59:59"),
 };
 
 function getSeasonInfo() {
@@ -1392,7 +1392,7 @@ function SeasonCategories() {
         <Star className="w-5 h-5 text-[#B7FF1A]" />
         <h2 className="text-xl font-black text-white">Season Awards</h2>
         <span className="text-[10px] font-bold text-[#B7FF1A] bg-[#B7FF1A]/10 border border-[#B7FF1A]/20 px-2 py-0.5 rounded-full ml-1">
-          SEASON 01
+          SEASON 09
         </span>
       </div>
       <p className="text-slate-500 text-xs mb-4 ml-7">
@@ -1597,7 +1597,7 @@ export default function LeaderboardPage() {
       {/* Season info bar — below the banner image */}
       <SeasonInfoBar playerCount={playerCount} />
 
-      {/* ── Live Leaderboard — directly under Summer Showdown ── */}
+      {/* ── Live Leaderboard — directly under the current season ── */}
       <div id="current-season" className="w-full border-b border-white/5 pt-0 pb-6 scroll-mt-4">
         <LiveLeaderboard userId={user?.id} />
       </div>
