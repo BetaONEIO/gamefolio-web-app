@@ -1,5 +1,8 @@
 import { storage } from "./storage";
 import { InsertUserPointsHistory, InsertWeeklyLeaderboard, InsertTopContributor } from "@shared/schema";
+import { LEADERBOARD_REWARDS, getProjectedGftReward } from "@shared/leaderboard-rewards";
+import { SEASON_DEFS } from "@shared/season-definitions";
+import { transferGfTokens } from "./gf-token-service";
 
 // Point values for different actions
 // Points are used for BOTH leaderboards AND leveling
@@ -520,8 +523,101 @@ export class LeaderboardService {
         
         await this.storeTopContributors('monthly', monthKey, year);
       }
+
+      await this.processSeasonGftRewardPayouts(now);
     } catch (error) {
       console.error('Error processing periodic leaderboard closures:', error);
+    }
+  }
+
+  // Send the previous season's projected Top 10 rewards once its final XP
+  // window has closed. Each rank is persisted before transfer so repeated
+  // closure checks cannot create duplicate payouts.
+  static async processSeasonGftRewardPayouts(now: Date = new Date()): Promise<void> {
+    // Never send live token transfers from the development preview. Production
+    // publishing is the explicit activation point for the treasury payout job.
+    if (process.env.NODE_ENV !== "production") {
+      return;
+    }
+
+    const currentSeason = SEASON_DEFS[0];
+    const previousSeason = SEASON_DEFS.find((season) => season.num === currentSeason.num - 1);
+    if (!previousSeason || !process.env.TREASURY_PRIVATE_KEY) {
+      return;
+    }
+
+    const [startYear, startMonth] = previousSeason.months[0].split("-").map(Number);
+    const lastMonth = previousSeason.months[previousSeason.months.length - 1];
+    const [endYear, endMonth] = lastMonth.split("-").map(Number);
+    const seasonStart = new Date(Date.UTC(startYear, startMonth - 1, 1));
+    const seasonEnd = new Date(Date.UTC(endYear, endMonth, 1));
+
+    // Do not pay until the full season window has elapsed. This also makes
+    // the Season 8 backfill happen now that Season 9 has started.
+    if (now < seasonEnd) {
+      return;
+    }
+
+    const entries = await storage.getSeasonLeaderboardForRewards(
+      seasonStart,
+      seasonEnd,
+      LEADERBOARD_REWARDS.payouts.length,
+    );
+
+    for (const entry of entries) {
+      const amount = getProjectedGftReward(entry.rank);
+      if (amount === null) continue;
+
+      const walletAddress = entry.walletAddress?.trim() || null;
+      const createdPayout = await storage.createLeaderboardRewardPayoutIfAbsent({
+        seasonNumber: previousSeason.num,
+        rank: entry.rank,
+        userId: entry.userId,
+        amount,
+        walletAddress,
+        status: walletAddress ? "pending" : "skipped_no_wallet",
+        txHash: null,
+        errorMessage: null,
+      });
+
+      let payout = createdPayout;
+      if (!payout) {
+        payout = await storage.getLeaderboardRewardPayoutBySeasonRank(
+          previousSeason.num,
+          entry.rank,
+        );
+      }
+
+      if (!payout || !walletAddress || payout.status === "skipped_no_wallet" || payout.status === "paid") {
+        continue;
+      }
+
+      const claimedPayout = await storage.claimLeaderboardRewardPayout(payout.id, now);
+      if (!claimedPayout) {
+        continue;
+      }
+
+      const transfer = await transferGfTokens(walletAddress, amount);
+      await storage.updateLeaderboardRewardPayout(claimedPayout.id, {
+        status: transfer.success ? "paid" : "failed",
+        txHash: transfer.txHash ?? null,
+        errorMessage: transfer.error ?? null,
+        retryable: transfer.success ? false : Boolean(transfer.retryable),
+        nextRetryAt: transfer.success || !transfer.retryable
+          ? null
+          : new Date(now.getTime() + 6 * 60 * 60 * 1000),
+        paidAt: transfer.success ? new Date() : null,
+      });
+
+      if (transfer.success) {
+        console.log(
+          `[Season Rewards] Season ${previousSeason.num} rank ${entry.rank} paid ${amount} GFT to wallet ${walletAddress}`,
+        );
+      } else {
+        console.error(
+          `[Season Rewards] Season ${previousSeason.num} rank ${entry.rank} payout failed: ${transfer.error ?? "unknown error"}`,
+        );
+      }
     }
   }
 

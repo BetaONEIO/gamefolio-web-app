@@ -1276,6 +1276,9 @@ function SeasonRewards() {
               <p className="mt-1 text-xs text-slate-400">
                 Finish higher to claim a larger share of the {LEADERBOARD_REWARDS.prizePool.toLocaleString("en-US")} GFT pool.
               </p>
+              <p className="mt-1 text-[10px] text-slate-500">
+                Projected rewards are sent on-chain at season close to eligible linked wallets.
+              </p>
             </div>
             <span className="text-sm font-black text-[#B7FF1A]">
               {LEADERBOARD_REWARDS.payouts.length} paid positions

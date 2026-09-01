@@ -1382,6 +1382,10 @@ export const leaderboardRewardPayouts = pgTable("leaderboard_reward_payouts", {
   status: text("status").notNull().default("pending"), // pending, paid, skipped_no_wallet, failed
   txHash: text("tx_hash"),
   errorMessage: text("error_message"),
+  retryable: boolean("retryable").notNull().default(false),
+  attempts: integer("attempts").notNull().default(0),
+  lastAttemptAt: timestamp("last_attempt_at"),
+  nextRetryAt: timestamp("next_retry_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   paidAt: timestamp("paid_at"),
 }, (table) => ({
