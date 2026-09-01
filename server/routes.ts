@@ -4493,30 +4493,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Season history — top 3 per season, aggregated from monthly_leaderboard
+  // Season history — top 3 per season, aggregated from authoritative XP history.
   app.get("/api/leaderboard/season-history", async (req, res) => {
     try {
+      // Seasons 4 and 3 have no usable historical data. Keep their internal
+      // IDs out of this public list and collapse the displayed numbering so
+      // the current and previous seasons read as 7 and 6.
+      const seasonHistoryDefs = SEASON_DEFS
+        .filter((season) => season.num >= 5)
+        .map((season) => ({ ...season, num: season.num - 2 }));
+
       const seasons = await Promise.all(
-        SEASON_DEFS.map(async (s) => {
+        seasonHistoryDefs.map(async (s) => {
+          const sourceSeason = SEASON_DEFS.find((season) => season.num === s.num + 2)!;
+          const [startYear, startMonth] = sourceSeason.months[0].split("-").map(Number);
+          const lastMonth = sourceSeason.months[sourceSeason.months.length - 1];
+          const [endYear, endMonth] = lastMonth.split("-").map(Number);
+          const seasonStart = new Date(Date.UTC(startYear, startMonth - 1, 1)).toISOString();
+          const seasonEnd = new Date(Date.UTC(endYear, endMonth, 1)).toISOString();
+
           const rows = await db.execute(sql`
             SELECT
-              ml.user_id                         AS "userId",
-              SUM(ml.total_points)               AS "seasonPoints",
+              u.id                               AS "userId",
+              SUM(xh.xp_amount)                  AS "seasonPoints",
               u.username,
               u.display_name                     AS "displayName",
               u.avatar_url                       AS "avatarUrl",
               u.nft_profile_token_id             AS "nftProfileTokenId",
               u.nft_profile_image_url            AS "nftProfileImageUrl",
               u.active_profile_pic_type          AS "activeProfilePicType"
-            FROM monthly_leaderboard ml
-            JOIN users u ON u.id = ml.user_id
-            WHERE ml.month = ANY(ARRAY[${sql.join(s.months.map(m => sql`${m}`), sql`, `)}])
-              AND u.role NOT IN ('admin', 'moderator', 'system')
+            FROM users u
+            JOIN user_xp_history xh ON xh.user_id = u.id
+              AND xh.created_at >= ${seasonStart}
+              AND xh.created_at < ${seasonEnd}
+            WHERE u.role NOT IN ('admin', 'moderator', 'system')
               AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
               AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
-            GROUP BY ml.user_id, u.username, u.display_name, u.avatar_url,
+            GROUP BY u.id, u.username, u.display_name, u.avatar_url,
                      u.nft_profile_token_id, u.nft_profile_image_url, u.active_profile_pic_type
-            ORDER BY "seasonPoints" DESC
+            HAVING SUM(xh.xp_amount) > 0
+            ORDER BY "seasonPoints" DESC, u.id ASC
             LIMIT 3
           `);
           const top3 = await Promise.all((rows as any[]).map(async (r, idx) => {

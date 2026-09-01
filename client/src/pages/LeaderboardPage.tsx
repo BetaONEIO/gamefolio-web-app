@@ -110,9 +110,9 @@ function getLeagueFromEntry(tiers: LeagueConfigTier[], totalPoints: number, rank
   return { ...current, ...getLeagueStyle(current.name) };
 }
 
-// Mirrors the current entry in server SEASON_DEFS.
+// Public season numbering excludes the two historical seasons with no usable data.
 const CURRENT_SEASON = {
-  num: 9,
+  num: 7,
   name: "Autumn Assault",
   startDate: new Date("2026-09-01T00:00:00"),
   endDate:   new Date("2026-11-30T23:59:59"),
@@ -1417,9 +1417,14 @@ function HallOfChampions() {
                                 style={{ filter: `drop-shadow(0 1px 3px rgba(0,0,0,0.8))` }}
                               />
                             </div>
-                            <span className="text-sm font-semibold text-white/90 truncate group-hover:text-white transition-colors">
-                              {p.user.displayName || p.user.username}
-                            </span>
+                            <div className="min-w-0">
+                              <span className="block text-sm font-semibold text-white/90 truncate group-hover:text-white transition-colors">
+                                {p.user.displayName || p.user.username}
+                              </span>
+                              <span className="block text-[10px] font-bold text-[#B7FF1A]/80 tracking-wide">
+                                {p.seasonPoints.toLocaleString("en-US")} XP
+                              </span>
+                            </div>
                           </div>
                         </Link>
                       );
