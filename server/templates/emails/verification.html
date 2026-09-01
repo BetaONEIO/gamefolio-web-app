@@ -22,7 +22,10 @@
       }
       .header img {
         width: 100%;
+         max-width: 600px;
+         height: auto;
         display: block;
+         border: 0;
       }
       .header-fallback {
         display: none;
@@ -72,6 +75,7 @@
       <!-- Primary image with fallback -->
       <div class="header">
          <img src="{{siteUrl}}/attached_assets/gamefolio-verification-banner.png" alt="Gamefolio"
+              width="600" style="display:block; width:100%; max-width:600px; height:auto; border:0;"
              onerror="this.style.display='none'; document.querySelector('.header-fallback').style.display='block';">
         <div class="header-fallback">
           <h1>Gamefolio</h1>
