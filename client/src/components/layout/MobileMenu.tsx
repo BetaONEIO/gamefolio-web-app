@@ -468,16 +468,18 @@ const MobileMenu = () => {
                       <span>Account Settings</span>
                     </Link>
                   </li>
-                  <li>
-                    <Link
-                      href="/settings/profile"
-                      onClick={handleClose}
-                      className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
-                    >
-                      <GamefolioProfileSettingsIcon className="mr-3 h-5 w-5 opacity-70 group-hover:opacity-100 group-hover:text-[#071013]" />
-                      <span>Profile Settings</span>
-                    </Link>
-                  </li>
+                  {!(user.isPartner && user.partnerType === "indie") && (
+                    <li>
+                      <Link
+                        href="/settings/profile"
+                        onClick={handleClose}
+                        className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
+                      >
+                        <GamefolioProfileSettingsIcon className="mr-3 h-5 w-5 opacity-70 group-hover:opacity-100 group-hover:text-[#071013]" />
+                        <span>Profile &amp; Appearance</span>
+                      </Link>
+                    </li>
+                  )}
                 </ul>
               </>
             )}
