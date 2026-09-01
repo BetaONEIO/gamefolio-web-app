@@ -97,6 +97,7 @@ import {
   commentMentions,
   nameTags,
   userUnlockedNameTags,
+  userWallets,
   profileBorders,
   userUnlockedBorders,
   verificationBadges,
@@ -4179,6 +4180,7 @@ export class DatabaseStorage implements IStorage {
         AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
         AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
       GROUP BY u.id, primary_wallet.address
+      HAVING COALESCE(SUM(xh.xp_amount), 0) > 0
       ORDER BY "seasonPoints" DESC, u.id ASC
       LIMIT ${limit}
     `);
@@ -4202,6 +4204,54 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return created ?? null;
+  }
+
+  async getLeaderboardRewardPayoutBySeasonRank(
+    seasonNumber: number,
+    rank: number,
+  ): Promise<LeaderboardRewardPayout | null> {
+    const [payout] = await db
+      .select()
+      .from(leaderboardRewardPayouts)
+      .where(and(
+        eq(leaderboardRewardPayouts.seasonNumber, seasonNumber),
+        eq(leaderboardRewardPayouts.rank, rank),
+      ))
+      .limit(1);
+    return payout ?? null;
+  }
+
+  async claimLeaderboardRewardPayout(
+    id: string,
+    now: Date,
+  ): Promise<LeaderboardRewardPayout | null> {
+    const [claimed] = await db
+      .update(leaderboardRewardPayouts)
+      .set({
+        status: "pending",
+        attempts: sql`${leaderboardRewardPayouts.attempts} + 1`,
+        lastAttemptAt: now,
+        nextRetryAt: null,
+      })
+      .where(and(
+        eq(leaderboardRewardPayouts.id, id),
+        or(
+          and(
+            eq(leaderboardRewardPayouts.status, "pending"),
+            eq(leaderboardRewardPayouts.attempts, 0),
+          ),
+          and(
+            eq(leaderboardRewardPayouts.status, "failed"),
+            eq(leaderboardRewardPayouts.retryable, true),
+            or(
+              isNull(leaderboardRewardPayouts.nextRetryAt),
+              lte(leaderboardRewardPayouts.nextRetryAt, now),
+            ),
+          ),
+        ),
+      ))
+      .returning();
+    return claimed ?? null;
   }
 
   async updateLeaderboardRewardPayout(

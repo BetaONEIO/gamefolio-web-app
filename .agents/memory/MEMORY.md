@@ -33,3 +33,4 @@
 - [Raw analytics timestamp binding](raw-analytics-timestamp-binding.md) — raw Drizzle db.execute queries in this project must bind ISO timestamp strings, not JavaScript Date objects.
 - [Public indie game identity](public-indie-game-identity.md) — public game slugs resolve developer profiles through catalogue game IDs, never by treating the slug as a username.
 - [Daily reward session hydration](daily-reward-session-hydration.md) — guarded daily claims must run on authenticated session hydration, not only explicit login, including apps left open overnight.
+- [Season GFT payouts](season-gft-payouts.md) — production-only rank payouts use an idempotent ledger; submitted transactions require manual reconciliation before retry.

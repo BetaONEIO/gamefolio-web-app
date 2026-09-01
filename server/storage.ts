@@ -301,6 +301,8 @@ export interface IStorage {
     walletAddress: string | null;
   }>>;
   createLeaderboardRewardPayoutIfAbsent(payout: InsertLeaderboardRewardPayout): Promise<LeaderboardRewardPayout | null>;
+  getLeaderboardRewardPayoutBySeasonRank(seasonNumber: number, rank: number): Promise<LeaderboardRewardPayout | null>;
+  claimLeaderboardRewardPayout(id: string, now: Date): Promise<LeaderboardRewardPayout | null>;
   updateLeaderboardRewardPayout(id: string, updates: Partial<LeaderboardRewardPayout>): Promise<LeaderboardRewardPayout | null>;
 
   // XP operations (legacy - kept for backward compatibility, totalXP now stores points)
