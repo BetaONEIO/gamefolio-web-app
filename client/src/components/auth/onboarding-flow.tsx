@@ -36,8 +36,6 @@ import imgIndieGame from "@assets/indie-game_1780953921840.png";
 import imgGamefolioCard from "@assets/image_1780751936689.png";
 import imgIndieSocket from "@assets/-1Plug_1780932573098.png";
 import imgIndiePlug from "@assets/gf-plug_1780932928172.png";
-import imgBountyBg from "@assets/image_1780752103152.png";
-import imgGFBag from "@assets/image_1780752169383.png";
 import imgLaunchButton from "@assets/LAUNCH-BUTTON_(1)_1780950145274.png";
 import imgHandPixel from "@assets/hand-pixel_1780949461463.png";
 import imgProgression from "@assets/image_1780755222420.png";
@@ -170,7 +168,6 @@ enum OnboardingStep {
   ChoosePath = 1,  // Choose path (Gamer / Streamer / Indie) — happens right after Welcome
   Intro1 = 2,      // Path-specific intro screen 1
   Intro2 = 3,      // Path-specific intro screen 2
-  Intro3 = 4,      // Path-specific intro screen 3
   Username = 5,    // Google users only
   Games = 6,       // Choose Favourite Games (gamer path only)
   Avatar = 7,      // Profile picture
@@ -268,7 +265,7 @@ interface OnboardingStepIndicatorProps {
 function OnboardingStepIndicator({ currentStep, isGoogleUser, selectedPath }: OnboardingStepIndicatorProps) {
   const phases = [
     { label: "Path",    from: OnboardingStep.Welcome,    to: OnboardingStep.ChoosePath },
-    { label: "Intro",   from: OnboardingStep.Intro1,     to: OnboardingStep.Intro3 },
+    { label: "Intro",   from: OnboardingStep.Intro1,     to: OnboardingStep.Intro2 },
     { label: "Profile", from: OnboardingStep.Username,   to: OnboardingStep.Avatar },
     { label: "Setup",   from: OnboardingStep.PathSetup,  to: OnboardingStep.PathSetup },
     { label: "Wallet",  from: OnboardingStep.Wallet,     to: OnboardingStep.Wallet },
@@ -684,8 +681,7 @@ export default function OnboardingFlow({
       case OnboardingStep.Welcome:    return OnboardingStep.ChoosePath;
       case OnboardingStep.ChoosePath: return OnboardingStep.Intro1;
       case OnboardingStep.Intro1:     return OnboardingStep.Intro2;
-      case OnboardingStep.Intro2:     return OnboardingStep.Intro3;
-      case OnboardingStep.Intro3:     return isGoogleUser ? OnboardingStep.Username : (selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar);
+      case OnboardingStep.Intro2:     return isGoogleUser ? OnboardingStep.Username : (selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar);
       case OnboardingStep.Username:   return selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar;
       case OnboardingStep.Games:      return OnboardingStep.Avatar;
       case OnboardingStep.Avatar:     return OnboardingStep.PathSetup;
@@ -1203,7 +1199,7 @@ export default function OnboardingFlow({
             </div>
             <div className="mt-auto flex-shrink-0 relative z-10 px-6 pt-5 pb-6">
               <div className="flex items-center gap-2 justify-center mb-5">
-                {[0,1,2].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===0?'20px':'6px', height:'6px', background: i===0?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===0?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
+                {[0,1].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===0?'20px':'6px', height:'6px', background: i===0?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===0?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
               </div>
               <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:'clamp(24px,6vw,30px)', letterSpacing:'-0.9px', color:'#fff' }}>
                 {i1.titleA} <span style={{ color:'#c1ff00' }}>{i1.titleB}</span>
@@ -1311,45 +1307,12 @@ export default function OnboardingFlow({
             </div>
             <div className="mt-auto flex-shrink-0 relative z-10 px-6 pt-5 pb-6">
               <div className="flex items-center gap-2 justify-center mb-5">
-                {[0,1,2].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===1?'20px':'6px', height:'6px', background: i===1?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===1?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
+                {[0,1].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===1?'20px':'6px', height:'6px', background: i===1?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===1?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
               </div>
               <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:'clamp(24px,6vw,30px)', letterSpacing:'-0.9px', color:'#fff' }}>
                 {i2.titleA} <span style={{ color:'#c1ff00' }}>{i2.titleB}</span>
               </h2>
               <p className="text-center mb-5" style={{ fontFamily:"'Outfit',sans-serif", fontWeight:400, fontSize:'14px', lineHeight:'20px', color:'#94A3B8', minHeight:'60px', display:'flex', alignItems:'center', justifyContent:'center' }}>{i2.sub}</p>
-              <div className="flex items-center gap-3">
-                <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 font-bold" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:'15px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
-                  Continue
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      // ── STEP 4: PATH-SPECIFIC INTRO 3 ─────────────────────────────────────
-      case OnboardingStep.Intro3: {
-        const i3 = selectedPath === 'streamer'
-          ? { titleA: 'UNLOCK CREATOR', titleB: 'OPPORTUNITIES', sub: 'Earn rewards, join creator campaigns, get featured on the homepage and connect your Twitch, Kick and VPZone channels.' }
-          : selectedPath === 'indie'
-          ? { titleA: 'LAUNCH', titleB: 'BOUNTIES', sub: 'Run creator campaigns, offer game keys, and reward players with bounty challenges.' }
-          : { titleA: 'EARN', titleB: 'REWARDS', sub: 'Complete daily bounties, join creator challenges, and earn GFT to unlock exclusive legendary gear.' };
-        return (
-          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-background overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
-            <div className="flex-1 min-h-[240px] sm:min-h-[300px] relative flex items-center justify-center">
-              <img src={imgBountyBg} alt="" aria-hidden draggable={false} className="absolute inset-0 w-full h-full object-cover select-none" style={{ opacity: 0.55 }} />
-              <div className="absolute inset-x-0 top-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to bottom, var(--gf-background), transparent)' }} />
-              <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none" style={{ background: 'linear-gradient(to top, var(--gf-background), transparent)' }} />
-              <img src={imgGFBag} alt="GF Token bag" draggable={false} className="ob-float relative z-10 select-none" style={{ height:'85%', width:'auto', objectFit:'contain', animationDuration:'4s', filter:'drop-shadow(0 0 40px rgba(193,255,0,0.35))' }} />
-            </div>
-            <div className="mt-auto flex-shrink-0 relative z-10 px-6 pt-5 pb-6">
-              <div className="flex items-center gap-2 justify-center mb-5">
-                {[0,1,2].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===2?'20px':'6px', height:'6px', background: i===2?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===2?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
-              </div>
-              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:'clamp(24px,6vw,30px)', letterSpacing:'-0.9px', color:'#fff' }}>
-                {i3.titleA} <span style={{ color:'#c1ff00' }}>{i3.titleB}</span>
-              </h2>
-              <p className="text-center mb-5" style={{ fontFamily:"'Outfit',sans-serif", fontWeight:400, fontSize:'14px', lineHeight:'20px', color:'#94A3B8', minHeight:'60px', display:'flex', alignItems:'center', justifyContent:'center' }}>{i3.sub}</p>
               <div className="flex items-center gap-3">
                 <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 font-bold" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:'15px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
                   Continue
@@ -2482,7 +2445,7 @@ export default function OnboardingFlow({
     }
   };
 
-  const isIntroStep = currentStep <= OnboardingStep.Intro3;
+  const isIntroStep = currentStep <= OnboardingStep.Intro2;
 
   return (
     <div
