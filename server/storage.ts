@@ -1,6 +1,6 @@
 import {
   users, games, clips, likes, comments, userGameFavorites, follows, messages, profileBanners,
-  monthlyLeaderboard, weeklyLeaderboard, topContributors, userPointsHistory, userXPHistory, notifications, userBadges, contentFilterSettings, bannedWords,
+  monthlyLeaderboard, weeklyLeaderboard, topContributors, leaderboardRewardPayouts, userPointsHistory, userXPHistory, notifications, userBadges, contentFilterSettings, bannedWords,
   heroTextSettings, bannerSettings, uploadedBanners, clipMentions, commentMentions, screenshotCommentMentions, nftWatchlist, bookmarks, assetRewards, assetRewardClaims,
   proLootboxGrants, nameTags, userUnlockedNameTags, userDailyFires, profileBorders, userUnlockedBorders, verificationBadges, userUnlockedVerificationBadges, xpSettings,
   type User, type InsertUser,
@@ -16,6 +16,7 @@ import {
   type MonthlyLeaderboard, type InsertMonthlyLeaderboard,
   type WeeklyLeaderboard, type InsertWeeklyLeaderboard,
   type TopContributor, type InsertTopContributor,
+  type LeaderboardRewardPayout, type InsertLeaderboardRewardPayout,
   type UserPointsHistory, type InsertUserPointsHistory,
   type UserXPHistory, type InsertUserXPHistory,
   type Notification, type InsertNotification,
@@ -293,6 +294,14 @@ export interface IStorage {
   getTopContributors(periodType: string, limit?: number): Promise<(TopContributor & { user: User })[]>;
   getTopContributorByPeriod(periodType: string, period: string, year: number): Promise<TopContributor | null>;
   getTopContributorsByPeriod(periodType: string, period: string, year: number): Promise<(TopContributor & { user: User })[]>;
+  getSeasonLeaderboardForRewards(start: Date, end: Date, limit: number): Promise<Array<{
+    userId: number;
+    rank: number;
+    seasonPoints: number;
+    walletAddress: string | null;
+  }>>;
+  createLeaderboardRewardPayoutIfAbsent(payout: InsertLeaderboardRewardPayout): Promise<LeaderboardRewardPayout | null>;
+  updateLeaderboardRewardPayout(id: string, updates: Partial<LeaderboardRewardPayout>): Promise<LeaderboardRewardPayout | null>;
 
   // XP operations (legacy - kept for backward compatibility, totalXP now stores points)
   addUserXPHistory(xpHistory: InsertUserXPHistory): Promise<UserXPHistory>;

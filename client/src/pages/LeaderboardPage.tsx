@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { CreatorCard } from "@/components/home/CreatorCard";
 import { TrendingEntry, CREATOR_CARD_STYLES } from "@/components/home/creator-card-utils";
+import { formatGftReward, getProjectedGftReward, LEADERBOARD_REWARDS } from "@shared/leaderboard-rewards";
 import goldBannerImg from "@assets/goldr-flat-banner-_1783016208886.png";
 import silverBannerImg from "@assets/silver-flat-banne-_1783016206432.png";
 import bronzeBannerImg from "@assets/bronze-flat-banner_(1)_1783016211069.png";
@@ -547,6 +548,21 @@ function SeasonInfoBar({ playerCount }: { playerCount: number }) {
         </div>
       </div>
 
+      {/* Prize pool — prominent before the live leaderboard */}
+      <div className="mx-auto mb-6 max-w-md rounded-2xl border border-[#FFD700]/40 bg-gradient-to-br from-[#FFD700]/15 via-[#B7FF1A]/8 to-transparent px-5 py-4 shadow-[0_0_32px_rgba(255,215,0,0.12)]">
+        <div className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-[#FFD700]">
+          <Trophy className="h-4 w-4" />
+          <span>Top 10 Projected Rewards</span>
+        </div>
+        <div className="mt-1 text-3xl font-black tracking-tight text-white sm:text-4xl">
+          {LEADERBOARD_REWARDS.prizePool.toLocaleString("en-US")}{" "}
+          <span className="text-[#B7FF1A]">GFT</span>
+        </div>
+        <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+          Earn your share by finishing in the Top 10
+        </p>
+      </div>
+
       {/* Stats */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-sm">
         <div className="flex items-center gap-2 text-slate-400 text-center">
@@ -555,7 +571,7 @@ function SeasonInfoBar({ playerCount }: { playerCount: number }) {
         </div>
         <div className="flex items-center gap-2 text-slate-400 text-center">
           <Trophy className="w-4 h-4 text-[#FFD700]" />
-          <span><strong className="text-white">20,000</strong> GFT Prize Pool</span>
+          <span><strong className="text-white">{LEADERBOARD_REWARDS.prizePool.toLocaleString("en-US")}</strong> GFT Prize Pool</span>
         </div>
       </div>
     </div>
@@ -824,9 +840,10 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
     >
       <div className="flex items-start gap-2 sm:gap-3 min-w-max px-4 pb-1" style={{ paddingTop: isCompact ? 20 : 32 }}>
         {entries.map((entry, i) => {
-          const rank   = i + 1;
+          const rank   = entry.rank || i + 1;
           const isMe   = entry.userId === userId;
           const isTop3 = rank <= 3;
+          const projectedReward = getProjectedGftReward(rank);
           const pct    = entry.totalPoints / maxPts;
           const barH   = Math.max(Math.round(pct * MAX_BAR_H), 14);
           const isTop10Chrome = rank >= 4 && rank <= 10;
@@ -945,13 +962,26 @@ function XPBarChart({ entries, userId }: { entries: LeaderboardEntry[]; userId?:
                     : entry.user.displayName}
                 </span>
 
-                {/* Rank */}
-                <span
-                  className="text-[9px] font-black leading-none"
-                  style={{ color: isTop3 ? BAR_RANK_COLORS[rank].badge : "#B7FF1A" }}
-                >
-                  #{rank}
-                </span>
+                {/* Rank + projected reward */}
+                <div className="flex flex-col items-center gap-1">
+                  <span
+                    className="text-[9px] font-black leading-none"
+                    style={{ color: isTop3 ? BAR_RANK_COLORS[rank].badge : "#B7FF1A" }}
+                  >
+                    #{rank}
+                  </span>
+                  {projectedReward !== null && (
+                    <span
+                      className={`rounded-full border px-1.5 py-0.5 text-[8px] font-black leading-none tracking-tight ${
+                        isTop3
+                          ? "border-white/25 bg-white/10 text-white"
+                          : "border-[#B7FF1A]/25 bg-[#B7FF1A]/10 text-[#B7FF1A]"
+                      }`}
+                    >
+                      {formatGftReward(projectedReward)}
+                    </span>
+                  )}
+                </div>
               </div>
             </Link>
           );
@@ -1072,7 +1102,12 @@ function LiveLeaderboard({ userId }: { userId?: number }) {
             </span>
             <span className="text-[10px] text-white/30 font-mono">updated {lastUpdatedLabel}</span>
           </div>
-          <span className="text-xs text-slate-500 mt-0.5 lb-mobile-subtitle">{tabSubtitle[tab]}</span>
+           <span className="text-xs text-slate-500 mt-0.5 lb-mobile-subtitle">{tabSubtitle[tab]}</span>
+           {tab === "season" && (
+             <span className="text-[10px] font-black uppercase tracking-wider text-[#FFD700]">
+               Top 10 pays out {LEADERBOARD_REWARDS.prizePool.toLocaleString("en-US")} GFT
+             </span>
+           )}
           {usingFallback && (
             <span className="text-[10px] bg-[#B7FF1A]/10 text-[#B7FF1A]/70 border border-[#B7FF1A]/20 px-2 py-0.5 rounded-full">
               showing last month
@@ -1223,22 +1258,48 @@ function SeasonRewards() {
     <section className="px-4 mb-8">
       <div className="flex items-center gap-2 mb-4">
         <Medal className="w-5 h-5 text-[#B7FF1A]" />
-        <h2 className="text-xl font-black text-white">Season Rewards & Awards</h2>
+        <h2 className="text-xl font-black text-white">Top 10 GFT Rewards</h2>
       </div>
-      <div className="relative rounded-2xl border border-white/10 bg-[#0d1520] overflow-hidden" style={{ minHeight: 180 }}>
-        {/* Background image — blurred */}
+      <div className="relative rounded-2xl border border-[#FFD700]/20 bg-[#0d1520] overflow-hidden p-4 sm:p-5">
         <img
           src={imgLootboxBanner}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ filter: "blur(18px) brightness(0.45)", transform: "scale(1.1)" }}
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-10"
+          style={{ filter: "blur(18px)", transform: "scale(1.1)" }}
         />
-        {/* Darkening overlay */}
-        <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.35)" }} />
-        {/* Center text */}
-        <div className="relative z-10 flex flex-col items-center justify-center py-12 px-6">
-          <span className="text-lg font-black text-white/90 tracking-widest uppercase">Revealing soon</span>
-          <span className="text-xs text-slate-500 mt-1.5">Check back at the end of the season</span>
+        <div className="relative z-10">
+          <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FFD700]">
+                Projected at season close
+              </span>
+              <p className="mt-1 text-xs text-slate-400">
+                Finish higher to claim a larger share of the {LEADERBOARD_REWARDS.prizePool.toLocaleString("en-US")} GFT pool.
+              </p>
+            </div>
+            <span className="text-sm font-black text-[#B7FF1A]">
+              {LEADERBOARD_REWARDS.payouts.length} paid positions
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+            {LEADERBOARD_REWARDS.payouts.map(({ rank, amount }) => {
+              const rankColor = rank === 1 ? "#FFD700" : rank === 2 ? "#C0C0C0" : rank === 3 ? "#CD7F32" : "#B7FF1A";
+              const isTop3 = rank <= 3;
+              return (
+                <div
+                  key={rank}
+                  className={`rounded-xl border px-3 py-2.5 ${isTop3 ? "bg-white/[0.08]" : "bg-black/20"}`}
+                  style={{ borderColor: `${rankColor}${isTop3 ? "66" : "30"}` }}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-black" style={{ color: rankColor }}>#{rank}</span>
+                    {isTop3 && <span className="text-[9px] uppercase tracking-wider text-slate-500">Podium</span>}
+                  </div>
+                  <div className="mt-1 text-sm font-black text-white">{formatGftReward(amount)}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>
