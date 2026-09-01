@@ -4509,11 +4509,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const [endYear, endMonth] = lastMonth.split("-").map(Number);
           const seasonStart = new Date(Date.UTC(startYear, startMonth - 1, 1)).toISOString();
           const seasonEnd = new Date(Date.UTC(endYear, endMonth, 1)).toISOString();
+          const isCurrentSeason = sourceSeason.num === SEASON_DEFS[0].num;
+          const xpJoin = isCurrentSeason
+            ? sql`LEFT JOIN user_xp_history xh ON xh.user_id = u.id
+                AND xh.created_at >= ${seasonStart}
+                AND xh.created_at < ${seasonEnd}`
+            : sql`JOIN user_xp_history xh ON xh.user_id = u.id
+                AND xh.created_at >= ${seasonStart}
+                AND xh.created_at < ${seasonEnd}`;
+          const positiveSeasonXp = isCurrentSeason ? sql`` : sql`HAVING SUM(xh.xp_amount) > 0`;
 
           const rows = await db.execute(sql`
             SELECT
               u.id                               AS "userId",
-              SUM(xh.xp_amount)                  AS "seasonPoints",
+              COALESCE(SUM(xh.xp_amount), 0)      AS "seasonPoints",
               u.username,
               u.display_name                     AS "displayName",
               u.avatar_url                       AS "avatarUrl",
@@ -4521,9 +4530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               u.nft_profile_image_url            AS "nftProfileImageUrl",
               u.active_profile_pic_type          AS "activeProfilePicType"
             FROM users u
-            JOIN user_xp_history xh ON xh.user_id = u.id
-              AND xh.created_at >= ${seasonStart}
-              AND xh.created_at < ${seasonEnd}
+            ${xpJoin}
             WHERE u.role NOT IN ('admin', 'moderator', 'system')
               AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
               AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
@@ -4531,7 +4538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               AND COALESCE(u.user_type, '') NOT ILIKE '%indie_developer%'
             GROUP BY u.id, u.username, u.display_name, u.avatar_url,
                      u.nft_profile_token_id, u.nft_profile_image_url, u.active_profile_pic_type
-            HAVING SUM(xh.xp_amount) > 0
+            ${positiveSeasonXp}
             ORDER BY "seasonPoints" DESC, u.id ASC
             LIMIT 3
           `);
@@ -4563,6 +4570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return {
             ...sourceSeason,
             num: getPublicSeasonNumber(sourceSeason.num),
+            inProgress: isCurrentSeason,
             top3,
           };
         })

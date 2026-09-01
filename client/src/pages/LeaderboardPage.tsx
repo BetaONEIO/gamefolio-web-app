@@ -1318,6 +1318,7 @@ interface SeasonEntry {
   icon: string;
   dateRange: string;
   months: string[];
+  inProgress?: boolean;
   top3: {
     rank: number;
     userId: number;
@@ -1396,7 +1397,12 @@ function HallOfChampions() {
                     </span>
                   </div>
                   <div className="text-base font-bold text-white leading-tight">{season.name}</div>
-                  <div className="text-xs text-slate-500 mt-1">{season.dateRange}</div>
+                   <div className="text-xs text-slate-500 mt-1">
+                     {season.dateRange}
+                     {season.inProgress && (
+                       <span className="ml-1.5 font-semibold text-[#B7FF1A]/80">(In progress)</span>
+                     )}
+                   </div>
                 </div>
 
                 {/* Top 3 list */}
