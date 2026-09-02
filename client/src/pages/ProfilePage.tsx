@@ -2808,9 +2808,24 @@ const ProfilePage = () => {
             0%,100% { box-shadow:0 0 12px #00d3f266, 0 0 32px #00d3f222; border-color:#00b8db; }
             50%      { box-shadow:0 0 14px #e12afb77, 0 0 36px #e12afb22; border-color:#e12afb; }
           }
+          @keyframes cyberCollectionTabGlow {
+            0%,100% {
+              color: #00d3f2;
+              border-color: #00b8db;
+              box-shadow: 0 0 12px #00d3f266, 0 0 32px #00d3f222;
+            }
+            50% {
+              color: #e12afb;
+              border-color: #e12afb;
+              box-shadow: 0 0 14px #e12afb77, 0 0 36px #e12afb22;
+            }
+          }
           .cyber-stats-card {
             position:relative;
             animation: cyberBorderGlow 4s ease-in-out infinite;
+          }
+          .cyber-collection-tab {
+            animation: cyberCollectionTabGlow 4s ease-in-out infinite;
           }
           /* ── Diamond mesh base ── */
           @keyframes cyberNodePulse {
@@ -3679,6 +3694,7 @@ const ProfilePage = () => {
             <GamefolioCollectionButton
               active={profileSectionTab === 'collection'}
               size="mobile"
+              className={isCyberpunkTheme ? 'cyber-collection-tab' : undefined}
               style={collectionTabStyle}
               onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
             />
@@ -4075,6 +4091,7 @@ const ProfilePage = () => {
               <GamefolioCollectionButton
                 active={profileSectionTab === 'collection'}
                 size="desktop"
+                className={isCyberpunkTheme ? 'cyber-collection-tab' : undefined}
                 style={collectionTabStyle}
                 onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
               />
