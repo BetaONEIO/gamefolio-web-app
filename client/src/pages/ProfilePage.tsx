@@ -4342,8 +4342,8 @@ const ProfilePage = () => {
         {profileSectionTab === 'collection' ? (
           <div className="w-full">
             <div 
-              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-nft-header' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : isMacTheme ? 'rounded-full' : isGothicTheme ? 'rounded-2xl' : isCartoonTheme ? 'rounded-xl' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
-              style={isBlocksTheme ? undefined : isWatermelonTheme ? { background: '#ffb3c1', border: '5px solid #1d3932', borderRadius: '9999px' } : isZombieTheme ? { background: '#1a1d1a' } : isMacTheme ? { background: 'linear-gradient(180deg, #ebebeb 0%, #d6d6d6 100%)', border: '1px solid #bdbdbd', borderRadius: '9999px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)', position: 'relative' } : isGothicTheme ? { background: 'rgba(15,2,38,0.92)', border: '1px solid #c27aff33', borderRadius: '16px', boxShadow: '0 0 18px #c27aff15' } : isCartoonTheme ? { background: '#ffffff', border: '3px solid #1d1d1f', borderRadius: '12px', boxShadow: '4px 4px 0 #1d1d1f' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : undefined}
+              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-nft-header' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : isMacTheme ? 'rounded-full' : isGothicTheme ? 'rounded-2xl' : isCartoonTheme ? 'rounded-xl' : isDefaultTheme ? 'rounded-full bg-[#0F101B] border border-[#2B3042]' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
+              style={isBlocksTheme ? undefined : isWatermelonTheme ? { background: '#ffb3c1', border: '5px solid #1d3932', borderRadius: '9999px' } : isZombieTheme ? { background: '#1a1d1a' } : isMacTheme ? { background: 'linear-gradient(180deg, #ebebeb 0%, #d6d6d6 100%)', border: '1px solid #bdbdbd', borderRadius: '9999px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)', position: 'relative' } : isGothicTheme ? { background: 'rgba(15,2,38,0.92)', border: '1px solid #c27aff33', borderRadius: '16px', boxShadow: '0 0 18px #c27aff15' } : isCartoonTheme ? { background: '#ffffff', border: '3px solid #1d1d1f', borderRadius: '12px', boxShadow: '4px 4px 0 #1d1d1f' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : isDefaultTheme ? { background: '#0F101B', border: '1px solid #2B3042' } : undefined}
             >
               {isMacTheme && (
                 <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6, alignItems: 'center', zIndex: 2 }}>
@@ -4415,6 +4415,9 @@ const ProfilePage = () => {
                 } : isLightBackground ? {
                   background: 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)',
                   color: '#ffffff',
+                } : isDefaultTheme ? {
+                   background: '#B7FF1A',
+                   color: '#ffffff',
                 } : {
                   background: `hsl(var(--primary))`,
                   color: '#ffffff',
