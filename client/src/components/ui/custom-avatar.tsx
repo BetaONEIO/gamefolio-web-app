@@ -557,7 +557,7 @@ export const CustomAvatar = ({
           svgUrl={avatarBorder.imageUrl}
           color={borderColor}
           className="absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full"
-          rasterSize={size === 'profile' ? 358 : undefined}
+          rasterSize={size === 'profile' ? 300 : undefined}
           style={{ 
             width: '160%', 
             height: '160%', 
