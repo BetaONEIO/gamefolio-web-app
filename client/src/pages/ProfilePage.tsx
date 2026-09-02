@@ -589,7 +589,7 @@ const ProfilePage = () => {
   });
 
   // Fetch user's selected name tag
-  const { data: nameTagData } = useQuery<{ nameTag: { id: number; name: string; imageUrl: string; rarity: string; description?: string | null } | null }>({
+  const { data: nameTagData } = useQuery<{ nameTag: { id: number; name: string; imageUrl: string; rarity: string; description?: string | null; unlockCondition?: string | null; availableInStore?: boolean; isDefault?: boolean } | null }>({
     queryKey: ['/api/user', profile?.id, 'name-tag'],
     queryFn: async () => {
       const res = await fetch(`/api/user/${profile?.id}/name-tag`);
@@ -6084,6 +6084,9 @@ const ProfilePage = () => {
           rarity: nameTagData.nameTag.rarity,
           gfCost: 0,
           owned: true,
+           unlockCondition: nameTagData.nameTag.unlockCondition,
+           availableInStore: nameTagData.nameTag.availableInStore,
+           isDefault: nameTagData.nameTag.isDefault,
         } : null}
         open={nameTagPreviewOpen}
         onOpenChange={setNameTagPreviewOpen}
