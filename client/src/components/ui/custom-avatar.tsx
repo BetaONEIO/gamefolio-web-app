@@ -115,14 +115,44 @@ const useSvgBorderData = (svgUrl: string, color: string) => {
   return { ...data, clipId };
 };
 
+type RasterBorderCalibration = {
+  ringCenterX: number;
+  ringCenterY: number;
+  innerDiameter: number;
+  overlap: number;
+};
+
+// Calibrated from the main blue summer tube in the 1254x1254 source PNG.
+// Decorations outside the tube are intentionally ignored when measuring the
+// ring centre and opening.
+const RASTER_BORDER_CALIBRATIONS: Record<string, RasterBorderCalibration> = {
+  "player2-blue-summer-border": {
+    ringCenterX: 0.5,
+    ringCenterY: 0.486,
+    innerDiameter: 0.83,
+    overlap: 0.02,
+  },
+};
+
+const getRasterBorderCalibration = (border: AssetReward): RasterBorderCalibration | undefined => {
+  if (
+    border.id === 44 ||
+    border.name.trim().toLowerCase() === "player2 blue summer border"
+  ) {
+    return RASTER_BORDER_CALIBRATIONS["player2-blue-summer-border"];
+  }
+
+  return undefined;
+};
+
 // Component to render SVG or raster-image borders
 const InlineSvgBorder: React.FC<{
   svgUrl: string;
   color: string;
   className?: string;
   style?: React.CSSProperties;
-  rasterSize?: number;
-}> = ({ svgUrl, color, className, style, rasterSize }) => {
+  rasterCalibration?: RasterBorderCalibration;
+}> = ({ svgUrl, color, className, style, rasterCalibration }) => {
   const [svgContent, setSvgContent] = useState<string>('');
   const [assetType, setAssetType] = useState<'svg' | 'raster' | null>(null);
   
@@ -212,6 +242,26 @@ const InlineSvgBorder: React.FC<{
   }, [svgUrl, signedUrl, color]);
   
   if (assetType === 'raster') {
+    const calibratedStyle = rasterCalibration
+      ? {
+          width: `${((1 + rasterCalibration.overlap) / rasterCalibration.innerDiameter) * 100}%`,
+          height: `${((1 + rasterCalibration.overlap) / rasterCalibration.innerDiameter) * 100}%`,
+          left: '50%',
+          top: '50%',
+          marginLeft: `${(
+            (0.5 - rasterCalibration.ringCenterX) *
+            ((1 + rasterCalibration.overlap) / rasterCalibration.innerDiameter) *
+            100
+          ).toFixed(4)}%`,
+          marginTop: `${(
+            (0.5 - rasterCalibration.ringCenterY) *
+            ((1 + rasterCalibration.overlap) / rasterCalibration.innerDiameter) *
+            100
+          ).toFixed(4)}%`,
+          transform: 'translate(-50%, -50%)',
+        }
+      : {};
+
     return (
       <img
         src={signedUrl || svgUrl}
@@ -221,9 +271,7 @@ const InlineSvgBorder: React.FC<{
         className={className}
         style={{
           ...style,
-          ...(rasterSize
-            ? { width: `${rasterSize}px`, height: `${rasterSize}px` }
-            : {}),
+          ...calibratedStyle,
           display: 'block',
           maxWidth: 'none',
           maxHeight: 'none',
@@ -433,6 +481,9 @@ export const CustomAvatar = ({
   const avatarBorder = borderData?.avatarBorder;
   const hasAvatarBorderOverlay = showAvatarBorderOverlay && !!avatarBorder?.imageUrl;
   const hasSolidBorder = showAvatarBorderOverlay && (avatarBorder?.id === -1 || effectiveBorderId === -1);
+  const rasterBorderCalibration = avatarBorder
+    ? getRasterBorderCalibration(avatarBorder)
+    : undefined;
 
   if (hasNftProfile) {
     const handleNftAvatarClick = (e: React.MouseEvent) => {
@@ -539,7 +590,7 @@ export const CustomAvatar = ({
         
         {/* Avatar - the actual profile picture (no border, just the image) */}
         <Avatar 
-          className={`${sizeClasses[size]} transition-all duration-300 rounded-full relative border-0`}
+          className={`${sizeClasses[size]} aspect-square transition-all duration-300 rounded-full relative overflow-hidden border-0`}
           style={{ zIndex: 10 }}
         >
           <AvatarImage 
@@ -557,7 +608,7 @@ export const CustomAvatar = ({
           svgUrl={avatarBorder.imageUrl}
           color={borderColor}
           className="absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full"
-          rasterSize={size === 'profile' ? 300 : undefined}
+          rasterCalibration={rasterBorderCalibration}
           style={{ 
             width: '160%', 
             height: '160%', 
