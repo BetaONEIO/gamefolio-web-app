@@ -428,8 +428,7 @@ export function SeasonalTransitionModalGate() {
     user && (
       user.partnerType === "indie" ||
       user.layoutStyle === "indie-game" ||
-      user.userType
-        .split(",")
+      user.userType?.split(",")
         .map((type) => type.trim())
         .includes("indie_developer")
     ),
