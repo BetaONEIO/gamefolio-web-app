@@ -121,7 +121,8 @@ const InlineSvgBorder: React.FC<{
   color: string;
   className?: string;
   style?: React.CSSProperties;
-}> = ({ svgUrl, color, className, style }) => {
+  rasterSize?: number;
+}> = ({ svgUrl, color, className, style, rasterSize }) => {
   const [svgContent, setSvgContent] = useState<string>('');
   const [assetType, setAssetType] = useState<'svg' | 'raster' | null>(null);
   
@@ -220,6 +221,9 @@ const InlineSvgBorder: React.FC<{
         className={className}
         style={{
           ...style,
+          ...(rasterSize
+            ? { width: `${rasterSize}px`, height: `${rasterSize}px` }
+            : {}),
           display: 'block',
           maxWidth: 'none',
           maxHeight: 'none',
@@ -553,6 +557,7 @@ export const CustomAvatar = ({
           svgUrl={avatarBorder.imageUrl}
           color={borderColor}
           className="absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+          rasterSize={size === 'profile' ? 358 : undefined}
           style={{ 
             width: '160%', 
             height: '160%', 
