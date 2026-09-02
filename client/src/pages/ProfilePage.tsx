@@ -3376,7 +3376,9 @@ const ProfilePage = () => {
                                     ? (profileSectionTab === 'collection' ? '#fffaec' : 'linear-gradient(135deg, #ff5e5e 0%, #ff7a5e 100%)')
                                     : isMayhemTheme
                                       ? 'linear-gradient(135deg, #00DFFF 0%, #9B30E8 50%, #FF0069 100%)'
-                                      : '#B7FF1A',
+                                      : isDefaultTheme
+                                        ? '#0F101B'
+                                        : '#B7FF1A',
                 color: profileSectionTab === 'collection' ? (isWatermelonTheme ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#1d1d1f' : isMayhemTheme ? '#00DFFF' : '#ffffff') : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#ffffff' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? 'transparent' : isNeoTheme ? '#00ff41' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#c27aff' : isCartoonTheme ? '#ffffff' : isMayhemTheme ? '#ffffff' : '#0f172b',
                 border: isWatermelonTheme ? '3px solid #1d3932' : isZombieTheme ? '1px solid #9ae60066' : isCyberpunkTheme ? '1px solid #00b8db66' : isNeoTheme ? '1px solid #00ff4166' : isBlocksTheme ? '3px solid #B7FF1A' : isForestTheme ? '1px solid rgba(164,118,66,0.4)' : isGothicTheme ? '1px solid #c27aff55' : isCartoonTheme ? '3px solid #1d1d1f' : isMayhemTheme ? '1px solid rgba(255,0,105,0.5)' : undefined,
                 fontFamily: isZombieTheme ? "'Creepster', cursive" : isCyberpunkTheme ? "'Orbitron', sans-serif" : isNeoTheme ? "'JetBrains Mono', monospace" : isBlocksTheme ? "'Press Start 2P', monospace" : isGothicTheme ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" : isCartoonTheme ? "'Bricolage Grotesque', 'Arial Black', sans-serif" : undefined,
@@ -4415,9 +4417,10 @@ const ProfilePage = () => {
                 } : isLightBackground ? {
                   background: 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)',
                   color: '#ffffff',
-                } : isDefaultTheme ? {
-                   background: '#B7FF1A',
-                   color: '#ffffff',
+                 } : isDefaultTheme ? {
+                    background: '#0F101B',
+                    color: '#ffffff',
+                    border: '1px solid #B7FF1A',
                 } : {
                   background: `hsl(var(--primary))`,
                   color: '#ffffff',
