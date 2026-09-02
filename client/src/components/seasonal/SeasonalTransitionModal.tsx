@@ -45,6 +45,11 @@ type SeasonalAnnouncement = {
   images: {
     seasonEndImage: string | null;
     summerRewardsImage: string | null;
+    summerRewardImages?: Array<{
+      id: string;
+      src: string;
+      alt: string;
+    }>;
     newSeasonImage: string | null;
   };
   previousSeason: {
@@ -90,7 +95,7 @@ function SlotPlaceholder({
     <div
       data-seasonal-asset-slot={slot}
       className="flex aspect-[16/9] w-full items-center justify-center overflow-hidden rounded-md border border-dashed border-border/80 bg-background/60"
-      aria-label={`${label} placeholder`}
+      aria-label={`${label}${src ? " image" : " placeholder"}`}
     >
       {src ? (
         <img src={src} alt={label} className="h-full w-full object-cover" />
@@ -103,6 +108,41 @@ function SlotPlaceholder({
           <p className="mt-1 text-xs text-muted-foreground/70">Season artwork coming soon</p>
         </div>
       )}
+    </div>
+  );
+}
+
+function RewardImageStrip({
+  images,
+  fallbackLabel,
+}: {
+  images?: SeasonalAnnouncement["images"]["summerRewardImages"];
+  fallbackLabel: string;
+}) {
+  if (!images?.length) {
+    return <SlotPlaceholder slot="summerRewardsImage" label={fallbackLabel} />;
+  }
+
+  return (
+    <div
+      data-seasonal-asset-slot="summerRewardImages"
+      className="grid grid-cols-3 gap-2"
+      aria-label={`${fallbackLabel} preview`}
+    >
+      {images.map((image) => (
+        <figure key={image.id} className="min-w-0">
+          <div className="flex aspect-square items-center justify-center overflow-hidden rounded-md border border-border/70 bg-background/70 p-1.5 sm:p-2">
+            <img
+              src={image.src}
+              alt={image.alt}
+              className="h-full w-full object-contain"
+            />
+          </div>
+          <figcaption className="mt-1.5 truncate text-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground sm:text-xs">
+            {image.alt}
+          </figcaption>
+        </figure>
+      ))}
     </div>
   );
 }
@@ -174,26 +214,25 @@ function SeasonalTransitionModal({
 
     if (step === 1) {
       const title = result.isTopTen
-        ? `You finished #${result.finalRank}`
+        ? "Your Summer rewards"
         : result.participated
           ? "Thanks for taking part"
           : `${previousSeasonName} was for everyone`;
 
       const description = result.isTopTen
-        ? `You placed in the final ${previousSeasonName} top 10.`
+        ? `Your final ${previousSeasonName} top 10 finish unlocked these confirmed rewards.`
         : result.participated
           ? `Your ${previousSeasonName} XP has been recorded. Seasonal cosmetics are reserved for the final top 10.`
           : `${previousSeasonName} has wrapped. Jump into ${newSeasonName} to start a new run.`;
 
       return {
-        eyebrow: result.isTopTen ? "Your final result" : "Your Summer recap",
+        eyebrow: result.isTopTen ? "Your final result" : `${previousSeasonName} recap`,
         title,
         description,
         image: (
-          <SlotPlaceholder
-            slot="summerRewardsImage"
-            label={`${previousSeasonName} rewards`}
-            src={announcement.images.summerRewardsImage}
+          <RewardImageStrip
+            images={announcement.images.summerRewardImages}
+            fallbackLabel={`${previousSeasonName} rewards`}
           />
         ),
         icon: <Gift className="h-5 w-5" aria-hidden="true" />,
@@ -250,32 +289,39 @@ function SeasonalTransitionModal({
             <div className="min-w-0">
               {step === 0 && (
                 <div className="rounded-md border border-border/70 bg-background/40 p-4">
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    {previousSeasonName} is now part of your season history. Your final placement
-                    and any confirmed rewards are shown in the next step.
-                  </p>
+                  {result.participated ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">Final rank</p>
+                          <p className="mt-1 text-2xl font-semibold text-foreground">
+                            {result.finalRank === null ? "—" : `#${result.finalRank}`}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-muted-foreground">Season XP</p>
+                          <p className="mt-1 text-2xl font-semibold text-foreground">
+                            {formatNumber(result.seasonXp)}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="mt-4 text-sm leading-6 text-muted-foreground">
+                        {result.isTopTen
+                          ? `Congratulations — you secured a top 10 finish in ${previousSeasonName}.`
+                          : `Thank you for competing in ${previousSeasonName}. Your final placement is now part of your season history.`}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      {previousSeasonName} is now part of your season history. Autumn Assault is
+                      ready when you are.
+                    </p>
+                  )}
                 </div>
               )}
 
               {step === 1 && (
                 <div className="space-y-4">
-                  {result.participated && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-md border border-border/70 bg-background/40 p-3">
-                        <p className="text-xs uppercase tracking-wide text-muted-foreground">Season XP</p>
-                        <p className="mt-1 text-xl font-semibold text-foreground">
-                          {formatNumber(result.seasonXp)}
-                        </p>
-                      </div>
-                      {result.finalRank !== null && (
-                        <div className="rounded-md border border-border/70 bg-background/40 p-3">
-                          <p className="text-xs uppercase tracking-wide text-muted-foreground">Final rank</p>
-                          <p className="mt-1 text-xl font-semibold text-foreground">#{result.finalRank}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
                   {result.isTopTen && result.rewards.length > 0 && (
                     <div>
                       <p className="mb-2 text-sm font-semibold text-foreground">Confirmed rewards</p>

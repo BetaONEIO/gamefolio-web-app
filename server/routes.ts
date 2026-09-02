@@ -4747,9 +4747,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         announcementId: SEASONAL_ANNOUNCEMENT_ID,
         seen: (seenRows as any[]).length > 0,
         images: {
-          seasonEndImage: null,
-          summerRewardsImage: null,
-          newSeasonImage: null,
+          seasonEndImage: "/attached_assets/seasonal-summer-ended.png",
+          summerRewardsImage: "/attached_assets/seasonal-summer-reward-banner.png",
+          summerRewardImages: [
+            {
+              id: "summer-reward-banner",
+              src: "/attached_assets/seasonal-summer-reward-banner.png",
+              alt: "Summer reward banner",
+            },
+            {
+              id: "summer-profile-border",
+              src: "/attached_assets/seasonal-summer-border.png",
+              alt: "Summer profile border",
+            },
+            {
+              id: "summer-theme",
+              src: "/attached_assets/seasonal-summer-theme.png",
+              alt: "Summer beach theme",
+            },
+          ],
+          newSeasonImage: "/attached_assets/seasonal-autumn-assault.png",
         },
         previousSeason: {
           name: previousSeason.name,
