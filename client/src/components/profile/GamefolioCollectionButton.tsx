@@ -21,17 +21,17 @@ export function GamefolioCollectionButton({
       aria-label="View Collection"
       aria-pressed={active}
       className={cn(
-        "absolute z-20 inline-flex items-center justify-center border font-semibold uppercase leading-none tracking-[0.12em] text-[#0F101B] transition-colors duration-150 ease-out hover:border-[#B7FF1A] hover:bg-[#B7FF1A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF1A] focus-visible:ring-offset-2",
+        "absolute z-20 inline-flex items-center justify-center border font-semibold uppercase leading-none tracking-[1px] text-[#0F101B] transition-colors duration-150 ease-out hover:border-[#B7FF1A] hover:bg-[#B7FF1A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF1A] focus-visible:ring-offset-2",
         size === "desktop"
-          ? "right-5 top-[-45px] h-[46px] w-[184px] text-[13px]"
-          : "right-3 top-[-39px] h-[40px] w-[136px] text-[11px]",
+          ? "right-[22px] top-[-26px] h-[27px] w-[105px] text-[9px]"
+          : "right-3 top-[-22px] h-[23px] w-[86px] text-[8px]",
         active
           ? "border-[#B7FF1A] bg-[#B7FF1A]"
           : "border-[#F1F3F4] bg-[#F1F3F4]",
         className,
       )}
       style={{
-        clipPath: "polygon(14px 0, 100% 0, 100% 100%, 0 100%, 0 15px)",
+        clipPath: "polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 9px)",
         ...style,
       }}
     >
