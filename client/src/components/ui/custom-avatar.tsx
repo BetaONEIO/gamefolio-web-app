@@ -120,6 +120,7 @@ type RasterBorderCalibration = {
   ringCenterY: number;
   innerDiameter: number;
   overlap: number;
+  sizeAdjustment: number;
 };
 
 // Calibrated from the main blue summer tube in the 1254x1254 source PNG.
@@ -131,6 +132,7 @@ const RASTER_BORDER_CALIBRATIONS: Record<string, RasterBorderCalibration> = {
     ringCenterY: 0.486,
     innerDiameter: 0.83,
     overlap: 0.02,
+    sizeAdjustment: 0.96,
   },
 };
 
@@ -242,20 +244,24 @@ const InlineSvgBorder: React.FC<{
   }, [svgUrl, signedUrl, color]);
   
   if (assetType === 'raster') {
+    const borderScale = rasterCalibration
+      ? ((1 + rasterCalibration.overlap) / rasterCalibration.innerDiameter) *
+        rasterCalibration.sizeAdjustment
+      : null;
     const calibratedStyle = rasterCalibration
       ? {
-          width: `${((1 + rasterCalibration.overlap) / rasterCalibration.innerDiameter) * 100}%`,
-          height: `${((1 + rasterCalibration.overlap) / rasterCalibration.innerDiameter) * 100}%`,
+          width: `${borderScale! * 100}%`,
+          height: `${borderScale! * 100}%`,
           left: '50%',
           top: '50%',
           marginLeft: `${(
             (0.5 - rasterCalibration.ringCenterX) *
-            ((1 + rasterCalibration.overlap) / rasterCalibration.innerDiameter) *
+            borderScale! *
             100
           ).toFixed(4)}%`,
           marginTop: `${(
             (0.5 - rasterCalibration.ringCenterY) *
-            ((1 + rasterCalibration.overlap) / rasterCalibration.innerDiameter) *
+            borderScale! *
             100
           ).toFixed(4)}%`,
           transform: 'translate(-50%, -50%)',
