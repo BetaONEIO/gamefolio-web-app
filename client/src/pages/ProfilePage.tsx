@@ -2812,15 +2812,6 @@ const ProfilePage = () => {
             position:relative;
             animation: cyberBorderGlow 4s ease-in-out infinite;
           }
-          .cyber-stats-card::before,.cyber-stats-card::after {
-            content:'';
-            position:absolute;
-            width:10px;
-            height:10px;
-            pointer-events:none;
-          }
-          .cyber-stats-card::before { top:-1px; left:-1px; border-top:1.667px solid #ffffff88; border-left:1.667px solid #ffffff88; }
-          .cyber-stats-card::after  { bottom:-1px; right:-1px; border-bottom:1.667px solid #ffffff88; border-right:1.667px solid #ffffff88; }
           /* ── Diamond mesh base ── */
           @keyframes cyberNodePulse {
             0%,100% { opacity:0.18; transform:scale(1); }
@@ -3050,15 +3041,6 @@ const ProfilePage = () => {
             position: relative;
             animation: mayhemBorderGlow 4s ease-in-out infinite;
           }
-          .mayhem-stats-card::before, .mayhem-stats-card::after {
-            content: '';
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            pointer-events: none;
-          }
-          .mayhem-stats-card::before { top: -1px; left: -1px; border-top: 1.667px solid #ffffff88; border-left: 1.667px solid #ffffff88; }
-          .mayhem-stats-card::after  { bottom: -1px; right: -1px; border-bottom: 1.667px solid #ffffff88; border-right: 1.667px solid #ffffff88; }
         `}</style>
       )}
       {isMayhemTheme && !profileBackgroundImageUrl && <div className="mayhem-stripes-cyan" />}
