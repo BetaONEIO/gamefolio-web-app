@@ -21,17 +21,17 @@ export function GamefolioCollectionButton({
       aria-label="View Collection"
       aria-pressed={active}
       className={cn(
-        "absolute right-0 z-20 inline-flex items-center justify-center rounded-tr-xl border font-semibold uppercase leading-none tracking-[1px] transition-[filter,box-shadow] duration-150 ease-out hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF1A] focus-visible:ring-offset-2",
+        "absolute z-20 inline-flex items-center justify-center rounded-tr-[4px] border font-semibold uppercase leading-none tracking-[0.5px] transition-[filter,box-shadow] duration-150 ease-out hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF1A] focus-visible:ring-offset-2",
         size === "desktop"
-          ? "top-[-26px] h-[27px] w-[105px] text-[9px]"
-          : "top-[-22px] h-[23px] w-[86px] text-[8px]",
+          ? "right-[22px] top-[-23px] h-[24px] w-[100px] text-[8px]"
+          : "right-[18px] top-[-20px] h-[21px] w-[80px] text-[7px]",
         active
           ? "border-[#B7FF1A] bg-[#B7FF1A]"
           : "border-[#F1F3F4] bg-[#F1F3F4]",
         className,
       )}
       style={{
-        clipPath: "polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 9px)",
+        clipPath: "polygon(7px 0, 100% 0, 100% 100%, 0 100%, 0 8px)",
         ...style,
       }}
     >
