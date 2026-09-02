@@ -218,7 +218,13 @@ const InlineSvgBorder: React.FC<{
         aria-hidden="true"
         draggable={false}
         className={className}
-        style={{ ...style, display: 'block', objectFit: 'contain' }}
+        style={{
+          ...style,
+          display: 'block',
+          maxWidth: 'none',
+          maxHeight: 'none',
+          objectFit: 'contain',
+        }}
         onError={() => console.error('Failed to load avatar border image')}
       />
     );
