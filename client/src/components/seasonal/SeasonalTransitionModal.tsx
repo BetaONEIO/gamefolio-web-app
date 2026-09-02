@@ -9,7 +9,6 @@ import {
   CircleDot,
   Gift,
   LockKeyhole,
-  Trophy,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -208,7 +207,6 @@ function SeasonalTransitionModal({
             src={announcement.images.seasonEndImage}
           />
         ),
-        icon: <Trophy className="h-5 w-5" aria-hidden="true" />,
       };
     }
 
@@ -229,7 +227,6 @@ function SeasonalTransitionModal({
             fallbackLabel={`${previousSeasonName} rewards`}
           />
         ),
-        icon: <Gift className="h-5 w-5" aria-hidden="true" />,
       };
     }
 
@@ -244,7 +241,6 @@ function SeasonalTransitionModal({
           src={announcement.images.newSeasonImage}
         />
       ),
-      icon: <ArrowRight className="h-5 w-5" aria-hidden="true" />,
     };
   }, [announcement, newSeasonName, previousSeasonName, result, step]);
 
@@ -252,20 +248,16 @@ function SeasonalTransitionModal({
     <Dialog open onOpenChange={(open) => !open && complete()}>
       <DialogContent
         aria-describedby="seasonal-transition-description"
-        className="max-h-[calc(100dvh-2rem)] max-w-[920px] overflow-y-auto border-border bg-card p-0 text-card-foreground sm:rounded-xl"
+        className="max-h-[calc(100dvh-2rem)] max-w-[1120px] overflow-y-auto border-border bg-card p-0 text-card-foreground sm:rounded-xl"
         style={{
           paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))",
         }}
       >
         <div className="relative">
           <div className="border-b border-border/80 px-5 pb-4 pt-5 sm:px-8 sm:pt-7">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-              {stepContent.icon}
-              <span>{stepContent.eyebrow}</span>
-            </div>
             <DialogTitle
               id={dialogTitleId}
-              className="mt-3 max-w-2xl text-2xl font-semibold tracking-tight sm:text-3xl"
+              className="max-w-2xl text-2xl font-semibold tracking-tight sm:text-3xl"
             >
               {stepContent.title}
             </DialogTitle>
@@ -277,10 +269,10 @@ function SeasonalTransitionModal({
             </DialogDescription>
           </div>
 
-          <div className="grid gap-5 px-5 py-5 sm:px-8 sm:py-7 md:grid-cols-[0.9fr_1.1fr] md:items-start">
-            <div>{stepContent.image}</div>
+          <div className="px-5 py-5 sm:px-8 sm:py-7">
+            <div className="w-full">{stepContent.image}</div>
 
-            <div className="min-w-0">
+            <div className="mt-5 min-w-0 md:mt-7">
               {step === 0 && (
                 <div className="rounded-md border border-border/70 bg-background/40 p-4">
                   {result.participated ? (
