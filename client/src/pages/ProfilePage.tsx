@@ -3625,6 +3625,7 @@ const ProfilePage = () => {
             <GamefolioCollectionButton
               active={profileSectionTab === 'collection'}
               size="mobile"
+              style={userTagStyle}
               onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
             />
             )}
@@ -4020,6 +4021,7 @@ const ProfilePage = () => {
               <GamefolioCollectionButton
                 active={profileSectionTab === 'collection'}
                 size="desktop"
+                style={userTagStyle}
                 onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
               />
               )}
