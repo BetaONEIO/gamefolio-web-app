@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
 import {
-  Crown, Flame, Gamepad2, Coins, Sparkles, ExternalLink, ChevronRight, Trophy,
+  Crown, Flame, Gamepad2, Coins, Sparkles, ChevronRight, Trophy, Video, User as UserIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,8 +25,61 @@ const BORDER = "rgba(255,255,255,0.08)";
 
 const cardStyle = { background: CARD, border: `1px solid ${BORDER}`, borderRadius: "14px" };
 
+type Board = "gamers" | "streamers" | "games";
+
+// Each board spotlights a different subject, so the copy, the icon and the
+// claimable thing all change with the tab. Keeping that in one table means the
+// rest of the page can stay board-agnostic.
+const BOARDS: Record<Board, {
+  label: string;
+  icon: typeof Gamepad2;
+  blurb: string;
+  subjectNoun: string;
+  emptyCta: string;
+}> = {
+  gamers: {
+    label: "Gamers",
+    icon: UserIcon,
+    blurb: "Gamers spend GFT to put their profile on top. Get outbid and someone else takes your place — bids aren't refunded, so the ladder only goes up.",
+    subjectNoun: "profile",
+    emptyCta: "Be the first gamer on the spotlight leaderboard.",
+  },
+  streamers: {
+    label: "Streamers",
+    icon: Video,
+    blurb: "Streamers spend GFT to put their channel on top. Get outbid and someone else takes your place — bids aren't refunded, so the ladder only goes up.",
+    subjectNoun: "channel",
+    emptyCta: "Be the first streamer on the spotlight leaderboard.",
+  },
+  games: {
+    label: "Games",
+    icon: Gamepad2,
+    blurb: "Indie devs spend GFT to hold the top slot for their game, per category. Get outbid and someone else takes your place — bids aren't refunded, so the ladder only goes up.",
+    subjectNoun: "game",
+    emptyCta: "Be the first indie dev on the spotlight leaderboard.",
+  },
+};
+
+const BOARD_ORDER: Board[] = ["gamers", "streamers", "games"];
+
 const CATEGORY_LABELS: Record<string, string> = {
   overall: "Overall",
+  // gamers
+  competitive: "Competitive",
+  casual: "Casual",
+  retro: "Retro",
+  collector: "Collector",
+  completionist: "Completionist",
+  speedrunner: "Speedrunner",
+  fps: "FPS",
+  mmo: "MMO",
+  // streamers
+  variety: "Variety",
+  esports: "Esports",
+  speedrun: "Speedrun",
+  irl: "IRL",
+  educational: "Educational",
+  // games
   action: "Action",
   adventure: "Adventure",
   rpg: "RPG",
@@ -40,9 +93,12 @@ const CATEGORY_LABELS: Record<string, string> = {
   other: "Other",
 };
 
+const catLabel = (c: string) => CATEGORY_LABELS[c] ?? c;
+
 interface LeaderRow {
   id: number;
-  gameId: number;
+  board: Board;
+  gameId: number | null;
   userId: number;
   category: string;
   gftAmount: number;
@@ -55,19 +111,33 @@ interface LeaderRow {
   steamUrl: string | null;
   itchUrl: string | null;
   username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
+  userType: string | null;
+  isStreamer: boolean | null;
+  streamPlatform: string | null;
+  twitchChannelName: string | null;
+  kickChannelName: string | null;
+  youtubeChannelName: string | null;
+  streamMainGame: string | null;
 }
 
 interface RecentRow {
   id: number;
+  board: Board;
   category: string;
   gftAmount: number;
   createdAt: string;
   isActive: boolean;
   gameName: string | null;
   username: string;
+  avatarUrl: string | null;
 }
 
 interface LeaderboardResponse {
+  board: Board;
+  boards: Board[];
   categories: string[];
   leaders: LeaderRow[];
   recent: RecentRow[];
@@ -77,6 +147,30 @@ interface MyGame {
   id: number;
   gameName: string | null;
   capsuleImageUrl: string | null;
+}
+
+// What a row is actually showing depends on the board: a game on "games", the
+// member themselves on the other two.
+function subjectOf(row: LeaderRow, board: Board) {
+  if (board === "games") {
+    return {
+      name: row.gameName ?? "Untitled game",
+      subtitle: row.studioName ?? row.username,
+      image: row.capsuleImageUrl,
+      blurb: row.shortDescription,
+      href: null as string | null,
+    };
+  }
+  const channel = row.twitchChannelName ?? row.kickChannelName ?? row.youtubeChannelName;
+  const streamerSubtitle = [row.streamPlatform, channel && `@${channel}`]
+    .filter(Boolean).join(" · ") || `@${row.username}`;
+  return {
+    name: row.displayName ?? row.username,
+    subtitle: board === "streamers" ? streamerSubtitle : `@${row.username}`,
+    image: row.avatarUrl,
+    blurb: board === "streamers" ? (row.streamMainGame ?? row.bio) : row.bio,
+    href: `/profile/${row.username}` as string | null,
+  };
 }
 
 function timeAgo(iso: string): string {
@@ -93,40 +187,46 @@ export default function SpotlightLeaderboardPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [board, setBoard] = useState<Board>("gamers");
   const [claimTarget, setClaimTarget] = useState<{ category: string; minRequired: number } | null>(null);
   const [selectedGameId, setSelectedGameId] = useState<string>("");
   const [bidAmount, setBidAmount] = useState<string>("");
 
   const { data, isLoading } = useQuery<LeaderboardResponse>({
-    queryKey: ["/api/spotlight-leaderboard"],
+    queryKey: ["/api/spotlight-leaderboard", board],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/spotlight-leaderboard");
+      const res = await apiRequest("GET", `/api/spotlight-leaderboard?board=${board}`);
       return res.json();
     },
     refetchInterval: 15000,
   });
 
+  // Only the Games board needs the dev's game list.
   const { data: myGames } = useQuery<{ games: MyGame[] }>({
     queryKey: ["/api/indie/games"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/indie/games");
       return res.json();
     },
-    enabled: !!user,
+    enabled: !!user && board === "games",
   });
 
   const claimMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/spotlight-leaderboard/claim", {
-        gameId: Number(selectedGameId),
+        board,
+        gameId: board === "games" ? Number(selectedGameId) : undefined,
         category: claimTarget?.category ?? "overall",
         gftAmount: Number(bidAmount),
       });
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: "You're #1", description: "Your game is now on top of the spotlight leaderboard." });
-      queryClient.invalidateQueries({ queryKey: ["/api/spotlight-leaderboard"] });
+      toast({
+        title: "You're #1",
+        description: `Your ${BOARDS[board].subjectNoun} is now on top of the ${BOARDS[board].label} leaderboard.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/spotlight-leaderboard", board] });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       setClaimTarget(null);
       setBidAmount("");
@@ -144,12 +244,31 @@ export default function SpotlightLeaderboardPage() {
     },
   });
 
-  const categories = data?.categories ?? Object.keys(CATEGORY_LABELS);
+  const categories = data?.categories ?? [];
   const leaders = data?.leaders ?? [];
   const overallLeader = leaders.find((l) => l.category === "overall");
   const otherLeaders = leaders.filter((l) => l.category !== "overall").sort((a, b) => b.gftAmount - a.gftAmount);
-
   const games = myGames?.games ?? [];
+
+  // Mirrors the server-side rule in eligibilityFor() / the games-ownership
+  // check, so the dialog can explain the block instead of failing the POST.
+  const eligibility = useMemo(() => {
+    if (!user) return { ok: false, reason: "signin" as const };
+    if (board === "games") {
+      return games.length > 0 ? { ok: true as const } : { ok: false, reason: "no-game" as const };
+    }
+    if (board === "streamers") {
+      const types = String((user as any).userType ?? "").split(",").map((t) => t.trim());
+      const isStreamer = Boolean(
+        (user as any).isStreamer
+        || (user as any).twitchVerified || (user as any).kickVerified
+        || (user as any).youtubeVerified || (user as any).rumbleVerified || (user as any).vpzoneVerified
+        || types.includes("streamer"),
+      );
+      return isStreamer ? { ok: true as const } : { ok: false, reason: "no-channel" as const };
+    }
+    return { ok: true as const };
+  }, [user, board, games.length]);
 
   const openClaim = (category: string, currentAmount?: number) => {
     const min = (currentAmount ?? 0) + 1;
@@ -157,6 +276,14 @@ export default function SpotlightLeaderboardPage() {
     setBidAmount(String(min));
     setSelectedGameId(games[0]?.id ? String(games[0].id) : "");
   };
+
+  const switchBoard = (next: Board) => {
+    setBoard(next);
+    setClaimTarget(null);
+  };
+
+  const meta = BOARDS[board];
+  const FallbackIcon = meta.icon;
 
   return (
     <div className="min-h-screen" style={{ background: BG, color: "white" }}>
@@ -173,65 +300,104 @@ export default function SpotlightLeaderboardPage() {
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
             Pay GFT. Take the #1 spot.
           </h1>
-          <p className="text-sm text-white/60 max-w-xl mx-auto">
-            Indie devs spend GFT to hold the top slot for their game, per category. Get outbid and
-            someone else takes your place — bids aren't refunded, so the ladder only goes up.
-          </p>
+          <p className="text-sm text-white/60 max-w-xl mx-auto">{meta.blurb}</p>
+        </div>
+
+        {/* Board switcher */}
+        <div
+          className="grid grid-cols-3 gap-1 p-1 rounded-xl"
+          style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${BORDER}` }}
+          role="tablist"
+          aria-label="Spotlight boards"
+        >
+          {BOARD_ORDER.map((b) => {
+            const Icon = BOARDS[b].icon;
+            const active = b === board;
+            return (
+              <button
+                key={b}
+                role="tab"
+                aria-selected={active}
+                onClick={() => switchBoard(b)}
+                className="flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-colors"
+                style={active
+                  ? { background: NEON, color: BG }
+                  : { color: "rgba(255,255,255,0.55)" }}
+              >
+                <Icon className="w-4 h-4" />
+                {BOARDS[b].label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Overall #1 - hero card */}
         {isLoading ? (
           <Skeleton className="h-48 w-full rounded-2xl" />
         ) : overallLeader ? (
-          <div
-            className="relative overflow-hidden rounded-2xl p-6 flex flex-col sm:flex-row gap-5 items-center"
-            style={{
-              background: "linear-gradient(135deg, rgba(183,255,24,0.12), rgba(183,255,24,0.02))",
-              border: `1px solid rgba(183,255,24,0.3)`,
-            }}
-          >
-            <Crown className="absolute top-4 right-4 w-6 h-6" style={{ color: NEON }} />
-            {overallLeader.capsuleImageUrl ? (
-              <img
-                src={overallLeader.capsuleImageUrl}
-                alt={overallLeader.gameName ?? "Game"}
-                className="w-24 h-24 rounded-xl object-cover flex-shrink-0"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: CARD }}>
-                <Gamepad2 className="w-10 h-10 text-white/30" />
-              </div>
-            )}
-            <div className="flex-1 min-w-0 text-center sm:text-left">
-              <div className="text-xs uppercase tracking-wide" style={{ color: NEON }}>#1 Overall</div>
-              <div className="text-xl font-bold truncate">{overallLeader.gameName ?? "Untitled game"}</div>
-              <div className="text-sm text-white/50">
-                {overallLeader.studioName ?? overallLeader.username} · claimed {timeAgo(overallLeader.createdAt)}
-              </div>
-              {overallLeader.shortDescription && (
-                <p className="text-sm text-white/70 mt-1 line-clamp-2">{overallLeader.shortDescription}</p>
-              )}
-            </div>
-            <div className="flex flex-col items-center gap-2 flex-shrink-0">
-              <div className="flex items-center gap-1.5 text-2xl font-bold" style={{ color: NEON }}>
-                <Coins className="w-5 h-5" />
-                {overallLeader.gftAmount.toLocaleString()}
-              </div>
-              <Button
-                size="sm"
-                style={{ background: NEON, color: BG }}
-                className="font-semibold hover:opacity-90"
-                onClick={() => openClaim("overall", overallLeader.gftAmount)}
+          (() => {
+            const subject = subjectOf(overallLeader, board);
+            return (
+              <div
+                className="relative overflow-hidden rounded-2xl p-6 flex flex-col sm:flex-row gap-5 items-center"
+                style={{
+                  background: "linear-gradient(135deg, rgba(183,255,24,0.12), rgba(183,255,24,0.02))",
+                  border: `1px solid rgba(183,255,24,0.3)`,
+                }}
               >
-                Outbid for {(overallLeader.gftAmount + 1).toLocaleString()} GFT
-              </Button>
-            </div>
-          </div>
+                <Crown className="absolute top-4 right-4 w-6 h-6" style={{ color: NEON }} />
+                {subject.image ? (
+                  <img
+                    src={subject.image}
+                    alt={subject.name}
+                    className={`w-24 h-24 object-cover flex-shrink-0 ${board === "games" ? "rounded-xl" : "rounded-full"}`}
+                  />
+                ) : (
+                  <div
+                    className={`w-24 h-24 flex items-center justify-center flex-shrink-0 ${board === "games" ? "rounded-xl" : "rounded-full"}`}
+                    style={{ background: CARD }}
+                  >
+                    <FallbackIcon className="w-10 h-10 text-white/30" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0 text-center sm:text-left">
+                  <div className="text-xs uppercase tracking-wide" style={{ color: NEON }}>#1 Overall</div>
+                  {subject.href ? (
+                    <Link href={subject.href} className="text-xl font-bold truncate block hover:underline">
+                      {subject.name}
+                    </Link>
+                  ) : (
+                    <div className="text-xl font-bold truncate">{subject.name}</div>
+                  )}
+                  <div className="text-sm text-white/50">
+                    {subject.subtitle} · claimed {timeAgo(overallLeader.createdAt)}
+                  </div>
+                  {subject.blurb && (
+                    <p className="text-sm text-white/70 mt-1 line-clamp-2">{subject.blurb}</p>
+                  )}
+                </div>
+                <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-1.5 text-2xl font-bold" style={{ color: NEON }}>
+                    <Coins className="w-5 h-5" />
+                    {overallLeader.gftAmount.toLocaleString()}
+                  </div>
+                  <Button
+                    size="sm"
+                    style={{ background: NEON, color: BG }}
+                    className="font-semibold hover:opacity-90"
+                    onClick={() => openClaim("overall", overallLeader.gftAmount)}
+                  >
+                    Outbid for {(overallLeader.gftAmount + 1).toLocaleString()} GFT
+                  </Button>
+                </div>
+              </div>
+            );
+          })()
         ) : (
           <div className="rounded-2xl p-8 text-center" style={cardStyle}>
             <Trophy className="w-10 h-10 mx-auto mb-3 text-white/30" />
             <div className="font-semibold mb-1">No one's claimed #1 yet</div>
-            <div className="text-sm text-white/50 mb-4">Be the first indie dev on the spotlight leaderboard.</div>
+            <div className="text-sm text-white/50 mb-4">{meta.emptyCta}</div>
             <Button style={{ background: NEON, color: BG }} className="font-semibold hover:opacity-90" onClick={() => openClaim("overall", 0)}>
               Claim #1 Overall
             </Button>
@@ -240,7 +406,9 @@ export default function SpotlightLeaderboardPage() {
 
         {/* Category leaders */}
         <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide">Category leaders</h2>
+          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide">
+            {meta.label} category leaders
+          </h2>
           {isLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
@@ -249,38 +417,48 @@ export default function SpotlightLeaderboardPage() {
             <div className="text-sm text-white/40 py-4">No category claims yet — every category is up for grabs.</div>
           ) : (
             <div className="space-y-2">
-              {otherLeaders.map((row) => (
-                <div key={row.id} className="flex items-center gap-3 p-3 rounded-xl" style={cardStyle}>
-                  {row.capsuleImageUrl ? (
-                    <img src={row.capsuleImageUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,255,255,0.06)" }}>
-                      <Gamepad2 className="w-4 h-4 text-white/30" />
+              {otherLeaders.map((row) => {
+                const subject = subjectOf(row, board);
+                return (
+                  <div key={row.id} className="flex items-center gap-3 p-3 rounded-xl" style={cardStyle}>
+                    {subject.image ? (
+                      <img
+                        src={subject.image}
+                        alt=""
+                        className={`w-10 h-10 object-cover flex-shrink-0 ${board === "games" ? "rounded-lg" : "rounded-full"}`}
+                      />
+                    ) : (
+                      <div
+                        className={`w-10 h-10 flex items-center justify-center flex-shrink-0 ${board === "games" ? "rounded-lg" : "rounded-full"}`}
+                        style={{ background: "rgba(255,255,255,0.06)" }}
+                      >
+                        <FallbackIcon className="w-4 h-4 text-white/30" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px] border-white/15 text-white/50">
+                          {catLabel(row.category)}
+                        </Badge>
+                        <span className="font-medium truncate">{subject.name}</span>
+                      </div>
+                      <div className="text-xs text-white/40 truncate">{subject.subtitle}</div>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-[10px] border-white/15 text-white/50">
-                        {CATEGORY_LABELS[row.category] ?? row.category}
-                      </Badge>
-                      <span className="font-medium truncate">{row.gameName ?? "Untitled game"}</span>
+                    <div className="flex items-center gap-1 font-semibold flex-shrink-0" style={{ color: NEON }}>
+                      <Coins className="w-3.5 h-3.5" />
+                      {row.gftAmount.toLocaleString()}
                     </div>
-                    <div className="text-xs text-white/40 truncate">{row.studioName ?? row.username}</div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-white/15 text-white hover:bg-white/10 flex-shrink-0"
+                      onClick={() => openClaim(row.category, row.gftAmount)}
+                    >
+                      Outbid
+                    </Button>
                   </div>
-                  <div className="flex items-center gap-1 font-semibold flex-shrink-0" style={{ color: NEON }}>
-                    <Coins className="w-3.5 h-3.5" />
-                    {row.gftAmount.toLocaleString()}
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-white/15 text-white hover:bg-white/10 flex-shrink-0"
-                    onClick={() => openClaim(row.category, row.gftAmount)}
-                  >
-                    Outbid
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -295,7 +473,7 @@ export default function SpotlightLeaderboardPage() {
                   className="text-xs px-2.5 py-1 rounded-full text-white/50 hover:text-white transition-colors"
                   style={{ border: `1px dashed ${BORDER}` }}
                 >
-                  + Claim {CATEGORY_LABELS[c] ?? c}
+                  + Claim {catLabel(c)}
                 </button>
               ))}
           </div>
@@ -310,9 +488,11 @@ export default function SpotlightLeaderboardPage() {
             {(data?.recent ?? []).slice(0, 8).map((row) => (
               <div key={row.id} className="flex items-center justify-between text-sm py-1.5 border-b" style={{ borderColor: BORDER }}>
                 <div className="min-w-0 truncate text-white/70">
-                  <span className="font-medium text-white">{row.gameName ?? "Untitled game"}</span>
+                  <span className="font-medium text-white">
+                    {board === "games" ? (row.gameName ?? "Untitled game") : `@${row.username}`}
+                  </span>
                   {" "}claimed{" "}
-                  <span className="text-white/50">{CATEGORY_LABELS[row.category] ?? row.category}</span>
+                  <span className="text-white/50">{catLabel(row.category)}</span>
                   {!row.isActive && <span className="text-white/30"> (later outbid)</span>}
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0 ml-3">
@@ -331,7 +511,7 @@ export default function SpotlightLeaderboardPage() {
 
         {!user && (
           <div className="text-center text-sm text-white/50 pt-2">
-            <Link href="/auth" className="underline hover:text-white">Sign in</Link> as an indie developer to claim a spot.
+            <Link href="/auth" className="underline hover:text-white">Sign in</Link> to claim a spot.
           </div>
         )}
       </div>
@@ -341,7 +521,7 @@ export default function SpotlightLeaderboardPage() {
         <DialogContent style={{ background: "#0F1820", border: `1px solid ${BORDER}`, color: "white" }}>
           <DialogHeader>
             <DialogTitle>
-              Claim #1 in {claimTarget ? (CATEGORY_LABELS[claimTarget.category] ?? claimTarget.category) : ""}
+              Claim #1 in {meta.label} · {claimTarget ? catLabel(claimTarget.category) : ""}
             </DialogTitle>
             <DialogDescription className="text-white/50">
               Spend GFT from your balance to take this spot. This is non-refundable — if someone
@@ -351,28 +531,47 @@ export default function SpotlightLeaderboardPage() {
 
           {!user ? (
             <div className="text-sm text-white/60 py-2">Sign in first to claim a spotlight spot.</div>
-          ) : games.length === 0 ? (
+          ) : !eligibility.ok ? (
             <div className="text-sm text-white/60 py-2 space-y-2">
-              <p>You need an indie game profile before you can claim a spot.</p>
-              <Link href="/studio-dashboard" className="inline-flex items-center gap-1 underline" style={{ color: NEON }}>
-                Set up your game <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
+              {eligibility.reason === "no-game" ? (
+                <>
+                  <p>You need an indie game profile before you can claim a spot on the Games board.</p>
+                  <Link href="/studio-dashboard" className="inline-flex items-center gap-1 underline" style={{ color: NEON }}>
+                    Set up your game <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <p>Connect a streaming channel before you can claim a spot on the Streamers board.</p>
+                  <Link href="/settings" className="inline-flex items-center gap-1 underline" style={{ color: NEON }}>
+                    Connect a channel <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
+                </>
+              )}
             </div>
           ) : (
             <div className="space-y-4 py-2">
-              <div className="space-y-1.5">
-                <label className="text-xs text-white/50">Which game?</label>
-                <Select value={selectedGameId} onValueChange={setSelectedGameId}>
-                  <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                    <SelectValue placeholder="Choose a game" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {games.map((g) => (
-                      <SelectItem key={g.id} value={String(g.id)}>{g.gameName ?? `Game #${g.id}`}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {board === "games" && (
+                <div className="space-y-1.5">
+                  <label className="text-xs text-white/50">Which game?</label>
+                  <Select value={selectedGameId} onValueChange={setSelectedGameId}>
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                      <SelectValue placeholder="Choose a game" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {games.map((g) => (
+                        <SelectItem key={g.id} value={String(g.id)}>{g.gameName ?? `Game #${g.id}`}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {board !== "games" && (
+                <div className="text-xs text-white/50">
+                  Claiming for your {meta.subjectNoun}: <span className="text-white">@{user.username}</span>
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <label className="text-xs text-white/50">
@@ -399,13 +598,13 @@ export default function SpotlightLeaderboardPage() {
             <Button variant="ghost" className="text-white/60 hover:text-white" onClick={() => setClaimTarget(null)}>
               Cancel
             </Button>
-            {user && games.length > 0 && (
+            {user && eligibility.ok && (
               <Button
                 style={{ background: NEON, color: BG }}
                 className="font-semibold hover:opacity-90"
                 disabled={
                   claimMutation.isPending ||
-                  !selectedGameId ||
+                  (board === "games" && !selectedGameId) ||
                   Number(bidAmount) < (claimTarget?.minRequired ?? 1) ||
                   Number(bidAmount) > (user.gfTokenBalance ?? 0)
                 }

@@ -2495,20 +2495,67 @@ export const insertIndieGameFieldOverrideSchema = createInsertSchema(indieGameFi
 export type IndieGameFieldOverride = typeof indieGameFieldOverrides.$inferSelect;
 export type InsertIndieGameFieldOverride = z.infer<typeof insertIndieGameFieldOverrideSchema>;
 
-// ─── Spotlight Leaderboard (POC) ─────────────────────────────────────────────
-// A pay-to-rank leaderboard modeled on outbid.lol: an indie dev spends GFT
-// (their off-chain gf_token_balance) to hold the #1 spot for their game in a
-// category. Bids are non-refundable by design — outbidding someone does not
-// return their spent GFT, which is what makes the ladder self-funding.
-export const spotlightCategories = [
-  "overall", "action", "adventure", "rpg", "strategy", "simulation",
-  "puzzle", "horror", "platformer", "multiplayer", "sports", "other",
-] as const;
-export type SpotlightCategory = typeof spotlightCategories[number];
+// ─── Spotlight Leaderboard (POC) ─────────────────────────────
+// A pay-to-rank leaderboard modeled on outbid.lol: a member spends GFT (their
+// off-chain gf_token_balance) to hold the #1 spot in a category. Bids are
+// non-refundable by design — outbidding someone does not return their spent
+// GFT, which is what makes the ladder self-funding.
+//
+// The ladder is split into three boards, because the three audiences on
+// Gamefolio spotlight different things:
+//   • "gamers"    — the member's own profile is the subject (game_id is null)
+//   • "streamers" — the member's channel is the subject (game_id is null)
+//   • "games"     — an indie_game_profiles row is the subject (game_id set)
+// Each board keeps an independent ladder: one active #1 per (board, category),
+// so a claim never competes against claims on another board.
+export const spotlightBoards = ["gamers", "streamers", "games"] as const;
+export type SpotlightBoard = typeof spotlightBoards[number];
+
+export const SPOTLIGHT_BOARD_LABELS: Record<SpotlightBoard, string> = {
+  gamers: "Gamers",
+  streamers: "Streamers",
+  games: "Games",
+};
+
+// Category vocabulary per board. The gamer list mirrors the interests offered
+// during onboarding (competitive/casual/retro/collector) so the board lines up
+// with the userType a member already picked for themselves.
+export const SPOTLIGHT_CATEGORIES_BY_BOARD = {
+  gamers: [
+    "overall", "competitive", "casual", "retro", "collector", "completionist",
+    "speedrunner", "fps", "rpg", "mmo", "multiplayer", "other",
+  ],
+  streamers: [
+    "overall", "variety", "esports", "speedrun", "horror", "retro", "irl",
+    "educational", "competitive", "casual", "multiplayer", "other",
+  ],
+  games: [
+    "overall", "action", "adventure", "rpg", "strategy", "simulation",
+    "puzzle", "horror", "platformer", "multiplayer", "sports", "other",
+  ],
+} as const satisfies Record<SpotlightBoard, readonly string[]>;
+
+// Flat union of every category across boards, kept for validation helpers.
+export const spotlightCategories: string[] = Array.from(
+  new Set(Object.values(SPOTLIGHT_CATEGORIES_BY_BOARD).flat() as string[]),
+);
+export type SpotlightCategory = string;
+
+export function isSpotlightBoard(value: unknown): value is SpotlightBoard {
+  return typeof value === "string" && (spotlightBoards as readonly string[]).includes(value);
+}
+
+// A category is only valid on the board that declares it.
+export function isSpotlightCategoryForBoard(board: SpotlightBoard, category: unknown): boolean {
+  return typeof category === "string"
+    && (SPOTLIGHT_CATEGORIES_BY_BOARD[board] as readonly string[]).includes(category);
+}
 
 export const spotlightClaims = pgTable("spotlight_claims", {
   id: serial("id").primaryKey(),
-  gameId: integer("game_id").notNull().references(() => indieGameProfiles.id, { onDelete: "cascade" }),
+  board: text("board").notNull().default("games"),
+  // Null on the gamers/streamers boards, where the claiming user is the subject.
+  gameId: integer("game_id").references(() => indieGameProfiles.id, { onDelete: "cascade" }),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   category: text("category").notNull().default("overall"),
   gftAmount: integer("gft_amount").notNull(),
