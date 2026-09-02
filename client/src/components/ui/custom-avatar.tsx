@@ -393,7 +393,7 @@ const sizeClasses = {
   xl: "h-20 w-20",
   "2xl": "h-32 w-32",
   "mobile-profile": "h-28 w-28",
-  "profile": "h-40 w-40 sm:h-48 sm:w-48 md:h-56 md:w-56"
+  "profile": "h-56 w-56"
 };
 
 const containerSizes = {
@@ -603,7 +603,7 @@ export const CustomAvatar = ({
           </AvatarFallback>
         </Avatar>
         
-        {/* SVG Border with inline color replacement - larger than avatar to wrap around it properly */}
+        {/* Border overlay is centred on the same wrapper as the avatar. */}
         <InlineSvgBorder
           svgUrl={avatarBorder.imageUrl}
           color={borderColor}
@@ -612,8 +612,9 @@ export const CustomAvatar = ({
           style={{ 
             width: '160%', 
             height: '160%', 
-            top: '-30%', 
-            left: '-30%',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
             zIndex: 20 
           }}
         />
