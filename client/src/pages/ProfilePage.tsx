@@ -3324,9 +3324,10 @@ const ProfilePage = () => {
               primaryColor: resolvedProfileTheme.primaryColor
             }}
             userStats={{
-              clips: profile._count?.clips || 0,
+              xp: profile.totalXP || 0,
+              views: profile._count?.views ?? profile._count?.clipViews ?? 0,
+              uploads: (profile._count?.clips || 0) + (profile._count?.screenshots || 0),
               followers: profile._count?.followers || 0,
-              following: profile._count?.following || 0
             }}
             favoriteGames={favoriteGames?.slice(0, 5).map(g => ({ id: g.id, name: g.name, imageUrl: g.imageUrl }))}
             trigger={
@@ -3690,15 +3691,16 @@ const ProfilePage = () => {
                   {isCartoonTheme ? (
                     <div className="flex w-full py-2">
                       {[
-                        { value: (clips?.length || 0) + (screenshots?.length || 0), label: 'Uploads', color: '#3498db' },
+                        { value: Math.round(Number(profile.totalXP || 0)), label: 'XP', color: '#9b59b6' },
+                        { value: Number(profile._count?.views ?? profile._count?.clipViews ?? 0), label: 'Views', color: '#3498db' },
+                        { value: (clips?.length || 0) + (screenshots?.length || 0), label: 'Uploads', color: '#e67e22' },
                         { value: Number(profile._count?.followers || 0), label: 'Followers', color: '#e74c3c' },
-                        { value: Number(profile._count?.following || 0), label: 'Following', color: '#27ae60' },
                       ].map((stat, i, arr) => (
                         <div
                           key={stat.label}
                           className="flex flex-1 items-center"
-                          onClick={stat.label === 'Followers' ? () => setLocation(`/profile/${profile.username}/followers`) : stat.label === 'Following' ? () => setLocation(`/profile/${profile.username}/followers?tab=following`) : undefined}
-                          style={stat.label !== 'Uploads' ? { cursor: 'pointer' } : undefined}
+                          onClick={stat.label === 'Followers' ? () => setLocation(`/profile/${profile.username}/followers`) : undefined}
+                          style={stat.label === 'Followers' ? { cursor: 'pointer' } : undefined}
                         >
                           <div className="flex flex-col items-center gap-1 flex-1 py-1">
                             <span style={{ color: stat.color, fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: 800, fontSize: '1.6rem', letterSpacing: '-0.9px', lineHeight: 1 }}>{stat.value}</span>
@@ -3713,15 +3715,16 @@ const ProfilePage = () => {
                   ) : isGothicTheme ? (
                     <div className="flex mt-1 w-full">
                       {[
+                        { value: Math.round(Number(profile.totalXP || 0)), label: 'XP' },
+                        { value: Number(profile._count?.views ?? profile._count?.clipViews ?? 0), label: 'Views' },
                         { value: (clips?.length || 0) + (screenshots?.length || 0), label: 'Uploads' },
                         { value: Number(profile._count?.followers || 0), label: 'Followers' },
-                        { value: Number(profile._count?.following || 0), label: 'Following' },
                       ].map((stat, i, arr) => (
                         <div
                           key={stat.label}
                           className="flex flex-1 items-center"
-                          onClick={stat.label === 'Followers' ? () => setLocation(`/profile/${profile.username}/followers`) : stat.label === 'Following' ? () => setLocation(`/profile/${profile.username}/followers?tab=following`) : undefined}
-                          style={stat.label !== 'Uploads' ? { cursor: 'pointer' } : undefined}
+                          onClick={stat.label === 'Followers' ? () => setLocation(`/profile/${profile.username}/followers`) : undefined}
+                          style={stat.label === 'Followers' ? { cursor: 'pointer' } : undefined}
                         >
                           <div className="flex flex-col items-center gap-1 flex-1 py-1">
                             <span style={{ color: '#ffffff', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>{stat.value}</span>
@@ -3734,19 +3737,26 @@ const ProfilePage = () => {
                       ))}
                     </div>
                   ) : (
-                  <div className="flex mt-1" style={isWatermelonTheme || isSummerTheme ? { gap: 0 } : { gap: '1.5rem' }}>
-                    <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''} ${isSummerTheme ? 'summer-stat-item flex-1 items-center text-center' : ''}`}>
-                      <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isMacTheme ? { color: '#0066ff', letterSpacing: '0.8px' } : isLightBackground ? { color: '#6b7280', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>UPLOADS</span>
-                    </div>
-                    <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''} ${isSummerTheme ? 'summer-stat-item flex-1 items-center text-center' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/followers`)}>
-                      <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : isBlocksTheme ? '#3b82f6' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.followers || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isMacTheme ? { color: '#0066ff', letterSpacing: '0.8px' } : isLightBackground ? { color: '#6b7280', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>FOLLOWERS</span>
-                    </div>
-                    <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''} ${isSummerTheme ? 'summer-stat-item flex-1 items-center text-center' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/followers?tab=following`)}>
-                      <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
-                      <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isMacTheme ? { color: '#0066ff', letterSpacing: '0.8px' } : isLightBackground ? { color: '#6b7280', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#B7FF1A', color: '#1a1a1a', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>FOLLOWING</span>
-                    </div>
+                  <div className="grid grid-cols-4 mt-1 w-full" style={{ gap: isWatermelonTheme || isSummerTheme ? 0 : '1.5rem' }}>
+                    {[
+                      { value: Math.round(Number(profile.totalXP || 0)), label: 'XP' },
+                      { value: Number(profile._count?.views ?? profile._count?.clipViews ?? 0), label: 'Views' },
+                      { value: (clips?.length || 0) + (screenshots?.length || 0), label: 'Uploads' },
+                      { value: Number(profile._count?.followers || 0), label: 'Followers' },
+                    ].map((stat) => (
+                      <div
+                        key={stat.label}
+                        className={`flex min-w-0 flex-col items-center gap-1 ${stat.label === 'Followers' ? 'cursor-pointer' : ''} ${isWatermelonTheme ? 'watermelon-stat-item' : ''} ${isSummerTheme ? 'summer-stat-item' : ''}`}
+                        onClick={stat.label === 'Followers' ? () => setLocation(`/profile/${profile.username}/followers`) : undefined}
+                      >
+                        <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>
+                          {stat.value.toLocaleString()}
+                        </span>
+                        <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isMacTheme ? { color: '#0066ff', letterSpacing: '0.8px' } : isLightBackground ? { color: '#6b7280', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>
+                          {stat.label}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                   )}
                   </>
@@ -4379,9 +4389,10 @@ const ProfilePage = () => {
                         primaryColor: resolvedProfileTheme.primaryColor
                       }}
                       userStats={{
-                        clips: profile._count?.clips || 0,
+                        xp: profile.totalXP || 0,
+                        views: profile._count?.views ?? profile._count?.clipViews ?? 0,
+                        uploads: (profile._count?.clips || 0) + (profile._count?.screenshots || 0),
                         followers: profile._count?.followers || 0,
-                        following: profile._count?.following || 0
                       }}
                       favoriteGames={favoriteGames?.slice(0, 5).map(g => ({ id: g.id, name: g.name, imageUrl: g.imageUrl }))}
                       trigger={
@@ -4427,9 +4438,10 @@ const ProfilePage = () => {
                         primaryColor: resolvedProfileTheme.primaryColor
                       }}
                       userStats={{
-                        clips: profile._count?.clips || 0,
+                        xp: profile.totalXP || 0,
+                        views: profile._count?.views ?? profile._count?.clipViews ?? 0,
+                        uploads: (profile._count?.clips || 0) + (profile._count?.screenshots || 0),
                         followers: profile._count?.followers || 0,
-                        following: profile._count?.following || 0
                       }}
                       favoriteGames={favoriteGames?.slice(0, 5).map(g => ({ id: g.id, name: g.name, imageUrl: g.imageUrl }))}
                       trigger={
@@ -6024,9 +6036,10 @@ const ProfilePage = () => {
                   primaryColor: resolvedProfileTheme.primaryColor
                 }}
                 userStats={{
-                  clips: profile._count?.clips || 0,
+                  xp: profile.totalXP || 0,
+                  views: profile._count?.views ?? profile._count?.clipViews ?? 0,
+                  uploads: (profile._count?.clips || 0) + (profile._count?.screenshots || 0),
                   followers: profile._count?.followers || 0,
-                  following: profile._count?.following || 0
                 }}
                 favoriteGames={favoriteGames?.slice(0, 5).map(g => ({ id: g.id, name: g.name, imageUrl: g.imageUrl }))}
                 trigger={

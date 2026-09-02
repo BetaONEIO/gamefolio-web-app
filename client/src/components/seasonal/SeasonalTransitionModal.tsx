@@ -455,8 +455,7 @@ export function SeasonalTransitionModalGate() {
   const blockedPath = BLOCKED_PATH_PREFIXES.some((prefix) => location.startsWith(prefix));
   const player2PreviewRequested =
     import.meta.env.DEV &&
-    user?.username?.toLowerCase() === "player2" &&
-    new URLSearchParams(window.location.search).get("seasonalPreview") === "1";
+    user?.username?.toLowerCase() === "player2";
   const enabled = Boolean(
     user &&
       user.userType &&

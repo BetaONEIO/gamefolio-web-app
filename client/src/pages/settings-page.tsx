@@ -1542,7 +1542,16 @@ export default function SettingsPage() {
     staleTime: 60000,
   });
 
-  const { data: profileStats } = useQuery<{ _count?: { followers?: number; following?: number; clips?: number } }>({
+  const { data: profileStats } = useQuery<{
+    totalXP?: number;
+    _count?: {
+      followers?: number;
+      clips?: number;
+      screenshots?: number;
+      views?: number;
+      clipViews?: number;
+    };
+  }>({
     queryKey: [`/api/users/${user?.username}`],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user?.username,
@@ -6294,11 +6303,19 @@ export default function SettingsPage() {
 
                 {/* Stats Card */}
                 <div className="relative z-10 mx-4 mb-3 p-2.5" style={statsCardStyle}>
-                  <div className="grid grid-cols-3" style={{ gap: 0 }}>
+                  <div className="grid grid-cols-4" style={{ gap: 0 }}>
                     {[
-                      { label: 'Uploads', value: profileStats?._count?.clips ?? '—' },
-                      { label: 'Followers', value: profileStats?._count?.followers ?? '—' },
-                      { label: 'Following', value: profileStats?._count?.following ?? '—' },
+                      { label: 'XP', value: profileStats?.totalXP == null ? '—' : Math.round(profileStats.totalXP).toLocaleString() },
+                      { label: 'Views', value: profileStats?._count?.views == null
+                        ? (profileStats?._count?.clipViews == null ? '—' : profileStats._count.clipViews.toLocaleString())
+                        : profileStats._count.views.toLocaleString() },
+                      {
+                        label: 'Uploads',
+                        value: profileStats?._count == null
+                          ? '—'
+                          : ((profileStats._count.clips ?? 0) + (profileStats._count.screenshots ?? 0)).toLocaleString(),
+                      },
+                      { label: 'Followers', value: profileStats?._count?.followers == null ? '—' : profileStats._count.followers.toLocaleString() },
                     ].map(({ label, value }, i) => (
                       <div key={label} className="text-center px-2" style={{ borderRight: i < 2 ? `1px solid ${isSummer ? 'rgba(6,59,92,0.22)' : isWatermelon ? 'rgba(0,0,0,0.12)' : isLight ? 'rgba(0,0,0,0.08)' : `${accent}22`}` : 'none' }}>
                         <p style={valueStyle}>{value}</p>

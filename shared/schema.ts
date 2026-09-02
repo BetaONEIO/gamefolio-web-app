@@ -1926,6 +1926,7 @@ export type UserWithStats = User & {
     following: number;
     clips: number;
     screenshots: number;
+    views?: number;
     clipViews: number;
     likesReceived: number;
     firesReceived: number;

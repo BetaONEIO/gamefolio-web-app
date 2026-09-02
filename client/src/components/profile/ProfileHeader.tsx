@@ -9,8 +9,6 @@ import {
   UserPlus,
   UserCheck,
   Trophy,
-  Heart,
-  Flame,
   Video,
   Gamepad2,
   Upload,
@@ -19,7 +17,6 @@ import {
   Scroll,
   Settings,
 } from "lucide-react";
-import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -296,10 +293,28 @@ const ProfileHeader = ({
                 const lblColor = isLight ? "#374151" : resolvedTheme.accentColor;
 
                 return (
-                  <div className="flex space-x-4 text-xs rounded-[10px] px-4 py-2.5 bg-background/90">
+                  <div className="grid grid-cols-4 gap-3 text-xs rounded-[10px] px-4 py-2.5 bg-background/90">
                       <div className="text-center">
                         <span className="font-bold block" style={{ color: numColor }}>
-                          {(profile._count?.clips || 0) + (profile._count?.screenshots || 0)}
+                          {Math.round(profile.totalXP || 0).toLocaleString()}
+                        </span>
+                        <span className="text-muted-foreground" style={{ color: lblColor }}>
+                          XP
+                        </span>
+                      </div>
+
+                      <div className="text-center">
+                        <span className="font-bold block" style={{ color: numColor }}>
+                          {(profile._count?.views ?? profile._count?.clipViews ?? 0).toLocaleString()}
+                        </span>
+                        <span className="text-muted-foreground" style={{ color: lblColor }}>
+                          Views
+                        </span>
+                      </div>
+
+                      <div className="text-center">
+                        <span className="font-bold block" style={{ color: numColor }}>
+                          {((profile._count?.clips || 0) + (profile._count?.screenshots || 0)).toLocaleString()}
                         </span>
                         <span className="text-muted-foreground" style={{ color: lblColor }}>
                           Uploads
@@ -308,90 +323,11 @@ const ProfileHeader = ({
 
                       <div className="text-center">
                         <span className="font-bold block" style={{ color: numColor }}>
-                          {profile._count?.followers || 0}
+                          {(profile._count?.followers || 0).toLocaleString()}
                         </span>
                         <span className="text-muted-foreground" style={{ color: lblColor }}>
                           Followers
                         </span>
-                      </div>
-
-                      <div className="text-center">
-                        <span className="font-bold block" style={{ color: numColor }}>
-                          {profile._count?.following || 0}
-                        </span>
-                        <span className="text-muted-foreground" style={{ color: lblColor }}>
-                          Following
-                        </span>
-                      </div>
-
-                      <div className="text-center" data-testid="stat-likes-received">
-                        <span
-                          className="font-bold block flex items-center gap-1 justify-center"
-                          style={{ color: numColor }}
-                        >
-                          <Heart className="w-3 h-3 text-red-500" />
-                          {profile._count?.likesReceived || 0}
-                        </span>
-                        <span className="text-muted-foreground" style={{ color: lblColor }}>
-                          Likes
-                        </span>
-                      </div>
-
-                      <div className="text-center" data-testid="stat-fires-received">
-                        <span
-                          className="font-bold block flex items-center gap-1 justify-center"
-                          style={{ color: numColor }}
-                        >
-                          <ZapIconSvg className="w-3 h-3" active={true} />
-                          {profile._count?.firesReceived || 0}
-                        </span>
-                        <span className="text-muted-foreground" style={{ color: lblColor }}>
-                          Fires
-                        </span>
-                      </div>
-
-                      <div className="text-center" data-testid="stat-streak">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <span
-                                className="font-bold block flex items-center gap-1 justify-center"
-                                style={{ color: numColor }}
-                              >
-                                <Flame className="w-3 h-3 text-orange-500" />
-                                {profile.currentStreak || 0}
-                              </span>
-                              <span className="text-muted-foreground" style={{ color: lblColor }}>
-                                Streak
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-sm">Longest: {profile.longestStreak || 0} days</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-
-                      <div className="text-center">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <span
-                                className="font-bold block flex items-center gap-1 justify-center"
-                                style={{ color: numColor }}
-                              >
-                                <Trophy className="w-3 h-3 text-yellow-500" />
-                                {profile.level || 1}
-                              </span>
-                              <span className="text-muted-foreground" style={{ color: lblColor }}>
-                                Level
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-sm">{profile.totalXP || 0} Total XP</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
                       </div>
                   </div>
                 );
@@ -571,9 +507,10 @@ const ProfileHeader = ({
                   primaryColor: profile.primaryColor,
                 }}
                 userStats={{
-                  clips: (profile._count?.clips || 0) + (profile._count?.screenshots || 0),
+                  xp: profile.totalXP || 0,
+                  views: profile._count?.views ?? profile._count?.clipViews ?? 0,
+                  uploads: (profile._count?.clips || 0) + (profile._count?.screenshots || 0),
                   followers: profile._count?.followers || 0,
-                  following: profile._count?.following || 0,
                 }}
                 trigger={
                   <Button variant="outline" size="sm" className="h-8 px-4">

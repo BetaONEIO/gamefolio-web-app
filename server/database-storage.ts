@@ -614,6 +614,12 @@ export class DatabaseStorage implements IStorage {
       .from(clips)
       .where(eq(clips.userId, id));
 
+    // Get total views across all uploaded content
+    const screenshotViewsResult = await db
+      .select({ total: sql<number>`sum(${screenshots.views})` })
+      .from(screenshots)
+      .where(eq(screenshots.userId, id));
+
     // Get total likes received on user's clips
     const likesReceivedResult = await db
       .select({ count: sql<number>`count(*)` })
@@ -641,7 +647,8 @@ export class DatabaseStorage implements IStorage {
         following: followingCount[0].count || 0,
         clips: clipsCount[0].count || 0,
         screenshots: screenshotsCount[0].count || 0,
-        clipViews: viewsResult[0].total || 0,
+        views: Number(viewsResult[0].total || 0) + Number(screenshotViewsResult[0].total || 0),
+        clipViews: Number(viewsResult[0].total || 0),
         likesReceived: likesReceivedResult[0].count || 0,
         firesReceived: firesReceivedResult[0].count || 0
       },
