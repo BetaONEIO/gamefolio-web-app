@@ -11,6 +11,7 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "db:migrate": "tsx scripts/apply-migrations.ts",
+    "db:seed:spotlight": "tsx scripts/seed-spotlight-leaderboard.ts",
     "mobile:build": "vite build && cap sync",
     "mobile:build:android": "vite build && cap sync android",
     "mobile:build:ios": "vite build && cap sync ios",
