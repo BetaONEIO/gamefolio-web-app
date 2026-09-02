@@ -1682,6 +1682,81 @@ const ProfilePage = () => {
     boxShadow: `0 0 8px ${accentColor}44`,
   };
 
+  const collectionTabStyle: React.CSSProperties = isLightBackground ? {
+    backgroundColor: '#ffffff',
+    color: accentColor,
+    border: `1px solid ${accentColor}80`,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+  } : isMayhemTheme ? {
+    backgroundColor: '#020617',
+    color: '#00DFFF',
+    border: '1px solid #00DFFF',
+    boxShadow: '0 0 12px rgba(0,223,255,0.28)',
+    fontFamily: "'Orbitron', sans-serif",
+  } : isSummerTheme ? {
+    backgroundColor: '#063B5C',
+    color: '#32D6F4',
+    border: '1px solid #32D6F4',
+    boxShadow: '0 2px 0 rgba(6,59,92,0.35)',
+  } : isCyberpunkTheme ? {
+    backgroundColor: '#020617',
+    color: '#00D3F2',
+    border: '1px solid #00B8DB',
+    boxShadow: '0 0 12px rgba(0,184,219,0.32)',
+    fontFamily: "'Orbitron', sans-serif",
+  } : isNeoTheme ? {
+    backgroundColor: '#001A00',
+    color: '#00FF41',
+    border: '1px solid rgba(0,255,65,0.47)',
+    boxShadow: '0 0 10px rgba(0,255,65,0.2)',
+  } : isZombieTheme ? {
+    backgroundColor: '#1A1D1A',
+    color: '#9AE600',
+    border: '1px solid rgba(124,207,0,0.65)',
+    boxShadow: '0 0 10px rgba(154,230,0,0.2)',
+  } : isBlocksTheme ? {
+    backgroundColor: '#2A2A2A',
+    color: '#B7FF1A',
+    border: '1px solid rgba(183,255,26,0.55)',
+    fontFamily: "'Press Start 2P', monospace",
+    fontSize: '6px',
+  } : isForestTheme ? {
+    backgroundColor: '#1D3932',
+    color: '#E8D5B7',
+    border: '1px solid rgba(164,118,66,0.65)',
+  } : isGothicTheme ? {
+    background: 'linear-gradient(135deg, #3D0070 0%, #1E053A 100%)',
+    color: '#C27AFF',
+    border: '1px solid rgba(194,122,255,0.5)',
+    boxShadow: '0 0 10px rgba(194,122,255,0.22)',
+  } : isCartoonTheme ? {
+    background: '#FFFFFF',
+    color: '#1D1D1F',
+    border: '3px solid #1D1D1F',
+    boxShadow: '3px 3px 0 #1D1D1F',
+    fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif",
+    fontWeight: '800',
+  } : isWatermelonTheme ? {
+    backgroundColor: '#FFB3C1',
+    color: '#1D3932',
+    border: '2px solid #1D3932',
+  } : isElectricTheme ? {
+    backgroundColor: '#1A1200',
+    color: '#FFE033',
+    border: '1px solid rgba(255,224,51,0.55)',
+    boxShadow: '0 0 8px rgba(255,224,51,0.2)',
+  } : isBatTheme ? {
+    backgroundColor: '#000000',
+    color: '#FF8C00',
+    border: '1px solid rgba(255,140,0,0.55)',
+    boxShadow: '0 0 8px rgba(255,140,0,0.2)',
+  } : {
+    backgroundColor: 'rgba(10,15,25,0.95)',
+    color: accentColor,
+    border: `1px solid ${accentColor}`,
+    boxShadow: `0 0 10px ${accentColor}33`,
+  };
+
   const platformBtnStyle = isSummerTheme
     ? { backgroundColor: '#063B5C', color: '#FFFFFF', border: '1px solid #32D6F4', borderRadius: '9999px', boxShadow: '0 2px 0 rgba(6,59,92,0.35)' }
     : isWatermelonTheme
@@ -3625,7 +3700,7 @@ const ProfilePage = () => {
             <GamefolioCollectionButton
               active={profileSectionTab === 'collection'}
               size="mobile"
-              style={userTagStyle}
+              style={collectionTabStyle}
               onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
             />
             )}
@@ -4021,7 +4096,7 @@ const ProfilePage = () => {
               <GamefolioCollectionButton
                 active={profileSectionTab === 'collection'}
                 size="desktop"
-                style={userTagStyle}
+                style={collectionTabStyle}
                 onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
               />
               )}
