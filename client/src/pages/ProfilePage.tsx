@@ -3613,19 +3613,18 @@ const ProfilePage = () => {
             </div>
           )}
 
-          {/* Profile Info Card — stats only, Collection button on top-right border */}
+          {/* Profile Info Card — stats only, Collection tab attached above the top-right edge */}
           <div className="relative mx-4 mt-2 mb-1">
             {/* Stats card container */}
             <div
               className="relative mt-4 rounded-lg transition-all duration-300"
               style={{ width: '100%', maxWidth: '600px' }}
             >
-            {/* Collection button — straddles the top border of the stats card (half on, half off). Hidden on native builds. */}
+            {/* Collection tab — attached to the top-right edge of the stats card. Hidden on native builds. */}
             {CRYPTO_FEATURES_ENABLED && (
             <GamefolioCollectionButton
               active={profileSectionTab === 'collection'}
               size="mobile"
-              showTooltip={false}
               onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
             />
             )}
@@ -4009,14 +4008,14 @@ const ProfilePage = () => {
               </p>
             )}
 
-            {/* Profile Info Card — stats only, Collection button on top-right border */}
+            {/* Profile Info Card — stats only, Collection tab attached above the top-right edge */}
             <div className="relative mt-4">
 
             {/* Stats card */}
             <div
               className="relative mt-4 rounded-lg transition-all duration-300"
             >
-              {/* Collection button — straddles the top border of the stats card (half on, half off). Hidden on native builds. */}
+              {/* Collection tab — attached to the top-right edge of the stats card. Hidden on native builds. */}
               {CRYPTO_FEATURES_ENABLED && (
               <GamefolioCollectionButton
                 active={profileSectionTab === 'collection'}
