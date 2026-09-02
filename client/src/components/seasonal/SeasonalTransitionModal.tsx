@@ -213,17 +213,11 @@ function SeasonalTransitionModal({
     }
 
     if (step === 1) {
-      const title = result.isTopTen
-        ? "Your Summer rewards"
-        : result.participated
-          ? "Thanks for taking part"
-          : `${previousSeasonName} was for everyone`;
+      const title = result.isTopTen ? "Your Summer rewards" : "No rewards this time";
 
       const description = result.isTopTen
         ? `Your final ${previousSeasonName} top 10 finish unlocked these confirmed rewards.`
-        : result.participated
-          ? `Your ${previousSeasonName} XP has been recorded. Seasonal cosmetics are reserved for the final top 10.`
-          : `${previousSeasonName} has wrapped. Jump into ${newSeasonName} to start a new run.`;
+        : `Unfortunately, you didn't qualify for any rewards this season. We look forward to seeing what you can do next season.`;
 
       return {
         eyebrow: result.isTopTen ? "Your final result" : `${previousSeasonName} recap`,
@@ -351,17 +345,11 @@ function SeasonalTransitionModal({
                     </div>
                   )}
 
-                  {!result.isTopTen && result.participated && (
+                  {!result.isTopTen && (
                     <div className="rounded-md border border-border/70 bg-background/40 p-3 text-sm leading-5 text-muted-foreground">
-                      Seasonal profile cosmetics are awarded only to the final {previousSeasonName} top 10.
+                      Unfortunately, you didn&apos;t qualify for any rewards this season. We look forward
+                      to seeing what you can do next season.
                     </div>
-                  )}
-
-                  {!result.participated && (
-                    <p className="text-sm leading-6 text-muted-foreground">
-                      No {previousSeasonName} XP was recorded on this account, so there are no
-                      personal seasonal rewards to display.
-                    </p>
                   )}
                 </div>
               )}
@@ -453,12 +441,23 @@ export function SeasonalTransitionModalGate() {
   const announcementQueryKey = ["/api/seasonal-announcement", user?.id] as const;
 
   const blockedPath = BLOCKED_PATH_PREFIXES.some((prefix) => location.startsWith(prefix));
+  const isIndieGame = Boolean(
+    user && (
+      user.partnerType === "indie" ||
+      user.layoutStyle === "indie-game" ||
+      user.userType
+        .split(",")
+        .map((type) => type.trim())
+        .includes("indie_developer")
+    ),
+  );
   const player2PreviewRequested =
     import.meta.env.DEV &&
     user?.username?.toLowerCase() === "player2";
   const enabled = Boolean(
     user &&
       user.userType &&
+      !isIndieGame &&
       !blockedPath &&
       !isAuthModalOpen &&
       (user.emailVerified === true || player2PreviewRequested),

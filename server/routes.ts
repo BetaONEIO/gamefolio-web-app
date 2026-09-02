@@ -4730,6 +4730,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // were already distributed by the season/reward systems.
   app.get("/api/seasonal-announcement", authMiddleware, async (req, res) => {
     try {
+      const user = req.user!;
+      const isIndieGame = user.partnerType === "indie" ||
+        user.layoutStyle === "indie-game" ||
+        (user.userType ?? "")
+          .split(",")
+          .map((type) => type.trim())
+          .includes("indie_developer");
+      if (isIndieGame) {
+        return res.json(null);
+      }
+
       const userId = req.user!.id;
       const seenRows = await db.execute(sql`
         SELECT 1
