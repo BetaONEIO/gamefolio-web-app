@@ -35,3 +35,4 @@
 - [Daily reward session hydration](daily-reward-session-hydration.md) — guarded daily claims must run on authenticated session hydration, not only explicit login, including apps left open overnight.
 - [Season GFT payouts](season-gft-payouts.md) — production-only rank payouts use an idempotent ledger; submitted transactions require manual reconciliation before retry.
 - [Default profile palette migration](default-profile-palette-migration.md) — remap only known legacy default palettes at render time; never overwrite arbitrary or named custom themes.
+- [Seasonal reward claims](seasonal-reward-claims.md) — bulk grants must be distinct-user and existence-checked because legacy claim history is not globally unique.

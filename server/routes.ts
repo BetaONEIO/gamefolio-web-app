@@ -7387,6 +7387,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         Object.entries(req.body).filter(([key]) => ALLOWED_PROFILE_FIELDS.has(key))
       );
 
+      // The Summer preset is a seasonal reward, not a freely selectable
+      // palette. Check the final colour pair so direct API calls cannot bypass
+      // the locked theme card in settings.
+      const finalAccentColor = String(safeBody.accentColor ?? (req.user as any)?.accentColor ?? "").toLowerCase();
+      const finalBackgroundColor = String(safeBody.backgroundColor ?? (req.user as any)?.backgroundColor ?? "").toLowerCase();
+      if (finalAccentColor === "#35e0ff" && finalBackgroundColor === "#061e2a") {
+        const summerReward = (await storage.getAllAssetRewards()).find(
+          (reward) => reward.name === "Summer Showdown 2026 Border"
+        );
+        const hasSummerReward = !!summerReward && await storage.userHasUnlockedReward(userId, summerReward.id);
+        if (!hasSummerReward) {
+          return res.status(403).json({
+            message: "The Summer theme is unlocked by participating in Summer Showdown."
+          });
+        }
+      }
+
       // Guard against stale banner overwrites: uploaded-banner activation goes
       // through PUT /api/user/banners/:id/activate. If the PATCH carries a
       // bannerUrl that matches one of the user's *inactive* uploaded banners,

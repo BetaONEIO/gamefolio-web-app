@@ -1570,6 +1570,7 @@ const ProfilePage = () => {
   const isZombieTheme = !isLightBackground && accentColor?.toLowerCase() === '#9ae600';
   const isCyberpunkTheme = !isLightBackground && accentColor?.toLowerCase() === '#00d3f2';
   const isNeoTheme = !isLightBackground && accentColor?.toLowerCase() === '#00ff41';
+  const isSummerTheme = !isLightBackground && accentColor?.toLowerCase() === '#35e0ff' && backgroundColor?.toLowerCase() === '#061e2a';
   const isGothicTheme = !isLightBackground && accentColor?.toLowerCase() === '#c27aff' && backgroundColor?.toLowerCase() === '#1e053a';
   const isBlocksTheme = !isLightBackground && accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#1a1a1a';
   const isForestTheme = !isLightBackground && accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#0a2f1f';
@@ -1578,7 +1579,7 @@ const ProfilePage = () => {
   const isBatTheme = !isLightBackground && accentColor?.toLowerCase() === '#ff8c00' && (backgroundColor?.toLowerCase() === '#111111' || backgroundColor?.toLowerCase() === '#0a0010');
   const isMayhemTheme = !isLightBackground && accentColor?.toLowerCase() === '#00dfff';
 
-  const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isBatTheme && !isMayhemTheme && !isLightBackground;
+  const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isSummerTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isBatTheme && !isMayhemTheme && !isLightBackground;
 
   const userTagStyle: React.CSSProperties = isLightBackground ? {
     backgroundColor: 'rgba(255,255,255,0.6)',
@@ -1590,6 +1591,11 @@ const ProfilePage = () => {
     color: '#ffffff',
     border: '1px solid rgba(0,223,255,0.5)',
     boxShadow: '0 0 10px rgba(0,223,255,0.3)',
+  } : isSummerTheme ? {
+    background: 'linear-gradient(135deg, #0b6172 0%, #061e2a 100%)',
+    color: '#b9f8ff',
+    border: '1px solid rgba(53,224,255,0.42)',
+    boxShadow: '0 0 10px rgba(53,224,255,0.22)',
   } : isCyberpunkTheme ? {
     backgroundColor: '#00b8db',
     color: '#020617',
@@ -1645,7 +1651,9 @@ const ProfilePage = () => {
     boxShadow: `0 0 8px ${accentColor}44`,
   };
 
-  const platformBtnStyle = isWatermelonTheme
+  const platformBtnStyle = isSummerTheme
+    ? { backgroundColor: 'rgba(6,30,42,0.9)', color: '#8ff4ff', border: '1px solid #35e0ff66', borderRadius: '9999px', boxShadow: '0 0 8px #35e0ff22' }
+    : isWatermelonTheme
     ? { backgroundColor: '#ffb3c1', color: '#0d1a12', border: '3px solid #1d3932', borderRadius: '9999px' }
     : isCartoonTheme
     ? { backgroundColor: '#ffffff', color: '#1d1d1f', border: '3px solid #1d1d1f', borderRadius: '9999px', boxShadow: '3px 3px 0 #1d1d1f', fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: '800' }
@@ -1679,7 +1687,7 @@ const ProfilePage = () => {
     ? platformBtnStyle
     : isLightBackground
     ? { backgroundColor: 'rgba(255,255,255,0.9)', color: '#000000', border: '1.5px solid rgba(0,0,0,0.5)', borderRadius: '9999px' }
-    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isMayhemTheme)
+    : (isZombieTheme || isCyberpunkTheme || isNeoTheme || isSummerTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isMayhemTheme)
       ? platformBtnStyle
       : { backgroundColor: '#ffffff', color: '#000000', border: '1.5px solid #000000', borderRadius: '9999px' };
 
@@ -1696,9 +1704,10 @@ const ProfilePage = () => {
     facebook:    { backgroundColor: '#1877F2', color: '#ffffff', border: '1px solid #1877F2', borderRadius: '9999px' },
   };
 
-  const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isBatTheme || isMayhemTheme || isLightBackground;
+  const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isSummerTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isBatTheme || isMayhemTheme || isLightBackground;
 
-  const avatarThemeColor = isWatermelonTheme ? '#ff6b6b'
+  const avatarThemeColor = isSummerTheme ? '#35e0ff'
+    : isWatermelonTheme ? '#ff6b6b'
     : isCartoonTheme ? '#ff6b35'
     : isMacTheme ? '#0071e3'
     : isZombieTheme ? '#9ae600'
@@ -1715,7 +1724,12 @@ const ProfilePage = () => {
     return socialOutlineStyle;
   };
 
-  const shareButtonStyle = isWatermelonTheme ? {
+  const shareButtonStyle = isSummerTheme ? {
+    color: '#8ff4ff',
+    background: 'rgba(6,30,42,0.82)',
+    border: '1px solid #35e0ff88',
+    boxShadow: '0 0 10px #35e0ff22',
+  } : isWatermelonTheme ? {
     color: '#1d3932',
     background: '#ffb3c1',
     border: '3px solid #1d3932',
@@ -1761,7 +1775,13 @@ const ProfilePage = () => {
     border: `1px solid ${accentColor ? accentColor + '80' : 'rgba(255,255,255,0.2)'}`,
   };
 
-  const tabListStyle = isWatermelonTheme ? {
+  const tabListStyle = isSummerTheme ? {
+    background: 'rgba(6,30,42,0.9)',
+    border: '1px solid #35e0ff55',
+    borderRadius: '9999px',
+    padding: '4px 8px',
+    boxShadow: '0 0 18px #35e0ff18',
+  } : isWatermelonTheme ? {
     background: '#ffb3c1',
     border: '5px solid #1d3932',
     borderRadius: '9999px',
@@ -1832,7 +1852,7 @@ const ProfilePage = () => {
     } : {};
     return {
       backgroundColor: isCartoonTheme ? 'transparent' : isActive ? (isBlocksTheme ? (blocksTabColors[tabName] || accentColor) : isForestTheme ? '#e8d5b7' : isMacTheme ? 'rgba(255,255,255,0.18)' : `${accentColor}22`) : 'transparent',
-      color: isCartoonTheme ? (isActive ? (cartoonTabColors[tabName] || '#1d1d1f') : 'rgba(0,0,0,0.25)') : isActive ? (isBlocksTheme ? '#1a1a1a' : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#5C3317' : accentColor) : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#c4a882' : isLightBackground ? accentColor : undefined,
+      color: isCartoonTheme ? (isActive ? (cartoonTabColors[tabName] || '#1d1d1f') : 'rgba(0,0,0,0.25)') : isActive ? (isBlocksTheme ? '#1a1a1a' : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#5C3317' : isSummerTheme ? '#b9f8ff' : accentColor) : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#c4a882' : isSummerTheme ? '#8ff4ff' : isLightBackground ? accentColor : undefined,
       ...(!isCartoonTheme && !isBlocksTheme && !isForestTheme ? frostedGlass : {}),
       ...(isCartoonTheme ? { fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: '800', letterSpacing: '-0.5px', fontSize: '1.1rem', borderBottom: isActive ? `4px solid ${cartoonTabColors[tabName] || 'gold'}` : '4px solid transparent', borderRadius: '0', paddingBottom: '6px' } : {}),
       ...(isZombieTheme ? { fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.8rem' } : {}),
@@ -1840,11 +1860,16 @@ const ProfilePage = () => {
       ...(isNeoTheme ? { fontFamily: "'JetBrains Mono', monospace", letterSpacing: '1.5px', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase' as const } : {}),
       ...(isBlocksTheme ? { fontFamily: "'Press Start 2P', monospace", fontSize: '0.55rem', letterSpacing: '0.5px', textTransform: 'uppercase' as const, borderRadius: '2px' } : {}),
       ...(isGothicTheme ? { fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif", letterSpacing: '1.5px', fontSize: '0.78rem' } : {}),
+      ...(isSummerTheme ? { fontFamily: "'Trebuchet MS', sans-serif", letterSpacing: '1px', fontSize: '0.78rem', textTransform: 'uppercase' as const } : {}),
       ...(isElectricTheme ? { fontFamily: "'Bangers', 'Impact', cursive", letterSpacing: '2px', fontSize: '0.85rem', textTransform: 'uppercase' as const } : {}),
     };
   };
 
-  const nameTagBgStyle = isWatermelonTheme ? {
+  const nameTagBgStyle = isSummerTheme ? {
+    background: 'rgba(6,30,42,0.94)',
+    border: '1px solid #35e0ff66',
+    boxShadow: '0 0 12px #35e0ff22',
+  } : isWatermelonTheme ? {
     background: '#ffb3c1',
     border: '5px solid #1d3932',
     borderRadius: '9999px',
@@ -2059,6 +2084,12 @@ const ProfilePage = () => {
     )}
     {isNeoTheme && !profileBackgroundImageUrl && <div className="neo-vignette" />}
     {isNeoTheme && !profileBackgroundImageUrl && <div className="neo-scanline" />}
+    {isSummerTheme && !profileBackgroundImageUrl && (
+      <>
+        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, background: 'radial-gradient(circle at 12% 18%, rgba(185,248,255,0.14) 0 2px, transparent 3px), radial-gradient(circle at 84% 28%, rgba(53,224,255,0.18) 0 1px, transparent 2px), linear-gradient(180deg, rgba(11,97,114,0.08), transparent 42%)' }} />
+        <div style={{ position: 'fixed', left: '-5%', right: '-5%', bottom: '-4%', height: '24vh', pointerEvents: 'none', zIndex: 0, borderRadius: '50% 50% 0 0', borderTop: '1px solid rgba(53,224,255,0.22)', boxShadow: '0 -18px 0 rgba(53,224,255,0.06), 0 -36px 0 rgba(53,224,255,0.035)', transform: 'rotate(-1deg)' }} />
+      </>
+    )}
     <div 
       className={`min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope${isBlocksTheme && !profileBackgroundImageUrl ? ' blocks-bg' : ''}`}
       ref={profileThemeScopeRef}
@@ -3393,7 +3424,7 @@ const ProfilePage = () => {
             )}
 
             <div 
-              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''} ${isMayhemTheme ? 'mayhem-stats-card' : ''}`}
+             className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''} ${isMayhemTheme ? 'mayhem-stats-card' : ''}`}
               style={isWatermelonTheme ? {
                 background: '#ffb3c1',
               } : isCartoonTheme ? {
@@ -3426,6 +3457,10 @@ const ProfilePage = () => {
                 background: 'rgba(15,2,38,0.92)',
                 border: '1px solid #c27aff55',
                 boxShadow: '0 0 20px #c27aff22, 0 0 40px #c27aff11',
+               } : isSummerTheme ? {
+                 background: 'rgba(6,30,42,0.9)',
+                 border: '1px solid #35e0ff55',
+                 boxShadow: '0 0 20px #35e0ff22, inset 0 1px 0 #b9f8ff12',
               } : isBatTheme ? {
                 background: '#000000',
                 border: '1px solid rgba(255,140,0,0.2)',
@@ -3794,7 +3829,7 @@ const ProfilePage = () => {
                   borderRadius: isBlocksTheme ? '4px' : undefined,
                   boxShadow: isBlocksTheme ? '4px 4px 0 #000' : isGothicTheme ? '0 0 14px #c27aff33' : isCartoonTheme ? '3px 3px 0 #1d1d1f' : isMayhemTheme ? '0 0 12px rgba(255,0,105,0.4)' : undefined,
                 }}>
-                  <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>{isGothicTheme ? '👻 Collection' : 'Collection'}</span>
+                 <span className={isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}>{isGothicTheme ? '👻 Collection' : isSummerTheme ? '🌊 Collection' : 'Collection'}</span>
               </button>
               )}
 

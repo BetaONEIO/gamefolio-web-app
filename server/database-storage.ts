@@ -5454,7 +5454,7 @@ export class DatabaseStorage implements IStorage {
       .insert(assetRewardClaims)
       .values(claim)
       .returning();
-    
+
     // Increment the times rewarded counter
     await db
       .update(assetRewards)

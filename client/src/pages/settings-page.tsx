@@ -40,7 +40,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Slider } from "@/components/ui/slider";
 import DOMPurify from "dompurify";
 import { useSignedUrl, useSignedUrls, clearSignedUrlCache } from "@/hooks/use-signed-url";
-import type { NameTag, VerificationBadge } from "@shared/schema";
+import type { AssetReward, NameTag, VerificationBadge } from "@shared/schema";
 import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWrapper";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
@@ -378,6 +378,15 @@ const PRESET_THEMES = [
     proOnly: true
   },
   {
+    name: "Summer",
+    backgroundColor: "#061e2a",
+    accentColor: "#35e0ff",
+    gradientTopColor: "#0b6172",
+    primaryColor: "#0b6172",
+    profileBackgroundGradientCss: "radial-gradient(circle at 18% 18%, rgba(53,224,255,0.18) 0 2px, transparent 3px), radial-gradient(circle at 82% 30%, rgba(255,255,255,0.14) 0 1.5px, transparent 2.5px), radial-gradient(ellipse 95% 70% at 50% 0%, rgba(11,97,114,0.9) 0%, rgba(6,30,42,0.98) 72%), linear-gradient(180deg, #0b6172 0%, #061e2a 100%)",
+    unlockRewardName: "Summer Showdown 2026 Border"
+  },
+  {
     name: "Mac",
     backgroundColor: "#f0f0f2",
     accentColor: "#0066ff",
@@ -556,6 +565,15 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   useTheme();
   const { customerInfo, refreshCustomerInfo } = useRevenueCat();
+
+  const { data: claimedRewards } = useQuery<AssetReward[] | null>({
+    queryKey: ["/api/lootbox/rewards"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: !!user,
+  });
+  const hasSummerReward = !!claimedRewards?.some(
+    (reward) => reward.name === "Summer Showdown 2026 Border"
+  );
   
   const updateProfile = useUpdateProfile();
 
@@ -2031,7 +2049,7 @@ export default function SettingsPage() {
   const bgRgb = user?.backgroundColor ? hexToRgb(user.backgroundColor) : null;
   const accentRgb = user?.accentColor ? hexToRgb(user.accentColor) : null;
 
-  const NAMED_THEME_NAMES = ['Zombie', 'Cyberpunk', 'NEO', 'Blocks', 'Watermelon', 'Forest', 'Gothic', 'Mac', 'Cartoon', 'Bat'];
+  const NAMED_THEME_NAMES = ['Zombie', 'Cyberpunk', 'NEO', 'Blocks', 'Watermelon', 'Forest', 'Gothic', 'Summer', 'Mac', 'Cartoon', 'Bat'];
   const isNamedThemeActive = PRESET_THEMES.some(t =>
     NAMED_THEME_NAMES.includes(t.name) &&
     profileData.accentColor === t.accentColor &&
@@ -3254,7 +3272,11 @@ export default function SettingsPage() {
                           {PRESET_THEMES.map((theme) => {
                             const topColor = theme.gradientTopColor || DEFAULT_PROFILE_THEME.backgroundColor;
                             const isActive = profileData.accentColor === theme.accentColor && profileData.backgroundColor === theme.backgroundColor;
-                            const isLocked = (theme as any).proOnly && !user?.isPro && theme.name !== "None";
+                            const unlockRewardName = (theme as any).unlockRewardName as string | undefined;
+                            const isLocked = (
+                              ((theme as any).proOnly && !user?.isPro) ||
+                              (!!unlockRewardName && !hasSummerReward)
+                            ) && theme.name !== "None";
                             return (
                               <div
                                 key={theme.name}
@@ -3322,6 +3344,13 @@ export default function SettingsPage() {
                                     <div style={{ position:'absolute', top:'10%', left:'15%', fontSize:'14px', color:'#c27affaa', pointerEvents:'none', lineHeight:1 }}>✦</div>
                                     <div style={{ position:'absolute', top:'8%', right:'18%', fontSize:'10px', color:'#c27aff88', pointerEvents:'none', lineHeight:1 }}>✦</div>
                                   </>}
+                                  {theme.name === 'Summer' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 80% 100% at 50% 0%, rgba(53,224,255,0.26) 0%, rgba(6,30,42,0.35) 70%)' }} />
+                                    <div style={{ position:'absolute', left:'-8%', right:'-8%', bottom:'-8%', height:'42%', pointerEvents:'none', borderRadius:'50% 50% 0 0', borderTop:'2px solid rgba(53,224,255,0.65)', boxShadow:'0 -8px 0 rgba(53,224,255,0.12), 0 -16px 0 rgba(53,224,255,0.08)', transform:'rotate(-2deg)' }} />
+                                    <div style={{ position:'absolute', top:'15%', left:'18%', fontSize:'13px', color:'#b9f8ff', pointerEvents:'none', lineHeight:1 }}>✦</div>
+                                    <div style={{ position:'absolute', top:'10%', right:'22%', fontSize:'9px', color:'#35e0ff', pointerEvents:'none', lineHeight:1 }}>✦</div>
+                                    <div style={{ position:'absolute', bottom:'22%', right:'17%', fontSize:'11px', color:'#35e0ffcc', pointerEvents:'none', lineHeight:1 }}>✦</div>
+                                  </>}
                                   {theme.name === 'Mac' && <>
                                     <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'rgba(255,255,255,0.55)' }} />
                                     <div style={{ position:'absolute', top:'-20%', left:'-10%', width:'80%', height:'80%', borderRadius:'50%', background:'radial-gradient(circle, rgba(255,80,80,0.25) 0%, rgba(255,200,0,0.2) 30%, rgba(0,200,100,0.2) 55%, rgba(0,100,255,0.2) 80%, transparent 100%)', pointerEvents:'none' }} />
@@ -3379,7 +3408,9 @@ export default function SettingsPage() {
                                   {theme.name === 'None' ? 'Gamefolio Default' : theme.name}
                                 </p>
                                 {isLocked && theme.name !== "None" && (
-                                  <p className="text-center text-xs text-muted-foreground">Pro only</p>
+                                  <p className="text-center text-xs text-muted-foreground">
+                                    {(theme as any).unlockRewardName ? "Summer Showdown reward" : "Pro only"}
+                                  </p>
                                 )}
                                 <div className="flex justify-center p-2">
                                   <Button
@@ -5837,6 +5868,7 @@ export default function SettingsPage() {
         const isBlocks      = tn === 'Blocks';
         const isElectric    = tn === 'Electric';
         const isGothic      = tn === 'Gothic';
+         const isSummer      = tn === 'Summer';
         const isCartoon     = tn === 'Cartoon';
         const isWatermelon  = tn === 'Watermelon';
         const isForest      = tn === 'Forest';
@@ -5846,6 +5878,7 @@ export default function SettingsPage() {
         const isCutesyPink  = tn === 'Cutesy Pink';
         const isMayhem      = tn === 'Mayhem';
         const isBat         = tn === 'Bat';
+         const isRewardLocked = !!(themePreviewData as any).unlockRewardName && !hasSummerReward;
         const isLight       = isMac || isCartoon || isIce || isBubbleTea || isWatermelon;
 
         const themeFont =
@@ -5856,7 +5889,8 @@ export default function SettingsPage() {
           isElectric  ? "'Bangers', cursive" :
           isGothic    ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" :
           isCartoon   ? "'Bricolage Grotesque', 'Arial Black', sans-serif" :
-          undefined;
+           isSummer    ? "'Trebuchet MS', sans-serif" :
+           undefined;
 
         const nameColor = isLight && !isWatermelon ? '#1d1d1f' : '#ffffff';
 
@@ -5879,7 +5913,16 @@ export default function SettingsPage() {
           fontSize: '1rem',
           fontWeight: 700,
           letterSpacing: '2px',
-        } : {
+         } : isSummer ? {
+           background: 'linear-gradient(90deg, #b9f8ff 0%, #35e0ff 45%, #ffffff 100%)',
+           WebkitBackgroundClip: 'text',
+           WebkitTextFillColor: 'transparent',
+           backgroundClip: 'text',
+           fontFamily: themeFont,
+           fontSize: '1.1rem',
+           fontWeight: 900,
+           letterSpacing: '1px',
+         } : {
           color: nameColor,
           fontFamily: themeFont,
           fontWeight: isBlocks ? 400 : isElectric ? 400 : 700,
@@ -5892,7 +5935,8 @@ export default function SettingsPage() {
           color:
             isWatermelon ? '#0d1a12' :
             isLight       ? '#555' :
-            isCyberpunk   ? undefined :
+             isCyberpunk   ? undefined :
+             isSummer      ? '#8ff4ff' :
             `${accent}bb`,
           fontSize: isBlocks ? '0.45rem' : isElectric ? '0.75rem' : '0.6rem',
           letterSpacing: isZombie ? '1.5px' : '0.8px',
@@ -5923,7 +5967,8 @@ export default function SettingsPage() {
             isNeo         ? '#00ff41' :
             isBlocks      ? '#B7FF1A' :
             isElectric    ? '#ffe033' :
-            isGothic      ? '#c27aff' :
+             isGothic      ? '#c27aff' :
+             isSummer      ? '#35e0ff' :
             '#ffffff',
           fontWeight: 900,
           fontSize: isBlocks ? '0.6rem' : '1rem',
@@ -5934,7 +5979,12 @@ export default function SettingsPage() {
           background: '#ffb3c1',
           border: '5px solid #1d3932',
           padding: '10px 16px',
-        } : isBlocks ? {
+         } : isSummer ? {
+           borderRadius: '16px',
+           background: 'rgba(6,30,42,0.88)',
+           border: '1px solid rgba(53,224,255,0.42)',
+           boxShadow: '0 0 20px rgba(53,224,255,0.16), inset 0 1px 0 rgba(185,248,255,0.12)',
+         } : isBlocks ? {
           borderRadius: '4px',
           background: `${topColor}ee`,
           border: '3px solid #B7FF1A',
@@ -5966,7 +6016,11 @@ export default function SettingsPage() {
           borderRadius: '12px',
           background: '#000000',
           border: '1px solid rgba(255,140,0,0.25)',
-        } : {
+         } : isSummer ? {
+           border: '4px solid #35e0ff',
+           borderRadius: '9999px',
+           boxShadow: '0 0 16px rgba(53,224,255,0.45)',
+         } : {
           borderRadius: '12px',
           background: `${topColor}cc`,
           border: `1px solid ${accent}33`,
@@ -5989,7 +6043,10 @@ export default function SettingsPage() {
           borderRadius: '9999px',
         };
 
-        const isThemeLocked = (themePreviewData as any).proOnly && !user?.isPro && tn !== "None";
+         const isThemeLocked = (
+           ((themePreviewData as any).proOnly && !user?.isPro) ||
+           ((themePreviewData as any).unlockRewardName && !hasSummerReward)
+         ) && tn !== "None";
         const isCurrentTheme = !isThemeLocked && themePreviewData.accentColor === profileData.accentColor && themePreviewData.backgroundColor === profileData.backgroundColor;
         const displayName = tn === 'None' ? 'Gamefolio Default' : tn;
 
@@ -6046,7 +6103,7 @@ export default function SettingsPage() {
               `}</style>
               <div
                 className="rounded-2xl overflow-hidden relative"
-                style={{ background: isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)` }}
+                 style={{ background: isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' : isSummer ? 'radial-gradient(ellipse 95% 70% at 50% 0%, rgba(53,224,255,0.25) 0%, rgba(6,30,42,0.98) 72%), linear-gradient(180deg, #0b6172 0%, #061e2a 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)` }}
               >
                 {/* ── Zombie layers ── */}
                 {isZombie && <>
@@ -6063,6 +6120,13 @@ export default function SettingsPage() {
                   <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px)' }} />
                   <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'rgba(255,0,60,0.12)', animation:'cpRGBR 9s linear infinite', mixBlendMode:'screen' as any }} />
                   <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'rgba(0,80,255,0.12)', animation:'cpRGBB 9s linear infinite', mixBlendMode:'screen' as any }} />
+                </>}
+
+                {/* ── Summer layers ── */}
+                {isSummer && <>
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(circle at 14% 16%, #b9f8ff 0 1px, transparent 2px), radial-gradient(circle at 82% 22%, #35e0ff 0 1.5px, transparent 2.5px), radial-gradient(circle at 72% 64%, #ffffff 0 1px, transparent 2px)', opacity:0.85 }} />
+                  <div style={{ position:'absolute', left:'-8%', right:'-8%', bottom:'-7%', height:'36%', pointerEvents:'none', borderRadius:'50% 50% 0 0', borderTop:'2px solid #35e0ff99', boxShadow:'0 -10px 0 #35e0ff22, 0 -20px 0 #35e0ff12', transform:'rotate(-2deg)' }} />
+                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(135deg, rgba(255,255,255,0.12), transparent 35%, transparent 68%, rgba(53,224,255,0.1))' }} />
                 </>}
 
                 {/* ── Neo layers ── */}
@@ -6194,7 +6258,14 @@ export default function SettingsPage() {
                     onClick={() => {
                       if (isThemeLocked) {
                         setThemePreviewData(null);
-                        setShowProUpgradeDialog(true);
+                        if (isRewardLocked) {
+                          toast({
+                            title: "Summer theme locked",
+                            description: "Participate in Summer Showdown to unlock this seasonal theme.",
+                          });
+                        } else {
+                          setShowProUpgradeDialog(true);
+                        }
                       } else {
                         applyPresetTheme(themePreviewData);
                         setThemePreviewData(null);
@@ -6212,8 +6283,8 @@ export default function SettingsPage() {
                       border: isCurrentTheme ? `1px solid ${accent}44` : 'none',
                     }}
                   >
-                    {isThemeLocked && <img src={gamefolioLogo} alt="Gamefolio" className="w-5 h-5 rounded-full flex-shrink-0" />}
-                    {isCurrentTheme ? 'Current Theme' : isThemeLocked ? 'Go Pro' : 'Apply Theme'}
+                     {isThemeLocked && !isRewardLocked && <img src={gamefolioLogo} alt="Gamefolio" className="w-5 h-5 rounded-full flex-shrink-0" />}
+                     {isCurrentTheme ? 'Current Theme' : isRewardLocked ? 'Earn in Summer Showdown' : isThemeLocked ? 'Go Pro' : 'Apply Theme'}
                   </button>
                 </div>
               </div>
