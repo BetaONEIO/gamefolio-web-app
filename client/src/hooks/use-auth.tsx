@@ -14,7 +14,7 @@ import { auth, getGoogleRedirectResult } from "@/lib/firebase";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { isNative } from "@/lib/platform";
-import { clearTokens, getAccessTokenSync, setTokens } from "@/lib/auth-token";
+import { clearTokens, setTokens } from "@/lib/auth-token";
 import { getDeviceId } from "@/lib/device-id";
 import { initPushNotifications, unregisterCurrentPushToken } from "@/lib/push-notifications";
 import { setSentryUser } from "@/lib/sentry";
@@ -267,10 +267,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // gate the whole app's auth resolution forever.
     const firebaseCheckTimeout = setTimeout(() => {
       if (!mounted) return;
-      Sentry.captureMessage("use-auth: Firebase auth check timed out, proceeding anyway", {
-        level: "warning",
-        tags: { module: "use-auth", op: "firebase-timeout" },
-      });
       setFirebaseAuthChecked(true);
     }, 5000);
 
@@ -304,7 +300,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
-    isFetching,
     isFetched,
   } = useQuery<User | undefined, Error>({
     queryKey: ["/api/user"],
@@ -320,35 +315,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     retry: 1,
     retryDelay: 500,
   });
-
-  // Diagnostic for the "logged out after force-quit" investigation: report
-  // the outcome of the very first /api/user resolution on this app launch,
-  // together with whether a token was in memory at that moment. This is the
-  // one thing hydrate()'s own logging can't show - whether the token that was
-  // found actually resulted in a recognized session.
-  //
-  // Must gate on firebaseAuthChecked + !isFetching, not just !isLoading: a
-  // disabled query (enabled: false, before firebaseAuthChecked flips true)
-  // also reports isLoading: false with no fetch ever having run, so an
-  // earlier version of this effect fired on that very first disabled render
-  // and locked itself out before the real fetch ever completed - every
-  // "userResolved: false" it ever reported was meaningless.
-  const initialAuthCheckReported = useRef(false);
-  useEffect(() => {
-    if (!isNative || !firebaseAuthChecked || isFetching || initialAuthCheckReported.current) return;
-    initialAuthCheckReported.current = true;
-    Sentry.captureMessage("use-auth: initial /api/user resolution", {
-      level: "info",
-      tags: {
-        module: "use-auth",
-        op: "initial-user-check",
-        hadTokenAtCheckTime: String(!!getAccessTokenSync()),
-        userResolved: String(!!user),
-        hadError: String(!!error),
-        errorMessage: error?.message ?? "",
-      },
-    });
-  }, [firebaseAuthChecked, isFetching, user, error]);
 
   // Tag Sentry events with the resolved user so crashes/errors are
   // attributable to a username, not just an anonymous device UUID.

@@ -35,21 +35,35 @@ export function initSentry(): void {
     return;
   }
 
+  // NB: do NOT use import.meta.env.PROD here. `.env` sets NODE_ENV=development
+  // (needed for local server dev), and Vite leaks that into `vite build`,
+  // forcing PROD=false in the shipped AAB — which mis-tagged every production
+  // crash as "development" and made prod/dev indistinguishable in Sentry.
+  // MODE reflects the actual build command ("production" for `vite build`) and
+  // is not affected by the NODE_ENV leak. Set VITE_SENTRY_ENVIRONMENT to
+  // override (e.g. "staging").
+  const environment =
+    import.meta.env.VITE_SENTRY_ENVIRONMENT?.trim() ||
+    (import.meta.env.MODE === "production" ? "production" : "development");
+
+  // Only production reports — same gate as server/sentry.ts, and for the same
+  // reason: dev workspaces and beta share this DSN and the org's single
+  // monthly error quota, so a broken non-prod build must not be able to
+  // exhaust it and blind production. Set VITE_SENTRY_ALLOW_NON_PRODUCTION=true
+  // to opt an environment back in deliberately.
+  if (
+    environment !== "production" &&
+    import.meta.env.VITE_SENTRY_ALLOW_NON_PRODUCTION?.trim() !== "true"
+  ) {
+    return;
+  }
+
   Sentry.init(
     {
       dsn,
       release:
         typeof __APP_RELEASE__ !== "undefined" ? __APP_RELEASE__ : undefined,
-      // NB: do NOT use import.meta.env.PROD here. `.env` sets NODE_ENV=development
-      // (needed for local server dev), and Vite leaks that into `vite build`,
-      // forcing PROD=false in the shipped AAB — which mis-tagged every production
-      // crash as "development" and made prod/dev indistinguishable in Sentry.
-      // MODE reflects the actual build command ("production" for `vite build`) and
-      // is not affected by the NODE_ENV leak. Set VITE_SENTRY_ENVIRONMENT to
-      // override (e.g. "staging").
-      environment:
-        import.meta.env.VITE_SENTRY_ENVIRONMENT?.trim() ||
-        (import.meta.env.MODE === "production" ? "production" : "development"),
+      environment,
       // Crash-capture focus for QA: errors on, performance tracing off (it
       // burns quota fast and isn't what we're after). Raise later if wanted.
       tracesSampleRate: 0,
