@@ -345,12 +345,6 @@ function SeasonalTransitionModal({
                     </div>
                   )}
 
-                  {!result.isTopTen && (
-                    <div className="rounded-md border border-border/70 bg-background/40 p-3 text-sm leading-5 text-muted-foreground">
-                      Unfortunately, you didn&apos;t qualify for any rewards this season. We look forward
-                      to seeing what you can do next season.
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -359,9 +353,6 @@ function SeasonalTransitionModal({
                   <p className="text-sm leading-6 text-muted-foreground">
                     The leaderboard is live now. Bring your clips, screenshots, and streaks into
                     the new season.
-                  </p>
-                  <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                    Keep an eye out for a few surprise rewards throughout the season.
                   </p>
                   {announcement.newSeason.rewards.length > 0 && (
                     <div className="mt-4">
