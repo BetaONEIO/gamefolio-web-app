@@ -8,12 +8,10 @@ import {
 import { cn } from "@/lib/utils";
 
 interface GamefolioCollectionIconProps {
-  active?: boolean;
   className?: string;
 }
 
 export function GamefolioCollectionIcon({
-  active = false,
   className,
 }: GamefolioCollectionIconProps) {
   return (
@@ -70,7 +68,6 @@ export function GamefolioCollectionButton({
       )}
     >
       <GamefolioCollectionIcon
-        active={active}
         className={cn(
           "transition-colors duration-150",
           size === "desktop" ? "h-7 w-7" : "h-6 w-6",
