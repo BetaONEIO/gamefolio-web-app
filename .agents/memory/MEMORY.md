@@ -36,3 +36,4 @@
 - [Season GFT payouts](season-gft-payouts.md) — production-only rank payouts use an idempotent ledger; submitted transactions require manual reconciliation before retry.
 - [Default profile palette migration](default-profile-palette-migration.md) — remap only known legacy default palettes at render time; never overwrite arbitrary or named custom themes.
 - [Seasonal reward claims](seasonal-reward-claims.md) — bulk grants must be distinct-user and existence-checked because legacy claim history is not globally unique.
+- [Pro-gated catalog cache](pro-gated-catalog-cache.md) — entitlement-dependent catalogs need the entitlement in the client query key or an explicit invalidation after upgrade.

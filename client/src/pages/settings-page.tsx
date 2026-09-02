@@ -156,26 +156,48 @@ const InlineSvgBorder: React.FC<{
   style?: React.CSSProperties;
 }> = ({ svgUrl, color, className, style }) => {
   const [svgContent, setSvgContent] = useState<string>('');
+  const [assetType, setAssetType] = useState<'svg' | 'raster' | null>(null);
   
   // Get signed URL for the SVG
   const { signedUrl } = useSignedUrl(svgUrl);
   
   useEffect(() => {
+    let cancelled = false;
+
+    setSvgContent('');
+    setAssetType(null);
+
     // Wait for signed URL if the original URL is a Supabase URL
     const urlToFetch = signedUrl || svgUrl;
     if (!urlToFetch) return;
     
     // Don't fetch if we need a signed URL but don't have one yet
     if (svgUrl && svgUrl.includes('supabase.co') && !signedUrl) return;
+
+    // Raster borders must be rendered as images. Reading a PNG as text
+    // produces the visible �PNG/IHDR payload seen in the Settings preview.
+    const urlPath = urlToFetch.split(/[?#]/, 1)[0];
+    if (/\.(?:png|jpe?g|gif|webp|avif)$/i.test(urlPath)) {
+      setAssetType('raster');
+      return () => {
+        cancelled = true;
+      };
+    }
     
     fetch(urlToFetch)
       .then(res => {
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
         }
+        const contentType = res.headers.get('content-type')?.toLowerCase() || '';
+        if (contentType.startsWith('image/') && !contentType.includes('svg')) {
+          if (!cancelled) setAssetType('raster');
+          return null;
+        }
         return res.text();
       })
       .then(svg => {
+        if (svg === null || cancelled) return;
         if (!svg.includes('<svg') && !svg.includes('<?xml')) {
           console.error('Invalid SVG content received');
           return;
@@ -202,12 +224,39 @@ const InlineSvgBorder: React.FC<{
           .replace(/fill\s*:\s*currentColor/gi, `fill: ${color}`)
           .replace(/stroke\s*:\s*currentColor/gi, `stroke: ${color}`);
         
-        setSvgContent(colorized);
+        if (!cancelled) {
+          setAssetType('svg');
+          setSvgContent(colorized);
+        }
       })
       .catch(err => console.error('Failed to load SVG:', err));
+
+    return () => {
+      cancelled = true;
+    };
   }, [svgUrl, signedUrl, color]);
   
-  if (!svgContent) return null;
+  if (assetType === 'raster') {
+    return (
+      <img
+        src={signedUrl || svgUrl}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        className={className}
+        style={{
+          ...style,
+          width: '100%',
+          height: '100%',
+          display: 'block',
+          objectFit: 'contain',
+        }}
+        onError={() => console.error('Failed to load avatar border image')}
+      />
+    );
+  }
+
+  if (assetType !== 'svg' || !svgContent) return null;
   
   return (
     <div 
@@ -1444,9 +1493,10 @@ export default function SettingsPage() {
     }
   };
 
-  // Fetch user's unlocked avatar borders (only borders they have access to)
+  // Include Pro status in the key so an upgrade refetches the full border
+  // catalog instead of keeping the non-Pro unlocked-only result forever.
   const { data: avatarBorders, isLoading: isLoadingBorders } = useQuery({
-    queryKey: ['/api/user/avatar-borders'],
+    queryKey: ['/api/user/avatar-borders', user?.isPro ? 'pro' : 'standard'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
   });
