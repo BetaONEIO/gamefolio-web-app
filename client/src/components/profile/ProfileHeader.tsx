@@ -185,7 +185,7 @@ const ProfileHeader = ({
   const resolvedTheme = resolveProfileTheme(profile);
 
   const bannerStyle = {
-    backgroundColor: resolvedTheme.backgroundColor,
+    backgroundColor: resolvedTheme.bannerColor,
     backgroundImage: signedBannerUrl ? `url(${signedBannerUrl})` : undefined,
     backgroundSize: "cover",
     backgroundPosition: "center",

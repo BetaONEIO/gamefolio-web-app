@@ -1,6 +1,7 @@
 export const DEFAULT_PROFILE_THEME = {
   backgroundColor: "#0F101B",
   primaryColor: "#0F101B",
+  bannerColor: "#171A27",
   cardColor: "#1A1D2B",
   accentColor: "#B7FF18",
   avatarBorderColor: "#B7FF18",
@@ -41,10 +42,19 @@ export function isLegacyDefaultProfileTheme(profile: ProfileThemeValues): boolea
 }
 
 export function resolveProfileTheme(profile: ProfileThemeValues) {
-  if (!isLegacyDefaultProfileTheme(profile)) {
+  const hasCustomBackground =
+    !!profile.profileBackgroundImageUrl?.trim() || !!profile.profileBackgroundGradientCss?.trim();
+  const isCurrentDefault =
+    !hasCustomBackground &&
+    normalise(profile.backgroundColor) === DEFAULT_PROFILE_THEME.backgroundColor.toLowerCase() &&
+    normalise(profile.accentColor) === DEFAULT_PROFILE_THEME.accentColor.toLowerCase() &&
+    normalise(profile.primaryColor) === DEFAULT_PROFILE_THEME.primaryColor.toLowerCase();
+
+  if (!isLegacyDefaultProfileTheme(profile) && !isCurrentDefault) {
     return {
       backgroundColor: profile.backgroundColor || DEFAULT_PROFILE_THEME.backgroundColor,
       primaryColor: profile.primaryColor || DEFAULT_PROFILE_THEME.primaryColor,
+      bannerColor: profile.primaryColor || DEFAULT_PROFILE_THEME.bannerColor,
       cardColor: profile.cardColor || DEFAULT_PROFILE_THEME.cardColor,
       accentColor: profile.accentColor || DEFAULT_PROFILE_THEME.accentColor,
       avatarBorderColor: profile.avatarBorderColor || profile.accentColor || DEFAULT_PROFILE_THEME.avatarBorderColor,
@@ -54,6 +64,7 @@ export function resolveProfileTheme(profile: ProfileThemeValues) {
   return {
     backgroundColor: DEFAULT_PROFILE_THEME.backgroundColor,
     primaryColor: DEFAULT_PROFILE_THEME.primaryColor,
+    bannerColor: DEFAULT_PROFILE_THEME.bannerColor,
     cardColor:
       !profile.cardColor || LEGACY_DEFAULT_CARD_COLORS.has(normalise(profile.cardColor))
         ? DEFAULT_PROFILE_THEME.cardColor

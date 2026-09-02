@@ -1253,12 +1253,13 @@ const ProfilePage = () => {
 
   // Memoize banner style to prevent unnecessary re-renders
   const resolvedBannerUrl = bannerSignedUrl || profile?.bannerUrl;
+  const resolvedProfileTheme = resolveProfileTheme(profile || {});
   const bannerStyle = useMemo(() => ({
     backgroundImage: resolvedBannerUrl ? `url(${resolvedBannerUrl})` : 'none',
-    backgroundColor: profile?.primaryColor || '#0B1218',
+    backgroundColor: resolvedProfileTheme.bannerColor,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
-  }), [resolvedBannerUrl, profile?.primaryColor, profile?.accentColor]);
+  }), [resolvedBannerUrl, resolvedProfileTheme.bannerColor]);
 
   // DISABLED: Profile-scoped theme colors - now using global theme system
   // useEffect(() => {
@@ -1547,7 +1548,6 @@ const ProfilePage = () => {
     );
   }
 
-  const resolvedProfileTheme = resolveProfileTheme(profile);
   const _rawAccent = resolvedProfileTheme.accentColor;
   const accentColor = /^#[0-9a-fA-F]{3}$/.test(_rawAccent)
     ? `#${_rawAccent[1]}${_rawAccent[1]}${_rawAccent[2]}${_rawAccent[2]}${_rawAccent[3]}${_rawAccent[3]}`
