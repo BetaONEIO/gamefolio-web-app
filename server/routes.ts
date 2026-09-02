@@ -27,6 +27,7 @@ import { eq, sql, desc, inArray, and } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
 import { captureRouteError } from "./sentry";
+import { notifyOnboardingComplete } from "./telegram-notify";
 import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
 import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog } from "@shared/schema";
 import { hasIndieDeveloperAccess } from "@shared/partner-access";
@@ -7394,10 +7395,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Onboarding completion is what first writes user_type (see
+      // client/src/components/auth/onboarding-flow.tsx). Read the prior value
+      // so the Telegram notification only fires on the null -> set transition,
+      // not every time someone edits their persona from Settings later.
+      let userTypeWasUnset = false;
+      if (typeof safeBody.userType === "string" && safeBody.userType) {
+        const before = await storage.getUser(userId);
+        userTypeWasUnset = !before?.userType;
+      }
+
       // Update the user profile
       const updatedUser = await storage.updateUser(userId, safeBody);
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
+      }
+
+      if (userTypeWasUnset && updatedUser.userType) {
+        notifyOnboardingComplete(updatedUser);
       }
 
       // Remove password from response
