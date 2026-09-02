@@ -434,11 +434,11 @@ const PRESET_THEMES = [
   },
   {
     name: "Summer",
-    backgroundColor: "#061e2a",
-    accentColor: "#35e0ff",
-    gradientTopColor: "#0b6172",
-    primaryColor: "#0b6172",
-    profileBackgroundGradientCss: "radial-gradient(circle at 18% 18%, rgba(53,224,255,0.18) 0 2px, transparent 3px), radial-gradient(circle at 82% 30%, rgba(255,255,255,0.14) 0 1.5px, transparent 2.5px), radial-gradient(ellipse 95% 70% at 50% 0%, rgba(11,97,114,0.9) 0%, rgba(6,30,42,0.98) 72%), linear-gradient(180deg, #0b6172 0%, #061e2a 100%)",
+    backgroundColor: "#063B5C",
+    accentColor: "#12B8C4",
+    gradientTopColor: "#28A9E8",
+    primaryColor: "#087EA4",
+    profileBackgroundGradientCss: "repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px), linear-gradient(180deg, #28A9E8 0%, #087EA4 37%, #12B8C4 62%, #E9C47A 92%, #C99B50 100%)",
     unlockRewardName: "Summer Showdown 2026 Border"
   },
   {
@@ -3348,7 +3348,9 @@ export default function SettingsPage() {
                                 <div
                                   className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative overflow-hidden"
                                   style={{ 
-                                    background: `linear-gradient(180deg, ${topColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
+                                    background: theme.name === 'Summer'
+                                      ? theme.profileBackgroundGradientCss
+                                      : `linear-gradient(180deg, ${topColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
                                   }}
                                 >
                                   {/* ── Theme-specific visual overlays ── */}
@@ -3404,11 +3406,11 @@ export default function SettingsPage() {
                                     <div style={{ position:'absolute', top:'8%', right:'18%', fontSize:'10px', color:'#c27aff88', pointerEvents:'none', lineHeight:1 }}>✦</div>
                                   </>}
                                   {theme.name === 'Summer' && <>
-                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 80% 100% at 50% 0%, rgba(53,224,255,0.26) 0%, rgba(6,30,42,0.35) 70%)' }} />
-                                    <div style={{ position:'absolute', left:'-8%', right:'-8%', bottom:'-8%', height:'42%', pointerEvents:'none', borderRadius:'50% 50% 0 0', borderTop:'2px solid rgba(53,224,255,0.65)', boxShadow:'0 -8px 0 rgba(53,224,255,0.12), 0 -16px 0 rgba(53,224,255,0.08)', transform:'rotate(-2deg)' }} />
-                                    <div style={{ position:'absolute', top:'15%', left:'18%', fontSize:'13px', color:'#b9f8ff', pointerEvents:'none', lineHeight:1 }}>✦</div>
-                                    <div style={{ position:'absolute', top:'10%', right:'22%', fontSize:'9px', color:'#35e0ff', pointerEvents:'none', lineHeight:1 }}>✦</div>
-                                    <div style={{ position:'absolute', bottom:'22%', right:'17%', fontSize:'11px', color:'#35e0ffcc', pointerEvents:'none', lineHeight:1 }}>✦</div>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(circle at 84% 18%, rgba(255,240,173,0.55) 0 8px, transparent 34px), linear-gradient(180deg, rgba(255,255,255,0.16), transparent 42%)' }} />
+                                    <div style={{ position:'absolute', left:'-8%', right:'-8%', bottom:'-8%', height:'42%', pointerEvents:'none', borderRadius:'50% 50% 0 0', borderTop:'2px solid rgba(243,217,155,0.8)', boxShadow:'0 -7px 0 rgba(18,184,196,0.85), 0 -14px 0 rgba(50,214,244,0.28)', transform:'rotate(-2deg)' }} />
+                                    <div style={{ position:'absolute', top:'12%', left:'15%', fontSize:'13px', color:'#ffffffcc', pointerEvents:'none', lineHeight:1 }}>☀</div>
+                                    <div style={{ position:'absolute', top:'10%', right:'21%', fontSize:'9px', color:'#F3D99B', pointerEvents:'none', lineHeight:1 }}>✦</div>
+                                    <div style={{ position:'absolute', bottom:'18%', right:'14%', fontSize:'10px', color:'#063B5Caa', pointerEvents:'none', lineHeight:1 }}>⌁</div>
                                   </>}
                                   {theme.name === 'Mac' && <>
                                     <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'rgba(255,255,255,0.55)' }} />
@@ -5927,7 +5929,7 @@ export default function SettingsPage() {
         const isBlocks      = tn === 'Blocks';
         const isElectric    = tn === 'Electric';
         const isGothic      = tn === 'Gothic';
-         const isSummer      = tn === 'Summer';
+        const isSummer      = tn === 'Summer';
         const isCartoon     = tn === 'Cartoon';
         const isWatermelon  = tn === 'Watermelon';
         const isForest      = tn === 'Forest';
@@ -5972,8 +5974,8 @@ export default function SettingsPage() {
           fontSize: '1rem',
           fontWeight: 700,
           letterSpacing: '2px',
-         } : isSummer ? {
-           background: 'linear-gradient(90deg, #b9f8ff 0%, #35e0ff 45%, #ffffff 100%)',
+          } : isSummer ? {
+            background: 'linear-gradient(90deg, #FFFFFF 0%, #F3D99B 52%, #32D6F4 100%)',
            WebkitBackgroundClip: 'text',
            WebkitTextFillColor: 'transparent',
            backgroundClip: 'text',
@@ -5995,7 +5997,7 @@ export default function SettingsPage() {
             isWatermelon ? '#0d1a12' :
             isLight       ? '#555' :
              isCyberpunk   ? undefined :
-             isSummer      ? '#8ff4ff' :
+             isSummer      ? '#063B5C' :
             `${accent}bb`,
           fontSize: isBlocks ? '0.45rem' : isElectric ? '0.75rem' : '0.6rem',
           letterSpacing: isZombie ? '1.5px' : '0.8px',
@@ -6027,7 +6029,7 @@ export default function SettingsPage() {
             isBlocks      ? '#B7FF1A' :
             isElectric    ? '#ffe033' :
              isGothic      ? '#c27aff' :
-             isSummer      ? '#35e0ff' :
+             isSummer      ? '#063B5C' :
             '#ffffff',
           fontWeight: 900,
           fontSize: isBlocks ? '0.6rem' : '1rem',
@@ -6038,11 +6040,11 @@ export default function SettingsPage() {
           background: '#ffb3c1',
           border: '5px solid #1d3932',
           padding: '10px 16px',
-         } : isSummer ? {
-           borderRadius: '16px',
-           background: 'rgba(6,30,42,0.88)',
-           border: '1px solid rgba(53,224,255,0.42)',
-           boxShadow: '0 0 20px rgba(53,224,255,0.16), inset 0 1px 0 rgba(185,248,255,0.12)',
+          } : isSummer ? {
+            borderRadius: '14px',
+            background: '#E9C47A',
+              border: '1px solid #C99B50',
+            boxShadow: '0 4px 0 rgba(201,155,80,0.7), inset 0 1px 0 rgba(255,255,255,0.45)',
          } : isBlocks ? {
           borderRadius: '4px',
           background: `${topColor}ee`,
@@ -6075,11 +6077,7 @@ export default function SettingsPage() {
           borderRadius: '12px',
           background: '#000000',
           border: '1px solid rgba(255,140,0,0.25)',
-         } : isSummer ? {
-           border: '4px solid #35e0ff',
-           borderRadius: '9999px',
-           boxShadow: '0 0 16px rgba(53,224,255,0.45)',
-         } : {
+          } : {
           borderRadius: '12px',
           background: `${topColor}cc`,
           border: `1px solid ${accent}33`,
@@ -6121,8 +6119,20 @@ export default function SettingsPage() {
               >
                 <X className="w-5 h-5 text-white" />
               </button>
-              <style>{`
+               <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&family=Bangers&family=Bricolage+Grotesque:wght@400;800&display=swap');
+
+                 @keyframes summerPreviewShimmer {
+                   0%, 100% { background-position: 0 0, 0 0; }
+                   50% { background-position: 18px 0, 0 0; }
+                 }
+                 @keyframes summerPreviewFloat {
+                   0%, 100% { transform: translateY(0); opacity: .55; }
+                   50% { transform: translateY(-4px); opacity: .9; }
+                 }
+                 @media (prefers-reduced-motion: reduce) {
+                   .summer-preview-motion { animation: none !important; }
+                 }
 
                 /* Zombie */
                 @keyframes zpFogDrift1 { 0%{transform:translate(0%,0%)} 25%{transform:translate(7%,-5%)} 50%{transform:translate(3%,8%)} 75%{transform:translate(-6%,4%)} 100%{transform:translate(0%,0%)} }
@@ -6162,7 +6172,7 @@ export default function SettingsPage() {
               `}</style>
               <div
                 className="rounded-2xl overflow-hidden relative"
-                 style={{ background: isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' : isSummer ? 'radial-gradient(ellipse 95% 70% at 50% 0%, rgba(53,224,255,0.25) 0%, rgba(6,30,42,0.98) 72%), linear-gradient(180deg, #0b6172 0%, #061e2a 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)` }}
+                  style={{ background: isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' : isSummer ? 'repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px), linear-gradient(180deg, #28A9E8 0%, #087EA4 37%, #12B8C4 62%, #E9C47A 92%, #C99B50 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)` }}
               >
                 {/* ── Zombie layers ── */}
                 {isZombie && <>
@@ -6181,11 +6191,12 @@ export default function SettingsPage() {
                   <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'rgba(0,80,255,0.12)', animation:'cpRGBB 9s linear infinite', mixBlendMode:'screen' as any }} />
                 </>}
 
-                {/* ── Summer layers ── */}
+                 {/* ── Summer layers ── */}
                 {isSummer && <>
-                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(circle at 14% 16%, #b9f8ff 0 1px, transparent 2px), radial-gradient(circle at 82% 22%, #35e0ff 0 1.5px, transparent 2.5px), radial-gradient(circle at 72% 64%, #ffffff 0 1px, transparent 2px)', opacity:0.85 }} />
-                  <div style={{ position:'absolute', left:'-8%', right:'-8%', bottom:'-7%', height:'36%', pointerEvents:'none', borderRadius:'50% 50% 0 0', borderTop:'2px solid #35e0ff99', boxShadow:'0 -10px 0 #35e0ff22, 0 -20px 0 #35e0ff12', transform:'rotate(-2deg)' }} />
-                  <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(135deg, rgba(255,255,255,0.12), transparent 35%, transparent 68%, rgba(53,224,255,0.1))' }} />
+                   <div className="summer-preview-motion" style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(circle at 14% 16%, #ffffff 0 1px, transparent 2px), radial-gradient(circle at 72% 64%, #F3D99B 0 1px, transparent 2px), repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 5px)', backgroundSize:'auto, auto, 100% 10px', opacity:0.8, animation:'summerPreviewShimmer 12s ease-in-out infinite' }} />
+                   <div style={{ position:'absolute', top:'8%', right:'12%', width:25, height:25, borderRadius:'50%', background:'radial-gradient(circle, #FFF1B5 0 52%, rgba(255,241,181,0.08) 70%, transparent 72%)', pointerEvents:'none' }} />
+                   <div style={{ position:'absolute', left:'-8%', right:'-8%', bottom:'-7%', height:'36%', pointerEvents:'none', borderRadius:'50% 50% 0 0', borderTop:'2px solid #F3D99BCC', boxShadow:'0 -10px 0 #12B8C455, 0 -20px 0 #32D6F433', transform:'rotate(-2deg)' }} />
+                   <div className="summer-preview-motion" style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(135deg, rgba(255,255,255,0.15), transparent 35%, transparent 68%, rgba(50,214,244,0.1))', animation:'summerPreviewFloat 7s ease-in-out infinite' }} />
                 </>}
 
                 {/* ── Neo layers ── */}
@@ -6257,8 +6268,8 @@ export default function SettingsPage() {
 
                 {/* ── Content ── */}
                 <div className="relative z-10 px-4 pt-4 pb-0 text-center">
-                  <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ fontFamily: themeFont, color: isLight && !isWatermelon ? '#666' : `${accent}cc`, letterSpacing: '1.5px' }}>
-                    {displayName}
+                   <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ fontFamily: themeFont, color: isSummer ? '#FFFFFF' : isLight && !isWatermelon ? '#666' : `${accent}cc`, letterSpacing: '1.5px', textShadow: isSummer ? '0 1px 8px rgba(6,59,92,0.45)' : undefined }}>
+                     {isSummer ? <>SUMMER <span style={{ color: '#F3D99B' }} aria-hidden="true">☀</span></> : displayName}
                   </p>
 
                   {/* Avatar */}
@@ -6276,7 +6287,7 @@ export default function SettingsPage() {
 
                   {/* Display Name */}
                   <h2 style={nameStyle}>{profileData.displayName || user?.username}</h2>
-                  <p className="text-xs mt-0.5 mb-3" style={{ color: isLight && !isWatermelon ? '#888' : `${accent}99`, fontFamily: themeFont }}>
+                   <p className="text-xs mt-0.5 mb-3" style={{ color: isSummer ? '#063B5C' : isLight && !isWatermelon ? '#888' : `${accent}99`, fontFamily: themeFont }}>
                     @{user?.username}
                   </p>
                 </div>
@@ -6289,7 +6300,7 @@ export default function SettingsPage() {
                       { label: 'Followers', value: profileStats?._count?.followers ?? '—' },
                       { label: 'Following', value: profileStats?._count?.following ?? '—' },
                     ].map(({ label, value }, i) => (
-                      <div key={label} className="text-center px-2" style={{ borderRight: i < 2 ? `1px solid ${isWatermelon ? 'rgba(0,0,0,0.12)' : isLight ? 'rgba(0,0,0,0.08)' : `${accent}22`}` : 'none' }}>
+                      <div key={label} className="text-center px-2" style={{ borderRight: i < 2 ? `1px solid ${isSummer ? 'rgba(6,59,92,0.22)' : isWatermelon ? 'rgba(0,0,0,0.12)' : isLight ? 'rgba(0,0,0,0.08)' : `${accent}22`}` : 'none' }}>
                         <p style={valueStyle}>{value}</p>
                         <p style={isCyberpunk ? cyberLabelStyle : labelStyle}>{label}</p>
                       </div>
@@ -6303,9 +6314,9 @@ export default function SettingsPage() {
                     onClick={() => setThemePreviewData(null)}
                     className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
                     style={{
-                      background: isLight ? 'rgba(0,0,0,0.07)' : `${accent}18`,
-                      color: isLight && !isWatermelon ? '#555' : 'rgba(255,255,255,0.7)',
-                      border: `1px solid ${isLight ? 'rgba(0,0,0,0.12)' : `${accent}33`}`,
+                        background: isSummer ? '#F3D99B' : isLight ? 'rgba(0,0,0,0.07)' : `${accent}18`,
+                        color: isSummer ? '#063B5C' : isLight && !isWatermelon ? '#555' : 'rgba(255,255,255,0.7)',
+                        border: isSummer ? '1px solid #C99B50' : `1px solid ${isLight ? 'rgba(0,0,0,0.12)' : `${accent}33`}`,
                       fontFamily: themeFont,
                       fontSize: isBlocks ? '0.5rem' : '0.875rem',
                     }}
@@ -6332,14 +6343,14 @@ export default function SettingsPage() {
                     }}
                     className="flex-1 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2"
                     style={{
-                      background: isCurrentTheme ? `${accent}40` : isThemeLocked ? '#B7FF1A' : accent,
-                      color: isCurrentTheme ? (isLight ? '#333' : 'rgba(255,255,255,0.5)') : isThemeLocked ? '#1a1a1a' : (isLight && !isGothic ? '#1d1d1f' : bg),
-                      boxShadow: isCurrentTheme ? 'none' : isThemeLocked ? '0 8px 24px -8px #B7FF1A66' : `0 8px 24px -8px ${accent}`,
+                      background: isCurrentTheme ? `${accent}40` : isThemeLocked ? '#B7FF1A' : isSummer ? '#087EA4' : accent,
+                      color: isCurrentTheme ? (isLight ? '#333' : 'rgba(255,255,255,0.5)') : isThemeLocked ? '#1a1a1a' : isSummer ? '#FFFFFF' : (isLight && !isGothic ? '#1d1d1f' : bg),
+                      boxShadow: isCurrentTheme ? 'none' : isThemeLocked ? '0 8px 24px -8px #B7FF1A66' : isSummer ? '0 5px 0 #063B5C55, 0 8px 24px -8px #087EA4' : `0 8px 24px -8px ${accent}`,
                       fontFamily: isThemeLocked ? undefined : themeFont,
                       fontSize: '0.875rem',
                       borderRadius: '12px',
                       cursor: isCurrentTheme ? 'default' : 'pointer',
-                      border: isCurrentTheme ? `1px solid ${accent}44` : 'none',
+                      border: isCurrentTheme ? `1px solid ${accent}44` : isSummer ? '1px solid #32D6F4' : 'none',
                     }}
                   >
                      {isThemeLocked && !isRewardLocked && <img src={gamefolioLogo} alt="Gamefolio" className="w-5 h-5 rounded-full flex-shrink-0" />}

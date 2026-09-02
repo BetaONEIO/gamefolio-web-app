@@ -1570,7 +1570,10 @@ const ProfilePage = () => {
   const isZombieTheme = !isLightBackground && accentColor?.toLowerCase() === '#9ae600';
   const isCyberpunkTheme = !isLightBackground && accentColor?.toLowerCase() === '#00d3f2';
   const isNeoTheme = !isLightBackground && accentColor?.toLowerCase() === '#00ff41';
-  const isSummerTheme = !isLightBackground && accentColor?.toLowerCase() === '#35e0ff' && backgroundColor?.toLowerCase() === '#061e2a';
+  const isSummerTheme = !isLightBackground && (
+    (accentColor?.toLowerCase() === '#12b8c4' && backgroundColor?.toLowerCase() === '#063b5c') ||
+    (accentColor?.toLowerCase() === '#35e0ff' && backgroundColor?.toLowerCase() === '#061e2a')
+  );
   const isGothicTheme = !isLightBackground && accentColor?.toLowerCase() === '#c27aff' && backgroundColor?.toLowerCase() === '#1e053a';
   const isBlocksTheme = !isLightBackground && accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#1a1a1a';
   const isForestTheme = !isLightBackground && accentColor?.toLowerCase() === '#b7ff1a' && backgroundColor?.toLowerCase() === '#0a2f1f';
@@ -1592,10 +1595,10 @@ const ProfilePage = () => {
     border: '1px solid rgba(0,223,255,0.5)',
     boxShadow: '0 0 10px rgba(0,223,255,0.3)',
   } : isSummerTheme ? {
-    background: 'linear-gradient(135deg, #0b6172 0%, #061e2a 100%)',
-    color: '#b9f8ff',
-    border: '1px solid rgba(53,224,255,0.42)',
-    boxShadow: '0 0 10px rgba(53,224,255,0.22)',
+    background: 'linear-gradient(135deg, #087EA4 0%, #063B5C 100%)',
+    color: '#FFFFFF',
+    border: '1px solid #32D6F4',
+    boxShadow: '0 2px 10px rgba(6,59,92,0.24)',
   } : isCyberpunkTheme ? {
     backgroundColor: '#00b8db',
     color: '#020617',
@@ -1652,7 +1655,7 @@ const ProfilePage = () => {
   };
 
   const platformBtnStyle = isSummerTheme
-    ? { backgroundColor: 'rgba(6,30,42,0.9)', color: '#8ff4ff', border: '1px solid #35e0ff66', borderRadius: '9999px', boxShadow: '0 0 8px #35e0ff22' }
+    ? { backgroundColor: '#063B5C', color: '#FFFFFF', border: '1px solid #32D6F4', borderRadius: '9999px', boxShadow: '0 2px 0 rgba(6,59,92,0.35)' }
     : isWatermelonTheme
     ? { backgroundColor: '#ffb3c1', color: '#0d1a12', border: '3px solid #1d3932', borderRadius: '9999px' }
     : isCartoonTheme
@@ -1706,7 +1709,7 @@ const ProfilePage = () => {
 
   const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isSummerTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isBatTheme || isMayhemTheme || isLightBackground;
 
-  const avatarThemeColor = isSummerTheme ? '#35e0ff'
+  const avatarThemeColor = isSummerTheme ? '#32D6F4'
     : isWatermelonTheme ? '#ff6b6b'
     : isCartoonTheme ? '#ff6b35'
     : isMacTheme ? '#0071e3'
@@ -1725,10 +1728,10 @@ const ProfilePage = () => {
   };
 
   const shareButtonStyle = isSummerTheme ? {
-    color: '#8ff4ff',
-    background: 'rgba(6,30,42,0.82)',
-    border: '1px solid #35e0ff88',
-    boxShadow: '0 0 10px #35e0ff22',
+    color: '#063B5C',
+    background: '#F3D99B',
+    border: '1px solid #C99B50',
+    boxShadow: '0 3px 0 rgba(6,59,92,0.28)',
   } : isWatermelonTheme ? {
     color: '#1d3932',
     background: '#ffb3c1',
@@ -1776,11 +1779,11 @@ const ProfilePage = () => {
   };
 
   const tabListStyle = isSummerTheme ? {
-    background: 'rgba(6,30,42,0.9)',
-    border: '1px solid #35e0ff55',
+    background: '#063B5C',
+    border: '1px solid #32D6F4',
     borderRadius: '9999px',
     padding: '4px 8px',
-    boxShadow: '0 0 18px #35e0ff18',
+    boxShadow: '0 3px 0 rgba(6,59,92,0.28)',
   } : isWatermelonTheme ? {
     background: '#ffb3c1',
     border: '5px solid #1d3932',
@@ -1852,7 +1855,7 @@ const ProfilePage = () => {
     } : {};
     return {
       backgroundColor: isCartoonTheme ? 'transparent' : isActive ? (isBlocksTheme ? (blocksTabColors[tabName] || accentColor) : isForestTheme ? '#e8d5b7' : isMacTheme ? 'rgba(255,255,255,0.18)' : `${accentColor}22`) : 'transparent',
-      color: isCartoonTheme ? (isActive ? (cartoonTabColors[tabName] || '#1d1d1f') : 'rgba(0,0,0,0.25)') : isActive ? (isBlocksTheme ? '#1a1a1a' : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#5C3317' : isSummerTheme ? '#b9f8ff' : accentColor) : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#c4a882' : isSummerTheme ? '#8ff4ff' : isLightBackground ? accentColor : undefined,
+      color: isCartoonTheme ? (isActive ? (cartoonTabColors[tabName] || '#1d1d1f') : 'rgba(0,0,0,0.25)') : isActive ? (isBlocksTheme ? '#1a1a1a' : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#5C3317' : isSummerTheme ? '#FFFFFF' : accentColor) : isWatermelonTheme ? '#0d1a12' : isForestTheme ? '#c4a882' : isSummerTheme ? '#F3D99B' : isLightBackground ? accentColor : undefined,
       ...(!isCartoonTheme && !isBlocksTheme && !isForestTheme ? frostedGlass : {}),
       ...(isCartoonTheme ? { fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: '800', letterSpacing: '-0.5px', fontSize: '1.1rem', borderBottom: isActive ? `4px solid ${cartoonTabColors[tabName] || 'gold'}` : '4px solid transparent', borderRadius: '0', paddingBottom: '6px' } : {}),
       ...(isZombieTheme ? { fontFamily: "'Creepster', cursive", letterSpacing: '2px', fontSize: '0.8rem' } : {}),
@@ -1866,9 +1869,9 @@ const ProfilePage = () => {
   };
 
   const nameTagBgStyle = isSummerTheme ? {
-    background: 'rgba(6,30,42,0.94)',
-    border: '1px solid #35e0ff66',
-    boxShadow: '0 0 12px #35e0ff22',
+    background: '#063B5C',
+    border: '1px solid #32D6F4',
+    boxShadow: '0 3px 0 rgba(6,59,92,0.24)',
   } : isWatermelonTheme ? {
     background: '#ffb3c1',
     border: '5px solid #1d3932',
@@ -2076,6 +2079,200 @@ const ProfilePage = () => {
   return (
     <>
     {selectedProfileNftDetail}
+    {isSummerTheme && (
+      <style>{`
+        .summer-profile {
+          --theme-bg-primary: #063B5C;
+          --theme-bg-secondary: #087EA4;
+          --theme-accent: #12B8C4;
+          --theme-water-highlight: #32D6F4;
+          --theme-sand: #E9C47A;
+          --theme-sand-light: #F3D99B;
+          --theme-sand-shadow: #C99B50;
+          --theme-text: #FFFFFF;
+          --theme-ink: #063B5C;
+          --summer-background: repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px), linear-gradient(180deg, #28A9E8 0%, #087EA4 37%, #12B8C4 62%, #E9C47A 92%, #C99B50 100%);
+          color: var(--theme-text);
+        }
+        @keyframes summerWaterShimmer {
+          0%, 100% { background-position: 0 0, 0 0; }
+          50% { background-position: 48px 0, -24px 0; }
+        }
+        @keyframes summerSunPulse {
+          0%, 100% { transform: scale(1); opacity: .7; }
+          50% { transform: scale(1.06); opacity: .95; }
+        }
+        @keyframes summerBubbleRise {
+          0% { transform: translate3d(0, 16px, 0); opacity: 0; }
+          18% { opacity: .4; }
+          82% { opacity: .2; }
+          100% { transform: translate3d(14px, -92px, 0); opacity: 0; }
+        }
+        .summer-ambient-layer {
+          position: fixed;
+          inset: 0;
+          overflow: hidden;
+          pointer-events: none;
+          z-index: 0;
+        }
+        .summer-sun-glow {
+          position: absolute;
+          top: 7vh;
+          right: 12vw;
+          width: 180px;
+          height: 180px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(255,241,181,.72) 0 9%, rgba(255,224,122,.18) 32%, transparent 70%);
+          animation: summerSunPulse 14s ease-in-out infinite;
+        }
+        .summer-water-shimmer {
+          position: absolute;
+          left: -5%;
+          right: -5%;
+          bottom: -3vh;
+          height: 30vh;
+          background:
+            repeating-linear-gradient(178deg, transparent 0 14px, rgba(255,255,255,.11) 15px 16px, transparent 17px 32px),
+            linear-gradient(180deg, rgba(50,214,244,.26), rgba(8,126,164,.06));
+          opacity: .6;
+          animation: summerWaterShimmer 12s ease-in-out infinite;
+        }
+        .summer-bubble {
+          position: absolute;
+          bottom: 9vh;
+          width: 8px;
+          height: 8px;
+          border: 1px solid rgba(255,255,255,.45);
+          border-radius: 50%;
+          animation: summerBubbleRise 11s ease-in-out infinite;
+        }
+        .summer-bubble-1 { left: 15%; animation-delay: -2s; }
+        .summer-bubble-2 { left: 78%; width: 5px; height: 5px; animation-delay: -6s; animation-duration: 14s; }
+        .summer-bubble-3 { left: 64%; width: 4px; height: 4px; animation-delay: -9s; animation-duration: 13s; }
+        .summer-banner-tint {
+          background: linear-gradient(135deg, rgba(6,59,92,.82), rgba(8,126,164,.42) 55%, transparent 82%) !important;
+          opacity: .72 !important;
+        }
+        .summer-banner-shimmer {
+          background: linear-gradient(110deg, transparent 26%, rgba(255,255,255,.16) 46%, transparent 64%) !important;
+          background-size: 220% 100% !important;
+          animation: summerWaterShimmer 14s ease-in-out infinite !important;
+          opacity: .35 !important;
+        }
+        .summer-theme-title {
+          position: absolute;
+          top: 1.25rem;
+          left: 1.25rem;
+          z-index: 5;
+          display: inline-flex;
+          align-items: center;
+          gap: .45rem;
+          color: #FFFFFF;
+          font: 800 .7rem/1 "Trebuchet MS", sans-serif;
+          letter-spacing: .22em;
+          text-shadow: 0 1px 9px rgba(6,59,92,.45);
+        }
+        .summer-theme-title span {
+          color: #F3D99B;
+          font-size: 1rem;
+          letter-spacing: 0;
+        }
+        .summer-profile .summer-stats-card {
+          background: var(--theme-sand) !important;
+          border: 1px solid var(--theme-sand-shadow) !important;
+          box-shadow: 0 5px 0 rgba(201,155,80,.72), inset 0 1px 0 rgba(255,255,255,.46) !important;
+          color: var(--theme-ink);
+          position: relative;
+          overflow: visible;
+        }
+        .summer-profile .summer-stats-card::before,
+        .summer-profile .summer-stats-card::after {
+          position: absolute;
+          pointer-events: none;
+          color: rgba(6,59,92,.34);
+          font-size: 13px;
+          line-height: 1;
+        }
+        .summer-profile .summer-stats-card::before {
+          content: "◒";
+          left: 10px;
+          bottom: 7px;
+          transform: rotate(-22deg);
+        }
+        .summer-profile .summer-stats-card::after {
+          content: "✦";
+          right: 11px;
+          top: 7px;
+          font-size: 10px;
+        }
+        .summer-profile .summer-stat-item {
+          min-width: 0;
+          justify-content: center;
+        }
+        .summer-profile .summer-stat-item > span:first-child {
+          color: var(--theme-ink) !important;
+        }
+        .summer-profile .summer-stat-item > span:last-child {
+          color: var(--theme-ink) !important;
+          letter-spacing: .08em !important;
+        }
+        .summer-profile .summer-stat-item + .summer-stat-item {
+          border-left: 1px solid rgba(6,59,92,.22);
+        }
+        .summer-profile .summer-shoreline {
+          height: 13px;
+          margin: -1px 12px 0;
+          border-radius: 0 0 50% 50%;
+          background:
+            repeating-linear-gradient(175deg, transparent 0 8px, rgba(255,255,255,.48) 9px 10px, transparent 11px 18px),
+            linear-gradient(180deg, rgba(50,214,244,.92), rgba(18,184,196,.58));
+          background-size: 52px 100%, 100% 100%;
+          box-shadow: 0 3px 0 rgba(6,59,92,.22);
+          animation: summerWaterShimmer 12s ease-in-out infinite;
+        }
+        .summer-profile .summer-platform-section a,
+        .summer-profile .summer-platform-section > div {
+          background: var(--theme-bg-primary) !important;
+          color: #FFFFFF !important;
+          border-color: var(--theme-water-highlight) !important;
+          box-shadow: 0 2px 0 rgba(6,59,92,.25);
+        }
+        .summer-profile .summer-platform-section svg {
+          color: var(--theme-water-highlight) !important;
+        }
+        .summer-profile .summer-collection-control {
+          background: var(--theme-bg-secondary) !important;
+          color: #FFFFFF !important;
+          border: 1px solid var(--theme-water-highlight) !important;
+          box-shadow: 0 3px 0 rgba(6,59,92,.28) !important;
+        }
+        .summer-profile [data-testid="follow-button"] {
+          background: var(--theme-bg-secondary) !important;
+          color: #FFFFFF !important;
+          border-color: var(--theme-water-highlight) !important;
+          box-shadow: 0 3px 0 rgba(6,59,92,.28) !important;
+        }
+        .summer-profile [data-testid="follow-button"][data-following="true"] {
+          background: var(--theme-bg-primary) !important;
+          color: var(--theme-sand-light) !important;
+        }
+        @media (max-width: 767px) {
+          .summer-sun-glow { top: 8vh; right: -38px; width: 130px; height: 130px; }
+          .summer-theme-title { top: .85rem; left: 1rem; font-size: .62rem; }
+          .summer-bubble-1 { display: none; }
+          .summer-profile .summer-stats-card::before { left: 6px; bottom: 5px; }
+          .summer-profile .summer-stats-card::after { right: 7px; top: 5px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .summer-profile *,
+          .summer-profile *::before,
+          .summer-profile *::after,
+          .summer-ambient-layer * {
+            animation: none !important;
+          }
+        }
+      `}</style>
+    )}
     {isNeoTheme && !profileBackgroundImageUrl && (
       <div style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 0, pointerEvents: 'none' }} />
     )}
@@ -2085,13 +2282,16 @@ const ProfilePage = () => {
     {isNeoTheme && !profileBackgroundImageUrl && <div className="neo-vignette" />}
     {isNeoTheme && !profileBackgroundImageUrl && <div className="neo-scanline" />}
     {isSummerTheme && !profileBackgroundImageUrl && (
-      <>
-        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, background: 'radial-gradient(circle at 12% 18%, rgba(185,248,255,0.14) 0 2px, transparent 3px), radial-gradient(circle at 84% 28%, rgba(53,224,255,0.18) 0 1px, transparent 2px), linear-gradient(180deg, rgba(11,97,114,0.08), transparent 42%)' }} />
-        <div style={{ position: 'fixed', left: '-5%', right: '-5%', bottom: '-4%', height: '24vh', pointerEvents: 'none', zIndex: 0, borderRadius: '50% 50% 0 0', borderTop: '1px solid rgba(53,224,255,0.22)', boxShadow: '0 -18px 0 rgba(53,224,255,0.06), 0 -36px 0 rgba(53,224,255,0.035)', transform: 'rotate(-1deg)' }} />
-      </>
+      <div className="summer-ambient-layer" aria-hidden="true">
+        <div className="summer-sun-glow" />
+        <div className="summer-water-shimmer" />
+        <span className="summer-bubble summer-bubble-1" />
+        <span className="summer-bubble summer-bubble-2" />
+        <span className="summer-bubble summer-bubble-3" />
+      </div>
     )}
     <div 
-      className={`min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope${isBlocksTheme && !profileBackgroundImageUrl ? ' blocks-bg' : ''}`}
+      className={`min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope${isBlocksTheme && !profileBackgroundImageUrl ? ' blocks-bg' : ''}${isSummerTheme ? ' summer-profile' : ''}`}
       ref={profileThemeScopeRef}
       data-default-profile-theme={backgroundColor === DEFAULT_PROFILE_THEME.backgroundColor && accentColor === DEFAULT_PROFILE_THEME.accentColor ? "true" : undefined}
       style={profileBackgroundImageUrl ? {
@@ -2103,6 +2303,11 @@ const ProfilePage = () => {
         zIndex: 1
       } : isNeoTheme ? {
         background: 'transparent',
+        position: 'relative',
+        zIndex: 1
+      } : isSummerTheme ? {
+        background: 'var(--summer-background)',
+        backgroundAttachment: 'fixed',
         position: 'relative',
         zIndex: 1
       } : isBlocksTheme ? {
@@ -2311,7 +2516,7 @@ const ProfilePage = () => {
       >
         {/* Dynamic theme-based gradient overlay */}
         <div 
-          className="absolute inset-0 opacity-60" 
+          className={`absolute inset-0 opacity-60 ${isSummerTheme ? 'summer-banner-tint' : ''}`}
           style={{
             background: `linear-gradient(135deg, hsl(var(--background))CC, hsl(var(--primary))88, transparent 70%)`,
           }}
@@ -2319,7 +2524,7 @@ const ProfilePage = () => {
 
         {/* Theme-colored animated shimmer effect */}
         <div 
-          className="absolute inset-0 opacity-30" 
+          className={`absolute inset-0 opacity-30 ${isSummerTheme ? 'summer-banner-shimmer' : ''}`}
           style={{
             background: `linear-gradient(45deg, transparent 30%, hsl(var(--primary))20, transparent 70%)`,
             backgroundSize: '200% 200%',
@@ -2363,6 +2568,13 @@ const ProfilePage = () => {
             }}
           ></div>
         </div>
+        )}
+
+        {isSummerTheme && (
+          <div className="summer-theme-title" aria-label="Summer theme">
+            <span>SUMMER</span>
+            <span aria-hidden="true">☀</span>
+          </div>
         )}
 
         {/* Theme accent corner decorations - only show when no custom banner */}
@@ -3383,7 +3595,7 @@ const ProfilePage = () => {
             {CRYPTO_FEATURES_ENABLED && (
             <button
               onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-              className="absolute -top-[14px] right-2 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
+              className={`absolute -top-[14px] right-2 z-10 px-4 py-1.5 text-[10px] font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity ${isSummerTheme ? 'summer-collection-control' : ''}`}
               style={{ 
                 background: profileSectionTab === 'collection'
                   ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : isMayhemTheme ? 'rgba(2,1,20,0.95)' : '#0B1218')
@@ -3424,7 +3636,7 @@ const ProfilePage = () => {
             )}
 
             <div 
-             className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''} ${isMayhemTheme ? 'mayhem-stats-card' : ''}`}
+              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''} ${isMayhemTheme ? 'mayhem-stats-card' : ''} ${isSummerTheme ? 'summer-stats-card' : ''}`}
               style={isWatermelonTheme ? {
                 background: '#ffb3c1',
               } : isCartoonTheme ? {
@@ -3522,16 +3734,16 @@ const ProfilePage = () => {
                       ))}
                     </div>
                   ) : (
-                  <div className="flex mt-1" style={isWatermelonTheme ? { gap: 0 } : { gap: '1.5rem' }}>
-                    <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
+                  <div className="flex mt-1" style={isWatermelonTheme || isSummerTheme ? { gap: 0 } : { gap: '1.5rem' }}>
+                    <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''} ${isSummerTheme ? 'summer-stat-item flex-1 items-center text-center' : ''}`}>
                       <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
                       <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isMacTheme ? { color: '#0066ff', letterSpacing: '0.8px' } : isLightBackground ? { color: '#6b7280', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>UPLOADS</span>
                     </div>
-                    <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/followers`)}>
+                    <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''} ${isSummerTheme ? 'summer-stat-item flex-1 items-center text-center' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/followers`)}>
                       <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : isBlocksTheme ? '#3b82f6' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.followers || 0)}</span>
                       <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isMacTheme ? { color: '#0066ff', letterSpacing: '0.8px' } : isLightBackground ? { color: '#6b7280', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>FOLLOWERS</span>
                     </div>
-                    <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/followers?tab=following`)}>
+                    <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''} ${isSummerTheme ? 'summer-stat-item flex-1 items-center text-center' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/followers?tab=following`)}>
                       <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
                       <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isMacTheme ? { color: '#0066ff', letterSpacing: '0.8px' } : isLightBackground ? { color: '#6b7280', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#B7FF1A', color: '#1a1a1a', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>FOLLOWING</span>
                     </div>
@@ -3575,11 +3787,12 @@ const ProfilePage = () => {
                 )}
               </div>
             </div>
-            </div>
-          </div>
+             </div>
+             {isSummerTheme && <div className="summer-shoreline" aria-hidden="true" />}
+           </div>
 
-          {/* Platform tags and Social Links — below the stats card */}
-          {profileSectionTab === 'stats' && <div className={`flex flex-wrap gap-1.5 mb-4 mt-4 pl-4 pr-8 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''}`}>
+           {/* Platform tags and Social Links — below the stats card */}
+          {profileSectionTab === 'stats' && <div className={`flex flex-wrap gap-1.5 mb-4 mt-4 pl-4 pr-8 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''} ${isSummerTheme ? 'summer-platform-section' : ''}`}>
             {profile.steamUsername && (
               <a href={`https://steamcommunity.com/id/${profile.steamUsername}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium hover:opacity-80 transition-opacity" style={getBtnStyle('steam')}>
                 <SiSteam className="w-2.5 h-2.5" />
@@ -3805,7 +4018,7 @@ const ProfilePage = () => {
               {CRYPTO_FEATURES_ENABLED && (
               <button
                 onClick={() => setProfileSectionTab(profileSectionTab === 'collection' ? 'stats' : 'collection')}
-                className="absolute -top-[14px] right-2 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity"
+                className={`absolute -top-[14px] right-2 z-10 px-5 py-2 text-xs font-black rounded-full uppercase tracking-[0.8px] hover:opacity-90 transition-opacity ${isSummerTheme ? 'summer-collection-control' : ''}`}
                 style={{ 
                   background: profileSectionTab === 'collection'
                     ? (isWatermelonTheme ? '#1d3932' : isZombieTheme ? '#0d1a00' : isCyberpunkTheme ? '#020617' : isNeoTheme ? '#000800' : isBlocksTheme ? '#1a1a1a' : isForestTheme ? '#e8d5b7' : isGothicTheme ? '#0d0118' : isCartoonTheme ? '#fffaec' : isMayhemTheme ? 'rgba(2,1,20,0.95)' : '#0B1218')
@@ -3834,7 +4047,7 @@ const ProfilePage = () => {
               )}
 
               <div 
-                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''} ${isMayhemTheme ? 'mayhem-stats-card' : ''}`}
+                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''} ${isMayhemTheme ? 'mayhem-stats-card' : ''} ${isSummerTheme ? 'summer-stats-card' : ''}`}
                 style={isWatermelonTheme ? {
                   background: '#ffb3c1',
                   minWidth: '384px',
@@ -3865,6 +4078,11 @@ const ProfilePage = () => {
                   background: '#e8d5b7',
                   border: '1px solid #c4a88266',
                   minWidth: '384px',
+                } : isSummerTheme ? {
+                  background: '#E9C47A',
+                  border: '1px solid #C99B50',
+                  boxShadow: '0 5px 0 rgba(201,155,80,0.72), inset 0 1px 0 rgba(255,255,255,0.46)',
+                  minWidth: '384px',
                 } : isBatTheme ? {
                   background: '#000000',
                   border: '1px solid rgba(255,140,0,0.2)',
@@ -3882,18 +4100,18 @@ const ProfilePage = () => {
               >
                 <div className="p-5">
                   {profileSectionTab === 'stats' ? (
-                    <div className="flex items-center w-full" style={{ gap: isWatermelonTheme ? 0 : '2rem' }}>
-                      <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`}>
-                        <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
-                        <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>Uploads</span>
+                <div className="flex items-center w-full" style={{ gap: isWatermelonTheme || isSummerTheme ? 0 : '2rem' }}>
+                  <div className={`flex flex-col gap-1 ${isWatermelonTheme ? 'watermelon-stat-item' : ''} ${isSummerTheme ? 'summer-stat-item flex-1 items-center text-center' : ''}`}>
+                    <span className="font-black text-xl" style={{ color: isSummerTheme ? '#063B5C' : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{(clips?.length || 0) + (screenshots?.length || 0)}</span>
+                    <span className="text-[9px] uppercase font-black" style={isSummerTheme ? { color: '#063B5C', letterSpacing: '0.8px' } : isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>Uploads</span>
                       </div>
-                      <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/followers`)}>
-                        <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : isBlocksTheme ? '#3b82f6' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.followers || 0)}</span>
-                        <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>Followers</span>
+                  <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''} ${isSummerTheme ? 'summer-stat-item flex-1 items-center text-center' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/followers`)}>
+                    <span className="font-black text-xl" style={{ color: isSummerTheme ? '#063B5C' : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#ed6aff' : isBlocksTheme ? '#3b82f6' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.followers || 0)}</span>
+                    <span className="text-[9px] uppercase font-black" style={isSummerTheme ? { color: '#063B5C', letterSpacing: '0.8px' } : isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#3b82f6', color: '#ffffff', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>Followers</span>
                       </div>
-                      <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/followers?tab=following`)}>
-                        <span className="font-black text-xl" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
-                        <span className="text-[9px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#B7FF1A', color: '#1a1a1a', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>Following</span>
+                  <div className={`flex flex-col gap-1 cursor-pointer ${isWatermelonTheme ? 'watermelon-stat-item' : ''} ${isSummerTheme ? 'summer-stat-item flex-1 items-center text-center' : ''}`} onClick={() => setLocation(`/profile/${profile.username}/followers?tab=following`)}>
+                    <span className="font-black text-xl" style={{ color: isSummerTheme ? '#063B5C' : isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#B7FF1A' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '1rem' : undefined }}>{Number(profile._count?.following || 0)}</span>
+                    <span className="text-[9px] uppercase font-black" style={isSummerTheme ? { color: '#063B5C', letterSpacing: '0.8px' } : isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 8px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 8px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#B7FF1A', color: '#1a1a1a', padding: '2px 8px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>Following</span>
                       </div>
                     </div>
                   ) : (
@@ -3912,12 +4130,13 @@ const ProfilePage = () => {
                   )}
                 </div>
               </div>
+             </div>
             </div>
-            </div>
+            {isSummerTheme && <div className="summer-shoreline" aria-hidden="true" />}
 
             {/* Platform Connections — below the stats card */}
             {profileSectionTab === 'stats' && (profile.steamUsername || profile.xboxUsername || profile.playstationUsername || profile.discordUsername || profile.epicUsername || profile.nintendoUsername || profile.twitterUsername || profile.youtubeUsername || profile.rumbleUsername || profile.instagramUsername || profile.facebookUsername) && (
-              <div className={`flex flex-wrap gap-2 mt-4 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''}`}>
+              <div className={`flex flex-wrap gap-2 mt-4 ${isCyberpunkTheme ? 'cyber-platform-section' : ''} ${isNeoTheme ? 'neo-platform-section' : ''} ${isBlocksTheme ? 'blocks-platform-section' : ''} ${isWatermelonTheme ? 'watermelon-platform-section' : ''} ${isSummerTheme ? 'summer-platform-section' : ''}`}>
                 {profile.steamUsername && (
                   <a href={`https://steamcommunity.com/id/${profile.steamUsername}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium hover:opacity-80 transition-opacity" style={getBtnStyle('steam')}>
                     <SiSteam className="w-3 h-3" />
