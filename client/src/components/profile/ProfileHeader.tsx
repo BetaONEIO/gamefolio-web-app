@@ -36,6 +36,7 @@ import { GamefolioShareDialog } from "./GamefolioShareDialog";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";
+import { resolveProfileTheme } from "@shared/profile-theme";
 import {
   useProfilePictureLightbox,
   ProfilePictureLightbox,
@@ -181,15 +182,17 @@ const ProfileHeader = ({
 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
+  const resolvedTheme = resolveProfileTheme(profile);
+
   const bannerStyle = {
-    backgroundColor: "#071013",
+    backgroundColor: resolvedTheme.backgroundColor,
     backgroundImage: signedBannerUrl ? `url(${signedBannerUrl})` : undefined,
     backgroundSize: "cover",
     backgroundPosition: "center",
   };
 
   const buttonStyle = {
-    backgroundColor: profile.accentColor || undefined,
+    backgroundColor: resolvedTheme.accentColor,
   };
 
   const memberSinceText = profile.createdAt
@@ -217,7 +220,7 @@ const ProfileHeader = ({
               className="shadow-lg"
               borderIntensity="strong"
               showAvatarBorderOverlay={true}
-              themeColor={profile.accentColor}
+              themeColor={resolvedTheme.avatarBorderColor}
               onNftClick={
                 isNftProfileActive
                   ? (userId, tokenId, imageUrl, event) => {
@@ -252,7 +255,7 @@ const ProfileHeader = ({
                   left: 0,
                   right: 0,
                   height: "1px",
-                  background: profile.accentColor || "#B7FF1A",
+                  background: resolvedTheme.accentColor,
                   pointerEvents: "none",
                   zIndex: 5,
                 }}
@@ -265,7 +268,7 @@ const ProfileHeader = ({
                   left: 0,
                   bottom: 0,
                   width: "1px",
-                  background: profile.accentColor || "#B7FF1A",
+                  background: resolvedTheme.accentColor,
                   pointerEvents: "none",
                   zIndex: 5,
                 }}
@@ -276,7 +279,7 @@ const ProfileHeader = ({
                 <div
                   className="absolute -top-3 right-0 z-10 cursor-pointer transition-opacity hover:opacity-80"
                   style={{
-                    background: profile.accentColor || "#B7FF1A",
+                    background: resolvedTheme.accentColor,
                     padding: "1px",
                     borderRadius: "8px",
                   }}
@@ -288,9 +291,9 @@ const ProfileHeader = ({
               </Link>
 
               {(() => {
-                const isLight = getRelativeLuminance(profile.backgroundColor || "#071013") > 0.179;
+                const isLight = getRelativeLuminance(resolvedTheme.backgroundColor) > 0.179;
                 const numColor = isLight ? "#111827" : "#FFFFFF";
-                const lblColor = isLight ? "#374151" : profile.accentColor || undefined;
+                const lblColor = isLight ? "#374151" : resolvedTheme.accentColor;
 
                 return (
                   <div className="flex space-x-4 text-xs rounded-[10px] px-4 py-2.5 bg-background/90">

@@ -46,6 +46,7 @@ import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import ManageGameSettings from "@/components/indie/ManageGameSettings";
+import { DEFAULT_PROFILE_THEME, resolveProfileTheme } from "@shared/profile-theme";
 
 const EMOJI_CATEGORIES = [
   {
@@ -299,10 +300,10 @@ const getCroppedImg = async (
 const PRESET_THEMES = [
   {
     name: "None",
-    backgroundColor: "#121F2B",
-    accentColor: "#B7FF1A",
-    gradientTopColor: "#071013",
-    primaryColor: "#071013"
+    backgroundColor: DEFAULT_PROFILE_THEME.backgroundColor,
+    accentColor: DEFAULT_PROFILE_THEME.accentColor,
+    gradientTopColor: DEFAULT_PROFILE_THEME.backgroundColor,
+    primaryColor: DEFAULT_PROFILE_THEME.primaryColor
   },
   {
     name: "Cutesy Pink",
@@ -549,6 +550,7 @@ function validatePlatformInput(key: PlatformKey, username: string): string | nul
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
+  const resolvedUserTheme = resolveProfileTheme(user || {});
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -935,8 +937,8 @@ export default function SettingsPage() {
     displayName: user?.displayName || "",
     bio: user?.bio || "",
     clanTag: (user as any)?.clanTag || "",
-    backgroundColor: user?.backgroundColor || "#121F2B",
-    accentColor: user?.accentColor || "#B7FF1A",
+    backgroundColor: resolvedUserTheme.backgroundColor,
+    accentColor: resolvedUserTheme.accentColor,
     bannerUrl: user?.bannerUrl || "",
     avatarUrl: user?.avatarUrl || "",
     profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
@@ -970,7 +972,7 @@ export default function SettingsPage() {
   const [newKeyFeature, setNewKeyFeature] = useState("");
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
   
-  const [avatarBorderColor, setAvatarBorderColor] = useState<string>(user?.avatarBorderColor || '#B7FF1A');
+  const [avatarBorderColor, setAvatarBorderColor] = useState<string>(resolvedUserTheme.avatarBorderColor);
   const [selectedBorderId, setSelectedBorderId] = useState<number | null>(user?.selectedAvatarBorderId ?? -1);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
@@ -1026,13 +1028,13 @@ export default function SettingsPage() {
   // value the user hasn't touched it — safe to update. If they differ, the user
   // has an unsaved edit in flight and we must preserve it.
   const lastSyncedBorder = React.useRef({
-    avatarBorderColor: user?.avatarBorderColor || '#B7FF1A',
+    avatarBorderColor: resolvedUserTheme.avatarBorderColor,
     selectedBorderId:  user?.selectedAvatarBorderId ?? -1,
   });
 
   const lastSyncedAppearance = React.useRef({
-    backgroundColor: user?.backgroundColor || "#121F2B",
-    accentColor: user?.accentColor || "#B7FF1A",
+    backgroundColor: resolvedUserTheme.backgroundColor,
+    accentColor: resolvedUserTheme.accentColor,
     profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
     profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
     profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
@@ -1133,8 +1135,8 @@ export default function SettingsPage() {
         }
         
         const appearanceFields = hasPendingEdits.current ? {} : {
-          backgroundColor: user.backgroundColor || "#121F2B",
-          accentColor: user.accentColor || "#B7FF1A",
+          backgroundColor: resolveProfileTheme(user).backgroundColor,
+          accentColor: resolveProfileTheme(user).accentColor,
           profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
           profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
           profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
@@ -1160,8 +1162,9 @@ export default function SettingsPage() {
         const pick = <T,>(prevVal: T, serverVal: T, lastVal: T): T =>
           prevVal === lastVal ? serverVal : prevVal;
 
-        const newBgColor       = user.backgroundColor || "#121F2B";
-        const newAccent        = user.accentColor || "#B7FF1A";
+        const newResolvedTheme = resolveProfileTheme(user);
+        const newBgColor       = newResolvedTheme.backgroundColor;
+        const newAccent        = newResolvedTheme.accentColor;
         const newBgType        = (user as any)?.profileBackgroundType || "solid";
         const newBgTheme       = (user as any)?.profileBackgroundTheme || "default";
         const newBgAnim        = (user as any)?.profileBackgroundAnimation || "none";
@@ -1286,8 +1289,8 @@ export default function SettingsPage() {
     normalizeValue(profileData.displayName) !== normalizeValue(user?.displayName) ||
     normalizeValue(profileData.bio) !== normalizeValue(user?.bio) ||
     normalizeValue(profileData.clanTag) !== normalizeValue((user as any)?.clanTag) ||
-    profileData.backgroundColor !== (user?.backgroundColor || "#121F2B") ||
-    profileData.accentColor !== (user?.accentColor || "#B7FF1A") ||
+    profileData.backgroundColor !== resolvedUserTheme.backgroundColor ||
+    profileData.accentColor !== resolvedUserTheme.accentColor ||
     normalizeValue(profileData.bannerUrl) !== normalizeValue(user?.bannerUrl) ||
     profileData.profileBackgroundType !== ((user as any)?.profileBackgroundType || "solid") ||
     profileData.profileBackgroundTheme !== ((user as any)?.profileBackgroundTheme || "default") ||
@@ -1302,7 +1305,7 @@ export default function SettingsPage() {
     profileData.profileBackgroundGradient !== ((user as any)?.profileBackgroundGradient !== false) ||
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
-    avatarBorderColor !== (user?.avatarBorderColor || '#B7FF1A') ||
+    avatarBorderColor !== resolvedUserTheme.avatarBorderColor ||
     selectedBorderId !== (user?.selectedAvatarBorderId ?? -1) ||
     (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) ||
     (pendingVerificationBadgeId !== undefined && pendingVerificationBadgeId !== (user as any)?.selectedVerificationBadgeId) ||
@@ -1898,7 +1901,7 @@ export default function SettingsPage() {
       const combinedUserType = buildUserType(primaryUserType, isStreamingEnabled);
       updateProfileMutation.mutate({
         ...updatedData,
-        avatarBorderColor: avatarBorderColor?.trim() || '#B7FF1A',
+        avatarBorderColor: avatarBorderColor?.trim() || DEFAULT_PROFILE_THEME.avatarBorderColor,
         userType: combinedUserType,
         streamPlatform,
         showLiveOverlay,
@@ -3249,8 +3252,7 @@ export default function SettingsPage() {
                       <CardContent>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {PRESET_THEMES.map((theme) => {
-                            const topColor = theme.gradientTopColor || '#071013';
-                            const defaultThemeColor = '#071013';
+                            const topColor = theme.gradientTopColor || DEFAULT_PROFILE_THEME.backgroundColor;
                             const isActive = profileData.accentColor === theme.accentColor && profileData.backgroundColor === theme.backgroundColor;
                             const isLocked = (theme as any).proOnly && !user?.isPro && theme.name !== "None";
                             return (
@@ -3440,13 +3442,13 @@ export default function SettingsPage() {
                                 value={profileData.backgroundColor}
                                 onChange={(e) => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, backgroundColor: e.target.value })); }}
                                 className="w-32 font-mono text-sm"
-                                placeholder="#121F2B"
+                                placeholder={DEFAULT_PROFILE_THEME.backgroundColor}
                               />
                             </div>
                             <div
                               className="w-full h-24 rounded-lg border border-border overflow-hidden"
                               style={profileData.profileBackgroundGradient
-                                ? { background: `linear-gradient(180deg, #121F2B 0%, ${profileData.backgroundColor} 60%, ${profileData.backgroundColor} 100%)` }
+                                ? { background: `linear-gradient(180deg, ${DEFAULT_PROFILE_THEME.backgroundColor} 0%, ${profileData.backgroundColor} 60%, ${profileData.backgroundColor} 100%)` }
                                 : { backgroundColor: profileData.backgroundColor }
                               }
                             />

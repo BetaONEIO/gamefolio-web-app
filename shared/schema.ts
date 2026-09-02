@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { pgTable, text, serial, integer, boolean, timestamp, json, unique, real, uniqueIndex, uuid, index, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { DEFAULT_PROFILE_THEME } from "./profile-theme";
 
 // Users table
 export const users = pgTable("users", {
@@ -16,11 +17,11 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
   bannerUrl: text("banner_url").default("/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg"),
   // Customization options
-  accentColor: text("accent_color").default("#B7FF1A"), // Default neon green accent
-  primaryColor: text("primary_color").default("#02172C"), // Default navy primary
-  backgroundColor: text("background_color").default("#0B2232"), // Default navy background
-  cardColor: text("card_color").default("#1E3A8A"), // Default card background
-  avatarBorderColor: text("avatar_border_color").default("#4ADE80"), // Default avatar border color
+  accentColor: text("accent_color").default(DEFAULT_PROFILE_THEME.accentColor),
+  primaryColor: text("primary_color").default(DEFAULT_PROFILE_THEME.primaryColor),
+  backgroundColor: text("background_color").default(DEFAULT_PROFILE_THEME.backgroundColor),
+  cardColor: text("card_color").default(DEFAULT_PROFILE_THEME.cardColor),
+  avatarBorderColor: text("avatar_border_color").default(DEFAULT_PROFILE_THEME.avatarBorderColor),
   profileFont: text("profile_font").default("default"),
   profileFontEffect: text("profile_font_effect").default("none"),
   profileFontAnimation: text("profile_font_animation").default("none"),

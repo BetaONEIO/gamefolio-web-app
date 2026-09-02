@@ -7,6 +7,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { openExternal } from "@/lib/platform";
 import { Game, User, UserWithStats, ClipWithUser, Screenshot } from "@shared/schema";
+import { DEFAULT_PROFILE_THEME, resolveProfileTheme } from "@shared/profile-theme";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1546,12 +1547,13 @@ const ProfilePage = () => {
     );
   }
 
-  const _rawAccent = profile.accentColor || '#B7FF1A';
+  const resolvedProfileTheme = resolveProfileTheme(profile);
+  const _rawAccent = resolvedProfileTheme.accentColor;
   const accentColor = /^#[0-9a-fA-F]{3}$/.test(_rawAccent)
     ? `#${_rawAccent[1]}${_rawAccent[1]}${_rawAccent[2]}${_rawAccent[2]}${_rawAccent[3]}${_rawAccent[3]}`
     : _rawAccent;
-  const backgroundColor = profile.backgroundColor || '#121F2B';
-  const cardColor = profile.cardColor || '#1E3A8A';
+  const backgroundColor = resolvedProfileTheme.backgroundColor;
+  const cardColor = resolvedProfileTheme.cardColor;
 
   const isMacTheme = accentColor?.toLowerCase() === '#0066ff' && backgroundColor?.toLowerCase() === '#f0f0f2';
   const isCartoonTheme = accentColor?.toLowerCase() === '#ff5e5e' && backgroundColor?.toLowerCase() === '#fffaec';
@@ -2003,7 +2005,7 @@ const ProfilePage = () => {
 
   const bgRgb = hexToRgb(backgroundColor);
   const accentRgb = hexToRgb(accentColor);
-  const defaultThemeColor = profile.primaryColor || '#071013';
+  const defaultThemeColor = resolvedProfileTheme.primaryColor;
 
   const selectedProfileNftDetail = selectedProfileNft ? (() => {
     const { score } = getNftRarity(selectedProfileNft);
@@ -2060,6 +2062,7 @@ const ProfilePage = () => {
     <div 
       className={`min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope${isBlocksTheme && !profileBackgroundImageUrl ? ' blocks-bg' : ''}`}
       ref={profileThemeScopeRef}
+      data-default-profile-theme={backgroundColor === DEFAULT_PROFILE_THEME.backgroundColor && accentColor === DEFAULT_PROFILE_THEME.accentColor ? "true" : undefined}
       style={profileBackgroundImageUrl ? {
         backgroundImage: `url(${profileBackgroundImageUrl})`,
         backgroundSize: 'cover',
@@ -2089,7 +2092,7 @@ const ProfilePage = () => {
         backgroundAttachment: 'fixed',
         position: 'relative',
         zIndex: 1
-      } : (profile as any).profileBackgroundGradient !== false ? {
+      } : (profile as any).profileBackgroundGradient !== false && backgroundColor !== DEFAULT_PROFILE_THEME.backgroundColor ? {
         background: isMayhemTheme
           ? 'linear-gradient(to top right, #00DFFF 0%, #9B30E8 48%, #FF0069 100%)'
           : isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
@@ -2097,7 +2100,7 @@ const ProfilePage = () => {
         position: 'relative',
         zIndex: 1
       } : {
-        backgroundColor: backgroundColor,
+        backgroundColor,
         backgroundAttachment: 'fixed',
         position: 'relative',
         zIndex: 1
@@ -3063,7 +3066,7 @@ const ProfilePage = () => {
               avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
               bannerUrl: profile.bannerUrl,
               selectedAvatarBorderId: profile.selectedAvatarBorderId,
-              avatarBorderColor: profile.avatarBorderColor,
+              avatarBorderColor: resolvedProfileTheme.avatarBorderColor,
               nftProfileTokenId: profile.nftProfileTokenId,
               nftProfileImageUrl: profile.nftProfileImageUrl,
               emailVerified: profile.emailVerified,
@@ -3072,10 +3075,10 @@ const ProfilePage = () => {
               selectedVerificationBadgeId: profile.selectedVerificationBadgeId,
               userType: profile.userType,
               showUserType: profile.showUserType,
-              accentColor: profile.accentColor,
-              backgroundColor: profile.backgroundColor,
-              cardColor: profile.cardColor,
-              primaryColor: profile.primaryColor
+              accentColor,
+              backgroundColor,
+              cardColor,
+              primaryColor: resolvedProfileTheme.primaryColor
             }}
             userStats={{
               clips: profile._count?.clips || 0,
@@ -4105,7 +4108,7 @@ const ProfilePage = () => {
                         avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
                         bannerUrl: profile.bannerUrl,
                         selectedAvatarBorderId: profile.selectedAvatarBorderId,
-                        avatarBorderColor: profile.avatarBorderColor,
+                        avatarBorderColor: resolvedProfileTheme.avatarBorderColor,
                         nftProfileTokenId: profile.nftProfileTokenId,
                         nftProfileImageUrl: profile.nftProfileImageUrl,
                         emailVerified: profile.emailVerified,
@@ -4114,10 +4117,10 @@ const ProfilePage = () => {
                         selectedVerificationBadgeId: profile.selectedVerificationBadgeId,
                         userType: profile.userType,
                         showUserType: profile.showUserType,
-                        accentColor: profile.accentColor,
-                        backgroundColor: profile.backgroundColor,
-                        cardColor: profile.cardColor,
-                        primaryColor: profile.primaryColor
+                        accentColor,
+                        backgroundColor,
+                        cardColor,
+                        primaryColor: resolvedProfileTheme.primaryColor
                       }}
                       userStats={{
                         clips: profile._count?.clips || 0,
@@ -4153,7 +4156,7 @@ const ProfilePage = () => {
                         avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
                         bannerUrl: profile.bannerUrl,
                         selectedAvatarBorderId: profile.selectedAvatarBorderId,
-                        avatarBorderColor: profile.avatarBorderColor,
+                        avatarBorderColor: resolvedProfileTheme.avatarBorderColor,
                         nftProfileTokenId: profile.nftProfileTokenId,
                         nftProfileImageUrl: profile.nftProfileImageUrl,
                         emailVerified: profile.emailVerified,
@@ -4162,10 +4165,10 @@ const ProfilePage = () => {
                         selectedVerificationBadgeId: profile.selectedVerificationBadgeId,
                         userType: profile.userType,
                         showUserType: profile.showUserType,
-                        accentColor: profile.accentColor,
-                        backgroundColor: profile.backgroundColor,
-                        cardColor: profile.cardColor,
-                        primaryColor: profile.primaryColor
+                        accentColor,
+                        backgroundColor,
+                        cardColor,
+                        primaryColor: resolvedProfileTheme.primaryColor
                       }}
                       userStats={{
                         clips: profile._count?.clips || 0,
@@ -5746,7 +5749,7 @@ const ProfilePage = () => {
                   avatarUrl: profileAvatarSignedUrl || profile.avatarUrl,
                   bannerUrl: profile.bannerUrl,
                   selectedAvatarBorderId: profile.selectedAvatarBorderId,
-                  avatarBorderColor: profile.avatarBorderColor,
+                  avatarBorderColor: resolvedProfileTheme.avatarBorderColor,
                   nftProfileTokenId: profile.nftProfileTokenId,
                   nftProfileImageUrl: profile.nftProfileImageUrl,
                   emailVerified: profile.emailVerified,
@@ -5755,10 +5758,10 @@ const ProfilePage = () => {
                   selectedVerificationBadgeId: profile.selectedVerificationBadgeId,
                   userType: profile.userType,
                   showUserType: profile.showUserType,
-                  accentColor: profile.accentColor,
-                  backgroundColor: profile.backgroundColor,
-                  cardColor: profile.cardColor,
-                  primaryColor: profile.primaryColor
+                  accentColor,
+                  backgroundColor,
+                  cardColor,
+                  primaryColor: resolvedProfileTheme.primaryColor
                 }}
                 userStats={{
                   clips: profile._count?.clips || 0,
