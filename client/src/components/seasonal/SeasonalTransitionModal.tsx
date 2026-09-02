@@ -453,12 +453,16 @@ export function SeasonalTransitionModalGate() {
   const announcementQueryKey = ["/api/seasonal-announcement", user?.id] as const;
 
   const blockedPath = BLOCKED_PATH_PREFIXES.some((prefix) => location.startsWith(prefix));
+  const player2PreviewRequested =
+    import.meta.env.DEV &&
+    user?.username?.toLowerCase() === "player2" &&
+    new URLSearchParams(window.location.search).get("seasonalPreview") === "1";
   const enabled = Boolean(
     user &&
-    user.userType &&
-    user.emailVerified === true &&
-    !blockedPath &&
-    !isAuthModalOpen,
+      user.userType &&
+      !blockedPath &&
+      !isAuthModalOpen &&
+      (user.emailVerified === true || player2PreviewRequested),
   );
   const { data } = useQuery<SeasonalAnnouncement | null>({
     queryKey: announcementQueryKey,
@@ -484,7 +488,14 @@ export function SeasonalTransitionModalGate() {
     completedForSession.current = false;
   }, [user?.id]);
 
-  if (!enabled || !data || data.seen || completedForSession.current) return null;
+  if (
+    !enabled ||
+    !data ||
+    (data.seen && !player2PreviewRequested) ||
+    completedForSession.current
+  ) {
+    return null;
+  }
 
   const handleComplete = () => {
     if (completedForSession.current) return;
