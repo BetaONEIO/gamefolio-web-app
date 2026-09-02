@@ -31,6 +31,136 @@ import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
 import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog } from "@shared/schema";
 import { hasIndieDeveloperAccess } from "@shared/partner-access";
 import { getPublicSeasonNumber, SEASON_DEFS } from "@shared/season-definitions";
+import { getLeaderboardRewardsForSeason } from "@shared/leaderboard-rewards";
+
+const SEASONAL_ANNOUNCEMENT_ID = "summer_2026_end_autumn_2026_launch";
+const SUMMER_SEASON_NUMBER = 8;
+
+type SeasonalReward = {
+  type: "gft" | "cosmetic";
+  label: string;
+  amount?: number;
+  status?: string;
+};
+
+async function getSummerTransitionResult(userId: number) {
+  const scoreRows = await db.execute(sql`
+    WITH summer_scores AS (
+      SELECT
+        u.id AS user_id,
+        COALESCE(SUM(xh.xp_amount), 0)::int AS season_xp,
+        ROW_NUMBER() OVER (
+          ORDER BY COALESCE(SUM(xh.xp_amount), 0) DESC, u.id ASC
+        ) AS final_rank
+      FROM users u
+      LEFT JOIN user_xp_history xh
+        ON xh.user_id = u.id
+        AND xh.created_at >= '2026-06-01T00:00:00.000Z'
+        AND xh.created_at < '2026-09-01T00:00:00.000Z'
+        AND xh.xp_amount > 0
+      WHERE u.role NOT IN ('admin', 'moderator', 'system')
+        AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+        AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+        AND LOWER(u.username) NOT LIKE '%test%'
+        AND COALESCE(u.user_type, '') NOT ILIKE '%indie_developer%'
+      GROUP BY u.id
+    )
+    SELECT final_rank, season_xp
+    FROM summer_scores
+    WHERE user_id = ${userId}
+    LIMIT 1
+  `);
+
+  const score = (scoreRows as any[])[0];
+  const finalRank = score ? Number(score.final_rank) : null;
+  const seasonXp = score ? Number(score.season_xp) : 0;
+  const participated = seasonXp > 0;
+  const isTopTen = finalRank !== null && finalRank <= 10;
+
+  const rewards: SeasonalReward[] = [];
+  let payout: { amount: number; status: string } | null = null;
+
+  if (isTopTen) {
+    const [payoutRow, borderClaim, nameTagUnlock] = await Promise.all([
+      db.execute(sql`
+        SELECT amount, status
+        FROM leaderboard_reward_payouts
+        WHERE season_number = ${SUMMER_SEASON_NUMBER}
+          AND rank = ${finalRank}
+          AND user_id = ${userId}
+        LIMIT 1
+      `),
+      db.execute(sql`
+        SELECT 1
+        FROM asset_reward_claims arc
+        JOIN asset_rewards ar ON ar.id = arc.reward_id
+        WHERE arc.user_id = ${userId}
+          AND ar.id = 44
+        LIMIT 1
+      `),
+      db.execute(sql`
+        SELECT 1
+        FROM user_unlocked_name_tags uunt
+        JOIN name_tags nt ON nt.id = uunt.name_tag_id
+        WHERE uunt.user_id = ${userId}
+          AND nt.id = 157
+        LIMIT 1
+      `),
+    ]);
+
+    const storedPayout = (payoutRow as any[])[0];
+    if (storedPayout) {
+      payout = {
+        amount: Number(storedPayout.amount),
+        status: String(storedPayout.status),
+      };
+      if (payout.status === "paid") {
+        rewards.push({
+          type: "gft",
+          label: `${payout.amount.toLocaleString("en-US")} GFT`,
+          amount: payout.amount,
+          status: payout.status,
+        });
+      }
+    }
+
+    if ((borderClaim as any[]).length > 0) {
+      rewards.push({
+        type: "cosmetic",
+        label: "Summer Showdown Profile Border",
+        status: "awarded",
+      });
+    }
+
+    // The Summer theme is an entitlement derived from the final top-ten
+    // result, not a second claim row.
+    rewards.push({
+      type: "cosmetic",
+      label: "Summer Theme",
+      status: "awarded",
+    });
+
+    if ((nameTagUnlock as any[]).length > 0) {
+      rewards.push({
+        type: "cosmetic",
+        label: "Summer Showdown Name Tag",
+        status: "awarded",
+      });
+    }
+  }
+
+  const payoutPending = isTopTen && (!payout || !["paid", "skipped_no_wallet"].includes(payout.status));
+
+  return {
+    participated,
+    finalRank,
+    seasonXp,
+    isTopTen,
+    rewards,
+    payout: payout ? { ...payout, pending: payoutPending } : null,
+    payoutPending,
+  };
+}
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -521,6 +651,19 @@ async function checkMediaOwnerAccess(
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
+
+  // Keep the announcement acknowledgement available immediately in
+  // development as well as after the schema is published.
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS user_seasonal_announcements (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      announcement_id TEXT NOT NULL,
+      seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT user_seasonal_announcements_user_announcement_unique
+        UNIQUE (user_id, announcement_id)
+    )
+  `);
   
   app.use('/api', (req, res, next) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -4582,6 +4725,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Versioned Summer → Autumn transition announcement. The modal is
+  // deliberately read-only with respect to rewards; it reports records that
+  // were already distributed by the season/reward systems.
+  app.get("/api/seasonal-announcement", authMiddleware, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const seenRows = await db.execute(sql`
+        SELECT 1
+        FROM user_seasonal_announcements
+        WHERE user_id = ${userId}
+          AND announcement_id = ${SEASONAL_ANNOUNCEMENT_ID}
+        LIMIT 1
+      `);
+
+      const previousSeason = SEASON_DEFS.find((season) => season.num === SUMMER_SEASON_NUMBER)!;
+      const newSeason = SEASON_DEFS[0];
+      const newSeasonPlan = getLeaderboardRewardsForSeason(newSeason.num);
+
+      res.json({
+        announcementId: SEASONAL_ANNOUNCEMENT_ID,
+        seen: (seenRows as any[]).length > 0,
+        images: {
+          seasonEndImage: null,
+          summerRewardsImage: null,
+          newSeasonImage: null,
+        },
+        previousSeason: {
+          name: previousSeason.name,
+          dateRange: previousSeason.dateRange,
+        },
+        newSeason: {
+          name: newSeason.name,
+          dateRange: newSeason.dateRange,
+          rewardPool: newSeasonPlan.prizePool,
+          currency: newSeasonPlan.currency,
+          rewards: [],
+        },
+        summerResult: await getSummerTransitionResult(userId),
+      });
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error fetching seasonal announcement:", error);
+      res.status(500).json({ message: "Failed to load seasonal announcement" });
+    }
+  });
+
+  app.post("/api/seasonal-announcement/seen", authMiddleware, async (req, res) => {
+    try {
+      const announcementId = req.body?.announcementId;
+      if (announcementId !== SEASONAL_ANNOUNCEMENT_ID) {
+        return res.status(400).json({ message: "Unknown seasonal announcement" });
+      }
+
+      await db.execute(sql`
+        INSERT INTO user_seasonal_announcements (user_id, announcement_id)
+        VALUES (${req.user!.id}, ${SEASONAL_ANNOUNCEMENT_ID})
+        ON CONFLICT (user_id, announcement_id) DO NOTHING
+      `);
+
+      res.json({ announcementId: SEASONAL_ANNOUNCEMENT_ID, seen: true });
+    } catch (error) {
+      captureRouteError(error);
+      console.error("Error marking seasonal announcement seen:", error);
+      res.status(500).json({ message: "Failed to save seasonal announcement state" });
+    }
+  });
+
   // Current season top players — used by the homepage leaderboard slide podium
   app.get("/api/leaderboard/current-season/top", async (req, res) => {
     try {
@@ -7392,14 +7602,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // the locked theme card in settings.
       const finalAccentColor = String(safeBody.accentColor ?? (req.user as any)?.accentColor ?? "").toLowerCase();
       const finalBackgroundColor = String(safeBody.backgroundColor ?? (req.user as any)?.backgroundColor ?? "").toLowerCase();
-      if (finalAccentColor === "#35e0ff" && finalBackgroundColor === "#061e2a") {
+      const finalThemeName = String(
+        safeBody.profileBackgroundTheme ?? (req.user as any)?.profileBackgroundTheme ?? ""
+      ).toLowerCase();
+      const isSummerPalette =
+        (finalAccentColor === "#12b8c4" && finalBackgroundColor === "#063b5c") ||
+        (finalAccentColor === "#35e0ff" && finalBackgroundColor === "#061e2a");
+      if (finalThemeName === "summer" || isSummerPalette) {
         const summerReward = (await storage.getAllAssetRewards()).find(
           (reward) => reward.name === "Summer Showdown 2026 Border"
         );
         const hasSummerReward = !!summerReward && await storage.userHasUnlockedReward(userId, summerReward.id);
         if (!hasSummerReward) {
           return res.status(403).json({
-            message: "The Summer theme is unlocked by participating in Summer Showdown."
+            message: "The Summer theme is awarded only to the Summer Showdown top 10."
           });
         }
       }
@@ -14102,7 +14318,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUserById(req.user.id);
       if (user?.isPro) {
         const allBorders = await storage.getAllAvatarBorders();
-        return res.json(allBorders);
+        const summerEligible = await storage.isSummerShowdownTopTenUser(req.user.id);
+        return res.json(
+          summerEligible
+            ? allBorders
+            : allBorders.filter(border => border.id !== 44)
+        );
       }
       
       // Non-Pro users only get their unlocked borders
@@ -14136,9 +14357,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return res.status(400).json({ message: "Invalid avatar border" });
           }
           
-          // Pro users can select ANY border
+          // Pro users can select any border except the top-ten-only Summer
+          // reward, which is checked against the final leaderboard below.
           const user = await storage.getUserById(req.user.id);
-          if (!user?.isPro) {
+          const isSummerBorder = avatarBorderId === 44;
+          if (isSummerBorder && !(await storage.isSummerShowdownTopTenUser(req.user.id))) {
+            return res.status(403).json({
+              message: "The Summer border is awarded only to the Summer Showdown top 10."
+            });
+          }
+          if (!user?.isPro && !isSummerBorder) {
             // Non-Pro users must have unlocked the border
             const hasUnlocked = await storage.userHasUnlockedReward(req.user.id, avatarBorderId);
             if (!hasUnlocked) {

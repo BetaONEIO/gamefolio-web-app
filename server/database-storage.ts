@@ -5492,6 +5492,42 @@ export class DatabaseStorage implements IStorage {
 
   // Free avatar borders available to all users (IDs of borders everyone can use)
   private readonly FREE_AVATAR_BORDER_IDS = [17]; // HUD Corner Brackets
+  private readonly SUMMER_SHOWDOWN_REWARD_ID = 44;
+
+  // Summer Showdown 2026 eligibility is the final top ten from the
+  // authoritative XP ledger. Claims are retained for history, but access is
+  // determined by this ranking so old participation-wide grants cannot unlock
+  // the seasonal cosmetics.
+  async isSummerShowdownTopTenUser(userId: number): Promise<boolean> {
+    const rows = await db.execute(sql`
+      WITH summer_scores AS (
+        SELECT
+          u.id AS user_id,
+          ROW_NUMBER() OVER (
+            ORDER BY COALESCE(SUM(xh.xp_amount), 0) DESC, u.id ASC
+          ) AS final_rank
+        FROM users u
+        LEFT JOIN user_xp_history xh
+          ON xh.user_id = u.id
+          AND xh.created_at >= '2026-06-01T00:00:00.000Z'
+          AND xh.created_at < '2026-09-01T00:00:00.000Z'
+          AND xh.xp_amount > 0
+        WHERE u.role NOT IN ('admin', 'moderator', 'system')
+          AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+          AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+          AND LOWER(u.username) NOT LIKE '%test%'
+          AND COALESCE(u.user_type, '') NOT ILIKE '%indie_developer%'
+        GROUP BY u.id
+      )
+      SELECT 1
+      FROM summer_scores
+      WHERE user_id = ${userId}
+        AND final_rank <= 10
+      LIMIT 1
+    `);
+
+    return rows.length > 0;
+  }
 
   // Get ALL avatar borders (for Pro users who have access to everything)
   async getAllAvatarBorders(): Promise<AssetReward[]> {
@@ -5509,6 +5545,8 @@ export class DatabaseStorage implements IStorage {
 
   // Get user's unlocked avatar borders
   async getUserUnlockedAvatarBorders(userId: number): Promise<AssetReward[]> {
+    const summerEligible = await this.isSummerShowdownTopTenUser(userId);
+
     // Get user's claimed borders from lootbox
     const claims = await db
       .select({
@@ -5524,7 +5562,9 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    const claimedBorders = claims.map(c => c.reward);
+    const claimedBorders = claims
+      .map(c => c.reward)
+      .filter(reward => reward.id !== this.SUMMER_SHOWDOWN_REWARD_ID || summerEligible);
     const claimedIds = new Set(claimedBorders.map(b => b.id));
 
     // Get free borders that user hasn't already claimed
@@ -5555,6 +5595,13 @@ export class DatabaseStorage implements IStorage {
     // Check if it's a free border (available to everyone)
     if (this.FREE_AVATAR_BORDER_IDS.includes(rewardId)) {
       return true;
+    }
+
+    // Summer is a final top-ten seasonal reward. This check intentionally
+    // ignores the historical claim row so the old participation-wide grants
+    // cannot keep granting access to the border or theme.
+    if (rewardId === this.SUMMER_SHOWDOWN_REWARD_ID) {
+      return this.isSummerShowdownTopTenUser(userId);
     }
 
     const [claim] = await db
@@ -5792,6 +5839,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserClaimedRewards(userId: number): Promise<AssetReward[]> {
+    const summerEligible = await this.isSummerShowdownTopTenUser(userId);
     const claims = await db
       .select({
         reward: assetRewards,
@@ -5801,7 +5849,9 @@ export class DatabaseStorage implements IStorage {
       .where(eq(assetRewardClaims.userId, userId))
       .orderBy(desc(assetRewardClaims.claimedAt));
 
-    return claims.map(c => c.reward);
+    return claims
+      .map(c => c.reward)
+      .filter(reward => reward.id !== this.SUMMER_SHOWDOWN_REWARD_ID || summerEligible);
   }
 
   async getActiveRewardsForLootbox(): Promise<AssetReward[]> {
@@ -5830,6 +5880,8 @@ export class DatabaseStorage implements IStorage {
       claimedAt: Date;
     }>;
   }> {
+    const summerEligible = await this.isSummerShowdownTopTenUser(userId);
+
     // Get total lootboxes opened
     const lootboxRecord = await db
       .select({ openCount: userDailyLootbox.openCount })
@@ -5870,11 +5922,18 @@ export class DatabaseStorage implements IStorage {
       .where(eq(assetRewardClaims.userId, userId))
       .orderBy(desc(assetRewardClaims.claimedAt));
 
+    // Historical Summer claims remain in the database for auditability, but
+    // non-top-ten users should not see the seasonal reward as an active
+    // collection item.
+    const visibleClaimedItems = claimedItems.filter(
+      item => item.id !== this.SUMMER_SHOWDOWN_REWARD_ID || summerEligible
+    );
+
     // Count by rarity
-    const legendaryCount = claimedItems.filter(i => i.rarity === 'legendary').length;
-    const epicCount = claimedItems.filter(i => i.rarity === 'epic').length;
-    const rareCount = claimedItems.filter(i => i.rarity === 'rare').length;
-    const commonCount = claimedItems.filter(i => i.rarity === 'common').length;
+    const legendaryCount = visibleClaimedItems.filter(i => i.rarity === 'legendary').length;
+    const epicCount = visibleClaimedItems.filter(i => i.rarity === 'epic').length;
+    const rareCount = visibleClaimedItems.filter(i => i.rarity === 'rare').length;
+    const commonCount = visibleClaimedItems.filter(i => i.rarity === 'common').length;
 
     return {
       stats: {
@@ -5885,7 +5944,7 @@ export class DatabaseStorage implements IStorage {
         rareCount,
         commonCount,
       },
-      items: claimedItems,
+       items: visibleClaimedItems,
     };
   }
 

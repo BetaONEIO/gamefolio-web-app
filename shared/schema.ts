@@ -204,6 +204,18 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Versioned, account-level acknowledgement state for seasonal announcements.
+// A composite key keeps each season transition independently dismissible.
+export const userSeasonalAnnouncements = pgTable("user_seasonal_announcements", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  announcementId: text("announcement_id").notNull(),
+  seenAt: timestamp("seen_at").defaultNow().notNull(),
+}, (table) => ({
+  userAnnouncementUnique: unique("user_seasonal_announcements_user_announcement_unique")
+    .on(table.userId, table.announcementId),
+}));
+
 // Games table
 export const games = pgTable("games", {
   id: serial("id").primaryKey(),

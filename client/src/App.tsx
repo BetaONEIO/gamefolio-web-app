@@ -45,6 +45,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, X } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { SeasonalTransitionModalGate } from "@/components/seasonal/SeasonalTransitionModal";
 
 // Lazy-loaded page components for better performance
 import React, { Suspense } from 'react';
@@ -493,6 +494,10 @@ function MainLayout({ children }: { children: React.ReactNode }) {
         onClose={closeModal} 
         defaultTab={defaultTab} 
       />
+
+      {/* Account-backed seasonal announcement. This is mounted only in the
+          authenticated app shell, never over auth/onboarding screens. */}
+      {!isDeveloperSubdomain && <SeasonalTransitionModalGate />}
     </div>
   );
 }

@@ -6331,7 +6331,7 @@ export default function SettingsPage() {
                         if (isRewardLocked) {
                           toast({
                             title: "Summer theme locked",
-                            description: "Participate in Summer Showdown to unlock this seasonal theme.",
+                            description: "Finish in the Summer Showdown top 10 to unlock this seasonal theme.",
                           });
                         } else {
                           setShowProUpgradeDialog(true);
@@ -6354,7 +6354,7 @@ export default function SettingsPage() {
                     }}
                   >
                      {isThemeLocked && !isRewardLocked && <img src={gamefolioLogo} alt="Gamefolio" className="w-5 h-5 rounded-full flex-shrink-0" />}
-                     {isCurrentTheme ? 'Current Theme' : isRewardLocked ? 'Earn in Summer Showdown' : isThemeLocked ? 'Go Pro' : 'Apply Theme'}
+                     {isCurrentTheme ? 'Current Theme' : isRewardLocked ? 'Place in Summer top 10' : isThemeLocked ? 'Go Pro' : 'Apply Theme'}
                   </button>
                 </div>
               </div>
