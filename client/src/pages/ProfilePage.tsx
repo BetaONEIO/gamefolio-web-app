@@ -91,6 +91,7 @@ import { VerificationBadge } from "@/components/ui/verification-badge";
 import { ReportButton } from "@/components/reporting/ReportButton";
 import { useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
 import { BannerLightbox, useBannerLightbox } from "@/components/ui/banner-lightbox";
+import { ProfileMetricTooltip, type ProfileMetricLabel } from "@/components/profile/ProfileMetricTooltip";
 
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { useSignedUrl } from "@/hooks/use-signed-url";
@@ -1583,6 +1584,32 @@ const ProfilePage = () => {
   const isMayhemTheme = !isLightBackground && accentColor?.toLowerCase() === '#00dfff';
 
   const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isSummerTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isBatTheme && !isMayhemTheme && !isLightBackground;
+
+  const renderProfileStatValue = (
+    label: string,
+    value: number,
+    className?: string,
+    style?: React.CSSProperties,
+  ) => {
+    if (label === "XP" || label === "Views") {
+      return (
+        <ProfileMetricTooltip
+          label={label as ProfileMetricLabel}
+          value={value}
+          seasonValue={label === "XP" ? profile.seasonStats?.seasonXP : profile.seasonStats?.seasonViews}
+          seasonName={profile.seasonStats?.seasonName}
+          className={className}
+          style={style}
+        />
+      );
+    }
+
+    return (
+      <span className={className} style={style}>
+        {value.toLocaleString()}
+      </span>
+    );
+  };
 
   const userTagStyle: React.CSSProperties = isLightBackground ? {
     backgroundColor: 'rgba(255,255,255,0.6)',
@@ -3703,7 +3730,7 @@ const ProfilePage = () => {
                           style={stat.label === 'Followers' ? { cursor: 'pointer' } : undefined}
                         >
                           <div className="flex flex-col items-center gap-1 flex-1 py-1">
-                            <span style={{ color: stat.color, fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: 800, fontSize: '1.6rem', letterSpacing: '-0.9px', lineHeight: 1 }}>{stat.value}</span>
+                            {renderProfileStatValue(stat.label, stat.value, undefined, { color: stat.color, fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif", fontWeight: 800, fontSize: '1.6rem', letterSpacing: '-0.9px', lineHeight: 1 })}
                             <span style={{ color: 'rgba(0,0,0,0.4)', fontSize: '10px', letterSpacing: '2.2px', fontWeight: 800, textTransform: 'uppercase' as const, fontFamily: "'Bricolage Grotesque', 'Arial Black', sans-serif" }}>{stat.label}</span>
                           </div>
                           {i < arr.length - 1 && (
@@ -3727,7 +3754,7 @@ const ProfilePage = () => {
                           style={stat.label === 'Followers' ? { cursor: 'pointer' } : undefined}
                         >
                           <div className="flex flex-col items-center gap-1 flex-1 py-1">
-                            <span style={{ color: '#ffffff', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 }}>{stat.value}</span>
+                            {renderProfileStatValue(stat.label, stat.value, undefined, { color: '#ffffff', fontWeight: 900, fontSize: '1.1rem', lineHeight: 1 })}
                             <span style={{ color: '#c27aff', fontSize: '8px', letterSpacing: '1.2px', fontWeight: 700, textTransform: 'uppercase' as const, fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }}>{stat.label}</span>
                           </div>
                           {i < arr.length - 1 && (
@@ -3749,9 +3776,7 @@ const ProfilePage = () => {
                         className={`flex min-w-0 flex-col items-center gap-1 ${stat.label === 'Followers' ? 'cursor-pointer' : ''} ${isWatermelonTheme ? 'watermelon-stat-item' : ''} ${isSummerTheme ? 'summer-stat-item' : ''}`}
                         onClick={stat.label === 'Followers' ? () => setLocation(`/profile/${profile.username}/followers`) : undefined}
                       >
-                        <span className="font-black text-base" style={{ color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined }}>
-                          {stat.value.toLocaleString()}
-                        </span>
+                        {renderProfileStatValue(stat.label, stat.value, "font-black text-base", { color: isWatermelonTheme ? '#0d1a12' : isLightBackground ? '#1d293d' : isZombieTheme ? '#9ae600' : isCyberpunkTheme ? '#00d3f2' : isBlocksTheme ? '#ef4444' : isForestTheme ? '#5C3317' : '#ffffff', fontFamily: isCyberpunkTheme ? "'Orbitron', sans-serif" : isBlocksTheme ? "'Press Start 2P', monospace" : undefined, fontSize: isBlocksTheme ? '0.9rem' : undefined })}
                         <span className="text-[8px] uppercase font-black" style={isWatermelonTheme ? { color: '#0d1a12', letterSpacing: '0.8px' } : isMacTheme ? { color: '#0066ff', letterSpacing: '0.8px' } : isLightBackground ? { color: '#6b7280', letterSpacing: '0.8px' } : isZombieTheme ? { backgroundColor: '#9ae600e6', color: '#3c6300', padding: '2px 6px', borderRadius: '4px', letterSpacing: '1.6px' } : isCyberpunkTheme ? { background: 'linear-gradient(270deg, #00d3f2, #e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', padding: '2px 6px', letterSpacing: '1.6px', fontFamily: "'Orbitron', sans-serif" } : isBlocksTheme ? { backgroundColor: '#ef4444', color: '#ffffff', padding: '2px 6px', borderRadius: '2px', fontFamily: "'Press Start 2P', monospace", fontSize: '6px', letterSpacing: '0px', boxShadow: '3px 3px 0 #000' } : isForestTheme ? { color: '#8B5E3C', letterSpacing: '0.8px' } : { color: accentColor, letterSpacing: '0.8px' }}>
                           {stat.label}
                         </span>
@@ -4122,34 +4147,29 @@ const ProfilePage = () => {
                       className={`flex min-w-0 flex-col items-center gap-1 text-center ${stat.label === 'Followers' ? 'cursor-pointer' : ''} ${isWatermelonTheme ? 'watermelon-stat-item' : ''} ${isSummerTheme ? 'summer-stat-item' : ''}`}
                       onClick={stat.label === 'Followers' ? () => setLocation(`/profile/${profile.username}/followers`) : undefined}
                     >
-                      <span
-                        className="font-black text-xl"
-                        style={{
-                          color: isSummerTheme
-                            ? '#063B5C'
-                            : isWatermelonTheme
-                              ? '#0d1a12'
-                              : isLightBackground
-                                ? '#1d293d'
-                                : isZombieTheme
-                                  ? '#9ae600'
-                                  : isCyberpunkTheme
-                                    ? '#00d3f2'
-                                    : isBlocksTheme
-                                      ? '#ef4444'
-                                      : isForestTheme
-                                        ? '#5C3317'
-                                        : '#ffffff',
-                          fontFamily: isCyberpunkTheme
-                            ? "'Orbitron', sans-serif"
-                            : isBlocksTheme
-                              ? "'Press Start 2P', monospace"
-                              : undefined,
-                          fontSize: isBlocksTheme ? '1rem' : undefined,
-                        }}
-                      >
-                        {stat.value.toLocaleString()}
-                      </span>
+                      {renderProfileStatValue(stat.label, stat.value, "font-black text-xl", {
+                        color: isSummerTheme
+                          ? '#063B5C'
+                          : isWatermelonTheme
+                            ? '#0d1a12'
+                            : isLightBackground
+                              ? '#1d293d'
+                              : isZombieTheme
+                                ? '#9ae600'
+                                : isCyberpunkTheme
+                                  ? '#00d3f2'
+                                  : isBlocksTheme
+                                    ? '#ef4444'
+                                    : isForestTheme
+                                      ? '#5C3317'
+                                      : '#ffffff',
+                        fontFamily: isCyberpunkTheme
+                          ? "'Orbitron', sans-serif"
+                          : isBlocksTheme
+                            ? "'Press Start 2P', monospace"
+                            : undefined,
+                        fontSize: isBlocksTheme ? '1rem' : undefined,
+                      })}
                       <span
                         className="text-[9px] uppercase font-black"
                         style={isSummerTheme

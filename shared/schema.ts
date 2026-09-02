@@ -1932,6 +1932,12 @@ export type UserWithStats = User & {
     firesReceived: number;
   };
   favoriteGames?: Game[];
+  seasonStats?: {
+    seasonName: string;
+    seasonNumber: number;
+    seasonXP: number;
+    seasonViews: number;
+  };
 };
 
 export type UserWithBadges = User & {

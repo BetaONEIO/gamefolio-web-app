@@ -38,6 +38,7 @@ import {
   useProfilePictureLightbox,
   ProfilePictureLightbox,
 } from "@/components/ui/profile-picture-lightbox";
+import { ProfileMetricTooltip } from "./ProfileMetricTooltip";
 
 const getRelativeLuminance = (hex: string): number => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -295,18 +296,28 @@ const ProfileHeader = ({
                 return (
                   <div className="grid grid-cols-4 gap-3 text-xs rounded-[10px] px-4 py-2.5 bg-background/90">
                       <div className="text-center">
-                        <span className="font-bold block" style={{ color: numColor }}>
-                          {Math.round(profile.totalXP || 0).toLocaleString()}
-                        </span>
+                        <ProfileMetricTooltip
+                          label="XP"
+                          value={Number(profile.totalXP || 0)}
+                          seasonValue={profile.seasonStats?.seasonXP}
+                          seasonName={profile.seasonStats?.seasonName}
+                          className="font-bold block"
+                          style={{ color: numColor }}
+                        />
                         <span className="text-muted-foreground" style={{ color: lblColor }}>
                           XP
                         </span>
                       </div>
 
                       <div className="text-center">
-                        <span className="font-bold block" style={{ color: numColor }}>
-                          {(profile._count?.views ?? profile._count?.clipViews ?? 0).toLocaleString()}
-                        </span>
+                        <ProfileMetricTooltip
+                          label="Views"
+                          value={Number(profile._count?.views ?? profile._count?.clipViews ?? 0)}
+                          seasonValue={profile.seasonStats?.seasonViews}
+                          seasonName={profile.seasonStats?.seasonName}
+                          className="font-bold"
+                          style={{ color: numColor }}
+                        />
                         <span className="text-muted-foreground" style={{ color: lblColor }}>
                           Views
                         </span>

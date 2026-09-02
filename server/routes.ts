@@ -44,6 +44,35 @@ type SeasonalReward = {
   status?: string;
 };
 
+async function getCurrentSeasonProfileStats(userId: number) {
+  const seasonDef = SEASON_DEFS[0];
+  const [startYear, startMonth] = seasonDef.months[0].split("-").map(Number);
+  const lastMonth = seasonDef.months[seasonDef.months.length - 1];
+  const [endYear, endMonth] = lastMonth.split("-").map(Number);
+  const seasonStart = new Date(Date.UTC(startYear, startMonth - 1, 1)).toISOString();
+  const seasonEnd = new Date(Date.UTC(endYear, endMonth, 1)).toISOString();
+
+  const rows = await db.execute(sql`
+    SELECT
+      COALESCE(SUM(xp_amount) FILTER (WHERE xp_amount > 0), 0) AS "seasonXP",
+      COUNT(*) FILTER (WHERE source = 'view' AND xp_amount > 0)::int AS "seasonViews"
+    FROM user_xp_history
+    WHERE user_id = ${userId}
+      AND created_at >= ${seasonStart}
+      AND created_at < ${seasonEnd}
+  `);
+  const row = (((rows as any).rows ?? rows) as any[])[0] ?? {};
+
+  return {
+    seasonName: seasonDef.name,
+    seasonNumber: getPublicSeasonNumber(seasonDef.num),
+    seasonXP: Number(row.seasonXP ?? 0),
+    // Each valid view earns one "view" XP history row, so this is the
+    // season's tracked view count across clips and screenshots.
+    seasonViews: Number(row.seasonViews ?? 0),
+  };
+}
+
 async function getSummerTransitionResult(userId: number) {
   const scoreRows = await db.execute(sql`
     WITH summer_scores AS (
@@ -6614,7 +6643,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Strip password + all other secret columns (2FA secret, tokens, PII…)
       // while keeping the profile stats/display fields the page needs.
-      res.json(stripUserSecrets(userWithStats));
+      const seasonStats = await getCurrentSeasonProfileStats(user.id);
+      res.json({ ...stripUserSecrets(userWithStats), seasonStats });
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching user:", err);
