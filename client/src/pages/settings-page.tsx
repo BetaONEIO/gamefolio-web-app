@@ -154,7 +154,8 @@ const InlineSvgBorder: React.FC<{
   color: string;
   className?: string;
   style?: React.CSSProperties;
-}> = ({ svgUrl, color, className, style }) => {
+  rasterScale?: number;
+}> = ({ svgUrl, color, className, style, rasterScale = 1 }) => {
   const [svgContent, setSvgContent] = useState<string>('');
   const [assetType, setAssetType] = useState<'svg' | 'raster' | null>(null);
   
@@ -246,8 +247,13 @@ const InlineSvgBorder: React.FC<{
         className={className}
         style={{
           ...style,
-          width: '100%',
-          height: '100%',
+          width: `${rasterScale * 100}%`,
+          height: `${rasterScale * 100}%`,
+          left: '50%',
+          top: '50%',
+          right: 'auto',
+          bottom: 'auto',
+          transform: 'translate(-50%, -50%)',
           display: 'block',
           objectFit: 'contain',
         }}
@@ -2255,6 +2261,7 @@ export default function SettingsPage() {
                                   svgUrl={border.imageUrl}
                                   color={avatarBorderColor}
                                   className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+                                  rasterScale={0.82}
                                   style={{ zIndex: 5 }}
                                 />
                               );
@@ -2675,6 +2682,7 @@ export default function SettingsPage() {
                               svgUrl={border.imageUrl}
                               color={avatarBorderColor}
                               className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+                              rasterScale={0.82}
                               style={{ zIndex: 5 }}
                             />
                           ) : null;
@@ -2812,6 +2820,7 @@ export default function SettingsPage() {
                                         svgUrl={border.imageUrl}
                                         color="#ffffff"
                                         className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+                                        rasterScale={0.75}
                                       />
                                       {isLocked && (
                                         <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
