@@ -115,7 +115,7 @@ const useSvgBorderData = (svgUrl: string, color: string) => {
   return { ...data, clipId };
 };
 
-// Component to render SVG border
+// Component to render SVG or raster-image borders
 const InlineSvgBorder: React.FC<{
   svgUrl: string;
   color: string;
@@ -123,11 +123,17 @@ const InlineSvgBorder: React.FC<{
   style?: React.CSSProperties;
 }> = ({ svgUrl, color, className, style }) => {
   const [svgContent, setSvgContent] = useState<string>('');
+  const [assetType, setAssetType] = useState<'svg' | 'raster' | null>(null);
   
-  // Get signed URL for the SVG
+  // Get a signed URL for private border assets
   const { signedUrl } = useSignedUrl(svgUrl);
   
   useEffect(() => {
+    let cancelled = false;
+
+    setSvgContent('');
+    setAssetType(null);
+
     // Wait for signed URL if the original URL is a Supabase URL
     const urlToFetch = signedUrl || svgUrl;
     if (!urlToFetch) return;
@@ -135,14 +141,30 @@ const InlineSvgBorder: React.FC<{
     // Don't fetch if we need a signed URL but don't have one yet
     if (svgUrl && svgUrl.includes('supabase.co') && !signedUrl) return;
     
+    // Raster assets can be rendered directly without reading their binary
+    // contents as text. This also covers local/public URLs with extensions.
+    const urlPath = urlToFetch.split(/[?#]/, 1)[0];
+    if (/\.(?:png|jpe?g|gif|webp|avif)$/i.test(urlPath)) {
+      setAssetType('raster');
+      return () => {
+        cancelled = true;
+      };
+    }
+
     fetch(urlToFetch)
       .then(res => {
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
         }
+        const contentType = res.headers.get('content-type')?.toLowerCase() || '';
+        if (contentType.startsWith('image/') && !contentType.includes('svg')) {
+          if (!cancelled) setAssetType('raster');
+          return null;
+        }
         return res.text();
       })
       .then(svg => {
+        if (svg === null || cancelled) return;
         if (!svg.includes('<svg') && !svg.includes('<?xml')) {
           console.error('Invalid SVG content received');
           return;
@@ -176,12 +198,33 @@ const InlineSvgBorder: React.FC<{
           return `<svg${cleaned} width="100%" height="100%" style="width:100%;height:100%;display:block">`;
         });
 
-        setSvgContent(finalSvg);
+        if (!cancelled) {
+          setAssetType('svg');
+          setSvgContent(finalSvg);
+        }
       })
       .catch(err => console.error('Failed to load SVG:', err));
+
+    return () => {
+      cancelled = true;
+    };
   }, [svgUrl, signedUrl, color]);
   
-  if (!svgContent) return null;
+  if (assetType === 'raster') {
+    return (
+      <img
+        src={signedUrl || svgUrl}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        className={className}
+        style={{ ...style, display: 'block', objectFit: 'contain' }}
+        onError={() => console.error('Failed to load avatar border image')}
+      />
+    );
+  }
+
+  if (assetType !== 'svg' || !svgContent) return null;
   
   return (
     <div 
