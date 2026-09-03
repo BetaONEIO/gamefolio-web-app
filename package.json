@@ -19,9 +19,12 @@
     "cap:sync": "cap sync"
   },
   "dependencies": {
+    "0xsequence": "^2.3.39",
     "@0xsequence/connect": "^5.4.8",
     "@0xsequence/hooks": "^5.4.8",
     "@0xsequence/waas": "^2.3.39",
+    "@aws-sdk/client-s3": "^3.1125.0",
+    "@aws-sdk/s3-request-presigner": "^3.1125.0",
     "@capacitor-community/apple-sign-in": "^6.0.0",
     "@capacitor-firebase/authentication": "^6.3.1",
     "@capacitor-firebase/messaging": "^6.3.1",
@@ -90,7 +93,6 @@
     "@types/memoizee": "^0.4.12",
     "@types/multer": "^1.4.12",
     "@types/qrcode": "^1.5.6",
-    "0xsequence": "^2.3.39",
     "axios": "^1.15.2",
     "bad-words": "^4.0.0",
     "class-variance-authority": "^0.7.1",
@@ -155,6 +157,7 @@
     "wagmi": "^2.19.5",
     "wouter": "^3.3.5",
     "ws": "^8.20.1",
+    "yauzl": "^3.4.0",
     "zod": "^3.24.2",
     "zod-validation-error": "^3.4.0",
     "zustand": "^4.5.7"
@@ -175,6 +178,7 @@
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
     "@types/ws": "^8.5.13",
+    "@types/yauzl": "^3.4.0",
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.31.1",

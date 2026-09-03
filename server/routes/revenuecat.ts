@@ -9,6 +9,7 @@ import { notifyProPurchase } from '../telegram-notify';
 import { captureRouteError } from "../sentry";
 import { provisionIndieDevSubscription } from './indie-dev-subscription';
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
+import { hideBuildsForLapsedSubscriber } from '../services/game-build-service';
 
 const router = Router();
 
@@ -360,6 +361,9 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
           isIndieDevSubscriber: false,
           updatedAt: new Date(),
         }).where(eq(users.id, user.id));
+
+        await hideBuildsForLapsedSubscriber(user.id).catch(err =>
+          console.error('[RevenueCat Webhook] Failed to hide hosted builds after expiry:', err));
 
         console.log(`[RevenueCat Webhook] User ${user.id} Indie Developer deactivated (type: ${type})`);
       }

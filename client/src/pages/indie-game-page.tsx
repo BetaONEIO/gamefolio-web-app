@@ -1,3 +1,5 @@
+import HostedBuildsCard from "@/components/game/HostedBuildsCard";
+import { GAME_BUILDS_ENABLED } from "@/lib/feature-flags";
 import { useState, useMemo, useEffect, useRef, lazy, Suspense } from "react";
 import { useRoute, useLocation, Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -1925,6 +1927,12 @@ const IndieGamePage = () => {
                   <InfoRow label="Platforms" value={meta.platforms.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(", ")} />
                   {meta.releaseDate && <InfoRow label="Release" value={meta.releaseDate} />}
                 </div>
+
+                {/* Builds hosted on Gamefolio. Renders nothing unless this
+                    game actually has an approved build. */}
+                {GAME_BUILDS_ENABLED && (
+                  <HostedBuildsCard profileId={igp?.id} cardBg={CARD_BG} cardBorder={CARD_BORDER} />
+                )}
 
                 {/* Store links */}
                 {(meta.steamUrl || meta.epicUrl || meta.itchUrl || meta.website || GAME_SOCIAL_LINKS.some(({ field }) => meta[field])) && (

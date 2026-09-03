@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, serial, integer, boolean, timestamp, json, unique, real, uniqueIndex, uuid, index, foreignKey } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, bigint, boolean, timestamp, json, unique, real, uniqueIndex, uuid, index, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -2494,3 +2494,89 @@ export type InsertIndieGameProfile = z.infer<typeof insertIndieGameProfileSchema
 export const insertIndieGameFieldOverrideSchema = createInsertSchema(indieGameFieldOverrides).omit({ id: true, createdAt: true });
 export type IndieGameFieldOverride = typeof indieGameFieldOverrides.$inferSelect;
 export type InsertIndieGameFieldOverride = z.infer<typeof insertIndieGameFieldOverrideSchema>;
+
+// ---------------------------------------------------------------------------
+// Developer-uploaded game builds
+//
+// Bytes live in Cloudflare R2, never in the Supabase bucket — see
+// server/r2-storage.ts for why that distinction is load-bearing rather than a
+// preference. These rows are the index over those objects: what a build is,
+// who owns it, whether a human has cleared it, and how much of the owner's
+// storage quota it is consuming.
+// ---------------------------------------------------------------------------
+export const gameBuilds = pgTable("game_builds", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id").notNull().references(() => indieGameProfiles.id, { onDelete: "cascade" }),
+  // Denormalised from the profile so quota sums and the moderation queue do not
+  // have to join, and so a build survives long enough to be cleaned up if the
+  // profile row is ever detached.
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  buildType: text("build_type").notNull(),        // "web" | "download"
+  platform: text("platform"),                     // windows | mac | linux — download builds only
+  channel: text("channel").default("demo").notNull(), // "demo" | "full"
+  label: text("label").notNull(),                 // developer-facing version label
+
+  // R2 object key of the uploaded archive.
+  storageKey: text("storage_key").notNull(),
+  // Web builds only: prefix the archive was expanded into, and the entry file
+  // within it that the player's browser actually loads.
+  extractedPrefix: text("extracted_prefix"),
+  webEntryPath: text("web_entry_path"),
+
+  originalFileName: text("original_file_name").notNull(),
+  sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
+  // Bytes actually occupied in R2. For a web build the expanded tree is what
+  // costs storage, not the archive, so quota accounting reads this and not
+  // sizeBytes. Null until the upload is confirmed.
+  storedBytes: bigint("stored_bytes", { mode: "number" }),
+  checksumSha256: text("checksum_sha256"),
+
+  status: text("status").default("pending_upload").notNull(),
+  // Shown to the developer on rejection, so "no" comes with a reason.
+  reviewNotes: text("review_notes"),
+  reviewedBy: integer("reviewed_by").references(() => users.id, { onDelete: "set null" }),
+  reviewedAt: timestamp("reviewed_at"),
+
+  // Deduped by visitor — see gameBuildDownloads.
+  downloadCount: integer("download_count").default(0).notNull(),
+  lastDownloadedAt: timestamp("last_downloaded_at"),
+
+  // Set when the owner's subscription lapses. The build stops being publicly
+  // downloadable immediately; the bytes survive until LAPSED_RETENTION_DAYS
+  // have passed, so a lapsed card is recoverable rather than destructive.
+  hiddenAt: timestamp("hidden_at"),
+  hiddenReason: text("hidden_reason"),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  profileIdx: index("game_builds_profile_idx").on(table.profileId),
+  // The quota sum: every build a user still holds bytes for.
+  userStatusIdx: index("game_builds_user_status_idx").on(table.userId, table.status),
+  // The moderation queue, oldest first.
+  statusCreatedIdx: index("game_builds_status_created_idx").on(table.status, table.createdAt),
+}));
+
+// One row per (build, visitor, day). Exists so downloadCount cannot be inflated
+// by refreshing, and so a build being pulled a thousand times an hour is
+// visible as abuse rather than as success.
+export const gameBuildDownloads = pgTable("game_build_downloads", {
+  id: serial("id").primaryKey(),
+  buildId: integer("build_id").notNull().references(() => gameBuilds.id, { onDelete: "cascade" }),
+  // Null for signed-out players.
+  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+  // One-way digest, same privacy rule as indieGameAnalyticsEvents: raw IP and
+  // user-agent values must never be persisted here.
+  visitorKey: text("visitor_key").notNull(),
+  dayKey: text("day_key").notNull(), // YYYY-MM-DD, UTC
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  onePerVisitorPerDay: uniqueIndex("game_build_downloads_unique_visitor_day").on(table.buildId, table.visitorKey, table.dayKey),
+  buildCreatedIdx: index("game_build_downloads_build_created_idx").on(table.buildId, table.createdAt),
+}));
+
+export const insertGameBuildSchema = createInsertSchema(gameBuilds).omit({ id: true, createdAt: true, updatedAt: true });
+export type GameBuild = typeof gameBuilds.$inferSelect;
+export type InsertGameBuild = z.infer<typeof insertGameBuildSchema>;
+export type GameBuildDownload = typeof gameBuildDownloads.$inferSelect;

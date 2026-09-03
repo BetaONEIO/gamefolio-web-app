@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import {
-  Target, BarChart3, KeyRound, Film, Settings, LayoutDashboard,
+  Target, BarChart3, KeyRound, Film, Settings, LayoutDashboard, HardDrive,
 } from "lucide-react";
-import { CAMPAIGNS_ENABLED, GAME_KEYS_ENABLED } from "@/lib/feature-flags";
+import { CAMPAIGNS_ENABLED, GAME_KEYS_ENABLED, GAME_BUILDS_ENABLED } from "@/lib/feature-flags";
 import CreateCampaignFlow from "./indie-dashboard/CreateCampaignFlow";
 import MyCampaignsTab from "./indie-dashboard/MyCampaignsTab";
 import CreatorContentTab from "./indie-dashboard/CreatorContentTab";
 import KeyManagementTab from "./indie-dashboard/KeyManagementTab";
 import AnalyticsTab from "./indie-dashboard/AnalyticsTab";
 import GameProfileTab from "./indie-dashboard/GameProfileTab";
+import BuildsTab from "./indie-dashboard/BuildsTab";
 import RunCampaignWizard from "./indie-dashboard/RunCampaignWizard";
 import GameHeroBanner from "./indie-dashboard/GameHeroBanner";
 import DashboardTab from "./indie-dashboard/DashboardTab";
@@ -17,7 +18,7 @@ import DashboardTab from "./indie-dashboard/DashboardTab";
 export { NEON, CARD_BG, CARD_BORDER, PAGE_BG, DASHBOARD_THEME } from "./indie-dashboard/constants";
 import { DASHBOARD_THEME } from "./indie-dashboard/constants";
 
-type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "analytics" | "game-profile";
+type TopTabId = "overview" | "campaigns" | "creator-content" | "keys" | "builds" | "analytics" | "game-profile";
 type CampaignSubTab = "create" | "my";
 type ProfileFocusRequest = { field: string };
 
@@ -32,6 +33,7 @@ const TOP_TABS: { id: TopTabId; label: string; icon: any }[] = [
   ...(CAMPAIGNS_ENABLED ? [{ id: "campaigns" as const, label: "Campaigns", icon: Target }] : []),
   { id: "creator-content", label: "Content",         icon: Film },
   ...(GAME_KEYS_ENABLED ? [{ id: "keys" as const, label: "Keys", icon: KeyRound }] : []),
+  ...(GAME_BUILDS_ENABLED ? [{ id: "builds" as const, label: "Builds", icon: HardDrive }] : []),
   { id: "analytics",       label: "Analytics",      icon: BarChart3 },
 ];
 
@@ -137,6 +139,9 @@ export default function IndieDashboardPage() {
 
         {/* ── KEYS ── */}
         {GAME_KEYS_ENABLED && tab === "keys" && <KeyManagementTab />}
+
+        {/* ── BUILDS ── */}
+        {GAME_BUILDS_ENABLED && tab === "builds" && <BuildsTab gameId={activeGameId} />}
 
         {/* ── ANALYTICS ── */}
         {tab === "analytics" && <AnalyticsTab gameId={activeGameId} />}

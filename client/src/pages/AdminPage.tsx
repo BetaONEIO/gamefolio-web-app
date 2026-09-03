@@ -4,6 +4,7 @@ import { getQueryFn } from "@/lib/queryClient";
 import { AlertSettings } from "@/components/admin/AlertSettings";
 import { PushBroadcastPanel } from "@/components/admin/PushBroadcastPanel";
 import { AdminBountiesPanel } from "@/components/admin/AdminBountiesPanel";
+import { AdminGameBuildsPanel } from "@/components/admin/AdminGameBuildsPanel";
 import { AmbassadorManagementPanel } from "@/components/admin/AmbassadorManagementPanel";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
@@ -3303,6 +3304,7 @@ const AdminPage = () => {
           <TabsTrigger value="alerts" className="text-xs px-3 py-1.5">Alerts</TabsTrigger>
           <TabsTrigger value="push" className="text-xs px-3 py-1.5">Push</TabsTrigger>
           <TabsTrigger value="bounties" className="text-xs px-3 py-1.5">Bounties</TabsTrigger>
+          <TabsTrigger value="game-builds" className="text-xs px-3 py-1.5">Builds</TabsTrigger>
           <TabsTrigger value="oauth-apps" className="text-xs px-3 py-1.5">Developer</TabsTrigger>
         </TabsList>
 
@@ -3317,6 +3319,10 @@ const AdminPage = () => {
 
         <TabsContent value="bounties" className="space-y-4">
           <AdminBountiesPanel />
+        </TabsContent>
+
+        <TabsContent value="game-builds" className="space-y-4">
+          <AdminGameBuildsPanel />
         </TabsContent>
 
         <TabsContent value="ambassadors" className="space-y-4">

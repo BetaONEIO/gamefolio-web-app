@@ -527,6 +527,25 @@ app.use((req, res, next) => {
         setInterval(tick, SCHEDULE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule scheduled-posts worker:', err));
 
+      // Delete the R2 objects for hosted game builds that have been hidden
+      // (subscription lapsed) longer than the retention window. Daily is
+      // plenty — the window is 90 days, and nothing here is time-critical.
+      // No-ops entirely when R2 is not configured.
+      import('./services/game-build-service').then(({ purgeExpiredHiddenBuilds }) => {
+        const PURGE_INTERVAL_MS = 24 * 60 * 60 * 1000;
+        const tick = () => {
+          purgeExpiredHiddenBuilds().catch((err: any) => {
+            // Quiet until the migration has been applied.
+            const msg: string = err?.cause?.message ?? err?.message ?? '';
+            if (!msg.includes('relation "game_builds" does not exist')) {
+              console.error('game-build retention sweep failed:', err);
+            }
+          });
+        };
+        setTimeout(tick, 5 * 60 * 1000);
+        setInterval(tick, PURGE_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule game-build retention sweep:', err));
+
       // Safety net for clips left stuck in "processing" — normally
       // finishClipProcessing runs immediately in-process right after upload
       // and this never finds anything; it only matters if the server

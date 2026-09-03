@@ -82,6 +82,8 @@ import adminNftSeedRouter from "./routes/admin-nft-seed";
 import adminWalletAuditRouter from "./routes/admin-wallet-audit";
 import { pushRouter, adminPushRouter } from "./routes/push";
 import gameBountiesRouter from "./routes/game-bounties";
+import gameBuildsRouter from "./routes/game-builds";
+import adminGameBuildsRouter from "./routes/admin-game-builds";
 import campaignProgrammeRouter from "./routes/campaign-programme";
 import bountyMarketplaceRouter, { ensureBountyMarketplaceTables } from "./routes/bounty-marketplace";
 import steamVerificationRouter from "./routes/steam-verification";
@@ -16046,6 +16048,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/admin/content-filter', adminContentFilterRouter);
   app.use('/api/admin/push', adminPushRouter);
   app.use('/api/admin/bounties', adminBountiesRouter);
+  app.use('/api/admin/game-builds', adminGameBuildsRouter);
 
   // Push notifications (token register/unregister, self-test)
   app.use('/api/push', pushRouter);
@@ -16059,6 +16062,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount Twitch games routes
   app.use('/api', twitchGamesRouter);
   app.use('/api/games', gameBountiesRouter);
+  app.use('/api/game-builds', gameBuildsRouter);
   app.use('/api/campaigns', campaignProgrammeRouter);
   app.use('/api/bounties', bountyMarketplaceRouter);
   ensureBountyMarketplaceTables();

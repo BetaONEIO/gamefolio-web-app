@@ -147,6 +147,41 @@ laptop debug builds installed via Xcode would need it set to
    surfaces it via a `gf-push-deeplink` window event, which `App.tsx`
    forwards to `wouter`'s `setLocation`.
 
+## Hosted game builds (Cloudflare R2)
+
+Developer-uploaded game builds — browser-playable WebGL/HTML5 exports and
+downloadable archives — go to **Cloudflare R2**, never to the `gamefolio-media`
+Supabase bucket that every other upload uses.
+
+This is a billing constraint, not a preference. Supabase charges for egress and
+a build exists to be downloaded repeatedly: one 2GB build pulled 500 times is
+~1TB (~$90) from a developer paying £3.99/month. R2 charges ~$0.015/GB-month for
+storage and nothing for egress, so a full 20GB quota costs ~£0.24/month however
+often it is pulled. Moving builds to Supabase would silently invert the unit
+economics of the whole feature. `server/r2-storage.ts` carries the full note.
+
+**Not live yet.** `GAME_BUILDS_ENABLED` in `client/src/lib/feature-flags.ts` is
+`false` and the server 503s every upload path while R2 is unconfigured. To turn
+it on:
+
+1. Cloudflare → R2 → create a bucket (e.g. `gamefolio-builds`).
+2. R2 → Manage API Tokens → Object Read & Write, scoped to that bucket.
+3. Set `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
+   `R2_BUILDS_BUCKET` in Replit Secrets and local `.env`.
+4. Browser-playable builds only: attach a public custom domain to the bucket and
+   set `R2_PUBLIC_BASE_URL` to it. Builds are served from that separate origin
+   deliberately — it is what stops an untrusted developer's JavaScript reaching
+   Gamefolio's session. Do not proxy builds through the app's own domain.
+5. `bun run db:migrate` (migration `0027_add_game_builds.sql`).
+6. Flip `GAME_BUILDS_ENABLED` to `true`.
+
+Tier limits live in `shared/game-builds.ts` and are enforced by the same
+`validateBuildUpload` on both sides. Free accounts get one browser-playable
+build; Game Developer subscribers get downloadable builds and 20GB. Every build
+waits for a human in AdminPage before it is public — the catalogue's existing
+auto-approve path is what produced the "Untitled game" stubs, and the same
+mistake on a hosted executable is distributing malware.
+
 ## Stack quick-ref
 
 - Web client: Vite + React DOM + TypeScript in `client/`, output to `dist/public`.

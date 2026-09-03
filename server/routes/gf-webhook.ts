@@ -12,6 +12,7 @@ import { captureRouteError } from '../sentry';
 import { provisionIndieDevSubscription } from './indie-dev-subscription';
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
 import Stripe from 'stripe';
+import { hideBuildsForLapsedSubscriber } from '../services/game-build-service';
 
 const router = Router();
 
@@ -366,6 +367,8 @@ router.post('/api/stripe/webhook',
             updatedAt: new Date(),
           }).where(eq(users.id, developer.id));
           console.log(`[GF Webhook] Removed Game Developer Pro status for user ${developer.id} (subscription deleted)`);
+          await hideBuildsForLapsedSubscriber(developer.id).catch(err =>
+            console.error('[GF Webhook] Failed to hide hosted builds after cancellation:', err));
         } else {
           console.warn(`[GF Webhook] No user found for deleted subscription: ${subscriptionId}`);
         }
@@ -407,6 +410,8 @@ router.post('/api/stripe/webhook',
               updatedAt: new Date(),
             }).where(eq(users.id, developer.id));
             console.log(`[GF Webhook] Revoked Game Developer Pro for user ${developer.id} due to subscription status: ${subscription.status}`);
+            await hideBuildsForLapsedSubscriber(developer.id).catch(err =>
+              console.error('[GF Webhook] Failed to hide hosted builds after revocation:', err));
           } else {
             console.warn(`[GF Webhook] No user found for subscription: ${subscriptionId}`);
           }

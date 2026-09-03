@@ -7,6 +7,7 @@ import { hybridAuth } from '../middleware/hybrid-auth';
 import { getGbpRates, detectLocalCurrency } from '../services/currency-service';
 import { captureRouteError } from '../sentry';
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
+import { restoreBuildsForSubscriber } from '../services/game-build-service';
 
 const router = Router();
 
@@ -137,6 +138,12 @@ export async function provisionIndieDevSubscription(opts: {
     ...(subscriptionId ? { indieDevStripeSubscriptionId: subscriptionId } : {}),
     updatedAt: new Date(),
   }).where(eq(users.id, userId));
+
+  // Bring back any downloadable builds that were hidden when a previous
+  // subscription lapsed. Their bytes were retained precisely so that
+  // resubscribing restores the game pages rather than requiring a re-upload.
+  await restoreBuildsForSubscriber(userId).catch((err) =>
+    console.error('[IndieDev] Failed to restore hosted builds on resubscribe:', err));
 }
 
 // Public pricing endpoint — same local-currency approximation as pro-pricing.
