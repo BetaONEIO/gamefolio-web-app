@@ -93,6 +93,7 @@ import { useProfilePictureLightbox } from "@/components/ui/profile-picture-light
 import { BannerLightbox, useBannerLightbox } from "@/components/ui/banner-lightbox";
 import { ProfileMetricTooltip, type ProfileMetricLabel } from "@/components/profile/ProfileMetricTooltip";
 import { GamefolioCollectionButton } from "@/components/profile/GamefolioCollectionButton";
+import "@/styles/profile-themes.css";
 
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import { useSignedUrl } from "@/hooks/use-signed-url";
@@ -1556,6 +1557,28 @@ const ProfilePage = () => {
     : _rawAccent;
   const backgroundColor = resolvedProfileTheme.backgroundColor;
   const cardColor = resolvedProfileTheme.cardColor;
+  const profileThemeDefinition = resolvedProfileTheme.theme;
+  const profileThemeSlug = profileThemeDefinition?.slug || "default";
+  const profileThemeTokens = profileThemeDefinition?.tokens;
+  const profileThemeStyle = {
+    "--profile-theme-background": profileThemeTokens?.background || backgroundColor,
+    "--profile-theme-surface": profileThemeTokens?.surface || cardColor,
+    "--profile-theme-surface-secondary": profileThemeTokens?.surfaceSecondary || resolvedProfileTheme.primaryColor,
+    "--profile-theme-primary": profileThemeDefinition?.primaryColor || resolvedProfileTheme.primaryColor,
+    "--profile-theme-accent": profileThemeTokens?.accent || accentColor,
+    "--profile-theme-accent-secondary": profileThemeTokens?.accentSecondary || accentColor,
+    "--profile-theme-text": profileThemeTokens?.text || "#f8fafc",
+    "--profile-theme-muted": profileThemeTokens?.textSecondary || "#cbd5e1",
+    "--profile-theme-border": profileThemeTokens?.border || `${accentColor}55`,
+    "--profile-theme-button-bg": profileThemeTokens?.buttonBg || accentColor,
+    "--profile-theme-button-text": profileThemeTokens?.buttonText || "#071018",
+    "--profile-theme-stats-bg": profileThemeTokens?.statsBg || cardColor,
+    "--profile-theme-stats-text": profileThemeTokens?.statsText || "#f8fafc",
+    "--profile-theme-tag-bg": profileThemeTokens?.tagBg || accentColor,
+    "--profile-theme-tag-text": profileThemeTokens?.tagText || "#071018",
+    "--profile-theme-pattern": profileThemeDefinition?.assets.decorativeOverlay || profileThemeDefinition?.patternCss || "none",
+    "--profile-theme-font": profileThemeDefinition?.fontFamily || "inherit",
+  } as React.CSSProperties;
 
   const isMacTheme = accentColor?.toLowerCase() === '#0066ff' && backgroundColor?.toLowerCase() === '#f0f0f2';
   const isCartoonTheme = accentColor?.toLowerCase() === '#ff5e5e' && backgroundColor?.toLowerCase() === '#fffaec';
@@ -1584,7 +1607,8 @@ const ProfilePage = () => {
   const isBatTheme = !isLightBackground && accentColor?.toLowerCase() === '#ff8c00' && (backgroundColor?.toLowerCase() === '#111111' || backgroundColor?.toLowerCase() === '#0a0010');
   const isMayhemTheme = !isLightBackground && accentColor?.toLowerCase() === '#00dfff';
 
-  const isDefaultTheme = !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isSummerTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isBatTheme && !isMayhemTheme && !isLightBackground;
+  const isCatalogTheme = profileThemeSlug !== "default";
+  const isDefaultTheme = !isCatalogTheme && !isWatermelonTheme && !isCartoonTheme && !isMacTheme && !isZombieTheme && !isCyberpunkTheme && !isNeoTheme && !isSummerTheme && !isBlocksTheme && !isForestTheme && !isGothicTheme && !isElectricTheme && !isBatTheme && !isMayhemTheme && !isLightBackground;
 
   const renderProfileStatValue = (
     label: string,
@@ -1807,7 +1831,7 @@ const ProfilePage = () => {
     facebook:    { backgroundColor: '#1877F2', color: '#ffffff', border: '1px solid #1877F2', borderRadius: '9999px' },
   };
 
-  const isNamedTheme = isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isSummerTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isBatTheme || isMayhemTheme || isLightBackground;
+  const isNamedTheme = isCatalogTheme || isWatermelonTheme || isCartoonTheme || isMacTheme || isZombieTheme || isCyberpunkTheme || isNeoTheme || isSummerTheme || isBlocksTheme || isForestTheme || isGothicTheme || isElectricTheme || isBatTheme || isMayhemTheme || isLightBackground;
 
   const avatarThemeColor = isSummerTheme ? '#32D6F4'
     : isWatermelonTheme ? '#ff6b6b'
@@ -2391,10 +2415,13 @@ const ProfilePage = () => {
       </div>
     )}
     <div 
-      className={`min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope${isBlocksTheme && !profileBackgroundImageUrl ? ' blocks-bg' : ''}${isSummerTheme ? ' summer-profile' : ''}`}
+      className={`min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope${isBlocksTheme && !profileBackgroundImageUrl ? ' blocks-bg' : ''}${isSummerTheme ? ' summer-profile' : ''}${isCatalogTheme ? ' profile-theme-catalog' : ''}`}
       ref={profileThemeScopeRef}
       data-default-profile-theme={backgroundColor === DEFAULT_PROFILE_THEME.backgroundColor && accentColor === DEFAULT_PROFILE_THEME.accentColor ? "true" : undefined}
+      data-profile-theme={isCatalogTheme ? profileThemeSlug : undefined}
+      data-profile-animation={isCatalogTheme ? profileThemeDefinition?.animation : undefined}
       style={profileBackgroundImageUrl ? {
+        ...profileThemeStyle,
         backgroundImage: `url(${profileBackgroundImageUrl})`,
         backgroundSize: 'cover',
         backgroundPosition: `${profileBackgroundPosX}% ${profileBackgroundPosY}%`,
@@ -2402,33 +2429,46 @@ const ProfilePage = () => {
         position: 'relative',
         zIndex: 1
       } : isNeoTheme ? {
+        ...profileThemeStyle,
         background: 'transparent',
         position: 'relative',
         zIndex: 1
       } : isSummerTheme ? {
+        ...profileThemeStyle,
         background: 'var(--summer-background)',
         backgroundAttachment: 'fixed',
         position: 'relative',
         zIndex: 1
       } : isBlocksTheme ? {
+        ...profileThemeStyle,
         background: '#87ceeb',
         position: 'relative',
         zIndex: 1
       } : isForestTheme ? {
+        ...profileThemeStyle,
         backgroundColor: '#0a2f1f',
         position: 'relative',
         zIndex: 1
       } : isBatTheme ? {
+        ...profileThemeStyle,
         background: 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)',
         backgroundAttachment: 'fixed',
         position: 'relative',
         zIndex: 1
+      } : isCatalogTheme ? {
+        ...profileThemeStyle,
+        background: profileThemeDefinition?.profileBackgroundGradientCss || backgroundColor,
+        backgroundAttachment: 'fixed',
+        position: 'relative',
+        zIndex: 1
       } : (profile as any).profileBackgroundGradientCss ? {
+        ...profileThemeStyle,
         background: (profile as any).profileBackgroundGradientCss,
         backgroundAttachment: 'fixed',
         position: 'relative',
         zIndex: 1
       } : (profile as any).profileBackgroundGradient !== false && backgroundColor !== DEFAULT_PROFILE_THEME.backgroundColor ? {
+        ...profileThemeStyle,
         background: isMayhemTheme
           ? 'linear-gradient(to top right, #00DFFF 0%, #9B30E8 48%, #FF0069 100%)'
           : isLightBackground ? backgroundColor : `linear-gradient(180deg, ${defaultThemeColor} 0%, ${backgroundColor} 60%, ${backgroundColor} 100%)`,
@@ -2436,6 +2476,7 @@ const ProfilePage = () => {
         position: 'relative',
         zIndex: 1
       } : {
+        ...profileThemeStyle,
         backgroundColor,
         backgroundAttachment: 'fixed',
         position: 'relative',
@@ -2445,6 +2486,13 @@ const ProfilePage = () => {
       {/* Dark overlay for background image readability */}
       {profileBackgroundImageUrl && (
         <div className="fixed inset-0 bg-black/50 pointer-events-none" style={{ zIndex: 0 }} />
+      )}
+      {isCatalogTheme && !profileBackgroundImageUrl && (
+        <div
+          className="profile-theme-atmosphere"
+          aria-hidden="true"
+          style={{ backgroundImage: profileThemeDefinition?.assets.decorativeOverlay || "none" }}
+        />
       )}
 
       {/* Bat theme animated overlay */}

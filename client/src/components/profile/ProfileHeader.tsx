@@ -39,6 +39,7 @@ import {
   ProfilePictureLightbox,
 } from "@/components/ui/profile-picture-lightbox";
 import { ProfileMetricTooltip } from "./ProfileMetricTooltip";
+import { GamefolioCollectionButton } from "./GamefolioCollectionButton";
 
 const getRelativeLuminance = (hex: string): number => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -273,20 +274,17 @@ const ProfileHeader = ({
               />
 
               {/* Collection button overlaid at top-right */}
-              <Link href={`/${profile.username}/collections`}>
-                <div
-                  className="absolute -top-3 right-0 z-10 cursor-pointer transition-opacity hover:opacity-80"
-                  style={{
-                    background: resolvedTheme.accentColor,
-                    padding: "1px",
-                    borderRadius: "8px",
-                  }}
-                >
-                  <div className="bg-background rounded-lg px-3 py-1">
-                    <span className="text-xs font-medium text-foreground">Collection</span>
-                  </div>
-                </div>
-              </Link>
+              <GamefolioCollectionButton
+                size="desktop"
+                style={{
+                  backgroundColor: resolvedTheme.accentColor,
+                  borderColor: resolvedTheme.accentColor,
+                  color: getRelativeLuminance(resolvedTheme.backgroundColor) > 0.179
+                    ? "#172033"
+                    : "#071018",
+                }}
+                onClick={() => setLocation(`/${profile.username}/collections`)}
+              />
 
               {(() => {
                 const isLight = getRelativeLuminance(resolvedTheme.backgroundColor) > 0.179;

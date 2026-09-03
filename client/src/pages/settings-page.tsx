@@ -46,7 +46,7 @@ import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import ManageGameSettings from "@/components/indie/ManageGameSettings";
-import { DEFAULT_PROFILE_THEME, resolveProfileTheme } from "@shared/profile-theme";
+import { DEFAULT_PROFILE_THEME, PROFILE_THEMES, resolveProfileTheme } from "@shared/profile-theme";
 
 const EMOJI_CATEGORIES = [
   {
@@ -352,7 +352,7 @@ const getCroppedImg = async (
   });
 };
 
-const PRESET_THEMES = [
+const LEGACY_PRESET_THEMES = [
   {
     name: "None",
     backgroundColor: DEFAULT_PROFILE_THEME.backgroundColor,
@@ -483,6 +483,16 @@ const PRESET_THEMES = [
     proOnly: true
   }
 ];
+
+// Keep the settings page backed by the shared catalog. The small merge preserves
+// any legacy-only seasonal gradient values while new themes get the same editor.
+const PRESET_THEMES = PROFILE_THEMES.map((theme) => ({
+  ...theme,
+  ...(LEGACY_PRESET_THEMES.find((legacy) => legacy.name === theme.name) || {}),
+  slug: theme.slug,
+  patternCss: theme.patternCss,
+  animation: theme.animation,
+}));
 
 const hexToRgb = (hex: string) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -2086,9 +2096,10 @@ export default function SettingsPage() {
       accentColor: theme.accentColor,
       backgroundColor: theme.backgroundColor,
       ...(theme.primaryColor ? { primaryColor: theme.primaryColor } : {}),
-      profileBackgroundGradientCss: (theme as any).profileBackgroundGradientCss || ""
+      profileBackgroundGradientCss: (theme as any).profileBackgroundGradientCss || "",
+      profileBackgroundTheme: theme.slug,
+      profileBackgroundAnimation: theme.animation || "none",
     }));
-    setAvatarBorderColor(theme.accentColor);
   };
 
   if (!user) {
@@ -2114,9 +2125,9 @@ export default function SettingsPage() {
   const bgRgb = user?.backgroundColor ? hexToRgb(user.backgroundColor) : null;
   const accentRgb = user?.accentColor ? hexToRgb(user.accentColor) : null;
 
-  const NAMED_THEME_NAMES = ['Zombie', 'Cyberpunk', 'NEO', 'Blocks', 'Watermelon', 'Forest', 'Gothic', 'Summer', 'Mac', 'Cartoon', 'Bat'];
-  const isNamedThemeActive = PRESET_THEMES.some(t =>
-    NAMED_THEME_NAMES.includes(t.name) &&
+  const activeThemeSlug = profileData.profileBackgroundTheme || "default";
+  const isNamedThemeActive = activeThemeSlug !== "default" || PRESET_THEMES.some(t =>
+    t.slug !== "default" &&
     profileData.accentColor === t.accentColor &&
     profileData.backgroundColor === t.backgroundColor
   );
@@ -3339,7 +3350,10 @@ export default function SettingsPage() {
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {PRESET_THEMES.map((theme) => {
                             const topColor = theme.gradientTopColor || DEFAULT_PROFILE_THEME.backgroundColor;
-                            const isActive = profileData.accentColor === theme.accentColor && profileData.backgroundColor === theme.backgroundColor;
+                            const isActive = activeThemeSlug === theme.slug ||
+                              (activeThemeSlug === "default" &&
+                                profileData.accentColor === theme.accentColor &&
+                                profileData.backgroundColor === theme.backgroundColor);
                             const unlockRewardName = (theme as any).unlockRewardName as string | undefined;
                             const isLocked = (
                               ((theme as any).proOnly && !user?.isPro) ||
@@ -3357,11 +3371,28 @@ export default function SettingsPage() {
                                 <div
                                   className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative overflow-hidden"
                                   style={{ 
-                                    background: theme.name === 'Summer'
-                                      ? theme.profileBackgroundGradientCss
-                                      : `linear-gradient(180deg, ${topColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
+                                    background: theme.profileBackgroundGradientCss ||
+                                      `linear-gradient(180deg, ${topColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
                                   }}
                                 >
+                                  {/* New catalog themes use a shared art-direction layer
+                                      rather than bespoke per-theme JSX branches. */}
+                                  <div
+                                    className="absolute inset-0 pointer-events-none"
+                                    style={{
+                                      backgroundImage: theme.patternCss,
+                                      backgroundSize: "auto, auto",
+                                      opacity: theme.slug === "default" ? 0.5 : 0.9,
+                                    }}
+                                  />
+                                  {theme.slug !== "default" && (
+                                    <span
+                                      className="relative z-[1] text-[10px] font-black uppercase tracking-[0.16em] drop-shadow-md"
+                                      style={{ fontFamily: theme.fontFamily }}
+                                    >
+                                      {theme.previewGlyph}
+                                    </span>
+                                  )}
                                   {/* ── Theme-specific visual overlays ── */}
                                   {theme.name === 'None' && <>
                                     <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #B7FF1A06 1px, transparent 1px), linear-gradient(90deg, #B7FF1A06 1px, transparent 1px)', backgroundSize:'14px 14px' }} />
@@ -3477,6 +3508,15 @@ export default function SettingsPage() {
                                 <p className="text-center mt-2 text-sm font-medium">
                                   {theme.name === 'None' ? 'Gamefolio Default' : theme.name}
                                 </p>
+                                 <p className="text-center text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                                   {theme.rarity}
+                                   {theme.animation !== "none" && (
+                                     <span className="ml-1.5 inline-flex items-center gap-1 normal-case tracking-normal text-primary">
+                                       <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />
+                                       animated
+                                     </span>
+                                   )}
+                                 </p>
                                 {isLocked && theme.name !== "None" && (
                                   <p className="text-center text-xs text-muted-foreground">
                                     {(theme as any).unlockRewardName ? "Summer Showdown reward" : "Pro only"}
@@ -5950,6 +5990,21 @@ export default function SettingsPage() {
         const isBat         = tn === 'Bat';
          const isRewardLocked = !!(themePreviewData as any).unlockRewardName && !hasSummerReward;
         const isLight       = isMac || isCartoon || isIce || isBubbleTea || isWatermelon;
+        const catalogPattern = (themePreviewData as any).assets?.decorativeOverlay || (themePreviewData as any).patternCss;
+        const catalogAnimation = (themePreviewData as any).assets?.backgroundAnimation || (themePreviewData as any).animation;
+        const isCatalogPreview = Boolean((themePreviewData as any).slug) && ![
+          'None', 'Zombie', 'Cyberpunk', 'NEO', 'Blocks', 'Watermelon', 'Forest', 'Ice',
+          'Gothic', 'Summer', 'Mac', 'Cartoon', 'Bubble Tea', 'Cutesy Pink', 'Mayhem', 'Bat',
+        ].includes(tn);
+        const catalogMotionName =
+          catalogAnimation === 'rain' ? 'catalogPreviewRain' :
+          catalogAnimation === 'snow' ? 'catalogPreviewSnow' :
+          catalogAnimation === 'flicker' ? 'catalogPreviewFlicker' :
+          catalogAnimation === 'scan' ? 'catalogPreviewScan' :
+          catalogAnimation === 'pulse' ? 'catalogPreviewPulse' :
+          catalogAnimation === 'spark' ? 'catalogPreviewSpark' :
+          catalogAnimation === 'drift' ? 'catalogPreviewDrift' :
+          undefined;
 
         const themeFont =
           isZombie    ? "'Creepster', cursive" :
@@ -6141,7 +6196,15 @@ export default function SettingsPage() {
                  }
                  @media (prefers-reduced-motion: reduce) {
                    .summer-preview-motion { animation: none !important; }
+                   .catalog-preview-motion { animation: none !important; }
                  }
+                 @keyframes catalogPreviewDrift { 0%,100%{background-position:0 0, 0 0} 50%{background-position:18px -10px, -14px 8px} }
+                 @keyframes catalogPreviewRain { 0%{background-position:0 -30px, 0 0} 100%{background-position:24px 520px, 0 0} }
+                 @keyframes catalogPreviewSnow { 0%{background-position:0 -20px, 0 0} 100%{background-position:16px 520px, 0 0} }
+                 @keyframes catalogPreviewFlicker { 0%,88%,100%{opacity:1} 89%{opacity:.58} 90%,91%{opacity:.88} }
+                 @keyframes catalogPreviewScan { 0%{background-position:0 0, 0 -30px} 100%{background-position:0 0, 0 520px} }
+                 @keyframes catalogPreviewPulse { 0%,100%{opacity:.62;transform:scale(1)} 50%{opacity:1;transform:scale(1.015)} }
+                 @keyframes catalogPreviewSpark { 0%,100%{opacity:.52} 50%{opacity:1} }
 
                 /* Zombie */
                 @keyframes zpFogDrift1 { 0%{transform:translate(0%,0%)} 25%{transform:translate(7%,-5%)} 50%{transform:translate(3%,8%)} 75%{transform:translate(-6%,4%)} 100%{transform:translate(0%,0%)} }
@@ -6181,8 +6244,25 @@ export default function SettingsPage() {
               `}</style>
               <div
                 className="rounded-2xl overflow-hidden relative"
-                  style={{ background: isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' : isSummer ? 'repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px), linear-gradient(180deg, #28A9E8 0%, #087EA4 37%, #12B8C4 62%, #E9C47A 92%, #C99B50 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)` }}
+                 style={{
+                   background: isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' : isSummer ? 'repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px), linear-gradient(180deg, #28A9E8 0%, #087EA4 37%, #12B8C4 62%, #E9C47A 92%, #C99B50 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)`
+                 }}
               >
+                 {isCatalogPreview && catalogPattern && (
+                   <div
+                     className="catalog-preview-motion"
+                     aria-hidden="true"
+                     style={{
+                       position: 'absolute',
+                       inset: 0,
+                       pointerEvents: 'none',
+                       backgroundImage: catalogPattern,
+                       backgroundSize: catalogAnimation === 'scan' ? '100% 12px, 100% 100%' : undefined,
+                       opacity: 0.82,
+                       animation: catalogMotionName ? `${catalogMotionName} 8s ease-in-out infinite` : undefined,
+                     }}
+                   />
+                 )}
                 {/* ── Zombie layers ── */}
                 {isZombie && <>
                   <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 70% 50% at 20% 30%, #1a2e0a88 0%, transparent 70%), radial-gradient(ellipse 80% 40% at 50% 90%, #9ae60020 0%, transparent 60%)', animation:'zpFogDrift1 28s ease-in-out infinite' }} />

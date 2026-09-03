@@ -37,6 +37,11 @@ export const users = pgTable("users", {
   statsGlassEffect: boolean("stats_glass_effect").default(false),
   profileBackgroundGradient: boolean("profile_background_gradient").default(true),
   profileBackgroundGradientCss: text("profile_background_gradient_css"),
+  // Stable catalog identity for the reusable profile theme system. The
+  // development database already contains these columns; keeping them in the
+  // Drizzle model makes the value type-safe for profile reads and updates.
+  profileBackgroundTheme: text("profile_background_theme").default("default"),
+  profileBackgroundAnimation: text("profile_background_animation").default("none"),
   layoutStyle: text("layout_style").default("grid"), // grid, masonry, classic
   // Platform connections
   steamUsername: text("steam_username"),
