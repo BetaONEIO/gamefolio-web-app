@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation, useParams } from "wouter";
+import { Switch, Route, Redirect, useLocation, useParams } from "wouter";
 import { queryClient, getQueryFn } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -13,6 +13,7 @@ import { sequenceConfig } from "@/lib/sequence-config";
 import { WalletProvider, NoWalletProvider } from "@/hooks/use-wallet";
 import { CrossmintProvider } from "@/hooks/use-crossmint";
 import { CRYPTO_FEATURES_ENABLED } from "@/lib/crypto-features";
+import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
 import { RevenueCatProvider } from "@/hooks/use-revenuecat";
 import { LevelTrackerProvider } from "@/hooks/use-level-tracker";
 import { DailyStreakProvider } from "@/hooks/use-daily-streak";
@@ -550,9 +551,13 @@ function Router() {
           <ProtectedRoute path="/hashtag/:hashtag" component={HashtagPage} />
           <ProtectedRoute path="/upload" component={UploadPage} />
           <ProtectedRoute path="/scheduled-posts" component={ScheduledPostsPage} />
-          <PartnerProtectedRoute path="/indie/dashboard" partnerType="indie" component={IndieDashboardPage} />
+          <PartnerProtectedRoute path="/game-dashboard" partnerType="indie" component={IndieDashboardPage} />
+          {/* Keep old dashboard links working while using the new public URL. */}
+          <Route path="/indie/dashboard">
+            {() => <Redirect to={`/game-dashboard${window.location.search}`} />}
+          </Route>
           <PartnerProtectedRoute path="/settings/game" partnerType="indie" component={SettingsPage} />
-          <PartnerProtectedRoute path="/bounties" partnerType="indie" component={BountiesPage} />
+          {BOUNTIES_ENABLED && <PartnerProtectedRoute path="/bounties" partnerType="indie" component={BountiesPage} />}
           <Route path="/streamer/dashboard" component={StreamerDashboardPage} />
           <ProtectedRoute path="/upload/bulk" component={BulkUploadPage} />
           <ProtectedRoute path="/upload/screenshots" component={ScreenshotUploadPage} />

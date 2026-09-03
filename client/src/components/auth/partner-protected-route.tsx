@@ -3,7 +3,8 @@ import { Lock } from "lucide-react";
 import { Redirect, Route } from "wouter";
 import { Button } from "@/components/ui/button";
 import { FullScreenLoader } from "@/components/ui/game-loader";
-import { isPartnerType, type PartnerType } from "@shared/partner-access";
+import { hasIndieDeveloperAccess, isPartnerType, type PartnerType } from "@shared/partner-access";
+import { GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
 
 const LABELS: Record<PartnerType, string> = {
   streamer: "Streamer Partner",
@@ -11,11 +12,9 @@ const LABELS: Record<PartnerType, string> = {
 };
 
 /**
- * Route guard for the paid partner dashboards. Requires an authenticated user
- * holding the given partner subscription (isPartner + partnerType). Admins
- * bypass so the pages stay reviewable/testable.
- *
- * Gates on the PAID entitlement, not the self-selected `userType` persona tags.
+ * Route guard for partner dashboards. Indie game management is also available
+ * to authenticated Indie Developer persona users, who receive the free-game
+ * quota; paid Indie partners receive their subscriber quota.
  */
 export function PartnerProtectedRoute({
   path,
@@ -45,8 +44,17 @@ export function PartnerProtectedRoute({
     );
   }
 
-  const isIndieDev = user.userType?.split(",").includes("indie_developer");
-  const allowed = user.role === "admin" || isPartnerType(user, partnerType) || (partnerType === "indie" && isIndieDev);
+  if (partnerType === "indie" && !GAME_DEVELOPER_FEATURES_ENABLED) {
+    return (
+      <Route path={path}>
+        {() => <Redirect to="/" />}
+      </Route>
+    );
+  }
+
+  const allowed = partnerType === "indie"
+    ? hasIndieDeveloperAccess(user)
+    : user.role === "admin" || isPartnerType(user, partnerType);
   if (!allowed) {
     return (
       <Route path={path}>

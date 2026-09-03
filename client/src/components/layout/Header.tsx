@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera, Clock, Layers, X as XIcon, Rocket, Radio, KeyRound, Gamepad2, BarChart3, Megaphone } from "lucide-react";
+import { Search, Plus, CheckCircle2, Menu, Flame, Video, Film, Camera, Clock, Layers, X as XIcon, Radio, Gamepad2 } from "lucide-react";
 import { isPartnerType } from "@shared/partner-access";
 import {
   LevelTrackerIcon,
@@ -11,7 +11,6 @@ import {
   GoProIcon,
   ManageProIcon,
   AccountSettingsIcon,
-  ProfileAppearanceIcon,
   AdminPanelIcon,
   LogoutIcon,
 } from "@/components/icons/DropdownIcons";
@@ -46,11 +45,11 @@ import { LevelTrackerModal } from "@/components/level/LevelTrackerModal";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useLevelTracker } from "@/hooks/use-level-tracker";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
+import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
 import ManageProDialog from "@/components/ManageProDialog";
 import { useAuthModal } from "@/hooks/use-auth-modal";
 import { resolveApiUrl } from "@/lib/platform";
 import { useIndieMode } from "@/hooks/use-indie-mode";
-import { CAMPAIGNS_ENABLED } from "@/lib/feature-flags";
 
 const RECENT_SEARCHES_KEY = "gamefolio_recent_searches";
 const MAX_RECENT = 8;
@@ -100,7 +99,7 @@ class MobileSearchErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, padding: "16px", zIndex: 99999, background: "rgba(3,8,10,0.93)", backdropFilter: "blur(20px)" }}>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, padding: "16px", zIndex: 99999, background: "color-mix(in srgb, var(--gf-background) 93%, transparent)", backdropFilter: "blur(20px)" }}>
           <p style={{ color: "#fff", textAlign: "center", fontSize: 14, margin: 0 }}>Search could not load. Please try again.</p>
         </div>
       );
@@ -170,6 +169,12 @@ const Header = () => {
   }, [user?.id, (user as any)?.userType]);
   const { isPro } = useRevenueCat();
   const { isIndieMode } = useIndieMode();
+  const hasStandardPro = !!(
+    isPro ||
+    user?.isPro ||
+    (user?.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date())
+  );
+  const hasDeveloperPro = !!user?.isIndieDevSubscriber;
   const { state: levelTrackerState, hideLevelTracker } = useLevelTracker();
   
   const isLevelTrackerOpen = levelTrackerOpen || levelTrackerState.isOpen;
@@ -205,11 +210,11 @@ const Header = () => {
     enabled: !!debouncedQuery && debouncedQuery.length >= 2,
   });
 
-  // Search games for dropdown — uses Twitch catalog (same source as Explore page)
+  // Search games for dropdown from the shared game catalogue.
   const { data: gameResults } = useQuery<TwitchGame[]>({
-    queryKey: ['/api/twitch/games/search', debouncedQuery],
+    queryKey: ['/api/game-catalog/search', debouncedQuery],
     queryFn: async () => {
-      const response = await fetch(resolveApiUrl(`/api/twitch/games/search?q=${encodeURIComponent(debouncedQuery)}`));
+      const response = await fetch(resolveApiUrl(`/api/game-catalog/search?q=${encodeURIComponent(debouncedQuery)}`));
       if (!response.ok) throw new Error("Failed to search games");
       return await response.json();
     },
@@ -294,7 +299,7 @@ const Header = () => {
   if (isMobile && location === '/trending') return null;
 
   return (
-    <header className="bg-card shadow-md sticky top-0 z-50 w-full safe-area-top">
+    <header className="bg-background border-b border-border shadow-md sticky top-0 z-50 w-full safe-area-top">
       <div className="w-full px-3 sm:px-4 lg:px-8 py-3 sm:py-4 md:py-6 flex items-center justify-between">
         {/* Header left section */}
         <div className="flex items-center flex-shrink-0">
@@ -520,15 +525,22 @@ const Header = () => {
           )}
           
           
-          <ProUpgradeDialog 
-            open={proUpgradeOpen} 
-            onOpenChange={setProUpgradeOpen}
-            onAuthRequired={() => {
-              setProUpgradeOpen(false);
-              sessionStorage.setItem('pending_pro_upgrade', '1');
-              openModal('login');
-            }}
-          />
+          {isIndieMode ? (
+            <IndieDevUpgradeDialog
+              open={proUpgradeOpen}
+              onOpenChange={setProUpgradeOpen}
+            />
+          ) : (
+            <ProUpgradeDialog
+              open={proUpgradeOpen}
+              onOpenChange={setProUpgradeOpen}
+              onAuthRequired={() => {
+                setProUpgradeOpen(false);
+                sessionStorage.setItem('pending_pro_upgrade', '1');
+                openModal('login');
+              }}
+            />
+          )}
           {user ? (
             <>
               {!isIndieMode && <LootboxTrigger onClick={() => setLootboxOpen(true)} />}
@@ -557,29 +569,18 @@ const Header = () => {
                       <span className="hidden sm:inline">New</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-52 mt-2">
-                    {CAMPAIGNS_ENABLED && (
-                      <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
-                        <Rocket className="h-4 w-4 mr-2" />
-                        New Campaign
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={() => setLocation('/indie/dashboard?tab=keys')} className="cursor-pointer">
-                      <KeyRound className="h-4 w-4 mr-2" />
-                      Upload Keys
+                  <DropdownMenuContent align="end" className="w-48 mt-2">
+                    <DropdownMenuItem onClick={() => { window.dispatchEvent(new CustomEvent('upload-type-change', { detail: 'clips' })); setLocation('/upload?type=clips'); }} className="cursor-pointer">
+                      <Video className="h-4 w-4 mr-2" />
+                      Upload Clip
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
-                      <Gamepad2 className="h-4 w-4 mr-2" />
-                      Manage Game
+                    <DropdownMenuItem onClick={() => { window.dispatchEvent(new CustomEvent('upload-type-change', { detail: 'reels' })); setLocation('/upload?type=reels'); }} className="cursor-pointer">
+                      <Film className="h-4 w-4 mr-2" />
+                      Upload Reel
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
-                      <Megaphone className="h-4 w-4 mr-2" />
-                      Publish Update
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setLocation('/studio-dashboard')} className="cursor-pointer">
-                      <BarChart3 className="h-4 w-4 mr-2" />
-                      View Analytics
+                    <DropdownMenuItem onClick={() => { window.dispatchEvent(new CustomEvent('upload-type-change', { detail: 'screenshots' })); setLocation('/upload?type=screenshots'); }} className="cursor-pointer">
+                      <Camera className="h-4 w-4 mr-2" />
+                      Upload Screenshot
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -666,6 +667,16 @@ const Header = () => {
                       </span>
                       <span>My Gamefolio</span>
                     </DropdownMenuItem>
+                    {isIndieMode && (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/game-dashboard")}
+                        data-testid="button-game-dashboard"
+                      >
+                        <Gamepad2 className="mr-2 h-4 w-4" />
+                        <span>Game Dashboard</span>
+                      </DropdownMenuItem>
+                    )}
                     {!isIndieMode && (
                       <DropdownMenuItem
                         className="cursor-pointer"
@@ -676,14 +687,16 @@ const Header = () => {
                         <span>Level Tracker</span>
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onClick={() => setLocation("/account/settings?tab=referral")}
-                      data-testid="button-referral"
-                    >
-                      <ReferFriendIcon className="mr-2 h-4 w-4" />
-                      <span>Refer a Friend</span>
-                    </DropdownMenuItem>
+                    {!isIndieMode && (
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/account/settings?tab=referral")}
+                        data-testid="button-referral"
+                      >
+                        <ReferFriendIcon className="mr-2 h-4 w-4" />
+                        <span>Refer a Friend</span>
+                      </DropdownMenuItem>
+                    )}
 
                     {user?.isAmbassador && (
                       <DropdownMenuItem
@@ -696,7 +709,7 @@ const Header = () => {
                       </DropdownMenuItem>
                     )}
 
-                    {!(isPro || user?.isPro || (user?.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date())) && (
+                    {!(isIndieMode ? hasDeveloperPro : hasStandardPro) && (
                       <DropdownMenuItem
                         className="cursor-pointer text-white"
                         style={{ background: 'linear-gradient(to right, #B7FF1A 0%, rgba(30, 41, 59, 0) 70%)' }}
@@ -704,18 +717,18 @@ const Header = () => {
                         data-testid="button-go-pro"
                       >
                         <GoProIcon className="mr-2 h-4 w-4" />
-                        <span>Go Pro</span>
+                        <span>{isIndieMode ? "Game Developer Pro" : "Go Pro"}</span>
                       </DropdownMenuItem>
                     )}
                     
-                    {(isPro || user?.isPro || (user?.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date())) && (
+                    {(isIndieMode ? hasDeveloperPro : hasStandardPro) && (
                       <DropdownMenuItem
                         className="cursor-pointer"
-                        onClick={() => setManageProOpen(true)}
+                        onClick={() => isIndieMode ? setProUpgradeOpen(true) : setManageProOpen(true)}
                         data-testid="button-manage-pro"
                       >
                         <ManageProIcon className="mr-2 h-4 w-4 text-yellow-500" />
-                        <span>Manage Pro</span>
+                        <span>{isIndieMode ? "Developer Pro status" : "Manage Pro"}</span>
                       </DropdownMenuItem>
                     )}
 
@@ -731,25 +744,9 @@ const Header = () => {
                         <AccountSettingsIcon className="mr-2 h-4 w-4" />
                         <span>Account Settings</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => setLocation("/settings/profile")}
-                      >
-                        <ProfileAppearanceIcon className="mr-2 h-4 w-4" />
-                        <span>Profile & Appearance</span>
-                      </DropdownMenuItem>
                     </DropdownMenuGroup>
 
                     <DropdownMenuSeparator />
-                    {(user.userType?.split(",").includes("indie_developer") || isPartnerType(user, "indie") || user.role === "admin") && (
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => setLocation("/indie/dashboard")}
-                      >
-                        <Rocket className="mr-2 h-4 w-4" />
-                        Game Dashboard
-                      </DropdownMenuItem>
-                    )}
                     {(isPartnerType(user, "streamer") || user.role === "admin") && (
                       <DropdownMenuItem
                         className="cursor-pointer"
@@ -799,7 +796,7 @@ const Header = () => {
             bottom: 0,
             width: '100vw',
             height: '100vh',
-            background: 'rgba(3, 8, 10, 0.93)',
+            background: 'color-mix(in srgb, var(--gf-background) 93%, transparent)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
             zIndex: 99999,

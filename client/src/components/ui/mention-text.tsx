@@ -52,7 +52,7 @@ function UserHoverPreview({ username, onLinkClick }: { username: string; onLinkC
           @{username}
         </Link>
       </HoverCardTrigger>
-      <HoverCardContent className="w-72 bg-[#0B1218] border-[#1B2A33] p-0 overflow-hidden">
+      <HoverCardContent className="w-72 bg-popover border-border p-0 overflow-hidden">
         {isLoading ? (
           <div>
             <div className="w-full h-20 bg-gray-800 animate-pulse" />
@@ -111,7 +111,7 @@ function UserHoverPreview({ username, onLinkClick }: { username: string; onLinkC
 
               {/* Stats row */}
               {user._count && (
-                <div className="flex items-center gap-3 pt-1 border-t border-[#1B2A33]">
+                <div className="flex items-center gap-3 pt-1 border-t border-border">
                   {user._count.followers != null && (
                     <div className="flex items-center gap-1 text-[11px] text-gray-400">
                       <Users className="w-3 h-3" />
@@ -162,7 +162,7 @@ function GameHoverPreview({ gameName, gameSlug, onLinkClick }: { gameName: strin
           {gameName}
         </Link>
       </HoverCardTrigger>
-      <HoverCardContent className="w-64 bg-[#0B1218] border-[#1B2A33] p-0 overflow-hidden">
+      <HoverCardContent className="w-64 bg-popover border-border p-0 overflow-hidden">
         {isLoading ? (
           <div>
             <div className="w-full h-32 bg-gray-800 animate-pulse" />
@@ -174,7 +174,7 @@ function GameHoverPreview({ gameName, gameSlug, onLinkClick }: { gameName: strin
         ) : game ? (
           <div>
             {/* Game cover — full-width banner crop */}
-            <div className="w-full h-36 bg-[#1B2A33] relative overflow-hidden">
+            <div className="w-full h-36 bg-card relative overflow-hidden">
               {game.imageUrl ? (
                 <img
                   src={game.imageUrl}

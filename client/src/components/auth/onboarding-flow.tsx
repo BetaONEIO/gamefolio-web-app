@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
 import { Check, Gamepad2, Upload, Search, ArrowRight, Video, Trophy, Code, Eye, Coffee, Scroll, Loader2, Plus, User, Camera, HelpCircle, Info, Wallet, ZoomIn, Crop, Zap, Star, Target, Gift, Tv, Globe, Swords, Users, Flame, ChevronLeft, ChevronRight, X, ExternalLink } from "lucide-react";
 import { SiSteam, SiItchdotio, SiEpicgames, SiTwitch, SiKick } from "react-icons/si";
 import ShareLaunchIcon from "@/components/ui/ShareIcon";
@@ -35,8 +36,6 @@ import imgIndieGame from "@assets/indie-game_1780953921840.png";
 import imgGamefolioCard from "@assets/image_1780751936689.png";
 import imgIndieSocket from "@assets/-1Plug_1780932573098.png";
 import imgIndiePlug from "@assets/gf-plug_1780932928172.png";
-import imgBountyBg from "@assets/image_1780752103152.png";
-import imgGFBag from "@assets/image_1780752169383.png";
 import imgLaunchButton from "@assets/LAUNCH-BUTTON_(1)_1780950145274.png";
 import imgHandPixel from "@assets/hand-pixel_1780949461463.png";
 import imgProgression from "@assets/image_1780755222420.png";
@@ -81,9 +80,9 @@ interface TrendingGamesGridProps {
 
 function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridProps) {
   const { data: trendingGames, isLoading } = useQuery<TwitchGame[]>({
-    queryKey: ["/api/twitch/games/top"],
+    queryKey: ["/api/game-catalog/top"],
     queryFn: async () => {
-      const response = await fetch("/api/twitch/games/top?limit=50");
+      const response = await fetch("/api/game-catalog/top?limit=50");
       if (!response.ok) throw new Error("Failed to fetch trending games");
       return await response.json();
     }
@@ -123,11 +122,11 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
               onClick={() => onSelectGame(game)}
               className={`group flex flex-col items-center p-1.5 rounded-lg transition-all focus:outline-none focus:ring-2 ${
                 isSelected 
-                  ? 'bg-[#071013] border-2 border-primary/70 ring-2 ring-primary/30' 
-                  : 'bg-[#071013] border-2 border-[#1B2A33] hover:border-primary/40 hover:bg-primary/5 focus:ring-primary/30'
+                  ? 'bg-background border-2 border-primary/70 ring-2 ring-primary/30'
+                  : 'bg-background border-2 border-border hover:border-primary/40 hover:bg-primary/5 focus:ring-primary/30'
               }`}
             >
-              <div className="relative w-full aspect-[3/4] mb-1.5 overflow-hidden rounded-md bg-[#071013]">
+              <div className="relative w-full aspect-[3/4] mb-1.5 overflow-hidden rounded-md bg-background">
                 <img
                   src={game.box_art_url ? game.box_art_url.replace('{width}', '300').replace('{height}', '400') : "https://placehold.co/120x160?text=Game"}
                   alt={game.name}
@@ -169,7 +168,6 @@ enum OnboardingStep {
   ChoosePath = 1,  // Choose path (Gamer / Streamer / Indie) — happens right after Welcome
   Intro1 = 2,      // Path-specific intro screen 1
   Intro2 = 3,      // Path-specific intro screen 2
-  Intro3 = 4,      // Path-specific intro screen 3
   Username = 5,    // Google users only
   Games = 6,       // Choose Favourite Games (gamer path only)
   Avatar = 7,      // Profile picture
@@ -230,7 +228,7 @@ function PlatformConnectRow({
 }) {
   const connected = !!connectedName;
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-[#1B2A33] bg-[#0B1218] px-3 py-2.5">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2.5">
       <div className="flex items-center gap-2.5 min-w-0">
         <span className="flex-shrink-0" style={{ color: connected ? brand : "rgba(255,255,255,0.45)" }}>{icon}</span>
         <div className="min-w-0">
@@ -267,7 +265,7 @@ interface OnboardingStepIndicatorProps {
 function OnboardingStepIndicator({ currentStep, isGoogleUser, selectedPath }: OnboardingStepIndicatorProps) {
   const phases = [
     { label: "Path",    from: OnboardingStep.Welcome,    to: OnboardingStep.ChoosePath },
-    { label: "Intro",   from: OnboardingStep.Intro1,     to: OnboardingStep.Intro3 },
+    { label: "Intro",   from: OnboardingStep.Intro1,     to: OnboardingStep.Intro2 },
     { label: "Profile", from: OnboardingStep.Username,   to: OnboardingStep.Avatar },
     { label: "Setup",   from: OnboardingStep.PathSetup,  to: OnboardingStep.PathSetup },
     { label: "Wallet",  from: OnboardingStep.Wallet,     to: OnboardingStep.Wallet },
@@ -291,7 +289,7 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser, selectedPath }: On
                     ? "bg-primary/20 border-primary text-primary"
                     : isActive
                     ? "bg-primary border-primary text-[#071013] font-bold ob-step-active-glow"
-                    : "bg-[#0B1218] border-primary/20 text-gray-500"
+                    : "bg-card border-primary/20 text-gray-500"
                 }`}
               >
                 {isDone ? <Check className="h-4 w-4" /> : index + 1}
@@ -689,8 +687,7 @@ export default function OnboardingFlow({
       case OnboardingStep.Welcome:    return OnboardingStep.ChoosePath;
       case OnboardingStep.ChoosePath: return OnboardingStep.Intro1;
       case OnboardingStep.Intro1:     return OnboardingStep.Intro2;
-      case OnboardingStep.Intro2:     return OnboardingStep.Intro3;
-      case OnboardingStep.Intro3:     return isGoogleUser ? OnboardingStep.Username : (selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar);
+      case OnboardingStep.Intro2:     return isGoogleUser ? OnboardingStep.Username : (selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar);
       case OnboardingStep.Username:   return selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar;
       case OnboardingStep.Games:      return OnboardingStep.Avatar;
       case OnboardingStep.Avatar:     return OnboardingStep.PathSetup;
@@ -869,7 +866,7 @@ export default function OnboardingFlow({
   const loadGames = async () => {
     setIsSearching(true);
     try {
-      const response = await apiRequest("GET", "/api/twitch/games/top");
+      const response = await apiRequest("GET", "/api/game-catalog/top");
       if (!response.ok) throw new Error("Failed to load games from Twitch");
       const twitchGames = await response.json();
       if (!twitchGames || twitchGames.length === 0) { await loadFallbackGames(); return; }
@@ -899,7 +896,7 @@ export default function OnboardingFlow({
     if (!query.trim()) { loadGames(); return; }
     setIsSearching(true);
     try {
-      const response = await apiRequest("GET", `/api/twitch/games/search?query=${encodeURIComponent(query)}`);
+      const response = await apiRequest("GET", `/api/game-catalog/search?q=${encodeURIComponent(query)}`);
       if (!response.ok) throw new Error("Search failed");
       const twitchGames = await response.json();
       setGames(twitchGames.map((game: TwitchGame) => ({
@@ -1036,8 +1033,9 @@ export default function OnboardingFlow({
         userType,
       });
 
-      // Persist the streamer setup step. OAuth writes verified channel names
-      // straight to the account; this saves the remaining profile preferences.
+      // Persist the streamer setup step. The OAuth buttons already wrote any
+      // verified channel straight to the account; this saves the OAuth-filled
+      // channel values along with the remaining profile preferences.
       if (selectedPath === "streamer") {
         try {
           await apiRequest("POST", "/api/streamer/onboarding-profile", {
@@ -1159,7 +1157,7 @@ export default function OnboardingFlow({
           ? { titleA: 'PROMOTE YOUR', titleB: 'GAME', sub: 'Create a game profile and showcase your indie title to the Gamefolio community.', img: imgIndieGame, imgAlt: 'Indie game cartridge' }
           : { titleA: 'BUILD YOUR', titleB: 'GAMEFOLIO', sub: 'Your gaming legacy, all in one place. Connect accounts and showcase your best moments.', img: imgGamefolioCard, imgAlt: 'Gamefolio profile card' };
         return (
-          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
+          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-background overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
             {/* Visual area */}
             <div className="flex-1 min-h-[240px] sm:min-h-[300px] relative flex items-center justify-center">
               {selectedPath === 'streamer' ? (
@@ -1168,9 +1166,9 @@ export default function OnboardingFlow({
                   {/* Radial background glow */}
                   <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 65% 65% at 50% 48%, rgba(193,255,0,0.10) 0%, rgba(145,71,255,0.08) 45%, transparent 72%)' }} />
                   {/* Top fade */}
-                  <div className="absolute inset-x-0 top-0 h-24 pointer-events-none z-10" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 top-0 h-24 pointer-events-none z-10" style={{ background: 'linear-gradient(to bottom, var(--gf-background), transparent)' }} />
                   {/* Bottom fade */}
-                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, var(--gf-background), transparent)' }} />
                   {/* Orbit system */}
                   <div className="relative z-10 flex flex-col items-center" style={{ gap: '16px' }}>
                     <div className="relative" style={{ width: '270px', height: '270px' }}>
@@ -1210,14 +1208,14 @@ export default function OnboardingFlow({
                   {/* Green/white radiant gradient behind center of image */}
                   <div className="absolute inset-0 pointer-events-none z-0" style={{ background: 'radial-gradient(circle at 50% 45%, rgba(193,255,0,0.22) 0%, rgba(255,255,255,0.06) 25%, transparent 55%)' }} />
                   <img src={(i1 as any).img} alt={(i1 as any).imgAlt} draggable={false} className="select-none absolute inset-0 w-full h-full ob-float z-10" style={{ objectFit:'contain', objectPosition:'center', animationDuration:'4s', paddingTop: '40px' }} />
-                  <div className="absolute inset-x-0 top-0 h-24 pointer-events-none z-10" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
-                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 top-0 h-24 pointer-events-none z-10" style={{ background: 'linear-gradient(to bottom, var(--gf-background), transparent)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, var(--gf-background), transparent)' }} />
                 </>
               )}
             </div>
             <div className="mt-auto flex-shrink-0 relative z-10 px-6 pt-5 pb-6">
               <div className="flex items-center gap-2 justify-center mb-5">
-                {[0,1,2].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===0?'20px':'6px', height:'6px', background: i===0?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===0?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
+                {[0,1].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===0?'20px':'6px', height:'6px', background: i===0?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===0?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
               </div>
               <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:'clamp(24px,6vw,30px)', letterSpacing:'-0.9px', color:'#fff' }}>
                 {i1.titleA} <span style={{ color:'#c1ff00' }}>{i1.titleB}</span>
@@ -1241,7 +1239,7 @@ export default function OnboardingFlow({
           ? { titleA: 'CONNECT WITH', titleB: 'CREATORS', sub: 'Creators upload clips, reels, and screenshots to build community around your game.' }
           : { titleA: 'TRACK YOUR', titleB: 'PROGRESS', sub: 'Watch your skills grow. Every action earns XP and builds your legendary status.', img: imgProgression, imgAlt: 'Track progression' };
         return (
-          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
+          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-background overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
             {/* Visual area */}
             <div className="flex-1 min-h-[240px] sm:min-h-[300px] relative flex items-center justify-center">
               {selectedPath === 'streamer' ? (
@@ -1249,9 +1247,9 @@ export default function OnboardingFlow({
                 <>
                   <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(145,71,255,0.12) 0%, transparent 70%)' }} />
                   {/* Top fade */}
-                  <div className="absolute inset-x-0 top-0 h-20 pointer-events-none z-20" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 top-0 h-20 pointer-events-none z-20" style={{ background: 'linear-gradient(to bottom, var(--gf-background), transparent)' }} />
                   {/* Bottom fade */}
-                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-20" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none z-20" style={{ background: 'linear-gradient(to top, var(--gf-background), transparent)' }} />
                   {/* 3 rows above the text — each row uses its own exclusive clips */}
                   <div className="relative z-10 flex flex-col gap-2 w-full overflow-hidden" style={{ paddingTop: '8px' }}>
                     {/* Row 1: clips 1-4 only */}
@@ -1285,7 +1283,7 @@ export default function OnboardingFlow({
                 <>
                   {/* Dark navy base with green radial glow between socket and plug */}
                   <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 55%, rgba(120,200,0,0.28) 0%, rgba(60,120,0,0.10) 38%, transparent 65%), #0b1520' }} />
-                  <div className="absolute inset-x-0 bottom-0 h-20 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-20 pointer-events-none" style={{ background: 'linear-gradient(to top, var(--gf-background), transparent)' }} />
                   {/* INDIE socket — lower-left, cable exits bottom */}
                   <img
                     src={imgIndieSocket}
@@ -1319,51 +1317,18 @@ export default function OnboardingFlow({
               ) : (
                 <>
                   <img src={(i2 as any).img} alt={(i2 as any).imgAlt} draggable={false} className="select-none absolute inset-0 w-full h-full" style={{ objectFit:'contain', objectPosition:'top center' }} />
-                  <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
+                  <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: 'linear-gradient(to top, var(--gf-background), transparent)' }} />
                 </>
               )}
             </div>
             <div className="mt-auto flex-shrink-0 relative z-10 px-6 pt-5 pb-6">
               <div className="flex items-center gap-2 justify-center mb-5">
-                {[0,1,2].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===1?'20px':'6px', height:'6px', background: i===1?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===1?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
+                {[0,1].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===1?'20px':'6px', height:'6px', background: i===1?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===1?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
               </div>
               <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:'clamp(24px,6vw,30px)', letterSpacing:'-0.9px', color:'#fff' }}>
                 {i2.titleA} <span style={{ color:'#c1ff00' }}>{i2.titleB}</span>
               </h2>
               <p className="text-center mb-5" style={{ fontFamily:"'Outfit',sans-serif", fontWeight:400, fontSize:'14px', lineHeight:'20px', color:'#94A3B8', minHeight:'60px', display:'flex', alignItems:'center', justifyContent:'center' }}>{i2.sub}</p>
-              <div className="flex items-center gap-3">
-                <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 font-bold" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:'15px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
-                  Continue
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      // ── STEP 4: PATH-SPECIFIC INTRO 3 ─────────────────────────────────────
-      case OnboardingStep.Intro3: {
-        const i3 = selectedPath === 'streamer'
-          ? { titleA: 'UNLOCK CREATOR', titleB: 'OPPORTUNITIES', sub: 'Earn rewards, join creator campaigns, get featured on the homepage and connect your Twitch, Kick and VPZone channels.' }
-          : selectedPath === 'indie'
-          ? { titleA: 'LAUNCH', titleB: 'BOUNTIES', sub: 'Run creator campaigns, offer game keys, and reward players with bounty challenges.' }
-          : { titleA: 'EARN', titleB: 'REWARDS', sub: 'Complete daily bounties, join creator challenges, and earn GFT to unlock exclusive legendary gear.' };
-        return (
-          <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-[#071013] overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
-            <div className="flex-1 min-h-[240px] sm:min-h-[300px] relative flex items-center justify-center">
-              <img src={imgBountyBg} alt="" aria-hidden draggable={false} className="absolute inset-0 w-full h-full object-cover select-none" style={{ opacity: 0.55 }} />
-              <div className="absolute inset-x-0 top-0 h-24 pointer-events-none" style={{ background: 'linear-gradient(to bottom, #071013, transparent)' }} />
-              <div className="absolute inset-x-0 bottom-0 h-56 pointer-events-none" style={{ background: 'linear-gradient(to top, #071013, transparent)' }} />
-              <img src={imgGFBag} alt="GF Token bag" draggable={false} className="ob-float relative z-10 select-none" style={{ height:'85%', width:'auto', objectFit:'contain', animationDuration:'4s', filter:'drop-shadow(0 0 40px rgba(193,255,0,0.35))' }} />
-            </div>
-            <div className="mt-auto flex-shrink-0 relative z-10 px-6 pt-5 pb-6">
-              <div className="flex items-center gap-2 justify-center mb-5">
-                {[0,1,2].map(i => <div key={i} className="rounded-full transition-all duration-300" style={{ width: i===2?'20px':'6px', height:'6px', background: i===2?'#c1ff00':'rgba(255,255,255,0.2)', boxShadow: i===2?'0 0 8px rgba(193,255,0,0.7)':'none' }} />)}
-              </div>
-              <h2 className="text-center mb-2 leading-none uppercase" style={{ fontFamily:"'Space Grotesk',sans-serif", fontWeight:700, fontSize:'clamp(24px,6vw,30px)', letterSpacing:'-0.9px', color:'#fff' }}>
-                {i3.titleA} <span style={{ color:'#c1ff00' }}>{i3.titleB}</span>
-              </h2>
-              <p className="text-center mb-5" style={{ fontFamily:"'Outfit',sans-serif", fontWeight:400, fontSize:'14px', lineHeight:'20px', color:'#94A3B8', minHeight:'60px', display:'flex', alignItems:'center', justifyContent:'center' }}>{i3.sub}</p>
               <div className="flex items-center gap-3">
                 <button onClick={goToNextStep} className="flex-1 rounded-[18px] py-4 font-bold" style={{ background:'#c1ff00', boxShadow:'0 20px 40px rgba(193,255,0,0.30)', color:'#0a0f1c', fontFamily:"'Outfit',sans-serif", fontWeight:700, fontSize:'15px', borderBottom:'3.333px solid rgba(0,0,0,0.1)' }}>
                   Continue
@@ -1516,7 +1481,7 @@ export default function OnboardingFlow({
               </Button>
             </div>
             <Dialog open={showCropModal} onOpenChange={setShowCropModal}>
-              <DialogContent className="sm:max-w-lg max-w-[95vw] max-h-[90vh] bg-slate-900 border-slate-700 overflow-y-auto">
+              <DialogContent className="sm:max-w-lg max-w-[95vw] max-h-[90vh] bg-popover border-border overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="text-white flex items-center gap-2"><Crop className="h-5 w-5" />Crop Profile Picture</DialogTitle>
                   <DialogDescription className="text-slate-400">Drag to reposition, slider to zoom</DialogDescription>
@@ -1590,7 +1555,7 @@ export default function OnboardingFlow({
               </div>
             ),
           },
-          {
+          ...(GAME_DEVELOPER_FEATURES_ENABLED ? [{
             id: 'indie' as UserPath,
             title: 'GAME DEVELOPER',
             ctaLabel: 'Continue as Game Developer',
@@ -1621,7 +1586,7 @@ export default function OnboardingFlow({
                 </div>
               </div>
             ),
-          },
+          }] : []),
         ];
 
         const totalCards = pathCards.length;
@@ -1821,12 +1786,12 @@ export default function OnboardingFlow({
                         onClick={() => toggleGamerInterest(opt.id)}
                         className={`relative p-3 rounded-lg border-2 transition-all text-left select-none ${
                           isSelected ? "border-primary bg-primary shadow-lg shadow-primary/20 cursor-pointer"
-                          : isLocked ? "border-[#1B2A33] bg-[#0B1218]/60 cursor-not-allowed opacity-40"
-                          : "border-[#1B2A33] bg-[#0B1218] hover:border-primary/40 hover:bg-primary/5 cursor-pointer"
+                          : isLocked ? "border-border bg-card/60 cursor-not-allowed opacity-40"
+                          : "border-border bg-card hover:border-primary/40 hover:bg-primary/5 cursor-pointer"
                         }`}
                       >
                         <div className="flex flex-col items-center text-center space-y-2">
-                          <div className={`p-2.5 rounded-full ${isSelected ? "bg-black/20 text-[#051a08]" : "bg-[#1B2A33] text-gray-500"}`}>
+                          <div className={`p-2.5 rounded-full ${isSelected ? "bg-black/20 text-[#051a08]" : "bg-secondary text-gray-500"}`}>
                             <Icon className="h-5 w-5" />
                           </div>
                           <h3 className={`font-medium text-sm ${isSelected ? "text-[#051a08] font-semibold" : "text-gray-500"}`}>{opt.label}</h3>
@@ -1861,7 +1826,7 @@ export default function OnboardingFlow({
               <div className="flex-1 overflow-y-auto space-y-4">
                 <div>
                   <h2 className="text-2xl font-bold text-white mb-1">Streamer Setup</h2>
-                   <p className="text-gray-400 mb-4">Connect your streaming accounts to pull your channels in automatically. Choose your main platform and tell us what you stream.</p>
+                  <p className="text-gray-400 mb-4">Connect your streaming accounts to pull your channels in automatically. Choose your main platform and tell us what you stream.</p>
                 </div>
                 {isProductionBuild && !hasVerifiedStream && (
                   <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
@@ -1870,8 +1835,8 @@ export default function OnboardingFlow({
                 )}
 
                 {/* Verified connections. Each opens the existing OAuth flow in a
-                    popup; on success the account is updated server-side and the
-                    fields below fill themselves in. */}
+                    popup; on success the account is updated server-side and
+                    the connected channel is used automatically. */}
                 {(socialOAuth.twitch || socialOAuth.kick || socialOAuth.vpzone) && (
                   <div className="space-y-2">
                     {socialOAuth.twitch && (
@@ -1909,10 +1874,10 @@ export default function OnboardingFlow({
                   <div>
                     <Label className="text-white text-sm mb-1.5 block">Main Platform <span className="text-primary">*</span></Label>
                     <Select value={streamerData.mainPlatform} onValueChange={(v) => setStreamerData({ ...streamerData, mainPlatform: v })}>
-                      <SelectTrigger className="bg-[#0B1218] border-[#1B2A33] text-white">
+                      <SelectTrigger className="bg-card border-border text-white">
                         <SelectValue placeholder="Select your main platform" />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#0B1218] border-[#1B2A33]">
+                      <SelectContent className="bg-popover border-border">
                         <SelectItem value="kick">Kick</SelectItem>
                         <SelectItem value="twitch">Twitch</SelectItem>
                         <SelectItem value="vpzone">VPZone</SelectItem>
@@ -1923,15 +1888,15 @@ export default function OnboardingFlow({
 
                   <div>
                     <Label className="text-gray-400 text-sm mb-1.5 block">Main Game / Category</Label>
-                    <Input value={streamerData.mainGame} onChange={(e) => setStreamerData({ ...streamerData, mainGame: e.target.value })} placeholder="e.g. Fortnite, Just Chatting" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                    <Input value={streamerData.mainGame} onChange={(e) => setStreamerData({ ...streamerData, mainGame: e.target.value })} placeholder="e.g. Fortnite, Just Chatting" className="bg-card border-border text-white" />
                   </div>
                   <div>
                     <Label className="text-gray-400 text-sm mb-1.5 block">Stream Frequency</Label>
                     <Select value={streamerData.streamFrequency} onValueChange={(v) => setStreamerData({ ...streamerData, streamFrequency: v })}>
-                      <SelectTrigger className="bg-[#0B1218] border-[#1B2A33] text-white">
+                      <SelectTrigger className="bg-card border-border text-white">
                         <SelectValue placeholder="How often do you stream?" />
                       </SelectTrigger>
-                      <SelectContent className="bg-[#0B1218] border-[#1B2A33]">
+                      <SelectContent className="bg-popover border-border">
                         <SelectItem value="daily">Daily</SelectItem>
                         <SelectItem value="3-5x">3–5× per week</SelectItem>
                         <SelectItem value="1-2x">1–2× per week</SelectItem>
@@ -1974,7 +1939,7 @@ export default function OnboardingFlow({
               {/* Cover art pulled from the store — shown so it is obvious what
                   was imported, and removable if they would rather upload their own. */}
               {indieGameData.storeImport?.headerImageUrl && (
-                <div className="mb-3 flex items-center gap-3 rounded-lg border border-[#1B2A33] bg-[#0B1218] p-2">
+                <div className="mb-3 flex items-center gap-3 rounded-lg border border-border bg-card p-2">
                   <img
                     src={indieGameData.storeImport.headerImageUrl}
                     alt=""
@@ -2005,7 +1970,7 @@ export default function OnboardingFlow({
               {/* Trailer pulled from the store — same pattern as the cover art
                   card above: visible and removable rather than saved silently. */}
               {indieGameData.storeImport?.trailerUrl && (
-                <div className="mb-3 flex items-center gap-3 rounded-lg border border-[#1B2A33] bg-[#0B1218] p-2">
+                <div className="mb-3 flex items-center gap-3 rounded-lg border border-border bg-card p-2">
                   <video
                     src={indieGameData.storeImport.trailerUrl}
                     muted
@@ -2036,7 +2001,7 @@ export default function OnboardingFlow({
               {/* 1. Game Name */}
               <div>
                 <Label className="text-white text-sm mb-1.5 block">Game Name <span className="text-primary">*</span></Label>
-                <Input value={indieGameData.gameName} onChange={(e) => setIndieGameData({ ...indieGameData, gameName: e.target.value })} placeholder="Your game's name" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                <Input value={indieGameData.gameName} onChange={(e) => setIndieGameData({ ...indieGameData, gameName: e.target.value })} placeholder="Your game's name" className="bg-card border-border text-white" />
               </div>
 
               {/* 2. Store pages — one row per platform, added state replaces the add button */}
@@ -2046,7 +2011,7 @@ export default function OnboardingFlow({
 
                   {/* Steam */}
                   {indieGameData.steamLink && !platformExpanded.steam ? (
-                    <div className="flex items-center gap-2 rounded-lg border border-[#1B2A33] bg-[#0B1218] px-3 py-2.5">
+                    <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5">
                       <SiSteam className="w-4 h-4 flex-shrink-0 text-[#c6d4df]" />
                       <span className="flex-1 text-sm text-white flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
@@ -2074,7 +2039,7 @@ export default function OnboardingFlow({
                         <button
                           type="button"
                           onClick={() => setPlatformExpanded(p => ({ ...p, steam: true }))}
-                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#1B2A33] bg-[#0B1218] text-gray-300 hover:text-white hover:border-[#2A3A44] transition-colors text-sm"
+                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card text-gray-300 hover:text-white hover:border-primary/40 transition-colors text-sm"
                         >
                           <SiSteam className="w-4 h-4 flex-shrink-0 text-[#c6d4df]" />
                           Add Steam page
@@ -2087,7 +2052,7 @@ export default function OnboardingFlow({
                             onChange={(e) => setIndieGameData({ ...indieGameData, steamLink: e.target.value })}
                             onBlur={() => { if (!indieLinkError("steamLink")) void lookupStoreUrl(indieGameData.steamLink); }}
                             placeholder="https://store.steampowered.com/app/..."
-                            className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
+                            className="bg-card border-border text-white text-xs flex-1"
                           />
                           <button
                             type="button"
@@ -2107,7 +2072,7 @@ export default function OnboardingFlow({
 
                   {/* Itch.io */}
                   {indieGameData.itchLink && !platformExpanded.itch ? (
-                    <div className="flex items-center gap-2 rounded-lg border border-[#1B2A33] bg-[#0B1218] px-3 py-2.5">
+                    <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5">
                       <SiItchdotio className="w-4 h-4 flex-shrink-0 text-[#FA5C5C]" />
                       <span className="flex-1 text-sm text-white flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
@@ -2135,7 +2100,7 @@ export default function OnboardingFlow({
                         <button
                           type="button"
                           onClick={() => setPlatformExpanded(p => ({ ...p, itch: true }))}
-                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#1B2A33] bg-[#0B1218] text-gray-300 hover:text-white hover:border-[#2A3A44] transition-colors text-sm"
+                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card text-gray-300 hover:text-white hover:border-primary/40 transition-colors text-sm"
                         >
                           <SiItchdotio className="w-4 h-4 flex-shrink-0 text-[#FA5C5C]" />
                           Add itch.io page
@@ -2148,7 +2113,7 @@ export default function OnboardingFlow({
                             onChange={(e) => setIndieGameData({ ...indieGameData, itchLink: e.target.value })}
                             onBlur={() => { if (!indieLinkError("itchLink")) void lookupStoreUrl(indieGameData.itchLink); }}
                             placeholder="https://yourname.itch.io/your-game"
-                            className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
+                            className="bg-card border-border text-white text-xs flex-1"
                           />
                           <button
                             type="button"
@@ -2168,7 +2133,7 @@ export default function OnboardingFlow({
 
                   {/* Epic Games */}
                   {indieGameData.epicLink && !platformExpanded.epic ? (
-                    <div className="flex items-center gap-2 rounded-lg border border-[#1B2A33] bg-[#0B1218] px-3 py-2.5">
+                    <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2.5">
                       <SiEpicgames className="w-4 h-4 flex-shrink-0 text-white/70" />
                       <span className="flex-1 text-sm text-white flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
@@ -2196,7 +2161,7 @@ export default function OnboardingFlow({
                         <button
                           type="button"
                           onClick={() => setPlatformExpanded(p => ({ ...p, epic: true }))}
-                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-[#1B2A33] bg-[#0B1218] text-gray-300 hover:text-white hover:border-[#2A3A44] transition-colors text-sm"
+                          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card text-gray-300 hover:text-white hover:border-primary/40 transition-colors text-sm"
                         >
                           <SiEpicgames className="w-4 h-4 flex-shrink-0 text-white/70" />
                           Add Epic Games page
@@ -2209,7 +2174,7 @@ export default function OnboardingFlow({
                             onChange={(e) => setIndieGameData({ ...indieGameData, epicLink: e.target.value })}
                             onBlur={() => { if (!indieLinkError("epicLink")) void lookupStoreUrl(indieGameData.epicLink); }}
                             placeholder="https://store.epicgames.com/..."
-                            className="bg-[#0B1218] border-[#1B2A33] text-white text-xs flex-1"
+                            className="bg-card border-border text-white text-xs flex-1"
                           />
                           <button
                             type="button"
@@ -2233,10 +2198,10 @@ export default function OnboardingFlow({
               <div>
                 <Label className="text-white text-sm mb-1.5 block">Release Status <span className="text-primary">*</span></Label>
                 <Select value={indieGameData.releaseStatus} onValueChange={(v) => setIndieGameData({ ...indieGameData, releaseStatus: v })}>
-                  <SelectTrigger className="bg-[#0B1218] border-[#1B2A33] text-white">
+                  <SelectTrigger className="bg-card border-border text-white">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#0B1218] border-[#1B2A33]">
+                  <SelectContent className="bg-popover border-border">
                     <SelectItem value="released">Released</SelectItem>
                     <SelectItem value="early_access">Early Access</SelectItem>
                     <SelectItem value="coming_soon">Coming Soon</SelectItem>
@@ -2248,25 +2213,25 @@ export default function OnboardingFlow({
               {/* 4. Genre */}
               <div>
                 <Label className="text-gray-400 text-sm mb-1.5 block">Genre <span className="text-gray-600 font-normal text-xs ml-1">optional</span></Label>
-                <Input value={indieGameData.genre} onChange={(e) => setIndieGameData({ ...indieGameData, genre: e.target.value })} placeholder="e.g. Action RPG, Puzzle, Platformer" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                <Input value={indieGameData.genre} onChange={(e) => setIndieGameData({ ...indieGameData, genre: e.target.value })} placeholder="e.g. Action RPG, Puzzle, Platformer" className="bg-card border-border text-white" />
               </div>
 
               {/* 5. Studio / Developer */}
               <div>
                 <Label className="text-gray-400 text-sm mb-1.5 block">Studio / Developer <span className="text-gray-600 font-normal text-xs ml-1">optional</span></Label>
-                <Input value={indieGameData.studioName} onChange={(e) => setIndieGameData({ ...indieGameData, studioName: e.target.value })} placeholder="Studio or developer name" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                <Input value={indieGameData.studioName} onChange={(e) => setIndieGameData({ ...indieGameData, studioName: e.target.value })} placeholder="Studio or developer name" className="bg-card border-border text-white" />
               </div>
 
               {/* 6. Short Description */}
               <div>
                 <Label className="text-gray-400 text-sm mb-1.5 block">Short Description <span className="text-gray-600 font-normal text-xs ml-1">optional</span></Label>
-                <Textarea value={indieGameData.description} onChange={(e) => setIndieGameData({ ...indieGameData, description: e.target.value })} placeholder="A short description of your game..." className="bg-[#0B1218] border-[#1B2A33] text-white resize-none" rows={3} />
+                <Textarea value={indieGameData.description} onChange={(e) => setIndieGameData({ ...indieGameData, description: e.target.value })} placeholder="A short description of your game..." className="bg-card border-border text-white resize-none" rows={3} />
               </div>
 
               {/* 7. Website */}
               <div>
                 <Label className="text-gray-400 text-sm mb-1.5 block">Website <span className="text-gray-600 font-normal text-xs ml-1">optional</span></Label>
-                <Input value={indieGameData.websiteLink} onChange={(e) => setIndieGameData({ ...indieGameData, websiteLink: e.target.value })} placeholder="https://yourgame.com" className="bg-[#0B1218] border-[#1B2A33] text-white" />
+                <Input value={indieGameData.websiteLink} onChange={(e) => setIndieGameData({ ...indieGameData, websiteLink: e.target.value })} placeholder="https://yourgame.com" className="bg-card border-border text-white" />
                 {indieLinkError("websiteLink") && (
                   <p className="text-xs text-red-400 mt-1">{indieLinkError("websiteLink")}</p>
                 )}
@@ -2274,11 +2239,11 @@ export default function OnboardingFlow({
             </div>
 
             {/* Footer navigation — Back on the left, Continue on the right */}
-            <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-[#1B2A33] flex-shrink-0">
+            <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-border flex-shrink-0">
               <button
                 type="button"
                 onClick={goToPrevStep}
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 border border-[#1B2A33] hover:border-[#2A3A44] transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 border border-border hover:border-primary/40 transition-colors"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Back
@@ -2418,11 +2383,11 @@ export default function OnboardingFlow({
             proLabel: 'View Gamefolio Pro',
           },
           indie: {
-            titleA: 'GAME',  titleB: 'DEVELOPER',
-            sub: 'Run up to 5 active bounties at once, plus get featured across Gamefolio.',
+            titleA: 'GAME DEVELOPER',  titleB: 'PRO',
+            sub: 'Game Developer Pro is coming soon. Get ready for expanded developer benefits.',
             emoji: '🚀',
-            benefits: ['Run up to 5 active bounties at once (free: 1)', 'Featured promotion on gamefolio.com/games', 'Included in Gamefolio\'s social media promotion', '£3.99/mo or £42.00/yr'],
-            proLabel: 'Upgrade to Game Developer',
+            benefits: ['Add multiple games', 'Featured promotion on gamefolio.com/games', 'Included in Gamefolio\'s social media promotion', 'Priority developer support', '£3.99/mo or £42.00/yr'],
+            proLabel: 'Game Developer Pro — Coming soon',
           },
         };
         const upsell = upsellConfig[selectedPath || 'gamer'];
@@ -2503,11 +2468,11 @@ export default function OnboardingFlow({
     }
   };
 
-  const isIntroStep = currentStep <= OnboardingStep.Intro3;
+  const isIntroStep = currentStep <= OnboardingStep.Intro2;
 
   return (
     <div
-      className={`w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 h-dvh sm:h-[700px] sm:overflow-hidden sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col bg-[#071013]`}
+      className={`w-full mx-auto px-5 pt-8 sm:p-6 md:p-8 h-dvh sm:h-[700px] sm:overflow-hidden sm:rounded-lg shadow-lg sm:border sm:border-primary/20 flex flex-col bg-background`}
       style={{ paddingBottom: 'calc(max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem)' }}
     >
       {/* Persistent back control. Sits above the step indicator so every step

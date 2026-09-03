@@ -23,7 +23,7 @@ export default function NotFound() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-black">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-background">
       <div className="max-w-2xl w-full text-center space-y-6">
         {/* 404 Image */}
         <div className="flex justify-center mb-4">

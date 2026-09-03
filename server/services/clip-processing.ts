@@ -3,6 +3,9 @@ import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
 import { supabaseStorage } from '../supabase-storage';
 import { storage } from '../storage';
+import { db } from '../db';
+import { indieGameProfiles } from '@shared/schema';
+import { and, eq } from 'drizzle-orm';
 import { insertClipSchema, type Clip } from '@shared/schema';
 import { VideoProcessor } from '../video-processor';
 import { XPService } from '../xp-service';
@@ -39,6 +42,51 @@ export interface ProcessAndCreateClipParams {
   // request (see server/lib/request-meta.ts) since this service has no req.
   uploadIp?: string;
   uploadDeviceId?: string | null;
+  // Browser-generated durable key for reconciling an interrupted response.
+  uploadAttemptId?: string;
+}
+
+// Keep this intentionally narrow: it is used as a database lookup key and
+// comes from an authenticated browser/API request.
+export function isValidUploadAttemptId(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-zA-Z0-9_-]{16,128}$/.test(value);
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const databaseError = error as { code?: string; cause?: { code?: string } };
+  return databaseError.code === '23505' || databaseError.cause?.code === '23505';
+}
+
+async function buildLiveClipResponse(clip: Clip, userId: number, reconciled = false) {
+  const baseUrl = 'https://app.gamefolio.com';
+  const user = await storage.getUser(userId);
+  const username = user?.username || 'unknown';
+  const contentType = clip.videoType === 'reel' ? 'reel' : 'clip';
+  const clipUrl = `${baseUrl}/@${username}/${contentType}/${clip.shareCode}`;
+  const qrCodeDataUrl = await QRCode.toDataURL(clipUrl);
+
+  return {
+    success: true,
+    reconciled,
+    clip: {
+      ...clip,
+      qrCode: qrCodeDataUrl,
+      shareUrl: clipUrl,
+      socialMediaLinks: {
+        facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(clipUrl)}`,
+        twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out my ${contentType}!`)}&url=${encodeURIComponent(clipUrl)}`,
+        reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(clipUrl)}&title=${encodeURIComponent(`Check out this gaming ${contentType}!`)}`,
+        discord: clipUrl,
+      },
+    },
+    xpGained: reconciled ? 0 : 250,
+    userXP: user?.totalXP || 0,
+    userLevel: user?.level || 1,
+    message: reconciled
+      ? 'This upload was already received and is processing.'
+      : 'Upload received — your clip is processing and will appear on your profile shortly.',
+  };
 }
 
 /**
@@ -49,7 +97,7 @@ export interface ProcessAndCreateClipParams {
  * pipeline instead of a second, divergent copy of this logic.
  */
 export async function processAndCreateClip(userId: number, params: ProcessAndCreateClipParams) {
-  const { uploadResult, title, description, gameId, tags, ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd, scheduledAt, uploadIp, uploadDeviceId } = params;
+  const { uploadResult, title, description, gameId, tags, ageRestricted, trimStart: rawTrimStart, trimEnd: rawTrimEnd, scheduledAt, uploadIp, uploadDeviceId, uploadAttemptId } = params;
   const videoType = params.videoType || 'clip';
 
   if (!uploadResult || !title) {
@@ -58,8 +106,33 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   if (!uploadResult.url || !uploadResult.path) {
     throw new ClipProcessingError(400, { error: 'Invalid upload result' });
   }
+  if (uploadAttemptId !== undefined && !isValidUploadAttemptId(uploadAttemptId)) {
+    throw new ClipProcessingError(400, { error: 'Invalid upload attempt identifier' });
+  }
   if (!['clip', 'reel'].includes(videoType)) {
     throw new ClipProcessingError(400, { error: 'Invalid video type. Must be "clip" or "reel"' });
+  }
+  const gameAccess = await validateDeveloperGameSelection(userId, gameId);
+  if (!gameAccess.allowed) {
+    throw new ClipProcessingError(403, { error: gameAccess.message });
+  }
+
+  // A response can be lost after the server has created the clip. Return that
+  // owner-scoped record rather than consuming quota or creating it again.
+  if (uploadAttemptId) {
+    const existingClip = await storage.getClipByUserAndUploadAttemptId(userId, uploadAttemptId);
+    if (existingClip) {
+      return buildLiveClipResponse(existingClip, userId, true);
+    }
+    const existingScheduledPost = await storage.getScheduledPostByUserAndUploadAttemptId(userId, uploadAttemptId);
+    if (existingScheduledPost) {
+      return {
+        success: true,
+        reconciled: true,
+        scheduled: existingScheduledPost,
+        message: 'This upload was already scheduled.',
+      };
+    }
   }
 
   // Check upload limits before processing (size already validated at the raw-upload
@@ -272,6 +345,7 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
     shareCode,
     uploadIp: uploadIp ?? null,
     uploadDeviceId: uploadDeviceId ?? null,
+    uploadAttemptId: uploadAttemptId ?? null,
   };
   const validatedClipData = insertClipSchema.parse(placeholderClipData);
 
@@ -283,15 +357,32 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
     const { videoUrl, thumbnailUrl, duration } = await runClipProcessingPipeline({
       ...pipelineCtx, uploadResultUrl: uploadResult.url, uploadResultPath: uploadResult.path,
     });
-    const scheduled = await storage.createScheduledPost({
-      userId,
-      contentType: 'clip',
-      scheduledAt,
-      payload: { ...validatedClipData, videoUrl, thumbnailUrl, duration },
-      title: validatedClipData.title,
-      thumbnailUrl: thumbnailUrl || null,
-      videoType,
-    });
+    let scheduled;
+    try {
+      scheduled = await storage.createScheduledPost({
+        userId,
+        contentType: 'clip',
+        scheduledAt,
+        payload: { ...validatedClipData, videoUrl, thumbnailUrl, duration },
+        title: validatedClipData.title,
+        thumbnailUrl: thumbnailUrl || null,
+        videoType,
+        uploadAttemptId: uploadAttemptId ?? null,
+      });
+    } catch (error) {
+      if (uploadAttemptId && isUniqueViolation(error)) {
+        const existing = await storage.getScheduledPostByUserAndUploadAttemptId(userId, uploadAttemptId);
+        if (existing) {
+          return {
+            success: true,
+            reconciled: true,
+            scheduled: existing,
+            message: 'This upload was already scheduled.',
+          };
+        }
+      }
+      throw error;
+    }
     // The file was actually processed/uploaded now, not at the future
     // publish time, so it consumes the window now.
     await storage.incrementUploadUsage(userId, videoType);
@@ -307,7 +398,20 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
   // trim/transcode/thumbnail work runs in the background via
   // finishClipProcessing below (with a periodic reconciler as a safety net
   // if the process restarts mid-job; see server/clip-processing-worker.ts).
-  const clip = await storage.createClip({ ...validatedClipData, status: 'processing', rawUploadPath: uploadResult.path });
+  let clip: Clip;
+  try {
+    clip = await storage.createClip({
+      ...validatedClipData,
+      status: 'processing',
+      rawUploadPath: uploadResult.path,
+    });
+  } catch (error) {
+    if (uploadAttemptId && isUniqueViolation(error)) {
+      const existing = await storage.getClipByUserAndUploadAttemptId(userId, uploadAttemptId);
+      if (existing) return buildLiveClipResponse(existing, userId, true);
+    }
+    throw error;
+  }
   await storage.incrementUploadUsage(userId, videoType);
 
   await XPService.awardXP(
@@ -326,28 +430,29 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
     console.error(`Background processing failed to even start for clip ${clip.id}:`, err);
   });
 
-  const baseUrl = 'https://app.gamefolio.com';
+  return buildLiveClipResponse(clip, userId);
+}
+
+function isGameDeveloper(user: { userType?: string | null; isPartner?: boolean | null; partnerType?: string | null } | null | undefined) {
+  const personas = user?.userType?.split(",").map((type) => type.trim()) ?? [];
+  return personas.includes("indie_developer") || (user?.isPartner === true && user.partnerType === "indie");
+}
+
+export async function validateDeveloperGameSelection(userId: number, gameId: unknown): Promise<{ allowed: boolean; message?: string }> {
   const user = await storage.getUser(userId);
-  const username = user?.username || 'unknown';
-  const contentType = videoType === 'reel' ? 'reel' : 'clip';
-  const clipUrl = `${baseUrl}/@${username}/${contentType}/${clip.shareCode}`;
-  const qrCodeDataUrl = await QRCode.toDataURL(clipUrl);
+  if (!isGameDeveloper(user)) return { allowed: true };
 
-  const socialMediaLinks = {
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(clipUrl)}`,
-    twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out my ${videoType}!`)}&url=${encodeURIComponent(clipUrl)}`,
-    reddit: `https://www.reddit.com/submit?url=${encodeURIComponent(clipUrl)}&title=${encodeURIComponent(`Check out this gaming ${videoType}!`)}`,
-    discord: clipUrl
-  };
-
-  return {
-    success: true,
-    clip: { ...clip, qrCode: qrCodeDataUrl, shareUrl: clipUrl, socialMediaLinks },
-    xpGained: 250,
-    userXP: user?.totalXP || 0,
-    userLevel: user?.level || 1,
-    message: 'Upload received — your clip is processing and will appear on your profile shortly.'
-  };
+  const parsedGameId = Number(gameId);
+  if (!Number.isInteger(parsedGameId) || parsedGameId <= 0) {
+    return { allowed: false, message: "Select one of your own games before uploading." };
+  }
+  const [ownedProfile] = await db.select({ id: indieGameProfiles.id })
+    .from(indieGameProfiles)
+    .where(and(eq(indieGameProfiles.userId, userId), eq(indieGameProfiles.catalogGameId, parsedGameId)))
+    .limit(1);
+  return ownedProfile
+    ? { allowed: true }
+    : { allowed: false, message: "Game Developers can only upload content for games they manage." };
 }
 
 interface ClipPipelineContext {

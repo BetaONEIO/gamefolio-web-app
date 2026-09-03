@@ -6,6 +6,7 @@ import { isNative, platform } from "@/lib/platform";
 import { AuthContext } from "./use-auth";
 import { useToast } from "./use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from "@/lib/feature-flags";
 
 // Minimal CustomerInfo shape the app actually reads. Both the native
 // StoreKit/Play SDK (@revenuecat/purchases-capacitor) and the web Billing SDK
@@ -382,6 +383,14 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
   // purchasePackage, since the two tiers have different backend activation
   // endpoints and success copy.
   const purchaseIndieDevPackage = useCallback(async (pkg: RcPackage): Promise<boolean> => {
+    if (!GAME_DEVELOPER_PRO_PURCHASES_ENABLED) {
+      toast({
+        title: "Game Developer Pro is coming soon",
+        description: "Purchases are not available yet.",
+      });
+      return false;
+    }
+
     const notReady = () =>
       toast({
         title: "Not ready",
@@ -421,7 +430,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
         }
         toast({
           title: "Welcome to Game Developer!",
-          description: "You can now run up to 5 active bounties at once.",
+          description: "Your Game Developer benefits are now active.",
           variant: "gamefolioSuccess",
         });
         return true;

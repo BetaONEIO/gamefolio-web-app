@@ -20,15 +20,18 @@ import { XPService } from "./xp-service";
 import { createInsertSchema } from "drizzle-zod";
 import { insertUserSchema, insertClipSchema, insertCommentSchema, insertLikeSchema, insertFollowSchema, insertUserGameFavoriteSchema, insertMessageSchema, insertClipReactionSchema, insertUserBlockSchema, insertScreenshotCommentSchema, insertScreenshotReactionSchema, insertCommentReportSchema, insertClipReportSchema, insertScreenshotReportSchema, insertNftWatchlistSchema, insertBookmarkSchema } from "@shared/schema";
 import { promisify } from "util";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
 import { eq, sql, desc, inArray, and } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
 import { captureRouteError } from "./sentry";
+import { notifyOnboardingComplete } from "./telegram-notify";
 import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
 import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog } from "@shared/schema";
+import { hasIndieDeveloperAccess } from "@shared/partner-access";
+import { SEASON_DEFS } from "@shared/season-definitions";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -381,6 +384,8 @@ declare global {
       authProvider?: string | null;
       externalId?: string | null;
       isPrivate?: boolean;
+      isPartner?: boolean | null;
+      partnerType?: string | null;
     }
   }
 }
@@ -2812,7 +2817,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       : undefined;
 
     try {
-      const freshUser = await storage.getUserById((req.user as any).id);
+      const authenticatedUserId = (req.user as any).id;
+      // Users who remain signed in restore their existing session through this
+      // endpoint instead of running a login handler. Claim the daily streak
+      // here too; updateLoginStreak's atomic 20-hour guard prevents repeats.
+      const streakInfo = impersonation
+        ? null
+        : await StreakService.updateLoginStreak(authenticatedUserId);
+      const freshUser = await storage.getUserById(authenticatedUserId);
       if (freshUser) {
         const { password, ...u } = freshUser as any;
         if (u.username === 'busyguy') {
@@ -2826,6 +2838,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           emailVerified: u.emailVerified || false,
           profilePictureUrl: u.profilePictureUrl,
           bio: u.bio,
+          clanTag: u.clanTag || null,
           bannerUrl: u.bannerUrl,
           displayName: u.displayName,
           backgroundColor: u.backgroundColor,
@@ -2930,6 +2943,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           vpzoneShowOnProfile: u.vpzoneShowOnProfile ?? true,
           referralCode: u.referralCode || null,
           referredBy: u.referredBy || null,
+          ...(streakInfo && !streakInfo.isFirstLogin ? {
+            streakInfo: {
+              currentStreak: streakInfo.currentStreak,
+              bonusAwarded: streakInfo.bonusAwarded,
+              dailyXP: streakInfo.dailyXP,
+              longestStreak: u.longestStreak || 0,
+              nextMilestone: streakInfo.currentStreak + (5 - (streakInfo.currentStreak % 5)),
+              message: streakInfo.message,
+              isNewMilestone: streakInfo.isNewMilestone,
+            },
+          } : {}),
           impersonatedBy,
         });
       }
@@ -3080,7 +3104,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ALTER TABLE indie_game_profiles
           ADD COLUMN IF NOT EXISTS age_rating TEXT,
           ADD COLUMN IF NOT EXISTS supported_languages TEXT[],
-          ADD COLUMN IF NOT EXISTS content_descriptors TEXT[]
+          ADD COLUMN IF NOT EXISTS content_descriptors TEXT[],
+          ADD COLUMN IF NOT EXISTS catalog_game_id INTEGER REFERENCES games(id) ON DELETE SET NULL
+      `);
+      await db.execute(sql`
+        CREATE UNIQUE INDEX IF NOT EXISTS indie_game_profiles_catalog_game_id_unique
+        ON indie_game_profiles (catalog_game_id)
+        WHERE catalog_game_id IS NOT NULL
       `);
     } catch (err) {
       // Columns already exist or other harmless error
@@ -4469,15 +4499,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Season history — top 3 per season, aggregated from monthly_leaderboard
-  const SEASON_DEFS = [
-    { num: 8, name: "Summer Showdown", icon: "sun",    dateRange: "Jun – Aug 2026",      months: ["2026-06","2026-07","2026-08"] },
-    { num: 7, name: "Spring Clash",    icon: "leaf",   dateRange: "Mar – May 2026",      months: ["2026-03","2026-04","2026-05"] },
-    { num: 6, name: "Winter Warzone",  icon: "snow",   dateRange: "Dec 2025 – Feb 2026", months: ["2025-12","2026-01","2026-02"] },
-    { num: 5, name: "Autumn Assault",  icon: "flame",  dateRange: "Sep – Nov 2025",      months: ["2025-09","2025-10","2025-11"] },
-    { num: 4, name: "Summer Heat",     icon: "sun",    dateRange: "Jun – Aug 2025",      months: ["2025-06","2025-07","2025-08"] },
-    { num: 3, name: "Spring Surge",    icon: "leaf",   dateRange: "Mar – May 2025",      months: ["2025-03","2025-04","2025-05"] },
-  ];
-
   app.get("/api/leaderboard/season-history", async (req, res) => {
     try {
       const seasons = await Promise.all(
@@ -7287,6 +7308,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      if (typeof req.body.clanTag === "string") {
+        const trimmed = req.body.clanTag.trim();
+        if (trimmed === "") {
+          req.body.clanTag = null; // Empty input clears the tag
+        } else if (!/^[A-Z0-9]{1,4}$/i.test(trimmed)) {
+          validationErrors.push("Clan Tag: must be 1-4 letters/numbers only");
+        } else {
+          req.body.clanTag = trimmed.toUpperCase();
+        }
+      }
+
       const steamUrlError = validatePlatformUrl(req.body.gameSteamUrl, "steam");
       if (steamUrlError) validationErrors.push(`Steam: ${steamUrlError}`);
       const epicUrlError = validatePlatformUrl(req.body.gameEpicUrl, "epic");
@@ -7303,7 +7335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sensitive/system fields (gfTokenBalance, isPro, level, totalXP, etc.)
       // are managed by dedicated server-side routes only.
       const ALLOWED_PROFILE_FIELDS = new Set([
-        "username", "displayName", "bio", "userType", "location", "website",
+        "username", "displayName", "bio", "clanTag", "userType", "location", "website",
         "dateOfBirth", "avatarUrl", "bannerUrl", "activeProfilePicType",
         "avatarBorderColor", "primaryColor", "secondaryColor", "accentColor",
         "backgroundColor", "cardColor", "layoutStyle", "showUserType",
@@ -7367,10 +7399,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Onboarding completion is what first writes user_type (see
+      // client/src/components/auth/onboarding-flow.tsx). Read the prior value
+      // so the Telegram notification only fires on the null -> set transition,
+      // not every time someone edits their persona from Settings later.
+      let userTypeWasUnset = false;
+      if (typeof safeBody.userType === "string" && safeBody.userType) {
+        const before = await storage.getUser(userId);
+        userTypeWasUnset = !before?.userType;
+      }
+
       // Update the user profile
       const updatedUser = await storage.updateUser(userId, safeBody);
       if (!updatedUser) {
         return res.status(404).json({ message: "User not found" });
+      }
+
+      if (userTypeWasUnset && updatedUser.userType) {
+        notifyOnboardingComplete(updatedUser);
       }
 
       // Remove password from response
@@ -11711,10 +11757,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/indie/profile/upload-image — upload capsule or header image for the indie game profile
   app.post("/api/indie/profile/upload-image", indieProfileImageUpload.single('image'), async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       if (!req.file) return res.status(400).json({ message: "No file provided" });
       if (!req.file.path || !fs.existsSync(req.file.path)) return res.status(400).json({ message: "Uploaded file not found" });
       const field = (req.body?.field === "headerImageUrl") ? "headerImageUrl" : "capsuleImageUrl";
+      const uploadGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !uploadGameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
       const sharpInstance = sharp(req.file.path);
       const metadata = await sharpInstance.metadata();
       if (!metadata.width || !metadata.height) return res.status(400).json({ message: "Invalid image" });
@@ -11726,7 +11777,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { url: imageUrl } = await supabaseStorage.uploadBuffer(processedBuffer, fileName, "image/jpeg", "image", req.user.id);
       try { await fsPromises.unlink(req.file.path); } catch {}
       const { indieGameProfiles } = await import("@shared/schema");
-      const uploadGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
       let targetGameId = uploadGameId;
       if (targetGameId) {
         await db.update(indieGameProfiles).set({ [field]: imageUrl }).where(eq(indieGameProfiles.id, targetGameId));
@@ -11736,7 +11786,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       // Clear useImported so GET /api/indie/profile returns the uploaded URL, not a stale imported value
       await _indieUpsertMeta(req.user.id, field, { isManualOverride: true, useImported: false, lastEditedAt: new Date() }, targetGameId);
-      res.json({ url: imageUrl, field });
+      const [updatedProfile] = targetGameId
+        ? await db.select().from(indieGameProfiles).where(eq(indieGameProfiles.id, targetGameId)).limit(1)
+        : [];
+      const catalogue = updatedProfile ? await _syncIndieGameCatalogue(updatedProfile) : { game: null };
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
+      res.json({ url: imageUrl, field, catalogueGame: catalogue.game });
     } catch (err) {
       console.error("Error uploading indie profile image:", err);
       res.status(500).json({ message: "Upload failed" });
@@ -11749,13 +11806,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // share the same underlying indie_game_profiles data).
   app.post("/api/indie/profile/upload-trailer", indieProfileTrailerUpload.single('video'), async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       if (!req.file) return res.status(400).json({ message: "No file provided" });
+      const uploadGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !uploadGameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
       const ext = (req.file.originalname.split('.').pop() || 'mp4').toLowerCase();
       const fileName = `indie-trailer-${req.user.id}-${Date.now()}.${ext}`;
       const { url: trailerUrl } = await supabaseStorage.uploadBuffer(req.file.buffer, fileName, req.file.mimetype, 'video', req.user.id);
       const { indieGameProfiles } = await import("@shared/schema");
-      const uploadGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
       let targetGameId = uploadGameId;
       if (targetGameId) {
         await db.update(indieGameProfiles).set({ trailerUrl, updatedAt: new Date() }).where(eq(indieGameProfiles.id, targetGameId));
@@ -11995,7 +12056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Store links are validated against their platform's host so a link pasted
   // into the wrong field is rejected rather than silently breaking imports.
-  const { validateStoreUrls } = await import("@shared/store-urls");
+  const { validateStoreUrls, normalizeProfileUrls } = await import("@shared/store-urls");
 
   // Store lookups, factored out so the partner-only preview endpoints and the
   // onboarding-time lookup below share one implementation.
@@ -12121,7 +12182,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "headerImageUrl","capsuleImageUrl","trailerUrl","screenshotUrls",
     "platforms",
     "steamUrl","steamAppId","epicUrl","epicSlug","itchUrl",
-    "websiteUrl","twitterUrl","discordUrl",
+    "websiteUrl","twitterUrl","discordUrl","youtubeUrl","twitchUrl","instagramUrl","facebookUrl","tiktokUrl",
+    "ageRating","supportedLanguages","contentDescriptors",
+    "autoSyncEnabled","preferredSyncSource",
   ];
 
   // Game quotas: a free developer gets two games; an indie-dev subscriber gets ten.
@@ -12149,8 +12212,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { db } = await import("./db");
     const { eq, and, asc } = await import("drizzle-orm");
 
+    const isExplicitlyRequested = requested !== undefined && requested !== null && requested !== "";
     const wanted = Number(requested);
-    if (Number.isInteger(wanted) && wanted > 0) {
+    if (isExplicitlyRequested && (!Number.isInteger(wanted) || wanted <= 0)) {
+      return null;
+    }
+    if (isExplicitlyRequested) {
       const [owned] = await db.select({ id: indieGameProfiles.id })
         .from(indieGameProfiles)
         .where(and(eq(indieGameProfiles.id, wanted), eq(indieGameProfiles.userId, userId)));
@@ -12171,16 +12238,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return first?.id ?? null;
   }
 
-  // GET /api/indie/profile — owner: full profile + field meta (partner access only)
+  type IndieCatalogueSyncResult = {
+    game: { id: number; name: string; imageUrl: string | null } | null;
+    conflict?: string;
+  };
+
+  // An Indie profile is the source of truth for a developer-owned game, while
+  // `games` is the catalogue used by uploads and community content. Reconcile
+  // the two through an explicit ID link so renaming a game never disconnects
+  // its clips/screenshots and title matches cannot attach another dev's game.
+  async function _syncIndieGameCatalogue(profile: any): Promise<IndieCatalogueSyncResult> {
+    const name = String(profile?.gameName ?? "").trim();
+    if (!name) return { game: null };
+
+    const { indieGameProfiles } = await import("@shared/schema");
+    const artwork = profile.capsuleImageUrl || profile.headerImageUrl || null;
+    const matchingName = async () => {
+      const [match] = await db.select().from(games)
+        .where(sql`lower(${games.name}) = lower(${name})`)
+        .limit(1);
+      return match ?? null;
+    };
+
+    const linked = profile.catalogGameId ? await storage.getGame(profile.catalogGameId) : null;
+    if (linked) {
+      const sameName = await matchingName();
+      if (sameName && sameName.id !== linked.id) {
+        return { game: null, conflict: "A different Gamefolio catalogue entry already uses this game name. Rename your game or contact support to merge the entries." };
+      }
+
+      // Only modify metadata for the catalogue row created by this indie flow.
+      // A pre-existing provider catalogue entry may be linked below, but its
+      // metadata must remain provider-owned.
+      if (linked.isUserAdded && !linked.showContactBanner) {
+        const updated = await storage.updateGame(linked.id, {
+          name,
+          imageUrl: artwork ?? linked.imageUrl,
+          isApproved: true,
+          showContactBanner: false,
+        });
+        if (updated) return { game: updated };
+      }
+      return { game: linked };
+    }
+
+    const existing = await matchingName();
+    if (existing) {
+      const [linkedElsewhere] = await db.select({ id: indieGameProfiles.id })
+        .from(indieGameProfiles)
+        .where(eq(indieGameProfiles.catalogGameId, existing.id))
+        .limit(1);
+      if (linkedElsewhere && linkedElsewhere.id !== profile.id) {
+        return { game: null, conflict: "This catalogue game is already managed by another indie profile. Choose a distinct title or contact support." };
+      }
+      if (existing.isUserAdded) {
+        return { game: null, conflict: "A community-submitted game already uses this title. Rename your game or contact support to safely merge the entries." };
+      }
+
+      await db.update(indieGameProfiles)
+        .set({ catalogGameId: existing.id, updatedAt: new Date() })
+        .where(eq(indieGameProfiles.id, profile.id));
+      profile.catalogGameId = existing.id;
+      return { game: existing };
+    }
+
+    const created = await storage.createGame({
+      name,
+      imageUrl: artwork,
+      isUserAdded: true,
+      isApproved: true,
+      showContactBanner: false,
+    });
+    await db.update(indieGameProfiles)
+      .set({ catalogGameId: created.id, updatedAt: new Date() })
+      .where(eq(indieGameProfiles.id, profile.id));
+    profile.catalogGameId = created.id;
+    return { game: created };
+  }
+
+  // GET /api/indie/profile — owner: full profile + field meta
   // Resolution model: when useImported is true for a field, the resolved profile value
   // should reflect the importedValue rather than the manually-edited value.
   app.get("/api/indie/profile", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       // ?gameId= selects one of the developer's games; omitted means primary.
       const gameId = await _indieResolveGameId(req.user.id, req.query.gameId);
-      if (req.query.gameId && !gameId) return res.status(404).json({ error: "Game not found" });
+      if (req.query.gameId != null && req.query.gameId !== "" && !gameId) return res.status(404).json({ error: "Game not found" });
       // Read-only: do NOT create a profile here. Auto-creating was harmless when
       // a user could only ever have one, but now it spends a slot from their
       // quota on a nameless placeholder just for opening the dashboard — a free
@@ -12212,7 +12357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // PUT /api/indie/profile — owner: manually update profile fields
   app.put("/api/indie/profile", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       const { indieGameProfiles } = await import("@shared/schema");
       const { db } = await import("./db");
@@ -12222,6 +12367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (key in req.body) patch[key] = req.body[key];
       }
       if (Object.keys(patch).length === 0) return res.status(400).json({ error: "No valid fields provided" });
+      normalizeProfileUrls(patch);
       const urlErrors = validateStoreUrls(patch);
       if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
       patch.updatedAt = new Date();
@@ -12230,7 +12376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 0020 has removed the UNIQUE(user_id) constraint.
       const requestedGameId = req.body.gameId ?? req.query.gameId;
       const gameId = await _indieResolveGameId(req.user.id, requestedGameId);
-      if (requestedGameId && !gameId) return res.status(404).json({ error: "Game not found" });
+      if (requestedGameId != null && requestedGameId !== "" && !gameId) return res.status(404).json({ error: "Game not found" });
       let profile;
       if (gameId) {
         const up = await db.update(indieGameProfiles).set(patch).where(eq(indieGameProfiles.id, gameId)).returning();
@@ -12244,8 +12390,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (key === "updatedAt") continue;
         await _indieUpsertMeta(req.user.id, key, { isManualOverride: true, useImported: false, lastEditedAt: now }, profile?.id);
       }
+      // Catalogue reconciliation only depends on the game's name and artwork.
+      // Avoid doing those extra lookups for unrelated fields such as platforms,
+      // which should feel like an immediate multi-select interaction.
+      const catalogueFields = new Set(["gameName", "capsuleImageUrl", "headerImageUrl"]);
+      const needsCatalogueSync = Object.keys(patch).some((key) => catalogueFields.has(key));
+      const catalogue = profile && needsCatalogueSync
+        ? await _syncIndieGameCatalogue(profile)
+        : { game: null };
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
       const fieldMeta = await _indieFieldMetaMap(req.user.id, profile?.id);
-      res.json({ profile, fieldMeta });
+      res.json({ profile, fieldMeta, catalogueGame: catalogue.game });
     } catch (err) {
       console.error("PUT /api/indie/profile error:", err);
       res.status(500).json({ error: "Failed to update profile" });
@@ -12272,6 +12429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
+      normalizeProfileUrls(patch);
       const urlErrors = validateStoreUrls(patch);
       if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
       patch.updatedAt = new Date();
@@ -12291,7 +12449,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .values({ userId: userId, ...patch, isPrimary: true }).returning();
         profile = ins[0];
       }
-      res.json({ profile });
+      const catalogue = await _syncIndieGameCatalogue(profile);
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
+      res.json({ profile, catalogueGame: catalogue.game });
     } catch (err) {
       console.error("POST /api/indie/onboarding-profile error:", err);
       res.status(500).json({ error: "Failed to save game profile" });
@@ -12470,6 +12632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (key in req.body && req.body[key] !== "" && req.body[key] != null) patch[key] = req.body[key];
       }
       if (!patch.gameName) return res.status(400).json({ error: "gameName is required" });
+      normalizeProfileUrls(patch);
       const urlErrors = validateStoreUrls(patch);
       if (urlErrors.length > 0) return res.status(400).json({ error: urlErrors[0], errors: urlErrors, code: "INVALID_STORE_URL" });
 
@@ -12496,7 +12659,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sortOrder: existing.length,
         updatedAt: new Date(),
       }).returning();
-      res.status(201).json({ game });
+      const catalogue = await _syncIndieGameCatalogue(game);
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
+      res.status(201).json({ game, catalogueGame: catalogue.game });
     } catch (err) {
       console.error("POST /api/indie/games error:", err);
       res.status(500).json({ error: "Failed to create game" });
@@ -12568,7 +12735,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/indie/steam/preview?appId= — preview Steam data without saving
   app.get("/api/indie/steam/preview", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const appId = (req.query.appId as string || "").replace(/\D/g, "");
     if (!appId) return res.status(400).json({ error: "Valid numeric appId required" });
     try {
@@ -12584,7 +12751,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // GET /api/indie/epic/preview?slug= — preview Epic Games data without saving
   app.get("/api/indie/epic/preview", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const slug = (req.query.slug as string || "").trim().toLowerCase();
     if (!slug) return res.status(400).json({ error: "slug required (from Epic store URL)" });
     try {
@@ -12771,7 +12938,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // later choose to revert to it via the Revert button or sync-apply.
   app.post("/api/indie/import", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const { source, fields, steamAppId: reqAppId, epicSlug: reqSlug, itchGameUrl } = req.body;
     if (!source || !fields || typeof fields !== "object") return res.status(400).json({ error: "source and fields object required" });
     try {
@@ -12780,7 +12947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { eq } = await import("drizzle-orm");
       const now = new Date();
       const importGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
-      if ((req.body.gameId ?? req.query.gameId) && !importGameId) {
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !importGameId) {
         return res.status(404).json({ error: "Game not found" });
       }
 
@@ -12846,10 +13013,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }, metaGameId);
       }
 
+      const catalogue = profile ? await _syncIndieGameCatalogue(profile) : { game: null };
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
       const fieldMeta = await _indieFieldMetaMap(req.user.id, metaGameId);
       res.json({
         profile,
         fieldMeta,
+        catalogueGame: catalogue.game,
         imported: Object.keys(patch).length - 2,  // subtract updatedAt + timestamp fields
         protected: protected_fields,
         message: protected_fields.length
@@ -12865,9 +13037,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/indie/sync-check — diff current profile vs live store data
   app.post("/api/indie/sync-check", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       const gameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !gameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
       const profile = await _indieGetOrCreate(req.user.id, gameId);
       const fieldMeta = await _indieFieldMetaMap(req.user.id, gameId);
       let storeData: Record<string, any> | null = null;
@@ -12910,7 +13085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // and always applies them, clearing isManualOverride so the field tracks the store source.
   app.post("/api/indie/sync-apply", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const { fields, source } = req.body;
     if (!Array.isArray(fields)) return res.status(400).json({ error: "fields array required" });
     try {
@@ -12918,6 +13093,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { db } = await import("./db");
       const { eq } = await import("drizzle-orm");
       const syncGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !syncGameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
       const patch: Record<string, any> = {};
       const applied: string[] = [];
       const now = new Date();
@@ -12939,12 +13117,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             importSource: source || "store",
             isManualOverride: false,
             lastImportedAt: now,
-          });
+          }, syncGameId);
         }
       }
       const profile = await _indieGetOrCreate(req.user.id, syncGameId);
+      const catalogue = await _syncIndieGameCatalogue(profile);
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
       const fieldMetaNew = await _indieFieldMetaMap(req.user.id, syncGameId);
-      res.json({ profile, fieldMeta: fieldMetaNew, applied, skipped: [] });
+      res.json({ profile, fieldMeta: fieldMetaNew, applied, skipped: [], catalogueGame: catalogue.game });
     } catch (err) {
       console.error("POST /api/indie/sync-apply error:", err);
       res.status(500).json({ error: "Sync apply failed" });
@@ -12956,7 +13138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // this is a single-field explicit revert that always succeeds if there is an importedValue.
   app.post("/api/indie/field-revert", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const { fieldName } = req.body;
     if (!fieldName || typeof fieldName !== "string" || !INDIE_ALLOWED_FIELDS.includes(fieldName)) {
       return res.status(400).json({ error: "Valid fieldName required" });
@@ -12988,8 +13170,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastEditedAt: now,
       });
       const profile = await _indieGetOrCreate(req.user.id, revertGameId);
+      const catalogue = await _syncIndieGameCatalogue(profile);
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
       const fieldMetaNew = await _indieFieldMetaMap(req.user.id, revertGameId);
-      res.json({ profile, fieldMeta: fieldMetaNew, reverted: fieldName, value: importedValue });
+      res.json({ profile, fieldMeta: fieldMetaNew, reverted: fieldName, value: importedValue, catalogueGame: catalogue.game });
     } catch (err) {
       console.error("POST /api/indie/field-revert error:", err);
       res.status(500).json({ error: "Revert failed" });
@@ -12999,7 +13185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/indie/upload/image — upload header or capsule image for indie profile
   app.post("/api/indie/upload/image", upload.single('image'), async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const field = req.body?.field === 'capsule' ? 'capsuleImageUrl' : 'headerImageUrl';
     try {
       if (!req.file) return res.status(400).json({ error: "No file uploaded" });
@@ -13026,7 +13212,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         imgTargetId = created?.id ?? null;
       }
       await _indieUpsertMeta(req.user.id, field, { isManualOverride: true, lastEditedAt: new Date() }, imgTargetId);
-      res.json({ url: imageUrl, field });
+      const [updatedProfile] = imgTargetId
+        ? await db.select().from(indieGameProfiles).where(eq(indieGameProfiles.id, imgTargetId)).limit(1)
+        : [];
+      const catalogue = updatedProfile ? await _syncIndieGameCatalogue(updatedProfile) : { game: null };
+      if (catalogue.conflict) {
+        return res.status(409).json({ error: catalogue.conflict, code: "CATALOGUE_NAME_CONFLICT" });
+      }
+      res.json({ url: imageUrl, field, catalogueGame: catalogue.game });
     } catch (err) {
       console.error("POST /api/indie/upload/image error:", err);
       try { if (req.file?.path) await fsPromises.unlink(req.file.path); } catch {}
@@ -13037,7 +13230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/indie/upload/trailer — upload a trailer video for an indie game
   app.post("/api/indie/upload/trailer", indieTrailerUpload.single('video'), async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       if (!req.file) return res.status(400).json({ error: "No file uploaded" });
       const ext = (req.file.originalname.split('.').pop() || 'mp4').toLowerCase();
@@ -13065,7 +13258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // POST /api/indie/upload/screenshot — upload and append a screenshot
   app.post("/api/indie/upload/screenshot", screenshotUpload.array('screenshot', 20), async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       const files = (req.files as Express.Multer.File[] | undefined) ?? [];
       if (files.length === 0) return res.status(400).json({ error: "No file uploaded" });
@@ -13073,6 +13266,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { db } = await import("./db");
       const { eq, sql } = await import("drizzle-orm");
       const shotGameId = await _indieResolveGameId(req.user.id, req.body.gameId ?? req.query.gameId);
+      if ((req.body.gameId ?? req.query.gameId) != null && (req.body.gameId ?? req.query.gameId) !== "" && !shotGameId) {
+        return res.status(404).json({ error: "Game not found" });
+      }
       const ex = shotGameId
         ? await db.select({ screenshotUrls: indieGameProfiles.screenshotUrls }).from(indieGameProfiles).where(eq(indieGameProfiles.id, shotGameId))
         : [];
@@ -13114,7 +13310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // DELETE /api/indie/screenshot — remove a screenshot URL from the array
   app.delete("/api/indie/screenshot", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Indie developer access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const { url } = req.body;
     if (!url || typeof url !== 'string') return res.status(400).json({ error: "url required" });
     try {
@@ -13146,12 +13342,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!result) return res.status(404).json({ error: "Indie game profile not found" });
       const { user, profile } = result;
       if (!profile) return res.status(404).json({ error: "Indie game profile not found" });
-      // Indie profile records pre-date the canonical games table. Resolve the
-      // existing game by its name without creating a record, so community
-      // content is only shown when it is genuinely associated with this game.
-      const canonicalGame = profile.gameName?.trim()
-        ? await storage.getGameByName(profile.gameName.trim())
+      // Prefer the explicit relationship created by the indie write paths.
+      // Legacy profiles receive the same idempotent reconciliation the next
+      // time their public hub is opened, so they are not left with a permanent
+      // “waiting for catalogue” state after this feature ships.
+      let canonicalGame = profile.catalogGameId
+        ? await storage.getGame(profile.catalogGameId)
         : null;
+      if (!canonicalGame && profile.gameName?.trim()) {
+        const catalogue = await _syncIndieGameCatalogue(profile);
+        canonicalGame = catalogue.game;
+      }
       res.json({
         user: { id: user.id, username: user.username, displayName: user.displayName, avatarUrl: user.avatarUrl, bio: user.bio, level: user.level, totalXP: user.totalXP, currentStreak: user.currentStreak },
         profile,
@@ -13165,6 +13366,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public profile associated with a catalogue game. The Indie Game page is
+  // addressed by game slug, not developer username, so resolve by game ID.
+  app.get("/api/games/:gameId/indie-profile", async (req, res) => {
+    try {
+      const gameId = parseInt(req.params.gameId, 10);
+      if (!Number.isFinite(gameId)) return res.status(400).json({ error: "Invalid game ID" });
+      const { db } = await import("./db");
+      const { indieGameProfiles } = await import("@shared/schema");
+      const { and, eq, isNull, sql } = await import("drizzle-orm");
+      let [profile] = await db.select().from(indieGameProfiles)
+        .where(eq(indieGameProfiles.catalogGameId, gameId))
+        .limit(1);
+      if (!profile) {
+        const game = await storage.getGame(gameId);
+        if (!game) return res.status(404).json({ error: "Game not found" });
+        const legacyMatches = await db.select().from(indieGameProfiles)
+          .where(and(
+            isNull(indieGameProfiles.catalogGameId),
+            sql`lower(trim(${indieGameProfiles.gameName})) = lower(trim(${game.name}))`,
+          ))
+          .limit(2);
+        if (legacyMatches.length === 1) {
+          const [linked] = await db.update(indieGameProfiles)
+            .set({ catalogGameId: gameId, updatedAt: new Date() })
+            .where(eq(indieGameProfiles.id, legacyMatches[0].id))
+            .returning();
+          profile = linked;
+        }
+      }
+      if (!profile) return res.status(404).json({ error: "Indie game profile not found" });
+      const user = await storage.getUserById(profile.userId);
+      if (!user) return res.status(404).json({ error: "Developer not found" });
+      res.json({
+        user: {
+          id: user.id,
+          username: user.username,
+          displayName: user.displayName,
+          avatarUrl: user.avatarUrl,
+          bio: user.bio,
+          level: user.level,
+          totalXP: user.totalXP,
+          currentStreak: user.currentStreak,
+        },
+        profile,
+      });
+    } catch (err) {
+      console.error("GET /api/games/:gameId/indie-profile error:", err);
+      res.status(500).json({ error: "Failed to fetch profile" });
+    }
+  });
+
   // GET /api/games/indie/:username/list — public list of a developer's games,
   // for the profile-page game switcher (no auth required).
   app.get("/api/games/indie/:username/list", async (req, res) => {
@@ -13174,6 +13426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         games: result.profiles.map(p => ({
           id: p.id,
+          catalogGameId: p.catalogGameId,
           gameName: p.gameName,
           headerImageUrl: p.headerImageUrl,
           capsuleImageUrl: p.capsuleImageUrl,
@@ -13235,47 +13488,179 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ─── Indie Game Management: Creator Content ───────────────────────────────
   app.get("/api/indie/creator-content", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
-    const { type = "all", sort = "newest" } = req.query as any;
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    const { type = "all", sort = "newest", source = "all", gameId: rawGameId } = req.query as any;
+    const requestedProfileId = rawGameId == null || rawGameId === "" ? null : Number.parseInt(String(rawGameId), 10);
+    if (requestedProfileId != null && (!Number.isInteger(requestedProfileId) || requestedProfileId <= 0)) {
+      return res.status(400).json({ error: "Invalid gameId" });
+    }
+    let ownedGames: Array<{ id: number; name: string | null; imageUrl: string | null }> = [];
     try {
       const { db } = await import("./db");
       const { sql } = await import("drizzle-orm");
-      // Find the indie profile to get the game name
+
+      // Use the explicit catalogue relationship rather than title matching. A
+      // developer can manage more than one game, and a renamed game must not
+      // accidentally pick up a different catalogue title's content.
+      const profileFilter = requestedProfileId == null ? sql`` : sql`AND igp.id = ${requestedProfileId}`;
       const profileRows = await db.execute(sql`
-        SELECT game_name FROM indie_game_profiles WHERE user_id = ${req.user.id} LIMIT 1
+        SELECT igp.catalog_game_id AS "catalogGameId",
+               COALESCE(g.name, igp.game_name, CONCAT('Game ', igp.catalog_game_id::text)) AS "gameName",
+               g.image_url AS "imageUrl"
+        FROM indie_game_profiles igp
+        LEFT JOIN games g ON g.id = igp.catalog_game_id
+         WHERE igp.user_id = ${req.user.id} AND igp.catalog_game_id IS NOT NULL ${profileFilter}
       `);
-      const gameName = (profileRows.rows?.[0] as any)?.game_name;
-      if (!gameName) return res.json({ items: [] });
+      ownedGames = (profileRows.rows ?? [])
+        .map((row: any) => ({ id: Number(row.catalogGameId), name: row.gameName ?? null, imageUrl: row.imageUrl ?? null }))
+        .filter((game: { id: number }) => Number.isInteger(game.id) && game.id > 0);
+      const ownedGameIds = ownedGames.map((game: { id: number }) => game.id);
+      const ownedGameIdsSql = sql`ARRAY[${sql.join(ownedGameIds.map((id: number) => sql`${id}`), sql`, `)}]::int[]`;
 
-      const orderBy = sort === "most_viewed" ? "c.views DESC" : sort === "most_liked" ? "c.likes DESC" : "c.created_at DESC";
-      let items: any[] = [];
+      const normalizedType = String(type).toLowerCase();
+      const normalizedSort = String(sort).toLowerCase();
+      const normalizedSource = String(source).toLowerCase();
+      const sourceFilter = normalizedSource === "publisher" || normalizedSource === "creator"
+        ? normalizedSource
+        : "all";
+      const wantsClips = normalizedType === "all" || normalizedType === "clip" || normalizedType === "clips";
+      const wantsReels = normalizedType === "all" || normalizedType === "reel" || normalizedType === "reels";
+      const wantsScreenshots = normalizedType === "all" || normalizedType === "screenshot" || normalizedType === "screenshots";
+      const videoTypeFilter = wantsClips && wantsReels
+        ? sql``
+        : wantsReels
+          ? sql`AND c.video_type = 'reel'`
+          : sql`AND (c.video_type = 'clip' OR c.video_type IS NULL)`;
+      const videoSourceFilter = sourceFilter === "publisher"
+        ? sql`AND c.user_id = ${req.user.id}`
+        : sourceFilter === "creator"
+          ? sql`AND c.user_id <> ${req.user.id}`
+          : sql``;
+      const screenshotSourceFilter = sourceFilter === "publisher"
+        ? sql`AND s.user_id = ${req.user.id}`
+        : sourceFilter === "creator"
+          ? sql`AND s.user_id <> ${req.user.id}`
+          : sql``;
+      const clipSort = normalizedSort === "most_viewed"
+        ? sql`c.views DESC, c.created_at DESC`
+        : normalizedSort === "most_liked"
+          ? sql`c.created_at DESC`
+          : sql`c.created_at DESC`;
+      const screenshotSort = normalizedSort === "most_viewed"
+        ? sql`s.views DESC, s.created_at DESC`
+        : sql`s.created_at DESC`;
 
-      if (type === "all" || type === "clips") {
+      const emptyResponse = {
+        ownedGames,
+        ownedGameContent: [] as any[],
+        ownedGameContentTotal: 0,
+        // Keep older callers working while they migrate to the grouped fields.
+        items: [] as any[],
+      };
+
+      const loadVideos = async () => {
+        if (!wantsClips && !wantsReels) return [];
+        if (ownedGameIds.length === 0) return [];
         const rows = await db.execute(sql`
-          SELECT c.id, 'clip' AS type, c.title, c.thumbnail_url AS "thumbnailUrl", c.views, c.likes, u.username, c.created_at AS "createdAt"
+          SELECT
+            c.id,
+            CASE WHEN c.video_type = 'reel' THEN 'reel' ELSE 'clip' END AS type,
+            c.title,
+            c.thumbnail_url AS "thumbnailUrl",
+            COALESCE(c.views, 0) AS views,
+            0 AS likes,
+            c.user_id = ${req.user.id} AS "isDeveloperUpload",
+            u.username AS "creatorUsername",
+            g.id AS "gameId",
+            g.name AS "gameName",
+            c.created_at AS "createdAt"
           FROM clips c
           JOIN users u ON u.id = c.user_id
           JOIN games g ON g.id = c.game_id
-          WHERE g.name ILIKE ${'%' + gameName + '%'} AND c.user_id != ${req.user.id}
-          ORDER BY c.created_at DESC LIMIT 20
+          WHERE c.game_id = ANY(${ownedGameIdsSql}) ${videoTypeFilter} ${videoSourceFilter}
+          ORDER BY ${clipSort}
+          LIMIT 30
         `);
-        items = [...items, ...(rows.rows ?? [])];
-      }
-      if (type === "all" || type === "screenshots") {
+        return rows.rows ?? [];
+      };
+
+      const loadScreenshots = async () => {
+        if (!wantsScreenshots) return [];
+        if (ownedGameIds.length === 0) return [];
         const rows = await db.execute(sql`
-          SELECT s.id, 'screenshot' AS type, s.title, s.file_url AS "thumbnailUrl", 0 AS views, 0 AS likes, u.username, s.created_at AS "createdAt"
+          SELECT
+            s.id,
+            'screenshot' AS type,
+            s.title,
+            COALESCE(s.thumbnail_url, s.image_url) AS "thumbnailUrl",
+            COALESCE(s.views, 0) AS views,
+            0 AS likes,
+            s.user_id = ${req.user.id} AS "isDeveloperUpload",
+            u.username AS "creatorUsername",
+            g.id AS "gameId",
+            g.name AS "gameName",
+            s.created_at AS "createdAt"
           FROM screenshots s
           JOIN users u ON u.id = s.user_id
           JOIN games g ON g.id = s.game_id
-          WHERE g.name ILIKE ${'%' + gameName + '%'} AND s.user_id != ${req.user.id}
-          ORDER BY s.created_at DESC LIMIT 20
+          WHERE s.game_id = ANY(${ownedGameIdsSql}) ${screenshotSourceFilter}
+          ORDER BY ${screenshotSort}
+          LIMIT 30
         `);
-        items = [...items, ...(rows.rows ?? [])];
-      }
-      res.json({ items: items.slice(0, 30) });
+        return rows.rows ?? [];
+      };
+
+      const loadVideoCount = async () => {
+        if ((!wantsClips && !wantsReels) || ownedGameIds.length === 0) return 0;
+        const result = await db.execute(sql`
+          SELECT COUNT(*)::int AS count
+          FROM clips c
+          WHERE c.game_id = ANY(${ownedGameIdsSql}) ${videoTypeFilter} ${videoSourceFilter}
+        `);
+        return Number((result.rows ?? [])[0]?.count ?? 0);
+      };
+
+      const loadScreenshotCount = async () => {
+        if (!wantsScreenshots || ownedGameIds.length === 0) return 0;
+        const result = await db.execute(sql`
+          SELECT COUNT(*)::int AS count
+          FROM screenshots s
+          WHERE s.game_id = ANY(${ownedGameIdsSql}) ${screenshotSourceFilter}
+        `);
+        return Number((result.rows ?? [])[0]?.count ?? 0);
+      };
+
+      const sortAndLimit = (items: any[]) => items
+        .sort((a, b) => {
+          if (normalizedSort === "most_viewed") return Number(b.views ?? 0) - Number(a.views ?? 0);
+          if (normalizedSort === "most_liked") return Number(b.likes ?? 0) - Number(a.likes ?? 0);
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        })
+        .slice(0, 30);
+
+      const [ownedVideos, ownedScreenshots, videoCount, screenshotCount] = await Promise.all([
+        loadVideos(),
+        loadScreenshots(),
+        loadVideoCount(),
+        loadScreenshotCount(),
+      ]);
+      const ownedGameContent = sortAndLimit([...ownedVideos, ...ownedScreenshots]);
+
+      res.json({
+        ownedGames,
+        ownedGameContent,
+        ownedGameContentTotal: videoCount + screenshotCount,
+        // Compatibility response for the older settings implementation.
+        items: ownedGameContent,
+      });
     } catch (err) {
       console.error("GET /api/indie/creator-content error:", err);
-      res.json({ items: [] });
+      res.json({
+        ownedGames,
+        ownedGameContent: [],
+        ownedGameContentTotal: 0,
+        items: [],
+      });
     }
   });
 
@@ -13304,7 +13689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/indie/updates", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       const { db } = await import("./db");
       const { sql } = await import("drizzle-orm");
@@ -13321,7 +13706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/indie/updates", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const { title, type = "Announcement", summary = "", content = "", publishDate = "", status = "draft" } = req.body;
     if (!title?.trim()) return res.status(400).json({ error: "title required" });
     try {
@@ -13341,7 +13726,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/indie/updates/:id", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     const id = parseInt(req.params.id);
     if (!id) return res.status(400).json({ error: "Invalid id" });
     try {
@@ -13355,42 +13740,223 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ─── Indie Game Management: Analytics ─────────────────────────────────────
-  app.get("/api/indie/analytics", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+  // First-party analytics collection for public indie game pages. This route is
+  // deliberately public: visitors do not need an account to view a game.
+  app.post("/api/games/indie/:profileId/analytics-event", async (req, res) => {
+    const profileId = Number.parseInt(req.params.profileId, 10);
+    const eventType = req.body?.eventType;
+    const store = req.body?.store;
+    const allowedStores = new Set(["steam", "epic", "itch"]);
+    if (!Number.isInteger(profileId) || profileId <= 0) return res.status(400).json({ error: "Invalid profile id" });
+    if (eventType !== "game_page_view" && eventType !== "game_store_click") {
+      return res.status(400).json({ error: "Unsupported analytics event" });
+    }
+    if (eventType === "game_store_click" && (!allowedStores.has(store) || typeof store !== "string")) {
+      return res.status(400).json({ error: "Unsupported store" });
+    }
     try {
       const { db } = await import("./db");
       const { sql } = await import("drizzle-orm");
-      const profileRows = await db.execute(sql`SELECT game_name FROM indie_game_profiles WHERE user_id = ${req.user.id} LIMIT 1`);
-      const gameName = (profileRows.rows?.[0] as any)?.game_name;
-
-      let clipsGenerated = 0, screenshotsGenerated = 0;
-      if (gameName) {
-        const clipCount = await db.execute(sql`
-          SELECT COUNT(*)::int AS cnt FROM clips c JOIN games g ON g.id = c.game_id
-          WHERE g.name ILIKE ${'%' + gameName + '%'} AND c.user_id != ${req.user.id}
-        `);
-        clipsGenerated = (clipCount.rows?.[0] as any)?.cnt ?? 0;
-        const ssCount = await db.execute(sql`
-          SELECT COUNT(*)::int AS cnt FROM screenshots s JOIN games g ON g.id = s.game_id
-          WHERE g.name ILIKE ${'%' + gameName + '%'} AND s.user_id != ${req.user.id}
-        `);
-        screenshotsGenerated = (ssCount.rows?.[0] as any)?.cnt ?? 0;
+      const profiles = await db.execute(sql`
+        SELECT id, user_id AS "userId", catalog_game_id AS "catalogGameId"
+        FROM indie_game_profiles WHERE id = ${profileId} LIMIT 1
+      `);
+      const profile = ((profiles as any).rows ?? profiles as any[])[0] as any;
+      if (!profile || !profile.catalogGameId) return res.status(404).json({ error: "Indie game profile not found" });
+      const authenticatedUserId = req.isAuthenticated() ? req.user?.id : undefined;
+      if (authenticatedUserId === Number(profile.userId)) {
+        return res.status(204).send();
       }
+      const fingerprint = authenticatedUserId
+        ? `user:${authenticatedUserId}`
+        : `anonymous:${req.ip}|${req.get("user-agent") ?? ""}`;
+      const visitorKey = createHash("sha256").update(fingerprint).digest("hex");
+      if (eventType === "game_page_view") {
+        const duplicate = await db.execute(sql`
+          SELECT 1 FROM indie_game_analytics_events
+          WHERE profile_id = ${profileId} AND event_type = 'game_page_view'
+            AND visitor_key = ${visitorKey} AND created_at >= now() - interval '1 hour'
+          LIMIT 1
+        `);
+        if ((((duplicate as any).rows ?? duplicate as any[]) as any[]).length > 0) return res.status(204).send();
+      }
+      await db.execute(sql`
+        INSERT INTO indie_game_analytics_events
+          (profile_id, catalog_game_id, event_type, store, visitor_key)
+        VALUES (${profileId}, ${Number(profile.catalogGameId)}, ${eventType},
+          ${eventType === "game_store_click" ? store : null}, ${visitorKey})
+      `);
+      return res.status(204).send();
+    } catch (err) {
+      console.error("POST /api/games/indie/:profileId/analytics-event error:", err);
+      return res.status(500).json({ error: "Failed to record analytics event" });
+    }
+  });
 
-      const updateCount = await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM indie_game_updates WHERE user_id = ${req.user.id}`);
-      res.json({ clipsGenerated, screenshotsGenerated, reelsGenerated: 0, publishedUpdates: (updateCount.rows?.[0] as any)?.cnt ?? 0 });
+  // ─── Indie Game Management: Analytics ─────────────────────────────────────
+  app.get("/api/indie/analytics", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
+    const developerId = req.user!.id;
+    const rawGameId = req.query.gameId;
+    const gameId = rawGameId == null || rawGameId === "" ? null : Number.parseInt(String(rawGameId), 10);
+    const requestedRange = String(req.query.range ?? "30d");
+    if (gameId != null && (!Number.isInteger(gameId) || gameId <= 0)) return res.status(400).json({ error: "Invalid gameId" });
+    if (!["7d", "30d", "90d", "all"].includes(requestedRange)) return res.status(400).json({ error: "Invalid range" });
+    try {
+      // Ownership is resolved through storage, not a client-supplied catalogue id.
+      const profile = await storage.getIndieGameProfile(developerId, gameId);
+      if (!profile) return res.status(404).json({ error: "Indie game profile not found" });
+      if (!profile.catalogGameId) return res.status(409).json({ error: "This profile is not linked to a catalogue game" });
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      const days = requestedRange === "all" ? null : Number.parseInt(requestedRange, 10);
+      const rangeStart = days ? new Date(Date.now() - days * 24 * 60 * 60 * 1000) : null;
+      const previousStart = days ? new Date(Date.now() - days * 2 * 24 * 60 * 60 * 1000) : null;
+      // Raw db.execute uses postgres-js parameter binding, which does not accept
+      // JavaScript Date instances in this project. Send ISO timestamps so the
+      // database can infer the timestamp type from created_at.
+      const rangeStartParam = rangeStart?.toISOString() ?? null;
+      const previousStartParam = previousStart?.toISOString() ?? null;
+      const currentFilter = rangeStartParam ? sql`AND created_at >= ${rangeStartParam}` : sql``;
+      const currentMetricFilter = rangeStartParam ? sql`AND created_at >= ${rangeStartParam}` : sql``;
+      const previousFilter = previousStart && rangeStart
+        ? sql`AND created_at >= ${previousStartParam} AND created_at < ${rangeStartParam}` : sql`AND false`;
+      const [metricResult, seriesResult, contentResult, topContentResult, storesResult, favoritesResult, creatorsResult, updatesResult] = await Promise.all([
+        db.execute(sql`SELECT
+          COUNT(*) FILTER (WHERE event_type = 'game_page_view' ${currentMetricFilter})::int AS "pageViews",
+          COUNT(DISTINCT visitor_key) FILTER (WHERE event_type = 'game_page_view' ${currentMetricFilter})::int AS "uniqueVisitors",
+          COUNT(*) FILTER (WHERE event_type = 'game_store_click' ${currentMetricFilter})::int AS "storeClicks",
+          COUNT(*) FILTER (WHERE event_type = 'game_page_view' ${previousFilter})::int AS "previousPageViews",
+          COUNT(DISTINCT visitor_key) FILTER (WHERE event_type = 'game_page_view' ${previousFilter})::int AS "previousUniqueVisitors",
+          COUNT(*) FILTER (WHERE event_type = 'game_store_click' ${previousFilter})::int AS "previousStoreClicks"
+          FROM indie_game_analytics_events WHERE profile_id = ${profile.id}`),
+        db.execute(sql`SELECT date_trunc('day', created_at)::date AS day,
+          COUNT(*) FILTER (WHERE event_type = 'game_page_view')::int AS "pageViews",
+          COUNT(DISTINCT visitor_key) FILTER (WHERE event_type = 'game_page_view')::int AS "uniqueVisitors",
+          COUNT(*) FILTER (WHERE event_type = 'game_store_click')::int AS "storeClicks"
+          FROM indie_game_analytics_events WHERE profile_id = ${profile.id} ${currentFilter}
+          GROUP BY 1 ORDER BY 1`),
+        db.execute(sql`SELECT
+          COUNT(*) FILTER (WHERE type = 'clip')::int AS clips,
+          COUNT(*) FILTER (WHERE type = 'reel')::int AS reels,
+          COUNT(*) FILTER (WHERE type = 'screenshot')::int AS screenshots,
+          COALESCE(SUM(views), 0)::int AS "totalContentViews"
+          FROM (
+            SELECT CASE WHEN video_type = 'reel' THEN 'reel' ELSE 'clip' END AS type, COALESCE(views, 0) AS views FROM clips WHERE game_id = ${profile.catalogGameId}
+            UNION ALL SELECT 'screenshot', COALESCE(views, 0) FROM screenshots WHERE game_id = ${profile.catalogGameId}
+          ) content`),
+        db.execute(sql`SELECT * FROM (
+          SELECT c.id, CASE WHEN c.video_type = 'reel' THEN 'reel' ELSE 'clip' END AS type, c.title,
+            c.thumbnail_url AS "thumbnailUrl", COALESCE(c.views, 0)::int AS views, c.video_url AS url,
+            u.username AS "creatorUsername", u.avatar_url AS "creatorAvatarUrl",
+            (COALESCE(u.twitch_verified,false) OR COALESCE(u.kick_verified,false) OR COALESCE(u.youtube_verified,false) OR COALESCE(u.rumble_verified,false) OR COALESCE(u.vpzone_verified,false)) AS verified,
+            (SELECT COUNT(*)::int FROM clip_reactions cr WHERE cr.clip_id = c.id) AS reactions
+          FROM clips c JOIN users u ON u.id = c.user_id WHERE c.game_id = ${profile.catalogGameId}
+          UNION ALL
+          SELECT s.id, 'screenshot', s.title, COALESCE(s.thumbnail_url, s.image_url), COALESCE(s.views, 0)::int, s.image_url,
+            u.username, u.avatar_url,
+            (COALESCE(u.twitch_verified,false) OR COALESCE(u.kick_verified,false) OR COALESCE(u.youtube_verified,false) OR COALESCE(u.rumble_verified,false) OR COALESCE(u.vpzone_verified,false)),
+            (SELECT COUNT(*)::int FROM screenshot_reactions sr WHERE sr.screenshot_id = s.id)
+          FROM screenshots s JOIN users u ON u.id = s.user_id WHERE s.game_id = ${profile.catalogGameId}
+        ) content ORDER BY views DESC, reactions DESC LIMIT 5`),
+        db.execute(sql`SELECT store, COUNT(*)::int AS clicks FROM indie_game_analytics_events
+          WHERE profile_id = ${profile.id} AND event_type = 'game_store_click' ${currentFilter} GROUP BY store`),
+        db.execute(sql`SELECT COUNT(*)::int AS favorites FROM user_game_favorites WHERE game_id = ${profile.catalogGameId}`),
+        db.execute(sql`SELECT "creatorId", "creatorUsername", "creatorAvatarUrl", verified, COUNT(*)::int AS "contentCount", SUM(views)::int AS views, SUM(reactions)::int AS reactions FROM (
+          SELECT u.id AS "creatorId", u.username AS "creatorUsername", u.avatar_url AS "creatorAvatarUrl",
+            (COALESCE(u.twitch_verified,false) OR COALESCE(u.kick_verified,false) OR COALESCE(u.youtube_verified,false) OR COALESCE(u.rumble_verified,false) OR COALESCE(u.vpzone_verified,false)) AS verified,
+            COALESCE(c.views,0) AS views, (SELECT COUNT(*) FROM clip_reactions WHERE clip_id=c.id) AS reactions
+          FROM clips c JOIN users u ON u.id=c.user_id WHERE c.game_id=${profile.catalogGameId} AND c.user_id <> ${developerId}
+          UNION ALL SELECT u.id, u.username, u.avatar_url, (COALESCE(u.twitch_verified,false) OR COALESCE(u.kick_verified,false) OR COALESCE(u.youtube_verified,false) OR COALESCE(u.rumble_verified,false) OR COALESCE(u.vpzone_verified,false)), COALESCE(s.views,0), (SELECT COUNT(*) FROM screenshot_reactions WHERE screenshot_id=s.id)
+          FROM screenshots s JOIN users u ON u.id=s.user_id WHERE s.game_id=${profile.catalogGameId} AND s.user_id <> ${developerId}
+        ) creators GROUP BY "creatorId", "creatorUsername", "creatorAvatarUrl", verified ORDER BY views DESC, reactions DESC LIMIT 5`),
+        db.execute(sql`SELECT COUNT(*)::int AS count FROM indie_game_updates WHERE user_id = ${developerId}`),
+      ]);
+      const rowsOf = (result: any): any[] => result.rows ?? result ?? [];
+      const metrics = rowsOf(metricResult)[0] ?? {};
+      const content = rowsOf(contentResult)[0] ?? {};
+      const percent = (current: any, previous: any) => Number(previous) > 0 ? Math.round(((Number(current) - Number(previous)) / Number(previous)) * 10000) / 100 : null;
+      const pageViews = Number(metrics.pageViews ?? 0), storeClicks = Number(metrics.storeClicks ?? 0);
+      const connectedStores = [
+        { key: "steam", label: "Steam", url: profile.steamUrl, clicks: 0 },
+        { key: "epic", label: "Epic Games", url: profile.epicUrl, clicks: 0 },
+        { key: "itch", label: "itch.io", url: profile.itchUrl, clicks: 0 },
+      ].filter((entry) => Boolean(entry.url)) as Array<{ key: string; label: string; url: string; clicks: number }>;
+      for (const row of rowsOf(storesResult)) {
+        const target = connectedStores.find((entry) => entry.key === (row as any).store);
+        if (target) target.clicks = Number((row as any).clicks ?? 0);
+      }
+      const timeSeries = rowsOf(seriesResult).map((row: any) => {
+        const date = row.day instanceof Date
+          ? row.day.toISOString().slice(0, 10)
+          : String(row.day ?? "").slice(0, 10);
+        return {
+          date,
+          label: requestedRange === "all"
+            ? new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", year: "2-digit", timeZone: "UTC" })
+            : new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }),
+          pageViews: Number(row.pageViews ?? 0),
+          uniqueVisitors: Number(row.uniqueVisitors ?? 0),
+          storeClicks: Number(row.storeClicks ?? 0),
+        };
+      });
+      const topContent = rowsOf(topContentResult).map((row: any) => ({
+        id: Number(row.id),
+        type: row.type,
+        title: row.title,
+        thumbnail: row.thumbnailUrl ?? null,
+        thumbnailUrl: row.thumbnailUrl ?? null,
+        creator: {
+          username: row.creatorUsername,
+          avatarUrl: row.creatorAvatarUrl ?? null,
+        },
+        verified: Boolean(row.verified),
+        views: Number(row.views ?? 0),
+        reactions: Number(row.reactions ?? 0),
+        url: row.url,
+      }));
+      res.json({
+        game: { id: profile.id, catalogGameId: profile.catalogGameId, name: profile.gameName ?? "Your game" },
+        range: { key: requestedRange, start: rangeStart?.toISOString() ?? null, contentPerformanceScope: "all_time" },
+        metrics: {
+          pageViews: { value: pageViews, changePct: percent(pageViews, metrics.previousPageViews) },
+          uniqueVisitors: { value: Number(metrics.uniqueVisitors ?? 0), changePct: percent(metrics.uniqueVisitors, metrics.previousUniqueVisitors) },
+          contentViews: { value: Number(content.totalContentViews ?? 0), changePct: null, scope: "All-time total" },
+          storeClicks: { value: storeClicks, changePct: percent(storeClicks, metrics.previousStoreClicks) },
+        },
+        discovery: { availability: "available", series: timeSeries, sourcesAvailable: false, sources: [] },
+        content: { scope: "All-time current totals", clips: Number(content.clips ?? 0), reels: Number(content.reels ?? 0), screenshots: Number(content.screenshots ?? 0), totalContentViews: Number(content.totalContentViews ?? 0) },
+        topContent,
+        stores: {
+          connected: connectedStores,
+          totalClicks: storeClicks,
+          ctr: pageViews > 0 ? Math.round((storeClicks / pageViews) * 10000) / 100 : null,
+        },
+        engagement: [{ name: "Game saves", value: Number(rowsOf(favoritesResult)[0]?.favorites ?? 0) }],
+        topCreators: rowsOf(creatorsResult).map((row: any) => ({
+          id: Number(row.creatorId),
+          username: row.creatorUsername,
+          avatarUrl: row.creatorAvatarUrl ?? null,
+          verified: Boolean(row.verified),
+          contentCount: Number(row.contentCount ?? 0),
+          totalViews: Number(row.views ?? 0),
+          reactions: Number(row.reactions ?? 0),
+        })),
+        insight: pageViews > 0 && storeClicks > 0 ? `${storeClicks} store clicks were recorded in the selected period.` : null,
+        clipsGenerated: Number(content.clips ?? 0), screenshotsGenerated: Number(content.screenshots ?? 0), reelsGenerated: Number(content.reels ?? 0),
+        publishedUpdates: Number(rowsOf(updatesResult)[0]?.count ?? 0),
+      });
     } catch (err) {
       console.error("GET /api/indie/analytics error:", err);
-      res.json({});
+      res.status(500).json({ error: "Failed to fetch analytics" });
     }
   });
 
   // ─── Indie Game Management: Bounty Status ─────────────────────────────────
   app.get("/api/indie/bounty-status", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       res.json({ status: "not_enrolled", demoKeys: { uploaded: 0, valid: 0, available: 0, claimed: 0 }, fullGameKeys: { uploaded: 0, valid: 0, available: 0, awarded: 0 } });
     } catch (err) {
@@ -13401,7 +13967,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ─── Indie Game Management: Verification ──────────────────────────────────
   app.get("/api/indie/verification", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    if (!req.user.isPartner) return res.status(403).json({ error: "Partner access required" });
+    if (!hasIndieDeveloperAccess(req.user)) return res.status(403).json({ error: "Indie developer access required" });
     try {
       const { db } = await import("./db");
       const { sql } = await import("drizzle-orm");
@@ -13756,14 +14322,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      // All users get default tags + their individually unlocked tags
+      // All users get default tags + their individually unlocked tags.
+      // Also retain an active tag that was selected before ownership records
+      // were introduced (for example, an admin-assigned legacy tag). Without
+      // this, the profile can render the selected tag while its owner cannot
+      // see or remove it in Profile & Appearance.
       const allTags = await storage.getAllNameTags();
       const defaultTags = allTags.filter(t => t.isDefault);
       const unlockedTags = await storage.getUserUnlockedNameTags(req.user.id);
+      const currentUser = await storage.getUserById(req.user.id);
+      const selectedTag = currentUser?.selectedNameTagId
+        ? allTags.find(t => t.id === currentUser.selectedNameTagId && t.isActive)
+        : undefined;
       
-      // Merge default and unlocked tags, avoiding duplicates
+      // Merge default, unlocked, and legacy-selected tags, avoiding duplicates.
       const unlockedIds = new Set(unlockedTags.map(t => t.id));
-      const mergedTags = [...defaultTags.filter(t => !unlockedIds.has(t.id)), ...unlockedTags];
+      const mergedTags = [
+        ...defaultTags.filter(t => !unlockedIds.has(t.id)),
+        ...unlockedTags,
+      ];
+      if (selectedTag && !mergedTags.some(t => t.id === selectedTag.id)) {
+        mergedTags.push(selectedTag);
+      }
       
       res.json(mergedTags);
     } catch (err) {

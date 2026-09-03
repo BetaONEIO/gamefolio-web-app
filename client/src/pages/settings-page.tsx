@@ -1197,6 +1197,7 @@ export default function SettingsPage() {
   const [profileData, setProfileData] = useState({
     displayName: user?.displayName || "",
     bio: user?.bio || "",
+    clanTag: (user as any)?.clanTag || "",
     backgroundColor: user?.backgroundColor || "#121F2B",
     accentColor: user?.accentColor || "#B7FF1A",
     bannerUrl: user?.bannerUrl || "",
@@ -1470,6 +1471,7 @@ export default function SettingsPage() {
           ...prev,
           displayName: user.displayName || "",
           bio: user.bio || "",
+          clanTag: (user as any)?.clanTag || "",
           avatarUrl: user.avatarUrl || "",
           bannerUrl: finalBannerUrl,
           // Appearance/font/background — preserve pending user edits
@@ -1547,6 +1549,7 @@ export default function SettingsPage() {
   const hasUnsavedChanges = 
     normalizeValue(profileData.displayName) !== normalizeValue(user?.displayName) ||
     normalizeValue(profileData.bio) !== normalizeValue(user?.bio) ||
+    normalizeValue(profileData.clanTag) !== normalizeValue((user as any)?.clanTag) ||
     profileData.backgroundColor !== (user?.backgroundColor || "#121F2B") ||
     profileData.accentColor !== (user?.accentColor || "#B7FF1A") ||
     normalizeValue(profileData.bannerUrl) !== normalizeValue(user?.bannerUrl) ||
@@ -2321,13 +2324,11 @@ export default function SettingsPage() {
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Profile</span>
             </TabsTrigger>
-            {!user.isPartner && (
-              <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-                <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Appearance</span>
-                <span className="sm:hidden">Look</span>
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="appearance" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Appearance</span>
+              <span className="sm:hidden">Look</span>
+            </TabsTrigger>
             {!user.isPartner && (
               <TabsTrigger value="banners" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
                 <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -3145,7 +3146,29 @@ export default function SettingsPage() {
                     </Popover>
                   </div>
                 </div>
-                
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="clanTag">Clan Tag</Label>
+                    <span className={`text-xs ${profileData.clanTag.length >= 4 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      {profileData.clanTag.length}/4
+                    </span>
+                  </div>
+                  <Input
+                    id="clanTag"
+                    value={profileData.clanTag}
+                    onChange={(e) => setProfileData(prev => ({
+                      ...prev,
+                      clanTag: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4),
+                    }))}
+                    placeholder="e.g. FOLI"
+                    maxLength={4}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Up to 4 letters/numbers, shown as [{profileData.clanTag || "TAG"}] before your name.
+                  </p>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="bio">Bio</Label>
                   <Textarea

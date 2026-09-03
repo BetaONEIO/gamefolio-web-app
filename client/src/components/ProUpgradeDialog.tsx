@@ -4,6 +4,7 @@ import { Crown, Loader2, X, Check, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useAuth } from "@/hooks/use-auth";
+import { useIndieMode } from "@/hooks/use-indie-mode";
 import type { RcPackage } from "@/hooks/use-revenuecat";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import {
@@ -306,13 +307,18 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   // Indie Partner can't be purchased here yet — its backend lands with the
   // indie-partner merge. Until then the card advertises but can't check out.
   const indieComingSoon = isIndieTier && !INDIE_BACKEND_READY;
-  const tierName = meta.name;
+  const { isIndieMode } = useIndieMode();
+  // Pro is branded "Developer Pro" inside indie mode; the partner tiers keep
+  // their own names in either mode.
+  const tierName = activeTier === "pro" && isIndieMode ? "Developer Pro" : meta.name;
   const ownsThisTier = activeTier === "partner" ? isPartner : activeTier === "pro" ? isPro : false;
   const benefits = meta.benefits;
   const createEndpoint = `/api/stripe/create-${meta.api}-subscription`;
   const confirmEndpoint = `/api/stripe/confirm-${meta.api}-subscription`;
   const pricingEndpoint = `/api/stripe/${meta.api}-pricing`;
-  const ctaLabel = meta.cta;
+  // TIER_META.cta for pro is "Join Gamefolio Pro" — derive it from tierName so
+  // indie mode gets "Join Developer Pro" without a second copy of the string.
+  const ctaLabel = activeTier === "pro" ? `Join ${tierName}` : meta.cta;
   const tagline = meta.tagline;
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
   const [purchasing, setPurchasing] = useState(false);
@@ -556,7 +562,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   if (ownsThisTier && step !== "success" && !purchaseInProgress) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[430px] w-full bg-[#0B1218] border-none p-0 overflow-hidden [&>button]:hidden">
+        <DialogContent className="max-w-[430px] w-full bg-popover border-none p-0 overflow-hidden [&>button]:hidden">
           <div className="p-8 text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#B7FF1A] to-[#6FA800] mb-6">
               <Crown className="w-10 h-10 text-white" />
@@ -565,9 +571,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
               {isPartnerTier ? "You're a Streamer Partner!" : "You're already Pro!"}
             </h2>
             <p className="text-[#B8C0AE] mb-6">
-              {isPartnerTier
-                ? "You have full access to all Streamer Partner features. Thank you for your support!"
-                : "You have full access to all Gamefolio Pro features. Thank you for your support!"}
+              You have full access to all {tierName} features. Thank you for your support!
             </p>
             <button
               onClick={() => onOpenChange(false)}
@@ -793,7 +797,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       <div className="absolute inset-0">
         <img
           src={proHeroImage}
-          alt="Gamefolio Pro"
+          alt={tierName}
           className="w-full h-full object-cover"
           style={{ objectPosition: "center 70%" }}
         />
@@ -973,7 +977,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                 <div className="relative w-full flex-shrink-0" style={{ height: "56vh" }}>
                   <img
                     src={proHeroImage}
-                    alt="Gamefolio Pro"
+                    alt={tierName}
                     className="w-full h-full object-cover"
                     style={{ objectPosition: "center 70%" }}
                   />

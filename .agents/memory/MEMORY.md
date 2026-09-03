@@ -20,3 +20,17 @@
 - [Dark video hero blending](dark-video-hero-blending.md) — black-background hero video blends cleanly when the hero owns the navy-to-black transition; local black media panels create visible boundaries.
 - [Phone video alpha masking](phone-video-alpha-masking.md) — black-screen phone footage needs a silhouette alpha mask, not chroma keying, to preserve dark hardware and UI.
 - [Weekly XP multi-ledger](weekly-xp-multi-ledger.md) — weekly scores must combine both XP ledgers through independent per-user aggregates, never a raw join.
+- [Upload attempt idempotency](upload-attempt-idempotency.md) — direct video uploads reconcile creator-scoped attempt IDs to recover lost responses without duplicates.
+- [Indie dashboard access](indie-dashboard-access.md) — Indie Developer personas have the free game quota; paid Indie partners receive the higher subscriber quota.
+- [Private indie media URLs](private-indie-media-urls.md) — game profile media is stored in a private bucket; render it through the signed-URL hook, not its canonical storage URL.
+- [Expired signed media URLs](expired-signed-media-urls.md) — legacy asset records may persist expired signed Supabase URLs; refresh them by token expiry instead of treating every signed URL as current.
+- [Developer upload ownership](developer-upload-ownership.md) — Game Developers may publish only to catalogue games explicitly linked to their Indie profiles.
+- [Developer Pro purchase pauses](developer-pro-purchase-pauses.md) — pause every acquisition channel, but keep existing subscriber renewal and expiry synchronization active.
+- [Developer renewal timestamps](developer-renewal-timestamps.md) — validate persisted lifecycle dates before reusing them in renewal writes.
+- [Async signed-media selection](async-signed-media-selection.md) — select mixed signed/public media by stable identity, never array index, because signed items appear asynchronously.
+- [Indie analytics event privacy](indie-analytics-event-privacy.md) — public game analytics store only hashed visitor identity; owner views are excluded and page views dedupe hourly.
+- [Indie analytics metric scope](indie-analytics-metric-scope.md) — discovery events support date ranges, but legacy content view counters are honest all-time totals.
+- [Raw analytics timestamp binding](raw-analytics-timestamp-binding.md) — raw Drizzle db.execute queries in this project must bind ISO timestamp strings, not JavaScript Date objects.
+- [Public indie game identity](public-indie-game-identity.md) — public game slugs resolve developer profiles through catalogue game IDs, never by treating the slug as a username.
+- [Daily reward session hydration](daily-reward-session-hydration.md) — guarded daily claims must run on authenticated session hydration, not only explicit login, including apps left open overnight.
+- [Season GFT payouts](season-gft-payouts.md) — production-only rank payouts use an idempotent ledger; submitted transactions require manual reconciliation before retry.

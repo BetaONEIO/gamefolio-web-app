@@ -62,7 +62,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="relative min-h-screen flex flex-col sm:items-center sm:justify-center p-0 sm:p-4 bg-[#071013]">
+    <div className="relative min-h-screen flex flex-col sm:items-center sm:justify-center p-0 sm:p-4 bg-background">
       <div className="relative z-10 w-full min-h-screen sm:min-h-0 max-w-full sm:max-w-lg md:max-w-5xl">
         <OnboardingFlow
           userId={user.id}

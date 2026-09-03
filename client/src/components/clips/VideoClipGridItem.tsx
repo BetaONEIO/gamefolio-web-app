@@ -47,6 +47,7 @@ const VideoClipGridItem = ({
 
   const isProcessing = clip.status === "processing";
   const isFailed = clip.status === "failed";
+  const uploadSource = (clip as ClipWithUser & { uploadSource?: "publisher" | "community" }).uploadSource;
 
   const handleOpenClip = () => {
     // Not ready to watch yet — nothing to open.
@@ -163,6 +164,15 @@ const VideoClipGridItem = ({
         )}
 
         <div className="absolute top-1.5 left-1.5 flex items-center gap-1 z-20">
+          {uploadSource && (
+            <div className={`rounded-md border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.1em] shadow-md backdrop-blur-sm ${
+              uploadSource === "publisher"
+                ? "border-[#B7FF18]/35 bg-[#B7FF18]/85 text-[#07100A]"
+                : "border-white/20 bg-black/70 text-white/80"
+            }`}>
+              {uploadSource === "publisher" ? "Publisher" : "Community"}
+            </div>
+          )}
           {isProcessing && (
             <div className="bg-black/70 backdrop-blur-sm text-white/90 font-bold text-[9px] px-1.5 py-0.5 rounded shadow-md flex items-center gap-1">
               <Loader2 size={9} className="animate-spin" /> PROCESSING

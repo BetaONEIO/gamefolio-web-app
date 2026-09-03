@@ -8,6 +8,7 @@ import { storage } from '../storage';
 import { notifyProPurchase } from '../telegram-notify';
 import { captureRouteError } from "../sentry";
 import { provisionIndieDevSubscription } from './indie-dev-subscription';
+import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
 
 const router = Router();
 
@@ -87,12 +88,15 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
     if (!appUserId || typeof appUserId !== 'string') {
       return res.status(400).json({ error: 'appUserId is required' });
     }
+    const expectedAppUserId = `gamefolio_${userId}`;
+    if (appUserId !== expectedAppUserId) {
+      return res.status(403).json({ error: 'RevenueCat subscriber does not belong to this user' });
+    }
 
     const [user] = await db.select().from(users).where(eq(users.id, userId));
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-
     let rcData: any;
     try {
       rcData = await fetchRevenueCatSubscriber(appUserId, typeof platform === 'string' ? platform : 'ios');
@@ -174,10 +178,17 @@ router.post('/api/indie-dev/activate', hybridAuth, async (req: Request, res: Res
     if (!appUserId || typeof appUserId !== 'string') {
       return res.status(400).json({ error: 'appUserId is required' });
     }
+    const expectedAppUserId = `gamefolio_${userId}`;
+    if (appUserId !== expectedAppUserId) {
+      return res.status(403).json({ error: 'RevenueCat subscriber does not belong to this user' });
+    }
 
     const [user] = await db.select().from(users).where(eq(users.id, userId));
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
+    }
+    if (!GAME_DEVELOPER_PRO_PURCHASES_ENABLED && !user.isIndieDevSubscriber) {
+      return res.status(503).json({ error: 'Game Developer Pro purchases are coming soon' });
     }
 
     let rcData: any;
@@ -197,7 +208,11 @@ router.post('/api/indie-dev/activate', hybridAuth, async (req: Request, res: Res
 
     const plan = parsePlanFromEntitlement(entitlement);
 
-    await provisionIndieDevSubscription({ userId, plan });
+    await provisionIndieDevSubscription({
+      userId,
+      plan,
+      endDate: getEndDateFromEntitlement(entitlement),
+    });
     await db.update(users).set({ revenuecatUserId: appUserId, updatedAt: new Date() }).where(eq(users.id, userId));
 
     console.log(`[RevenueCat] User ${userId} activated Indie Developer via RevenueCat (appUserId: ${appUserId}, plan: ${plan})`);
@@ -213,12 +228,14 @@ router.post('/api/indie-dev/activate', hybridAuth, async (req: Request, res: Res
 router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
   try {
     const webhookSecret = process.env.REVENUECAT_WEBHOOK_SECRET;
-    if (webhookSecret) {
-      const authHeader = req.headers['authorization'];
-      if (!authHeader || authHeader !== webhookSecret) {
-        console.warn('[RevenueCat Webhook] Invalid or missing Authorization header');
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
+    if (!webhookSecret) {
+      console.error('[RevenueCat Webhook] REVENUECAT_WEBHOOK_SECRET is not configured');
+      return res.status(503).json({ error: 'Webhook authentication is not configured' });
+    }
+    const authHeader = req.headers['authorization'];
+    if (!authHeader || authHeader !== webhookSecret) {
+      console.warn('[RevenueCat Webhook] Invalid or missing Authorization header');
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const event = req.body?.event;
@@ -318,26 +335,41 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
       }
 
       if (isIndieDevEvent) {
-        await provisionIndieDevSubscription({ userId: user.id, plan });
-        await db.update(users).set({ revenuecatUserId: app_user_id, updatedAt: new Date() }).where(eq(users.id, user.id));
-        console.log(`[RevenueCat Webhook] User ${user.id} Indie Developer activated/renewed (type: ${type}, plan: ${plan}, until: ${endDate}, sandbox: ${isSandbox})`);
+        const isNewEntitlementWhileDisabled =
+          !GAME_DEVELOPER_PRO_PURCHASES_ENABLED &&
+          !user.isIndieDevSubscriber;
+        if (isNewEntitlementWhileDisabled) {
+          console.warn(`[RevenueCat Webhook] Ignoring disabled Game Developer entitlement activation for user ${user.id} (type: ${type})`);
+        } else {
+          await provisionIndieDevSubscription({ userId: user.id, plan, endDate });
+          await db.update(users).set({ revenuecatUserId: app_user_id, updatedAt: new Date() }).where(eq(users.id, user.id));
+          console.log(`[RevenueCat Webhook] User ${user.id} Indie Developer activated/renewed (type: ${type}, plan: ${plan}, until: ${endDate}, sandbox: ${isSandbox})`);
+        }
       }
 
       if (!isProEvent && !isPartnerEvent && !isIndieDevEvent) {
         console.log(`[RevenueCat Webhook] Activating event with no recognized entitlement_ids — ignoring (type: ${type})`);
       }
     } else if (deactivatingEvents.includes(type)) {
-      if (isProEvent || isPartnerEvent) {
+      // RevenueCat CANCELLATION only disables auto-renewal; the paid
+      // entitlement remains valid until the later EXPIRATION event. A billing
+      // issue can also remain within its grace period, and SUBSCRIBER_ALIAS is
+      // not a lifecycle transition at all.
+      if ((isProEvent || isPartnerEvent) && type === 'EXPIRATION') {
         await db.update(users).set({
           isPro: false,
           ...(isPartnerEvent ? { isPartner: false, partnerType: null } : {}),
           updatedAt: new Date(),
         }).where(eq(users.id, user.id));
 
-        console.log(`[RevenueCat Webhook] User ${user.id} ${isPartnerEvent ? 'Streamer Partner' : 'Pro'} deactivated (type: ${type})`);
+        console.log(`[RevenueCat Webhook] User ${user.id} ${isPartnerEvent ? 'Streamer Partner' : 'Pro'} expired (type: ${type})`);
       }
 
-      if (isIndieDevEvent) {
+      // RevenueCat CANCELLATION only disables auto-renewal; the paid
+      // entitlement remains valid until an EXPIRATION event arrives.
+      // BILLING_ISSUE can also remain active during a grace period, and
+      // SUBSCRIBER_ALIAS is an identity event rather than an expiry.
+      if (isIndieDevEvent && type === 'EXPIRATION') {
         await db.update(users).set({
           isIndieDevSubscriber: false,
           updatedAt: new Date(),

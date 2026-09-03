@@ -23,6 +23,7 @@ import {
   MonthlyLeaderboard, InsertMonthlyLeaderboard,
   WeeklyLeaderboard, InsertWeeklyLeaderboard,
   TopContributor, InsertTopContributor,
+  LeaderboardRewardPayout, InsertLeaderboardRewardPayout,
   UserPointsHistory, InsertUserPointsHistory,
   UserXPHistory, InsertUserXPHistory,
   ContentFilterSettings, InsertContentFilterSettings,
@@ -80,6 +81,7 @@ import {
   monthlyLeaderboard,
   weeklyLeaderboard,
   topContributors,
+  leaderboardRewardPayouts,
   userPointsHistory,
   userXPHistory,
   emailVerificationTokens,
@@ -95,6 +97,7 @@ import {
   commentMentions,
   nameTags,
   userUnlockedNameTags,
+  userWallets,
   profileBorders,
   userUnlockedBorders,
   verificationBadges,
@@ -867,6 +870,15 @@ export class DatabaseStorage implements IStorage {
   async getClipById(id: number): Promise<ClipWithUser | null> {
     const result = await this.getClipWithUser(id);
     return result || null;
+  }
+
+  async getClipByUserAndUploadAttemptId(userId: number, uploadAttemptId: string): Promise<Clip | null> {
+    const [clip] = await db
+      .select()
+      .from(clips)
+      .where(and(eq(clips.userId, userId), eq(clips.uploadAttemptId, uploadAttemptId)))
+      .limit(1);
+    return clip || null;
   }
 
   async createClip(clipData: InsertClip): Promise<Clip> {
@@ -4145,6 +4157,115 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
+  async getSeasonLeaderboardForRewards(start: Date, end: Date, limit: number): Promise<Array<{
+    userId: number;
+    rank: number;
+    seasonPoints: number;
+    walletAddress: string | null;
+  }>> {
+    const rows = await db.execute(sql`
+      SELECT
+        u.id AS "userId",
+        COALESCE(SUM(xh.xp_amount), 0) AS "seasonPoints",
+        COALESCE(primary_wallet.address, u.wallet_address) AS "walletAddress"
+      FROM users u
+      LEFT JOIN user_xp_history xh
+        ON xh.user_id = u.id
+        AND xh.created_at >= ${start.toISOString()}
+        AND xh.created_at < ${end.toISOString()}
+      LEFT JOIN user_wallets primary_wallet
+        ON primary_wallet.user_id = u.id
+        AND primary_wallet.is_primary = true
+      WHERE u.role NOT IN ('admin', 'moderator', 'system')
+        AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+        AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+      GROUP BY u.id, primary_wallet.address
+      HAVING COALESCE(SUM(xh.xp_amount), 0) > 0
+      ORDER BY "seasonPoints" DESC, u.id ASC
+      LIMIT ${limit}
+    `);
+
+    return (rows as any[]).map((row, index) => ({
+      userId: Number(row.userId),
+      rank: index + 1,
+      seasonPoints: Number(row.seasonPoints),
+      walletAddress: row.walletAddress || null,
+    }));
+  }
+
+  async createLeaderboardRewardPayoutIfAbsent(
+    payout: InsertLeaderboardRewardPayout,
+  ): Promise<LeaderboardRewardPayout | null> {
+    const [created] = await db
+      .insert(leaderboardRewardPayouts)
+      .values(payout)
+      .onConflictDoNothing({
+        target: [leaderboardRewardPayouts.seasonNumber, leaderboardRewardPayouts.rank],
+      })
+      .returning();
+    return created ?? null;
+  }
+
+  async getLeaderboardRewardPayoutBySeasonRank(
+    seasonNumber: number,
+    rank: number,
+  ): Promise<LeaderboardRewardPayout | null> {
+    const [payout] = await db
+      .select()
+      .from(leaderboardRewardPayouts)
+      .where(and(
+        eq(leaderboardRewardPayouts.seasonNumber, seasonNumber),
+        eq(leaderboardRewardPayouts.rank, rank),
+      ))
+      .limit(1);
+    return payout ?? null;
+  }
+
+  async claimLeaderboardRewardPayout(
+    id: string,
+    now: Date,
+  ): Promise<LeaderboardRewardPayout | null> {
+    const [claimed] = await db
+      .update(leaderboardRewardPayouts)
+      .set({
+        status: "pending",
+        attempts: sql`${leaderboardRewardPayouts.attempts} + 1`,
+        lastAttemptAt: now,
+        nextRetryAt: null,
+      })
+      .where(and(
+        eq(leaderboardRewardPayouts.id, id),
+        or(
+          and(
+            eq(leaderboardRewardPayouts.status, "pending"),
+            eq(leaderboardRewardPayouts.attempts, 0),
+          ),
+          and(
+            eq(leaderboardRewardPayouts.status, "failed"),
+            eq(leaderboardRewardPayouts.retryable, true),
+            or(
+              isNull(leaderboardRewardPayouts.nextRetryAt),
+              lte(leaderboardRewardPayouts.nextRetryAt, now),
+            ),
+          ),
+        ),
+      ))
+      .returning();
+    return claimed ?? null;
+  }
+
+  async updateLeaderboardRewardPayout(
+    id: string,
+    updates: Partial<LeaderboardRewardPayout>,
+  ): Promise<LeaderboardRewardPayout | null> {
+    const [updated] = await db
+      .update(leaderboardRewardPayouts)
+      .set(updates)
+      .where(eq(leaderboardRewardPayouts.id, id))
+      .returning();
+    return updated ?? null;
+  }
+
   // XP operations
   async addUserXPHistory(xpHistory: InsertUserXPHistory): Promise<UserXPHistory> {
     const [xp] = await db.insert(userXPHistory).values(xpHistory).returning();
@@ -5960,6 +6081,18 @@ export class DatabaseStorage implements IStorage {
     return row;
   }
 
+  async getScheduledPostByUserAndUploadAttemptId(userId: number, uploadAttemptId: string): Promise<ScheduledPost | undefined> {
+    const [row] = await db
+      .select()
+      .from(scheduledPosts)
+      .where(and(
+        eq(scheduledPosts.userId, userId),
+        eq(scheduledPosts.uploadAttemptId, uploadAttemptId),
+      ))
+      .limit(1);
+    return row;
+  }
+
   // Posts a user can see/manage: pending queue first, then recently published/failed.
   async getScheduledPostsByUser(userId: number): Promise<ScheduledPost[]> {
     return db
@@ -6816,23 +6949,46 @@ export class DatabaseStorage implements IStorage {
     if (existing.length > 0) {
       await db.update(indieGameFieldOverrides).set(patch as any).where(eq(indieGameFieldOverrides.id, existing[0].id));
     } else {
+      // Profiles created before multi-game support have an override row with a
+      // null game_id. Reattach that row to the selected game instead of
+      // inserting a duplicate user/field row on older databases that still
+      // retain the legacy uniqueness constraint.
+      if (gameId) {
+        const [legacy] = await db.select({ id: indieGameFieldOverrides.id })
+          .from(indieGameFieldOverrides)
+          .where(and(
+            eq(indieGameFieldOverrides.userId, userId),
+            eq(indieGameFieldOverrides.fieldName, fieldName),
+            isNull(indieGameFieldOverrides.gameId),
+          ));
+        if (legacy) {
+          await db.update(indieGameFieldOverrides)
+            .set({ ...patch, gameId } as any)
+            .where(eq(indieGameFieldOverrides.id, legacy.id));
+          return;
+        }
+      }
       await db.insert(indieGameFieldOverrides).values({ userId, fieldName, gameId: gameId ?? null, ...patch } as any);
     }
   }
 
   async getIndieGameProfileByUsername(username: string, gameId?: number | null): Promise<{ profile: IndieGameProfile | null; user: User } | null> {
     const user = await this.getUserByUsername(username);
-    if (!user || user.partnerType !== "indie") return null;
+    // Access to the Game Dashboard is no longer determined solely by the
+    // legacy partnerType flag. A developer can have a valid Indie game profile
+    // while that older account field is empty, so use the profile record as the
+    // source of truth for whether a public studio page exists.
+    if (!user) return null;
     const profile = await this.getIndieGameProfile(user.id, gameId);
-    return { user, profile };
+    return profile ? { user, profile } : null;
   }
 
   async getIndieGameProfilesByUsername(username: string): Promise<{ profiles: IndieGameProfile[]; user: User } | null> {
     const user = await this.getUserByUsername(username);
-    if (!user || user.partnerType !== "indie") return null;
+    if (!user) return null;
     const profiles = await db.select().from(indieGameProfiles)
       .where(eq(indieGameProfiles.userId, user.id))
       .orderBy(desc(indieGameProfiles.isPrimary), asc(indieGameProfiles.sortOrder), asc(indieGameProfiles.id));
-    return { user, profiles };
+    return profiles.length > 0 ? { user, profiles } : null;
   }
 }

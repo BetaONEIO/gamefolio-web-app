@@ -69,7 +69,7 @@ export function NameTagCheckoutDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#0B1218] border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden">
+      <DialogContent className="bg-popover border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden">
         {showSuccess ? (
           <SuccessDashNameTag
             assetName={nameTag.name}
@@ -87,7 +87,7 @@ export function NameTagCheckoutDialog({
             <div className="flex items-center gap-4 px-6 pt-12 pb-6">
               <button
                 onClick={() => onOpenChange(false)}
-                className="w-10 h-10 rounded-full bg-[#1B2A33]/50 flex items-center justify-center transition-colors hover:bg-[#1B2A33]/80"
+                className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center transition-colors hover:bg-secondary/80"
               >
                 <ArrowLeft className="h-6 w-6 text-white" />
               </button>
@@ -102,7 +102,7 @@ export function NameTagCheckoutDialog({
               {/* Item Details Section */}
               <div className="space-y-4">
                 <span className="text-[12px] font-black text-[#B8C0AE] uppercase tracking-[2.4px]">Item Details</span>
-                <div className="bg-[#0B1218] border border-[#f0b10033] rounded-[24px] p-4 flex items-center gap-4 shadow-[0_10px_15px_-3px_rgba(255,105,0,0.05)]">
+                <div className="bg-card border border-[#f0b10033] rounded-[24px] p-4 flex items-center gap-4 shadow-[0_10px_15px_-3px_rgba(255,105,0,0.05)]">
                   <div className="w-24 h-24 bg-black border border-white/10 rounded-[16px] overflow-hidden flex-shrink-0">
                     <img src={nameTag.imageUrl} alt={nameTag.name} className="w-full h-full object-cover" />
                   </div>
@@ -120,12 +120,12 @@ export function NameTagCheckoutDialog({
               {/* Purchase Summary Section */}
               <div className="space-y-4">
                 <span className="text-[12px] font-black text-[#B8C0AE] uppercase tracking-[2.4px]">Purchase Summary</span>
-                <div className="bg-[#0B1218] border border-[#1B2A3380] rounded-[24px] overflow-hidden shadow-sm">
-                  <div className="flex justify-between items-center p-4 border-b border-[#1B2A334d]">
+                <div className="bg-card border border-border rounded-[24px] overflow-hidden shadow-sm">
+                  <div className="flex justify-between items-center p-4 border-b border-border">
                     <span className="text-sm text-[#B8C0AE]">Item Price</span>
                     <span className="text-sm font-bold text-[#F5F7F2]">{nameTag.gfCost} GF</span>
                   </div>
-                  <div className="flex justify-between items-center p-4 border-b border-[#1B2A334d]">
+                  <div className="flex justify-between items-center p-4 border-b border-border">
                     <span className="text-sm text-[#B8C0AE]">Network Fee</span>
                     <span className="text-sm font-bold text-[#F5F7F2]">{networkFee} GF</span>
                   </div>
@@ -141,9 +141,9 @@ export function NameTagCheckoutDialog({
               {/* Wallet Balance Section */}
               <div className="space-y-4">
                 <span className="text-[12px] font-black text-[#B8C0AE] uppercase tracking-[2.4px]">Wallet Balance</span>
-                <div className={`p-4 rounded-[24px] border flex items-center justify-between ${canAfford ? 'bg-[#0B1218] border-[#1B2A3380]' : 'bg-red-500/10 border-red-500/50'}`}>
+                <div className={`p-4 rounded-[24px] border flex items-center justify-between ${canAfford ? 'bg-card border-border' : 'bg-red-500/10 border-red-500/50'}`}>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[#1B2A33]/50 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center">
                       <img src={gfTokenLogo} alt="GF" className="w-6 h-6" />
                     </div>
                     <div className="flex flex-col">
@@ -162,13 +162,13 @@ export function NameTagCheckoutDialog({
             </div>
 
             {/* Bottom Action */}
-            <div className="p-6 bg-[#0B1218] space-y-4">
+            <div className="p-6 bg-popover space-y-4">
               <Button
                 onClick={handleConfirm}
                 disabled={!canAfford || isPurchasing}
                 className="w-full h-[68px] rounded-[24px] text-lg font-black uppercase"
                 style={{
-                  background: canAfford && !isPurchasing ? '#B7FF1A' : '#1B2A33',
+                  background: canAfford && !isPurchasing ? '#B7FF1A' : 'var(--gf-border)',
                   color: canAfford && !isPurchasing ? '#071013' : '#475569',
                   letterSpacing: '-0.9px',
                   cursor: canAfford && !isPurchasing ? 'pointer' : 'not-allowed',

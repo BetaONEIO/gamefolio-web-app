@@ -14,11 +14,54 @@ import QRCode from 'qrcode';
 import { fullAccessMiddleware } from '../middleware/full-access';
 import { hybridFullAccess } from '../middleware/hybrid-auth';
 import { XPService } from '../xp-service';
-import { captureRouteError } from "../sentry";
+import { captureRouteError, captureRouteMessage } from "../sentry";
 import { getRequestMeta } from "../lib/request-meta";
-import { processAndCreateClip, ClipProcessingError } from '../services/clip-processing';
+import { processAndCreateClip, ClipProcessingError, isValidUploadAttemptId, validateDeveloperGameSelection } from '../services/clip-processing';
 
 const router = express.Router();
+
+function safeTelemetryHeader(value: unknown, pattern: RegExp): string | undefined {
+  return typeof value === 'string' && pattern.test(value) ? value : undefined;
+}
+
+function uploadTelemetryContext(req: express.Request, extra: Record<string, string> = {}) {
+  const batchId = safeTelemetryHeader(req.headers['x-bulk-upload-id'], /^[A-Za-z0-9-]{1,100}$/);
+  const itemIndex = safeTelemetryHeader(req.headers['x-bulk-upload-item'], /^\d{1,3}$/);
+  const context: Record<string, string> = {
+    route: req.path,
+    ...(req.user?.id ? { user_id: String(req.user.id) } : {}),
+    ...(batchId ? { batch_id: batchId } : {}),
+    ...(itemIndex ? { item_index: itemIndex } : {}),
+    ...extra,
+  };
+  return context;
+}
+
+async function getExistingUploadAttempt(userId: number, uploadAttemptId: unknown) {
+  if (!isValidUploadAttemptId(uploadAttemptId)) return null;
+
+  const clip = await storage.getClipByUserAndUploadAttemptId(userId, uploadAttemptId);
+  if (clip) {
+    return {
+      success: true,
+      reconciled: true,
+      clip,
+      message: 'This upload was already received and is processing.',
+    };
+  }
+
+  const scheduled = await storage.getScheduledPostByUserAndUploadAttemptId(userId, uploadAttemptId);
+  if (scheduled) {
+    return {
+      success: true,
+      reconciled: true,
+      scheduled,
+      message: 'This upload was already scheduled.',
+    };
+  }
+
+  return null;
+}
 
 // Temporary directory for processing
 const tempDir = path.join(process.cwd(), "temp");
@@ -340,7 +383,7 @@ router.post('/video-direct', hybridFullAccess, upload.single('file'), async (req
     });
 
   } catch (error) {
-    captureRouteError(error);
+    captureRouteError(error, uploadTelemetryContext(req, { stage: 'direct-upload' }));
     console.error('❌ Direct video upload error:', error);
 
     // Clean up temp file on error
@@ -370,7 +413,7 @@ router.post('/upload/supabase-creds', hybridFullAccess, async (req, res) => {
     
     res.json({ uploadUrl, publicUrl });
   } catch (error) {
-    captureRouteError(error);
+    captureRouteError(error, uploadTelemetryContext(req, { stage: 'storage-credentials' }));
     console.error('Error generating Supabase upload credentials:', error);
     res.status(500).json({ error: 'Failed to generate upload credentials' });
   }
@@ -463,6 +506,15 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
           scheduleLimits,
         });
       }
+    }
+
+    // Developers may only publish content for catalogue games linked to their
+    // Indie profiles. Check the raw requested ID before any fallback can create
+    // or resolve an unrelated catalogue record.
+    const requestedGameAccess = await validateDeveloperGameSelection(req.user!.id, gameId);
+    if (!requestedGameAccess.allowed) {
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
+      return res.status(403).json({ error: requestedGameAccess.message });
     }
 
     // Handle game ID - ensure game exists in database
@@ -687,7 +739,7 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
     res.json(responseData);
 
   } catch (error) {
-    captureRouteError(error);
+    captureRouteError(error, uploadTelemetryContext(req, { stage: 'screenshot-processing' }));
     console.error('Screenshot upload error:', error);
 
     // Clean up temp file on error
@@ -706,6 +758,11 @@ router.post('/screenshot', hybridFullAccess, screenshotUpload.single('screenshot
 // Video/Reel processing endpoint (called after TUS upload completes)
 router.post('/process-video', hybridFullAccess, async (req, res) => {
   try {
+    // Check before validation/limits so a retry after a dropped response does
+    // not appear to hit a new quota or scheduling cap.
+    const existingUpload = await getExistingUploadAttempt(req.user!.id, req.body.uploadAttemptId);
+    if (existingUpload) return res.json(existingUpload);
+
     // Resolve scheduling intent up front so we can reject before doing the
     // expensive download/transcode work in processAndCreateClip below.
     const { date: scheduledAt, error: scheduleError } = parseScheduledAt(req.body.scheduledAt);
@@ -752,7 +809,12 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
 
     res.json(responseData);
   } catch (error) {
-    captureRouteError(error);
+    captureRouteError(error, uploadTelemetryContext(req, {
+      stage: 'processing',
+      ...(isValidUploadAttemptId(req.body?.uploadAttemptId)
+        ? { upload_attempt_id: req.body.uploadAttemptId }
+        : {}),
+    }));
     if (error instanceof ClipProcessingError) {
       return res.status(error.status).json(error.body);
     }
@@ -760,6 +822,36 @@ router.post('/process-video', hybridFullAccess, async (req, res) => {
     res.status(500).json({
       error: error instanceof Error ? error.message : 'Video processing failed'
     });
+  }
+});
+
+// Browser-side recovery for a request that reached the server but whose
+// response did not make it back to the client. The lookup is strictly scoped
+// to the authenticated owner and reveals no upload-path or other-user data.
+router.get('/process-video/reconcile', hybridFullAccess, async (req, res) => {
+  try {
+    const existingUpload = await getExistingUploadAttempt(req.user!.id, req.query.uploadAttemptId);
+    captureRouteMessage(
+      existingUpload ? 'bulk_upload.reconciliation.recovered' : 'bulk_upload.reconciliation.not_found',
+      uploadTelemetryContext(req, {
+        stage: 'reconciliation',
+        outcome: existingUpload ? 'recovered' : 'not_found',
+        ...(isValidUploadAttemptId(req.query?.uploadAttemptId)
+          ? { upload_attempt_id: String(req.query.uploadAttemptId) }
+          : {}),
+      }),
+    );
+    res.json(existingUpload ?? { found: false });
+  } catch (error) {
+    captureRouteError(error, uploadTelemetryContext(req, {
+      stage: 'reconciliation',
+      outcome: 'failed',
+      ...(isValidUploadAttemptId(req.query?.uploadAttemptId)
+        ? { upload_attempt_id: String(req.query.uploadAttemptId) }
+        : {}),
+    }));
+    console.error('Video upload reconciliation error:', error);
+    res.status(500).json({ error: 'Could not confirm the upload status' });
   }
 });
 

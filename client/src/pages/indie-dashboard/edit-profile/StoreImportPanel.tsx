@@ -1,23 +1,26 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, getQueryFn, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Loader2, Check, AlertTriangle, ShieldCheck, ShieldAlert,
+  Loader2, Check, AlertTriangle, ShieldCheck, ShieldAlert, X,
   Copy, KeyRound, LogOut, ExternalLink, ChevronRight,
 } from "lucide-react";
 import { SiSteam, SiEpicgames, SiItchdotio } from "react-icons/si";
 import { NEON, CARD_BG, CARD_BORDER } from "../../IndieDashboardPage";
-import { formatFieldName, formatValue, type Profile, type FieldMeta } from "./types";
+import { formatFieldName, formatValue, getSourceLabel, type Profile, type FieldMeta } from "./types";
+import { validateStoreUrl } from "@shared/store-urls";
 
 interface StoreImportPanelProps {
   profile: Profile | null;
+  gameId?: number;
   fieldMeta: FieldMeta;
   onImported: () => void;
   onGoToStoreLinks?: () => void;
 }
 
-export function StoreImportPanel({ profile, fieldMeta, onImported, onGoToStoreLinks }: StoreImportPanelProps) {
+export function StoreImportPanel({ profile, gameId, fieldMeta, onImported, onGoToStoreLinks }: StoreImportPanelProps) {
   const { toast } = useToast();
   const [tab, setTab] = useState<"steam" | "epic" | "itch">("steam");
   const [epicInput, setEpicInput] = useState(profile?.epicSlug ?? "");
@@ -32,15 +35,26 @@ export function StoreImportPanel({ profile, fieldMeta, onImported, onGoToStoreLi
   // ── Steam verification state ──
   const { data: steamStatus, refetch: refetchSteamStatus } = useQuery<any>({
     queryKey: ["/api/indie/steam/status"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
   const [steamVerifLoading, setSteamVerifLoading] = useState(false);
   const [steamVerifStep, setSteamVerifStep] = useState<"idle" | "code" | "checking">("idle");
   const [steamVerifCode, setSteamVerifCode] = useState<{ code: string; steamAppId: string; expiresAt: string } | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [showSteamUrlPrompt, setShowSteamUrlPrompt] = useState(false);
+  const [steamUrlInput, setSteamUrlInput] = useState("");
+  const [steamUrlError, setSteamUrlError] = useState("");
+  const [steamUrlSaving, setSteamUrlSaving] = useState(false);
   const [showManualSteam, setShowManualSteam] = useState(false);
   const [manualSteamId, setManualSteamId] = useState(profile?.steamAppId ?? "");
 
-  const startSteamVerif = async () => {
+  const openSteamUrlPrompt = () => {
+    setSteamUrlInput(profile?.steamUrl ?? "");
+    setSteamUrlError("");
+    setShowSteamUrlPrompt(true);
+  };
+
+  const requestSteamVerification = async () => {
     setSteamVerifLoading(true);
     try {
       const res = await fetch("/api/indie/steam/start-verification", { method: "POST", credentials: "include" });
@@ -50,6 +64,38 @@ export function StoreImportPanel({ profile, fieldMeta, onImported, onGoToStoreLi
       setSteamVerifStep("code");
     } catch { toast({ description: "Verification start failed", variant: "gamefolioError" }); }
     finally { setSteamVerifLoading(false); }
+  };
+
+  const startSteamVerif = async () => {
+    const steamUrlValidationError = validateStoreUrl("steamUrl", profile?.steamUrl);
+    if (!profile?.steamUrl?.trim() || steamUrlValidationError) {
+      openSteamUrlPrompt();
+      return;
+    }
+    await requestSteamVerification();
+  };
+
+  const saveSteamUrlAndContinue = async () => {
+    const value = steamUrlInput.trim();
+    const validationError = validateStoreUrl("steamUrl", value);
+    if (!value || validationError) {
+      setSteamUrlError(validationError ?? "Add your Steam store page URL to continue.");
+      return;
+    }
+
+    setSteamUrlSaving(true);
+    setSteamUrlError("");
+    try {
+      await apiRequest("PUT", "/api/indie/profile", { gameId, steamUrl: value });
+      await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
+      onImported();
+      setShowSteamUrlPrompt(false);
+      await requestSteamVerification();
+    } catch (error) {
+      setSteamUrlError(error instanceof Error ? error.message.replace(/^\d+:\s*/, "") : "Could not save your Steam store URL.");
+    } finally {
+      setSteamUrlSaving(false);
+    }
   };
 
   const checkSteamVerif = async () => {
@@ -75,6 +121,7 @@ export function StoreImportPanel({ profile, fieldMeta, onImported, onGoToStoreLi
   // ── itch.io connection state ──
   const { data: itchStatus, refetch: refetchItchStatus } = useQuery<any>({
     queryKey: ["/api/indie/itch/status"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
   });
   const [showItchConnect, setShowItchConnect] = useState(false);
   const [itchKeyInput, setItchKeyInput] = useState("");
@@ -155,7 +202,7 @@ export function StoreImportPanel({ profile, fieldMeta, onImported, onGoToStoreLi
       const data = previewData?.fields ?? {};
       for (const k of Array.from(selectedFields)) { if (k in data) fields[k] = data[k]; }
       const res = await apiRequest("POST", "/api/indie/import", {
-        source: previewSource, fields,
+        source: previewSource, fields, gameId,
         ...(previewSource === "steam" && previewAppId ? { steamAppId: previewAppId } : {}),
         ...(previewSource === "epic" && previewSlug ? { epicSlug: previewSlug } : {}),
         ...(previewSource === "itch" && selectedItchGame ? { itchGameUrl: selectedItchGame.url } : {}),
@@ -171,7 +218,7 @@ export function StoreImportPanel({ profile, fieldMeta, onImported, onGoToStoreLi
       await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       setPreviewData(null); setSelectedFields(new Set()); onImported();
     },
-    onError: () => toast({ description: "Import failed.", variant: "gamefolioError" }),
+    onError: (error: Error) => toast({ description: error.message.replace(/^\d+:\s*/, "") || "Import failed.", variant: "gamefolioError" }),
   });
 
   const previewFields = previewData?.fields ?? {};
@@ -180,7 +227,8 @@ export function StoreImportPanel({ profile, fieldMeta, onImported, onGoToStoreLi
   const itchConnected = itchStatus?.connected;
 
   return (
-    <div className="space-y-4">
+    <>
+      <div className="space-y-4">
       {/* Tab bar */}
       <div className="flex gap-1 p-1 rounded-lg" style={{ background: "rgba(255,255,255,0.04)" }}>
         {(["steam", "epic", "itch"] as const).map(t => (
@@ -450,14 +498,15 @@ export function StoreImportPanel({ profile, fieldMeta, onImported, onGoToStoreLi
           </div>
           <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
             {previewEntries.map(([k, v]) => {
-              const hasOverride = fieldMeta[k]?.isManualOverride;
+              const sourceLabel = getSourceLabel(fieldMeta[k]);
+              const hasOverride = sourceLabel === "OVERRIDDEN";
               return (
                 <label key={k} className="flex items-start gap-2.5 p-2 rounded cursor-pointer hover:bg-white/5 transition-colors">
                   <input type="checkbox" checked={selectedFields.has(k)} onChange={() => toggleField(k)} className="mt-0.5 accent-[#c1ff00]" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-bold text-white">{formatFieldName(k)}</span>
-                      {hasOverride && <span className="flex items-center gap-0.5 text-[9px] text-yellow-400"><AlertTriangle size={9} /> manual edit</span>}
+                      {hasOverride && <span className="flex items-center gap-0.5 text-[9px] text-yellow-400"><AlertTriangle size={9} /> OVERRIDDEN · current value kept</span>}
                     </div>
                     <div className="text-[11px] text-white/40 truncate">{formatValue(v)}</div>
                   </div>
@@ -479,6 +528,98 @@ export function StoreImportPanel({ profile, fieldMeta, onImported, onGoToStoreLi
           </div>
         </div>
       )}
-    </div>
+      </div>
+
+      {showSteamUrlPrompt && createPortal(
+        <div
+          className="fixed inset-0 z-[200000] flex items-center justify-center bg-black/75 p-4 backdrop-blur-[2px]"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !steamUrlSaving) setShowSteamUrlPrompt(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="steam-url-prompt-title"
+            className="w-full max-w-md rounded-2xl p-5 shadow-2xl"
+            style={{ background: "#151923", border: `1px solid ${CARD_BORDER}` }}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(102,192,244,0.12)" }}>
+                  <SiSteam size={17} className="text-[#66c0f4]" />
+                </div>
+                <div>
+                  <h2 id="steam-url-prompt-title" className="text-sm font-black text-white">Add your Steam store page</h2>
+                  <p className="mt-1 text-[11px] leading-relaxed text-white/45">
+                    We need the public Steam page before we can verify ownership.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSteamUrlPrompt(false)}
+                disabled={steamUrlSaving}
+                aria-label="Close"
+                className="rounded-lg p-1.5 text-white/35 transition-colors hover:bg-white/[0.06] hover:text-white disabled:opacity-40"
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-2">
+              <label htmlFor="steam-verification-url" className="text-[10px] font-black uppercase tracking-[0.12em] text-white/45">
+                Steam store URL
+              </label>
+              <input
+                id="steam-verification-url"
+                type="url"
+                autoFocus
+                value={steamUrlInput}
+                onChange={(event) => {
+                  setSteamUrlInput(event.target.value);
+                  if (steamUrlError) setSteamUrlError("");
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !steamUrlSaving) saveSteamUrlAndContinue();
+                }}
+                placeholder="https://store.steampowered.com/app/…"
+                className="w-full rounded-xl px-3 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-white/20"
+                style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${steamUrlError ? "rgba(248,113,113,0.7)" : CARD_BORDER}` }}
+              />
+              {steamUrlError ? (
+                <p className="text-[11px] leading-relaxed text-red-300">{steamUrlError}</p>
+              ) : (
+                <p className="text-[10px] leading-relaxed text-white/25">
+                  Use the public URL for the game’s Steam store page, not a search or community link.
+                </p>
+              )}
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowSteamUrlPrompt(false)}
+                disabled={steamUrlSaving}
+                className="rounded-xl px-3.5 py-2 text-xs font-bold text-white/50 transition-colors hover:bg-white/[0.05] hover:text-white disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveSteamUrlAndContinue}
+                disabled={steamUrlSaving || !steamUrlInput.trim()}
+                className="flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-black transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+                style={{ background: "#66c0f4", color: "#071018" }}
+              >
+                {steamUrlSaving && <Loader2 size={12} className="animate-spin" />}
+                {steamUrlSaving ? "Saving…" : "Save & continue"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }

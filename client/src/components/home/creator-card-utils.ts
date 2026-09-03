@@ -26,6 +26,8 @@ export interface TrendingEntry {
     avatarBorderColor: string | null;
     accentColor: string | null;
     level?: number | null;
+    isPro?: boolean | null;
+    selectedVerificationBadgeId?: number | null;
     backgroundColor?: string | null;
     primaryColor?: string | null;
     profileBackgroundType?: string | null;

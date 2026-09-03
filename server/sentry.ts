@@ -16,11 +16,29 @@ export function initServerSentry(): void {
   const dsn = (process.env.SENTRY_DSN || process.env.VITE_SENTRY_DSN)?.trim();
   if (!dsn) return;
 
+  const environment =
+    process.env.SENTRY_ENVIRONMENT?.trim() ||
+    (process.env.NODE_ENV === "production" ? "production" : "development");
+
+  // Only production reports. Dev workspaces and the beta Replit project share
+  // this DSN (see .env.beta), and they share the org's single monthly error
+  // quota with it — on 2026-08-22 a dev workspace running post-migration code
+  // against a DB missing migration 0020 threw `column clips.status does not
+  // exist` on five feed endpoints, burned ~2,100 events in 16 hours, exhausted
+  // the quota, and left production with no error reporting at all for the next
+  // ten days. A broken dev box must not be able to blind production. Set
+  // SENTRY_ALLOW_NON_PRODUCTION=true to opt a non-prod environment back in
+  // deliberately (and give it its own DSN/project if you do).
+  if (
+    environment !== "production" &&
+    process.env.SENTRY_ALLOW_NON_PRODUCTION?.trim() !== "true"
+  ) {
+    return;
+  }
+
   Sentry.init({
     dsn,
-    environment:
-      process.env.SENTRY_ENVIRONMENT?.trim() ||
-      (process.env.NODE_ENV === "production" ? "production" : "development"),
+    environment,
     // Error-capture focus, not perf monitoring — same tradeoff as the client.
     tracesSampleRate: 0,
     initialScope: { tags: { runtime: "server" } },
@@ -49,4 +67,15 @@ export function captureRouteError(
 ): void {
   if (!initialized) return;
   Sentry.captureException(err, context ? { tags: context } : undefined);
+}
+
+export function captureRouteMessage(
+  message: string,
+  context?: Record<string, string>,
+): void {
+  if (!initialized) return;
+  Sentry.captureMessage(message, {
+    level: "info",
+    ...(context ? { tags: context } : {}),
+  });
 }
