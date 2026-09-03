@@ -107,7 +107,7 @@ router.post("/:id/approve", async (req: Request, res: Response) => {
       type: "game_build_approved",
       title: "Build approved",
       message: `"${build.label}" for ${build.gameName ?? "your game"} is now live on Gamefolio.`,
-      actionUrl: `/indie-dashboard?tab=builds`,
+      actionUrl: `/game-dashboard?tab=builds`,
     }).catch((err) => console.error("[AdminGameBuilds] approval notification failed:", err));
 
     res.json({ success: true });
@@ -148,7 +148,7 @@ router.post("/:id/reject", async (req: Request, res: Response) => {
       type: "game_build_rejected",
       title: "Build needs changes",
       message: `"${build.label}" was not approved: ${reason}`,
-      actionUrl: `/indie-dashboard?tab=builds`,
+      actionUrl: `/game-dashboard?tab=builds`,
     }).catch((err) => console.error("[AdminGameBuilds] rejection notification failed:", err));
 
     res.json({ success: true });
@@ -192,7 +192,7 @@ router.post("/:id/takedown", async (req: Request, res: Response) => {
       type: "game_build_removed",
       title: "Build removed",
       message: `"${build.label}" was removed from Gamefolio: ${reason}`,
-      actionUrl: `/indie-dashboard?tab=builds`,
+      actionUrl: `/game-dashboard?tab=builds`,
     }).catch((err) => console.error("[AdminGameBuilds] takedown notification failed:", err));
 
     res.json({ success: true });
