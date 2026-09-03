@@ -252,6 +252,14 @@ router.post("/upload-url", hybridAuth, uploadRateLimiter, async (req: Request, r
     }
 
     const subscriber = await isSubscriber(userId);
+    if (!subscriber) {
+      // validateBuildUpload would refuse this too, but a 403 with an explicit
+      // code lets the client show the upgrade path rather than a form error.
+      return res.status(403).json({
+        error: "subscription_required",
+        message: "Hosting your game on Gamefolio is part of Game Developer Pro.",
+      });
+    }
     const quota = quotaFor(subscriber);
     const usage = await getQuotaUsage(userId, profileId);
 

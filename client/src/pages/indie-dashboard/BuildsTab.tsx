@@ -8,9 +8,10 @@ import {
 } from "lucide-react";
 import {
   quotaFor, validateBuildUpload, formatBytes, extensionsFor,
-  BUILD_PLATFORMS, PLATFORM_LABELS,
+  BUILD_PLATFORMS, PLATFORM_LABELS, SUBSCRIBER_QUOTA,
   type BuildType, type BuildPlatform, type BuildQuota, type BuildStatus,
 } from "@shared/game-builds";
+import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
 import { DASHBOARD_THEME, rgbaAccent } from "./constants";
 
 interface BuildRow {
@@ -65,20 +66,37 @@ export default function BuildsTab({ gameId }: { gameId: number | null }) {
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [stage, setStage] = useState<string | null>(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
-  const { data: quotaData } = useQuery<QuotaResponse>({
+  const { data: quotaData, isLoading: quotaLoading } = useQuery<QuotaResponse>({
     queryKey: ["/api/game-builds/quota"],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    // This query decides whether a paying subscriber sees their tools or an
+    // upsell, so it must not be left stranded at undefined by one bad response
+    // — the same failure that hid Pro upload limits (UploadPage.tsx:583).
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
   });
 
+  // `gameId` is only populated from ?gameId= in the URL. With no param the
+  // dashboard displays the developer's primary game, so resolve that here the
+  // same way GameHeroBanner and DashboardTab do — otherwise this tab tells a
+  // developer to add a game while their game is on screen above it.
+  const { data: profileData, isLoading: profileLoading } = useQuery<any>({
+    queryKey: ["/api/indie/profile", gameId ?? null],
+    queryFn: () =>
+      apiRequest("GET", `/api/indie/profile${gameId ? `?gameId=${gameId}` : ""}`).then((r) => r.json()),
+  });
+  const profileId: number | null = profileData?.profile?.id ?? null;
+
   const { data: buildsData, isLoading } = useQuery<{ builds: BuildRow[] }>({
-    queryKey: ["/api/game-builds", { profileId: gameId }],
+    queryKey: ["/api/game-builds", { profileId }],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    enabled: !!gameId,
+    enabled: !!profileId,
   });
 
   const builds = buildsData?.builds ?? [];
-  const quota = quotaData?.quota ?? quotaFor(false);
+  const quota = quotaData?.quota ?? quotaFor(true);
   const usedBytes = quotaData?.usedBytes ?? 0;
   const isSubscriber = quotaData?.isSubscriber ?? false;
 
@@ -114,11 +132,11 @@ export default function BuildsTab({ gameId }: { gameId: number | null }) {
    */
   const upload = useMutation({
     mutationFn: async () => {
-      if (!file || !gameId) throw new Error("Pick a game and a file first");
+      if (!file || !profileId) throw new Error("Pick a game and a file first");
 
       setStage("Preparing upload");
       const reserveRes = await apiRequest("POST", "/api/game-builds/upload-url", {
-        profileId: gameId,
+        profileId,
         buildType,
         platform: buildType === "download" ? platform : null,
         channel,
@@ -206,7 +224,49 @@ export default function BuildsTab({ gameId }: { gameId: number | null }) {
     );
   }
 
-  if (!gameId) {
+  // Hosting is a Game Developer Pro feature outright. Show what it is and how to
+  // get it rather than a form every submission would be refused from.
+  if (quotaLoading) {
+    return (
+      <div className="flex justify-center py-10">
+        <Loader2 className="h-5 w-5 animate-spin" style={{ color: DASHBOARD_THEME.textMuted }} />
+      </div>
+    );
+  }
+
+  if (!isSubscriber) {
+    return (
+      <>
+        <div className="rounded-2xl p-6 text-center"
+          style={{ background: DASHBOARD_THEME.surface, border: `1px solid ${DASHBOARD_THEME.border}` }}>
+          <HardDrive className="mx-auto mb-3 h-8 w-8" style={{ color: DASHBOARD_THEME.accent }} />
+          <h3 className="text-sm font-black text-white">Host your game on Gamefolio</h3>
+          <p className="mx-auto mt-2 max-w-md text-xs leading-5" style={{ color: DASHBOARD_THEME.textMuted }}>
+            Game Developer Pro lets you upload playable builds straight to your game page —
+            a browser demo players can start in one click, or downloads for Windows, macOS
+            and Linux. {formatBytes(SUBSCRIBER_QUOTA.accountBytes)} of storage,
+            {" "}{SUBSCRIBER_QUOTA.maxBuildsPerGame} builds per game, unlimited downloads.
+          </p>
+          <button type="button" onClick={() => setShowUpgrade(true)}
+            className="mt-4 rounded-xl px-5 py-2.5 text-xs font-black transition-all hover:brightness-110"
+            style={{ background: DASHBOARD_THEME.accent, color: "#071000" }}>
+            Explore Developer Pro
+          </button>
+        </div>
+        <IndieDevUpgradeDialog open={showUpgrade} onOpenChange={setShowUpgrade} />
+      </>
+    );
+  }
+
+  if (profileLoading) {
+    return (
+      <div className="flex justify-center py-10">
+        <Loader2 className="h-5 w-5 animate-spin" style={{ color: DASHBOARD_THEME.textMuted }} />
+      </div>
+    );
+  }
+
+  if (!profileId) {
     return (
       <div className="rounded-2xl p-6 text-center text-xs"
         style={{ background: DASHBOARD_THEME.surface, border: `1px solid ${DASHBOARD_THEME.border}`, color: DASHBOARD_THEME.textMuted }}>
@@ -236,12 +296,7 @@ export default function BuildsTab({ gameId }: { gameId: number | null }) {
           <div className="h-full rounded-full transition-all"
             style={{ width: `${usedPct}%`, background: usedPct > 90 ? DASHBOARD_THEME.danger : DASHBOARD_THEME.accent }} />
         </div>
-        {!isSubscriber && (
-          <p className="mt-3 text-[11px] leading-4" style={{ color: DASHBOARD_THEME.textMuted }}>
-            Free accounts can host one browser-playable build. Game Developer adds downloadable
-            builds for Windows, macOS and Linux, and raises storage to {formatBytes(quotaFor(true).accountBytes)}.
-          </p>
-        )}
+
       </div>
 
       {/* ── Upload form ── */}
@@ -266,7 +321,6 @@ export default function BuildsTab({ gameId }: { gameId: number | null }) {
                   {type === "web" ? <Globe className="h-3.5 w-3.5" /> : <Download className="h-3.5 w-3.5" />}
                   {type === "web" ? "Play in browser" : "Downloadable"}
                 </div>
-                {!allowed && <div className="mt-1 text-[10px]">Game Developer only</div>}
               </button>
             );
           })}

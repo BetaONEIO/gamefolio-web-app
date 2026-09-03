@@ -5,6 +5,7 @@ import {
   FREE_QUOTA,
   SUBSCRIBER_QUOTA,
   WEB_BUILD_MAX_BYTES,
+  hasBuildHosting,
   formatBytes,
 } from '../shared/game-builds';
 import { safeRelativePath, findEntryPoint } from '../server/services/game-build-extractor';
@@ -19,19 +20,22 @@ const GB = 1024 * MB;
 const noUsage = { usedBytes: 0, buildsOnGame: 0 };
 
 test.describe('validateBuildUpload @unit', () => {
-  test('accepts a normal web build on a free account', () => {
-    expect(validateBuildUpload(
-      { buildType: 'web', fileName: 'game.zip', sizeBytes: 40 * MB },
-      noUsage, FREE_QUOTA,
-    )).toBeNull();
+  test('refuses any build without the subscription', () => {
+    // Hosting is a Game Developer Pro feature outright — a non-subscriber is
+    // refused before build type, size or extension is even considered.
+    for (const req of [
+      { buildType: 'web' as const, fileName: 'game.zip', sizeBytes: 40 * MB },
+      { buildType: 'download' as const, platform: 'windows' as const, fileName: 'game.zip', sizeBytes: 10 * MB },
+    ]) {
+      expect(validateBuildUpload(req, noUsage, FREE_QUOTA)).toContain('Game Developer Pro');
+    }
   });
 
-  test('refuses downloadable builds on the free tier and names the reason', () => {
-    const error = validateBuildUpload(
-      { buildType: 'download', platform: 'windows', fileName: 'game.zip', sizeBytes: 10 * MB },
-      noUsage, FREE_QUOTA,
-    );
-    expect(error).toContain('Game Developer');
+  test('accepts a normal web build for a subscriber', () => {
+    expect(validateBuildUpload(
+      { buildType: 'web', fileName: 'game.zip', sizeBytes: 40 * MB },
+      noUsage, SUBSCRIBER_QUOTA,
+    )).toBeNull();
   });
 
   test('allows downloadable builds for a subscriber', () => {
@@ -70,8 +74,8 @@ test.describe('validateBuildUpload @unit', () => {
   test('rejects once the per-game build count is used up', () => {
     const error = validateBuildUpload(
       { buildType: 'web', fileName: 'game.zip', sizeBytes: 1 * MB },
-      { usedBytes: 0, buildsOnGame: FREE_QUOTA.maxBuildsPerGame },
-      FREE_QUOTA,
+      { usedBytes: 0, buildsOnGame: SUBSCRIBER_QUOTA.maxBuildsPerGame },
+      SUBSCRIBER_QUOTA,
     );
     expect(error).toContain('per game');
   });
@@ -86,6 +90,11 @@ test.describe('validateBuildUpload @unit', () => {
   test('quotaFor maps the subscription flag to the right ceiling', () => {
     expect(quotaFor(false).accountBytes).toBe(FREE_QUOTA.accountBytes);
     expect(quotaFor(true).accountBytes).toBe(SUBSCRIBER_QUOTA.accountBytes);
+  });
+
+  test('the free quota grants no hosting at all', () => {
+    expect(hasBuildHosting(FREE_QUOTA)).toBe(false);
+    expect(hasBuildHosting(SUBSCRIBER_QUOTA)).toBe(true);
   });
 });
 

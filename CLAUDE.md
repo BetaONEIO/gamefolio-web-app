@@ -176,11 +176,16 @@ it on:
 6. Flip `GAME_BUILDS_ENABLED` to `true`.
 
 Tier limits live in `shared/game-builds.ts` and are enforced by the same
-`validateBuildUpload` on both sides. Free accounts get one browser-playable
-build; Game Developer subscribers get downloadable builds and 20GB. Every build
-waits for a human in AdminPage before it is public — the catalogue's existing
-auto-approve path is what produced the "Untitled game" stubs, and the same
-mistake on a hosted executable is distributing malware.
+`validateBuildUpload` on both sides. Hosting is **Game Developer Pro only** —
+there is no free tier of it. `FREE_QUOTA` is deliberately all zeros with no
+allowed build types, so every quota check refuses a non-subscriber without
+needing a separate code path to remember; `/upload-url` also 403s them up front
+so the client can show the upgrade path instead of a form error. When a
+subscription lapses, every hosted build is hidden (not just downloads) and the
+bytes are kept for 90 days. Every build waits for a human in AdminPage before it
+is public — the catalogue's existing auto-approve path is what produced the
+"Untitled game" stubs, and the same mistake on a hosted executable is
+distributing malware.
 
 ## Stack quick-ref
 

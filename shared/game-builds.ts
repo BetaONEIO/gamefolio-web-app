@@ -58,16 +58,16 @@ export interface BuildQuota {
 }
 
 /**
- * Free devs get exactly enough to publish one playable demo, which is the
- * point: it is the shop window for the subscription, not a free tier of it.
- * Executable hosting stays behind the paywall because that is the part with a
- * real per-account cost (moderation time) attached to it.
+ * Hosting is a Game Developer Pro feature outright — there is no free tier of
+ * it. A zero quota with no allowed build types is how that is expressed, so
+ * every quota check naturally refuses a non-subscriber without needing a
+ * separate code path to remember.
  */
 export const FREE_QUOTA: BuildQuota = {
-  accountBytes: 250 * MB,
-  maxBuildBytes: 250 * MB,
-  maxBuildsPerGame: 1,
-  allowedTypes: ["web"],
+  accountBytes: 0,
+  maxBuildBytes: 0,
+  maxBuildsPerGame: 0,
+  allowedTypes: [],
 };
 
 export const SUBSCRIBER_QUOTA: BuildQuota = {
@@ -91,6 +91,11 @@ export const WEB_BUILD_MAX_EXPANDED_BYTES = 2 * GB;
 
 export function quotaFor(isIndieDevSubscriber: boolean): BuildQuota {
   return isIndieDevSubscriber ? SUBSCRIBER_QUOTA : FREE_QUOTA;
+}
+
+/** Whether this quota permits hosting at all, as opposed to how much of it. */
+export function hasBuildHosting(quota: BuildQuota): boolean {
+  return quota.allowedTypes.length > 0 && quota.accountBytes > 0;
 }
 
 /**
@@ -146,12 +151,14 @@ export function validateBuildUpload(
   usage: QuotaUsage,
   quota: BuildQuota,
 ): string | null {
+  if (!hasBuildHosting(quota)) {
+    return "Hosting your game on Gamefolio is part of Game Developer Pro.";
+  }
+
   if (!req.fileName.trim()) return "Choose a file to upload.";
 
   if (!quota.allowedTypes.includes(req.buildType)) {
-    return req.buildType === "download"
-      ? "Downloadable builds are a Game Developer feature. Browser-playable builds are available on every account."
-      : "That build type is not available on your plan.";
+    return "That build type is not available on your plan.";
   }
 
   if (!hasAllowedExtension(req.fileName, req.buildType)) {

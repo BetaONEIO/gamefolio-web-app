@@ -82,10 +82,9 @@ export function summariseQuota(usage: QuotaUsage, quota: BuildQuota): QuotaSumma
 /**
  * Called when a Game Developer subscription ends.
  *
- * Downloadable builds stop being public immediately — that capability is what
- * was being paid for. Browser-playable builds are left alone because they are
- * available on the free tier too, so pulling them would be taking away
- * something the developer never needed to pay for.
+ * Every hosted build stops being public, browser-playable ones included —
+ * hosting is a subscriber feature outright, so there is no build type a lapsed
+ * account is still entitled to serve.
  *
  * Bytes are NOT deleted here. The build stays recoverable for
  * LAPSED_RETENTION_DAYS so an expired card is an inconvenience rather than the
@@ -98,14 +97,13 @@ export async function hideBuildsForLapsedSubscriber(userId: number): Promise<num
         hidden_reason = 'subscription_lapsed',
         updated_at = now()
     WHERE user_id = ${userId}
-      AND build_type = 'download'
       AND hidden_at IS NULL
       AND status IN ('approved', 'pending_review')
     RETURNING id
   `);
   const hidden = rowsOf(result).length;
   if (hidden > 0) {
-    console.log(`[GameBuilds] Hid ${hidden} downloadable build(s) for lapsed subscriber ${userId}`);
+    console.log(`[GameBuilds] Hid ${hidden} build(s) for lapsed subscriber ${userId}`);
   }
   return hidden;
 }
