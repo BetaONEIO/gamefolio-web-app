@@ -87,6 +87,90 @@ function RewardCol({ icon, label, sublabel, value, active }: { icon: any; label:
   );
 }
 
+function CompactObjectiveRow({
+  title,
+  description,
+  contentType,
+  xp,
+  quantity,
+  progress = 0,
+  isBonus = false,
+  interactive = false,
+  done = false,
+  status,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  contentType: string;
+  xp: number;
+  quantity: number;
+  progress?: number;
+  isBonus?: boolean;
+  interactive?: boolean;
+  done?: boolean;
+  status?: string;
+  onClick?: () => void;
+}) {
+  const Icon = CONTENT_TYPE_ICON[contentType] ?? Target;
+  const accent = done ? "#4ade80" : isBonus ? "rgba(255,255,255,0.42)" : NEON;
+  const clampedProgress = Math.min(progress, quantity);
+  const rowClass = `relative w-full rounded-xl p-4 flex items-center gap-3 sm:gap-4 text-left transition-colors ${interactive ? "cursor-pointer hover:bg-white/[0.055]" : ""}`;
+
+  return (
+    <div
+      role={interactive ? "button" : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onClick={interactive ? onClick : undefined}
+      onKeyDown={interactive ? e => { if (e.key === "Enter" || e.key === " ") onClick?.(); } : undefined}
+      className={rowClass}
+      style={{
+        background: done ? "rgba(74,222,128,0.045)" : isBonus ? "rgba(255,255,255,0.025)" : CARD_BG,
+        border: `1px solid ${done ? "rgba(74,222,128,0.22)" : "rgba(255,255,255,0.09)"}`,
+        opacity: isBonus && !done ? 0.82 : 1,
+      }}
+    >
+      <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+        style={{ background: done ? "rgba(74,222,128,0.12)" : "rgba(184,255,27,0.08)", color: accent }}>
+        {done ? <Check size={16} strokeWidth={3} /> : <Icon size={16} />}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="text-sm font-black text-white leading-tight">{title}</div>
+          {isBonus && <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full" style={{ color: "rgba(255,255,255,0.52)", background: "rgba(255,255,255,0.07)" }}>Bonus</span>}
+          {status && <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full" style={{ color: done ? "#4ade80" : NEON, background: done ? "rgba(74,222,128,0.10)" : "rgba(184,255,27,0.08)" }}>{status}</span>}
+        </div>
+        <div className="text-[11px] text-white/40 truncate mt-1">{description}</div>
+        {interactive && (
+          <div className="h-1.5 rounded-full overflow-hidden mt-2 max-w-sm" style={{ background: "rgba(255,255,255,0.07)" }}>
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${quantity > 0 ? (clampedProgress / quantity) * 100 : 0}%`, background: done ? "#4ade80" : NEON }} />
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        {xp > 0 && <div className="text-xs font-black tabular-nums" style={{ color: NEON }}>+{xp.toLocaleString()} XP</div>}
+        <div className="text-[11px] font-black tabular-nums" style={{ color: done ? "#4ade80" : "rgba(255,255,255,0.52)" }}>
+          {interactive ? `${clampedProgress} / ${quantity}` : `${quantity} required`}
+        </div>
+        {interactive && <ChevronRight size={14} className="text-white/25" />}
+      </div>
+    </div>
+  );
+}
+
+function objectiveDescription(b: any) {
+  const qty = Number(b.quantity ?? 1);
+  const ct = b.content_type as string;
+  return b.description ?? (ct === "clip" ? `Upload at least ${qty} gameplay clip${qty !== 1 ? "s" : ""}` :
+    ct === "screenshot" ? `Capture ${qty} in-game screenshot${qty !== 1 ? "s" : ""}` :
+    ct === "feedback" ? "Share your impressions of the game" :
+    ct === "reel" ? `Create ${qty} highlight reel${qty !== 1 ? "s" : ""}` :
+    ct === "stream" ? "Go live and stream your gameplay" :
+    ct === "bug" ? `Document ${qty} bug${qty !== 1 ? "s" : ""}` : "Complete this objective");
+}
+
 // ── Requirement pill ──────────────────────────────────────────────────────
 const REQ_ICON: Record<string, any> = {
   clip: Film, screenshot: Camera, feedback: MessageSquare,
@@ -840,8 +924,57 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
               );
             })()}
 
-            {/* ── Objective cards ── */}
-            <div className="space-y-6">
+            {/* ── Compact quest-log objectives ── */}
+            <div className="space-y-3 max-w-3xl">
+              {mandatory.map((b: any) => {
+                const progress = getProgress(b.id);
+                const quantity = Number(b.quantity ?? 1);
+                const done = progress >= quantity;
+                return (
+                  <CompactObjectiveRow
+                    key={b.id}
+                    title={objectiveLabel(b)}
+                    description={objectiveDescription(b)}
+                    contentType={b.content_type}
+                    xp={Number(b.xp_reward ?? 0)}
+                    quantity={quantity}
+                    progress={progress}
+                    interactive={hasJoined && !!user}
+                    done={done}
+                    status={hasJoined ? (done ? "Completed" : progress > 0 ? "In Progress" : "Not Started") : undefined}
+                    onClick={() => setActivePanel({ bounty: b })}
+                  />
+                );
+              })}
+              {optional.length > 0 && (
+                <>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-white/30 pt-4 px-1">Bonus Objectives <span className="text-white/20">· Optional</span></div>
+                  {optional.map((b: any) => {
+                    const progress = getProgress(b.id);
+                    const quantity = Number(b.quantity ?? 1);
+                    return (
+                      <CompactObjectiveRow
+                        key={b.id}
+                        title={objectiveLabel(b)}
+                        description={objectiveDescription(b)}
+                        contentType={b.content_type}
+                        xp={Number(b.xp_reward ?? 0)}
+                        quantity={quantity}
+                        progress={progress}
+                        isBonus
+                        interactive={hasJoined && !!user}
+                        done={progress >= quantity}
+                        status={hasJoined ? (progress >= quantity ? "Completed" : progress > 0 ? "In Progress" : "Not Started") : undefined}
+                        onClick={() => setActivePanel({ bounty: b })}
+                      />
+                    );
+                  })}
+                </>
+              )}
+            </div>
+
+            {/* ── Legacy detailed objective layout retained for the accepted picker path ── */}
+            <div className="hidden">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {mandatory.map((b: any, idx: number) => {
                   const ct = b.content_type as string;
