@@ -293,7 +293,7 @@ const Sidebar = () => {
 
     // Partner dashboards — visible only to the matching paid partner (admins see both).
     ...(canAccessIndieGame ? [{ icon: Rocket, label: "Game Dashboard", href: "/game-dashboard" }] : []),
-    ...(isIndieDev && BOUNTIES_ENABLED ? [{ icon: Trophy, label: "Bounty Hub", href: "/bounties" }] : []),
+    ...(user && BOUNTIES_ENABLED ? [{ icon: Trophy, label: "Bounty Hub", href: "/bounties" }] : []),
     ...(isPartnerType(user, "streamer") || user?.role === "admin" ? [{ icon: Radio, label: "Streamer Dashboard", href: "/streamer/dashboard" }] : []),
 
     { icon: GamefolioHelpIcon, label: "Help & Support", href: "/help" },

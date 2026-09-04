@@ -1926,15 +1926,13 @@ export default function BountiesPage() {
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
-  // Bounty Hub = indie only (Gamefolio-managed campaigns live elsewhere)
-  const indieCampaigns = useMemo(
-    () => allCampaigns.filter((c: any) => !c.gamefolio_managed),
-    [allCampaigns],
-  );
+  // The hub is available to every authenticated Gamefolio user. This includes
+  // Gamefolio-managed starter campaigns alongside developer campaigns.
+  const availableCampaigns = useMemo(() => allCampaigns, [allCampaigns]);
 
   // Apply search + filters
   const filtered = useMemo(() => {
-    let list = indieCampaigns;
+    let list = availableCampaigns;
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -1985,18 +1983,18 @@ export default function BountiesPage() {
     }
 
     return list;
-  }, [indieCampaigns, search, activeFilters]);
+  }, [availableCampaigns, search, activeFilters]);
 
   // Top 3 trending campaigns for the hero slider — must be before early returns
   const featuredSlides = useMemo(() => {
-    const sorted = [...indieCampaigns].sort(
+    const sorted = [...availableCampaigns].sort(
       (a: any, b: any) => Number(b.participant_count ?? 0) - Number(a.participant_count ?? 0),
     );
     const pinned = sorted.find((c: any) => c.is_featured);
     const rest = sorted.filter((c: any) => !c.is_featured);
     const ordered = pinned ? [pinned, ...rest] : sorted;
     return ordered.slice(0, 3);
-  }, [indieCampaigns]);
+  }, [availableCampaigns]);
 
   const openDetail = (c: any) => { setSelectedCampaign(c); setView("detail"); };
 
@@ -2032,8 +2030,8 @@ export default function BountiesPage() {
       <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
 
         {/* ── Community Stats strip ── */}
-        {mainTab === "marketplace" && !isLoading && indieCampaigns.length > 0 && (
-          <CommunityStats campaigns={indieCampaigns} />
+        {mainTab === "marketplace" && !isLoading && availableCampaigns.length > 0 && (
+          <CommunityStats campaigns={availableCampaigns} />
         )}
 
         {/* ── Tabs row ── */}

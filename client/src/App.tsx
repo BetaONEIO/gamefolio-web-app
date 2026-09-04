@@ -562,7 +562,7 @@ function Router() {
             {() => <Redirect to={`/game-dashboard${window.location.search}`} />}
           </Route>
           <PartnerProtectedRoute path="/settings/game" partnerType="indie" component={SettingsPage} />
-          {BOUNTIES_ENABLED && <PartnerProtectedRoute path="/bounties" partnerType="indie" component={BountiesPage} />}
+          {BOUNTIES_ENABLED && <ProtectedRoute path="/bounties" component={BountiesPage} />}
           <Route path="/streamer/dashboard" component={StreamerDashboardPage} />
           <ProtectedRoute path="/upload/bulk" component={BulkUploadPage} />
           <ProtectedRoute path="/upload/screenshots" component={ScreenshotUploadPage} />

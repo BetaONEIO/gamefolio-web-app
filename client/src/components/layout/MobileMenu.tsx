@@ -316,7 +316,7 @@ const MobileMenu = () => {
                   </Link>
                 </li>
               )}
-              {isIndieDeveloperPersona && BOUNTIES_ENABLED && (
+              {user && BOUNTIES_ENABLED && (
                 <li>
                   <Link
                     href="/bounties"
