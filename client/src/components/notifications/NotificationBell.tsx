@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, MessageCircle, Upload, UserPlus, X, UserCheck, UserX, Flame, Video, Download, Share2, Trophy } from "lucide-react";
+import { Bell, Gift, MessageCircle, Upload, UserPlus, X, UserCheck, UserX, Flame, Video, Download, Share2, Trophy, Zap } from "lucide-react";
 import { ZapIconFire } from "@/components/ui/ZapReactionIcon";
 import { PixelHeartReaction } from "@/components/ui/PixelHeartReaction";
 import { Button } from "@/components/ui/button";
@@ -17,22 +17,6 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 
-let _notifZapStylesInjected = false;
-function ensureNotifZapStyles() {
-  if (_notifZapStylesInjected || typeof document === 'undefined') return;
-  _notifZapStylesInjected = true;
-  const el = document.createElement('style');
-  el.id = 'notif-zap-sweep-keyframes';
-  el.textContent = `
-    @keyframes notifZapSwipe {
-      0%   { transform: translateX(-105%); opacity: 1; }
-      45%  { transform: translateX(0%);    opacity: 0.75; }
-      100% { transform: translateX(105%);  opacity: 0; }
-    }
-  `;
-  document.head.appendChild(el);
-}
-
 interface NotificationWithUser extends Notification {
   fromUser?: {
     id: number;
@@ -49,7 +33,6 @@ interface NotificationWithUser extends Notification {
 }
 
 export function NotificationBell() {
-  ensureNotifZapStyles();
   const [isOpen, setIsOpen] = useState(false);
   const [showGreenPopup, setShowGreenPopup] = useState(false);
   const [previousUnreadCount, setPreviousUnreadCount] = useState(0);
@@ -253,9 +236,27 @@ export function NotificationBell() {
         return <Share2 className="h-4 w-4 text-[#B7FF1A]" />;
       case 'milestone':
         return <Trophy className="h-4 w-4 text-[#B7FF1A]" />;
+      case 'xp':
+        return <Zap className="h-4 w-4 text-[#B7FF1A]" />;
+      case 'achievement':
+      case 'reward':
+      case 'game':
+        return <Gift className="h-4 w-4 text-[#B7FF1A]" />;
       default:
         return <Bell className="h-4 w-4 text-gray-500" />;
     }
+  };
+
+  const formatNotificationTitle = (notification: NotificationWithUser) => {
+    if (notification.type !== 'streak') return notification.title;
+
+    // Older streak notifications were persisted with a fire emoji and
+    // exclamation mark. Keep those records readable without carrying the
+    // decorative title treatment into the redesigned dropdown.
+    return notification.title
+      .replace(/^\s*🔥\s*/u, '')
+      .replace(/[!！]+\s*$/u, '')
+      .trim();
   };
 
   const handleNotificationClick = (notification: NotificationWithUser) => {
@@ -295,14 +296,13 @@ export function NotificationBell() {
 
   return (
     <div className="relative">
-      {/* Green popup notification */}
+      {/* New-notification announcement */}
       {showGreenPopup && (
-        <div className="absolute -top-16 -right-2 bg-primary text-white px-4 py-2 rounded-lg shadow-lg animate-bounce z-50">
+        <div className="absolute -top-14 -right-2 z-50 rounded-lg border border-[#2A2D3A] bg-[#171A27] px-3 py-2 text-white shadow-xl">
           <div className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
+            <Bell className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium">New notification!</span>
           </div>
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#B7FF1A]"></div>
         </div>
       )}
       
@@ -318,32 +318,29 @@ export function NotificationBell() {
               className="text-gray-400 hover:text-gray-300 transition-colors w-5 h-5 sm:w-9 sm:h-9" 
             />
             {unreadCount > 0 && !isOpen && (
-              <>
-                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-6 w-6 flex items-center justify-center font-semibold animate-pulse">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-                <span className="absolute -top-1 -right-1 bg-primary rounded-full h-6 w-6 animate-ping opacity-75"></span>
-              </>
+              <span className="absolute -right-0.5 -top-0.5 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-semibold text-primary-foreground">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
             )}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent 
-          className="w-80 max-h-96 overflow-hidden p-0" 
+        <DropdownMenuContent
+          className="w-[min(24rem,calc(100vw-1rem))] max-h-[min(560px,calc(100vh-1rem))] overflow-hidden rounded-xl border border-[#2A2D3A] bg-[#0F101B] p-0 text-white shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
           align="end"
-          sideOffset={2}
+          sideOffset={8}
           collisionPadding={{ left: 12 }}
         >
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="font-semibold">Notifications</h3>
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between gap-4 border-b border-[#2A2D3A] bg-[#0F101B] px-4 py-3">
+          <h3 className="text-[15px] font-bold text-white">Notifications</h3>
+          <div className="flex items-center gap-3">
             {unreadCount > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => markAllAsReadMutation.mutate()}
-                className="text-xs text-primary hover:text-primary/80"
+                className="h-auto rounded px-0 py-1 text-xs font-medium text-primary hover:bg-transparent hover:text-primary/80"
               >
-                Mark Read
+                Mark all as read
               </Button>
             )}
             {notifications.length > 0 && (
@@ -351,52 +348,36 @@ export function NotificationBell() {
                 variant="ghost"
                 size="sm"
                 onClick={() => deleteAllNotificationsMutation.mutate()}
-                className="text-xs text-red-600 hover:text-red-700"
+                className="h-auto rounded px-0 py-1 text-xs font-medium text-[#8B8F9D] hover:bg-transparent hover:text-red-400"
                 disabled={deleteAllNotificationsMutation.isPending}
               >
-                {deleteAllNotificationsMutation.isPending ? "Clearing..." : "Clear All"}
+                {deleteAllNotificationsMutation.isPending ? "Clearing..." : "Clear all"}
               </Button>
             )}
           </div>
         </div>
         
-        <div className="max-h-80 overflow-y-auto">
+        <div className="max-h-[min(480px,calc(100vh-5rem))] overflow-y-auto overscroll-contain">
           {notifications.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">
-              <Bell className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>No notifications yet</p>
-              <p className="text-sm">You'll see notifications for likes, comments, and follows here</p>
+            <div className="px-6 py-12 text-center text-[#8B8F9D]">
+              <Bell className="mx-auto mb-3 h-9 w-9 text-[#626675]" />
+              <p className="text-sm font-medium text-white">No notifications yet</p>
+              <p className="mt-1 text-xs leading-5">You'll see notifications for likes, comments, and follows here</p>
             </div>
           ) : (
             <div className="space-y-0">
               {notifications.slice(0, 10).map((notification) => {
-                const isZapReaction = notification.type === 'reaction';
                 return (
                 <div
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
                   className={cn(
-                    "relative w-full p-4 text-left hover:bg-secondary transition-colors border-b border-border/50 last:border-b-0 cursor-pointer overflow-hidden",
-                    !notification.isRead && "bg-primary/5 border-l-4 border-l-primary",
-                    isZapReaction && !notification.isRead && "border-l-[#B7FF1A]"
+                     "group relative w-full cursor-pointer overflow-hidden border-b border-[#2A2D3A] px-4 py-3.5 text-left transition-colors last:border-b-0 hover:bg-[#1A1D2B]",
+                     !notification.isRead && "bg-[#171A27] hover:bg-[#1D202F]"
                   )}
                 >
-                  {/* Neon green swipe animation for unread zap reactions */}
-                  {isZapReaction && !notification.isRead && (
-                    <div
-                      aria-hidden
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        background: 'rgba(183, 255, 26, 0.18)',
-                        animation: 'notifZapSwipe 0.75s cubic-bezier(0.4,0,0.2,1) forwards',
-                        pointerEvents: 'none',
-                        zIndex: 0,
-                      }}
-                    />
-                  )}
-                  <div className="relative flex items-start gap-3" style={{ zIndex: 1 }}>
-                    <div className="flex-shrink-0 mt-0.5 relative">
+                   <div className="relative flex items-start gap-3">
+                     <div className="relative mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center">
                       {notification.fromUser ? (
                         <div className="relative">
                           <CustomAvatar 
@@ -409,16 +390,32 @@ export function NotificationBell() {
                           </div>
                         </div>
                       ) : (
-                        getNotificationIcon(notification.type)
+                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1A1D2B]">
+                           {getNotificationIcon(notification.type)}
+                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium text-sm truncate">
-                          {notification.title}
-                        </p>
+                       <div className="flex items-start gap-2">
+                         <p className="min-w-0 flex-1 truncate text-[15px] font-semibold leading-5 text-white">
+                           {formatNotificationTitle(notification)}
+                         </p>
+                         <div className="flex flex-shrink-0 items-center gap-2">
+                           {!notification.isRead && (
+                             <div className="h-2 w-2 rounded-full bg-primary" aria-label="Unread" />
+                           )}
+                           <Button
+                             variant="ghost"
+                             size="sm"
+                             onClick={(e) => handleDismissNotification(e, notification.id)}
+                             aria-label="Dismiss notification"
+                             className="h-5 w-5 rounded p-0 text-[#8B8F9D] opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-400 focus-visible:opacity-100 group-hover:opacity-100 max-sm:opacity-70"
+                           >
+                             <X className="h-3 w-3" />
+                           </Button>
+                         </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                       <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#B2B5C2]">
                         {notification.message}
                       </p>
                       
@@ -487,31 +484,18 @@ export function NotificationBell() {
                         </div>
                       )}
                       
-                      <p className="text-xs text-muted-foreground">
+                       <p className="mt-2 text-xs text-[#777B8A]">
                         {formatTimeAgo(typeof notification.createdAt === 'string' ? notification.createdAt : notification.createdAt.toISOString())}
                       </p>
-                    </div>
-                    <div className="flex flex-col items-center gap-2">
-                      {!notification.isRead && (
-                        <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0" />
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => handleDismissNotification(e, notification.id)}
-                        className="h-6 w-6 p-0 hover:bg-red-500/10 hover:text-red-500 opacity-50 hover:opacity-100 transition-all"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
                     </div>
                   </div>
                 </div>
                 );
               })}
               {notifications.length > 10 && (
-                <div className="p-4 text-center border-t">
+                <div className="border-t border-[#2A2D3A] p-3 text-center">
                   <Link href="/notifications">
-                    <Button variant="ghost" size="sm" className="text-primary">
+                    <Button variant="ghost" size="sm" className="h-auto py-1 text-xs font-medium text-primary hover:bg-transparent hover:text-primary/80">
                       View all notifications
                     </Button>
                   </Link>

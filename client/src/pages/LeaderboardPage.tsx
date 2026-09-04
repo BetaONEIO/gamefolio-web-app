@@ -15,6 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { CreatorCard } from "@/components/home/CreatorCard";
 import { TrendingEntry, CREATOR_CARD_STYLES } from "@/components/home/creator-card-utils";
 import { formatGftReward, getProjectedGftReward, LEADERBOARD_REWARDS } from "@shared/leaderboard-rewards";
+import { getPublicSeasonNumber, SEASON_DEFS } from "@shared/season-definitions";
 import goldBannerImg from "@assets/goldr-flat-banner-_1783016208886.png";
 import silverBannerImg from "@assets/silver-flat-banne-_1783016206432.png";
 import bronzeBannerImg from "@assets/bronze-flat-banner_(1)_1783016211069.png";
@@ -110,10 +111,10 @@ function getLeagueFromEntry(tiers: LeagueConfigTier[], totalPoints: number, rank
   return { ...current, ...getLeagueStyle(current.name) };
 }
 
-// Mirrors the current entry in server SEASON_DEFS.
+const currentSeasonDefinition = SEASON_DEFS[0];
 const CURRENT_SEASON = {
-  num: 9,
-  name: "Autumn Assault",
+  num: getPublicSeasonNumber(currentSeasonDefinition.num),
+  name: currentSeasonDefinition.name,
   startDate: new Date("2026-09-01T00:00:00"),
   endDate:   new Date("2026-11-30T23:59:59"),
 };
@@ -1317,6 +1318,7 @@ interface SeasonEntry {
   icon: string;
   dateRange: string;
   months: string[];
+  inProgress?: boolean;
   top3: {
     rank: number;
     userId: number;
@@ -1395,7 +1397,12 @@ function HallOfChampions() {
                     </span>
                   </div>
                   <div className="text-base font-bold text-white leading-tight">{season.name}</div>
-                  <div className="text-xs text-slate-500 mt-1">{season.dateRange}</div>
+                   <div className="text-xs text-slate-500 mt-1">
+                     {season.dateRange}
+                     {season.inProgress && (
+                       <span className="ml-1.5 font-semibold text-[#B7FF1A]/80">(In progress)</span>
+                     )}
+                   </div>
                 </div>
 
                 {/* Top 3 list */}
@@ -1417,9 +1424,14 @@ function HallOfChampions() {
                                 style={{ filter: `drop-shadow(0 1px 3px rgba(0,0,0,0.8))` }}
                               />
                             </div>
-                            <span className="text-sm font-semibold text-white/90 truncate group-hover:text-white transition-colors">
-                              {p.user.displayName || p.user.username}
-                            </span>
+                            <div className="min-w-0">
+                              <span className="block text-sm font-semibold text-white/90 truncate group-hover:text-white transition-colors">
+                                {p.user.displayName || p.user.username}
+                              </span>
+                              <span className="block text-[10px] font-bold text-[#B7FF1A]/80 tracking-wide">
+                                {p.seasonPoints.toLocaleString("en-US")} XP
+                              </span>
+                            </div>
                           </div>
                         </Link>
                       );
@@ -1606,12 +1618,6 @@ const RS_STYLES = `
 export default function LeaderboardPage() {
   const { user } = useAuth();
 
-  // Top entries for the banner carousel (mobile shows up to 20, desktop uses first 3)
-  const { data: top3Data } = useQuery<TrendingEntry[]>({
-    queryKey: ["/api/trending-gamefolios/banner"],
-    queryFn: () => fetch("/api/trending-gamefolios?period=week&limit=20").then(r => r.json()),
-  });
-
   // Weekly leaderboard (large limit) for rival + competitive overview
   const { data: weeklyData } = useQuery<LeaderboardEntry[]>({
     queryKey: ["/api/leaderboard/weekly/current/full"],
@@ -1643,8 +1649,8 @@ export default function LeaderboardPage() {
     staleTime: 60_000,
   });
 
-  const top3 = top3Data ?? [];
   const leaderboard = (Array.isArray(pageSeasonData) ? pageSeasonData : []) as LeaderboardEntry[];
+  const top3 = leaderboard.slice(0, 20) as TrendingEntry[];
   const playerCount = playerCountData?.count ?? alltimeData?.length ?? weeklyData?.length ?? 0;
   const leagueTiers = leagueConfigData?.tiers ?? [];
 

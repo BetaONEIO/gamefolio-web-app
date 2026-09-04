@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Zap, Upload, Users, Gamepad2, Clock } from "lucide-react";
+import { Zap, Upload, Users, Eye, Gamepad2, Clock } from "lucide-react";
 import Lottie from "lottie-react";
 import onFireData from "@/assets/on-fire.json";
 import { ProBadge } from "@/components/ui/pro-badge";
@@ -163,9 +163,10 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
                 style={{ background: '#0B1319', border: '1px solid rgba(255,255,255,0.06)' }}
               >
                 {[
-                  { icon: Zap,    label: 'XP',       value: entry.totalPoints },
-                  { icon: Users,  label: 'FOLLOWERS', value: entry.followersCount },
-                  { icon: Upload, label: 'FOLLOWING', value: entry.followingCount ?? 0 },
+                  { icon: Zap,   label: 'XP',        value: entry.totalPoints ?? 0 },
+                  { icon: Eye,   label: 'VIEWS',     value: entry.viewsCount ?? 0 },
+                  { icon: Upload,label: 'UPLOADS',   value: entry.uploadsCount ?? 0 },
+                  { icon: Users, label: 'FOLLOWERS', value: entry.followersCount ?? 0 },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex flex-col items-center gap-0.5">
                     <Icon className="w-3 h-3" style={{ color: label === 'XP' ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }} />
@@ -360,9 +361,10 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
               style={{ background: '#0B1319', border: '1px solid rgba(255,255,255,0.06)' }}
             >
               {[
-                { icon: Zap,   label: 'XP',        value: entry.totalPoints },
-                { icon: Users, label: 'FOLLOWERS',  value: entry.followersCount },
-                { icon: Upload,label: 'FOLLOWING',  value: entry.followingCount ?? 0 },
+                { icon: Zap,   label: 'XP',        value: entry.totalPoints ?? 0 },
+                { icon: Eye,   label: 'VIEWS',     value: entry.viewsCount ?? 0 },
+                { icon: Upload,label: 'UPLOADS',   value: entry.uploadsCount ?? 0 },
+                { icon: Users, label: 'FOLLOWERS', value: entry.followersCount ?? 0 },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex flex-col items-center gap-0.5">
                   <Icon className="w-3 h-3" style={{ color: label === 'XP' ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }} />

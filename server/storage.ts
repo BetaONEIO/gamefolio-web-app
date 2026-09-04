@@ -469,6 +469,7 @@ export interface IStorage {
   getAssetRewardClaims(rewardId: number): Promise<(AssetRewardClaim & { user: User })[]>;
   getUserUnlockedAvatarBorders(userId: number): Promise<AssetReward[]>;
   userHasUnlockedReward(userId: number, rewardId: number): Promise<boolean>;
+  isSummerShowdownTopTenUser(userId: number): Promise<boolean>;
   updateUserAvatarBorder(userId: number, avatarBorderId: number | null): Promise<void>;
 
   // Daily lootbox operations

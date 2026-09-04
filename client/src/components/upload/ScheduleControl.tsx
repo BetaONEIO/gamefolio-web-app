@@ -18,6 +18,8 @@ interface ScheduleControlProps {
   limits?: ScheduleLimits;
   /** Plural noun for the hint copy, e.g. "clip", "reel", "screenshot". */
   contentNoun?: string;
+  /** Unique id when more than one schedule control appears on the page. */
+  id?: string;
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -41,6 +43,7 @@ export function ScheduleControl({
   onValueChange,
   limits,
   contentNoun = 'post',
+  id = 'schedule-post',
 }: ScheduleControlProps) {
   const noSlots = !!limits && !limits.isUnlimited && (limits.remaining ?? 0) <= 0;
 
@@ -48,15 +51,15 @@ export function ScheduleControl({
     <div className="space-y-3 p-3 rounded-lg bg-muted/50 dark:bg-muted/20">
       <div className="flex items-start space-x-3">
         <Checkbox
-          id="schedule-post"
+          id={id}
           checked={enabled}
           onCheckedChange={(checked) => onEnabledChange(checked as boolean)}
           disabled={noSlots}
-          data-testid="checkbox-schedule"
+          data-testid={id === 'schedule-post' ? 'checkbox-schedule' : `checkbox-${id}`}
         />
         <div className="flex-1">
           <Label
-            htmlFor="schedule-post"
+            htmlFor={id}
             className="text-sm font-medium leading-none cursor-pointer flex items-center gap-1.5"
           >
             <CalendarClock className="h-4 w-4" />
@@ -81,7 +84,7 @@ export function ScheduleControl({
           value={value}
           onChange={(e) => onValueChange(e.target.value)}
           className="w-full"
-          data-testid="input-scheduled-at"
+          data-testid={id === 'schedule-post' ? 'input-scheduled-at' : `input-${id}-scheduled-at`}
         />
       )}
     </div>

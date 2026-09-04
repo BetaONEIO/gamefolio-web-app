@@ -70,10 +70,13 @@ interface BulkItem {
   videoUploadPublicUrl: string | null;
   storageUploaded: boolean;
   createdContentId: number | null;
-  // Set once the item finishes, reflecting whether *this* upload was
-  // scheduled — kept per-item so the "Posted" vs "Scheduled" badge stays
-  // correct even if the batch-wide schedule toggle changes afterward.
+  // Set once the item finishes, reflecting whether *this* upload was scheduled
+  // so the "Posted" vs "Scheduled" badge stays correct.
   wasScheduled: boolean;
+  // Scheduling is configured independently for each queued item so a batch
+  // can publish its items at different times (or immediately).
+  scheduleEnabled: boolean;
+  scheduledAt: string;
 }
 
 const ALLOWED_VIDEO = ["video/mp4", "video/webm", "video/quicktime"];
@@ -147,8 +150,6 @@ const BulkUploadPage = () => {
   const [items, setItems] = useState<BulkItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [showProUpgrade, setShowProUpgrade] = useState(false);
-  const [scheduleEnabled, setScheduleEnabled] = useState(false);
-  const [scheduledAt, setScheduledAt] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const batchIdRef = useRef(createBatchId());
 
@@ -173,10 +174,10 @@ const BulkUploadPage = () => {
   const maxBulk = limits?.maxBulkUploads ?? 3;
   const isFreeTier = maxBulk < 10;
 
-  // ISO timestamp for the whole batch, or undefined for an immediate post.
-  const getScheduledIso = (): string | undefined => {
-    if (!scheduleEnabled || !scheduledAt) return undefined;
-    const d = new Date(scheduledAt);
+  // Convert one item's local datetime input into an ISO timestamp for the API.
+  const getScheduledIso = (value: string): string | undefined => {
+    if (!value) return undefined;
+    const d = new Date(value);
     return isNaN(d.getTime()) ? undefined : d.toISOString();
   };
 
@@ -340,6 +341,8 @@ const BulkUploadPage = () => {
         storageUploaded: false,
         createdContentId: null,
         wasScheduled: false,
+        scheduleEnabled: false,
+        scheduledAt: "",
       };
     });
 
@@ -706,44 +709,42 @@ const BulkUploadPage = () => {
       }
     }
 
-    if (scheduleEnabled) {
-      const iso = getScheduledIso();
+    const scheduledItems = pending.filter((it) => it.scheduleEnabled);
+    for (const it of scheduledItems) {
+      const iso = getScheduledIso(it.scheduledAt);
       if (!iso) {
-        captureBulkUploadEvent({
-          batchId: batchIdRef.current,
-          itemIndex: -1,
-          itemKind: "batch",
+        const itemIndex = items.findIndex((candidate) => candidate.id === it.id);
+        captureItemEvent(it, itemIndex, {
           stage: "validation",
           outcome: "rejected",
           errorCategory: "invalid_schedule",
         });
-        toast({ title: "Pick a time", description: "Choose a date and time to schedule this batch.", variant: "destructive" });
+        updateItem(it.id, { error: "Choose a date and time before scheduling this item." });
+        toast({ title: "Pick a time", description: `"${it.file.name}" needs a schedule time.`, variant: "destructive" });
         return;
       }
       if (new Date(iso).getTime() <= Date.now()) {
-        captureBulkUploadEvent({
-          batchId: batchIdRef.current,
-          itemIndex: -1,
-          itemKind: "batch",
+        const itemIndex = items.findIndex((candidate) => candidate.id === it.id);
+        captureItemEvent(it, itemIndex, {
           stage: "validation",
           outcome: "rejected",
           errorCategory: "past_schedule",
         });
-        toast({ title: "Time must be in the future", description: "Pick a date and time later than now.", variant: "destructive" });
+        updateItem(it.id, { error: "Choose a future time for this scheduled item." });
+        toast({ title: "Time must be in the future", description: `"${it.file.name}" needs a future schedule time.`, variant: "destructive" });
         return;
       }
     }
-    const scheduledIso = getScheduledIso();
 
-    // Every item in the batch consumes a scheduling slot, so fail fast rather
-    // than burn bandwidth/processing on items doomed to hit the per-user cap
-    // partway through the sequential loop below.
+    // Every scheduled item consumes a scheduling slot, so fail fast rather than
+    // burn bandwidth/processing on items doomed to hit the per-user cap partway
+    // through the sequential loop below.
     if (
-      scheduledIso &&
+      scheduledItems.length > 0 &&
       scheduleLimits &&
       !scheduleLimits.isUnlimited &&
       scheduleLimits.remaining !== null &&
-      pending.length > scheduleLimits.remaining
+      scheduledItems.length > scheduleLimits.remaining
     ) {
       captureBulkUploadEvent({
         batchId: batchIdRef.current,
@@ -755,7 +756,7 @@ const BulkUploadPage = () => {
       });
       toast({
         title: "Not enough scheduling slots",
-        description: `You have ${scheduleLimits.remaining} scheduled-post slot${scheduleLimits.remaining === 1 ? "" : "s"} left, but this batch has ${pending.length} files. Trim the batch or upgrade to Pro for unlimited scheduling.`,
+        description: `You have ${scheduleLimits.remaining} scheduled-post slot${scheduleLimits.remaining === 1 ? "" : "s"} left, but ${scheduledItems.length} files are scheduled. Unschedule an item or upgrade to Pro for unlimited scheduling.`,
         variant: "destructive",
       });
       return;
@@ -764,6 +765,7 @@ const BulkUploadPage = () => {
     setIsUploading(true);
     let succeeded = 0;
     let failed = 0;
+    let scheduledSucceeded = 0;
 
     // Sequential so we don't saturate bandwidth / hit rate limits.
     for (const it of pending) {
@@ -775,6 +777,7 @@ const BulkUploadPage = () => {
       });
       try {
         const onProgress = (p: number) => updateItem(it.id, { progress: p });
+        const scheduledIso = it.scheduleEnabled ? getScheduledIso(it.scheduledAt) : undefined;
         if (it.kind === "video") {
           const result = await uploadVideoItem(it, onProgress, scheduledIso);
           updateItem(it.id, { createdContentId: result.contentId });
@@ -782,6 +785,7 @@ const BulkUploadPage = () => {
           await uploadScreenshotItem(it, onProgress, scheduledIso);
         }
         updateItem(it.id, { status: "success", progress: 100, wasScheduled: !!scheduledIso });
+        if (scheduledIso) scheduledSucceeded++;
         captureItemEvent(it, itemIndex, {
           stage: "complete",
           outcome: "succeeded",
@@ -818,21 +822,27 @@ const BulkUploadPage = () => {
     queryClient.invalidateQueries({ queryKey: [`/api/users/${user.username}`] });
     queryClient.invalidateQueries({ queryKey: ["/api/upload/limits"] });
     queryClient.refetchQueries({ queryKey: ["/api/user"] });
-    if (scheduledIso) {
+    if (scheduledItems.length > 0) {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduled-posts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/scheduled-posts/limits"] });
     }
 
     if (failed === 0) {
       toast({
-        title: scheduledIso ? "All uploads scheduled" : "All uploads complete",
-        description: scheduledIso
-          ? `${succeeded} item${succeeded > 1 ? "s" : ""} scheduled to publish at ${new Date(scheduledIso).toLocaleString()}.`
-          : `${succeeded} item${succeeded > 1 ? "s" : ""} posted to your gamefolio.`,
+        title: scheduledSucceeded === succeeded
+          ? "All uploads scheduled"
+          : scheduledSucceeded > 0
+            ? "Uploads completed"
+            : "All uploads complete",
+        description: scheduledSucceeded === succeeded
+          ? `${succeeded} item${succeeded > 1 ? "s" : ""} scheduled for their selected times.`
+          : scheduledSucceeded > 0
+            ? `${scheduledSucceeded} item${scheduledSucceeded > 1 ? "s" : ""} scheduled and ${succeeded - scheduledSucceeded} posted now.`
+            : `${succeeded} item${succeeded > 1 ? "s" : ""} posted to your gamefolio.`,
       });
     } else {
       toast({
-        title: scheduledIso ? "Some items couldn't be scheduled" : "Some uploads failed",
+        title: scheduledSucceeded > 0 ? "Some items couldn't be scheduled" : "Some uploads failed",
         description: `${succeeded} succeeded, ${failed} failed. You can retry the failed ones.`,
         variant: "destructive",
       });
@@ -841,6 +851,9 @@ const BulkUploadPage = () => {
 
   const allDone = items.length > 0 && items.every((it) => it.status === "success");
   const pendingCount = items.filter((it) => it.status !== "success").length;
+  const scheduledPendingCount = items.filter(
+    (it) => it.status !== "success" && it.scheduleEnabled,
+  ).length;
 
   return (
     <div className="container max-w-3xl mx-auto px-4 py-6 pb-28">
@@ -1024,6 +1037,19 @@ const BulkUploadPage = () => {
                             </label>
                           </div>
                         </details>
+                        <ScheduleControl
+                          id={`schedule-${item.id}`}
+                          enabled={item.scheduleEnabled}
+                          onEnabledChange={(enabled) =>
+                            updateItem(item.id, { scheduleEnabled: enabled, error: null })
+                          }
+                          value={item.scheduledAt}
+                          onValueChange={(value) =>
+                            updateItem(item.id, { scheduledAt: value, error: null })
+                          }
+                          limits={scheduleLimits}
+                          contentNoun={item.kind === "video" ? item.videoType : "screenshot"}
+                        />
                         {item.error && (
                           <p className="text-xs text-destructive flex items-center gap-1">
                             <AlertCircle className="h-3 w-3" /> {item.error}
@@ -1051,18 +1077,6 @@ const BulkUploadPage = () => {
             </Button>
           )}
 
-          {/* Batch-wide schedule toggle — applies the same publish time to
-              every item in this batch, rather than one picker per file. */}
-          {!isUploading && !allDone && (
-            <ScheduleControl
-              enabled={scheduleEnabled}
-              onEnabledChange={setScheduleEnabled}
-              value={scheduledAt}
-              onValueChange={setScheduledAt}
-              limits={scheduleLimits}
-              contentNoun="batch"
-            />
-          )}
         </div>
       )}
 
@@ -1096,12 +1110,17 @@ const BulkUploadPage = () => {
                 {isUploading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {scheduleEnabled ? "Scheduling…" : "Uploading…"}
+                    {scheduledPendingCount > 0 ? "Scheduling…" : "Uploading…"}
                   </>
-                ) : scheduleEnabled ? (
+                ) : scheduledPendingCount === pendingCount && scheduledPendingCount > 0 ? (
                   <>
                     <CalendarClock className="h-4 w-4 mr-2" />
                     Schedule {pendingCount} file{pendingCount > 1 ? "s" : ""}
+                  </>
+                ) : scheduledPendingCount > 0 ? (
+                  <>
+                    <CalendarClock className="h-4 w-4 mr-2" />
+                    Upload {pendingCount - scheduledPendingCount} · Schedule {scheduledPendingCount}
                   </>
                 ) : (
                   <>

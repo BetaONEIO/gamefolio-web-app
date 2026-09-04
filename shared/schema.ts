@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { pgTable, text, serial, integer, boolean, timestamp, json, unique, real, uniqueIndex, uuid, index, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { DEFAULT_PROFILE_THEME } from "./profile-theme";
 
 // Users table
 export const users = pgTable("users", {
@@ -16,11 +17,11 @@ export const users = pgTable("users", {
   avatarUrl: text("avatar_url"),
   bannerUrl: text("banner_url").default("/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg"),
   // Customization options
-  accentColor: text("accent_color").default("#B7FF1A"), // Default neon green accent
-  primaryColor: text("primary_color").default("#02172C"), // Default navy primary
-  backgroundColor: text("background_color").default("#0B2232"), // Default navy background
-  cardColor: text("card_color").default("#1E3A8A"), // Default card background
-  avatarBorderColor: text("avatar_border_color").default("#4ADE80"), // Default avatar border color
+  accentColor: text("accent_color").default(DEFAULT_PROFILE_THEME.accentColor),
+  primaryColor: text("primary_color").default(DEFAULT_PROFILE_THEME.primaryColor),
+  backgroundColor: text("background_color").default(DEFAULT_PROFILE_THEME.backgroundColor),
+  cardColor: text("card_color").default(DEFAULT_PROFILE_THEME.cardColor),
+  avatarBorderColor: text("avatar_border_color").default(DEFAULT_PROFILE_THEME.avatarBorderColor),
   profileFont: text("profile_font").default("default"),
   profileFontEffect: text("profile_font_effect").default("none"),
   profileFontAnimation: text("profile_font_animation").default("none"),
@@ -36,6 +37,11 @@ export const users = pgTable("users", {
   statsGlassEffect: boolean("stats_glass_effect").default(false),
   profileBackgroundGradient: boolean("profile_background_gradient").default(true),
   profileBackgroundGradientCss: text("profile_background_gradient_css"),
+  // Stable catalog identity for the reusable profile theme system. The
+  // development database already contains these columns; keeping them in the
+  // Drizzle model makes the value type-safe for profile reads and updates.
+  profileBackgroundTheme: text("profile_background_theme").default("default"),
+  profileBackgroundAnimation: text("profile_background_animation").default("none"),
   layoutStyle: text("layout_style").default("grid"), // grid, masonry, classic
   // Platform connections
   steamUsername: text("steam_username"),
@@ -202,6 +208,18 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// Versioned, account-level acknowledgement state for seasonal announcements.
+// A composite key keeps each season transition independently dismissible.
+export const userSeasonalAnnouncements = pgTable("user_seasonal_announcements", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  announcementId: text("announcement_id").notNull(),
+  seenAt: timestamp("seen_at").defaultNow().notNull(),
+}, (table) => ({
+  userAnnouncementUnique: unique("user_seasonal_announcements_user_announcement_unique")
+    .on(table.userId, table.announcementId),
+}));
 
 // Games table
 export const games = pgTable("games", {
@@ -1913,11 +1931,18 @@ export type UserWithStats = User & {
     following: number;
     clips: number;
     screenshots: number;
+    views?: number;
     clipViews: number;
     likesReceived: number;
     firesReceived: number;
   };
   favoriteGames?: Game[];
+  seasonStats?: {
+    seasonName: string;
+    seasonNumber: number;
+    seasonXP: number;
+    seasonViews: number;
+  };
 };
 
 export type UserWithBadges = User & {

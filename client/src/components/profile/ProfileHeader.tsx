@@ -9,8 +9,6 @@ import {
   UserPlus,
   UserCheck,
   Trophy,
-  Heart,
-  Flame,
   Video,
   Gamepad2,
   Upload,
@@ -19,7 +17,6 @@ import {
   Scroll,
   Settings,
 } from "lucide-react";
-import { ZapIconSvg } from "@/components/ui/ZapReactionIcon";
 import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -36,10 +33,13 @@ import { GamefolioShareDialog } from "./GamefolioShareDialog";
 import { CustomAvatar } from "@/components/ui/custom-avatar";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";
+import { resolveProfileTheme } from "@shared/profile-theme";
 import {
   useProfilePictureLightbox,
   ProfilePictureLightbox,
 } from "@/components/ui/profile-picture-lightbox";
+import { ProfileMetricTooltip } from "./ProfileMetricTooltip";
+import { GamefolioCollectionButton } from "./GamefolioCollectionButton";
 
 const getRelativeLuminance = (hex: string): number => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -181,15 +181,17 @@ const ProfileHeader = ({
 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
+  const resolvedTheme = resolveProfileTheme(profile);
+
   const bannerStyle = {
-    backgroundColor: "#071013",
+    backgroundColor: resolvedTheme.bannerColor,
     backgroundImage: signedBannerUrl ? `url(${signedBannerUrl})` : undefined,
     backgroundSize: "cover",
     backgroundPosition: "center",
   };
 
   const buttonStyle = {
-    backgroundColor: profile.accentColor || undefined,
+    backgroundColor: resolvedTheme.accentColor,
   };
 
   const memberSinceText = profile.createdAt
@@ -217,7 +219,7 @@ const ProfileHeader = ({
               className="shadow-lg"
               borderIntensity="strong"
               showAvatarBorderOverlay={true}
-              themeColor={profile.accentColor}
+              themeColor={resolvedTheme.avatarBorderColor}
               onNftClick={
                 isNftProfileActive
                   ? (userId, tokenId, imageUrl, event) => {
@@ -252,7 +254,7 @@ const ProfileHeader = ({
                   left: 0,
                   right: 0,
                   height: "1px",
-                  background: profile.accentColor || "#B7FF1A",
+                  background: resolvedTheme.accentColor,
                   pointerEvents: "none",
                   zIndex: 5,
                 }}
@@ -265,38 +267,63 @@ const ProfileHeader = ({
                   left: 0,
                   bottom: 0,
                   width: "1px",
-                  background: profile.accentColor || "#B7FF1A",
+                  background: resolvedTheme.accentColor,
                   pointerEvents: "none",
                   zIndex: 5,
                 }}
               />
 
               {/* Collection button overlaid at top-right */}
-              <Link href={`/${profile.username}/collections`}>
-                <div
-                  className="absolute -top-3 right-0 z-10 cursor-pointer transition-opacity hover:opacity-80"
-                  style={{
-                    background: profile.accentColor || "#B7FF1A",
-                    padding: "1px",
-                    borderRadius: "8px",
-                  }}
-                >
-                  <div className="bg-background rounded-lg px-3 py-1">
-                    <span className="text-xs font-medium text-foreground">Collection</span>
-                  </div>
-                </div>
-              </Link>
+              <GamefolioCollectionButton
+                size="desktop"
+                style={{
+                  backgroundColor: resolvedTheme.accentColor,
+                  borderColor: resolvedTheme.accentColor,
+                  color: getRelativeLuminance(resolvedTheme.backgroundColor) > 0.179
+                    ? "#172033"
+                    : "#071018",
+                }}
+                onClick={() => setLocation(`/${profile.username}/collections`)}
+              />
 
               {(() => {
-                const isLight = getRelativeLuminance(profile.backgroundColor || "#071013") > 0.179;
+                const isLight = getRelativeLuminance(resolvedTheme.backgroundColor) > 0.179;
                 const numColor = isLight ? "#111827" : "#FFFFFF";
-                const lblColor = isLight ? "#374151" : profile.accentColor || undefined;
+                const lblColor = isLight ? "#374151" : resolvedTheme.accentColor;
 
                 return (
-                  <div className="flex space-x-4 text-xs rounded-[10px] px-4 py-2.5 bg-background/90">
+                  <div className="grid grid-cols-4 gap-3 text-xs rounded-[10px] px-4 py-2.5 bg-background/90">
+                      <div className="text-center">
+                        <ProfileMetricTooltip
+                          label="XP"
+                          value={Number(profile.totalXP || 0)}
+                          seasonValue={profile.seasonStats?.seasonXP}
+                          seasonName={profile.seasonStats?.seasonName}
+                          className="font-bold block"
+                          style={{ color: numColor }}
+                        />
+                        <span className="text-muted-foreground" style={{ color: lblColor }}>
+                          XP
+                        </span>
+                      </div>
+
+                      <div className="text-center">
+                        <ProfileMetricTooltip
+                          label="Views"
+                          value={Number(profile._count?.views ?? profile._count?.clipViews ?? 0)}
+                          seasonValue={profile.seasonStats?.seasonViews}
+                          seasonName={profile.seasonStats?.seasonName}
+                          className="font-bold"
+                          style={{ color: numColor }}
+                        />
+                        <span className="text-muted-foreground" style={{ color: lblColor }}>
+                          Views
+                        </span>
+                      </div>
+
                       <div className="text-center">
                         <span className="font-bold block" style={{ color: numColor }}>
-                          {(profile._count?.clips || 0) + (profile._count?.screenshots || 0)}
+                          {((profile._count?.clips || 0) + (profile._count?.screenshots || 0)).toLocaleString()}
                         </span>
                         <span className="text-muted-foreground" style={{ color: lblColor }}>
                           Uploads
@@ -305,90 +332,11 @@ const ProfileHeader = ({
 
                       <div className="text-center">
                         <span className="font-bold block" style={{ color: numColor }}>
-                          {profile._count?.followers || 0}
+                          {(profile._count?.followers || 0).toLocaleString()}
                         </span>
                         <span className="text-muted-foreground" style={{ color: lblColor }}>
                           Followers
                         </span>
-                      </div>
-
-                      <div className="text-center">
-                        <span className="font-bold block" style={{ color: numColor }}>
-                          {profile._count?.following || 0}
-                        </span>
-                        <span className="text-muted-foreground" style={{ color: lblColor }}>
-                          Following
-                        </span>
-                      </div>
-
-                      <div className="text-center" data-testid="stat-likes-received">
-                        <span
-                          className="font-bold block flex items-center gap-1 justify-center"
-                          style={{ color: numColor }}
-                        >
-                          <Heart className="w-3 h-3 text-red-500" />
-                          {profile._count?.likesReceived || 0}
-                        </span>
-                        <span className="text-muted-foreground" style={{ color: lblColor }}>
-                          Likes
-                        </span>
-                      </div>
-
-                      <div className="text-center" data-testid="stat-fires-received">
-                        <span
-                          className="font-bold block flex items-center gap-1 justify-center"
-                          style={{ color: numColor }}
-                        >
-                          <ZapIconSvg className="w-3 h-3" active={true} />
-                          {profile._count?.firesReceived || 0}
-                        </span>
-                        <span className="text-muted-foreground" style={{ color: lblColor }}>
-                          Fires
-                        </span>
-                      </div>
-
-                      <div className="text-center" data-testid="stat-streak">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <span
-                                className="font-bold block flex items-center gap-1 justify-center"
-                                style={{ color: numColor }}
-                              >
-                                <Flame className="w-3 h-3 text-orange-500" />
-                                {profile.currentStreak || 0}
-                              </span>
-                              <span className="text-muted-foreground" style={{ color: lblColor }}>
-                                Streak
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-sm">Longest: {profile.longestStreak || 0} days</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-
-                      <div className="text-center">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger>
-                              <span
-                                className="font-bold block flex items-center gap-1 justify-center"
-                                style={{ color: numColor }}
-                              >
-                                <Trophy className="w-3 h-3 text-yellow-500" />
-                                {profile.level || 1}
-                              </span>
-                              <span className="text-muted-foreground" style={{ color: lblColor }}>
-                                Level
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-sm">{profile.totalXP || 0} Total XP</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
                       </div>
                   </div>
                 );
@@ -568,9 +516,10 @@ const ProfileHeader = ({
                   primaryColor: profile.primaryColor,
                 }}
                 userStats={{
-                  clips: (profile._count?.clips || 0) + (profile._count?.screenshots || 0),
+                  xp: profile.totalXP || 0,
+                  views: profile._count?.views ?? profile._count?.clipViews ?? 0,
+                  uploads: (profile._count?.clips || 0) + (profile._count?.screenshots || 0),
                   followers: profile._count?.followers || 0,
-                  following: profile._count?.following || 0,
                 }}
                 trigger={
                   <Button variant="outline" size="sm" className="h-8 px-4">

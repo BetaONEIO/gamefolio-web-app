@@ -15,9 +15,10 @@ export default function DailyXpBonus() {
   const progress = Math.min((streak / nextMilestone) * 100, 100);
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-[#020617] flex flex-col overflow-hidden">
-      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-6 py-8 md:py-10">
-        <div className="flex flex-col items-center max-w-md w-full">
+    <div className="fixed inset-0 z-[9999] bg-[#020617] md:bg-[#0F101B] flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-6 py-8 md:px-8 md:py-10">
+        <div className="flex flex-col items-center max-w-md w-full md:flex-none md:max-w-[820px] md:rounded-[18px] md:border md:border-white/10 md:bg-[#171925] md:px-16 md:py-12 md:shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+          <div className="flex flex-col items-center max-w-md w-full md:max-w-[560px]">
           {/* XP Amount */}
           <div className="flex items-start justify-center mb-1">
             <span
@@ -42,7 +43,7 @@ export default function DailyXpBonus() {
 
           {/* Daily Login Bonus label */}
           <p
-            className="text-[#B7FF1A] text-center font-black uppercase tracking-[0.4em] mb-6 md:mb-8"
+            className="text-[#B7FF1A] text-center font-black uppercase tracking-[0.4em] mb-6 md:mb-6"
             style={{
               fontSize: "clamp(11px, 2vw, 14px)",
               fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -52,8 +53,8 @@ export default function DailyXpBonus() {
           </p>
 
           {/* Sun Icon with green glow */}
-          <div className="relative w-24 h-24 md:w-32 md:h-32 mb-6 md:mb-8 flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full bg-[#B7FF1A]/20 blur-[40px] scale-150" />
+          <div className="relative w-24 h-24 md:w-28 md:h-28 mb-6 md:mb-6 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full bg-[#B7FF1A]/20 md:bg-[#B7FF1A]/10 blur-[40px] md:blur-[28px] scale-150 md:scale-125" />
             <svg
               className="relative z-10"
               width="100%"
@@ -112,7 +113,7 @@ export default function DailyXpBonus() {
             Leveling up!
           </h2>
           <p
-            className="text-slate-400/80 text-center mb-6 md:mb-8 max-w-sm"
+            className="text-slate-400/80 text-center mb-6 md:mb-6 max-w-sm"
             style={{
               fontSize: "clamp(12px, 2vw, 14px)",
               lineHeight: "1.6",
@@ -156,11 +157,29 @@ export default function DailyXpBonus() {
               Day {nextMilestone}
             </span>
           </div>
+          </div>
+
+          {/* Desktop CTA stays inside the reward panel, close to the progress. */}
+          <div className="hidden md:flex w-full justify-center mt-10">
+            <button
+              onClick={handleClaim}
+              className="w-full max-w-[380px] h-14 bg-[#B7FF1A] hover:bg-[#A2F000] active:scale-[0.98] transition-all rounded-xl flex items-center justify-center gap-3 cursor-pointer"
+              style={{ boxShadow: "0 12px 24px rgba(183, 255, 26, 0.16)" }}
+            >
+              <span
+                className="text-[#0F101B] font-black uppercase tracking-[0.2em]"
+                style={{ fontSize: "14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              >
+                Claim Reward
+              </span>
+              <ChevronRight className="w-5 h-5 text-[#0F101B]" strokeWidth={3} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Bottom button */}
-      <div className="shrink-0 backdrop-blur-xl bg-[#020617]/80 border-t border-slate-700/10 p-5 md:p-6 flex justify-center">
+      {/* Mobile keeps the immersive bottom-safe-area CTA. */}
+      <div className="shrink-0 md:hidden backdrop-blur-xl bg-[#020617]/80 border-t border-slate-700/10 p-5 flex justify-center">
         <button
           onClick={handleClaim}
           className="w-full max-w-[400px] h-16 bg-[#B7FF1A] hover:bg-[#A2F000] active:scale-[0.98] transition-all rounded-full flex items-center justify-center gap-3 cursor-pointer"

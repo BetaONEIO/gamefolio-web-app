@@ -1,6 +1,6 @@
 import { storage } from "./storage";
 import { InsertUserPointsHistory, InsertWeeklyLeaderboard, InsertTopContributor } from "@shared/schema";
-import { LEADERBOARD_REWARDS, getProjectedGftReward } from "@shared/leaderboard-rewards";
+import { getLeaderboardRewardsForSeason, getProjectedGftReward } from "@shared/leaderboard-rewards";
 import { SEASON_DEFS } from "@shared/season-definitions";
 import { transferGfTokens } from "./gf-token-service";
 
@@ -558,14 +558,15 @@ export class LeaderboardService {
       return;
     }
 
+    const rewardPlan = getLeaderboardRewardsForSeason(previousSeason.num);
     const entries = await storage.getSeasonLeaderboardForRewards(
       seasonStart,
       seasonEnd,
-      LEADERBOARD_REWARDS.payouts.length,
+      rewardPlan.payouts.length,
     );
 
     for (const entry of entries) {
-      const amount = getProjectedGftReward(entry.rank);
+      const amount = getProjectedGftReward(entry.rank, previousSeason.num);
       if (amount === null) continue;
 
       const walletAddress = entry.walletAddress?.trim() || null;

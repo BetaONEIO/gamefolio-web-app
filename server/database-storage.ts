@@ -614,6 +614,12 @@ export class DatabaseStorage implements IStorage {
       .from(clips)
       .where(eq(clips.userId, id));
 
+    // Get total views across all uploaded content
+    const screenshotViewsResult = await db
+      .select({ total: sql<number>`sum(${screenshots.views})` })
+      .from(screenshots)
+      .where(eq(screenshots.userId, id));
+
     // Get total likes received on user's clips
     const likesReceivedResult = await db
       .select({ count: sql<number>`count(*)` })
@@ -641,7 +647,8 @@ export class DatabaseStorage implements IStorage {
         following: followingCount[0].count || 0,
         clips: clipsCount[0].count || 0,
         screenshots: screenshotsCount[0].count || 0,
-        clipViews: viewsResult[0].total || 0,
+        views: Number(viewsResult[0].total || 0) + Number(screenshotViewsResult[0].total || 0),
+        clipViews: Number(viewsResult[0].total || 0),
         likesReceived: likesReceivedResult[0].count || 0,
         firesReceived: firesReceivedResult[0].count || 0
       },
@@ -3861,7 +3868,17 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(monthlyLeaderboard.month, month),
         eq(monthlyLeaderboard.year, year),
-        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`
+        sql`NOT EXISTS (
+          SELECT 1 FROM users u
+          WHERE u.id = ${monthlyLeaderboard.userId}
+            AND (
+              u.status IN ('suspended', 'banned')
+              OR u.role IN ('admin', 'moderator', 'system')
+              OR u.hide_from_leaderboard = TRUE
+              OR LOWER(u.username) LIKE '%test%'
+              OR COALESCE(u.user_type, '') ILIKE '%indie_developer%'
+            )
+        )`
       ))
       .orderBy(desc(monthlyLeaderboard.totalPoints));
 
@@ -3876,7 +3893,9 @@ export class DatabaseStorage implements IStorage {
         entryUserIds.length > 0 ? notInArray(users.id, entryUserIds) : sql`TRUE`,
         or(isNull(users.status), notInArray(users.status, ['suspended', 'banned'])),
         notInArray(users.role, ['admin', 'moderator', 'system']),
-        or(isNull(users.hideFromLeaderboard), eq(users.hideFromLeaderboard, false))
+        or(isNull(users.hideFromLeaderboard), eq(users.hideFromLeaderboard, false)),
+        sql`LOWER(${users.username}) NOT LIKE '%test%'`,
+        sql`COALESCE(${users.userType}, '') NOT ILIKE '%indie_developer%'`
       ))
       .orderBy(asc(users.id));
 
@@ -3936,7 +3955,17 @@ export class DatabaseStorage implements IStorage {
         totalPoints: sql<number>`CAST(SUM(${monthlyLeaderboard.totalPoints}) AS INTEGER)`,
       })
       .from(monthlyLeaderboard)
-      .where(sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${monthlyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`)
+      .where(sql`NOT EXISTS (
+        SELECT 1 FROM users u
+        WHERE u.id = ${monthlyLeaderboard.userId}
+          AND (
+            u.status IN ('suspended', 'banned')
+            OR u.role IN ('admin', 'moderator', 'system')
+            OR u.hide_from_leaderboard = TRUE
+            OR LOWER(u.username) LIKE '%test%'
+            OR COALESCE(u.user_type, '') ILIKE '%indie_developer%'
+          )
+      )`)
       .groupBy(monthlyLeaderboard.userId)
       // No HAVING filter — include users with 0 aggregated points too
       .orderBy(desc(sql`SUM(${monthlyLeaderboard.totalPoints})`));
@@ -3951,7 +3980,9 @@ export class DatabaseStorage implements IStorage {
         entryUserIds.length > 0 ? notInArray(users.id, entryUserIds) : sql`TRUE`,
         notInArray(users.status, ['suspended', 'banned']),
         notInArray(users.role, ['admin', 'moderator', 'system']),
-        eq(users.hideFromLeaderboard, false)
+        eq(users.hideFromLeaderboard, false),
+        sql`LOWER(${users.username}) NOT LIKE '%test%'`,
+        sql`COALESCE(${users.userType}, '') NOT ILIKE '%indie_developer%'`
       ))
       .orderBy(asc(users.id));
 
@@ -4037,7 +4068,17 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(weeklyLeaderboard.week, week),
         eq(weeklyLeaderboard.year, year),
-        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${weeklyLeaderboard.userId} AND (u.status IN ('suspended', 'banned') OR u.role IN ('admin', 'moderator', 'system') OR u.hide_from_leaderboard = TRUE))`
+        sql`NOT EXISTS (
+          SELECT 1 FROM users u
+          WHERE u.id = ${weeklyLeaderboard.userId}
+            AND (
+              u.status IN ('suspended', 'banned')
+              OR u.role IN ('admin', 'moderator', 'system')
+              OR u.hide_from_leaderboard = TRUE
+              OR LOWER(u.username) LIKE '%test%'
+              OR COALESCE(u.user_type, '') ILIKE '%indie_developer%'
+            )
+        )`
       ))
       .orderBy(desc(weeklyLeaderboard.totalPoints));
 
@@ -4052,7 +4093,9 @@ export class DatabaseStorage implements IStorage {
         entryUserIds.length > 0 ? notInArray(users.id, entryUserIds) : sql`TRUE`,
         or(isNull(users.status), notInArray(users.status, ['suspended', 'banned'])),
         notInArray(users.role, ['admin', 'moderator', 'system']),
-        or(isNull(users.hideFromLeaderboard), eq(users.hideFromLeaderboard, false))
+        or(isNull(users.hideFromLeaderboard), eq(users.hideFromLeaderboard, false)),
+        sql`LOWER(${users.username}) NOT LIKE '%test%'`,
+        sql`COALESCE(${users.userType}, '') NOT ILIKE '%indie_developer%'`
       ))
       .orderBy(asc(users.id));
 
@@ -4103,7 +4146,17 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(topContributors.userId, users.id))
       .where(and(
         eq(topContributors.periodType, periodType),
-        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${topContributors.userId} AND (u.status IN ('suspended', 'banned') OR u.hide_from_leaderboard = TRUE))`
+        sql`NOT EXISTS (
+          SELECT 1 FROM users u
+          WHERE u.id = ${topContributors.userId}
+            AND (
+              u.status IN ('suspended', 'banned')
+              OR u.role IN ('admin', 'moderator', 'system')
+              OR u.hide_from_leaderboard = TRUE
+              OR LOWER(u.username) LIKE '%test%'
+              OR COALESCE(u.user_type, '') ILIKE '%indie_developer%'
+            )
+        )`
       ))
       .orderBy(desc(topContributors.achievedAt), desc(topContributors.totalPoints));
 
@@ -4147,7 +4200,17 @@ export class DatabaseStorage implements IStorage {
         eq(topContributors.periodType, periodType),
         eq(topContributors.period, period),
         eq(topContributors.year, year),
-        sql`NOT EXISTS (SELECT 1 FROM users u WHERE u.id = ${topContributors.userId} AND u.status IN ('suspended', 'banned'))`
+        sql`NOT EXISTS (
+          SELECT 1 FROM users u
+          WHERE u.id = ${topContributors.userId}
+            AND (
+              u.status IN ('suspended', 'banned')
+              OR u.role IN ('admin', 'moderator', 'system')
+              OR u.hide_from_leaderboard = TRUE
+              OR LOWER(u.username) LIKE '%test%'
+              OR COALESCE(u.user_type, '') ILIKE '%indie_developer%'
+            )
+        )`
       ))
       .orderBy(desc(topContributors.totalPoints));
 
@@ -4179,6 +4242,8 @@ export class DatabaseStorage implements IStorage {
       WHERE u.role NOT IN ('admin', 'moderator', 'system')
         AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
         AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+        AND LOWER(u.username) NOT LIKE '%test%'
+        AND COALESCE(u.user_type, '') NOT ILIKE '%indie_developer%'
       GROUP BY u.id, primary_wallet.address
       HAVING COALESCE(SUM(xh.xp_amount), 0) > 0
       ORDER BY "seasonPoints" DESC, u.id ASC
@@ -5396,7 +5461,7 @@ export class DatabaseStorage implements IStorage {
       .insert(assetRewardClaims)
       .values(claim)
       .returning();
-    
+
     // Increment the times rewarded counter
     await db
       .update(assetRewards)
@@ -5434,6 +5499,42 @@ export class DatabaseStorage implements IStorage {
 
   // Free avatar borders available to all users (IDs of borders everyone can use)
   private readonly FREE_AVATAR_BORDER_IDS = [17]; // HUD Corner Brackets
+  private readonly SUMMER_SHOWDOWN_REWARD_ID = 44;
+
+  // Summer Showdown 2026 eligibility is the final top ten from the
+  // authoritative XP ledger. Claims are retained for history, but access is
+  // determined by this ranking so old participation-wide grants cannot unlock
+  // the seasonal cosmetics.
+  async isSummerShowdownTopTenUser(userId: number): Promise<boolean> {
+    const rows = await db.execute(sql`
+      WITH summer_scores AS (
+        SELECT
+          u.id AS user_id,
+          ROW_NUMBER() OVER (
+            ORDER BY COALESCE(SUM(xh.xp_amount), 0) DESC, u.id ASC
+          ) AS final_rank
+        FROM users u
+        LEFT JOIN user_xp_history xh
+          ON xh.user_id = u.id
+          AND xh.created_at >= '2026-06-01T00:00:00.000Z'
+          AND xh.created_at < '2026-09-01T00:00:00.000Z'
+          AND xh.xp_amount > 0
+        WHERE u.role NOT IN ('admin', 'moderator', 'system')
+          AND (u.status IS NULL OR u.status NOT IN ('suspended', 'banned'))
+          AND (u.hide_from_leaderboard IS NULL OR u.hide_from_leaderboard = false)
+          AND LOWER(u.username) NOT LIKE '%test%'
+          AND COALESCE(u.user_type, '') NOT ILIKE '%indie_developer%'
+        GROUP BY u.id
+      )
+      SELECT 1
+      FROM summer_scores
+      WHERE user_id = ${userId}
+        AND final_rank <= 10
+      LIMIT 1
+    `);
+
+    return rows.length > 0;
+  }
 
   // Get ALL avatar borders (for Pro users who have access to everything)
   async getAllAvatarBorders(): Promise<AssetReward[]> {
@@ -5451,6 +5552,8 @@ export class DatabaseStorage implements IStorage {
 
   // Get user's unlocked avatar borders
   async getUserUnlockedAvatarBorders(userId: number): Promise<AssetReward[]> {
+    const summerEligible = await this.isSummerShowdownTopTenUser(userId);
+
     // Get user's claimed borders from lootbox
     const claims = await db
       .select({
@@ -5466,7 +5569,9 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
-    const claimedBorders = claims.map(c => c.reward);
+    const claimedBorders = claims
+      .map(c => c.reward)
+      .filter(reward => reward.id !== this.SUMMER_SHOWDOWN_REWARD_ID || summerEligible);
     const claimedIds = new Set(claimedBorders.map(b => b.id));
 
     // Get free borders that user hasn't already claimed
@@ -5497,6 +5602,13 @@ export class DatabaseStorage implements IStorage {
     // Check if it's a free border (available to everyone)
     if (this.FREE_AVATAR_BORDER_IDS.includes(rewardId)) {
       return true;
+    }
+
+    // Summer is a final top-ten seasonal reward. This check intentionally
+    // ignores the historical claim row so the old participation-wide grants
+    // cannot keep granting access to the border or theme.
+    if (rewardId === this.SUMMER_SHOWDOWN_REWARD_ID) {
+      return this.isSummerShowdownTopTenUser(userId);
     }
 
     const [claim] = await db
@@ -5734,6 +5846,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserClaimedRewards(userId: number): Promise<AssetReward[]> {
+    const summerEligible = await this.isSummerShowdownTopTenUser(userId);
     const claims = await db
       .select({
         reward: assetRewards,
@@ -5743,7 +5856,9 @@ export class DatabaseStorage implements IStorage {
       .where(eq(assetRewardClaims.userId, userId))
       .orderBy(desc(assetRewardClaims.claimedAt));
 
-    return claims.map(c => c.reward);
+    return claims
+      .map(c => c.reward)
+      .filter(reward => reward.id !== this.SUMMER_SHOWDOWN_REWARD_ID || summerEligible);
   }
 
   async getActiveRewardsForLootbox(): Promise<AssetReward[]> {
@@ -5772,6 +5887,8 @@ export class DatabaseStorage implements IStorage {
       claimedAt: Date;
     }>;
   }> {
+    const summerEligible = await this.isSummerShowdownTopTenUser(userId);
+
     // Get total lootboxes opened
     const lootboxRecord = await db
       .select({ openCount: userDailyLootbox.openCount })
@@ -5812,11 +5929,18 @@ export class DatabaseStorage implements IStorage {
       .where(eq(assetRewardClaims.userId, userId))
       .orderBy(desc(assetRewardClaims.claimedAt));
 
+    // Historical Summer claims remain in the database for auditability, but
+    // non-top-ten users should not see the seasonal reward as an active
+    // collection item.
+    const visibleClaimedItems = claimedItems.filter(
+      item => item.id !== this.SUMMER_SHOWDOWN_REWARD_ID || summerEligible
+    );
+
     // Count by rarity
-    const legendaryCount = claimedItems.filter(i => i.rarity === 'legendary').length;
-    const epicCount = claimedItems.filter(i => i.rarity === 'epic').length;
-    const rareCount = claimedItems.filter(i => i.rarity === 'rare').length;
-    const commonCount = claimedItems.filter(i => i.rarity === 'common').length;
+    const legendaryCount = visibleClaimedItems.filter(i => i.rarity === 'legendary').length;
+    const epicCount = visibleClaimedItems.filter(i => i.rarity === 'epic').length;
+    const rareCount = visibleClaimedItems.filter(i => i.rarity === 'rare').length;
+    const commonCount = visibleClaimedItems.filter(i => i.rarity === 'common').length;
 
     return {
       stats: {
@@ -5827,7 +5951,7 @@ export class DatabaseStorage implements IStorage {
         rareCount,
         commonCount,
       },
-      items: claimedItems,
+       items: visibleClaimedItems,
     };
   }
 

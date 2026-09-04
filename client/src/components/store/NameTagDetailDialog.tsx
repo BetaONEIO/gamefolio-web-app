@@ -1,9 +1,11 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, Loader2, Trophy } from "lucide-react";
 import gfTokenLogo from "@assets/Gamefolio token_1762633908726.png";
 import { useState } from "react";
 import { NameTagCheckoutDialog } from "./NameTagCheckoutDialog";
@@ -19,6 +21,9 @@ interface NameTag {
   owned?: boolean;
   proDiscount?: boolean;
   originalPrice?: number;
+  unlockCondition?: string | null;
+  availableInStore?: boolean;
+  isDefault?: boolean;
 }
 
 interface NameTagDetailDialogProps {
@@ -90,12 +95,20 @@ export function NameTagDetailDialog({
     : 45;
 
   const cost = nameTag.gfCost || 0;
+  const isSummerShowdownReward =
+    nameTag.name.trim().toLowerCase() === "summer" ||
+    nameTag.unlockCondition?.toLowerCase().includes("summer showdown") === true;
+  const isNonTradeable = isSummerShowdownReward || nameTag.availableInStore === false;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent
         className="bg-popover border-none text-white p-0 max-w-[430px] w-full h-[90vh] max-h-[900px] overflow-hidden flex flex-col [&>button]:hidden"
       >
+        <DialogTitle className="sr-only">NFT Details: {nameTag.name}</DialogTitle>
+        <DialogDescription className="sr-only">
+          View the {nameTag.rarity} {nameTag.name} name tag details, ownership, and marketplace status.
+        </DialogDescription>
         <div
           className="flex-1 overflow-y-auto relative"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -203,9 +216,31 @@ export function NameTagDetailDialog({
               <div className="flex flex-col gap-3 mb-6">
                 <span className="text-xs font-black text-[#B8C0AE] uppercase" style={{ letterSpacing: '2.4px' }}>Description</span>
                 <p className="text-sm text-[#B8C0AE]/80 leading-[22.75px]">
-                  The <span className="text-[#F5F7F2]">{nameTag.name}</span> name tag is a high-kinetic {nameTag.rarity?.toLowerCase()} asset from the Gamefolio Collection series. It features adaptive luminescence that reacts to your profile activity, symbolizing unmatched speed and precision on the leaderboard.
+                  {isSummerShowdownReward ? (
+                    <>
+                      The <span className="text-[#F5F7F2]">{nameTag.name}</span> name tag is a legendary seasonal reward from the Gamefolio Collection. It commemorates your participation in the Summer Showdown 2026 and is an exclusive cosmetic that cannot be traded.
+                    </>
+                  ) : (
+                    <>
+                      The <span className="text-[#F5F7F2]">{nameTag.name}</span> name tag is a high-kinetic {nameTag.rarity?.toLowerCase()} asset from the Gamefolio Collection series. It features adaptive luminescence that reacts to your profile activity, symbolizing unmatched speed and precision on the leaderboard.
+                    </>
+                  )}
                 </p>
               </div>
+
+              {isSummerShowdownReward && (
+                <div className="flex items-start gap-3 mb-6 rounded-2xl border border-[#00D9FF]/25 bg-[#00D9FF]/10 px-4 py-3.5">
+                  <Trophy className="mt-0.5 h-5 w-5 shrink-0 text-[#00D9FF]" />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-black uppercase tracking-[1.5px] text-[#00D9FF]">
+                      How you got it
+                    </span>
+                    <p className="text-sm leading-5 text-[#B8C0AE]">
+                      Earned by competing in the Summer Showdown 2026.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Rarity Chance & Rating Cards */}
               <div className="flex gap-3 mb-6">
@@ -242,6 +277,15 @@ export function NameTagDetailDialog({
                   <CheckCircle className="h-6 w-6 mr-2" />
                   Owned
                 </Button>
+              ) : isNonTradeable ? (
+                <Button
+                  className="w-full h-[68px] rounded-2xl text-[#071013] text-lg font-black uppercase bg-gradient-to-r from-[#00D9FF] to-[#00A8CC] cursor-default"
+                  disabled
+                  style={{ letterSpacing: '-0.9px' }}
+                >
+                  <Trophy className="h-6 w-6 mr-2" />
+                  Earned Reward
+                </Button>
               ) : (
                 <Button
                   onClick={handleBuyClick}
@@ -267,7 +311,7 @@ export function NameTagDetailDialog({
                 </Button>
               )}
               <span className="text-[10px] font-bold text-[#B8C0AE] uppercase text-center" style={{ letterSpacing: '1px' }}>
-                This asset is tradeable on the marketplace
+                {isNonTradeable ? 'This asset is not tradeable on the marketplace' : 'This asset is tradeable on the marketplace'}
               </span>
             </div>
           </div>

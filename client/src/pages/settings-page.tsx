@@ -40,12 +40,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Slider } from "@/components/ui/slider";
 import DOMPurify from "dompurify";
 import { useSignedUrl, useSignedUrls, clearSignedUrlCache } from "@/hooks/use-signed-url";
-import type { NameTag, VerificationBadge } from "@shared/schema";
+import type { AssetReward, NameTag, VerificationBadge } from "@shared/schema";
 import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWrapper";
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import ManageGameSettings from "@/components/indie/ManageGameSettings";
+import { DEFAULT_PROFILE_THEME, PROFILE_THEMES, resolveProfileTheme } from "@shared/profile-theme";
 
 const EMOJI_CATEGORIES = [
   {
@@ -153,28 +154,51 @@ const InlineSvgBorder: React.FC<{
   color: string;
   className?: string;
   style?: React.CSSProperties;
-}> = ({ svgUrl, color, className, style }) => {
+  rasterScale?: number;
+}> = ({ svgUrl, color, className, style, rasterScale = 1 }) => {
   const [svgContent, setSvgContent] = useState<string>('');
+  const [assetType, setAssetType] = useState<'svg' | 'raster' | null>(null);
   
   // Get signed URL for the SVG
   const { signedUrl } = useSignedUrl(svgUrl);
   
   useEffect(() => {
+    let cancelled = false;
+
+    setSvgContent('');
+    setAssetType(null);
+
     // Wait for signed URL if the original URL is a Supabase URL
     const urlToFetch = signedUrl || svgUrl;
     if (!urlToFetch) return;
     
     // Don't fetch if we need a signed URL but don't have one yet
     if (svgUrl && svgUrl.includes('supabase.co') && !signedUrl) return;
+
+    // Raster borders must be rendered as images. Reading a PNG as text
+    // produces the visible �PNG/IHDR payload seen in the Settings preview.
+    const urlPath = urlToFetch.split(/[?#]/, 1)[0];
+    if (/\.(?:png|jpe?g|gif|webp|avif)$/i.test(urlPath)) {
+      setAssetType('raster');
+      return () => {
+        cancelled = true;
+      };
+    }
     
     fetch(urlToFetch)
       .then(res => {
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
         }
+        const contentType = res.headers.get('content-type')?.toLowerCase() || '';
+        if (contentType.startsWith('image/') && !contentType.includes('svg')) {
+          if (!cancelled) setAssetType('raster');
+          return null;
+        }
         return res.text();
       })
       .then(svg => {
+        if (svg === null || cancelled) return;
         if (!svg.includes('<svg') && !svg.includes('<?xml')) {
           console.error('Invalid SVG content received');
           return;
@@ -201,12 +225,44 @@ const InlineSvgBorder: React.FC<{
           .replace(/fill\s*:\s*currentColor/gi, `fill: ${color}`)
           .replace(/stroke\s*:\s*currentColor/gi, `stroke: ${color}`);
         
-        setSvgContent(colorized);
+        if (!cancelled) {
+          setAssetType('svg');
+          setSvgContent(colorized);
+        }
       })
       .catch(err => console.error('Failed to load SVG:', err));
+
+    return () => {
+      cancelled = true;
+    };
   }, [svgUrl, signedUrl, color]);
   
-  if (!svgContent) return null;
+  if (assetType === 'raster') {
+    return (
+      <img
+        src={signedUrl || svgUrl}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        className={className}
+        style={{
+          ...style,
+          width: `${rasterScale * 100}%`,
+          height: `${rasterScale * 100}%`,
+          left: '50%',
+          top: '50%',
+          right: 'auto',
+          bottom: 'auto',
+          transform: 'translate(-50%, -50%)',
+          display: 'block',
+          objectFit: 'contain',
+        }}
+        onError={() => console.error('Failed to load avatar border image')}
+      />
+    );
+  }
+
+  if (assetType !== 'svg' || !svgContent) return null;
   
   return (
     <div 
@@ -296,13 +352,13 @@ const getCroppedImg = async (
   });
 };
 
-const PRESET_THEMES = [
+const LEGACY_PRESET_THEMES = [
   {
     name: "None",
-    backgroundColor: "#121F2B",
-    accentColor: "#B7FF1A",
-    gradientTopColor: "#071013",
-    primaryColor: "#071013"
+    backgroundColor: DEFAULT_PROFILE_THEME.backgroundColor,
+    accentColor: DEFAULT_PROFILE_THEME.accentColor,
+    gradientTopColor: DEFAULT_PROFILE_THEME.backgroundColor,
+    primaryColor: DEFAULT_PROFILE_THEME.primaryColor
   },
   {
     name: "Cutesy Pink",
@@ -377,6 +433,15 @@ const PRESET_THEMES = [
     proOnly: true
   },
   {
+    name: "Summer",
+    backgroundColor: "#063B5C",
+    accentColor: "#12B8C4",
+    gradientTopColor: "#28A9E8",
+    primaryColor: "#087EA4",
+    profileBackgroundGradientCss: "repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px), linear-gradient(180deg, #28A9E8 0%, #087EA4 37%, #12B8C4 62%, #E9C47A 92%, #C99B50 100%)",
+    unlockRewardName: "Summer Showdown 2026 Border"
+  },
+  {
     name: "Mac",
     backgroundColor: "#f0f0f2",
     accentColor: "#0066ff",
@@ -418,6 +483,16 @@ const PRESET_THEMES = [
     proOnly: true
   }
 ];
+
+// Keep the settings page backed by the shared catalog. The small merge preserves
+// any legacy-only seasonal gradient values while new themes get the same editor.
+const PRESET_THEMES = PROFILE_THEMES.map((theme) => ({
+  ...theme,
+  ...(LEGACY_PRESET_THEMES.find((legacy) => legacy.name === theme.name) || {}),
+  slug: theme.slug,
+  patternCss: theme.patternCss,
+  animation: theme.animation,
+}));
 
 const hexToRgb = (hex: string) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -549,11 +624,21 @@ function validatePlatformInput(key: PlatformKey, username: string): string | nul
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
+  const resolvedUserTheme = resolveProfileTheme(user || {});
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   useTheme();
   const { customerInfo, refreshCustomerInfo } = useRevenueCat();
+
+  const { data: claimedRewards } = useQuery<AssetReward[] | null>({
+    queryKey: ["/api/lootbox/rewards"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: !!user,
+  });
+  const hasSummerReward = !!claimedRewards?.some(
+    (reward) => reward.name === "Summer Showdown 2026 Border"
+  );
   
   const updateProfile = useUpdateProfile();
 
@@ -935,8 +1020,8 @@ export default function SettingsPage() {
     displayName: user?.displayName || "",
     bio: user?.bio || "",
     clanTag: (user as any)?.clanTag || "",
-    backgroundColor: user?.backgroundColor || "#121F2B",
-    accentColor: user?.accentColor || "#B7FF1A",
+    backgroundColor: resolvedUserTheme.backgroundColor,
+    accentColor: resolvedUserTheme.accentColor,
     bannerUrl: user?.bannerUrl || "",
     avatarUrl: user?.avatarUrl || "",
     profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
@@ -970,7 +1055,7 @@ export default function SettingsPage() {
   const [newKeyFeature, setNewKeyFeature] = useState("");
   const [uploadingScreenshot, setUploadingScreenshot] = useState(false);
   
-  const [avatarBorderColor, setAvatarBorderColor] = useState<string>(user?.avatarBorderColor || '#B7FF1A');
+  const [avatarBorderColor, setAvatarBorderColor] = useState<string>(resolvedUserTheme.avatarBorderColor);
   const [selectedBorderId, setSelectedBorderId] = useState<number | null>(user?.selectedAvatarBorderId ?? -1);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
@@ -1026,13 +1111,13 @@ export default function SettingsPage() {
   // value the user hasn't touched it — safe to update. If they differ, the user
   // has an unsaved edit in flight and we must preserve it.
   const lastSyncedBorder = React.useRef({
-    avatarBorderColor: user?.avatarBorderColor || '#B7FF1A',
+    avatarBorderColor: resolvedUserTheme.avatarBorderColor,
     selectedBorderId:  user?.selectedAvatarBorderId ?? -1,
   });
 
   const lastSyncedAppearance = React.useRef({
-    backgroundColor: user?.backgroundColor || "#121F2B",
-    accentColor: user?.accentColor || "#B7FF1A",
+    backgroundColor: resolvedUserTheme.backgroundColor,
+    accentColor: resolvedUserTheme.accentColor,
     profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
     profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
     profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
@@ -1133,8 +1218,8 @@ export default function SettingsPage() {
         }
         
         const appearanceFields = hasPendingEdits.current ? {} : {
-          backgroundColor: user.backgroundColor || "#121F2B",
-          accentColor: user.accentColor || "#B7FF1A",
+          backgroundColor: resolveProfileTheme(user).backgroundColor,
+          accentColor: resolveProfileTheme(user).accentColor,
           profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
           profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
           profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
@@ -1160,8 +1245,9 @@ export default function SettingsPage() {
         const pick = <T,>(prevVal: T, serverVal: T, lastVal: T): T =>
           prevVal === lastVal ? serverVal : prevVal;
 
-        const newBgColor       = user.backgroundColor || "#121F2B";
-        const newAccent        = user.accentColor || "#B7FF1A";
+        const newResolvedTheme = resolveProfileTheme(user);
+        const newBgColor       = newResolvedTheme.backgroundColor;
+        const newAccent        = newResolvedTheme.accentColor;
         const newBgType        = (user as any)?.profileBackgroundType || "solid";
         const newBgTheme       = (user as any)?.profileBackgroundTheme || "default";
         const newBgAnim        = (user as any)?.profileBackgroundAnimation || "none";
@@ -1286,8 +1372,8 @@ export default function SettingsPage() {
     normalizeValue(profileData.displayName) !== normalizeValue(user?.displayName) ||
     normalizeValue(profileData.bio) !== normalizeValue(user?.bio) ||
     normalizeValue(profileData.clanTag) !== normalizeValue((user as any)?.clanTag) ||
-    profileData.backgroundColor !== (user?.backgroundColor || "#121F2B") ||
-    profileData.accentColor !== (user?.accentColor || "#B7FF1A") ||
+    profileData.backgroundColor !== resolvedUserTheme.backgroundColor ||
+    profileData.accentColor !== resolvedUserTheme.accentColor ||
     normalizeValue(profileData.bannerUrl) !== normalizeValue(user?.bannerUrl) ||
     profileData.profileBackgroundType !== ((user as any)?.profileBackgroundType || "solid") ||
     profileData.profileBackgroundTheme !== ((user as any)?.profileBackgroundTheme || "default") ||
@@ -1302,7 +1388,7 @@ export default function SettingsPage() {
     profileData.profileBackgroundGradient !== ((user as any)?.profileBackgroundGradient !== false) ||
     avatarFile !== null ||
     selectedPreviousAvatar !== null ||
-    avatarBorderColor !== (user?.avatarBorderColor || '#B7FF1A') ||
+    avatarBorderColor !== resolvedUserTheme.avatarBorderColor ||
     selectedBorderId !== (user?.selectedAvatarBorderId ?? -1) ||
     (pendingNameTagId !== undefined && pendingNameTagId !== user?.selectedNameTagId) ||
     (pendingVerificationBadgeId !== undefined && pendingVerificationBadgeId !== (user as any)?.selectedVerificationBadgeId) ||
@@ -1423,9 +1509,10 @@ export default function SettingsPage() {
     }
   };
 
-  // Fetch user's unlocked avatar borders (only borders they have access to)
+  // Include Pro status in the key so an upgrade refetches the full border
+  // catalog instead of keeping the non-Pro unlocked-only result forever.
   const { data: avatarBorders, isLoading: isLoadingBorders } = useQuery({
-    queryKey: ['/api/user/avatar-borders'],
+    queryKey: ['/api/user/avatar-borders', user?.isPro ? 'pro' : 'standard'],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user,
   });
@@ -1465,7 +1552,16 @@ export default function SettingsPage() {
     staleTime: 60000,
   });
 
-  const { data: profileStats } = useQuery<{ _count?: { followers?: number; following?: number; clips?: number } }>({
+  const { data: profileStats } = useQuery<{
+    totalXP?: number;
+    _count?: {
+      followers?: number;
+      clips?: number;
+      screenshots?: number;
+      views?: number;
+      clipViews?: number;
+    };
+  }>({
     queryKey: [`/api/users/${user?.username}`],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!user?.username,
@@ -1898,7 +1994,7 @@ export default function SettingsPage() {
       const combinedUserType = buildUserType(primaryUserType, isStreamingEnabled);
       updateProfileMutation.mutate({
         ...updatedData,
-        avatarBorderColor: avatarBorderColor?.trim() || '#B7FF1A',
+        avatarBorderColor: avatarBorderColor?.trim() || DEFAULT_PROFILE_THEME.avatarBorderColor,
         userType: combinedUserType,
         streamPlatform,
         showLiveOverlay,
@@ -2000,9 +2096,10 @@ export default function SettingsPage() {
       accentColor: theme.accentColor,
       backgroundColor: theme.backgroundColor,
       ...(theme.primaryColor ? { primaryColor: theme.primaryColor } : {}),
-      profileBackgroundGradientCss: (theme as any).profileBackgroundGradientCss || ""
+      profileBackgroundGradientCss: (theme as any).profileBackgroundGradientCss || "",
+      profileBackgroundTheme: theme.slug,
+      profileBackgroundAnimation: theme.animation || "none",
     }));
-    setAvatarBorderColor(theme.accentColor);
   };
 
   if (!user) {
@@ -2028,9 +2125,9 @@ export default function SettingsPage() {
   const bgRgb = user?.backgroundColor ? hexToRgb(user.backgroundColor) : null;
   const accentRgb = user?.accentColor ? hexToRgb(user.accentColor) : null;
 
-  const NAMED_THEME_NAMES = ['Zombie', 'Cyberpunk', 'NEO', 'Blocks', 'Watermelon', 'Forest', 'Gothic', 'Mac', 'Cartoon', 'Bat'];
-  const isNamedThemeActive = PRESET_THEMES.some(t =>
-    NAMED_THEME_NAMES.includes(t.name) &&
+  const activeThemeSlug = profileData.profileBackgroundTheme || "default";
+  const isNamedThemeActive = activeThemeSlug !== "default" || PRESET_THEMES.some(t =>
+    t.slug !== "default" &&
     profileData.accentColor === t.accentColor &&
     profileData.backgroundColor === t.backgroundColor
   );
@@ -2184,6 +2281,7 @@ export default function SettingsPage() {
                                   svgUrl={border.imageUrl}
                                   color={avatarBorderColor}
                                   className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+                                  rasterScale={0.82}
                                   style={{ zIndex: 5 }}
                                 />
                               );
@@ -2604,6 +2702,7 @@ export default function SettingsPage() {
                               svgUrl={border.imageUrl}
                               color={avatarBorderColor}
                               className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+                              rasterScale={0.82}
                               style={{ zIndex: 5 }}
                             />
                           ) : null;
@@ -2741,6 +2840,7 @@ export default function SettingsPage() {
                                         svgUrl={border.imageUrl}
                                         color="#ffffff"
                                         className="absolute inset-0 pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+                                        rasterScale={0.75}
                                       />
                                       {isLocked && (
                                         <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
@@ -3249,10 +3349,16 @@ export default function SettingsPage() {
                       <CardContent>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {PRESET_THEMES.map((theme) => {
-                            const topColor = theme.gradientTopColor || '#071013';
-                            const defaultThemeColor = '#071013';
-                            const isActive = profileData.accentColor === theme.accentColor && profileData.backgroundColor === theme.backgroundColor;
-                            const isLocked = (theme as any).proOnly && !user?.isPro && theme.name !== "None";
+                            const topColor = theme.gradientTopColor || DEFAULT_PROFILE_THEME.backgroundColor;
+                            const isActive = activeThemeSlug === theme.slug ||
+                              (activeThemeSlug === "default" &&
+                                profileData.accentColor === theme.accentColor &&
+                                profileData.backgroundColor === theme.backgroundColor);
+                            const unlockRewardName = (theme as any).unlockRewardName as string | undefined;
+                            const isLocked = (
+                              ((theme as any).proOnly && !user?.isPro) ||
+                              (!!unlockRewardName && !hasSummerReward)
+                            ) && theme.name !== "None";
                             return (
                               <div
                                 key={theme.name}
@@ -3265,9 +3371,28 @@ export default function SettingsPage() {
                                 <div
                                   className="h-20 rounded-lg flex items-center justify-center text-white font-medium text-sm relative overflow-hidden"
                                   style={{ 
-                                    background: `linear-gradient(180deg, ${topColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
+                                    background: theme.profileBackgroundGradientCss ||
+                                      `linear-gradient(180deg, ${topColor} 0%, ${theme.backgroundColor} 60%, ${theme.backgroundColor} 100%)`
                                   }}
                                 >
+                                  {/* New catalog themes use a shared art-direction layer
+                                      rather than bespoke per-theme JSX branches. */}
+                                  <div
+                                    className="absolute inset-0 pointer-events-none"
+                                    style={{
+                                      backgroundImage: theme.patternCss,
+                                      backgroundSize: "auto, auto",
+                                      opacity: theme.slug === "default" ? 0.5 : 0.9,
+                                    }}
+                                  />
+                                  {theme.slug !== "default" && (
+                                    <span
+                                      className="relative z-[1] text-[10px] font-black uppercase tracking-[0.16em] drop-shadow-md"
+                                      style={{ fontFamily: theme.fontFamily }}
+                                    >
+                                      {theme.previewGlyph}
+                                    </span>
+                                  )}
                                   {/* ── Theme-specific visual overlays ── */}
                                   {theme.name === 'None' && <>
                                     <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #B7FF1A06 1px, transparent 1px), linear-gradient(90deg, #B7FF1A06 1px, transparent 1px)', backgroundSize:'14px 14px' }} />
@@ -3319,6 +3444,13 @@ export default function SettingsPage() {
                                     <div style={{ position:'absolute', bottom:'15%', left:'50%', transform:'translateX(-50%)', width:'36px', height:'36px', borderRadius:'50%', background:'radial-gradient(circle, #c27aff55 0%, transparent 70%)', pointerEvents:'none' }} />
                                     <div style={{ position:'absolute', top:'10%', left:'15%', fontSize:'14px', color:'#c27affaa', pointerEvents:'none', lineHeight:1 }}>✦</div>
                                     <div style={{ position:'absolute', top:'8%', right:'18%', fontSize:'10px', color:'#c27aff88', pointerEvents:'none', lineHeight:1 }}>✦</div>
+                                  </>}
+                                  {theme.name === 'Summer' && <>
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(circle at 84% 18%, rgba(255,240,173,0.55) 0 8px, transparent 34px), linear-gradient(180deg, rgba(255,255,255,0.16), transparent 42%)' }} />
+                                    <div style={{ position:'absolute', left:'-8%', right:'-8%', bottom:'-8%', height:'42%', pointerEvents:'none', borderRadius:'50% 50% 0 0', borderTop:'2px solid rgba(243,217,155,0.8)', boxShadow:'0 -7px 0 rgba(18,184,196,0.85), 0 -14px 0 rgba(50,214,244,0.28)', transform:'rotate(-2deg)' }} />
+                                    <div style={{ position:'absolute', top:'12%', left:'15%', fontSize:'13px', color:'#ffffffcc', pointerEvents:'none', lineHeight:1 }}>☀</div>
+                                    <div style={{ position:'absolute', top:'10%', right:'21%', fontSize:'9px', color:'#F3D99B', pointerEvents:'none', lineHeight:1 }}>✦</div>
+                                    <div style={{ position:'absolute', bottom:'18%', right:'14%', fontSize:'10px', color:'#063B5Caa', pointerEvents:'none', lineHeight:1 }}>⌁</div>
                                   </>}
                                   {theme.name === 'Mac' && <>
                                     <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'rgba(255,255,255,0.55)' }} />
@@ -3376,8 +3508,19 @@ export default function SettingsPage() {
                                 <p className="text-center mt-2 text-sm font-medium">
                                   {theme.name === 'None' ? 'Gamefolio Default' : theme.name}
                                 </p>
+                                 <p className="text-center text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                                   {theme.rarity}
+                                   {theme.animation !== "none" && (
+                                     <span className="ml-1.5 inline-flex items-center gap-1 normal-case tracking-normal text-primary">
+                                       <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" aria-hidden="true" />
+                                       animated
+                                     </span>
+                                   )}
+                                 </p>
                                 {isLocked && theme.name !== "None" && (
-                                  <p className="text-center text-xs text-muted-foreground">Pro only</p>
+                                  <p className="text-center text-xs text-muted-foreground">
+                                    {(theme as any).unlockRewardName ? "Summer Showdown reward" : "Pro only"}
+                                  </p>
                                 )}
                                 <div className="flex justify-center p-2">
                                   <Button
@@ -3440,13 +3583,13 @@ export default function SettingsPage() {
                                 value={profileData.backgroundColor}
                                 onChange={(e) => { hasPendingEdits.current = true; setProfileData(prev => ({ ...prev, backgroundColor: e.target.value })); }}
                                 className="w-32 font-mono text-sm"
-                                placeholder="#121F2B"
+                                placeholder={DEFAULT_PROFILE_THEME.backgroundColor}
                               />
                             </div>
                             <div
                               className="w-full h-24 rounded-lg border border-border overflow-hidden"
                               style={profileData.profileBackgroundGradient
-                                ? { background: `linear-gradient(180deg, #121F2B 0%, ${profileData.backgroundColor} 60%, ${profileData.backgroundColor} 100%)` }
+                                ? { background: `linear-gradient(180deg, ${DEFAULT_PROFILE_THEME.backgroundColor} 0%, ${profileData.backgroundColor} 60%, ${profileData.backgroundColor} 100%)` }
                                 : { backgroundColor: profileData.backgroundColor }
                               }
                             />
@@ -5835,6 +5978,7 @@ export default function SettingsPage() {
         const isBlocks      = tn === 'Blocks';
         const isElectric    = tn === 'Electric';
         const isGothic      = tn === 'Gothic';
+        const isSummer      = tn === 'Summer';
         const isCartoon     = tn === 'Cartoon';
         const isWatermelon  = tn === 'Watermelon';
         const isForest      = tn === 'Forest';
@@ -5844,7 +5988,23 @@ export default function SettingsPage() {
         const isCutesyPink  = tn === 'Cutesy Pink';
         const isMayhem      = tn === 'Mayhem';
         const isBat         = tn === 'Bat';
+         const isRewardLocked = !!(themePreviewData as any).unlockRewardName && !hasSummerReward;
         const isLight       = isMac || isCartoon || isIce || isBubbleTea || isWatermelon;
+        const catalogPattern = (themePreviewData as any).assets?.decorativeOverlay || (themePreviewData as any).patternCss;
+        const catalogAnimation = (themePreviewData as any).assets?.backgroundAnimation || (themePreviewData as any).animation;
+        const isCatalogPreview = Boolean((themePreviewData as any).slug) && ![
+          'None', 'Zombie', 'Cyberpunk', 'NEO', 'Blocks', 'Watermelon', 'Forest', 'Ice',
+          'Gothic', 'Summer', 'Mac', 'Cartoon', 'Bubble Tea', 'Cutesy Pink', 'Mayhem', 'Bat',
+        ].includes(tn);
+        const catalogMotionName =
+          catalogAnimation === 'rain' ? 'catalogPreviewRain' :
+          catalogAnimation === 'snow' ? 'catalogPreviewSnow' :
+          catalogAnimation === 'flicker' ? 'catalogPreviewFlicker' :
+          catalogAnimation === 'scan' ? 'catalogPreviewScan' :
+          catalogAnimation === 'pulse' ? 'catalogPreviewPulse' :
+          catalogAnimation === 'spark' ? 'catalogPreviewSpark' :
+          catalogAnimation === 'drift' ? 'catalogPreviewDrift' :
+          undefined;
 
         const themeFont =
           isZombie    ? "'Creepster', cursive" :
@@ -5854,7 +6014,8 @@ export default function SettingsPage() {
           isElectric  ? "'Bangers', cursive" :
           isGothic    ? "'Palatino Linotype', 'Book Antiqua', Palatino, serif" :
           isCartoon   ? "'Bricolage Grotesque', 'Arial Black', sans-serif" :
-          undefined;
+           isSummer    ? "'Trebuchet MS', sans-serif" :
+           undefined;
 
         const nameColor = isLight && !isWatermelon ? '#1d1d1f' : '#ffffff';
 
@@ -5877,7 +6038,16 @@ export default function SettingsPage() {
           fontSize: '1rem',
           fontWeight: 700,
           letterSpacing: '2px',
-        } : {
+          } : isSummer ? {
+            background: 'linear-gradient(90deg, #FFFFFF 0%, #F3D99B 52%, #32D6F4 100%)',
+           WebkitBackgroundClip: 'text',
+           WebkitTextFillColor: 'transparent',
+           backgroundClip: 'text',
+           fontFamily: themeFont,
+           fontSize: '1.1rem',
+           fontWeight: 900,
+           letterSpacing: '1px',
+         } : {
           color: nameColor,
           fontFamily: themeFont,
           fontWeight: isBlocks ? 400 : isElectric ? 400 : 700,
@@ -5890,7 +6060,8 @@ export default function SettingsPage() {
           color:
             isWatermelon ? '#0d1a12' :
             isLight       ? '#555' :
-            isCyberpunk   ? undefined :
+             isCyberpunk   ? undefined :
+             isSummer      ? '#063B5C' :
             `${accent}bb`,
           fontSize: isBlocks ? '0.45rem' : isElectric ? '0.75rem' : '0.6rem',
           letterSpacing: isZombie ? '1.5px' : '0.8px',
@@ -5921,7 +6092,8 @@ export default function SettingsPage() {
             isNeo         ? '#00ff41' :
             isBlocks      ? '#B7FF1A' :
             isElectric    ? '#ffe033' :
-            isGothic      ? '#c27aff' :
+             isGothic      ? '#c27aff' :
+             isSummer      ? '#063B5C' :
             '#ffffff',
           fontWeight: 900,
           fontSize: isBlocks ? '0.6rem' : '1rem',
@@ -5932,7 +6104,12 @@ export default function SettingsPage() {
           background: '#ffb3c1',
           border: '5px solid #1d3932',
           padding: '10px 16px',
-        } : isBlocks ? {
+          } : isSummer ? {
+            borderRadius: '14px',
+            background: '#E9C47A',
+              border: '1px solid #C99B50',
+            boxShadow: '0 4px 0 rgba(201,155,80,0.7), inset 0 1px 0 rgba(255,255,255,0.45)',
+         } : isBlocks ? {
           borderRadius: '4px',
           background: `${topColor}ee`,
           border: '3px solid #B7FF1A',
@@ -5964,7 +6141,7 @@ export default function SettingsPage() {
           borderRadius: '12px',
           background: '#000000',
           border: '1px solid rgba(255,140,0,0.25)',
-        } : {
+          } : {
           borderRadius: '12px',
           background: `${topColor}cc`,
           border: `1px solid ${accent}33`,
@@ -5987,7 +6164,10 @@ export default function SettingsPage() {
           borderRadius: '9999px',
         };
 
-        const isThemeLocked = (themePreviewData as any).proOnly && !user?.isPro && tn !== "None";
+         const isThemeLocked = (
+           ((themePreviewData as any).proOnly && !user?.isPro) ||
+           ((themePreviewData as any).unlockRewardName && !hasSummerReward)
+         ) && tn !== "None";
         const isCurrentTheme = !isThemeLocked && themePreviewData.accentColor === profileData.accentColor && themePreviewData.backgroundColor === profileData.backgroundColor;
         const displayName = tn === 'None' ? 'Gamefolio Default' : tn;
 
@@ -6003,8 +6183,28 @@ export default function SettingsPage() {
               >
                 <X className="w-5 h-5 text-white" />
               </button>
-              <style>{`
+               <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&family=Bangers&family=Bricolage+Grotesque:wght@400;800&display=swap');
+
+                 @keyframes summerPreviewShimmer {
+                   0%, 100% { background-position: 0 0, 0 0; }
+                   50% { background-position: 18px 0, 0 0; }
+                 }
+                 @keyframes summerPreviewFloat {
+                   0%, 100% { transform: translateY(0); opacity: .55; }
+                   50% { transform: translateY(-4px); opacity: .9; }
+                 }
+                 @media (prefers-reduced-motion: reduce) {
+                   .summer-preview-motion { animation: none !important; }
+                   .catalog-preview-motion { animation: none !important; }
+                 }
+                 @keyframes catalogPreviewDrift { 0%,100%{background-position:0 0, 0 0} 50%{background-position:18px -10px, -14px 8px} }
+                 @keyframes catalogPreviewRain { 0%{background-position:0 -30px, 0 0} 100%{background-position:24px 520px, 0 0} }
+                 @keyframes catalogPreviewSnow { 0%{background-position:0 -20px, 0 0} 100%{background-position:16px 520px, 0 0} }
+                 @keyframes catalogPreviewFlicker { 0%,88%,100%{opacity:1} 89%{opacity:.58} 90%,91%{opacity:.88} }
+                 @keyframes catalogPreviewScan { 0%{background-position:0 0, 0 -30px} 100%{background-position:0 0, 0 520px} }
+                 @keyframes catalogPreviewPulse { 0%,100%{opacity:.62;transform:scale(1)} 50%{opacity:1;transform:scale(1.015)} }
+                 @keyframes catalogPreviewSpark { 0%,100%{opacity:.52} 50%{opacity:1} }
 
                 /* Zombie */
                 @keyframes zpFogDrift1 { 0%{transform:translate(0%,0%)} 25%{transform:translate(7%,-5%)} 50%{transform:translate(3%,8%)} 75%{transform:translate(-6%,4%)} 100%{transform:translate(0%,0%)} }
@@ -6044,8 +6244,25 @@ export default function SettingsPage() {
               `}</style>
               <div
                 className="rounded-2xl overflow-hidden relative"
-                style={{ background: isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)` }}
+                 style={{
+                   background: isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' : isSummer ? 'repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px), linear-gradient(180deg, #28A9E8 0%, #087EA4 37%, #12B8C4 62%, #E9C47A 92%, #C99B50 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)`
+                 }}
               >
+                 {isCatalogPreview && catalogPattern && (
+                   <div
+                     className="catalog-preview-motion"
+                     aria-hidden="true"
+                     style={{
+                       position: 'absolute',
+                       inset: 0,
+                       pointerEvents: 'none',
+                       backgroundImage: catalogPattern,
+                       backgroundSize: catalogAnimation === 'scan' ? '100% 12px, 100% 100%' : undefined,
+                       opacity: 0.82,
+                       animation: catalogMotionName ? `${catalogMotionName} 8s ease-in-out infinite` : undefined,
+                     }}
+                   />
+                 )}
                 {/* ── Zombie layers ── */}
                 {isZombie && <>
                   <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 70% 50% at 20% 30%, #1a2e0a88 0%, transparent 70%), radial-gradient(ellipse 80% 40% at 50% 90%, #9ae60020 0%, transparent 60%)', animation:'zpFogDrift1 28s ease-in-out infinite' }} />
@@ -6061,6 +6278,14 @@ export default function SettingsPage() {
                   <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px)' }} />
                   <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'rgba(255,0,60,0.12)', animation:'cpRGBR 9s linear infinite', mixBlendMode:'screen' as any }} />
                   <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'rgba(0,80,255,0.12)', animation:'cpRGBB 9s linear infinite', mixBlendMode:'screen' as any }} />
+                </>}
+
+                 {/* ── Summer layers ── */}
+                {isSummer && <>
+                   <div className="summer-preview-motion" style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(circle at 14% 16%, #ffffff 0 1px, transparent 2px), radial-gradient(circle at 72% 64%, #F3D99B 0 1px, transparent 2px), repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 5px)', backgroundSize:'auto, auto, 100% 10px', opacity:0.8, animation:'summerPreviewShimmer 12s ease-in-out infinite' }} />
+                   <div style={{ position:'absolute', top:'8%', right:'12%', width:25, height:25, borderRadius:'50%', background:'radial-gradient(circle, #FFF1B5 0 52%, rgba(255,241,181,0.08) 70%, transparent 72%)', pointerEvents:'none' }} />
+                   <div style={{ position:'absolute', left:'-8%', right:'-8%', bottom:'-7%', height:'36%', pointerEvents:'none', borderRadius:'50% 50% 0 0', borderTop:'2px solid #F3D99BCC', boxShadow:'0 -10px 0 #12B8C455, 0 -20px 0 #32D6F433', transform:'rotate(-2deg)' }} />
+                   <div className="summer-preview-motion" style={{ position:'absolute', inset:0, pointerEvents:'none', background:'linear-gradient(135deg, rgba(255,255,255,0.15), transparent 35%, transparent 68%, rgba(50,214,244,0.1))', animation:'summerPreviewFloat 7s ease-in-out infinite' }} />
                 </>}
 
                 {/* ── Neo layers ── */}
@@ -6132,8 +6357,8 @@ export default function SettingsPage() {
 
                 {/* ── Content ── */}
                 <div className="relative z-10 px-4 pt-4 pb-0 text-center">
-                  <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ fontFamily: themeFont, color: isLight && !isWatermelon ? '#666' : `${accent}cc`, letterSpacing: '1.5px' }}>
-                    {displayName}
+                   <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ fontFamily: themeFont, color: isSummer ? '#FFFFFF' : isLight && !isWatermelon ? '#666' : `${accent}cc`, letterSpacing: '1.5px', textShadow: isSummer ? '0 1px 8px rgba(6,59,92,0.45)' : undefined }}>
+                     {isSummer ? <>SUMMER <span style={{ color: '#F3D99B' }} aria-hidden="true">☀</span></> : displayName}
                   </p>
 
                   {/* Avatar */}
@@ -6151,20 +6376,28 @@ export default function SettingsPage() {
 
                   {/* Display Name */}
                   <h2 style={nameStyle}>{profileData.displayName || user?.username}</h2>
-                  <p className="text-xs mt-0.5 mb-3" style={{ color: isLight && !isWatermelon ? '#888' : `${accent}99`, fontFamily: themeFont }}>
+                   <p className="text-xs mt-0.5 mb-3" style={{ color: isSummer ? '#063B5C' : isLight && !isWatermelon ? '#888' : `${accent}99`, fontFamily: themeFont }}>
                     @{user?.username}
                   </p>
                 </div>
 
                 {/* Stats Card */}
                 <div className="relative z-10 mx-4 mb-3 p-2.5" style={statsCardStyle}>
-                  <div className="grid grid-cols-3" style={{ gap: 0 }}>
+                  <div className="grid grid-cols-4" style={{ gap: 0 }}>
                     {[
-                      { label: 'Uploads', value: profileStats?._count?.clips ?? '—' },
-                      { label: 'Followers', value: profileStats?._count?.followers ?? '—' },
-                      { label: 'Following', value: profileStats?._count?.following ?? '—' },
+                      { label: 'XP', value: profileStats?.totalXP == null ? '—' : Math.round(profileStats.totalXP).toLocaleString() },
+                      { label: 'Views', value: profileStats?._count?.views == null
+                        ? (profileStats?._count?.clipViews == null ? '—' : profileStats._count.clipViews.toLocaleString())
+                        : profileStats._count.views.toLocaleString() },
+                      {
+                        label: 'Uploads',
+                        value: profileStats?._count == null
+                          ? '—'
+                          : ((profileStats._count.clips ?? 0) + (profileStats._count.screenshots ?? 0)).toLocaleString(),
+                      },
+                      { label: 'Followers', value: profileStats?._count?.followers == null ? '—' : profileStats._count.followers.toLocaleString() },
                     ].map(({ label, value }, i) => (
-                      <div key={label} className="text-center px-2" style={{ borderRight: i < 2 ? `1px solid ${isWatermelon ? 'rgba(0,0,0,0.12)' : isLight ? 'rgba(0,0,0,0.08)' : `${accent}22`}` : 'none' }}>
+                      <div key={label} className="text-center px-2" style={{ borderRight: i < 2 ? `1px solid ${isSummer ? 'rgba(6,59,92,0.22)' : isWatermelon ? 'rgba(0,0,0,0.12)' : isLight ? 'rgba(0,0,0,0.08)' : `${accent}22`}` : 'none' }}>
                         <p style={valueStyle}>{value}</p>
                         <p style={isCyberpunk ? cyberLabelStyle : labelStyle}>{label}</p>
                       </div>
@@ -6178,9 +6411,9 @@ export default function SettingsPage() {
                     onClick={() => setThemePreviewData(null)}
                     className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
                     style={{
-                      background: isLight ? 'rgba(0,0,0,0.07)' : `${accent}18`,
-                      color: isLight && !isWatermelon ? '#555' : 'rgba(255,255,255,0.7)',
-                      border: `1px solid ${isLight ? 'rgba(0,0,0,0.12)' : `${accent}33`}`,
+                        background: isSummer ? '#F3D99B' : isLight ? 'rgba(0,0,0,0.07)' : `${accent}18`,
+                        color: isSummer ? '#063B5C' : isLight && !isWatermelon ? '#555' : 'rgba(255,255,255,0.7)',
+                        border: isSummer ? '1px solid #C99B50' : `1px solid ${isLight ? 'rgba(0,0,0,0.12)' : `${accent}33`}`,
                       fontFamily: themeFont,
                       fontSize: isBlocks ? '0.5rem' : '0.875rem',
                     }}
@@ -6192,7 +6425,14 @@ export default function SettingsPage() {
                     onClick={() => {
                       if (isThemeLocked) {
                         setThemePreviewData(null);
-                        setShowProUpgradeDialog(true);
+                        if (isRewardLocked) {
+                          toast({
+                            title: "Summer theme locked",
+                            description: "Finish in the Summer Showdown top 10 to unlock this seasonal theme.",
+                          });
+                        } else {
+                          setShowProUpgradeDialog(true);
+                        }
                       } else {
                         applyPresetTheme(themePreviewData);
                         setThemePreviewData(null);
@@ -6200,18 +6440,18 @@ export default function SettingsPage() {
                     }}
                     className="flex-1 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2"
                     style={{
-                      background: isCurrentTheme ? `${accent}40` : isThemeLocked ? '#B7FF1A' : accent,
-                      color: isCurrentTheme ? (isLight ? '#333' : 'rgba(255,255,255,0.5)') : isThemeLocked ? '#1a1a1a' : (isLight && !isGothic ? '#1d1d1f' : bg),
-                      boxShadow: isCurrentTheme ? 'none' : isThemeLocked ? '0 8px 24px -8px #B7FF1A66' : `0 8px 24px -8px ${accent}`,
+                      background: isCurrentTheme ? `${accent}40` : isThemeLocked ? '#B7FF1A' : isSummer ? '#087EA4' : accent,
+                      color: isCurrentTheme ? (isLight ? '#333' : 'rgba(255,255,255,0.5)') : isThemeLocked ? '#1a1a1a' : isSummer ? '#FFFFFF' : (isLight && !isGothic ? '#1d1d1f' : bg),
+                      boxShadow: isCurrentTheme ? 'none' : isThemeLocked ? '0 8px 24px -8px #B7FF1A66' : isSummer ? '0 5px 0 #063B5C55, 0 8px 24px -8px #087EA4' : `0 8px 24px -8px ${accent}`,
                       fontFamily: isThemeLocked ? undefined : themeFont,
                       fontSize: '0.875rem',
                       borderRadius: '12px',
                       cursor: isCurrentTheme ? 'default' : 'pointer',
-                      border: isCurrentTheme ? `1px solid ${accent}44` : 'none',
+                      border: isCurrentTheme ? `1px solid ${accent}44` : isSummer ? '1px solid #32D6F4' : 'none',
                     }}
                   >
-                    {isThemeLocked && <img src={gamefolioLogo} alt="Gamefolio" className="w-5 h-5 rounded-full flex-shrink-0" />}
-                    {isCurrentTheme ? 'Current Theme' : isThemeLocked ? 'Go Pro' : 'Apply Theme'}
+                     {isThemeLocked && !isRewardLocked && <img src={gamefolioLogo} alt="Gamefolio" className="w-5 h-5 rounded-full flex-shrink-0" />}
+                     {isCurrentTheme ? 'Current Theme' : isRewardLocked ? 'Place in Summer top 10' : isThemeLocked ? 'Go Pro' : 'Apply Theme'}
                   </button>
                 </div>
               </div>
