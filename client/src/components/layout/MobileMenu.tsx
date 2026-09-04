@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useMobileMenu } from "@/hooks/use-mobile-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import { X, Plus, Gift, Users, Bookmark, ChevronDown, Radio, Rocket } from "lucide-react";
+import { X, Plus, Gift, Users, Bookmark, ChevronDown, Radio, Rocket, Trophy } from "lucide-react";
 import { GamefolioHomeIcon } from "@/components/icons/GamefolioHomeIcon";
 import { GamefolioDashboardIcon } from "@/components/icons/GamefolioDashboardIcon";
 import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboardIcon";
@@ -25,7 +25,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Game } from "@shared/schema";
 import { isPartnerType } from "@shared/partner-access";
-import { GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
+import { BOUNTIES_ENABLED, GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
 import { GiftProSearchDialog } from "@/components/profile/GiftProSearchDialog";
 
 const LEVEL_THRESHOLDS = [
@@ -142,6 +142,10 @@ const MobileMenu = () => {
   });
   const followerCount = (ownProfileData as any)?._count?.followers ?? 0;
   const followingCount = (ownProfileData as any)?._count?.following ?? 0;
+  const isIndieDeveloperPersona = user?.userType
+    ?.split(",")
+    .map((type) => type.trim())
+    .includes("indie_developer") ?? false;
   const isStreamerPartner = isPartnerType(user, "streamer");
   const canAccessIndieGame = GAME_DEVELOPER_FEATURES_ENABLED && !!user && (
     user.role === "admin" ||
@@ -312,6 +316,19 @@ const MobileMenu = () => {
                   </Link>
                 </li>
               )}
+              {isIndieDeveloperPersona && BOUNTIES_ENABLED && (
+                <li>
+                  <Link
+                    href="/bounties"
+                    onClick={handleClose}
+                    className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
+                    data-testid="mobile-bounty-hub-link"
+                  >
+                    <Trophy className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                    <span className="font-medium">Bounty Hub</span>
+                  </Link>
+                </li>
+              )}
               {user && (isStreamerPartner || user.role === "admin") && (
                 <li>
                   <Link
@@ -468,7 +485,7 @@ const MobileMenu = () => {
                       <span>Account Settings</span>
                     </Link>
                   </li>
-                  {!(user.isPartner && user.partnerType === "indie") && (
+                  {!isIndieDeveloperPersona && (
                     <li>
                       <Link
                         href="/settings/profile"
