@@ -608,7 +608,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const [activePanel, setActivePanel] = useState<{ bounty: any } | null>(null);
   const [selectedItems, setSelectedItems] = useState<Record<number, any[]>>({});
   const [submittedItems, setSubmittedItems] = useState<Record<number, any[]>>({});
-  const [hasJoined, setHasJoined] = useState(false);
+  const [hasJoined, setHasJoined] = useState(Boolean(campaign.is_joined || campaign.participant_status));
   const [panelSubmitting, setPanelSubmitting] = useState(false);
 
   const activePanelCt = activePanel?.bounty?.content_type ?? "none";
@@ -690,14 +690,14 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   }
 
   return (
-    <div className="min-h-screen" style={{ background: PAGE_BG }}>
+    <div className="min-h-screen" style={{ background: "#0F101B" }}>
       {/* Back */}
       <button onClick={onBack} className="flex items-center gap-2 px-5 py-3 text-white/50 hover:text-white transition-colors text-sm font-bold">
         <ChevronLeft size={16} /> Back to Bounty Hub
       </button>
 
       {/* ── CINEMATIC HERO ── */}
-      <div className="relative overflow-hidden" style={{ minHeight: 460 }}>
+      <div className="relative overflow-hidden" style={{ minHeight: 390 }}>
         {/* Artwork */}
         {campaign.game_artwork_url ? (
           <img src={campaign.game_artwork_url} alt={campaign.game_name} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.65 }} />
@@ -709,8 +709,8 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,16,1) 0%, rgba(7,11,16,0.50) 42%, transparent 100%)" }} />
 
         {/* Content */}
-        <div className="relative z-10 flex flex-col justify-end" style={{ minHeight: 460 }}>
-          <div className="px-6 pb-8 pt-24">
+        <div className="relative z-10 flex flex-col justify-end" style={{ minHeight: 390 }}>
+          <div className="px-6 pb-8 pt-20">
             <div className="max-w-[1400px] mx-auto flex items-end justify-between gap-10">
 
               {/* LEFT: Game info */}
@@ -718,6 +718,9 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                 <div className="flex items-center gap-2 mb-4">
                   <span className="flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 rounded-full" style={{ color: "#070b10", background: NEON }}>
                     <ShieldCheck size={10} /> GF Verified
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.65)" }}>
+                    {isGF ? "Gamefolio Campaign" : "Creator Campaign"}
                   </span>
                   {campaign.platform && (
                     <span className="text-[11px] font-bold px-3 py-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.65)" }}>
@@ -728,38 +731,33 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                 {campaign.game_name && (
                   <div className="text-xs font-black uppercase tracking-[0.22em] mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{campaign.game_name}</div>
                 )}
-                <div className="font-black text-white leading-none mb-5 uppercase" style={{ fontSize: "clamp(2.2rem,5vw,4rem)", letterSpacing: "-0.02em", textShadow: "0 4px 60px rgba(0,0,0,0.80)" }}>
+                <div className="font-black text-white leading-none mb-4 uppercase" style={{ fontSize: "clamp(2rem,4vw,3.5rem)", letterSpacing: "-0.02em", textShadow: "0 4px 60px rgba(0,0,0,0.80)" }}>
                   {campaign.template_name}
                 </div>
                 {campaign.description && (
                   <p className="text-sm leading-relaxed mb-6 max-w-lg" style={{ color: "rgba(255,255,255,0.50)" }}>{campaign.description}</p>
                 )}
-                <div className="flex items-center gap-6 flex-wrap">
-                  {campaign.platform && (
-                    <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: "rgba(255,255,255,0.45)" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-                      {campaign.platform}
-                    </div>
-                  )}
+                <div className="flex items-center gap-x-5 gap-y-2 flex-wrap text-xs font-bold" style={{ color: "rgba(255,255,255,0.52)" }}>
+                  <div className="flex items-center gap-1.5"><Target size={13} /> {mandatory.length} required</div>
+                  {optional.length > 0 && <div className="flex items-center gap-1.5"><Star size={13} /> {optional.length} bonus</div>}
+                  <div className="flex items-center gap-1.5"><Clock size={13} /> Est. {bounties.length <= 2 ? "1–2 hrs" : bounties.length <= 4 ? "2–4 hrs" : "4+ hrs"}</div>
                   {timeLeft !== "Ended" && timeLeft !== "Ongoing" && (
-                    <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: "rgba(255,255,255,0.45)" }}>
-                      <Clock size={13} /> Time Left: <span style={{ color: "rgba(255,255,255,0.78)" }}>{timeLeft}</span>
-                    </div>
+                    <div className="flex items-center gap-1.5"><Clock size={13} /> <span style={{ color: "rgba(255,255,255,0.78)" }}>{timeLeft}</span></div>
                   )}
                   {!isGF && demoLeft > 0 && (
                     <div className="flex items-center gap-1.5 text-xs font-black" style={{ color: NEON }}>
                       <img src="/icons/demo-key-icon.png" alt="" className="w-3.5 h-3.5 object-contain" />
-                      Demo Keys: {demoLeft} Left
+                      {demoLeft} places remaining
                     </div>
                   )}
-                  <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: "rgba(255,255,255,0.45)" }}>
-                    <Users size={13} /> Creators Joined: <span style={{ color: "rgba(255,255,255,0.78)" }}>{campaign.participant_count ?? 0}</span>
+                  <div className="flex items-center gap-1.5">
+                    <Users size={13} /> <span style={{ color: "rgba(255,255,255,0.78)" }}>{campaign.participant_count ?? 0} creators joined</span>
                   </div>
                 </div>
               </div>
 
               {/* RIGHT: Circular campaign completion widget */}
-              <div className="flex-shrink-0 hidden md:flex flex-col items-center p-6 rounded-3xl" style={{ background: "rgba(7,11,16,0.85)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(20px)", minWidth: 210 }}>
+              {hasJoined && <div className="flex-shrink-0 hidden md:flex flex-col items-center p-6 rounded-3xl" style={{ background: "rgba(7,11,16,0.85)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(20px)", minWidth: 210 }}>
                 <div className="text-[10px] font-black uppercase tracking-widest mb-5" style={{ color: "rgba(255,255,255,0.32)" }}>Campaign Completion</div>
                 <div className="relative" style={{ width: 128, height: 128 }}>
                   <svg width="128" height="128" viewBox="0 0 128 128">
@@ -787,7 +785,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                 {overallPct === 100 && (
                   <div className="mt-2 text-[10px] font-black px-3 py-1 rounded-full" style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>✓ Complete</div>
                 )}
-              </div>
+              </div>}
 
             </div>
           </div>
@@ -797,7 +795,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
       {/* ── MAIN CONTENT ── */}
       <div className="px-4 sm:px-6 lg:px-8 pt-8 max-w-[1400px] mx-auto">
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_390px] gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6 mb-8 items-start">
 
           {/* ══ LEFT: Mission Objectives / post-acceptance workspace ══ */}
           <div>
@@ -812,7 +810,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                   <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.30)" }}>{mandatory.length} required · {optional.length} bonus</div>
                 </div>
               </div>
-              {completedMandatoryCount > 0 && (
+              {hasJoined && completedMandatoryCount > 0 && (
                 <div className="flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-full" style={{ background: "rgba(34,197,94,0.10)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.22)" }}>
                   <Check size={11} strokeWidth={3} /> {completedMandatoryCount}/{mandatory.length} done
                 </div>
@@ -844,7 +842,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
 
             {/* ── Objective cards ── */}
             <div className="space-y-6">
-              <div className={`grid gap-4 ${mandatory.length <= 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"}`}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {mandatory.map((b: any, idx: number) => {
                   const ct = b.content_type as string;
                   const qty = Number(b.quantity ?? 1);
@@ -941,7 +939,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                       style={{ background: done ? "rgba(34,197,94,0.05)" : "rgba(255,255,255,0.03)", border: done ? "1px solid rgba(34,197,94,0.28)" : "1px solid rgba(255,255,255,0.08)", boxShadow: done ? "0 0 20px rgba(34,197,94,0.08)" : "none" }}
                     >
                       {/* Artwork zone */}
-                      <div className="relative overflow-hidden flex-shrink-0" style={{ height: 160 }}>
+                      <div className="relative overflow-hidden flex-shrink-0" style={{ height: 105 }}>
                         {artwork}
                         {done && (
                           <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(34,197,94,0.22)" }}>
@@ -998,40 +996,37 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                           </div>
                         )}
 
-                        {/* Progress bar */}
-                        <div className="mt-auto">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] font-bold transition-colors duration-500" style={{ color: done ? "#22c55e" : "rgba(255,255,255,0.28)" }}>
-                              {prog} / {qty}{done ? " ✓" : ""}
-                            </span>
-                            {!done && prog > 0 && <span className="text-[10px] text-white/22">{Math.round(prog / qty * 100)}%</span>}
+                        {hasJoined ? (
+                          <div className="mt-auto">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] font-bold transition-colors duration-500" style={{ color: done ? "#22c55e" : "rgba(255,255,255,0.28)" }}>
+                                {prog} / {qty}{done ? " ✓" : ""}
+                              </span>
+                              {!done && prog > 0 && <span className="text-[10px] text-white/22">{Math.round(prog / qty * 100)}%</span>}
+                            </div>
+                            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+                              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(prog / qty * 100, 100)}%`, background: done ? "#22c55e" : accentColor }} />
+                            </div>
                           </div>
-                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
-                            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(prog / qty * 100, 100)}%`, background: done ? "#22c55e" : accentColor, boxShadow: done ? "0 0 8px rgba(34,197,94,0.50)" : "none" }} />
-                          </div>
-                        </div>
+                        ) : (
+                          <div className="mt-auto text-[11px] font-bold text-white/45">{qty} {CONTENT_TYPE_LABEL[ct] ?? ct}{qty !== 1 ? "s" : ""} required</div>
+                        )}
 
                         {/* Dynamic action button */}
-                        <button
-                          onClick={() => !done && user && hasJoined ? setActivePanel({ bounty: b }) : undefined}
-                          disabled={done || !user || !hasJoined}
+                        {hasJoined && <button
+                          onClick={() => !done && user ? setActivePanel({ bounty: b }) : undefined}
+                          disabled={done || !user}
                           className="w-full py-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all duration-200 hover:brightness-110 disabled:cursor-default"
                           style={done
                             ? { background: "rgba(34,197,94,0.10)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.22)" }
-                            : !user
-                            ? { background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.22)", border: "1px solid rgba(255,255,255,0.07)" }
                             : { background: accentBg, color: accentColor, border: `1px solid ${ct === "stream" ? "rgba(239,68,68,0.22)" : ct === "bug" ? "rgba(251,146,60,0.22)" : "rgba(184,255,27,0.22)"}` }}
                         >
                           {done
                             ? <><Check size={11} strokeWidth={3} /> Submitted for Review</>
-                            : !user
-                            ? <><Lock size={11} /> Sign in to Submit</>
-                            : !hasJoined
-                            ? <><Lock size={11} /> Accept mission to submit</>
                             : prog > 0
                             ? <><Plus size={11} /> Continue ({prog}/{qty})</>
                             : <><Upload size={11} /> {ct === "clip" ? "Add Clips" : ct === "screenshot" ? "Add Screenshots" : ct === "reel" ? "Add Reels" : ct === "feedback" ? "Write Feedback" : ct === "stream" ? "Go Live" : ct === "bug" ? "Report Bugs" : "Add Content"}</>}
-                        </button>
+                        </button>}
                       </div>
                     </div>
                   );
@@ -1064,15 +1059,15 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                             </div>
                             <div className="flex items-center gap-1">
                               <Star size={9} className="text-white/20 flex-shrink-0" />
-                              <span className="text-[10px] text-white/22">Bonus · {prog}/{qty}</span>
+                              <span className="text-[10px] text-white/22">{hasJoined ? `Bonus · ${prog}/${qty}` : `${qty} required`}</span>
                             </div>
-                            <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
+                            {hasJoined && <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
                               <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(prog / qty * 100, 100)}%`, background: done ? "#22c55e" : "rgba(255,255,255,0.18)" }} />
-                            </div>
-                            <button onClick={() => user && hasJoined && !done && setActivePanel({ bounty: b })} disabled={done || !user || !hasJoined} className="w-full mt-0.5 py-1.5 rounded-lg text-[11px] font-black flex items-center justify-center gap-1 transition-all"
+                            </div>}
+                            {hasJoined && <button onClick={() => user && !done && setActivePanel({ bounty: b })} disabled={done || !user} className="w-full mt-0.5 py-1.5 rounded-lg text-[11px] font-black flex items-center justify-center gap-1 transition-all"
                               style={{ background: done ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.04)", color: done ? "#22c55e" : "rgba(255,255,255,0.28)", border: done ? "1px solid rgba(34,197,94,0.18)" : "1px dashed rgba(255,255,255,0.09)" }}>
                               {done ? <><Check size={10} strokeWidth={3} /> Done</> : hasJoined ? <><Plus size={10} /> Add</> : <><Lock size={10} /> Unlock after accepting</>}
-                            </button>
+                            </button>}
                           </div>
                         </div>
                       );
@@ -1084,7 +1079,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
           </div>
 
           {/* ══ RIGHT: Mission Rewards ══ */}
-          <div className="rounded-3xl flex flex-col" style={{ background: CARD_BG, border: "1px solid rgba(184,255,27,0.20)", boxShadow: "0 0 50px rgba(184,255,27,0.06)" }}>
+          <div className="rounded-3xl flex flex-col lg:sticky lg:top-4" style={{ background: CARD_BG, border: "1px solid rgba(184,255,27,0.20)", boxShadow: "0 0 50px rgba(184,255,27,0.06)" }}>
 
             {/* Card header */}
             <div className="px-6 pt-6 pb-4 flex items-center gap-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -1244,7 +1239,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         </div>
 
         {/* ── FULL-WIDTH CAMPAIGN PROGRESS ── */}
-        <div className="mb-8 rounded-3xl overflow-hidden transition-all duration-700"
+        {hasJoined && <div className="mb-8 rounded-3xl overflow-hidden transition-all duration-700"
           style={{ background: CARD_BG, border: `1px solid ${overallPct > 0 ? "rgba(184,255,27,0.25)" : CARD_BORDER}`, boxShadow: overallPct > 0 ? "0 0 40px rgba(184,255,27,0.07)" : "none" }}>
           <div className="p-6 sm:p-8">
             {/* Header row */}
@@ -1298,10 +1293,10 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
               )}
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* ── HOW IT WORKS ── */}
-        <div className="mb-10 rounded-3xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+        {hasJoined && <div className="mb-10 rounded-3xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
           <div className="px-6 sm:px-8 py-6 flex flex-col sm:flex-row items-center sm:items-stretch gap-0 sm:gap-0">
             {([
               { icon: <ShieldCheck size={16} color={NEON} />, num: "1", label: "Accept Mission", sub: "Get your demo key" },
@@ -1351,7 +1346,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
               </div>
             )}
           </div>
-        </div>
+        </div>}
 
         {/* bottom spacer */}
         <div className="pb-8" />
