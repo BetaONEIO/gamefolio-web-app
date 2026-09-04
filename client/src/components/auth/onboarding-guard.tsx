@@ -2,6 +2,7 @@ import { ReactNode, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { FullScreenLoader } from "@/components/ui/game-loader";
+import { alwaysRequiresOnboarding } from "@shared/onboarding";
 
 interface OnboardingGuardProps {
   children: ReactNode;
@@ -12,7 +13,7 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
   const [location, setLocation] = useLocation();
 
   // Check if user needs onboarding
-  const needsOnboarding = user && !user.userType;
+  const needsOnboarding = user && (alwaysRequiresOnboarding(user.username) || !user.userType);
 
   // Routes that should bypass onboarding checks (including guest-accessible routes)
   const bypassRoutes = [

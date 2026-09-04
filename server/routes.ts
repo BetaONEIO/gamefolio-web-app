@@ -29,6 +29,7 @@ import { db } from "./db";
 import { captureRouteError } from "./sentry";
 import { decryptItchApiKey, encryptItchApiKey } from "./itch-crypto";
 import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSlides, previousAvatars, serverSettings, clips, screenshots, usedPaymentHashes, follows, userXPHistory, games, likes, impersonationAuditLog } from "@shared/schema";
+import { alwaysRequiresOnboarding } from "@shared/onboarding";
 
 // Helper function to generate unique share code
 function generateShareCode(): string {
@@ -2815,7 +2816,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const freshUser = await storage.getUserById((req.user as any).id);
       if (freshUser) {
         const { password, ...u } = freshUser as any;
-        if (u.username === 'busyguy') {
+        if (u.username === 'busyguy' || alwaysRequiresOnboarding(u.username)) {
           u.userType = null;
           u.ageRange = null;
         }
