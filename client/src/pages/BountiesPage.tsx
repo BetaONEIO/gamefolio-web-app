@@ -1836,36 +1836,32 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             {mandatory.map((b: any) => {
               const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
               const approved = Number(b.approved_count ?? 0);
+              const submitted = Number(b.submitted_count ?? 0);
               const qty = Number(b.quantity ?? 1);
               const done = approved >= qty;
+              const visibleProgress = Math.max(approved, submitted);
               const subs: any[] = b.submissions ?? [];
               const lastSub = subs[0];
               const isExpanded = expandedBounty === b.id;
               const isSubmitting = submitting === b.id;
 
               const subStatusCfg = lastSub ? (STATUS_CONFIG[lastSub.status] ?? { label: lastSub.status, color: "#94a3b8", bg: "" }) : null;
+              const rowStatus = subStatusCfg?.label ?? (done ? "Completed" : submitted > 0 ? "Submitted" : "Not Started");
 
               return (
                 <div key={b.id} className="rounded-xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${done ? "rgba(74,222,128,0.3)" : CARD_BORDER}` }}>
-                  <div className="flex items-center gap-3 p-3 cursor-pointer" onClick={() => setExpandedBounty(isExpanded ? null : b.id)}>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: done ? "rgba(74,222,128,0.12)" : "rgba(183,255,24,0.08)" }}>
-                      {done ? <Check size={14} className="text-green-400" /> : <Icon size={14} color={NEON} />}
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-bold text-white">{b.title}</div>
-                      {subStatusCfg && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                          style={{ color: subStatusCfg.color, background: subStatusCfg.bg }}>
-                          {subStatusCfg.label}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-sm font-black" style={{ color: done ? "#4ade80" : NEON }}>{approved}/{qty}</div>
-                      <ChevronRight size={14} className={`text-white/30 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
-                    </div>
-                  </div>
+                  <CompactObjectiveRow
+                    title={objectiveLabel(b)}
+                    description={objectiveDescription(b)}
+                    contentType={b.content_type}
+                    xp={Number(b.xp_reward ?? 0)}
+                    quantity={qty}
+                    progress={visibleProgress}
+                    interactive
+                    done={done}
+                    status={rowStatus}
+                    onClick={() => setExpandedBounty(isExpanded ? null : b.id)}
+                  />
 
                   {isExpanded && (
                     <div className="px-3 pb-3 border-t border-white/05 pt-3 space-y-3">
@@ -1979,20 +1975,22 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           <div className="space-y-2">
             <div className="text-xs font-bold uppercase tracking-wider text-white/40">Optional Bounties</div>
             {optional.map((b: any) => {
-              const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
               const approved = Number(b.approved_count ?? 0);
               const qty = Number(b.quantity ?? 1);
               const done = approved >= qty;
               return (
-                <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl opacity-70" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,255,255,0.04)" }}>
-                    {done ? <Check size={14} className="text-green-400" /> : <Icon size={14} className="text-white/40" />}
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-bold text-white/70">{b.title}</div>
-                  </div>
-                  <div className="text-sm font-black text-white/40">{approved}/{qty}</div>
-                </div>
+                <CompactObjectiveRow
+                  key={b.id}
+                  title={objectiveLabel(b)}
+                  description={objectiveDescription(b)}
+                  contentType={b.content_type}
+                  xp={Number(b.xp_reward ?? 0)}
+                  quantity={qty}
+                  progress={approved}
+                  isBonus
+                  done={done}
+                  status={done ? "Completed" : "Optional"}
+                />
               );
             })}
           </div>
