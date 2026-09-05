@@ -489,20 +489,20 @@ router.post('/api/pro/gift-checkout', hybridAuth, async (req: Request, res: Resp
 });
 
 // ---------------------------------------------------------------------------
-// Streamer Partner — paid tier above Pro (every Pro perk plus stream-on-profile
+// Streamer Pro — paid tier above Pro (every Pro perk plus stream-on-profile
 // and showcase). Mirrors the Pro flow exactly: ONE GBP base price + Stripe
 // Adaptive Pricing inside an embedded Checkout Session. Provisioning grants
 // isPartner AND isPro (partner includes all Pro perks). Native (iOS/Android)
 // purchases flow through RevenueCat ("Gamefolio Streamer Partner" offering),
 // not these endpoints.
 //
-// Pricing: £4.99/mo, £44.99/yr. Keep in sync with App Store / Play /
+// Pricing: £3.99/mo, £38.40/yr (£3.20/mo). Keep in sync with App Store / Play /
 // RevenueCat Web Billing prices. Override via STRIPE_PARTNER_MONTHLY_PRICE_ID /
 // STRIPE_PARTNER_YEARLY_PRICE_ID, otherwise auto-provisioned in Stripe.
 // ---------------------------------------------------------------------------
 const PARTNER_BASE_PRICE: Record<'monthly' | 'yearly', number> = {
-  monthly: 499,   // £4.99 / month
-  yearly: 4499,   // £44.99 / year
+  monthly: 399,   // £3.99 / month
+  yearly: 3840,   // £38.40 / year (£3.20 / month)
 };
 
 const cachedPartnerPriceIds: { monthly: string | null; yearly: string | null } = {
@@ -523,24 +523,41 @@ async function getOrCreatePartnerPriceId(
 
   if (envPriceId) {
     try {
-      await stripe.prices.retrieve(envPriceId);
-      cachedPartnerPriceIds[plan] = envPriceId;
-      return envPriceId;
+      const configuredPrice = await stripe.prices.retrieve(envPriceId);
+      const targetAmount = PARTNER_BASE_PRICE[plan];
+      const targetInterval = plan === 'monthly' ? 'month' : 'year';
+      if (
+        configuredPrice.active &&
+        configuredPrice.unit_amount === targetAmount &&
+        configuredPrice.currency === BASE_CURRENCY &&
+        configuredPrice.recurring?.interval === targetInterval
+      ) {
+        cachedPartnerPriceIds[plan] = envPriceId;
+        return envPriceId;
+      }
+      console.warn(`Configured partner price ID ${envPriceId} has stale pricing. Auto-provisioning the current Streamer Pro price...`);
     } catch {
       console.warn(`Configured partner price ID ${envPriceId} not found in Stripe. Auto-provisioning...`);
     }
   }
 
   const existingProducts = await stripe.products.list({ limit: 100 });
-  let product = existingProducts.data.find((p: any) => p.name === 'Gamefolio Streamer Partner' && p.active);
+  let product = existingProducts.data.find((p: any) =>
+    (p.name === 'Gamefolio Streamer Pro' || p.name === 'Gamefolio Streamer Partner') && p.active
+  );
 
   if (!product) {
     product = await stripe.products.create({
-      name: 'Gamefolio Streamer Partner',
-      description: 'Streamer Partner subscription for Gamefolio — every Pro perk plus stream-on-profile and showcase',
+      name: 'Gamefolio Streamer Pro',
+      description: 'Streamer Pro subscription for Gamefolio — every Pro perk plus stream-on-profile and showcase',
       metadata: { app: 'gamefolio', tier: 'partner' },
     });
     console.log(`✅ Created Stripe product: ${product.id}`);
+  } else if (product.name !== 'Gamefolio Streamer Pro') {
+    product = await stripe.products.update(product.id, {
+      name: 'Gamefolio Streamer Pro',
+      description: 'Streamer Pro subscription for Gamefolio — every Pro perk plus stream-on-profile and showcase',
+    });
   }
 
   const existingPrices = await stripe.prices.list({ product: product.id, active: true, limit: 100 });
@@ -683,7 +700,7 @@ router.post('/api/stripe/create-partner-subscription', hybridAuth, async (req: R
         const existing = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
         if (existing.status === 'active' || existing.status === 'trialing') {
           console.warn(`⚠️ User ${userId} already has active subscription ${user.stripeSubscriptionId} — blocking new Partner checkout`);
-          return res.status(409).json({ error: 'You already have an active Streamer Partner subscription.' });
+          return res.status(409).json({ error: 'You already have an active Streamer Pro subscription.' });
         }
       } catch {
         // Subscription not found in Stripe — allow proceeding

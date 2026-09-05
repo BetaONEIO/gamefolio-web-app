@@ -351,9 +351,9 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
           await syncSubscriptionWithBackend(true, hasPartner);
         }
         toast({
-          title: hasPartner ? "Welcome, Streamer Partner!" : "Welcome to Gamefolio Pro!",
+          title: hasPartner ? "Welcome to Streamer Pro!" : "Welcome to Gamefolio Pro!",
           description: hasPartner
-            ? "You now have all Pro perks plus Streamer Partner features."
+            ? "You now have all Pro perks plus Streamer Pro features."
             : "You now have access to all premium features.",
           variant: "gamefolioSuccess",
         });

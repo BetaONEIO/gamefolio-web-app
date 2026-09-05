@@ -194,15 +194,15 @@ const TIER_META: Record<SubscriptionTier, TierMeta> = {
     teaserMonthly: 2.99,
   },
   partner: {
-    name: "Streamer Partner",
+    name: "Streamer Pro",
     cardTitle: "Streamer",
-    cardSub: "Partner",
+    cardSub: "Pro",
     blurb: "Put your live stream front and centre across Gamefolio",
     benefits: partnerBenefits,
-    cta: "Become a Streamer Partner",
+    cta: "Join Streamer Pro",
     tagline: "Go pro and put your live stream front and centre across Gamefolio",
     api: "partner",
-    teaserMonthly: 4.99,
+    teaserMonthly: 3.99,
   },
   indie: {
     name: "Indie Partner",
@@ -562,11 +562,11 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
               <Crown className="w-10 h-10 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">
-              {isPartnerTier ? "You're a Streamer Partner!" : "You're already Pro!"}
+              {isPartnerTier ? "You're a Streamer Pro member!" : "You're already Pro!"}
             </h2>
             <p className="text-[#B8C0AE] mb-6">
               {isPartnerTier
-                ? "You have full access to all Streamer Partner features. Thank you for your support!"
+                ? "You have full access to all Streamer Pro features. Thank you for your support!"
                 : "You have full access to all Gamefolio Pro features. Thank you for your support!"}
             </p>
             <button

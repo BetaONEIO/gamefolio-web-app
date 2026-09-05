@@ -39,6 +39,22 @@ async function main() {
   }
 
   const offerings = (offeringsResponse.data as any)?.items ?? [];
+  const products = (productsResponse.data as any)?.items ?? [];
+  const productPrices = [];
+  for (const product of products) {
+    if (!String(product?.store_identifier ?? "").includes("streamer_partner")) continue;
+    const pricesResponse = await client.get({
+      url: "/projects/{project_id}/products/{product_id}/test_store_prices",
+      path: { project_id: project.id, product_id: product.id },
+    });
+    productPrices.push({
+      product_id: product.id,
+      store_identifier: product.store_identifier,
+      app_id: product.app_id,
+      prices: pricesResponse.error ? { error: pricesResponse.error } : pricesResponse.data,
+    });
+  }
+
   const offeringDetails = [];
   for (const offering of offerings) {
     const packagesResponse = await listPackages({
@@ -76,6 +92,7 @@ async function main() {
     project: { id: project.id, name: project.name },
     apps: appsResponse.data,
     products: productsResponse.data,
+    productPrices,
     entitlements: entitlementDetails,
     offerings: offeringDetails,
   }, null, 2));
