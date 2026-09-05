@@ -45,10 +45,11 @@ type RevenueCatContextType = {
 const RevenueCatContext = createContext<RevenueCatContextType | null>(null);
 
 const PRO_ENTITLEMENT_ID = "pro";
-// Streamer Partner: paid tier above Pro. Entitlement + its own offering
-// ("Gamefolio Streamer Partner", 2 packages). Partner implies Pro perks.
+// Streamer Pro: paid tier above Pro. Entitlement + its own offering. The
+// lookup key remains the legacy "Gamefolio Streamer Partner" value for
+// backwards compatibility, while the display name is "Gamefolio Streamer Pro".
 const PARTNER_ENTITLEMENT_ID = "streamer_partner";
-const PARTNER_OFFERING_ID = "Gamefolio Streamer Partner";
+const PARTNER_OFFERING_IDS = ["Gamefolio Streamer Pro", "Gamefolio Streamer Partner"];
 const INDIE_DEV_ENTITLEMENT_ID = "indie_dev";
 const INDIE_DEV_OFFERING_ID = "Gamefolio Indie Developer";
 
@@ -216,7 +217,9 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       setHasIndieDevEntitlement(indieDev);
       setPackages(pkgs);
       offeringsRef.current = rawOfferings;
-      const partnerOffering = rawOfferings?.all?.[PARTNER_OFFERING_ID];
+      const partnerOffering = PARTNER_OFFERING_IDS
+        .map((offeringId) => rawOfferings?.all?.[offeringId])
+        .find(Boolean);
       const indieDevOffering = rawOfferings?.all?.[INDIE_DEV_OFFERING_ID];
       setPartnerPackages(partnerOffering ? partnerOffering.availablePackages.map(normalize) : null);
       setIndieDevPackages(indieDevOffering ? indieDevOffering.availablePackages.map(normalize) : null);

@@ -505,7 +505,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     }
 
     // Web (Stripe) path — open an embedded Checkout Session. Stripe Adaptive
-    // Pricing (enabled in the Dashboard) converts £2.99 to the buyer's local
+    // Pricing (enabled in the Dashboard) converts the GBP base price to the buyer's local
     // currency inside the checkout; the server only sends the base GBP price.
     if (!webPricing) return;
     setCheckoutLoading(true);
