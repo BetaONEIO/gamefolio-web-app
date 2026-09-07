@@ -59,7 +59,7 @@ const FIELD_LABELS: Record<string, string> = {
   steamUrl: "Add a Steam store link",
   epicUrl: "Add an Epic Games link",
   itchUrl: "Add an itch.io link",
-  [STORE_LINK_GROUP]: "Add a store link (Steam, Epic or itch.io)",
+  [STORE_LINK_GROUP]: "Add a store or website link",
   trailerUrl: "Upload a game trailer",
   fullDescription: "Write a full description",
   screenshotUrls: "Add screenshots",

@@ -30,6 +30,14 @@ export interface SectionWrapperProps extends SharedFieldProps {
 // launch-ready because they had no itch.io page.
 export const STORE_LINK_FIELDS = ["steamUrl", "epicUrl", "itchUrl"];
 
+// A plain website also satisfies the requirement: a developer selling direct,
+// or pre-launch with no storefront at all, still has somewhere to send players
+// and must not be left with an unclearable checklist item. Matches
+// computeCompleteness() in components/indie/ManageGameSettings.tsx, which has
+// always accepted websiteUrl here. websiteUrl stays OUT of ESSENTIAL_FIELDS so
+// it keeps showing up as a recommendation in its own right.
+export const STORE_LINK_SATISFYING_FIELDS = [...STORE_LINK_FIELDS, "websiteUrl"];
+
 /** Synthetic id standing in for "any one store link" in checklists. */
 export const STORE_LINK_GROUP = "storeLink";
 
@@ -110,9 +118,9 @@ export function isFieldFilled(profile: Profile | null, field: string): boolean {
   return val !== null && val !== undefined && val !== "";
 }
 
-/** True when the profile links to at least one storefront. */
+/** True when the profile links to at least one storefront or its own website. */
 export function hasAnyStoreLink(profile: Profile | null): boolean {
-  return STORE_LINK_FIELDS.some((field) => isFieldFilled(profile, field));
+  return STORE_LINK_SATISFYING_FIELDS.some((field) => isFieldFilled(profile, field));
 }
 
 /**
