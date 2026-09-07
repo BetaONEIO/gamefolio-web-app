@@ -93,6 +93,7 @@ import { useProfilePictureLightbox } from "@/components/ui/profile-picture-light
 import { BannerLightbox, useBannerLightbox } from "@/components/ui/banner-lightbox";
 import { ProfileMetricTooltip, type ProfileMetricLabel } from "@/components/profile/ProfileMetricTooltip";
 import { GamefolioCollectionButton } from "@/components/profile/GamefolioCollectionButton";
+import { TowerdogPixelField } from "@/components/profile/TowerdogPixelField";
 import "@/styles/profile-themes.css";
 
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
@@ -2228,13 +2229,7 @@ const ProfilePage = () => {
   return (
     <>
     {selectedProfileNftDetail}
-    {isTowerdogTheme && typeof document !== "undefined" && createPortal(
-      <>
-        <div className="towerdog-pixel-background profile-theme-global-background" aria-hidden="true" />
-        <div className="towerdog-pixel-wave-overlay profile-theme-global-overlay" aria-hidden="true" />
-      </>,
-      document.body
-    )}
+    {isTowerdogTheme && typeof document !== "undefined" && createPortal(<TowerdogPixelField />, document.body)}
     {isSummerTheme && (
       <style>{`
         .summer-profile {

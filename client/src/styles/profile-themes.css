@@ -191,7 +191,7 @@
 
 .profile-theme-global-background {
   z-index: 0;
-  background-color: #060a1c !important;
+  background-color: #0F101B !important;
 }
 
 .profile-theme-global-overlay {
@@ -200,89 +200,84 @@
 
 .towerdog-pixel-background {
   z-index: 0;
-  opacity: 0.92;
-  background:
-    linear-gradient(115deg, transparent 0 44%, rgba(33, 118, 255, 0.1) 44% 46%, transparent 46% 100%),
-    repeating-conic-gradient(
-      from 45deg,
-      rgba(33, 118, 255, 0.1) 0 25%,
-      transparent 25% 50%,
-      rgba(255, 49, 92, 0.08) 50% 75%,
-      transparent 75% 100%
-    ) 0 0 / 32px 32px,
-    repeating-conic-gradient(
-      from 225deg,
-      rgba(255, 49, 92, 0.06) 0 25%,
-      transparent 25% 50%,
-      rgba(33, 118, 255, 0.05) 50% 75%,
-      transparent 75% 100%
-    ) 8px 8px / 24px 24px;
-  animation: towerdog-pixel-background-drift 18s steps(12, end) infinite alternate;
-}
-
-.profile-theme-global-background::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 50% 0%, rgba(25, 46, 112, 0.34), transparent 42%);
-  pointer-events: none;
-}
-
-.towerdog-pixel-background::after {
-  content: "";
-  position: absolute;
-  inset: 10% 0 0;
-  background:
-    linear-gradient(90deg, rgba(255, 49, 92, 0.2) 0 5px, transparent 5px) 12px 22px / 54px 54px,
-    linear-gradient(90deg, rgba(33, 118, 255, 0.22) 0 5px, transparent 5px) 30px 6px / 72px 72px;
-  background-size: 54px 54px, 72px 72px;
-  opacity: 0.7;
+  background: #0F101B;
 }
 
 .towerdog-pixel-wave-overlay {
   z-index: 1;
 }
 
-.towerdog-pixel-wave-overlay::before,
-.towerdog-pixel-wave-overlay::after {
-  content: "";
+.towerdog-pixel {
   position: absolute;
-  width: 170%;
-  height: 58%;
-  left: -82%;
-  top: 18%;
-  opacity: 0;
+  width: var(--pixel-size);
+  height: var(--pixel-size);
+  aspect-ratio: 1 / 1;
+  border-radius: 0;
+  transform: none;
+  image-rendering: pixelated;
+  background: var(--pixel-inactive);
+  animation: towerdog-pixel-activate var(--pixel-duration) ease-in-out var(--pixel-delay) infinite;
+  pointer-events: none;
+}
+
+.towerdog-pixel--red {
+  --pixel-inactive: #6B0712;
+  --pixel-active: #FF2438;
+  --pixel-highlight: #FF5A67;
+}
+
+.towerdog-pixel--blue {
+  --pixel-inactive: #082B73;
+  --pixel-active: #1677FF;
+  --pixel-highlight: #5CB8FF;
+}
+
+.towerdog-pixel--purple {
+  --pixel-inactive: #35136B;
+  --pixel-active: #8C35FF;
+  --pixel-highlight: #C08BFF;
+}
+
+.towerdog-wave-pixel {
   mix-blend-mode: screen;
-  background:
-    repeating-linear-gradient(90deg, transparent 0 14px, currentColor 14px 24px, transparent 24px 38px),
-    repeating-linear-gradient(0deg, transparent 0 10px, currentColor 10px 18px, transparent 18px 30px);
-  clip-path: polygon(0 30%, 7% 30%, 7% 20%, 15% 20%, 15% 38%, 25% 38%, 25% 12%, 34% 12%, 34% 48%, 45% 48%, 45% 24%, 56% 24%, 56% 58%, 67% 58%, 67% 34%, 78% 34%, 78% 50%, 88% 50%, 88% 28%, 100% 28%, 100% 72%, 0 72%);
-  animation: towerdog-pixel-wave-pass 11s steps(16, end) infinite;
+  animation-name: towerdog-pixel-activate;
+  animation-duration: var(--pixel-duration);
 }
 
-.towerdog-pixel-wave-overlay::before {
-  color: rgba(255, 49, 92, 0.34);
-}
-
-.towerdog-pixel-wave-overlay::after {
-  color: rgba(33, 118, 255, 0.34);
-  animation-delay: 1.4s;
+@keyframes towerdog-pixel-activate {
+  0%, 100% {
+    opacity: 0.025;
+    background: var(--pixel-inactive);
+    box-shadow: none;
+  }
+  12% {
+    opacity: 0.14;
+    background: var(--pixel-inactive);
+  }
+  24% {
+    opacity: 0.72;
+    background: var(--pixel-active);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--pixel-active) 45%, transparent);
+  }
+  34% {
+    opacity: 0.9;
+    background: var(--pixel-highlight);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--pixel-highlight) 50%, transparent);
+  }
+  48% {
+    opacity: 0.42;
+    background: var(--pixel-active);
+    box-shadow: 0 0 4px color-mix(in srgb, var(--pixel-active) 25%, transparent);
+  }
+  68% {
+    opacity: 0.12;
+    background: var(--pixel-inactive);
+    box-shadow: none;
+  }
 }
 
 .towerdog-border-wave-response {
   animation: towerdog-border-surge 11s ease-in-out infinite;
-}
-
-@keyframes towerdog-pixel-background-drift {
-  from { background-position: 0 0, 0 0, 0 0; }
-  to { background-position: 7% 3%, 44px 0, -18px 22px; }
-}
-
-@keyframes towerdog-pixel-wave-pass {
-  0%, 25%, 100% { transform: translateX(0); opacity: 0; }
-  34% { opacity: 0.42; }
-  56% { transform: translateX(78%); opacity: 0.42; }
-  68% { transform: translateX(122%); opacity: 0; }
 }
 
 @keyframes towerdog-border-surge {
@@ -298,17 +293,17 @@
   }
 
   .towerdog-pixel-background {
-    opacity: 0.72;
-    background-size: auto, 30px 30px, 24px 24px;
+    opacity: 0.84;
   }
 
-  .towerdog-pixel-wave-overlay::before,
-  .towerdog-pixel-wave-overlay::after {
-    width: 150%;
-    height: 42%;
-    left: -70%;
-    opacity: 0;
-    transform: scale(0.9);
+  .towerdog-pixel {
+    width: max(6px, calc(var(--pixel-size) * 0.78));
+    height: max(6px, calc(var(--pixel-size) * 0.78));
+  }
+
+  .towerdog-wave-pixel {
+    width: max(6px, calc(var(--pixel-size) * 0.85));
+    height: max(6px, calc(var(--pixel-size) * 0.85));
   }
 }
 
@@ -316,16 +311,22 @@
   .profile-theme-atmosphere,
   .profile-theme-atmosphere::after,
   .towerdog-pixel-background,
-  .towerdog-pixel-wave-overlay::before,
-  .towerdog-pixel-wave-overlay::after,
+  .towerdog-pixel,
+  .towerdog-wave-pixel,
   .towerdog-border-wave-response {
     animation: none !important;
   }
 
-  .towerdog-pixel-wave-overlay::before,
-  .towerdog-pixel-wave-overlay::after {
-    opacity: 0.18;
-    transform: none;
+  .towerdog-pixel {
+    opacity: 0.12;
+    background: var(--pixel-inactive);
+    box-shadow: none;
+  }
+
+  .towerdog-wave-pixel {
+    opacity: 0.16;
+    background: var(--pixel-inactive);
+    box-shadow: none;
   }
 }
 
@@ -367,7 +368,7 @@ body.profile-theme-towerdog-page .profile-theme-sidebar {
 
 body.profile-theme-page-hidden .towerdog-pixel-background,
 body.profile-theme-page-hidden .towerdog-pixel-wave-overlay,
-body.profile-theme-page-hidden .towerdog-pixel-wave-overlay::before,
-body.profile-theme-page-hidden .towerdog-pixel-wave-overlay::after {
+body.profile-theme-page-hidden .towerdog-pixel,
+body.profile-theme-page-hidden .towerdog-wave-pixel {
   animation-play-state: paused !important;
 }
