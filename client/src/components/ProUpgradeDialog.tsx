@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Crown, Loader2, X, Check, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { useRevenueCat } from "@/hooks/use-revenuecat";
+import { useRevenueCat, getAmbassadorOffer } from "@/hooks/use-revenuecat";
 import { useAuth } from "@/hooks/use-auth";
 import { useIndieMode } from "@/hooks/use-indie-mode";
 import type { RcPackage } from "@/hooks/use-revenuecat";
@@ -13,7 +13,8 @@ import {
 } from "@stripe/react-stripe-js";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { isNative, openExternal } from "@/lib/platform";
+import { isNative, isAndroid, openExternal } from "@/lib/platform";
+import { AMBASSADOR_DISCOUNT_PERCENT } from "@shared/ambassador";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import ProOnboardingScreen from "@/components/pro/ProOnboardingScreen";
 
@@ -363,7 +364,24 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       setPurchasing(true);
       setPurchaseInProgress(true);
       try {
-        const success = await purchasePackage(selectedPackage);
+        // Unlike Stripe (which validates inline when creating the session), the
+        // store sheet can't be corrected once it's open — so check the code
+        // before handing off to StoreKit / Play Billing.
+        const typedCode = ambassadorCode.trim();
+        let validCode: string | undefined;
+        if (typedCode) {
+          try {
+            const res = await apiRequest("POST", "/api/referral/validate-ambassador", { code: typedCode });
+            // The server re-validates on activation, so falling back to the
+            // typed code just preserves attribution if the body is unexpected.
+            validCode = (await res.json())?.code ?? typedCode.toUpperCase();
+          } catch (err: any) {
+            setCheckoutError(parseApiErrorMessage(err, "Invalid ambassador code"));
+            setPurchaseInProgress(false);
+            return;
+          }
+        }
+        const success = await purchasePackage(selectedPackage, { ambassadorCode: validCode });
         if (success) {
           setStep("success");
         }
@@ -577,8 +595,16 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     );
   };
 
-  // Ambassador referral discount — web/Stripe checkout only, validated
-  // server-side against the ambassador's referral code at checkout time.
+  // What an ambassador code is actually worth on this platform. Web gets a
+  // Stripe coupon and Android a discounted Play offer; Apple can't discount a
+  // first-time subscriber at all, so iOS (and Android if the Play offer isn't
+  // live yet) gets bonus XP granted server-side on activation instead.
+  const ambassadorPerkLabel = !isNative || (isAndroid && getAmbassadorOffer(selectedPackage))
+    ? `${AMBASSADOR_DISCOUNT_PERCENT}% off your first payment.`
+    : "500 bonus XP when you subscribe.";
+
+  // Ambassador referral code — validated server-side against the ambassador's
+  // referral code before the purchase starts.
   const ambassadorCodeSection = () => (
     <div className="text-left">
       {!showCodeInput ? (
@@ -602,7 +628,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
             className="w-full bg-[#0B1218] border border-[#1B2A33] rounded-lg px-3 py-2 text-white text-sm placeholder:text-[#475569] focus:outline-none focus:border-[#B7FF1A]"
           />
           <p className="text-[#B8C0AE] text-[10px]">
-            10% off your first payment.
+            {ambassadorPerkLabel}
           </p>
         </div>
       )}
@@ -695,7 +721,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
         {planSelector()}
 
-        {!isNative && ambassadorCodeSection()}
+        {ambassadorCodeSection()}
 
         <button
           onClick={handleJoinPro}
@@ -862,7 +888,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
                   {planSelector(true)}
 
-                  {!isNative && ambassadorCodeSection()}
+                  {ambassadorCodeSection()}
 
                   <button
                     onClick={handleJoinPro}

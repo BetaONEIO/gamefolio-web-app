@@ -7,6 +7,8 @@ import { hybridAuth } from '../middleware/hybrid-auth';
 import { EmailService } from '../email-service';
 import { storage } from '../storage';
 import { notifyProPurchase } from '../telegram-notify';
+import { validateAmbassadorCode, normalizeAmbassadorCode } from '../lib/ambassador-code';
+import { AMBASSADOR_DISCOUNT_PERCENT } from '@shared/ambassador';
 
 const router = Router();
 
@@ -114,11 +116,17 @@ async function getOrCreatePriceId(
   return price.id;
 }
 
-// Ambassador referral discount — a single shared 10%-off, first-payment-only
-// coupon reused for every ambassador/buyer. Which ambassador's code was used
-// is tracked in our own DB (ambassador_conversions), not as separate Stripe
+// Ambassador referral discount — a single shared first-payment-only coupon
+// reused for every ambassador/buyer. Which ambassador's code was used is
+// tracked in our own DB (ambassador_conversions), not as separate Stripe
 // objects per ambassador.
-const AMBASSADOR_COUPON_ID = 'ambassador-referral-10-once';
+//
+// The id embeds the percentage on purpose. Stripe coupons are immutable, so
+// bumping AMBASSADOR_DISCOUNT_PERCENT has to mint a new coupon — reusing a
+// fixed id would just retrieve the old one below and keep charging the old
+// rate. Superseded coupons can be deleted in the Stripe Dashboard once no
+// checkout session references them.
+const AMBASSADOR_COUPON_ID = `ambassador-referral-${AMBASSADOR_DISCOUNT_PERCENT}-once`;
 let cachedAmbassadorCouponId: string | null = null;
 
 async function getOrCreateAmbassadorCoupon(stripe: any): Promise<string> {
@@ -131,15 +139,47 @@ async function getOrCreateAmbassadorCoupon(stripe: any): Promise<string> {
   } catch {
     const coupon = await stripe.coupons.create({
       id: AMBASSADOR_COUPON_ID,
-      percent_off: 10,
+      percent_off: AMBASSADOR_DISCOUNT_PERCENT,
       duration: 'once',
-      name: 'Ambassador Referral 10% Off',
+      name: `Ambassador Referral ${AMBASSADOR_DISCOUNT_PERCENT}% Off`,
     });
     console.log(`✅ Created Stripe coupon: ${coupon.id}`);
     cachedAmbassadorCouponId = coupon.id;
     return coupon.id;
   }
 }
+
+// Validate an ambassador code without starting a purchase. Used by the native
+// paywall, which has to know whether the code is good BEFORE handing off to
+// StoreKit / Play Billing (the store sheet can't be corrected mid-flight).
+// The web/Stripe path validates inline in create-pro-subscription instead.
+router.post('/api/referral/validate-ambassador', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const result = await validateAmbassadorCode(req.body?.code, userId);
+    if (!result.valid) {
+      return res.status(400).json({ valid: false, error: result.error });
+    }
+
+    return res.json({
+      valid: true,
+      code: result.code,
+      ambassador: {
+        username: result.username,
+        displayName: result.displayName,
+        avatarUrl: result.avatarUrl,
+      },
+    });
+  } catch (error: any) {
+    captureRouteError(error);
+    console.error('Ambassador code validation error:', error);
+    return res.status(500).json({ error: 'Failed to validate ambassador code' });
+  }
+});
 
 // Shared, idempotent Pro provisioning. Called by the client-side confirm
 // endpoint (so the success screen + lootbox appear immediately) and by the
@@ -258,13 +298,12 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
     // Ambassador referral discount — entered manually at checkout, separate
     // from whatever `referredBy` the account already has from signup.
     let validatedAmbassadorCode: string | null = null;
-    if (typeof ambassadorCode === 'string' && ambassadorCode.trim()) {
-      const normalizedCode = ambassadorCode.trim().toUpperCase();
-      const codeOwner = await storage.getUserByReferralCode(normalizedCode);
-      if (!codeOwner || !codeOwner.isAmbassador || codeOwner.id === userId) {
-        return res.status(400).json({ error: 'Invalid ambassador code' });
+    if (normalizeAmbassadorCode(ambassadorCode)) {
+      const result = await validateAmbassadorCode(ambassadorCode, userId);
+      if (!result.valid) {
+        return res.status(400).json({ error: result.error });
       }
-      validatedAmbassadorCode = normalizedCode;
+      validatedAmbassadorCode = result.code;
     }
 
     const stripe = await getUncachableStripeClient();

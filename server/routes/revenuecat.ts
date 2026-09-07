@@ -9,8 +9,31 @@ import { notifyProPurchase } from '../telegram-notify';
 import { captureRouteError } from "../sentry";
 import { provisionIndieDevSubscription } from './indie-dev-subscription';
 import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
+import { validateAmbassadorCode, normalizeAmbassadorCode } from '../lib/ambassador-code';
+import { XPService } from '../xp-service';
 
 const router = Router();
+
+// Ambassador consolation bonus (iOS, and Android when the Play offer is
+// unavailable).
+//
+// Android gets a real percent-off subscription offer (developer-determined
+// eligibility, selected client-side — see use-revenuecat.tsx) and web gets a
+// Stripe coupon. Apple has no equivalent: promotional offers and win-back
+// offers are restricted to current/lapsed subscribers, and introductory-offer
+// eligibility is Apple's to decide — none of them can be gated on a code typed
+// by a first-time subscriber. Offer codes could, but they'd have to be minted
+// per-ambassador in App Store Connect and redeemed in Apple's own sheet.
+//
+// So on iOS the buyer pays full IAP price and we grant value on our side
+// instead. XP (not GFT) because the native builds deliberately ship with every
+// crypto/token surface removed for App Store compliance — see
+// server/middleware/block-crypto-on-native.ts.
+//
+// The same grant covers an Android buyer whose purchase fell back to the
+// undiscounted base plan, so a misconfigured Play offer degrades to "bonus XP"
+// rather than "the code silently did nothing".
+const AMBASSADOR_BONUS_XP = 500;
 
 const REVENUECAT_API_BASE = 'https://api.revenuecat.com/v1';
 export const PRO_ENTITLEMENT_ID = 'pro';
@@ -81,7 +104,7 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const { appUserId, platform } = req.body;
+    const { appUserId, platform, ambassadorCode } = req.body;
     if (!appUserId || typeof appUserId !== 'string') {
       return res.status(400).json({ error: 'appUserId is required' });
     }
@@ -94,6 +117,21 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
+
+    // An ambassador code typed at the native paywall. A bad code must never
+    // fail the activation — the money has already left the buyer's account by
+    // the time we get here — so it is validated leniently and simply ignored
+    // if it doesn't resolve.
+    let validatedAmbassadorCode: string | null = null;
+    if (normalizeAmbassadorCode(ambassadorCode)) {
+      const result = await validateAmbassadorCode(ambassadorCode, userId);
+      if (result.valid) {
+        validatedAmbassadorCode = result.code;
+      } else {
+        console.warn(`[RevenueCat] Ignoring invalid ambassador code from user ${userId}`);
+      }
+    }
+
     let rcData: any;
     try {
       rcData = await fetchRevenueCatSubscriber(appUserId, typeof platform === 'string' ? platform : 'ios');
@@ -146,9 +184,30 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
         ).catch(err => console.error('[RevenueCat] Failed to send Pro welcome email:', err));
       }
 
-      if (user.referredBy) {
-        storage.recordAmbassadorConversion(userId, user.referredBy, plan, 'revenuecat')
+      // A code typed at checkout wins over the one recorded at signup, matching
+      // the Stripe path (see provisionProSubscription in pro-subscription.ts).
+      const codeToAttribute = validatedAmbassadorCode || user.referredBy;
+      if (codeToAttribute) {
+        storage.recordAmbassadorConversion(userId, codeToAttribute, plan, 'revenuecat')
           .catch(err => console.error('[RevenueCat] Failed to record ambassador conversion:', err));
+      }
+
+      // Grant the consolation bonus whenever the store couldn't take money off:
+      // always on iOS, and on Android only if the client fell back to an
+      // undiscounted purchase because the Play offer wasn't being served. The
+      // client asserts that fallback, so a tampered Android request could claim
+      // both — worth at most 500 XP once per account (the dedupe key caps it),
+      // which is well below the cost of any server-side verification.
+      const storeDiscountApplied = platform === 'android' && req.body?.ambassadorDiscountApplied === true;
+      if (validatedAmbassadorCode && !storeDiscountApplied) {
+        XPService.awardXP(
+          userId,
+          AMBASSADOR_BONUS_XP,
+          'referral_bonus',
+          `Earned ${AMBASSADOR_BONUS_XP} XP for subscribing with ambassador code ${validatedAmbassadorCode}`,
+          undefined,
+          { dedupeKey: `ambassador_purchase_bonus:${userId}` },
+        ).catch(err => console.error('[RevenueCat] Failed to award ambassador bonus XP:', err));
       }
     }
 
