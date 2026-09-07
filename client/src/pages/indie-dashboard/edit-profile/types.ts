@@ -24,8 +24,22 @@ export interface SectionWrapperProps extends SharedFieldProps {
   statusColor?: string;
 }
 
-// Essential fields reflect the minimum for a useful public-facing profile
-export const ESSENTIAL_FIELDS = ["gameName", "shortDescription", "headerImageUrl", "steamUrl", "epicUrl", "itchUrl"];
+// Storefront links. A game normally ships on ONE of these, so they are required
+// as a GROUP — any single link satisfies it. Requiring each one individually
+// told a developer with Steam and Epic links that their page was not
+// launch-ready because they had no itch.io page.
+export const STORE_LINK_FIELDS = ["steamUrl", "epicUrl", "itchUrl"];
+
+/** Synthetic id standing in for "any one store link" in checklists. */
+export const STORE_LINK_GROUP = "storeLink";
+
+// Required individually — no sensible profile is missing any of these.
+export const REQUIRED_SINGLE_FIELDS = ["gameName", "shortDescription", "headerImageUrl"];
+
+// Essential fields reflect the minimum for a useful public-facing profile.
+// Store links are grouped: use missingEssentialFields() rather than filtering
+// this list directly, or you reintroduce the all-three-required bug.
+export const ESSENTIAL_FIELDS = [...REQUIRED_SINGLE_FIELDS, ...STORE_LINK_FIELDS];
 export const OPTIONAL_FIELDS = [
   "fullDescription", "releaseDate", "studioName", "studioFoundedYear", "studioTeamSize", "studioWebsite",
   "studioCountry", "genres", "tags", "platforms", "capsuleImageUrl", "trailerUrl", "screenshotUrls",
@@ -94,6 +108,21 @@ export function isFieldFilled(profile: Profile | null, field: string): boolean {
   if (Array.isArray(val)) return val.length > 0;
   if (typeof val === "boolean") return true;
   return val !== null && val !== undefined && val !== "";
+}
+
+/** True when the profile links to at least one storefront. */
+export function hasAnyStoreLink(profile: Profile | null): boolean {
+  return STORE_LINK_FIELDS.some((field) => isFieldFilled(profile, field));
+}
+
+/**
+ * Required checklist items still outstanding. The three store links collapse
+ * into a single STORE_LINK_GROUP entry, so a Steam-only game is complete.
+ */
+export function missingEssentialFields(profile: Profile | null): string[] {
+  const missing = REQUIRED_SINGLE_FIELDS.filter((field) => !isFieldFilled(profile, field));
+  if (!hasAnyStoreLink(profile)) missing.push(STORE_LINK_GROUP);
+  return missing;
 }
 
 export function formatFieldName(key: string): string {
