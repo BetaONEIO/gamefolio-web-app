@@ -57,3 +57,4 @@
 - [Pro-gated catalog cache](pro-gated-catalog-cache.md) — entitlement-dependent catalogs need the entitlement in the client query key or an explicit invalidation after upgrade.
 - [RevenueCat Play Store state](revenuecat-play-store-state.md) — Play create-if-missing needs localization and explicit base-plan billing metadata; poll the async operation.
 - [Towerdog theme entitlement](towerdog-theme-entitlement.md) — Towerdog Pixel Surge uses the immutable original signup referral, never mutable post-registration referral history.
+- [Full-page profile theme shell](full-page-profile-theme-shell.md) — fixed themed layers must escape app scrolling/stacking contexts and neutralize opaque template surfaces.

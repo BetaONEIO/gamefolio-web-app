@@ -409,14 +409,14 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
+    <div className="profile-theme-app-shell h-[100dvh] flex flex-col bg-background relative overflow-hidden">
       <Header />
 
       <ImpersonationBanner />
 
       {/* Email Verification Banner - shown app-wide until the user verifies */}
       {!isDeveloperSubdomain && user && !user.emailVerified && (
-        <div className={`px-4 mt-2 relative z-20 ${!isMobile ? 'ml-64' : ''}`}>
+        <div className={`profile-theme-verification px-4 mt-2 relative z-20 ${!isMobile ? 'ml-64' : ''}`}>
           <EmailVerificationBanner />
         </div>
       )}
@@ -468,7 +468,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
         <main
           ref={mainScrollRef}
-          className={`flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide bg-background ${!isDeveloperSubdomain && !isMobile ? 'ml-64' : ''}`}
+          className={`profile-theme-main flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide bg-background ${!isDeveloperSubdomain && !isMobile ? 'ml-64' : ''}`}
           style={{
             ...(isMobile && keyboardHeight > 0 ? { paddingBottom: `${keyboardHeight}px` } : {}),
             overflowAnchor: 'none',

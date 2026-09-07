@@ -149,9 +149,7 @@
 
 .profile-theme-towerdog {
   overflow-x: clip;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(25, 46, 112, 0.34), transparent 42%),
-    #060a1c;
+  background: transparent !important;
 }
 
 .profile-theme-towerdog .profile-theme-atmosphere {
@@ -163,12 +161,41 @@
   display: none;
 }
 
+.profile-theme-towerdog .towerdog-theme-banner {
+  background: transparent !important;
+}
+
+.profile-theme-towerdog .towerdog-theme-banner > .absolute {
+  display: none;
+}
+
 .towerdog-pixel-background,
 .towerdog-pixel-wave-overlay {
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
+}
+
+.profile-theme-global-background,
+.profile-theme-global-overlay {
+  position: fixed !important;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: 100vw;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.profile-theme-global-background {
+  z-index: 0;
+  background-color: #060a1c !important;
+}
+
+.profile-theme-global-overlay {
+  z-index: 20;
 }
 
 .towerdog-pixel-background {
@@ -179,6 +206,14 @@
     repeating-linear-gradient(90deg, rgba(33, 118, 255, 0.055) 0 1px, transparent 1px 22px),
     repeating-linear-gradient(0deg, rgba(255, 49, 92, 0.045) 0 1px, transparent 1px 18px);
   animation: towerdog-pixel-background-drift 18s steps(12, end) infinite alternate;
+}
+
+.profile-theme-global-background::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(25, 46, 112, 0.34), transparent 42%);
+  pointer-events: none;
 }
 
 .towerdog-pixel-background::after {
@@ -280,4 +315,47 @@
     opacity: 0.18;
     transform: none;
   }
+}
+
+body.profile-theme-towerdog-page .profile-theme-main {
+  background-color: transparent !important;
+}
+
+body.profile-theme-towerdog-page .profile-theme-app-shell {
+  background-color: transparent !important;
+}
+
+body.profile-theme-towerdog-page .profile-theme-global-overlay {
+  z-index: 20 !important;
+}
+
+body.profile-theme-towerdog-page .profile-theme-header {
+  background: rgba(10, 12, 24, 0.82) !important;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+body.profile-theme-towerdog-page .profile-theme-verification {
+  z-index: 60;
+}
+
+body.profile-theme-towerdog-page .profile-theme-mobile-nav {
+  background: rgba(10, 12, 24, 0.9) !important;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+body.profile-theme-towerdog-page aside {
+  background-color: rgba(7, 10, 24, 0.88) !important;
+}
+
+body.profile-theme-towerdog-page .profile-theme-sidebar {
+  background-color: rgba(7, 10, 24, 0.88) !important;
+}
+
+body.profile-theme-page-hidden .towerdog-pixel-background,
+body.profile-theme-page-hidden .towerdog-pixel-wave-overlay,
+body.profile-theme-page-hidden .towerdog-pixel-wave-overlay::before,
+body.profile-theme-page-hidden .towerdog-pixel-wave-overlay::after {
+  animation-play-state: paused !important;
 }

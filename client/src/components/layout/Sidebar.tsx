@@ -303,7 +303,7 @@ const Sidebar = () => {
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex w-64 bg-background fixed top-0 left-0 bottom-0 flex-col border-r border-border z-40">
+      <div className="profile-theme-sidebar hidden lg:flex w-64 bg-background fixed top-0 left-0 bottom-0 flex-col border-r border-border z-40">
         <nav className="px-4 pt-40 pb-4 space-y-1 flex-1 overflow-y-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {menuItems.map((item) => {
             const isActive = location === item.href;

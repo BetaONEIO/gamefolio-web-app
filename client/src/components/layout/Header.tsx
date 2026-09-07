@@ -300,7 +300,7 @@ const Header = () => {
   if (isMobile && location === '/trending') return null;
 
   return (
-    <header className="bg-background border-b border-border shadow-md sticky top-0 z-50 w-full safe-area-top">
+    <header className="profile-theme-header bg-background border-b border-border shadow-md sticky top-0 z-50 w-full safe-area-top">
       <div className="w-full px-3 sm:px-4 lg:px-8 py-3 sm:py-4 md:py-6 flex items-center justify-between">
         {/* Header left section */}
         <div className="flex items-center flex-shrink-0">

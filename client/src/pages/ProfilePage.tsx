@@ -1257,6 +1257,30 @@ const ProfilePage = () => {
   // Memoize banner style to prevent unnecessary re-renders
   const resolvedBannerUrl = bannerSignedUrl || profile?.bannerUrl;
   const resolvedProfileTheme = resolveProfileTheme(profile || {});
+  const shouldApplyTowerdogPageTheme =
+    resolvedProfileTheme.theme?.slug === "towerdog_pixel_surge" &&
+    profile?.layoutStyle !== "indie-game" &&
+    !profile?.userType?.split(",").map((type) => type.trim()).includes("indie_developer");
+
+  useEffect(() => {
+    const syncTowerdogPageState = () => {
+      document.body.classList.toggle("profile-theme-towerdog-page", shouldApplyTowerdogPageTheme);
+      document.body.classList.toggle(
+        "profile-theme-page-hidden",
+        shouldApplyTowerdogPageTheme && document.hidden
+      );
+    };
+
+    syncTowerdogPageState();
+    document.addEventListener("visibilitychange", syncTowerdogPageState);
+
+    return () => {
+      document.body.classList.remove("profile-theme-towerdog-page");
+      document.body.classList.remove("profile-theme-page-hidden");
+      document.removeEventListener("visibilitychange", syncTowerdogPageState);
+    };
+  }, [shouldApplyTowerdogPageTheme]);
+
   const bannerStyle = useMemo(() => ({
     backgroundImage: resolvedBannerUrl ? `url(${resolvedBannerUrl})` : 'none',
     backgroundColor: resolvedProfileTheme.bannerColor,
@@ -2204,6 +2228,13 @@ const ProfilePage = () => {
   return (
     <>
     {selectedProfileNftDetail}
+    {isTowerdogTheme && typeof document !== "undefined" && createPortal(
+      <>
+        <div className="towerdog-pixel-background profile-theme-global-background" aria-hidden="true" />
+        <div className="towerdog-pixel-wave-overlay profile-theme-global-overlay" aria-hidden="true" />
+      </>,
+      document.body
+    )}
     {isSummerTheme && (
       <style>{`
         .summer-profile {
@@ -2456,6 +2487,11 @@ const ProfilePage = () => {
         backgroundAttachment: 'fixed',
         position: 'relative',
         zIndex: 1
+      } : isTowerdogTheme ? {
+        ...profileThemeStyle,
+        background: 'transparent',
+        position: 'relative',
+        zIndex: 1
       } : isCatalogTheme ? {
         ...profileThemeStyle,
         background: profileThemeDefinition?.profileBackgroundGradientCss || backgroundColor,
@@ -2495,13 +2531,6 @@ const ProfilePage = () => {
           style={{ backgroundImage: profileThemeDefinition?.assets.decorativeOverlay || "none" }}
         />
       )}
-      {isTowerdogTheme && !profileBackgroundImageUrl && (
-        <>
-          <div className="towerdog-pixel-background" aria-hidden="true" />
-          <div className="towerdog-pixel-wave-overlay" aria-hidden="true" />
-        </>
-      )}
-
       {/* Bat theme animated overlay */}
       {isBatTheme && (
         <>
@@ -2655,7 +2684,7 @@ const ProfilePage = () => {
 
       {/* Enhanced Banner with global theme colors */}
       <div 
-        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 ${resolvedBannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
+        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 ${resolvedBannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}${isTowerdogTheme ? ' towerdog-theme-banner' : ''}`}
         style={{
           ...bannerStyle,
           opacity: hideBanner ? 0 : 1,
