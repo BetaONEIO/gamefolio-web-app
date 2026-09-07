@@ -892,9 +892,11 @@ export default function SettingsPage() {
   const { customerInfo, refreshCustomerInfo } = useRevenueCat();
 
   const { data: claimedRewards } = useQuery<AssetReward[] | null>({
-    queryKey: ["/api/lootbox/rewards"],
+    queryKey: ["/api/lootbox/rewards", user?.id],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!user,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
   const hasSummerReward = !!claimedRewards?.some(
     (reward) => reward.name === "Summer Showdown 2026 Border"

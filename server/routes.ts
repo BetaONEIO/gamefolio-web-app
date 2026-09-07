@@ -7703,12 +7703,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (finalThemeName === "towerdog_pixel_surge") {
+        const towerdogReward = (await storage.getAllAssetRewards())
+          .find((reward) => reward.sourcePath === "towerdog_pixel_surge");
         const currentUser = await storage.getUser(userId);
         const originalSignupReferralCode = currentUser?.originalSignupReferralCode
           ?.trim()
           .toUpperCase();
         const hasTowerdogSignupReferral = originalSignupReferralCode === TOWERDOG_REFERRAL_CODE;
-        if (!hasTowerdogSignupReferral) {
+        const hasTowerdogReward = !!towerdogReward &&
+          await storage.userHasUnlockedReward(userId, towerdogReward.id);
+        if (!hasTowerdogSignupReferral && !hasTowerdogReward) {
           return res.status(403).json({
             message: "The Towerdog Pixel Surge theme is unlocked only by using a referral code during signup."
           });
