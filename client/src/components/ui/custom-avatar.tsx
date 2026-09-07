@@ -126,22 +126,23 @@ type RasterBorderCalibration = {
 // Calibrated from the main blue summer tube in the 1254x1254 source PNG.
 // Decorations outside the tube are intentionally ignored when measuring the
 // ring centre and opening.
-const RASTER_BORDER_CALIBRATIONS: Record<string, RasterBorderCalibration> = {
-  "player2-blue-summer-border": {
-    ringCenterX: 0.5,
-    ringCenterY: 0.486,
-    innerDiameter: 0.83,
-    overlap: 0.02,
-    sizeAdjustment: 0.96,
-  },
+const SUMMER_RASTER_BORDER_CALIBRATION: RasterBorderCalibration = {
+  ringCenterX: 0.5,
+  ringCenterY: 0.486,
+  innerDiameter: 0.83,
+  overlap: 0.02,
+  sizeAdjustment: 0.96,
 };
 
 const getRasterBorderCalibration = (border: AssetReward): RasterBorderCalibration | undefined => {
   if (
     border.id === 44 ||
-    border.name.trim().toLowerCase() === "player2 blue summer border"
+    border.name.trim().toLowerCase() === "player2 blue summer border" ||
+    border.name.trim().toLowerCase() === "red blue pixel waves" ||
+    border.name.trim().toLowerCase() === "red and blue pixel wave border" ||
+    border.sourcePath === "red_blue_pixel_waves"
   ) {
-    return RASTER_BORDER_CALIBRATIONS["player2-blue-summer-border"];
+    return SUMMER_RASTER_BORDER_CALIBRATION;
   }
 
   return undefined;
