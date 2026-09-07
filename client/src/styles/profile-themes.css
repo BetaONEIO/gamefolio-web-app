@@ -305,6 +305,19 @@
   animation: towerdog-border-surge 11s ease-in-out infinite;
 }
 
+.towerdog-stats-card {
+  background: rgba(10, 12, 24, 0.86) !important;
+  border: 1px solid #8C35FF !important;
+  border-left-color: #FF2438 !important;
+  border-right-color: #1677FF !important;
+  border-radius: 12px !important;
+  box-shadow:
+    0 0 0 1px rgba(53, 19, 107, 0.52),
+    -5px 0 16px rgba(255, 36, 56, 0.10),
+    5px 0 16px rgba(22, 119, 255, 0.10),
+    inset 0 0 22px rgba(53, 19, 107, 0.16) !important;
+}
+
 @keyframes towerdog-border-surge {
   0%, 25%, 100% { filter: saturate(1) brightness(1); }
   42%, 58% { filter: saturate(1.45) brightness(1.18); }
