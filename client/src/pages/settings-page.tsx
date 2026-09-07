@@ -3633,6 +3633,9 @@ export default function SettingsPage() {
                               unlockRewardName,
                               unlockRewardSourcePath,
                             });
+                            if (unlockRewardSourcePath === "towerdog_pixel_surge" && !hasThemeReward) {
+                              return null;
+                            }
                             const isLocked = (
                               ((theme as any).proOnly && !user?.isPro) ||
                               (!!unlockRewardName && !hasThemeReward)
