@@ -200,13 +200,17 @@
 
 .towerdog-pixel-background {
   z-index: 0;
-  --pixel-cell: clamp(6px, 0.75vw, 10px);
+  --pixel-cell: clamp(16px, 1.8vw, 24px);
   background: #0F101B;
 }
 
 .towerdog-pixel-wave-overlay {
   z-index: 1;
   --pixel-cell: clamp(6px, 0.75vw, 10px);
+}
+
+.towerdog-pixel-background .towerdog-pixel {
+  --pixel-peak: 0.18;
 }
 
 .towerdog-pixel-depth-layer {
@@ -332,7 +336,7 @@
 
   .towerdog-pixel-background {
     opacity: 0.84;
-    --pixel-cell: clamp(6px, 1.6vw, 8px);
+    --pixel-cell: clamp(12px, 4vw, 18px);
   }
 
   .towerdog-pixel-wave-overlay {

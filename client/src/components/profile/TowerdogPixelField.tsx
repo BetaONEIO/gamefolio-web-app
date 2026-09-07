@@ -77,7 +77,7 @@ function pixelStyle(delay: number, duration?: number): CSSProperties {
   } as CSSProperties;
 }
 
-function PixelClusterView({ cluster }: { cluster: PixelCluster }) {
+function PixelClusterView({ cluster, background = false }: { cluster: PixelCluster; background?: boolean }) {
   return (
     <div
       className={`towerdog-pixel-cluster towerdog-pixel-cluster--${cluster.tone}${cluster.wave ? " towerdog-pixel-cluster--wave" : ""}${cluster.depth ? " towerdog-pixel-cluster--depth" : ""}`}
@@ -89,7 +89,7 @@ function PixelClusterView({ cluster }: { cluster: PixelCluster }) {
           key={`${column}-${row}`}
           className={`towerdog-pixel towerdog-pixel--${cluster.tone}`}
           style={{
-            ...pixelStyle(cluster.delay + index * 0.28, cluster.duration),
+            ...pixelStyle(cluster.delay + index * 0.28, cluster.duration ?? (background ? 22 : undefined)),
             gridColumn: column + 1,
             gridRow: row + 1,
           }}
@@ -104,11 +104,11 @@ export function TowerdogPixelField() {
     <>
       <div className="towerdog-pixel-background profile-theme-global-background" aria-hidden="true">
         {backgroundClusters.map((cluster, index) => (
-          <PixelClusterView key={`towerdog-background-cluster-${index}`} cluster={cluster} />
+          <PixelClusterView key={`towerdog-background-cluster-${index}`} cluster={cluster} background />
         ))}
         <div className="towerdog-pixel-depth-layer" aria-hidden="true">
           {depthClusters.map((cluster, index) => (
-            <PixelClusterView key={`towerdog-depth-cluster-${index}`} cluster={cluster} />
+            <PixelClusterView key={`towerdog-depth-cluster-${index}`} cluster={cluster} background />
           ))}
         </div>
       </div>
