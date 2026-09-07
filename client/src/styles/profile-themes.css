@@ -200,17 +200,33 @@
 
 .towerdog-pixel-background {
   z-index: 0;
+  --pixel-cell: clamp(6px, 0.75vw, 10px);
   background: #0F101B;
 }
 
 .towerdog-pixel-wave-overlay {
   z-index: 1;
+  --pixel-cell: clamp(6px, 0.75vw, 10px);
+}
+
+.towerdog-pixel-depth-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.towerdog-pixel-cluster {
+  position: absolute;
+  display: grid;
+  width: max-content;
+  height: max-content;
+  pointer-events: none;
 }
 
 .towerdog-pixel {
-  position: absolute;
-  width: var(--pixel-size);
-  height: var(--pixel-size);
+  width: var(--pixel-cell);
+  height: var(--pixel-cell);
+  position: relative;
   aspect-ratio: 1 / 1;
   border-radius: 0;
   transform: none;
@@ -224,24 +240,33 @@
   --pixel-inactive: #6B0712;
   --pixel-active: #FF2438;
   --pixel-highlight: #FF5A67;
+  --pixel-peak: 0.58;
 }
 
 .towerdog-pixel--blue {
   --pixel-inactive: #082B73;
   --pixel-active: #1677FF;
   --pixel-highlight: #5CB8FF;
+  --pixel-peak: 0.58;
 }
 
 .towerdog-pixel--purple {
   --pixel-inactive: #35136B;
   --pixel-active: #8C35FF;
   --pixel-highlight: #C08BFF;
+  --pixel-peak: 0.52;
 }
 
-.towerdog-wave-pixel {
+.towerdog-pixel-cluster--wave .towerdog-pixel {
   mix-blend-mode: screen;
-  animation-name: towerdog-pixel-activate;
-  animation-duration: var(--pixel-duration);
+  --pixel-peak: 0.68;
+}
+
+.towerdog-pixel-cluster--depth .towerdog-pixel {
+  opacity: 0.055;
+  animation: none;
+  background: var(--pixel-inactive);
+  box-shadow: none;
 }
 
 @keyframes towerdog-pixel-activate {
@@ -255,17 +280,17 @@
     background: var(--pixel-inactive);
   }
   24% {
-    opacity: 0.72;
+    opacity: calc(var(--pixel-peak) * 0.72);
     background: var(--pixel-active);
     box-shadow: 0 0 6px color-mix(in srgb, var(--pixel-active) 45%, transparent);
   }
   34% {
-    opacity: 0.9;
+    opacity: var(--pixel-peak);
     background: var(--pixel-highlight);
     box-shadow: 0 0 8px color-mix(in srgb, var(--pixel-highlight) 50%, transparent);
   }
   48% {
-    opacity: 0.42;
+    opacity: calc(var(--pixel-peak) * 0.62);
     background: var(--pixel-active);
     box-shadow: 0 0 4px color-mix(in srgb, var(--pixel-active) 25%, transparent);
   }
@@ -294,16 +319,15 @@
 
   .towerdog-pixel-background {
     opacity: 0.84;
+    --pixel-cell: clamp(6px, 1.6vw, 8px);
   }
 
-  .towerdog-pixel {
-    width: max(6px, calc(var(--pixel-size) * 0.78));
-    height: max(6px, calc(var(--pixel-size) * 0.78));
+  .towerdog-pixel-wave-overlay {
+    --pixel-cell: clamp(6px, 1.8vw, 9px);
   }
 
-  .towerdog-wave-pixel {
-    width: max(6px, calc(var(--pixel-size) * 0.85));
-    height: max(6px, calc(var(--pixel-size) * 0.85));
+  .towerdog-pixel-cluster--wave {
+    --pixel-cell: clamp(6px, 1.8vw, 9px);
   }
 }
 
@@ -312,7 +336,7 @@
   .profile-theme-atmosphere::after,
   .towerdog-pixel-background,
   .towerdog-pixel,
-  .towerdog-wave-pixel,
+  .towerdog-pixel-cluster--wave .towerdog-pixel,
   .towerdog-border-wave-response {
     animation: none !important;
   }
@@ -323,7 +347,7 @@
     box-shadow: none;
   }
 
-  .towerdog-wave-pixel {
+  .towerdog-pixel-cluster--wave .towerdog-pixel {
     opacity: 0.16;
     background: var(--pixel-inactive);
     box-shadow: none;
@@ -368,7 +392,6 @@ body.profile-theme-towerdog-page .profile-theme-sidebar {
 
 body.profile-theme-page-hidden .towerdog-pixel-background,
 body.profile-theme-page-hidden .towerdog-pixel-wave-overlay,
-body.profile-theme-page-hidden .towerdog-pixel,
-body.profile-theme-page-hidden .towerdog-wave-pixel {
+body.profile-theme-page-hidden .towerdog-pixel {
   animation-play-state: paused !important;
 }
