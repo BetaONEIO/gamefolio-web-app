@@ -9,7 +9,10 @@ import {
   Plus, Settings2, Sparkles, Video,
 } from "lucide-react";
 import { NEON, CARD_BG, DASHBOARD_THEME, rgbaAccent } from "./constants";
-import { ESSENTIAL_FIELDS, OPTIONAL_FIELDS, isFieldFilled } from "./edit-profile/types";
+import {
+  ESSENTIAL_FIELDS, OPTIONAL_FIELDS, REQUIRED_SINGLE_FIELDS, STORE_LINK_FIELDS, STORE_LINK_GROUP,
+  isFieldFilled, hasAnyStoreLink, missingEssentialFields,
+} from "./edit-profile/types";
 import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
 
 type TopTabId = "overview" | "creator-content" | "analytics" | "game-profile";
@@ -56,6 +59,7 @@ const FIELD_LABELS: Record<string, string> = {
   steamUrl: "Add a Steam store link",
   epicUrl: "Add an Epic Games link",
   itchUrl: "Add an itch.io link",
+  [STORE_LINK_GROUP]: "Add a store or website link",
   trailerUrl: "Upload a game trailer",
   fullDescription: "Write a full description",
   screenshotUrls: "Add screenshots",
@@ -101,13 +105,21 @@ function profileFieldLabel(field: string) {
 }
 
 function getProfileProgress(profile: any) {
-  const fields = [...ESSENTIAL_FIELDS, ...OPTIONAL_FIELDS.filter((field) => !ESSENTIAL_FIELDS.includes(field))];
-  const filled = fields.filter((field) => isFieldFilled(profile, field)).length;
+  // The three store links count as ONE item here too. Left ungrouped, a game
+  // sold only on Steam could never reach 100% however complete its page was.
+  const fields = [
+    ...REQUIRED_SINGLE_FIELDS,
+    STORE_LINK_GROUP,
+    ...OPTIONAL_FIELDS.filter((field) => !ESSENTIAL_FIELDS.includes(field)),
+  ];
+  const isFilled = (field: string) =>
+    field === STORE_LINK_GROUP ? hasAnyStoreLink(profile) : isFieldFilled(profile, field);
+  const filled = fields.filter(isFilled).length;
   return {
     filled,
     total: fields.length,
     percent: fields.length ? Math.round((filled / fields.length) * 100) : 0,
-    missingRequired: ESSENTIAL_FIELDS.filter((field) => !isFieldFilled(profile, field)),
+    missingRequired: missingEssentialFields(profile),
     missingRecommended: RECOMMENDED_ORDER.filter((field) => !isFieldFilled(profile, field)),
   };
 }
@@ -296,7 +308,14 @@ function FinishSettingUp({
       <div className="grid gap-5 p-3 sm:grid-cols-2 sm:p-4">
         <div>
           <div className="px-3 pb-1 text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: DASHBOARD_THEME.danger }}>Required</div>
-          {required.length ? required.map((field) => <SetupRow key={field} field={field} required onEdit={() => onEdit(field)} />) : (
+          {required.length ? required.map((field) => (
+            <SetupRow
+              key={field}
+              field={field}
+              required
+              onEdit={() => onEdit(field === STORE_LINK_GROUP ? STORE_LINK_FIELDS[0] : field)}
+            />
+          )) : (
             <div className="px-3 py-3 text-xs text-white/35">All required details are complete.</div>
           )}
         </div>
@@ -363,7 +382,10 @@ export default function DashboardTab({
   const profileUrl = user?.username && profile?.id
     ? publicUrl(`/studio/${encodeURIComponent(user.username)}?gameId=${profile.id}`)
     : null;
-  const firstMissingField = progress.missingRequired[0] ?? progress.missingRecommended[0] ?? "gameName";
+  const rawFirstMissing = progress.missingRequired[0] ?? progress.missingRecommended[0] ?? "gameName";
+  // STORE_LINK_GROUP is a checklist id, not a real form field — open the Steam
+  // input, which is the one most developers will want.
+  const firstMissingField = rawFirstMissing === STORE_LINK_GROUP ? STORE_LINK_FIELDS[0] : rawFirstMissing;
   const editProfile = (field = firstMissingField) => {
     if (onQuickEdit) onQuickEdit(field);
     else onGoTo("game-profile", field);
