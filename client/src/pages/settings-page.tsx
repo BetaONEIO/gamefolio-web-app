@@ -3797,11 +3797,11 @@ export default function SettingsPage() {
                                  </p>
                                 {isLocked && theme.name !== "None" && (
                                   <p className="text-center text-xs text-muted-foreground">
-                                    unlockRewardSourcePath
+                                    {unlockRewardSourcePath
                                       ? "Signup referral reward"
                                       : unlockRewardName
                                         ? "Summer Showdown reward"
-                                        : "Pro only"
+                                        : "Pro only"}
                                   </p>
                                 )}
                                 <div className="flex justify-center p-2">
