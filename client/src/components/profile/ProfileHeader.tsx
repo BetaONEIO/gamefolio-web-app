@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/profile-picture-lightbox";
 import { ProfileMetricTooltip } from "./ProfileMetricTooltip";
 import { GamefolioCollectionButton } from "./GamefolioCollectionButton";
+import { PartnerBadge } from "@/components/ui/partner-badge";
 
 const getRelativeLuminance = (hex: string): number => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -366,6 +367,8 @@ const ProfileHeader = ({
                     ? profile.displayName.slice(0, 12) + "…"
                     : profile.displayName}
                 </h1>
+
+                <PartnerBadge isPartner={(profile as any).isPartner} size="md" />
 
                 {nameTagData?.nameTag && signedNameTagUrl && (
                   <TooltipProvider>

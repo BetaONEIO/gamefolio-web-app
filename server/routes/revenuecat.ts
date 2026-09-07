@@ -14,6 +14,7 @@ const router = Router();
 
 const REVENUECAT_API_BASE = 'https://api.revenuecat.com/v1';
 export const PRO_ENTITLEMENT_ID = 'pro';
+export const PARTNER_ENTITLEMENT_ID = 'streamer_partner';
 export const INDIE_DEV_ENTITLEMENT_ID = 'indie_dev';
 
 // The GET /subscribers endpoint returns platform-agnostic entitlements, but
@@ -103,16 +104,21 @@ router.post('/api/pro/activate', hybridAuth, async (req: Request, res: Response)
 
     const subscriber = rcData.subscriber;
     const entitlement = subscriber?.entitlements?.[PRO_ENTITLEMENT_ID];
+    const partnerEntitlement = subscriber?.entitlements?.[PARTNER_ENTITLEMENT_ID];
+    const hasPartner = isEntitlementActive(partnerEntitlement);
+    const hasPro = isEntitlementActive(entitlement) || hasPartner;
 
-    if (!isEntitlementActive(entitlement)) {
-      return res.status(403).json({ error: 'No active Pro entitlement found' });
+    if (!hasPro) {
+      return res.status(403).json({ error: 'No active Pro or Streamer Partner entitlement found' });
     }
 
-    const plan = parsePlanFromEntitlement(entitlement);
-    const endDate = getEndDateFromEntitlement(entitlement);
+    const activeEntitlement = hasPartner ? partnerEntitlement : entitlement;
+    const plan = parsePlanFromEntitlement(activeEntitlement);
+    const endDate = getEndDateFromEntitlement(activeEntitlement);
 
     await db.update(users).set({
       isPro: true,
+      isPartner: hasPartner,
       proSubscriptionType: plan,
       proSubscriptionStartDate: user.proSubscriptionStartDate || new Date(),
       proSubscriptionEndDate: endDate,
@@ -237,7 +243,8 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
     // entitlement_ids — in that case, fall back to treating it as a Pro event
     // (the only entitlement that existed before Indie Developer was added).
     const entitlementIds: string[] | undefined = Array.isArray(entitlement_ids) ? entitlement_ids : undefined;
-    const isProEvent = !entitlementIds || entitlementIds.includes(PRO_ENTITLEMENT_ID);
+    const isPartnerEvent = !!entitlementIds?.includes(PARTNER_ENTITLEMENT_ID);
+    const isProEvent = !entitlementIds || entitlementIds.includes(PRO_ENTITLEMENT_ID) || isPartnerEvent;
     const isIndieDevEvent = !!entitlementIds?.includes(INDIE_DEV_ENTITLEMENT_ID);
     const isSandbox = environment === 'SANDBOX';
     console.log(`[RevenueCat Webhook] Received event type: ${type}, app_user_id: ${app_user_id}, environment: ${environment}`);
@@ -277,6 +284,7 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
       if (isProEvent) {
         await db.update(users).set({
           isPro: true,
+          ...(isPartnerEvent ? { isPartner: true } : {}),
           proSubscriptionType: plan,
           proSubscriptionStartDate: user.proSubscriptionStartDate || new Date(),
           proSubscriptionEndDate: endDate,
@@ -345,6 +353,7 @@ router.post('/api/revenuecat/webhook', async (req: Request, res: Response) => {
       if (isProEvent && type === 'EXPIRATION') {
         await db.update(users).set({
           isPro: false,
+          ...(isPartnerEvent ? { isPartner: false } : {}),
           updatedAt: new Date(),
         }).where(eq(users.id, user.id));
 

@@ -33,6 +33,7 @@ import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSl
 import { hasIndieDeveloperAccess } from "@shared/partner-access";
 import { getPublicSeasonNumber, SEASON_DEFS } from "@shared/season-definitions";
 import { getLeaderboardRewardsForSeason } from "@shared/leaderboard-rewards";
+import { alwaysRequiresOnboarding } from "@shared/onboarding";
 
 const SEASONAL_ANNOUNCEMENT_ID = "summer_2026_end_autumn_2026_launch";
 const SUMMER_SEASON_NUMBER = 8;
@@ -2998,7 +2999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const freshUser = await storage.getUserById(authenticatedUserId);
       if (freshUser) {
         const { password, ...u } = freshUser as any;
-        if (u.username === 'busyguy') {
+        if (u.username === 'busyguy' || alwaysRequiresOnboarding(u.username)) {
           u.userType = null;
           u.ageRange = null;
         }
@@ -18897,7 +18898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/subscription/sync", authMiddleware, async (req, res) => {
     try {
       const userId = (req.user as any).id;
-      const { isPro } = req.body;
+      const { isPro, isPartner } = req.body;
 
       if (typeof isPro !== "boolean") {
         return res.status(400).json({ message: "Invalid isPro value" });
@@ -18915,35 +18916,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // client so a misconfigured server never blocks a legitimate purchase.
       let verifiedPlan: 'monthly' | 'yearly' | undefined;
       let verifiedEndDate: Date | undefined;
-      if (isPro && process.env.REVENUECAT_API_KEY) {
+      const partnerFlag = typeof isPartner === "boolean" ? isPartner : undefined;
+      if ((isPro || partnerFlag === true) && process.env.REVENUECAT_API_KEY) {
         try {
           const rcData = await fetchRevenueCatSubscriber(`gamefolio_${userId}`);
           const entitlement = rcData?.subscriber?.entitlements?.[PRO_ENTITLEMENT_ID];
-          if (!isEntitlementActive(entitlement)) {
+          const partnerEntitlement = rcData?.subscriber?.entitlements?.streamer_partner;
+          if (!isEntitlementActive(entitlement) && !isEntitlementActive(partnerEntitlement)) {
             return res.status(403).json({ message: "No active Pro entitlement found" });
           }
-          verifiedPlan = parsePlanFromEntitlement(entitlement);
-          verifiedEndDate = getEndDateFromEntitlement(entitlement);
+          const activeEntitlement = isEntitlementActive(partnerEntitlement) ? partnerEntitlement : entitlement;
+          verifiedPlan = parsePlanFromEntitlement(activeEntitlement);
+          verifiedEndDate = getEndDateFromEntitlement(activeEntitlement);
         } catch (err: any) {
           console.warn(`[subscription/sync] RevenueCat verification unavailable, trusting client: ${err?.message}`);
         }
       }
 
       // Update user's Pro status in database
+      const effectiveIsPro = isPro || partnerFlag === true;
       await db.update(users).set({
-        isPro,
-        ...(isPro ? { revenuecatUserId: `gamefolio_${userId}` } : {}),
-        ...(verifiedPlan ? { proSubscriptionType: verifiedPlan } : {}),
-        ...(verifiedEndDate ? { proSubscriptionEndDate: verifiedEndDate } : {}),
+        isPro: effectiveIsPro,
+        ...(partnerFlag !== undefined ? { isPartner: partnerFlag } : {}),
+        ...(effectiveIsPro ? { revenuecatUserId: `gamefolio_${userId}` } : {}),
+        ...(effectiveIsPro && verifiedPlan ? { proSubscriptionType: verifiedPlan } : {}),
+        ...(effectiveIsPro && verifiedEndDate ? { proSubscriptionEndDate: verifiedEndDate } : {}),
         updatedAt: new Date()
       }).where(eq(users.id, userId));
 
-      console.log(`✅ Updated Pro status for user ${userId}: ${isPro}`);
+      console.log(`✅ Updated subscription for user ${userId}: isPro=${effectiveIsPro}${partnerFlag !== undefined ? `, isPartner=${partnerFlag}` : ""}`);
 
       let lootboxReward = null;
 
       // If user is becoming Pro for the first time, grant initial lootbox
-      if (isPro && wasNotPro) {
+      if (effectiveIsPro && wasNotPro) {
         console.log(`🎁 User ${userId} just became Pro! Granting initial Pro lootbox...`);
         const initialGrant = await storage.grantProLootbox(userId, 'initial');
         if (initialGrant) {
@@ -18957,7 +18963,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Also check for monthly lootbox grant
-      if (isPro) {
+      if (effectiveIsPro) {
         const monthlyGrant = await storage.grantProLootbox(userId, 'monthly');
         if (monthlyGrant && !lootboxReward) {
           lootboxReward = {
@@ -18969,7 +18975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json({ success: true, isPro, lootboxReward });
+      res.json({ success: true, isPro: effectiveIsPro, isPartner: partnerFlag, lootboxReward });
     } catch (error) {
       captureRouteError(error);
       console.error("Error syncing subscription:", error);

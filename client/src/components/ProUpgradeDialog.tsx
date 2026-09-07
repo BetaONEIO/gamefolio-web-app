@@ -31,6 +31,7 @@ interface ProUpgradeDialogProps {
   onOpenChange: (open: boolean) => void;
   subtitle?: string;
   onAuthRequired?: () => void;
+  tier?: "pro" | "partner";
 }
 
 const premiumBenefits = [
@@ -182,11 +183,13 @@ function parseApiErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthRequired }: ProUpgradeDialogProps) {
-  const { isInitialized, isLoading, isPro, getCurrentOffering, purchasePackage } = useRevenueCat();
+export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthRequired, tier = "pro" }: ProUpgradeDialogProps) {
+  const { isInitialized, isLoading, isPro, isPartner, getCurrentOffering, getPartnerOffering, purchasePackage } = useRevenueCat();
   const { user } = useAuth();
   const { isIndieMode } = useIndieMode();
-  const proProductName = isIndieMode ? "Developer Pro" : "Gamefolio Pro";
+  const isPartnerTier = tier === "partner";
+  const ownsThisTier = isPartnerTier ? isPartner : isPro;
+  const proProductName = isPartnerTier ? "Streamer Partner" : (isIndieMode ? "Developer Pro" : "Gamefolio Pro");
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
   const [purchasing, setPurchasing] = useState(false);
   const [step, setStep] = useState<"plans" | "checkout" | "success">("plans");
@@ -206,7 +209,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     }
   }, [step, open]);
 
-  const packages = getCurrentOffering();
+  const packages = isPartnerTier ? getPartnerOffering() : getCurrentOffering();
 
   const { monthlyPkg, yearlyPkg } = useMemo(() => {
     if (!packages) return { monthlyPkg: null, yearlyPkg: null };
@@ -373,7 +376,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     }
 
     // Web (Stripe) path — open an embedded Checkout Session. Stripe Adaptive
-    // Pricing (enabled in the Dashboard) converts £2.99 to the buyer's local
+    // Pricing (enabled in the Dashboard) converts the GBP base price to the buyer's local
     // currency inside the checkout; the server only sends the base GBP price.
     if (!webPricing) return;
     setCheckoutLoading(true);
@@ -383,7 +386,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     setPurchaseInProgress(true);
     try {
       await loadStripeInstance();
-      const res = await apiRequest("POST", "/api/stripe/create-pro-subscription", {
+      const res = await apiRequest("POST", isPartnerTier ? "/api/stripe/create-partner-subscription" : "/api/stripe/create-pro-subscription", {
         plan: billingPeriod,
         ambassadorCode: ambassadorCode.trim() || undefined,
       });
@@ -405,7 +408,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     let lootboxReward: LootboxReward | null = null;
     try {
       if (checkoutSessionId) {
-        const res = await apiRequest("POST", "/api/stripe/confirm-pro-subscription", {
+        const res = await apiRequest("POST", isPartnerTier ? "/api/stripe/confirm-partner-subscription" : "/api/stripe/confirm-pro-subscription", {
           sessionId: checkoutSessionId,
           plan: billingPeriod,
         });
@@ -421,7 +424,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     setStep("success");
   }, [checkoutSessionId, billingPeriod]);
 
-  if (isPro && step !== "success" && !purchaseInProgress) {
+  if (ownsThisTier && step !== "success" && !purchaseInProgress) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-[430px] w-full bg-popover border-none p-0 overflow-hidden [&>button]:hidden">
@@ -783,7 +786,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <div ref={scrollContainerRef} className="flex flex-col md:hidden h-[100dvh] overflow-y-auto" style={{ scrollbarWidth: "none", backgroundColor: "#081017" }}>
+              <div ref={scrollContainerRef} className="flex flex-col md:hidden h-[100dvh] overflow-y-auto overscroll-contain" style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch", backgroundColor: "#081017" }}>
                 <div className="relative w-full flex-shrink-0" style={{ height: "56vh" }}>
                   <img
                     src={proHeroImage}
@@ -803,7 +806,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                   </button>
                 </div>
 
-                <div className="px-5 pb-5 relative z-10" style={{ marginTop: "-72px", backgroundColor: "transparent" }}>
+                <div className="px-5 relative z-10" style={{ marginTop: "-72px", backgroundColor: "transparent", paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}>
                   <div className="flex justify-center mb-2">
                     <div className="inline-flex items-center gap-1.5 bg-[#14532d4d] border border-[#B7FF1A33] rounded-full px-3 py-1">
                       <svg width="21" height="21" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
