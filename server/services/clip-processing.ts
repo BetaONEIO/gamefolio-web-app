@@ -246,8 +246,18 @@ export async function processAndCreateClip(userId: number, params: ProcessAndCre
       tagsCount: tags?.length,
       error: validationError.errors || validationError.message
     });
+    // Surface *which* field failed. The client renders `message` in preference
+    // to `error`, and without one the user sees a bare "Invalid clip data"
+    // after their upload has already reached 100% — unactionable, and it makes
+    // the cause impossible to work out without server logs.
+    const issues: Array<{ message?: string }> | undefined = validationError.errors;
+    const message = Array.isArray(issues) && issues.length
+      ? issues.map((i) => i.message).filter(Boolean).join(' ')
+      : validationError.message || 'We could not save this upload.';
+
     throw new ClipProcessingError(400, {
       error: 'Invalid clip data',
+      message,
       details: validationError.errors || validationError.message
     });
   }
