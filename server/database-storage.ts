@@ -368,7 +368,11 @@ export class DatabaseStorage implements IStorage {
   async createUser(userData: InsertUser): Promise<User> {
     try {
       // CRITICAL SECURITY: Hash password before storing
-      const safeUserData = { ...userData };
+      // The original signup referral is an entitlement source of truth. It
+      // may be written by registration, but never changed by generic profile
+      // updates or the post-registration referral flow.
+      const { originalSignupReferralCode: _originalSignupReferralCode, ...mutableUserData } = userData;
+      const safeUserData = { ...mutableUserData };
       if (safeUserData.password) {
         console.log(`🔐 SECURITY: Hashing password for new user`);
         safeUserData.password = await hashPassword(safeUserData.password);

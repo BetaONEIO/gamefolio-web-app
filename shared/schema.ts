@@ -185,6 +185,9 @@ export const users = pgTable("users", {
   // Referral System
   referralCode: text("referral_code").unique(), // User's unique referral code
   referredBy: text("referred_by"), // The referral code used when this user signed up
+  // Immutable copy of the referral code used at signup. Unlike referredBy,
+  // this is never changed by the post-registration referral flow.
+  originalSignupReferralCode: text("original_signup_referral_code"),
   referralCodeCustomized: boolean("referral_code_customized").default(false).notNull(), // Whether the user has already customised their referral code
   // Outro videos — auto-appended on download; separate files for landscape (16:9) and portrait (9:16)
   outroVideoPath: text("outro_video_path"),          // landscape 1920×1080 — "outros/42.mp4"

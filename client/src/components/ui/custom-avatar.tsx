@@ -487,6 +487,7 @@ export const CustomAvatar = ({
 
   const avatarBorder = borderData?.avatarBorder;
   const hasAvatarBorderOverlay = showAvatarBorderOverlay && !!avatarBorder?.imageUrl;
+  const hasTowerdogBorder = avatarBorder?.sourcePath === "red_blue_pixel_waves";
   const hasSolidBorder = showAvatarBorderOverlay && (avatarBorder?.id === -1 || effectiveBorderId === -1);
   const rasterBorderCalibration = avatarBorder
     ? getRasterBorderCalibration(avatarBorder)
@@ -614,7 +615,7 @@ export const CustomAvatar = ({
         <InlineSvgBorder
           svgUrl={avatarBorder.imageUrl}
           color={borderColor}
-          className="absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+          className={`absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full${hasTowerdogBorder ? " towerdog-border-wave-response" : ""}`}
           rasterCalibration={rasterBorderCalibration}
           style={{ 
             width: '160%', 

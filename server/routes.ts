@@ -34,6 +34,7 @@ import { hasIndieDeveloperAccess } from "@shared/partner-access";
 import { getPublicSeasonNumber, SEASON_DEFS } from "@shared/season-definitions";
 import { getLeaderboardRewardsForSeason } from "@shared/leaderboard-rewards";
 import { alwaysRequiresOnboarding } from "@shared/onboarding";
+import { TOWERDOG_REFERRAL_CODE } from "@shared/profile-theme";
 
 const SEASONAL_ANNOUNCEMENT_ID = "summer_2026_end_autumn_2026_launch";
 const SUMMER_SEASON_NUMBER = 8;
@@ -2471,7 +2472,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate referral code if provided
       let referringUser: { id: number } | null = null;
-      if (usedReferralCode) {
+      if (usedReferralCode === TOWERDOG_REFERRAL_CODE) {
         const foundReferrer = await storage.getUserByReferralCode(usedReferralCode);
         if (!foundReferrer) {
           return res.status(400).json({ message: "Invalid referral code" });
@@ -2488,7 +2489,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         referringUser = { id: foundReferrer.id };
       }
 
-      // Create user — referralCode is always server-generated; referredBy records which code was used at signup
+      // Create user — referralCode is always server-generated. Keep an
+      // immutable signup copy for referral-gated collection items; referredBy
+      // remains the mutable compatibility field used by referral stats.
       // storage.createUser() hashes the password itself (like every other
       // caller here - OAuth/admin paths), so pass it through in plain text.
       // signupIp/signupDeviceId are server-derived (never from parsed client
@@ -2500,9 +2503,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: userData.email.toLowerCase(),
         emailVerified: false,
         ...(usedReferralCode && { referredBy: usedReferralCode }),
+        ...(usedReferralCode && { originalSignupReferralCode: usedReferralCode }),
         signupIp,
         signupDeviceId,
       });
+
+      // Referral-gated collection items are granted once, at signup. This
+      // never equips the theme and deliberately does not run in
+      // /api/user/apply-referral.
+      if (usedReferralCode) {
+        try {
+          const towerdogReward = (await storage.getAllAssetRewards())
+            .find((reward) => reward.sourcePath === "towerdog_pixel_surge");
+          if (towerdogReward) {
+            await storage.createAssetRewardClaim({
+              rewardId: towerdogReward.id,
+              userId: user.id,
+            });
+          }
+        } catch (entitlementError) {
+          console.error("Failed to grant Towerdog referral collection item:", entitlementError);
+        }
+      }
 
       // Generate verification code and store it in the database
       const verificationCode = await createVerificationCode(user.id);
@@ -7676,6 +7698,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!hasSummerReward) {
           return res.status(403).json({
             message: "The Summer theme is awarded only to the Summer Showdown top 10."
+          });
+        }
+      }
+
+      if (finalThemeName === "towerdog_pixel_surge") {
+        const currentUser = await storage.getUser(userId);
+        const originalSignupReferralCode = currentUser?.originalSignupReferralCode
+          ?.trim()
+          .toUpperCase();
+        const hasTowerdogSignupReferral = originalSignupReferralCode === TOWERDOG_REFERRAL_CODE;
+        if (!hasTowerdogSignupReferral) {
+          return res.status(403).json({
+            message: "The Towerdog Pixel Surge theme is unlocked only by using a referral code during signup."
           });
         }
       }

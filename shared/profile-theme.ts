@@ -7,6 +7,8 @@ export const DEFAULT_PROFILE_THEME = {
   avatarBorderColor: "#B7FF18",
 } as const;
 
+export const TOWERDOG_REFERRAL_CODE = "TOWER";
+
 export type ProfileThemeRarity = "starter" | "rare" | "epic" | "legendary";
 export type ProfileThemeAnimation =
   | "none"
@@ -62,6 +64,8 @@ export interface ProfileThemeDefinition {
   };
   proOnly?: boolean;
   unlockRewardName?: string;
+  unlockRewardSourcePath?: string;
+  unlockReferralCode?: string;
   light?: boolean;
   fontFamily?: string;
 }
@@ -133,6 +137,23 @@ const starterTheme = makeTheme({
 const THEME_SPECS: ThemeSpec[] = [
   // Existing themes, retained for backwards compatibility.
   starterTheme,
+  {
+    slug: "towerdog_pixel_surge",
+    name: "Towerdog Pixel Surge",
+    description: "A dark pixel arena with an animated red-and-blue surge.",
+    rarity: "legendary",
+    backgroundColor: "#060A1C",
+    primaryColor: "#0B1230",
+    accentColor: "#FF315C",
+    avatarBorderColor: "#2176FF",
+    patternCss: "none",
+    animation: "drift",
+    previewGlyph: "▰",
+    fontFamily: "'JetBrains Mono', monospace",
+    unlockRewardName: "Towerdog Pixel Surge",
+    unlockRewardSourcePath: "towerdog_pixel_surge",
+    unlockReferralCode: TOWERDOG_REFERRAL_CODE,
+  },
   { slug: "cutesy-pink", name: "Cutesy Pink", description: "Soft candy tones with an arcade-heart glow.", rarity: "epic", backgroundColor: "#fce7f3", primaryColor: "#4a0022", accentColor: "#ff2056", avatarBorderColor: "#ff2056", patternCss: "radial-gradient(circle at 20% 20%, #fff 0 2px, transparent 3px), radial-gradient(circle at 80% 70%, #ff78a022 0 18%, transparent 19%)", animation: "drift", previewGlyph: "♡", proOnly: true, light: true },
   { slug: "zombie", name: "Zombie", description: "Toxic green over a midnight survival bunker.", rarity: "epic", backgroundColor: "#0a0c0a", primaryColor: "#0d1a00", accentColor: "#9ae600", avatarBorderColor: "#9ae600", patternCss: "repeating-linear-gradient(105deg, transparent 0 12px, #9ae60012 13px 14px)", animation: "flicker", previewGlyph: "☣", proOnly: true },
   { slug: "cyberpunk", name: "Cyberpunk", description: "Neon city light, cyan edges, and magenta signal noise.", rarity: "epic", backgroundColor: "#020617", primaryColor: "#0a0e1a", accentColor: "#00d3f2", avatarBorderColor: "#00d3f2", patternCss: "linear-gradient(90deg, transparent 49%, #00d3f220 50%, transparent 51%), linear-gradient(0deg, transparent 49%, #e12afb18 50%, transparent 51%)", animation: "pulse", previewGlyph: "⌁", proOnly: true, fontFamily: "'Orbitron', sans-serif" },

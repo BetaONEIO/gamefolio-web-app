@@ -899,6 +899,14 @@ export default function SettingsPage() {
   const hasSummerReward = !!claimedRewards?.some(
     (reward) => reward.name === "Summer Showdown 2026 Border"
   );
+  const hasTowerdogReward = !!claimedRewards?.some(
+    (reward) => reward.sourcePath === "towerdog_pixel_surge"
+  );
+  const hasThemeEntitlement = (theme: { unlockRewardName?: string; unlockRewardSourcePath?: string }) => {
+    if (theme.unlockRewardSourcePath === "towerdog_pixel_surge") return hasTowerdogReward;
+    if (theme.unlockRewardName) return hasSummerReward;
+    return true;
+  };
   
   const updateProfile = useUpdateProfile();
 
@@ -3620,9 +3628,14 @@ export default function SettingsPage() {
                                 profileData.accentColor === theme.accentColor &&
                                 profileData.backgroundColor === theme.backgroundColor);
                             const unlockRewardName = (theme as any).unlockRewardName as string | undefined;
+                            const unlockRewardSourcePath = (theme as any).unlockRewardSourcePath as string | undefined;
+                            const hasThemeReward = hasThemeEntitlement({
+                              unlockRewardName,
+                              unlockRewardSourcePath,
+                            });
                             const isLocked = (
                               ((theme as any).proOnly && !user?.isPro) ||
-                              (!!unlockRewardName && !hasSummerReward)
+                              (!!unlockRewardName && !hasThemeReward)
                             ) && theme.name !== "None";
                             return (
                               <div
@@ -3784,7 +3797,11 @@ export default function SettingsPage() {
                                  </p>
                                 {isLocked && theme.name !== "None" && (
                                   <p className="text-center text-xs text-muted-foreground">
-                                    {(theme as any).unlockRewardName ? "Summer Showdown reward" : "Pro only"}
+                                    unlockRewardSourcePath
+                                      ? "Signup referral reward"
+                                      : unlockRewardName
+                                        ? "Summer Showdown reward"
+                                        : "Pro only"
                                   </p>
                                 )}
                                 <div className="flex justify-center p-2">
@@ -6320,7 +6337,9 @@ export default function SettingsPage() {
         const isCutesyPink  = tn === 'Cutesy Pink';
         const isMayhem      = tn === 'Mayhem';
         const isBat         = tn === 'Bat';
-         const isRewardLocked = !!(themePreviewData as any).unlockRewardName && !hasSummerReward;
+        const isTowerdog    = tn === 'Towerdog Pixel Surge';
+         const isRewardLocked = !!(themePreviewData as any).unlockRewardName &&
+           !hasThemeEntitlement(themePreviewData as any);
         const isLight       = isMac || isCartoon || isIce || isBubbleTea || isWatermelon;
         const catalogPattern = (themePreviewData as any).assets?.decorativeOverlay || (themePreviewData as any).patternCss;
         const catalogAnimation = (themePreviewData as any).assets?.backgroundAnimation || (themePreviewData as any).animation;
@@ -6498,7 +6517,7 @@ export default function SettingsPage() {
 
          const isThemeLocked = (
            ((themePreviewData as any).proOnly && !user?.isPro) ||
-           ((themePreviewData as any).unlockRewardName && !hasSummerReward)
+           ((themePreviewData as any).unlockRewardName && !hasThemeEntitlement(themePreviewData as any))
          ) && tn !== "None";
         const isCurrentTheme = !isThemeLocked && themePreviewData.accentColor === profileData.accentColor && themePreviewData.backgroundColor === profileData.backgroundColor;
         const displayName = tn === 'None' ? 'Gamefolio Default' : tn;
@@ -6575,11 +6594,15 @@ export default function SettingsPage() {
                 @keyframes mayhemRippleCard { 0%{transform:translate(-50%,-50%) scale(0.05);opacity:0.7} 100%{transform:translate(-50%,-50%) scale(5);opacity:0} }
               `}</style>
               <div
-                className="rounded-2xl overflow-hidden relative"
+                className={`rounded-2xl overflow-hidden relative${isTowerdog ? ' profile-theme-towerdog' : ''}`}
                  style={{
-                   background: isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' : isSummer ? 'repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px), linear-gradient(180deg, #28A9E8 0%, #087EA4 37%, #12B8C4 62%, #E9C47A 92%, #C99B50 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)`
+                   background: isTowerdog ? '#060A1C' : isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' : isSummer ? 'repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px), linear-gradient(180deg, #28A9E8 0%, #087EA4 37%, #12B8C4 62%, #E9C47A 92%, #C99B50 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)`
                  }}
               >
+                {isTowerdog && <>
+                  <div className="towerdog-pixel-background" aria-hidden="true" />
+                  <div className="towerdog-pixel-wave-overlay" aria-hidden="true" />
+                </>}
                  {isCatalogPreview && catalogPattern && (
                    <div
                      className="catalog-preview-motion"
@@ -6759,8 +6782,10 @@ export default function SettingsPage() {
                         setThemePreviewData(null);
                         if (isRewardLocked) {
                           toast({
-                            title: "Summer theme locked",
-                            description: "Finish in the Summer Showdown top 10 to unlock this seasonal theme.",
+                            title: `${tn} locked`,
+                            description: isTowerdog
+                              ? "Use a referral code during signup to unlock this permanent collection theme."
+                              : "Finish in the Summer Showdown top 10 to unlock this seasonal theme.",
                           });
                         } else {
                           setShowProUpgradeDialog(true);
@@ -6783,7 +6808,11 @@ export default function SettingsPage() {
                     }}
                   >
                      {isThemeLocked && !isRewardLocked && <img src={gamefolioLogo} alt="Gamefolio" className="w-5 h-5 rounded-full flex-shrink-0" />}
-                     {isCurrentTheme ? 'Current Theme' : isRewardLocked ? 'Place in Summer top 10' : isThemeLocked ? 'Go Pro' : 'Apply Theme'}
+                     {isCurrentTheme
+                       ? 'Current Theme'
+                       : isRewardLocked
+                         ? isTowerdog ? 'Signup referral reward' : 'Place in Summer top 10'
+                         : isThemeLocked ? 'Go Pro' : 'Apply Theme'}
                   </button>
                 </div>
               </div>

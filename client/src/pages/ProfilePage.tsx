@@ -1559,6 +1559,7 @@ const ProfilePage = () => {
   const cardColor = resolvedProfileTheme.cardColor;
   const profileThemeDefinition = resolvedProfileTheme.theme;
   const profileThemeSlug = profileThemeDefinition?.slug || "default";
+  const isTowerdogTheme = profileThemeSlug === "towerdog_pixel_surge";
   const profileThemeTokens = profileThemeDefinition?.tokens;
   const profileThemeStyle = {
     "--profile-theme-background": profileThemeTokens?.background || backgroundColor,
@@ -2415,7 +2416,7 @@ const ProfilePage = () => {
       </div>
     )}
     <div 
-      className={`min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope${isBlocksTheme && !profileBackgroundImageUrl ? ' blocks-bg' : ''}${isSummerTheme ? ' summer-profile' : ''}${isCatalogTheme ? ' profile-theme-catalog' : ''}`}
+      className={`min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope${isBlocksTheme && !profileBackgroundImageUrl ? ' blocks-bg' : ''}${isSummerTheme ? ' summer-profile' : ''}${isCatalogTheme ? ' profile-theme-catalog' : ''}${isTowerdogTheme ? ' profile-theme-towerdog' : ''}`}
       ref={profileThemeScopeRef}
       data-default-profile-theme={backgroundColor === DEFAULT_PROFILE_THEME.backgroundColor && accentColor === DEFAULT_PROFILE_THEME.accentColor ? "true" : undefined}
       data-profile-theme={isCatalogTheme ? profileThemeSlug : undefined}
@@ -2493,6 +2494,12 @@ const ProfilePage = () => {
           aria-hidden="true"
           style={{ backgroundImage: profileThemeDefinition?.assets.decorativeOverlay || "none" }}
         />
+      )}
+      {isTowerdogTheme && !profileBackgroundImageUrl && (
+        <>
+          <div className="towerdog-pixel-background" aria-hidden="true" />
+          <div className="towerdog-pixel-wave-overlay" aria-hidden="true" />
+        </>
       )}
 
       {/* Bat theme animated overlay */}
