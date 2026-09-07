@@ -11325,7 +11325,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Let the frontend handle demo user follow state via localStorage
       if (followerId === 999 || followingUser.id === 999) {
         // Return false to let frontend handle demo state via localStorage  
-        return res.json({ following: false, requested: false });
+        return res.json({
+          status: "not_following",
+          following: false,
+          requested: false,
+        });
       }
 
       // Check if following
@@ -11338,7 +11342,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasRequest = requestStatus === 'pending';
       }
 
-      res.json({ following: isFollowing, requested: hasRequest });
+      res.json({
+        status: isFollowing ? "following" : hasRequest ? "requested" : "not_following",
+        following: isFollowing,
+        requested: hasRequest,
+      });
     } catch (err) {
       captureRouteError(err);
       console.error("Error checking follow status:", err);

@@ -365,7 +365,11 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     }),
     enabled: !!canonicalGameId,
   });
-  const { data: followStatus } = useQuery<{ status: 'following' | 'requested' | 'not_following' }>({
+  const { data: followStatus } = useQuery<{
+    status?: 'following' | 'requested' | 'not_following';
+    following?: boolean;
+    requested?: boolean;
+  }>({
     queryKey: [`/api/users/${profile.username}/follow-status`],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!currentUser && !isOwnProfile,
@@ -377,8 +381,8 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const communityClips = useMemo(() => clips.filter((clip) => clip.uploadSource === 'community'), [clips]);
   const officialReels = useMemo(() => reels.filter((reel) => reel.uploadSource === 'publisher'), [reels]);
   const communityReels = useMemo(() => reels.filter((reel) => reel.uploadSource === 'community'), [reels]);
-  const isFollowing = followStatus?.status === 'following';
-  const isRequested = followStatus?.status === 'requested';
+  const isFollowing = followStatus?.status === 'following' || followStatus?.following === true;
+  const isRequested = followStatus?.status === 'requested' || followStatus?.requested === true;
   const gameName = gameProfile?.gameName?.trim() || canonicalGame?.name || profile.displayName;
   const description = gameProfile?.fullDescription || gameProfile?.shortDescription || null;
   const profileScreenshots: PublicGameScreenshot[] = profileScreenshotSources
@@ -538,7 +542,14 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
         method: isFollowing || isRequested ? 'DELETE' : 'POST',
         credentials: 'include',
       });
-      if (!response.ok) throw new Error('Failed to update follow status');
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        throw new Error(
+          typeof errorBody?.message === 'string'
+            ? errorBody.message
+            : 'Failed to update follow status',
+        );
+      }
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [`/api/users/${profile.username}/follow-status`] }),
     onError: (error: Error) => toast({ description: error.message, variant: 'gamefolioError' }),
