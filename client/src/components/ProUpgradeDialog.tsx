@@ -4,6 +4,7 @@ import { Crown, Loader2, X, Check, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { useAuth } from "@/hooks/use-auth";
+import { useIndieMode } from "@/hooks/use-indie-mode";
 import type { RcPackage } from "@/hooks/use-revenuecat";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import {
@@ -296,6 +297,7 @@ function parseApiErrorMessage(error: unknown, fallback: string): string {
 export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthRequired, tier = "pro" }: ProUpgradeDialogProps) {
   const { isInitialized, isLoading, isPro, isPartner, getCurrentOffering, getPartnerOffering, purchasePackage } = useRevenueCat();
   const { user } = useAuth();
+  const { isIndieMode } = useIndieMode();
   // The dialog can switch tiers in-place (e.g. cross-sell Streamer Partner from
   // the Go-Pro screen). Start from the requested tier and reset on each open.
   const [activeTier, setActiveTier] = useState<SubscriptionTier>(tier);
@@ -306,7 +308,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   // Indie Partner can't be purchased here yet — its backend lands with the
   // indie-partner merge. Until then the card advertises but can't check out.
   const indieComingSoon = isIndieTier && !INDIE_BACKEND_READY;
-  const tierName = meta.name;
+  const tierName = activeTier === "pro" && isIndieMode ? "Developer Pro" : meta.name;
   const ownsThisTier = activeTier === "partner" ? isPartner : activeTier === "pro" ? isPro : false;
   const benefits = meta.benefits;
   const createEndpoint = `/api/stripe/create-${meta.api}-subscription`;
@@ -556,7 +558,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   if (ownsThisTier && step !== "success" && !purchaseInProgress) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[430px] w-full bg-[#0B1218] border-none p-0 overflow-hidden [&>button]:hidden">
+        <DialogContent className="max-w-[430px] w-full bg-popover border-none p-0 overflow-hidden [&>button]:hidden">
           <div className="p-8 text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#B7FF1A] to-[#6FA800] mb-6">
               <Crown className="w-10 h-10 text-white" />

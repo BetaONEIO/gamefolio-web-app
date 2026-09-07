@@ -103,6 +103,10 @@ export default function SubmissionReviewTab() {
   const pending = submissions.filter((s) => s.status === "pending");
   const reviewed = submissions.filter((s) => s.status !== "pending");
 
+  // Bounty review is not ready for deployment. Keep the review UI available
+  // for later, but hide its empty-state prompt until bounties are enabled.
+  if (bounties.length === 0) return null;
+
   return (
     <div className="space-y-4">
       {bounties.length === 0 ? (

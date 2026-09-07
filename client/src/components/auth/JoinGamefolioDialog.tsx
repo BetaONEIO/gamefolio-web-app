@@ -198,7 +198,7 @@ export function JoinGamefolioDialog({
       <div
         className="relative w-full rounded-t-[20px] md:max-w-md md:rounded-2xl md:mb-8"
         style={{
-          background: '#101923',
+          background: 'var(--gf-surface-raised)',
           transform: slideIn ? 'translateY(0)' : 'translateY(100%)',
           transition: slideIn
             ? 'transform 350ms cubic-bezier(0.32, 0.72, 0, 1)'
@@ -214,7 +214,7 @@ export function JoinGamefolioDialog({
 
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full" style={{ background: '#1B2A33' }} />
+          <div className="w-10 h-1 rounded-full" style={{ background: 'var(--gf-border)' }} />
         </div>
 
         {/* Close button */}
@@ -222,7 +222,7 @@ export function JoinGamefolioDialog({
           onClick={triggerClose}
           data-testid="button-close-main"
           className="absolute top-4 right-4 z-10 flex items-center justify-center w-8 h-8 rounded-full transition-colors"
-          style={{ background: '#1B2A33', color: '#B8C0AE' }}
+          style={{ background: 'var(--gf-border)', color: '#B8C0AE' }}
           title="Close"
         >
           <X className="h-4 w-4" />
@@ -306,7 +306,7 @@ export function JoinGamefolioDialog({
                     value={formData.username}
                     onChange={e => setFormData(prev => ({ ...prev, username: e.target.value }))}
                     className="mt-1 text-white placeholder:text-gray-500 focus:border-primary"
-                    style={{ background: '#0B1218', borderColor: '#1B2A33' }}
+                    style={{ background: 'var(--gf-surface)', borderColor: 'var(--gf-border)' }}
                     disabled={isLoading}
                   />
                   <FieldError error={fieldErrors.username} />
@@ -321,7 +321,7 @@ export function JoinGamefolioDialog({
                     value={formData.email}
                     onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
                     className="mt-1 text-white placeholder:text-gray-500 focus:border-primary"
-                    style={{ background: '#0B1218', borderColor: '#1B2A33' }}
+                    style={{ background: 'var(--gf-surface)', borderColor: 'var(--gf-border)' }}
                     disabled={isLoading}
                   />
                   <FieldError error={fieldErrors.email} />
@@ -336,7 +336,7 @@ export function JoinGamefolioDialog({
                     value={formData.password}
                     onChange={e => handlePasswordChange(e.target.value)}
                     className="mt-1 text-white placeholder:text-gray-500 focus:border-primary"
-                    style={{ background: '#0B1218', borderColor: '#1B2A33' }}
+                    style={{ background: 'var(--gf-surface)', borderColor: 'var(--gf-border)' }}
                     disabled={isLoading}
                   />
                   <PasswordRequirementsDisplay requirements={passwordRequirements} />
@@ -352,7 +352,7 @@ export function JoinGamefolioDialog({
                     value={formData.confirmPassword}
                     onChange={e => handleConfirmPasswordChange(e.target.value)}
                     className="mt-1 text-white placeholder:text-gray-500 focus:border-primary"
-                    style={{ background: '#0B1218', borderColor: '#1B2A33' }}
+                    style={{ background: 'var(--gf-surface)', borderColor: 'var(--gf-border)' }}
                     disabled={isLoading}
                   />
                   {passwordsMatch === false && <FieldError error="Passwords do not match" />}
@@ -409,7 +409,7 @@ export function JoinGamefolioDialog({
                     value={loginData.usernameOrEmail}
                     onChange={e => setLoginData(prev => ({ ...prev, usernameOrEmail: e.target.value }))}
                     className="mt-1 text-white placeholder:text-gray-500 focus:border-primary"
-                    style={{ background: '#0B1218', borderColor: '#1B2A33' }}
+                    style={{ background: 'var(--gf-surface)', borderColor: 'var(--gf-border)' }}
                     disabled={isLoading}
                   />
                   <FieldError error={fieldErrors.usernameOrEmail} />
@@ -424,7 +424,7 @@ export function JoinGamefolioDialog({
                     value={loginData.password}
                     onChange={e => setLoginData(prev => ({ ...prev, password: e.target.value }))}
                     className="mt-1 text-white placeholder:text-gray-500 focus:border-primary"
-                    style={{ background: '#0B1218', borderColor: '#1B2A33' }}
+                    style={{ background: 'var(--gf-surface)', borderColor: 'var(--gf-border)' }}
                     disabled={isLoading}
                   />
                   <FieldError error={fieldErrors.password} />

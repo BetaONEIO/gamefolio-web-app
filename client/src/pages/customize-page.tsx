@@ -10,10 +10,10 @@ import { HexColorPicker } from "react-colorful";
 import { Palette, Eye, RotateCcw } from "lucide-react";
 
 const DEFAULT_COLORS = {
-  accentColor: "#B7FF1A",
-  primaryColor: "#071013", 
-  backgroundColor: "#071013",
-  cardColor: "#1E3A8A"
+  accentColor: "#B7FF18",
+  primaryColor: "#0F101B",
+  backgroundColor: "#0F101B",
+  cardColor: "#1A1D2B"
 };
 
 const PRESET_THEMES = [
@@ -26,9 +26,9 @@ const PRESET_THEMES = [
   },
   {
     name: "Default",
-    accentColor: "#B7FF1A",
-    backgroundColor: "#071013",
-    cardColor: "#1E3A8A"
+    accentColor: "#B7FF18",
+    backgroundColor: "#0F101B",
+    cardColor: "#1A1D2B"
   },
   {
     name: "Ocean Blue",

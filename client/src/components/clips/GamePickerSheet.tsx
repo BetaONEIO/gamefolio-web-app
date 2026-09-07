@@ -22,7 +22,7 @@ function GameCard({
       className="relative rounded-xl overflow-hidden flex flex-col justify-end transition-all"
       style={{
         aspectRatio: "3/4",
-        background: "#101923",
+        background: "var(--gf-surface-raised)",
         border: isSelected ? "2.5px solid #B7FF1A" : "2px solid rgba(255,255,255,0.08)",
       }}
       onClick={() => {
@@ -113,10 +113,10 @@ export function GamePickerSheet({
   const isSearching = debouncedQuery.length >= 2;
 
   const { data: searchResults, isLoading: isSearchLoading } = useQuery<Game[]>({
-    queryKey: ["/api/twitch/games/search", debouncedQuery],
+    queryKey: ["/api/game-catalog/search", debouncedQuery],
     queryFn: async () => {
       if (!isSearching) return [];
-      const res = await fetch(`/api/twitch/games/search?q=${encodeURIComponent(debouncedQuery)}`);
+      const res = await fetch(`/api/game-catalog/search?q=${encodeURIComponent(debouncedQuery)}`);
       if (!res.ok) return [];
       const data = await res.json();
       return data.map((g: TwitchGame) => ({
@@ -132,9 +132,9 @@ export function GamePickerSheet({
   });
 
   const { data: trendingGames, isLoading: isTrendingLoading } = useQuery<Game[]>({
-    queryKey: ["/api/twitch/games/top", "game-picker"],
+    queryKey: ["/api/game-catalog/top", "game-picker"],
     queryFn: async () => {
-      const res = await fetch("/api/twitch/games/top?limit=30");
+      const res = await fetch("/api/game-catalog/top?limit=30");
       if (!res.ok) return [];
       const data = await res.json();
       return data.map((g: any) => ({
@@ -216,7 +216,7 @@ export function GamePickerSheet({
       <div
         className="w-full md:max-w-2xl rounded-t-3xl md:rounded-3xl flex flex-col"
         style={{
-          background: "#0B1218",
+          background: "var(--gf-surface)",
           maxHeight: "82vh",
           marginBottom: keyboardOffset,
           transition: "margin-bottom 0.2s ease",
@@ -299,7 +299,7 @@ export function GamePickerSheet({
                   className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center gap-1 transition-all"
                   style={{
                     aspectRatio: "3/4",
-                    background: "#101923",
+                    background: "var(--gf-surface-raised)",
                     border: "2px dashed rgba(183,255,26,0.4)",
                   }}
                   onClick={() => {

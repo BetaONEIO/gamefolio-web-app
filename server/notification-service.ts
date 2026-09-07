@@ -463,7 +463,7 @@ export class NotificationService {
         title: "New Bounty Submission",
         message: `${submitter.username} submitted content for "${bountyTitle}"`,
         fromUserId: submitterId,
-        actionUrl: `/indie/dashboard?tab=review&bounty=${bountyId}`,
+        actionUrl: `/game-dashboard?tab=review&bounty=${bountyId}`,
         metadata: { bountyId },
       };
       await createAndPush(notification);
@@ -488,7 +488,7 @@ export class NotificationService {
         message: approved
           ? `Your submission for "${bountyTitle}" was approved! Rewards have been credited.`
           : `Your submission for "${bountyTitle}" was rejected.${reason ? ` Reason: ${reason}` : ""}`,
-        actionUrl: `/indie/dashboard?tab=bounties&bounty=${bountyId}`,
+        actionUrl: `/game-dashboard?tab=bounties&bounty=${bountyId}`,
         metadata: { bountyId, approved },
       };
       await createAndPush(notification);

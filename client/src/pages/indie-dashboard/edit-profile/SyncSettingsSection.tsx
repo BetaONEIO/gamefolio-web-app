@@ -73,7 +73,8 @@ export function SyncSettingsSection({ profile, onSave, isSaving, open, onToggle,
           Fields with manual edits are protected from sync. Use the{" "}
           <span className="font-bold" style={{ color: NEON }}>Revert</span> button on any field to restore its store-imported value.
           To override a store value permanently, simply edit the field — it will be marked as{" "}
-          <span className="font-bold text-white/70">Manual</span>.
+           <span className="font-bold text-white/70">MANUAL</span> when no imported value exists, or{" "}
+           <span className="font-bold text-yellow-300/80">OVERRIDDEN</span> when it replaces an imported value.
         </div>
       </div>
     </Section>

@@ -44,10 +44,10 @@ export default function ExplorePage() {
 
   // Fetch games with pagination — disabled when in search mode
   const { data: games, isLoading: isLoadingGames, error } = useQuery<TwitchGame[]>({
-    queryKey: ["/api/twitch/games/top", page],
+    queryKey: ["/api/game-catalog/top", page],
     queryFn: async () => {
       const offset = page * gamesPerPage;
-      const response = await fetch(`/api/twitch/games/top?limit=${gamesPerPage}&offset=${offset}`);
+      const response = await fetch(`/api/game-catalog/top?limit=${gamesPerPage}&offset=${offset}`);
       if (!response.ok) throw new Error("Failed to fetch trending games");
       return response.json();
     },

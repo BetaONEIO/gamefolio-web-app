@@ -811,12 +811,12 @@ const MessagesPage: React.FC = () => {
       {/* Chat Area */}
       <div className={`
         ${!showMobileConversationList && selectedConversation ? 'flex' : 'hidden'} 
-        md:flex flex-1 flex-col bg-[#0B1218]
+        md:flex flex-1 flex-col bg-background
       `}>
         {selectedConversation ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-border bg-[#0B1218]">
+            <div className="p-4 border-b border-border bg-background">
               <div className="flex items-center gap-3">
                 {/* Mobile Back Button */}
                 <Button
@@ -1187,7 +1187,7 @@ const MessagesPage: React.FC = () => {
 
             {/* Message Input */}
             <div
-              className="px-3 py-3 border-t border-border bg-[#0B1218]"
+              className="px-3 py-3 border-t border-border bg-background"
               style={{ paddingBottom: keyboardHeight > 50 ? '12px' : undefined }}
             >
               <form onSubmit={handleSendMessage}>

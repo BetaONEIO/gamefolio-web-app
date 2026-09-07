@@ -11,7 +11,18 @@
  * feedback while typing, the server enforces it, and neither can drift.
  */
 
-export type StoreField = "steamUrl" | "itchUrl" | "epicUrl" | "websiteUrl";
+export type StoreField =
+  | "steamUrl"
+  | "itchUrl"
+  | "epicUrl"
+  | "websiteUrl"
+  | "twitterUrl"
+  | "discordUrl"
+  | "youtubeUrl"
+  | "twitchUrl"
+  | "instagramUrl"
+  | "facebookUrl"
+  | "tiktokUrl";
 
 type Rule = {
   label: string;
@@ -41,12 +52,59 @@ const RULES: Record<StoreField, Rule> = {
     label: "Website",
     example: "https://yourgame.com",
   },
+  twitterUrl: {
+    label: "X",
+    example: "https://x.com/yourgame",
+  },
+  discordUrl: {
+    label: "Discord",
+    example: "https://discord.gg/yourgame",
+  },
+  youtubeUrl: {
+    label: "YouTube",
+    example: "https://youtube.com/@yourgame",
+  },
+  twitchUrl: {
+    label: "Twitch",
+    example: "https://twitch.tv/yourgame",
+  },
+  instagramUrl: {
+    label: "Instagram",
+    example: "https://instagram.com/yourgame",
+  },
+  facebookUrl: {
+    label: "Facebook",
+    example: "https://facebook.com/yourgame",
+  },
+  tiktokUrl: {
+    label: "TikTok",
+    example: "https://tiktok.com/@yourgame",
+  },
 };
 
 const hostMatches = (host: string, pattern: string): boolean =>
   pattern.startsWith(".")
     ? host === pattern.slice(1) || host.endsWith(pattern)
     : host === pattern;
+
+function normalizeUrlValue(value: unknown): string {
+  const raw = String(value ?? "")
+    .trim()
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/^<(.+)>$/, "$1")
+    .trim();
+  return raw && !/^https?:\/\//i.test(raw) ? `https://${raw}` : raw;
+}
+
+/** Normalizes every supported profile URL present on a patch before persistence. */
+export function normalizeProfileUrls(patch: Record<string, any>): Record<string, any> {
+  for (const field of Object.keys(RULES) as StoreField[]) {
+    if (field in patch && patch[field] != null) {
+      patch[field] = normalizeUrlValue(patch[field]);
+    }
+  }
+  return patch;
+}
 
 /**
  * Returns null when the value is acceptable (including empty — these fields are
@@ -57,23 +115,17 @@ export function validateStoreUrl(field: StoreField, value: string | null | undef
   // Links copied from chat clients and rich-text editors can carry invisible
   // zero-width characters or be wrapped as <https://...>. Normalize those
   // presentation-only characters before checking the real destination.
-  const raw = String(value)
-    .trim()
-    .replace(/[\u200B-\u200D\uFEFF]/g, "")
-    .replace(/^<(.+)>$/, "$1")
-    .trim();
-  if (raw === "") return null;
+  const normalized = normalizeUrlValue(value);
+  if (normalized === "") return null;
 
   const rule = RULES[field];
   if (!rule) return null;
 
   // Accept a bare "store.steampowered.com/..." by assuming https, matching what
   // people paste out of a browser's address bar.
-  const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-
   let parsed: URL;
   try {
-    parsed = new URL(withScheme);
+    parsed = new URL(normalized);
   } catch {
     return `${rule.label} link is not a valid URL. Example: ${rule.example}`;
   }
@@ -106,6 +158,80 @@ export function validateStoreUrls(patch: Record<string, any>): string[] {
     if (field in patch) {
       const err = validateStoreUrl(field, patch[field]);
       if (err) errors.push(err);
+    }
+  }
+  return errors;
+}
+
+export type GameSocialField =
+  | "twitterUrl"
+  | "discordUrl"
+  | "youtubeUrl"
+  | "twitchUrl"
+  | "instagramUrl"
+  | "facebookUrl"
+  | "tiktokUrl";
+
+/**
+ * Social links are intentionally host-agnostic: developers may link to a
+ * channel, community, or campaign URL hosted by the relevant service. The
+ * protocol is still restricted so saved links cannot become javascript URLs.
+ */
+export function validateGameSocialUrl(field: GameSocialField, value: string | null | undefined): string | null {
+  if (value == null || String(value).trim() === "") return null;
+  const label = GAME_SOCIAL_LABELS[field];
+  const raw = String(value)
+    .trim()
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/^<(.+)>$/, "$1")
+    .trim();
+  const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const parsed = new URL(withScheme);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return `${label} link must start with http:// or https://`;
+    }
+    if (!parsed.hostname) throw new Error("missing host");
+  } catch {
+    return `${label} link is not a valid URL. Example: https://example.com/your-game`;
+  }
+  return null;
+}
+
+export function normalizeGameSocialUrls(patch: Record<string, any>): Record<string, string> {
+  const normalized: Record<string, string> = {};
+  for (const field of Object.keys(GAME_SOCIAL_LABELS) as GameSocialField[]) {
+    if (field in patch) normalized[field] = normalizeGameSocialUrl(patch[field]);
+  }
+  return normalized;
+}
+
+const GAME_SOCIAL_LABELS: Record<GameSocialField, string> = {
+  twitterUrl: "X",
+  discordUrl: "Discord",
+  youtubeUrl: "YouTube",
+  twitchUrl: "Twitch",
+  instagramUrl: "Instagram",
+  facebookUrl: "Facebook",
+  tiktokUrl: "TikTok",
+};
+
+export function normalizeGameSocialUrl(value: string | null | undefined): string {
+  const raw = String(value ?? "")
+    .trim()
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/^<(.+)>$/, "$1")
+    .trim();
+  if (!raw) return "";
+  return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+}
+
+export function validateGameSocialUrls(patch: Record<string, any>): string[] {
+  const errors: string[] = [];
+  for (const field of Object.keys(GAME_SOCIAL_LABELS) as GameSocialField[]) {
+    if (field in patch) {
+      const error = validateGameSocialUrl(field, patch[field]);
+      if (error) errors.push(error);
     }
   }
   return errors;

@@ -160,7 +160,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
         ref={sheetRef}
         className="relative w-full rounded-t-[20px] md:max-w-md md:rounded-2xl md:mb-8"
         style={{
-          background: '#101923',
+          background: 'var(--gf-surface-raised)',
           transform: sheetTransform,
           transition: sheetTransition,
           maxHeight: 'min(820px, 82dvh)',
@@ -176,7 +176,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
 
         {/* Drag handle — always dismissible */}
         <div className="flex justify-center pt-3 pb-1 flex-shrink-0 touch-none select-none">
-          <div className="w-10 h-1 rounded-full" style={{ background: '#1B2A33' }} />
+          <div className="w-10 h-1 rounded-full" style={{ background: 'var(--gf-border)' }} />
         </div>
 
         {/* Close button */}
@@ -184,7 +184,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
           onClick={triggerClose}
           data-testid="button-close-auth"
           className="absolute top-4 right-4 z-10 flex items-center justify-center w-8 h-8 rounded-full transition-colors"
-          style={{ background: '#1B2A33', color: '#B8C0AE' }}
+          style={{ background: 'var(--gf-border)', color: '#B8C0AE' }}
           title="Close"
         >
           <X className="h-4 w-4" />
@@ -223,14 +223,14 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
           >
             <TabsList
               className={isDeveloperSubdomain ? "grid w-full grid-cols-1 p-1.5 rounded-xl" : "grid w-full grid-cols-2 gap-2 p-1.5 rounded-xl"}
-              style={{ background: '#0B1218', marginBottom: keyboardOpen ? '1rem' : '1.5rem' }}
+              style={{ background: 'var(--gf-surface)', marginBottom: keyboardOpen ? '1rem' : '1.5rem' }}
             >
               <TabsTrigger
                 value="login"
                 className="rounded-lg font-semibold transition-all duration-150 data-[state=active]:shadow-none"
                 style={activeTab === "login"
                   ? { backgroundColor: '#B7FF1A', color: '#000' }
-                  : { backgroundColor: '#0B1218', color: '#B8C0AE' }}
+                  : { backgroundColor: 'var(--gf-surface)', color: '#B8C0AE' }}
                 data-testid="tab-login"
               >
                 {isDeveloperSubdomain ? "Developer Sign In" : "Login"}
@@ -241,7 +241,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
                   className="rounded-lg font-semibold transition-all duration-150 data-[state=active]:shadow-none"
                   style={activeTab === "register"
                     ? { backgroundColor: '#B7FF1A', color: '#000' }
-                    : { backgroundColor: '#0B1218', color: '#B8C0AE' }}
+                    : { backgroundColor: 'var(--gf-surface)', color: '#B8C0AE' }}
                   data-testid="tab-register"
                 >
                   Register
@@ -265,7 +265,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "login" }: Aut
           </Tabs>
 
           {isDeveloperSubdomain && (
-            <div className="mt-4 p-3 rounded-lg text-center text-sm" style={{ background: '#0B1218', color: '#B8C0AE' }}>
+            <div className="mt-4 p-3 rounded-lg text-center text-sm" style={{ background: 'var(--gf-surface)', color: '#B8C0AE' }}>
               New accounts must be created on{" "}
               <a
                 href="https://app.gamefolio.com/auth"

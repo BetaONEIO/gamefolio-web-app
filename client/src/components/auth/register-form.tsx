@@ -617,7 +617,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <Dialog open={showTerms} onOpenChange={setShowTerms}>
         {/* z above the auth modal (z-[200000]) or the dialog opens behind it and looks like nothing happened */}
-        <DialogContent className="z-[200001] max-w-2xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700">
+        <DialogContent className="z-[200001] max-w-2xl max-h-[80vh] overflow-y-auto bg-popover border-border">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-primary">Terms and Conditions</DialogTitle>
             <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
@@ -700,7 +700,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <Dialog open={showPrivacy} onOpenChange={setShowPrivacy}>
         {/* z above the auth modal (z-[200000]) or the dialog opens behind it and looks like nothing happened */}
-        <DialogContent className="z-[200001] max-w-2xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700">
+        <DialogContent className="z-[200001] max-w-2xl max-h-[80vh] overflow-y-auto bg-popover border-border">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-primary">Privacy Policy</DialogTitle>
             <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>

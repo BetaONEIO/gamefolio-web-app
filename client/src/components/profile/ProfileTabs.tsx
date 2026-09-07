@@ -3,9 +3,9 @@ import { ClipWithUser } from "@shared/schema";
 import UserClipItem from "@/components/clips/UserClipItem";
 import ClipSkeleton from "@/components/clips/ClipSkeleton";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Layers3, BarChart, Bookmark, FolderOpen } from "lucide-react";
+import { Layers3, BarChart, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { GamefolioCollectionButton } from "./GamefolioCollectionButton";
 
 interface ProfileTabsProps {
   username: string;
@@ -173,19 +173,13 @@ const ProfileTabs = ({ username, isCyberpunkTheme = false }: ProfileTabsProps) =
             ))}
             
             {/* Collection button */}
-            <Button
-              variant="outline"
-              size="sm"
-              className="ml-2 rounded-lg border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
+            <GamefolioCollectionButton
+              placement="inline"
+              active={activeTab === "collection"}
+              className="ml-2 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
               style={isCyberpunkTheme ? { fontFamily: "'Orbitron', sans-serif", letterSpacing: '2px', fontSize: '0.65rem', fontWeight: '900', borderColor: '#00b8db66' } : undefined}
               onClick={() => setActiveTab("collection")}
-            >
-              <FolderOpen className="h-4 w-4 mr-1" />
-              <span
-                className="hidden sm:inline"
-                style={isCyberpunkTheme ? { background: 'linear-gradient(270deg,#00d3f2,#e12afb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } : undefined}
-              >Collection</span>
-            </Button>
+            />
           </div>
           
           {/* Right fading gradient */}

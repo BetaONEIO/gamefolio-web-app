@@ -63,7 +63,7 @@ function LoadingSkeleton() {
         </div>
       </div>
       <div className="flex gap-3 mb-2 pl-1">
-        {[0, 1, 2].map((i) => (
+        {[0, 1, 2, 3].map((i) => (
           <div key={i} className="flex flex-col gap-0.5">
             <Skeleton className="h-4 w-6" />
             <Skeleton className="h-1.5 w-10" />
@@ -91,9 +91,10 @@ function ProfilePreview({ username, profile, badgeData, signedBannerUrl, accent,
   const bannerSrc = bannerImgError ? null : signedBannerUrl;
 
   const stats = [
-    { label: "CLIPS",     value: profile._count?.clips ?? 0 },
+    { label: "XP",        value: Math.round(profile.totalXP ?? 0) },
+    { label: "VIEWS",     value: profile._count?.views ?? profile._count?.clipViews ?? 0 },
+    { label: "UPLOADS",   value: (profile._count?.clips ?? 0) + (profile._count?.screenshots ?? 0) },
     { label: "FOLLOWERS", value: profile._count?.followers ?? 0 },
-    { label: "FOLLOWING", value: profile._count?.following ?? 0 },
   ];
 
   const bgFrom = profile.primaryColor || profile.backgroundColor || "#0B1218";

@@ -285,6 +285,36 @@ function postJson(opts: {
   });
 }
 
+function getJson(opts: {
+  pathname: string;
+  headers?: Record<string, string>;
+}): Promise<{ status: number; body: any }> {
+  const baseUrl = new URL(process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:5000');
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      {
+        hostname: baseUrl.hostname,
+        port: Number(baseUrl.port) || 5000,
+        method: 'GET',
+        path: opts.pathname,
+        headers: opts.headers || {},
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk) => chunks.push(chunk));
+        res.on('end', () => {
+          const text = Buffer.concat(chunks).toString('utf8');
+          let body: any = text;
+          try { body = JSON.parse(text); } catch { /* keep as text */ }
+          resolve({ status: res.statusCode || 0, body });
+        });
+      },
+    );
+    req.on('error', reject);
+    req.end();
+  });
+}
+
 // --- TUS direct-invoke helper ---------------------------------------------
 // The TUS HTTP layer (`@tus/server` v2 + srvx) requires
 // `process.getBuiltinModule`, which Node 20.12.2 doesn't ship — so HTTP-level
@@ -399,6 +429,7 @@ let connection: ReturnType<typeof postgres>;
 let db: ReturnType<typeof drizzle>;
 let freeUserId = 0;
 let proUserId = 0;
+let indieDeveloperUserId = 0;
 let payloadServer: PayloadServer | null = null;
 let longVideoPath = '';
 let smallImagePath = '';
@@ -462,6 +493,21 @@ test.describe('Upload error contract @integration', () => {
       .returning({ id: users.id });
     proUserId = pro.id;
 
+    const [indieDeveloper] = await db
+      .insert(users)
+      .values({
+        username: `upload_indie_${suffix}`,
+        password: hashedPassword,
+        displayName: 'Upload Game Developer Test',
+        email: `upload_indie_${suffix}@example.test`,
+        emailVerified: true,
+        userType: 'indie_developer',
+        isPro: false,
+        role: 'user',
+      })
+      .returning({ id: users.id });
+    indieDeveloperUserId = indieDeveloper.id;
+
     // A real, very small MP4 that is longer than the Free clip duration cap (180s)
     // so the route's ffprobe duration check (not the size check) fires.
     longVideoPath = path.join(os.tmpdir(), `upload-long-${suffix}.mp4`);
@@ -498,6 +544,7 @@ test.describe('Upload error contract @integration', () => {
   test.afterAll(async () => {
     await safeDeleteUser(freeUserId);
     await safeDeleteUser(proUserId);
+    await safeDeleteUser(indieDeveloperUserId);
     await connection?.end({ timeout: 5 });
     if (payloadServer) {
       try { await payloadServer.close(); } catch { /* ignore */ }
@@ -508,6 +555,19 @@ test.describe('Upload error contract @integration', () => {
         try { fs.unlinkSync(p); } catch { /* ignore */ }
       }
     }
+  });
+
+  test('Game Developer user: standard upload access remains available at the normal free tier', async () => {
+    const res = await getJson({
+      pathname: '/api/upload/limits',
+      headers: { Authorization: `Bearer ${makeAccessToken(indieDeveloperUserId)}` },
+    });
+
+    expect(res.status).toBe(200);
+    expectLimitsShape(res.body);
+    expect(res.body.isPro).toBe(false);
+    expect(res.body.maxClipSizeMB).toBe(FREE_MAX_CLIP_SIZE_MB);
+    expect(res.body.maxScreenshotSizeMB).toBe(FREE_MAX_SCREENSHOT_SIZE_MB);
   });
 
   test('Free user: oversized clip on /api/upload/video-direct returns 403 with full contract', async () => {

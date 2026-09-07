@@ -14,7 +14,7 @@ import { auth, getGoogleRedirectResult } from "@/lib/firebase";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { useDailyStreak } from "@/hooks/use-daily-streak";
 import { isNative } from "@/lib/platform";
-import { clearTokens, getAccessTokenSync, setTokens } from "@/lib/auth-token";
+import { clearTokens, setTokens } from "@/lib/auth-token";
 import { getDeviceId } from "@/lib/device-id";
 import { initPushNotifications, unregisterCurrentPushToken } from "@/lib/push-notifications";
 import { setSentryUser } from "@/lib/sentry";
@@ -199,11 +199,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // On native, exchange the freshly-created session for a JWT pair.
         await issueNativeTokens();
 
-        const streakInfo = userData.streakInfo;
-        // Mark reward as shown so the session-restore useEffect doesn't double-fire
-        if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
-          dailyRewardShownRef.current = true;
-        }
+        // Updating the shared user cache lets the daily-reward effect display
+        // any newly-awarded streak data for Google sign-in as well.
         queryClient.setQueryData(["/api/user"], userData);
 
         const pendingOAuthRedirect = consumePendingOAuthRedirect();
@@ -270,10 +267,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // gate the whole app's auth resolution forever.
     const firebaseCheckTimeout = setTimeout(() => {
       if (!mounted) return;
-      Sentry.captureMessage("use-auth: Firebase auth check timed out, proceeding anyway", {
-        level: "warning",
-        tags: { module: "use-auth", op: "firebase-timeout" },
-      });
       setFirebaseAuthChecked(true);
     }, 5000);
 
@@ -307,7 +300,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
-    isFetching,
     isFetched,
   } = useQuery<User | undefined, Error>({
     queryKey: ["/api/user"],
@@ -323,35 +315,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     retry: 1,
     retryDelay: 500,
   });
-
-  // Diagnostic for the "logged out after force-quit" investigation: report
-  // the outcome of the very first /api/user resolution on this app launch,
-  // together with whether a token was in memory at that moment. This is the
-  // one thing hydrate()'s own logging can't show - whether the token that was
-  // found actually resulted in a recognized session.
-  //
-  // Must gate on firebaseAuthChecked + !isFetching, not just !isLoading: a
-  // disabled query (enabled: false, before firebaseAuthChecked flips true)
-  // also reports isLoading: false with no fetch ever having run, so an
-  // earlier version of this effect fired on that very first disabled render
-  // and locked itself out before the real fetch ever completed - every
-  // "userResolved: false" it ever reported was meaningless.
-  const initialAuthCheckReported = useRef(false);
-  useEffect(() => {
-    if (!isNative || !firebaseAuthChecked || isFetching || initialAuthCheckReported.current) return;
-    initialAuthCheckReported.current = true;
-    Sentry.captureMessage("use-auth: initial /api/user resolution", {
-      level: "info",
-      tags: {
-        module: "use-auth",
-        op: "initial-user-check",
-        hadTokenAtCheckTime: String(!!getAccessTokenSync()),
-        userResolved: String(!!user),
-        hadError: String(!!error),
-        errorMessage: error?.message ?? "",
-      },
-    });
-  }, [firebaseAuthChecked, isFetching, user, error]);
 
   // Tag Sentry events with the resolved user so crashes/errors are
   // attributable to a username, not just an anonymous device UUID.
@@ -371,23 +334,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   useEffect(() => {
-    if (!user || dailyRewardShownRef.current) return;
+    if (!user) return;
     const userData = user as any;
     const streakInfo = userData.streakInfo;
-    if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
-      dailyRewardShownRef.current = true;
-      setTimeout(() => {
-        showDailyXp({
-          dailyXP: streakInfo.dailyXP,
-          bonusAwarded: streakInfo.bonusAwarded,
-          currentStreak: streakInfo.currentStreak,
-          longestStreak: streakInfo.longestStreak || userData.longestStreak || 0,
-          isNewMilestone: streakInfo.isNewMilestone,
-          message: streakInfo.message,
-          nextMilestone: streakInfo.nextMilestone || 5,
-        });
-      }, 800);
+    const hasNewReward = streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0);
+    if (!hasNewReward) {
+      // A later hydration that reports no new claim arms the overlay for the
+      // next rolling reward window, including apps left open overnight.
+      dailyRewardShownRef.current = false;
+      return;
     }
+    if (dailyRewardShownRef.current) return;
+
+    dailyRewardShownRef.current = true;
+    void queryClient.invalidateQueries({ queryKey: [`/api/user/${user.id}/daily-activity`] });
+    setTimeout(() => {
+      showDailyXp({
+        dailyXP: streakInfo.dailyXP,
+        bonusAwarded: streakInfo.bonusAwarded,
+        currentStreak: streakInfo.currentStreak,
+        longestStreak: streakInfo.longestStreak || userData.longestStreak || 0,
+        isNewMilestone: streakInfo.isNewMilestone,
+        message: streakInfo.message,
+        nextMilestone: streakInfo.nextMilestone || 5,
+      });
+    }, 800);
   }, [user, showDailyXp]);
 
 
@@ -419,8 +390,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const user = responseData as User;
       const streakInfo = responseData.streakInfo;
 
-      // Mark reward as shown so the session-restore useEffect doesn't double-fire
-      dailyRewardShownRef.current = true;
+      // Local login receives the newly-awarded streak data directly. Show it
+      // here before refreshUser replaces the cache with the hydrated user.
+      if (streakInfo && (streakInfo.dailyXP > 0 || streakInfo.bonusAwarded > 0)) {
+        dailyRewardShownRef.current = true;
+        setTimeout(() => {
+          showDailyXp({
+            dailyXP: streakInfo.dailyXP,
+            bonusAwarded: streakInfo.bonusAwarded,
+            currentStreak: streakInfo.currentStreak,
+            longestStreak: streakInfo.longestStreak || user.longestStreak || 0,
+            isNewMilestone: streakInfo.isNewMilestone,
+            message: streakInfo.message,
+            nextMilestone: streakInfo.nextMilestone || 5,
+          });
+        }, 800);
+      }
 
       // On native, grab JWT tokens before any further requests so the
       // queryClient can use them when the session cookie is unavailable.

@@ -115,19 +115,58 @@ const useSvgBorderData = (svgUrl: string, color: string) => {
   return { ...data, clipId };
 };
 
-// Component to render SVG border
+type RasterBorderCalibration = {
+  ringCenterX: number;
+  ringCenterY: number;
+  innerDiameter: number;
+  overlap: number;
+  sizeAdjustment: number;
+};
+
+// Calibrated from the main blue summer tube in the 1254x1254 source PNG.
+// Decorations outside the tube are intentionally ignored when measuring the
+// ring centre and opening.
+const RASTER_BORDER_CALIBRATIONS: Record<string, RasterBorderCalibration> = {
+  "player2-blue-summer-border": {
+    ringCenterX: 0.5,
+    ringCenterY: 0.486,
+    innerDiameter: 0.83,
+    overlap: 0.02,
+    sizeAdjustment: 0.96,
+  },
+};
+
+const getRasterBorderCalibration = (border: AssetReward): RasterBorderCalibration | undefined => {
+  if (
+    border.id === 44 ||
+    border.name.trim().toLowerCase() === "player2 blue summer border"
+  ) {
+    return RASTER_BORDER_CALIBRATIONS["player2-blue-summer-border"];
+  }
+
+  return undefined;
+};
+
+// Component to render SVG or raster-image borders
 const InlineSvgBorder: React.FC<{
   svgUrl: string;
   color: string;
   className?: string;
   style?: React.CSSProperties;
-}> = ({ svgUrl, color, className, style }) => {
+  rasterCalibration?: RasterBorderCalibration;
+}> = ({ svgUrl, color, className, style, rasterCalibration }) => {
   const [svgContent, setSvgContent] = useState<string>('');
+  const [assetType, setAssetType] = useState<'svg' | 'raster' | null>(null);
   
-  // Get signed URL for the SVG
+  // Get a signed URL for private border assets
   const { signedUrl } = useSignedUrl(svgUrl);
   
   useEffect(() => {
+    let cancelled = false;
+
+    setSvgContent('');
+    setAssetType(null);
+
     // Wait for signed URL if the original URL is a Supabase URL
     const urlToFetch = signedUrl || svgUrl;
     if (!urlToFetch) return;
@@ -135,14 +174,30 @@ const InlineSvgBorder: React.FC<{
     // Don't fetch if we need a signed URL but don't have one yet
     if (svgUrl && svgUrl.includes('supabase.co') && !signedUrl) return;
     
+    // Raster assets can be rendered directly without reading their binary
+    // contents as text. This also covers local/public URLs with extensions.
+    const urlPath = urlToFetch.split(/[?#]/, 1)[0];
+    if (/\.(?:png|jpe?g|gif|webp|avif)$/i.test(urlPath)) {
+      setAssetType('raster');
+      return () => {
+        cancelled = true;
+      };
+    }
+
     fetch(urlToFetch)
       .then(res => {
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
         }
+        const contentType = res.headers.get('content-type')?.toLowerCase() || '';
+        if (contentType.startsWith('image/') && !contentType.includes('svg')) {
+          if (!cancelled) setAssetType('raster');
+          return null;
+        }
         return res.text();
       })
       .then(svg => {
+        if (svg === null || cancelled) return;
         if (!svg.includes('<svg') && !svg.includes('<?xml')) {
           console.error('Invalid SVG content received');
           return;
@@ -176,12 +231,64 @@ const InlineSvgBorder: React.FC<{
           return `<svg${cleaned} width="100%" height="100%" style="width:100%;height:100%;display:block">`;
         });
 
-        setSvgContent(finalSvg);
+        if (!cancelled) {
+          setAssetType('svg');
+          setSvgContent(finalSvg);
+        }
       })
       .catch(err => console.error('Failed to load SVG:', err));
+
+    return () => {
+      cancelled = true;
+    };
   }, [svgUrl, signedUrl, color]);
   
-  if (!svgContent) return null;
+  if (assetType === 'raster') {
+    const borderScale = rasterCalibration
+      ? ((1 + rasterCalibration.overlap) / rasterCalibration.innerDiameter) *
+        rasterCalibration.sizeAdjustment
+      : null;
+    const calibratedStyle = rasterCalibration
+      ? {
+          width: `${borderScale! * 100}%`,
+          height: `${borderScale! * 100}%`,
+          left: '50%',
+          top: '50%',
+          marginLeft: `${(
+            (0.5 - rasterCalibration.ringCenterX) *
+            borderScale! *
+            100
+          ).toFixed(4)}%`,
+          marginTop: `${(
+            (0.5 - rasterCalibration.ringCenterY) *
+            borderScale! *
+            100
+          ).toFixed(4)}%`,
+          transform: 'translate(-50%, -50%)',
+        }
+      : {};
+
+    return (
+      <img
+        src={signedUrl || svgUrl}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+        className={className}
+        style={{
+          ...style,
+          ...calibratedStyle,
+          display: 'block',
+          maxWidth: 'none',
+          maxHeight: 'none',
+          objectFit: 'contain',
+        }}
+        onError={() => console.error('Failed to load avatar border image')}
+      />
+    );
+  }
+
+  if (assetType !== 'svg' || !svgContent) return null;
   
   return (
     <div 
@@ -292,7 +399,7 @@ const sizeClasses = {
   xl: "h-20 w-20",
   "2xl": "h-32 w-32",
   "mobile-profile": "h-28 w-28",
-  "profile": "h-40 w-40 sm:h-48 sm:w-48 md:h-56 md:w-56"
+  "profile": "h-56 w-56"
 };
 
 const containerSizes = {
@@ -380,6 +487,9 @@ export const CustomAvatar = ({
   const avatarBorder = borderData?.avatarBorder;
   const hasAvatarBorderOverlay = showAvatarBorderOverlay && !!avatarBorder?.imageUrl;
   const hasSolidBorder = showAvatarBorderOverlay && (avatarBorder?.id === -1 || effectiveBorderId === -1);
+  const rasterBorderCalibration = avatarBorder
+    ? getRasterBorderCalibration(avatarBorder)
+    : undefined;
 
   if (hasNftProfile) {
     const handleNftAvatarClick = (e: React.MouseEvent) => {
@@ -486,7 +596,7 @@ export const CustomAvatar = ({
         
         {/* Avatar - the actual profile picture (no border, just the image) */}
         <Avatar 
-          className={`${sizeClasses[size]} transition-all duration-300 rounded-full relative border-0`}
+          className={`${sizeClasses[size]} aspect-square transition-all duration-300 rounded-full relative overflow-hidden border-0`}
           style={{ zIndex: 10 }}
         >
           <AvatarImage 
@@ -499,16 +609,18 @@ export const CustomAvatar = ({
           </AvatarFallback>
         </Avatar>
         
-        {/* SVG Border with inline color replacement - larger than avatar to wrap around it properly */}
+        {/* Border overlay is centred on the same wrapper as the avatar. */}
         <InlineSvgBorder
           svgUrl={avatarBorder.imageUrl}
           color={borderColor}
           className="absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+          rasterCalibration={rasterBorderCalibration}
           style={{ 
             width: '160%', 
             height: '160%', 
-            top: '-30%', 
-            left: '-30%',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
             zIndex: 20 
           }}
         />

@@ -19,17 +19,8 @@ let hydratePromise: Promise<void> | null = null;
 function hydrate(): Promise<void> {
   if (hydratePromise) return hydratePromise;
   hydratePromise = (async () => {
-    // Diagnostic for the "logged out after force-quit" investigation: report
-    // via captureMessage (not just a breadcrumb) so this shows up as its own
-    // Sentry event on every cold boot, even when nothing throws - we need to
-    // see isNative + whether a stored token was found, not just failures.
-    if (!isNative) {
-      Sentry.captureMessage('auth-token: hydrate skipped, isNative is false', {
-        level: 'warning',
-        tags: { module: 'auth-token', op: 'hydrate', isNative: 'false' },
-      });
-      return;
-    }
+    // Web has no Preferences store - tokens only ever live in memory there.
+    if (!isNative) return;
     try {
       const [a, r] = await Promise.all([
         Preferences.get({ key: ACCESS_KEY }),
@@ -37,16 +28,6 @@ function hydrate(): Promise<void> {
       ]);
       memoryAccess = a.value ?? null;
       memoryRefresh = r.value ?? null;
-      Sentry.captureMessage('auth-token: hydrate completed', {
-        level: 'info',
-        tags: {
-          module: 'auth-token',
-          op: 'hydrate',
-          isNative: 'true',
-          hasAccess: String(!!memoryAccess),
-          hasRefresh: String(!!memoryRefresh),
-        },
-      });
     } catch (e) {
       console.warn('auth-token: hydrate failed', e);
       Sentry.captureException(e, { tags: { module: 'auth-token', op: 'hydrate' } });

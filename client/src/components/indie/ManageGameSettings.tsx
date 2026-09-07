@@ -25,6 +25,7 @@ import {
 import { FaSteam, FaDiscord, FaTwitter, FaYoutube, FaGlobe } from "react-icons/fa";
 import { SiEpicgames, SiItchdotio, SiGogdotcom } from "react-icons/si";
 import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
+import { getSourceColor, getSourceLabel, getSourceLabelFromValue, type SourceLabel } from "@/pages/indie-dashboard/edit-profile/types";
 
 const GREEN = "#B8FF1B";
 
@@ -106,23 +107,15 @@ type IndieProfile = {
 };
 
 function FieldSourceBadge({ source }: { source?: string }) {
-  if (!source) return null;
-  const labels: Record<string, string> = {
-    steam: "Steam",
-    epic: "Epic",
-    itch: "itch.io",
-    manual: "Manual",
-  };
-  const colors: Record<string, string> = {
-    steam: "#1b9aed",
-    epic: "#2d2d2d",
-    itch: "#fa5c5c",
-    manual: GREEN,
-  };
+  const knownLabel = source && ["MANUAL", "IMPORTED", "STEAM", "ITCH.IO", "EPIC", "OVERRIDDEN"].includes(source)
+    ? source as SourceLabel
+    : null;
+  const label = knownLabel ?? getSourceLabelFromValue(source);
+  if (!label) return null;
   return (
-    <span className="text-[10px] px-1.5 py-0.5 rounded font-medium ml-2"
-      style={{ background: colors[source] || "#333", color: source === "manual" ? "#000" : "#fff" }}>
-      {labels[source] || source}
+    <span className="text-[9px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider ml-2"
+      style={{ background: `${getSourceColor(label as SourceLabel)}18`, color: getSourceColor(label as SourceLabel), border: `1px solid ${getSourceColor(label as SourceLabel)}35` }}>
+      {label}
     </span>
   );
 }
@@ -348,7 +341,7 @@ export default function ManageGameSettings() {
               { id: "media", label: "Media & Artwork", icon: ImageIcon },
               { id: "store", label: "Store & Platforms", icon: Store },
               ...(BOUNTIES_ENABLED ? [{ id: "bounty", label: "Bounty Programme", icon: Trophy }] : []),
-              { id: "content", label: "Creator Content", icon: Users },
+              { id: "content", label: "Content", icon: Users },
               { id: "updates", label: "Updates", icon: Megaphone },
               { id: "analytics", label: "Analytics", icon: BarChart3 },
               { id: "verification", label: "Verification", icon: Shield },
@@ -389,7 +382,7 @@ function GameProfileTab({ profile, fieldMeta, saveMut }: {
   useEffect(() => { setForm(profile); }, [profile]);
 
   const set = (k: keyof IndieProfile, v: any) => setForm((f) => ({ ...f, [k]: v }));
-  const src = (k: string) => fieldMeta[k]?.importSource ?? (fieldMeta[k]?.isManualOverride ? "manual" : undefined);
+  const src = (k: string) => getSourceLabel(fieldMeta[k]) ?? undefined;
 
   const save = () => saveMut.mutate({
     gameName: form.gameName, releaseStatus: form.releaseStatus, releaseDate: form.releaseDate,
@@ -556,8 +549,8 @@ function MediaTab({ profile, saveMut }: { profile: IndieProfile; saveMut: any })
           <Input value={form.headerImageUrl ?? ""} onChange={(e) => set("headerImageUrl", e.target.value)}
             placeholder="https://..." className={inputCls} />
           {form.headerImageUrl && (
-            <div className="mt-2 rounded-lg overflow-hidden border border-[#2a2a2a]" style={{ maxHeight: 160 }}>
-              <img src={form.headerImageUrl} alt="Banner preview" className="w-full object-cover" style={{ maxHeight: 160 }} onError={(e) => { (e.target as any).style.display = "none"; }} />
+            <div className="mt-2 aspect-video rounded-lg overflow-hidden border border-[#2a2a2a]" style={{ background: "#111" }}>
+              <img src={form.headerImageUrl} alt="Banner preview" className="h-full w-full object-cover" onError={(e) => { (e.target as any).style.display = "none"; }} />
             </div>
           )}
         </FormField>
@@ -868,8 +861,8 @@ function CreatorContentTab({ user }: { user: any }) {
       ) : items.length === 0 ? (
         <div className="text-center py-12" style={{ background: "#0d0d0d", borderRadius: 12, border: "1px solid #1a1a1a" }}>
           <Users className="h-10 w-10 mx-auto mb-3 text-gray-700" />
-          <p className="text-sm font-semibold text-gray-400">No creator content yet</p>
-          <p className="text-xs text-gray-600 mt-1">Content from Gamefolio creators tagged with your game will appear here</p>
+          <p className="text-sm font-semibold text-gray-400">No content yet</p>
+          <p className="text-xs text-gray-600 mt-1">Content tagged with your game will appear here</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

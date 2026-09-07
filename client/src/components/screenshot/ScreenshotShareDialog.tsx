@@ -180,11 +180,11 @@ export function ScreenshotShareDialog({
         </DialogTrigger>
       )}
       <DialogContent
-        className="p-0 border-[#1B2A33] bg-[#0B1218] w-[calc(100vw-2rem)] max-w-[384px] sm:max-w-[540px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh] flex flex-col z-[10001]"
+        className="p-0 border-border bg-popover w-[calc(100vw-2rem)] max-w-[384px] sm:max-w-[540px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh] flex flex-col z-[10001]"
         aria-describedby="screenshot-share-description"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#1B2A33]/50 shrink-0">
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-border shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <ShareLaunchIcon size={18} className="text-[#B7FF1A] shrink-0" />
             <span className="text-[#F5F7F2] text-base font-bold truncate">
@@ -224,7 +224,7 @@ export function ScreenshotShareDialog({
           ) : shareData ? (
             <>
               {/* Screenshot preview — mobile: object-contain to show full image; desktop: object-cover in aspect-video */}
-              <div className="w-full h-[200px] sm:h-auto sm:aspect-video bg-[#1B2A33] rounded-xl overflow-hidden border border-[#1B2A33]/80 flex items-center justify-center">
+              <div className="w-full h-[200px] sm:h-auto sm:aspect-video bg-card rounded-xl overflow-hidden border border-border flex items-center justify-center">
                 {shareData.imageUrl && (
                   <img
                     src={shareData.imageUrl}
@@ -239,7 +239,7 @@ export function ScreenshotShareDialog({
               <div className="flex flex-col gap-2">
                 <span className="text-[#64748b] text-xs font-medium uppercase tracking-wide">Screenshot Link</span>
                 <div className="flex gap-2">
-                  <div className="flex-1 min-w-0 bg-[#1B2A33] border border-[#2d3f55] rounded-xl px-3 py-2.5 overflow-hidden">
+                  <div className="flex-1 min-w-0 bg-secondary border border-border rounded-xl px-3 py-2.5 overflow-hidden">
                     <span className="text-[#B8C0AE] text-xs font-mono truncate block">
                       {shareData.screenshotUrl}
                     </span>
@@ -286,7 +286,7 @@ export function ScreenshotShareDialog({
                         title={platform.copyOnly ? `${platform.name} (copies link)` : platform.name}
                         aria-label={`Share on ${platform.name}`}
                       >
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#B7FF1A]/30 bg-[#1B2A33] flex items-center justify-center hover:border-[#B7FF1A] hover:bg-[#B7FF1A]/10 transition-colors">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-[#B7FF1A]/30 bg-secondary flex items-center justify-center hover:border-[#B7FF1A] hover:bg-[#B7FF1A]/10 transition-colors">
                           <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#F5F7F2]" />
                         </div>
                       </button>

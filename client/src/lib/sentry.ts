@@ -35,21 +35,35 @@ export function initSentry(): void {
     return;
   }
 
+  // NB: do NOT use import.meta.env.PROD here. `.env` sets NODE_ENV=development
+  // (needed for local server dev), and Vite leaks that into `vite build`,
+  // forcing PROD=false in the shipped AAB — which mis-tagged every production
+  // crash as "development" and made prod/dev indistinguishable in Sentry.
+  // MODE reflects the actual build command ("production" for `vite build`) and
+  // is not affected by the NODE_ENV leak. Set VITE_SENTRY_ENVIRONMENT to
+  // override (e.g. "staging").
+  const environment =
+    import.meta.env.VITE_SENTRY_ENVIRONMENT?.trim() ||
+    (import.meta.env.MODE === "production" ? "production" : "development");
+
+  // Only production reports — same gate as server/sentry.ts, and for the same
+  // reason: dev workspaces and beta share this DSN and the org's single
+  // monthly error quota, so a broken non-prod build must not be able to
+  // exhaust it and blind production. Set VITE_SENTRY_ALLOW_NON_PRODUCTION=true
+  // to opt an environment back in deliberately.
+  if (
+    environment !== "production" &&
+    import.meta.env.VITE_SENTRY_ALLOW_NON_PRODUCTION?.trim() !== "true"
+  ) {
+    return;
+  }
+
   Sentry.init(
     {
       dsn,
       release:
         typeof __APP_RELEASE__ !== "undefined" ? __APP_RELEASE__ : undefined,
-      // NB: do NOT use import.meta.env.PROD here. `.env` sets NODE_ENV=development
-      // (needed for local server dev), and Vite leaks that into `vite build`,
-      // forcing PROD=false in the shipped AAB — which mis-tagged every production
-      // crash as "development" and made prod/dev indistinguishable in Sentry.
-      // MODE reflects the actual build command ("production" for `vite build`) and
-      // is not affected by the NODE_ENV leak. Set VITE_SENTRY_ENVIRONMENT to
-      // override (e.g. "staging").
-      environment:
-        import.meta.env.VITE_SENTRY_ENVIRONMENT?.trim() ||
-        (import.meta.env.MODE === "production" ? "production" : "development"),
+      environment,
       // Crash-capture focus for QA: errors on, performance tracing off (it
       // burns quota fast and isn't what we're after). Raise later if wanted.
       tracesSampleRate: 0,
@@ -81,4 +95,58 @@ export function setSentryUser(
   Sentry.setUser(
     user ? { id: user.id, username: user.username ?? undefined } : null,
   );
+}
+
+export type BulkUploadTelemetry = {
+  batchId: string;
+  itemIndex: number;
+  itemKind: "video" | "screenshot" | "batch";
+  videoType?: "clip" | "reel";
+  mimeType?: string;
+  fileSizeBytes?: number;
+  durationSeconds?: number | null;
+  stage:
+    | "selection"
+    | "validation"
+    | "storage-credentials"
+    | "storage-transfer"
+    | "processing"
+    | "reconciliation"
+    | "complete";
+  outcome: "started" | "rejected" | "failed" | "recovered" | "succeeded";
+  errorCategory?: string;
+  httpStatus?: number;
+};
+
+export type BulkUploadTelemetryDetails = Omit<
+  BulkUploadTelemetry,
+  "batchId" | "itemIndex" | "itemKind" | "videoType" | "mimeType" | "fileSizeBytes" | "durationSeconds"
+>;
+
+// Bulk upload diagnostics intentionally accept only a closed set of fields.
+// Never add filenames, titles, descriptions, tags, URLs, request bodies, or
+// provider credentials here: this event is meant to be useful without copying
+// user-generated content into Sentry.
+export function captureBulkUploadEvent(
+  event: BulkUploadTelemetry,
+): void {
+  Sentry.captureMessage(`bulk_upload.${event.stage}.${event.outcome}`, {
+    level: event.outcome === "failed" || event.outcome === "rejected" ? "warning" : "info",
+    tags: {
+      feature: "bulk_upload",
+      batch_id: event.batchId,
+      item_index: String(event.itemIndex),
+      item_kind: event.itemKind,
+      stage: event.stage,
+      outcome: event.outcome,
+      ...(event.videoType ? { video_type: event.videoType } : {}),
+      ...(event.errorCategory ? { error_category: event.errorCategory } : {}),
+      ...(event.httpStatus !== undefined ? { http_status: String(event.httpStatus) } : {}),
+    },
+    extra: {
+      ...(event.mimeType ? { mime_type: event.mimeType } : {}),
+      ...(event.fileSizeBytes !== undefined ? { file_size_bytes: event.fileSizeBytes } : {}),
+      ...(event.durationSeconds !== undefined ? { duration_seconds: event.durationSeconds } : {}),
+    },
+  });
 }

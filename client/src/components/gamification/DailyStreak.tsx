@@ -18,9 +18,10 @@ export default function DailyStreak() {
     : `You've hit your ${streak}-day milestone!`;
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-[#020617] flex flex-col overflow-hidden">
-      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-6 py-8 md:py-10">
-        <div className="flex flex-col items-center max-w-md w-full">
+    <div className="fixed inset-0 z-[9999] bg-[#020617] md:bg-[#0F101B] flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-6 py-8 md:px-8 md:py-10">
+        <div className="flex flex-col items-center max-w-md w-full md:flex-none md:max-w-[820px] md:rounded-[18px] md:border md:border-white/10 md:bg-[#171925] md:px-16 md:py-12 md:shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+          <div className="flex flex-col items-center max-w-md w-full md:max-w-[560px]">
           {/* Streak Count */}
           <div className="flex items-start justify-center mb-1">
             <span
@@ -45,7 +46,7 @@ export default function DailyStreak() {
 
           {/* Consecutive Streak label */}
           <p
-            className="text-[#ff6900] text-center font-black uppercase tracking-[0.4em] mb-6 md:mb-8"
+            className="text-[#ff6900] text-center font-black uppercase tracking-[0.4em] mb-6 md:mb-6"
             style={{
               fontSize: "clamp(11px, 2vw, 14px)",
               fontFamily: "'Plus Jakarta Sans', sans-serif",
@@ -55,9 +56,9 @@ export default function DailyStreak() {
           </p>
 
           {/* Fire Icon with orange glow */}
-          <div className="relative w-24 h-24 md:w-32 md:h-32 mb-6 md:mb-8 flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full bg-[#ff6900]/20 blur-[40px] scale-150" />
-            <div className="absolute inset-0 blur-[20px] scale-[1.4]" style={{ background: "linear-gradient(to bottom, rgba(245,73,0,0.4), rgba(251,44,54,0.4), rgba(255,185,0,0.2))" }} />
+          <div className="relative w-24 h-24 md:w-28 md:h-28 mb-6 md:mb-6 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full bg-[#ff6900]/20 md:bg-[#ff6900]/10 blur-[40px] md:blur-[30px] scale-150 md:scale-125" />
+            <div className="absolute inset-0 blur-[20px] md:blur-[14px] scale-[1.4] md:scale-[1.25]" style={{ background: "linear-gradient(to bottom, rgba(245,73,0,0.4), rgba(251,44,54,0.4), rgba(255,185,0,0.2))" }} />
             <svg
               className="relative z-10"
               width="100%"
@@ -111,9 +112,9 @@ export default function DailyStreak() {
 
           {/* Personal Best badge */}
           <div
-            className="mt-4 mb-6 md:mb-8 px-6 py-3 rounded-full border border-[#ff6900]/20 bg-[#ff6900]/10 flex items-center gap-3"
+            className="mt-4 mb-6 md:mt-4 md:mb-5 px-6 py-3 md:px-0 md:py-0 rounded-full md:rounded-none border border-[#ff6900]/20 md:border-0 bg-[#ff6900]/10 md:bg-transparent flex items-center gap-3 md:gap-2"
           >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg className="md:hidden" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <g clipPath="url(#clip_pb)">
                 <path
                   fillRule="evenodd"
@@ -129,8 +130,8 @@ export default function DailyStreak() {
               </defs>
             </svg>
             <span
-              className="text-[#ff6900] font-bold uppercase tracking-[0.2em]"
-              style={{ fontSize: "10px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              className="text-[#ff6900] text-[10px] font-bold uppercase tracking-[0.2em] md:normal-case md:tracking-[0.04em] md:text-sm md:font-semibold"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             >
               Personal Best: {longestStreak} Days
             </span>
@@ -154,11 +155,29 @@ export default function DailyStreak() {
               />
             ))}
           </div>
+          </div>
+
+          {/* Desktop CTA stays inside the reward panel, close to the progress. */}
+          <div className="hidden md:flex w-full justify-center mt-10">
+            <button
+              onClick={dismiss}
+              className="w-full max-w-[380px] h-14 bg-[#B7FF1A] hover:bg-[#A2F000] active:scale-[0.98] transition-all rounded-xl flex items-center justify-center gap-3 cursor-pointer"
+              style={{ boxShadow: "0 12px 24px rgba(183, 255, 26, 0.16)" }}
+            >
+              <span
+                className="text-[#0F101B] font-black uppercase tracking-[0.2em]"
+                style={{ fontSize: "14px", fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              >
+                Continue
+              </span>
+              <ChevronRight className="w-5 h-5 text-[#0F101B]" strokeWidth={3} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Bottom button */}
-      <div className="shrink-0 backdrop-blur-xl bg-[#020617]/80 border-t border-slate-700/10 p-5 md:p-6 flex justify-center">
+      {/* Mobile keeps the immersive bottom-safe-area CTA. */}
+      <div className="shrink-0 md:hidden backdrop-blur-xl bg-[#020617]/80 border-t border-slate-700/10 p-5 flex justify-center">
         <button
           onClick={dismiss}
           className="w-full max-w-[400px] h-16 bg-[#B7FF1A] hover:bg-[#A2F000] active:scale-[0.98] transition-all rounded-full flex items-center justify-center gap-3 cursor-pointer"

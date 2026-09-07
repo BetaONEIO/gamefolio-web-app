@@ -261,11 +261,11 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
         </DialogTrigger>
       )}
       <DialogContent
-        className="p-0 border-[#1B2A33] bg-[#0B1218] w-[calc(100vw-2rem)] max-w-[384px] sm:max-w-[560px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh] flex flex-col"
+        className="p-0 border-border bg-popover w-[calc(100vw-2rem)] max-w-[384px] sm:max-w-[560px] rounded-3xl overflow-hidden shadow-2xl gap-0 [&>button]:hidden max-h-[90vh] flex flex-col"
         aria-describedby="clip-share-description"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#1B2A33]/50 shrink-0">
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-border shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <ShareLaunchIcon size={18} className="text-[#B7FF1A] shrink-0" />
             <span className="text-[#F5F7F2] text-base font-bold truncate">
@@ -307,7 +307,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
               {/* Thumbnail — smaller on mobile to keep modal compact */}
               <div className="flex justify-center">
                 <div
-                  className={`relative bg-[#101923] rounded-xl overflow-hidden border border-[#1B2A33]/80 ${
+                  className={`relative bg-card rounded-xl overflow-hidden border border-border ${
                     contentType === 'reel' || shareData.videoType === 'reel'
                       ? 'w-28 sm:w-48 aspect-[9/16]'
                       : 'w-full max-h-[140px] sm:max-h-[260px] aspect-video'
@@ -317,7 +317,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                   {!isScreenshot && (
                     <div className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none">
                       <div className="w-9 h-9 bg-white/90 rounded-full flex items-center justify-center">
-                        <div className="w-0 h-0 border-l-[6px] border-l-[#0B1218] border-y-[4px] border-y-transparent ml-0.5" />
+                        <div className="w-0 h-0 border-l-[6px] border-l-background border-y-[4px] border-y-transparent ml-0.5" />
                       </div>
                     </div>
                   )}
@@ -330,7 +330,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                   {`${label.charAt(0).toUpperCase()}${label.slice(1)} Link`}
                 </span>
                 <div className="flex gap-2">
-                  <div className="flex-1 min-w-0 bg-[#1B2A33] border border-[#2d3f55] rounded-xl px-3 py-2.5 overflow-hidden">
+                  <div className="flex-1 min-w-0 bg-secondary border border-border rounded-xl px-3 py-2.5 overflow-hidden">
                     <span className="text-[#B8C0AE] text-xs font-mono truncate block">
                       {shareData.clipUrl}
                     </span>
@@ -381,7 +381,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                         <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border flex items-center justify-center transition-colors ${
                           isSelected
                             ? 'border-[#B7FF1A] bg-[#B7FF1A]/20'
-                            : 'border-[#B7FF1A]/30 bg-[#1B2A33] hover:border-[#B7FF1A] hover:bg-[#B7FF1A]/10'
+                            : 'border-[#B7FF1A]/30 bg-secondary hover:border-[#B7FF1A] hover:bg-[#B7FF1A]/10'
                         }`}>
                           <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors ${isSelected ? 'text-[#B7FF1A]' : 'text-[#F5F7F2] hover:text-[#B7FF1A]'}`} />
                         </div>

@@ -114,12 +114,12 @@ export default function WalletHomepage({
   };
 
   const shortenAddress = (address: string) => {
-    if (!address) return "0x86d2...a4cf";
+    if (!address) return "Address unavailable";
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
   return (
-    <div className="w-full min-h-screen pb-24 font-['Plus_Jakarta_Sans']" style={{ background: '#0B1218' }}>
+    <div className="w-full min-h-screen pb-[calc(var(--mobile-nav-height,3.5rem)+1.5rem+env(safe-area-inset-bottom,0px))] md:pb-8 font-['Plus_Jakarta_Sans']" style={{ background: '#0B1218' }}>
       {/* Header Section with Gradient */}
       <div 
         className="w-full"
@@ -478,7 +478,7 @@ export default function WalletHomepage({
                     className="font-mono text-xs sm:text-sm font-medium break-all"
                     style={{ color: '#F5F7F2', fontFamily: 'JetBrains Mono, monospace' }}
                   >
-                    {walletAddress || "0x86d2...a4cf"}
+                    {walletAddress ? shortenAddress(walletAddress) : "Address unavailable"}
                   </span>
                 </div>
                 <button

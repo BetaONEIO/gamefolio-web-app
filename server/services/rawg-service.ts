@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Game, insertGameSchema } from '@shared/schema';
+import { Game } from '@shared/schema';
 import { db } from '../db';
 import { games } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
@@ -93,16 +93,9 @@ export class RAWGService {
 
       return mappedGames;
     } catch (error) {
-      console.error('Error searching games:', error);
-      
-      // Log more detailed error information for debugging
-      if (axios.isAxiosError(error)) {
-        console.error('API error details:', {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data
-        });
-      }
+      console.error(
+        `RAWG game search failed${axios.isAxiosError(error) ? ` (HTTP ${error.response?.status ?? 'unknown'})` : ''}`
+      );
       
       // Return any local games we can find as fallback
       return db.select()
@@ -131,7 +124,6 @@ export class RAWGService {
   
   async getTrendingGames(limit: number = 10): Promise<Game[]> {
     try {
-      console.log('RAWG API Key:', this.apiKey.substring(0, 4) + '...');
       console.log('Fetching trending games from RAWG API...');
       
       // Directly fetch from RAWG API regardless of database content
@@ -161,16 +153,9 @@ export class RAWGService {
       
       return mappedGames;
     } catch (error) {
-      console.error('Error fetching trending games from RAWG API:', error);
-      
-      // Log more detailed error information
-      if (axios.isAxiosError(error)) {
-        console.error('Axios error details:', {
-          status: error.response?.status,
-          statusText: error.response?.statusText,
-          data: error.response?.data
-        });
-      }
+      console.error(
+        `RAWG popular games request failed${axios.isAxiosError(error) ? ` (HTTP ${error.response?.status ?? 'unknown'})` : ''}`
+      );
       
       // Return whatever games we have in the database as fallback
       return db.select().from(games).limit(limit);

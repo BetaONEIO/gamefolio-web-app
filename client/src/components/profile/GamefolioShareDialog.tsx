@@ -80,9 +80,10 @@ interface GamefolioShareDialogProps {
     activeProfilePicType?: string | null;
   };
   userStats?: {
-    clips?: number;
+    xp?: number;
+    views?: number;
+    uploads?: number;
     followers?: number;
-    following?: number;
   };
   favoriteGames?: Array<{
     id: number;
@@ -397,18 +398,26 @@ export function GamefolioShareDialog({
                   )}
 
                   {/* Stats */}
-                  <div className="flex items-center gap-4 border-t border-[#1B2A33]/30 mt-3 pt-3">
-                    <div className="flex items-center gap-1">
-                      <span className="text-[#F5F7F2] text-lg font-bold leading-7">{userStats?.clips || 0}</span>
-                      <span className="text-[#B8C0AE] text-xs leading-4">Clips</span>
+                  <div className="grid grid-cols-4 gap-3 border-t border-[#1B2A33]/30 mt-3 pt-3">
+                    <div className="text-center">
+                      <span className="text-[#F5F7F2] text-lg font-bold leading-7 block">
+                        {userStats?.xp || 0}
+                      </span>
+                      <span className="text-[#B8C0AE] text-xs leading-4">XP</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[#F5F7F2] text-lg font-bold leading-7">{userStats?.followers || 0}</span>
+                    <div className="text-center">
+                      <span className="text-[#F5F7F2] text-lg font-bold leading-7 block">
+                        {userStats?.views || 0}
+                      </span>
+                      <span className="text-[#B8C0AE] text-xs leading-4">Views</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-[#F5F7F2] text-lg font-bold leading-7 block">{userStats?.uploads || 0}</span>
+                      <span className="text-[#B8C0AE] text-xs leading-4">Uploads</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-[#F5F7F2] text-lg font-bold leading-7 block">{userStats?.followers || 0}</span>
                       <span className="text-[#B8C0AE] text-xs leading-4">Followers</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-[#F5F7F2] text-lg font-bold leading-7">{userStats?.following || 0}</span>
-                      <span className="text-[#B8C0AE] text-xs leading-4">Following</span>
                     </div>
                   </div>
                 </div>

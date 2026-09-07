@@ -1,39 +1,18 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect, useId } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { getQueryFn, queryClient } from "@/lib/queryClient";
-import { Loader2, ImagePlus, X, CropIcon, Upload } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useSignedUrl } from "@/hooks/use-signed-url";
+import { Loader2, ImagePlus, X, CropIcon, Upload, ArrowUpRight, Edit3 } from "lucide-react";
+import { SiEpicgames, SiItchdotio, SiSteam } from "react-icons/si";
+import { publicUrl } from "@/lib/platform";
 import { NEON } from "./constants";
+import { GamePlatformBadges, GameSocialBadges, GamefolioPlatformButton } from "@/components/indie/GameProfileBadges";
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 
-const ALL_PROFILE_FIELDS = [
-  "gameName", "shortDescription", "headerImageUrl", "steamUrl", "epicUrl", "itchUrl",
-  "fullDescription", "releaseDate", "studioName", "genres", "tags", "platforms",
-  "capsuleImageUrl", "trailerUrl", "screenshotUrls", "keyFeatures",
-  "websiteUrl", "twitterUrl", "discordUrl", "ageRating", "supportedLanguages",
-];
-
-const PROFILE_STEPS: { field: string; label: string; pct: number }[] = [
-  { field: "trailerUrl",       label: "Upload a trailer",      pct: 5 },
-  { field: "steamUrl",         label: "Add Steam Store URL",   pct: 3 },
-  { field: "fullDescription",  label: "Write full description", pct: 3 },
-  { field: "releaseDate",      label: "Set release date",      pct: 3 },
-  { field: "screenshotUrls",   label: "Add screenshots",       pct: 2 },
-  { field: "genres",           label: "Select genres",         pct: 2 },
-  { field: "tags",             label: "Add tags",              pct: 2 },
-  { field: "platforms",        label: "Set platforms",         pct: 2 },
-];
-
 const BANNER_ASPECT = 16 / 9;
-
-function isFieldFilled(profile: any, field: string) {
-  if (!profile) return false;
-  const v = profile[field];
-  if (v === null || v === undefined || v === "") return false;
-  if (Array.isArray(v) && v.length === 0) return false;
-  return true;
-}
+const CAPSULE_ASPECT = 3 / 4;
 
 function getCroppedBlob(image: HTMLImageElement, crop: PixelCrop): Promise<Blob> {
   const canvas = document.createElement("canvas");
@@ -53,9 +32,9 @@ function getCroppedBlob(image: HTMLImageElement, crop: PixelCrop): Promise<Blob>
   });
 }
 
-function makeInitialCrop(imgWidth: number, imgHeight: number): Crop {
+function makeInitialCrop(imgWidth: number, imgHeight: number, aspect: number): Crop {
   return centerCrop(
-    makeAspectCrop({ unit: "%", width: 90 }, BANNER_ASPECT, imgWidth, imgHeight),
+    makeAspectCrop({ unit: "%", width: 90 }, aspect, imgWidth, imgHeight),
     imgWidth, imgHeight,
   );
 }
@@ -66,17 +45,63 @@ interface CropModalProps {
   onConfirm: (blob: Blob) => void;
   onCancel: () => void;
   isUploading: boolean;
+  aspect: number;
+  title: string;
+  aspectLabel: string;
+  confirmLabel: string;
 }
 
-function BannerCropModal({ src, onConfirm, onCancel, isUploading }: CropModalProps) {
+function ImageCropModal({
+  src,
+  onConfirm,
+  onCancel,
+  isUploading,
+  aspect,
+  title,
+  aspectLabel,
+  confirmLabel,
+}: CropModalProps) {
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const imgRef = useRef<HTMLImageElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isUploading) {
+        onCancel();
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+      ));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocus?.focus();
+    };
+  }, [isUploading, onCancel]);
 
   const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
     const { width, height } = e.currentTarget;
-    setCrop(makeInitialCrop(width, height));
-  }, []);
+    setCrop(makeInitialCrop(width, height, aspect));
+  }, [aspect]);
 
   const handleConfirm = async () => {
     if (!imgRef.current || !completedCrop) return;
@@ -87,23 +112,24 @@ function BannerCropModal({ src, onConfirm, onCancel, isUploading }: CropModalPro
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.88)", backdropFilter: "blur(6px)" }}>
-      <div className="flex flex-col gap-4 w-full max-w-2xl"
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId}
+        className="flex flex-col gap-4 w-full max-w-2xl"
         style={{ background: "#0d1117", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 16, padding: 24 }}>
 
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CropIcon className="w-4 h-4" style={{ color: NEON }} />
-            <span className="text-sm font-black text-white">Crop Banner Image</span>
+            <span id={titleId} className="text-sm font-black text-white">{title}</span>
           </div>
-          <button onClick={onCancel} disabled={isUploading}
+          <button ref={closeButtonRef} onClick={onCancel} disabled={isUploading} aria-label={`Close ${title}`}
             className="rounded-lg p-1.5 transition-colors hover:bg-white/10">
             <X className="w-4 h-4 text-white/50" />
           </button>
         </div>
 
         <p className="text-[11px] text-white/40 -mt-2">
-          Drag to reposition · Resize handles to adjust · 16:9 aspect ratio
+          Drag to reposition · Resize handles to adjust · {aspectLabel} aspect ratio
         </p>
 
         {/* Cropper */}
@@ -113,7 +139,7 @@ function BannerCropModal({ src, onConfirm, onCancel, isUploading }: CropModalPro
             crop={crop}
             onChange={c => setCrop(c)}
             onComplete={c => setCompletedCrop(c)}
-            aspect={BANNER_ASPECT}
+            aspect={aspect}
             minWidth={120}>
             <img
               ref={imgRef}
@@ -140,7 +166,7 @@ function BannerCropModal({ src, onConfirm, onCancel, isUploading }: CropModalPro
               opacity: !completedCrop ? 0.5 : 1,
             }}>
             {isUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-            {isUploading ? "Uploading…" : "Upload Banner"}
+            {isUploading ? "Uploading…" : confirmLabel}
           </button>
         </div>
       </div>
@@ -149,49 +175,72 @@ function BannerCropModal({ src, onConfirm, onCancel, isUploading }: CropModalPro
 }
 
 // ── Main banner component ───────────────────────────────────────────────────────
-export default function GameHeroBanner() {
+export default function GameHeroBanner({
+  gameId,
+  onGoTo,
+  onEditProfile,
+}: {
+  gameId?: number;
+  onGoTo?: (field: string) => void;
+  onEditProfile?: () => void;
+}) {
   const { user } = useAuth();
   const [imgError, setImgError] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [capsuleCropSrc, setCapsuleCropSrc] = useState<string | null>(null);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
+  const [localCapsulePreview, setLocalCapsulePreview] = useState<string | null>(null);
   const artworkInputRef = useRef<HTMLInputElement>(null);
+  const capsuleInputRef = useRef<HTMLInputElement>(null);
 
   const uploadMutation = useMutation({
-    mutationFn: async (blob: Blob) => {
+    mutationFn: async ({ blob, field, gameId }: { blob: Blob; field: "headerImageUrl" | "capsuleImageUrl"; gameId?: number }) => {
       const fd = new FormData();
-      fd.append("image", blob, "banner.jpg");
-      fd.append("field", "headerImageUrl");
+      fd.append("image", blob, field === "headerImageUrl" ? "banner.jpg" : "capsule.jpg");
+      fd.append("field", field);
+      if (gameId) fd.append("gameId", String(gameId));
       const res = await fetch("/api/indie/profile/upload-image", { method: "POST", body: fd });
       if (!res.ok) throw new Error("Upload failed");
       return res.json() as Promise<{ url: string; field: string }>;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       setImgError(false);
       setCropSrc(null);
-      // Replace local blob preview with the real server URL
-      setLocalPreview(data.url);
+      // Replace the local blob preview with the real server URL
+      if (variables.field === "headerImageUrl") {
+        setLocalPreview(data.url);
+        setCropSrc(null);
+      } else {
+        setLocalCapsulePreview(data.url);
+        setCapsuleCropSrc(null);
+      }
+      queryClient.setQueryData(["/api/indie/profile", variables.gameId ?? null], (cached: any) => ({
+        ...(cached ?? {}),
+        profile: { ...(cached?.profile ?? {}), [variables.field]: data.url },
+      }));
       queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
     },
     onError: () => {
-      setCropSrc(null);
       setLocalPreview(null);
+      setLocalCapsulePreview(null);
+      setCropSrc(null);
+      setCapsuleCropSrc(null);
     },
   });
 
   const { data: profileData } = useQuery<any>({
-    queryKey: ["/api/indie/profile"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+    queryKey: ["/api/indie/profile", gameId ?? null],
+    queryFn: () => apiRequest("GET", `/api/indie/profile${gameId ? `?gameId=${gameId}` : ""}`).then(r => r.json()),
   });
 
   const profile = profileData?.profile ?? null;
-  const allFilled = ALL_PROFILE_FIELDS.filter((f) => isFieldFilled(profile, f)).length;
-  const profilePct = Math.round((allFilled / ALL_PROFILE_FIELDS.length) * 100);
-  const nextSteps = PROFILE_STEPS.filter((s) => !isFieldFilled(profile, s.field)).slice(0, 3);
 
   // Use local optimistic preview first, then server data, then fallback
   const serverBannerUrl = !imgError ? (profile?.headerImageUrl || profile?.capsuleImageUrl || null) : null;
   const bannerUrl = localPreview ?? serverBannerUrl;
-  const capsuleUrl = profile?.capsuleImageUrl ?? null;
+  const capsuleUrl = localCapsulePreview ?? profile?.capsuleImageUrl ?? null;
+  const { signedUrl: displayBannerUrl } = useSignedUrl(bannerUrl);
+  const { signedUrl: displayCapsuleUrl } = useSignedUrl(capsuleUrl);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -208,98 +257,156 @@ export default function GameHeroBanner() {
     // Show optimistic preview immediately
     const previewUrl = URL.createObjectURL(blob);
     setLocalPreview(previewUrl);
-    uploadMutation.mutate(blob);
+    uploadMutation.mutate({ blob, field: "headerImageUrl", gameId: profile?.id ?? gameId });
   };
 
-  const handleCropCancel = () => {
+  const handleCapsuleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (capsuleCropSrc) URL.revokeObjectURL(capsuleCropSrc);
+    setCapsuleCropSrc(URL.createObjectURL(file));
+    setImgError(false);
+    e.target.value = "";
+  };
+
+  const handleBannerCropCancel = () => {
     if (cropSrc) URL.revokeObjectURL(cropSrc);
     setCropSrc(null);
+  };
+
+  const handleCapsuleCropConfirm = (blob: Blob) => {
+    if (capsuleCropSrc) URL.revokeObjectURL(capsuleCropSrc);
+    setCapsuleCropSrc(null);
+    setLocalCapsulePreview(URL.createObjectURL(blob));
+    uploadMutation.mutate({ blob, field: "capsuleImageUrl", gameId: profile?.id ?? gameId });
+  };
+
+  const handleCapsuleCropCancel = () => {
+    if (capsuleCropSrc) URL.revokeObjectURL(capsuleCropSrc);
+    setCapsuleCropSrc(null);
   };
 
   return (
     <>
       {/* ── Crop modal ─────────────────────────────────────────────────── */}
       {cropSrc && (
-        <BannerCropModal
+        <ImageCropModal
           src={cropSrc}
           onConfirm={handleCropConfirm}
-          onCancel={handleCropCancel}
+          onCancel={handleBannerCropCancel}
           isUploading={uploadMutation.isPending}
+          aspect={BANNER_ASPECT}
+          title="Crop Banner Image"
+          aspectLabel="16:9"
+          confirmLabel="Upload Banner"
+        />
+      )}
+      {capsuleCropSrc && (
+        <ImageCropModal
+          src={capsuleCropSrc}
+          onConfirm={handleCapsuleCropConfirm}
+          onCancel={handleCapsuleCropCancel}
+          isUploading={uploadMutation.isPending}
+          aspect={CAPSULE_ASPECT}
+          title="Crop Game Icon"
+          aspectLabel="3:4"
+          confirmLabel="Upload Game Icon"
         />
       )}
 
-      <div className="relative w-full overflow-hidden min-h-[420px] sm:min-h-[560px] md:min-h-[640px]"
-        style={{ background: "#0a0f14" }}>
+      <div className="relative w-full overflow-hidden" style={{ background: "#0a0f14" }}>
+        {/* Banner artwork stays visually separate from the game identity section below. */}
+        <div className="relative h-[300px] sm:h-[420px] md:h-[520px]">
+          {displayBannerUrl && (
+            <img src={displayBannerUrl} alt=""
+              className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
+              onError={() => { setImgError(true); setLocalPreview(null); }} />
+          )}
 
-        {/* Background banner image — full width, no rounding */}
-        {bannerUrl && (
-          <img src={bannerUrl} alt=""
-            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
-            onError={() => { setImgError(true); setLocalPreview(null); }} />
-        )}
+          <div className="absolute inset-0"
+            style={{ background: "linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.35) 100%)" }} />
+          <div className="absolute inset-0"
+            style={{ background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, transparent 50%)" }} />
 
-        {/* Dark gradient overlays */}
-        <div className="absolute inset-0"
-          style={{ background: "linear-gradient(90deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.35) 100%)" }} />
-        <div className="absolute inset-0"
-          style={{ background: "linear-gradient(to top, rgba(0,0,0,0.92) 0%, transparent 50%)" }} />
+          <button
+            onClick={() => artworkInputRef.current?.click()}
+            disabled={uploadMutation.isPending}
+            className="absolute top-5 right-5 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all backdrop-blur-md"
+            style={{ background: "rgba(0,0,0,0.45)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}>
+            {uploadMutation.isPending
+              ? <Loader2 className="w-3 h-3 animate-spin" />
+              : <ImagePlus className="w-3 h-3" />}
+            {uploadMutation.isPending ? "Uploading…" : "Change Banner"}
+          </button>
 
-        {/* Neon bottom border */}
-        <div className="absolute bottom-0 left-0 right-0 h-0.5"
-          style={{ background: "rgba(183,255,24,0.25)" }} />
-
-        {/* Change banner button */}
-        <button
-          onClick={() => artworkInputRef.current?.click()}
-          disabled={uploadMutation.isPending}
-          className="absolute top-5 right-5 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all backdrop-blur-md"
-          style={{ background: "rgba(0,0,0,0.45)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}>
-          {uploadMutation.isPending
-            ? <Loader2 className="w-3 h-3 animate-spin" />
-            : <ImagePlus className="w-3 h-3" />}
-          {uploadMutation.isPending ? "Uploading…" : "Change Banner"}
-        </button>
-
-        {/* Upload indicator overlay */}
-        {uploadMutation.isPending && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl backdrop-blur-md"
-              style={{ background: "rgba(0,0,0,0.6)", border: "1px solid rgba(183,255,24,0.25)" }}>
-              <Loader2 className="w-4 h-4 animate-spin" style={{ color: NEON }} />
-              <span className="text-xs font-bold" style={{ color: NEON }}>Uploading banner…</span>
+          {uploadMutation.isPending && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl backdrop-blur-md"
+                style={{ background: "rgba(0,0,0,0.6)", border: "1px solid rgba(183,255,24,0.25)" }}>
+                <Loader2 className="w-4 h-4 animate-spin" style={{ color: NEON }} />
+                <span className="text-xs font-bold" style={{ color: NEON }}>Uploading banner…</span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <input
           ref={artworkInputRef}
           type="file" accept="image/*" className="hidden"
           onChange={handleFileChange}
         />
+        <input
+          ref={capsuleInputRef}
+          type="file" accept="image/*" className="hidden"
+          onChange={handleCapsuleFileChange}
+        />
 
-        {/* Hero content */}
-        <div className="relative z-10 max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center min-h-[420px] sm:min-h-[560px] md:min-h-[640px]">
-          <div className="flex flex-col lg:flex-row lg:items-end gap-8 py-10">
+        {/* Game identity section — intentionally below the banner, with a larger icon. */}
+        <div className="relative z-10 border-t border-white/10">
+          <div className="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-7">
+              <button
+                type="button"
+                onClick={() => capsuleInputRef.current?.click()}
+                disabled={uploadMutation.isPending}
+                aria-label={displayCapsuleUrl ? "Change game icon" : "Upload game icon"}
+                className="group relative w-36 sm:w-44 md:w-48 aspect-[3/4] shrink-0 rounded-xl overflow-hidden shadow-2xl disabled:cursor-wait"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: displayCapsuleUrl ? "1px solid rgba(255,255,255,0.10)" : "1px dashed rgba(255,255,255,0.12)",
+                }}>
+                {displayCapsuleUrl ? (
+                  <img src={displayCapsuleUrl} alt="Game icon" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="w-full h-full flex flex-col items-center justify-center gap-2">
+                    <ImagePlus className="w-8 h-8 text-white/25" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/35">Upload icon</span>
+                  </span>
+                )}
+                {displayCapsuleUrl && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-[10px] font-bold uppercase tracking-wider text-white opacity-0 transition-opacity group-hover:opacity-100">
+                    Change icon
+                  </span>
+                )}
+                {uploadMutation.isPending && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/60">
+                    <Loader2 className="w-6 h-6 animate-spin" style={{ color: NEON }} />
+                  </span>
+                )}
+              </button>
 
-            {/* LEFT — Capsule + game info */}
-            <div className="flex items-end gap-5 flex-1 min-w-0">
-              {/* Capsule image */}
-              {capsuleUrl ? (
-                <div className="shrink-0 rounded-lg overflow-hidden shadow-2xl"
-                  style={{ width: 128, aspectRatio: "3/4", border: "1px solid rgba(255,255,255,0.10)" }}>
-                  <img src={capsuleUrl} alt="" className="w-full h-full object-cover" />
-                </div>
-              ) : (
-                <div className="shrink-0 rounded-lg flex items-center justify-center"
-                  style={{ width: 128, aspectRatio: "3/4", background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(255,255,255,0.12)" }}>
-                  <ImagePlus className="w-6 h-6 text-white/15" />
-                </div>
-              )}
-
-              <div className="min-w-0 pb-1">
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight mb-3 drop-shadow-lg">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white leading-tight mb-2">
                   {profile?.gameName ?? "Your Game"}
                 </h2>
+                {(profile?.shortDescription || profile?.fullDescription) && (
+                  <p className="mb-3 max-w-3xl text-sm leading-relaxed text-white/60 line-clamp-2 sm:text-base">
+                    {profile.shortDescription || profile.fullDescription}
+                  </p>
+                )}
+                <div className="mb-4">
+                  <GamePlatformBadges platforms={profile?.platforms} />
+                </div>
                 <div className="flex flex-wrap items-center gap-3 mb-5">
                   {profile?.releaseStatus && (
                     <span className="text-[11px] font-bold px-2.5 py-1 rounded uppercase tracking-wider"
@@ -307,34 +414,40 @@ export default function GameHeroBanner() {
                       {profile.releaseStatus.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
                     </span>
                   )}
-                  {profile?.platforms?.[0] && (
-                    <span className="text-[11px] text-white/40">{profile.platforms[0]}</span>
-                  )}
-                  {profile?.studioName && (
-                    <span className="text-[11px] text-white/40">{profile.studioName}</span>
-                  )}
+                  {profile?.studioName && <span className="text-[11px] text-white/40">{profile.studioName}</span>}
                 </div>
 
-                {/* Profile Strength */}
-                <div className="mb-5 max-w-sm">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">Profile Strength</span>
-                    <span className="text-[11px] font-black"
-                      style={{ color: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171" }}>
-                      {profilePct}%
-                    </span>
-                  </div>
-                  <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.10)" }}>
-                    <div className="h-full rounded-full transition-all duration-700"
-                      style={{ width: `${profilePct}%`,
-                        background: profilePct >= 80 ? NEON : profilePct >= 50 ? "#f59e0b" : "#f87171" }} />
-                  </div>
-                  {profilePct < 100 && nextSteps.length > 0 && (
-                    <p className="text-[10px] mt-1.5 text-white/30">
-                      Next: {nextSteps[0].label} <span style={{ color: NEON }}>+{nextSteps[0].pct}%</span>
-                    </p>
-                  )}
-                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                   {onEditProfile && (
+                     <button type="button" onClick={onEditProfile}
+                       className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-black transition-all hover:brightness-110"
+                       style={{ background: NEON, color: "#071000" }}>
+                       <Edit3 className="h-3 w-3" /> Edit game profile
+                     </button>
+                   )}
+                   {user?.username && profile?.id && (
+                     <a href={publicUrl(`/studio/${encodeURIComponent(user.username)}?gameId=${profile.id}`)}
+                       target="_blank" rel="noreferrer"
+                       className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-black text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                       style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                       View public page <ArrowUpRight className="h-3 w-3" />
+                     </a>
+                   )}
+                 </div>
+                 {(profile?.steamUrl || profile?.epicUrl || profile?.itchUrl) && (
+                   <div className="mt-4 flex flex-wrap gap-2">
+                     {profile?.steamUrl && (
+                       <GamefolioPlatformButton Icon={SiSteam} label="Steam" href={profile.steamUrl} />
+                     )}
+                     {profile?.epicUrl && (
+                       <GamefolioPlatformButton Icon={SiEpicgames} label="Epic Games" href={profile.epicUrl} />
+                     )}
+                     {profile?.itchUrl && (
+                       <GamefolioPlatformButton Icon={SiItchdotio} label="itch.io" href={profile.itchUrl} />
+                     )}
+                   </div>
+                 )}
+                 <GameSocialBadges links={profile ?? {}} className="mt-2" />
               </div>
             </div>
           </div>

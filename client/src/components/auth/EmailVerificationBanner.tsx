@@ -110,7 +110,7 @@ export function EmailVerificationBanner({ onDismiss, className }: EmailVerificat
           onClick={() => setLocation(`/verify-code?from=${encodeURIComponent(location)}`)}
           variant="outline"
           size="sm"
-          className="flex-1 sm:flex-none min-w-0 bg-[#0B1218] border-[#B7FF1A] text-white hover:bg-[#101923] hover:text-white hover:border-[#B7FF1A] disabled:opacity-50"
+          className="flex-1 sm:flex-none min-w-0 bg-card border-[#B7FF1A] text-white hover:bg-secondary hover:text-white hover:border-[#B7FF1A] disabled:opacity-50"
         >
           Enter Code
         </Button>
@@ -120,7 +120,7 @@ export function EmailVerificationBanner({ onDismiss, className }: EmailVerificat
           disabled={isResending || !canResend}
           variant="outline"
           size="sm"
-          className="flex-1 sm:flex-none min-w-0 bg-[#0B1218] border-[#B7FF1A] text-white hover:bg-[#101923] hover:text-white hover:border-[#B7FF1A] disabled:opacity-50"
+          className="flex-1 sm:flex-none min-w-0 bg-card border-[#B7FF1A] text-white hover:bg-secondary hover:text-white hover:border-[#B7FF1A] disabled:opacity-50"
         >
           {isResending ? "Sending..." : !canResend ? `Wait ${cooldownTime}s` : "Resend Code"}
         </Button>

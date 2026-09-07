@@ -7,20 +7,20 @@ import {
   Calendar, BarChart3, Gamepad2, FileText, Play, Eye,
   Edit3, Film, Flag, Plus,
 } from "lucide-react";
-import { NEON, CARD_BG, CARD_BORDER } from "./constants";
+import { NEON, CARD_BG, CARD_BORDER, DASHBOARD_THEME, rgbaAccent } from "./constants";
 
 const STATUS_CONFIG: Record<string, {
   label: string; color: string; bg: string; icon: any; filter: FilterTab;
 }> = {
   draft:             { label: "Draft",          color: "#94a3b8", bg: "rgba(148,163,184,0.12)", icon: FileText,    filter: "draft" },
-  awaiting_review:   { label: "In Review",       color: "#f59e0b", bg: "rgba(245,158,11,0.12)", icon: Clock,       filter: "draft" },
-  changes_requested: { label: "Changes Needed",  color: "#f97316", bg: "rgba(249,115,22,0.12)", icon: AlertCircle, filter: "draft" },
-  approved:          { label: "Approved",        color: "#4ade80", bg: "rgba(74,222,128,0.12)", icon: CheckCircle, filter: "scheduled" },
-  scheduled:         { label: "Scheduled",       color: "#60a5fa", bg: "rgba(96,165,250,0.12)", icon: Calendar,    filter: "scheduled" },
+  awaiting_review:   { label: "In Review",       color: DASHBOARD_THEME.warning, bg: `${DASHBOARD_THEME.warning}1f`, icon: Clock,       filter: "draft" },
+  changes_requested: { label: "Changes Needed",  color: DASHBOARD_THEME.warning, bg: `${DASHBOARD_THEME.warning}1f`, icon: AlertCircle, filter: "draft" },
+  approved:          { label: "Approved",        color: DASHBOARD_THEME.success, bg: rgbaAccent(0.12), icon: CheckCircle, filter: "scheduled" },
+  scheduled:         { label: "Scheduled",       color: DASHBOARD_THEME.info, bg: `${DASHBOARD_THEME.info}1f`, icon: Calendar,    filter: "scheduled" },
   live:              { label: "Live",            color: NEON,      bg: "rgba(183,255,24,0.12)", icon: Target,      filter: "active" },
   paused:            { label: "Paused",          color: "#94a3b8", bg: "rgba(148,163,184,0.12)", icon: Pause,      filter: "active" },
-  completed:         { label: "Completed",       color: "#4ade80", bg: "rgba(74,222,128,0.12)", icon: CheckCircle, filter: "completed" },
-  cancelled:         { label: "Cancelled",       color: "#f87171", bg: "rgba(248,113,113,0.12)", icon: XCircle,    filter: "completed" },
+  completed:         { label: "Completed",       color: DASHBOARD_THEME.success, bg: rgbaAccent(0.12), icon: CheckCircle, filter: "completed" },
+  cancelled:         { label: "Cancelled",       color: DASHBOARD_THEME.danger, bg: `${DASHBOARD_THEME.danger}1f`, icon: XCircle,    filter: "completed" },
 };
 
 type FilterTab = "all" | "active" | "scheduled" | "draft" | "completed";
@@ -219,8 +219,8 @@ function CampaignCard({ campaign }: { campaign: any }) {
         {/* Changes requested banner */}
         {campaign.status === "changes_requested" && campaign.rejection_reason && (
           <div className="rounded-lg px-3 py-2.5 text-[11px]"
-            style={{ background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.25)" }}>
-            <div className="font-bold text-orange-400 mb-0.5 flex items-center gap-1.5">
+             style={{ background: `${DASHBOARD_THEME.warning}14`, border: `1px solid ${DASHBOARD_THEME.warning}40` }}>
+            <div className="font-bold mb-0.5 flex items-center gap-1.5" style={{ color: DASHBOARD_THEME.warning }}>
               <AlertCircle size={10} /> Changes Requested
             </div>
             <div className="text-white/48">{campaign.rejection_reason}</div>

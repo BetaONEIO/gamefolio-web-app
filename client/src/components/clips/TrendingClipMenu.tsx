@@ -513,7 +513,7 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
             <DrawerPrimitive.Portal>
               <DrawerPrimitive.Overlay className="fixed inset-0 z-[9999] bg-black/60" />
               <DrawerPrimitive.Content
-                className="fixed inset-x-0 bottom-0 z-[9999] flex flex-col rounded-t-2xl bg-[#0B1218] border-t border-white/10 outline-none"
+                className="fixed inset-x-0 bottom-0 z-[9999] flex flex-col rounded-t-2xl bg-popover border-t border-border outline-none"
               >
                 <DrawerPrimitive.Title className="sr-only">{menuLabel}</DrawerPrimitive.Title>
                 {/* Drag handle */}
@@ -536,7 +536,7 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
           <PopoverContent
             align="end"
             sideOffset={6}
-            className="w-52 p-0 bg-[#0B1218] border border-white/10 shadow-2xl rounded-xl overflow-hidden"
+            className="w-52 p-0 bg-popover border border-border shadow-2xl rounded-xl overflow-hidden"
           >
             {menuContent}
           </PopoverContent>
@@ -546,7 +546,7 @@ export function TrendingClipMenu({ clip, onHide, contentType = 'clip', screensho
       {/* Edit Caption dialog */}
       <Dialog open={showEditCaption} onOpenChange={setShowEditCaption}>
         <DialogContent
-          className="bg-[#0B1218] border border-white/10 text-foreground sm:max-w-md"
+          className="bg-popover border border-border text-foreground sm:max-w-md"
           onClick={(e) => e.stopPropagation()}
         >
           <DialogHeader>

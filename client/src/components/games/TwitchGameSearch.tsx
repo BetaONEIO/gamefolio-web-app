@@ -56,9 +56,9 @@ const TwitchGameSearch = ({
     data: topGames, 
     isLoading: isTopGamesLoading 
   } = useQuery<TwitchGame[]>({
-    queryKey: ['/api/twitch/games/top'],
+    queryKey: ['/api/game-catalog/top'],
     queryFn: async () => {
-      const response = await fetch('/api/twitch/games/top');
+      const response = await fetch('/api/game-catalog/top');
       if (!response.ok) throw new Error("Failed to fetch top games");
       return await response.json();
     },
@@ -70,9 +70,9 @@ const TwitchGameSearch = ({
     data: searchResults, 
     isLoading: isSearchLoading 
   } = useQuery<TwitchGame[]>({
-    queryKey: ['/api/twitch/games/search', debouncedQuery],
+    queryKey: ['/api/game-catalog/search', debouncedQuery],
     queryFn: async () => {
-      const response = await fetch(`/api/twitch/games/search?q=${encodeURIComponent(debouncedQuery)}`);
+      const response = await fetch(`/api/game-catalog/search?q=${encodeURIComponent(debouncedQuery)}`);
       if (!response.ok) throw new Error("Failed to search games");
       return await response.json();
     },
