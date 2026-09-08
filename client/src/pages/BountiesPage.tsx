@@ -104,6 +104,7 @@ function CompactObjectiveRow({
   progress = 0,
   isBonus = false,
   interactive = false,
+  flat = false,
   done = false,
   status,
   onClick,
@@ -116,6 +117,7 @@ function CompactObjectiveRow({
   progress?: number;
   isBonus?: boolean;
   interactive?: boolean;
+  flat?: boolean;
   done?: boolean;
   status?: string;
   onClick?: () => void;
@@ -123,7 +125,7 @@ function CompactObjectiveRow({
   const Icon = CONTENT_TYPE_ICON[contentType] ?? Target;
   const accent = done ? "#4ade80" : isBonus ? "rgba(255,255,255,0.42)" : NEON;
   const clampedProgress = Math.min(progress, quantity);
-  const rowClass = `relative w-full rounded-xl p-4 flex items-center gap-3 sm:gap-4 text-left transition-colors ${interactive ? "cursor-pointer hover:bg-white/[0.055]" : ""}`;
+  const rowClass = `relative w-full ${flat ? "rounded-sm px-1 py-4 sm:px-2" : "rounded-xl p-4"} flex items-center gap-3 sm:gap-4 text-left transition-colors ${interactive ? "cursor-pointer hover:bg-white/[0.035]" : ""}`;
 
   return (
     <div
@@ -132,14 +134,16 @@ function CompactObjectiveRow({
       onClick={interactive ? onClick : undefined}
       onKeyDown={interactive ? e => { if (e.key === "Enter" || e.key === " ") onClick?.(); } : undefined}
       className={rowClass}
-      style={{
+      style={flat ? {
+        opacity: isBonus && !done ? 0.9 : 1,
+      } : {
         background: done ? "rgba(74,222,128,0.045)" : isBonus ? "rgba(255,255,255,0.025)" : CARD_BG,
         border: `1px solid ${done ? "rgba(74,222,128,0.22)" : "rgba(255,255,255,0.09)"}`,
         opacity: isBonus && !done ? 0.82 : 1,
       }}
     >
-      <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-        style={{ background: done ? "rgba(74,222,128,0.12)" : "rgba(184,255,27,0.08)", color: accent }}>
+      <div className={`${flat ? "w-7 h-7" : "w-9 h-9 rounded-lg"} flex items-center justify-center flex-shrink-0`}
+        style={{ background: flat ? "transparent" : done ? "rgba(74,222,128,0.12)" : "rgba(184,255,27,0.08)", color: accent }}>
         {done ? <Check size={16} strokeWidth={3} /> : <Icon size={16} />}
       </div>
 
@@ -149,7 +153,7 @@ function CompactObjectiveRow({
           {status && <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full" style={{ color: done ? "#4ade80" : NEON, background: done ? "rgba(74,222,128,0.10)" : "rgba(184,255,27,0.08)" }}>{status}</span>}
         </div>
         <div className="text-[11px] text-white/40 truncate mt-1">{description}</div>
-        {interactive && (
+        {interactive && !flat && (
           <div className="h-1.5 rounded-full overflow-hidden mt-2 max-w-sm" style={{ background: "rgba(255,255,255,0.07)" }}>
             <div className="h-full rounded-full transition-all duration-500" style={{ width: `${quantity > 0 ? (clampedProgress / quantity) * 100 : 0}%`, background: done ? "#4ade80" : NEON }} />
           </div>
@@ -1982,7 +1986,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     const rowStatus = subStatusCfg?.label ?? (done ? "Completed" : submitted > 0 ? "In Progress" : "Not Started");
 
     return (
-      <div key={b.id} className="rounded-xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${done ? "rgba(74,222,128,0.3)" : CARD_BORDER}` }}>
+      <div key={b.id} className="overflow-hidden border-b border-white/[0.08] last:border-b-0">
         <CompactObjectiveRow
           title={objectiveLabel(b)}
           description={objectiveDescription(b)}
@@ -1991,6 +1995,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           quantity={qty}
           progress={visibleProgress}
           interactive
+          flat
           isBonus={isBonus}
           done={done}
           status={isBonus && !done ? undefined : rowStatus}
@@ -1998,7 +2003,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         />
 
         {isExpanded && (
-          <div className="px-3 pb-3 border-t border-white/5 pt-3 space-y-3">
+          <div className="px-1 sm:px-10 pb-5 border-t border-white/[0.06] pt-4 space-y-4">
             {b.description && <div className="text-xs text-white/50">{b.description}</div>}
 
             {subs.length > 0 && (
@@ -2007,7 +2012,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 {subs.map((submission: any, index: number) => {
                   const submissionCfg = STATUS_CONFIG[submission.status] ?? { label: submission.status, color: "#94a3b8", bg: "" };
                   return (
-                    <div key={index} className="flex items-center gap-2 rounded-lg p-2" style={{ background: "rgba(255,255,255,0.03)" }}>
+                    <div key={index} className="flex items-center gap-2 py-2 border-b border-white/[0.05] last:border-b-0">
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: submissionCfg.color, background: submissionCfg.bg }}>{submissionCfg.label}</span>
                       {submission.content_url && <a href={submission.content_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-white/40 hover:text-white truncate max-w-[160px]">{submission.content_url}</a>}
                       {submission.review_notes && <div className="text-[10px] text-orange-400 ml-auto">{submission.review_notes}</div>}
@@ -2048,7 +2053,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                           })}
                         </div>
                       ) : (
-                        <div className="rounded-lg p-3 text-xs text-white/45" style={{ background: "rgba(255,255,255,0.035)" }}>
+                        <div className="py-3 text-xs text-white/45">
                           No matching Gamefolio content yet.
                         </div>
                       )}
@@ -2089,8 +2094,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               ) : (
                 <button
                   onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); }}
-                  className="w-full py-2 rounded-lg text-sm font-black transition-all hover:brightness-110"
-                  style={{ background: "rgba(183,255,24,0.1)", color: NEON, border: "1px solid rgba(183,255,24,0.2)" }}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-black transition-all hover:brightness-110"
+                  style={{ background: NEON, color: "#070b10" }}
                 >
                   Submit Content
                 </button>
@@ -2170,12 +2175,12 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         </section>
 
         {/* Mission progress and next action */}
-        <section className="rounded-xl p-4 sm:p-5 mt-4" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-          <div className="flex items-center justify-between gap-4 mb-2">
+        <section className="mt-7 pb-7 border-b border-white/[0.08]">
+          <div className="flex items-center justify-between gap-4 mb-3">
             <div className="text-xs font-black uppercase tracking-[0.16em] text-white/65">Mission Progress</div>
             <div className="text-sm font-black tabular-nums" style={{ color: pct >= 100 ? "#4ade80" : NEON }}>{progressUnits} / {requiredUnits}</div>
           </div>
-          <div className="h-2 rounded-full overflow-hidden" style={{ background: "#1b2231" }}>
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#252938" }}>
             <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: pct >= 100 ? "#4ade80" : NEON }} />
           </div>
           {nextObjectiveTitle && pct < 100 && (
@@ -2184,8 +2189,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 const nextBounty = mandatory.find((b: any) => Number(b.approved_count ?? 0) < Number(b.quantity ?? 1));
                 if (nextBounty) setExpandedBounty(nextBounty.id);
               }}
-              className="w-full flex items-center justify-between gap-4 mt-3 rounded-lg px-3 py-2.5 text-left hover:bg-white/[0.04] transition-colors"
-              style={{ background: "rgba(184,255,27,0.055)", border: "1px solid rgba(184,255,27,0.13)" }}
+              className="w-full flex items-center justify-between gap-4 mt-5 rounded-sm px-1 py-2.5 text-left hover:bg-white/[0.03] transition-colors"
             >
               <div>
                 <div className="text-[9px] font-black uppercase tracking-widest" style={{ color: NEON }}>Next Objective</div>
@@ -2196,12 +2200,12 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           )}
         </section>
 
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-5 lg:gap-6 mt-5 items-start">
-          <main className="space-y-6 min-w-0">
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-8 lg:gap-10 mt-8 items-start">
+          <main className="space-y-8 min-w-0">
 
         {/* Required objectives */}
         {mandatory.length > 0 && (
-          <div className="space-y-2">
+          <section>
             <div className="flex items-center justify-between gap-3">
               <div className="text-xs font-black uppercase tracking-wider text-white/55">Required Objectives</div>
               <div className="text-[11px] font-black tabular-nums text-white/40">{approvedCount} / {mandatory.length}</div>
@@ -2222,7 +2226,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               const rowStatus = subStatusCfg?.label ?? (done ? "Completed" : submitted > 0 ? "Submitted" : "Not Started");
 
               return (
-                <div key={b.id} className="rounded-xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${done ? "rgba(74,222,128,0.3)" : CARD_BORDER}` }}>
+                <div key={b.id} className="overflow-hidden border-b border-white/[0.08] last:border-b-0">
                   <CompactObjectiveRow
                     title={objectiveLabel(b)}
                     description={objectiveDescription(b)}
@@ -2231,13 +2235,14 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                     quantity={qty}
                     progress={visibleProgress}
                     interactive
+                    flat
                     done={done}
                     status={rowStatus}
                     onClick={() => setExpandedBounty(isExpanded ? null : b.id)}
                   />
 
                   {isExpanded && (
-                    <div className="px-3 pb-3 border-t border-white/05 pt-3 space-y-3">
+                    <div className="px-1 sm:px-10 pb-5 border-t border-white/[0.06] pt-4 space-y-4">
                       {b.description && <div className="text-xs text-white/50">{b.description}</div>}
 
                       {/* Submission history */}
@@ -2247,7 +2252,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                           {subs.map((s: any, i: number) => {
                             const sCfg = STATUS_CONFIG[s.status] ?? { label: s.status, color: "#94a3b8", bg: "" };
                             return (
-                              <div key={i} className="flex items-center gap-2 rounded-lg p-2" style={{ background: "rgba(255,255,255,0.03)" }}>
+                              <div key={i} className="flex items-center gap-2 py-2 border-b border-white/[0.05] last:border-b-0">
                                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: sCfg.color, background: sCfg.bg }}>{sCfg.label}</span>
                                 {s.content_url && <a href={s.content_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-white/40 hover:text-white truncate max-w-[160px]">{s.content_url}</a>}
                                 {s.review_notes && <div className="text-[10px] text-orange-400 ml-auto">{s.review_notes}</div>}
@@ -2289,7 +2294,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                                     })}
                                   </div>
                                 ) : (
-                                  <div className="rounded-lg p-3 text-xs text-white/45" style={{ background: "rgba(255,255,255,0.035)" }}>
+                                  <div className="py-3 text-xs text-white/45">
                                     No matching Gamefolio content yet.
                                   </div>
                                 )}
@@ -2329,8 +2334,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                         ) : (
                           <button
                             onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); }}
-                            className="w-full py-2 rounded-lg text-sm font-black transition-all hover:brightness-110"
-                            style={{ background: "rgba(183,255,24,0.1)", color: NEON, border: `1px solid rgba(183,255,24,0.2)` }}>
+                            className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-black transition-all hover:brightness-110"
+                            style={{ background: NEON, color: "#070b10" }}>
                             Submit Content
                           </button>
                         )
@@ -2340,33 +2345,33 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 </div>
               );
             })}
-          </div>
+          </section>
         )}
 
         {/* Optional objectives */}
         {optional.length > 0 && (
-          <div className="space-y-2">
+          <section>
             <div className="flex items-center justify-between gap-3">
-              <div className="text-xs font-black uppercase tracking-wider text-white/38">Optional Objectives</div>
-              <div className="text-[11px] font-black tabular-nums text-white/30">{completedOptional} / {optional.length}</div>
+              <div className="text-xs font-black uppercase tracking-wider text-white/55">Optional Objectives</div>
+              <div className="text-[11px] font-black tabular-nums text-white/40">{completedOptional} / {optional.length}</div>
             </div>
             {optional.map((b: any) => renderObjective(b, true))}
-          </div>
+          </section>
         )}
 
             {/* Campaign details, collapsed by default */}
-            <section className="rounded-xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+            <section className="border-y border-white/[0.08]">
               <button
                 type="button"
                 onClick={() => setShowDetails(value => !value)}
                 aria-expanded={showDetails}
-                className="w-full flex items-center justify-between gap-4 px-4 py-3.5 text-left hover:bg-white/[0.03] transition-colors"
+                className="w-full flex items-center justify-between gap-4 px-1 py-4 text-left hover:bg-white/[0.025] transition-colors"
               >
                 <span className="text-xs font-black uppercase tracking-wider text-white/60">Campaign Details</span>
                 <ChevronDown size={16} className={`text-white/40 transition-transform ${showDetails ? "rotate-180" : ""}`} />
               </button>
               {showDetails && (
-                <div className="px-4 pb-4 pt-1 grid sm:grid-cols-2 gap-x-6 gap-y-4 border-t border-white/5">
+                <div className="px-1 pb-5 pt-5 grid sm:grid-cols-2 gap-x-8 gap-y-5 border-t border-white/[0.06]">
                   {data.description && (
                     <div className="sm:col-span-2">
                       <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Campaign</div>
@@ -2386,9 +2391,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                   {contentRequirements.length > 0 && (
                     <div className="sm:col-span-2">
                       <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1.5">Content Requirements</div>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1.5">
                         {contentRequirements.map(requirement => (
-                          <span key={requirement} className="text-[10px] font-bold text-white/58 rounded-md px-2 py-1" style={{ background: "rgba(255,255,255,0.05)" }}>
+                          <span key={requirement} className="inline-flex items-center gap-1.5 text-[10px] font-bold text-white/58">
+                            <span className="w-1 h-1 rounded-full" style={{ background: NEON }} />
                             {requirement}
                           </span>
                         ))}
