@@ -33,6 +33,7 @@ const CONTENT_TYPE_LABEL: Record<string, string> = {
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   active:                  { label: "In Progress",             color: "#60a5fa", bg: "rgba(96,165,250,0.12)" },
   under_review:            { label: "Under Review",             color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
+  pending:                 { label: "Submitted for Review",     color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
   enrolled:               { label: "Joined",                  color: "#94a3b8", bg: "rgba(148,163,184,0.12)" },
   demo_key_claimed:       { label: "Demo Key Claimed",        color: NEON,      bg: "rgba(183,255,24,0.12)" },
   in_progress:            { label: "In Progress",             color: "#60a5fa", bg: "rgba(96,165,250,0.12)" },
@@ -140,7 +141,6 @@ function CompactObjectiveRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="text-sm font-black text-white leading-tight">{title}</div>
-          {isBonus && <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full" style={{ color: "rgba(255,255,255,0.52)", background: "rgba(255,255,255,0.07)" }}>Bonus</span>}
           {status && <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full" style={{ color: done ? "#4ade80" : NEON, background: done ? "rgba(74,222,128,0.10)" : "rgba(184,255,27,0.08)" }}>{status}</span>}
         </div>
         <div className="text-[11px] text-white/40 truncate mt-1">{description}</div>
@@ -285,6 +285,60 @@ function campaignRewardSummary(campaign: any) {
   }
   if (rewards.length === 0 && completionDescription) {
     rewards.push({ icon: Gift, label: completionDescription, tone: "rgba(255,255,255,0.68)" });
+  }
+  return rewards;
+}
+
+function missionRewardItems(campaign: any, bounties: any[], complete: boolean) {
+  const completionDescription = String(campaign.completion_reward_description ?? "");
+  const gft = completionDescription.match(/([\d,]+)\s*GFT/i)?.[1];
+  const awardedXp = bounties.reduce((total: number, bounty: any) => {
+    const submissions = Array.isArray(bounty.submissions) ? bounty.submissions : [];
+    return total + submissions.reduce((sum: number, submission: any) =>
+      sum + (submission.status === "approved" ? Number(submission.xp_awarded ?? 0) : 0), 0);
+  }, 0);
+  const configuredXp = Number(campaign.total_campaign_xp ?? 0);
+  const rewards: { icon: any; label: string; state: string; tone: string }[] = [];
+
+  if (campaign.demo_key_id || campaign.demo_key_value) {
+    rewards.push({
+      icon: Key,
+      label: "Demo Key",
+      state: campaign.demo_key_value ? "Claimed" : "Unlocked",
+      tone: NEON,
+    });
+  }
+  if (configuredXp > 0) {
+    rewards.push({
+      icon: Zap,
+      label: `${configuredXp.toLocaleString()} XP`,
+      state: `${Math.min(awardedXp, configuredXp).toLocaleString()}/${configuredXp.toLocaleString()} earned`,
+      tone: NEON,
+    });
+  }
+  if (gft) {
+    rewards.push({
+      icon: Trophy,
+      label: `${gft} GFT`,
+      state: complete ? "Earned" : "Complete required objectives",
+      tone: "#fbbf24",
+    });
+  }
+  if (campaign.completion_reward === "full_game_key" || /full[- ]game/i.test(completionDescription)) {
+    rewards.push({
+      icon: Gift,
+      label: "Full Game",
+      state: campaign.full_key_value ? "Claimed" : complete ? "Unlocked" : "Complete required objectives",
+      tone: campaign.full_key_value ? "#4ade80" : "#a78bfa",
+    });
+  }
+  if (campaign.completion_reward === "xp_badge" || /badge/i.test(completionDescription)) {
+    rewards.push({
+      icon: Star,
+      label: "Profile Badge",
+      state: complete ? "Earned" : "Complete required objectives",
+      tone: "#60a5fa",
+    });
   }
   return rewards;
 }
@@ -1833,6 +1887,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const [submitting, setSubmitting] = useState<number | null>(null);
   const [submitUrl, setSubmitUrl] = useState("");
   const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   const { data: progress, isLoading } = useQuery<any>({
     queryKey: ["/api/bounties/my", cp.instance_id],
@@ -1911,106 +1966,238 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const statusCfg = STATUS_CONFIG[data.journey_status ?? data.participant_status] ?? STATUS_CONFIG.enrolled;
   const allApproved = requiredUnits > 0 && approvedUnits >= requiredUnits;
   const canClaimFull = allApproved && !data.full_key_value;
+  const deadlineLabel = campaignDeadlineLabel(data);
+  const deadlineUrgency = campaignDeadlineUrgency(data);
+  const missionRewards = missionRewardItems(data, bounties, allApproved);
+  const completedOptional = optional.filter((b: any) => Number(b.approved_count ?? 0) >= Number(b.quantity ?? 1)).length;
+  const contentRequirements = bountyRequirements(bounties);
+
+  const renderObjective = (b: any, isBonus = false) => {
+    const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
+    const approved = Number(b.approved_count ?? 0);
+    const submitted = Number(b.submitted_count ?? 0);
+    const qty = Number(b.quantity ?? 1);
+    const done = approved >= qty;
+    const visibleProgress = Math.max(approved, submitted);
+    const subs: any[] = b.submissions ?? [];
+    const lastSub = subs[0];
+    const isExpanded = expandedBounty === b.id;
+    const isSubmitting = submitting === b.id;
+    const subStatusCfg = lastSub ? (STATUS_CONFIG[lastSub.status] ?? { label: lastSub.status, color: "#94a3b8", bg: "" }) : null;
+    const rowStatus = subStatusCfg?.label ?? (done ? "Completed" : submitted > 0 ? "In Progress" : "Not Started");
+
+    return (
+      <div key={b.id} className="rounded-xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${done ? "rgba(74,222,128,0.3)" : CARD_BORDER}` }}>
+        <CompactObjectiveRow
+          title={objectiveLabel(b)}
+          description={objectiveDescription(b)}
+          contentType={b.content_type}
+          xp={Number(b.xp_reward ?? 0)}
+          quantity={qty}
+          progress={visibleProgress}
+          interactive
+          isBonus={isBonus}
+          done={done}
+          status={isBonus && !done ? undefined : rowStatus}
+          onClick={() => setExpandedBounty(isExpanded ? null : b.id)}
+        />
+
+        {isExpanded && (
+          <div className="px-3 pb-3 border-t border-white/5 pt-3 space-y-3">
+            {b.description && <div className="text-xs text-white/50">{b.description}</div>}
+
+            {subs.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-white/30">Submissions</div>
+                {subs.map((submission: any, index: number) => {
+                  const submissionCfg = STATUS_CONFIG[submission.status] ?? { label: submission.status, color: "#94a3b8", bg: "" };
+                  return (
+                    <div key={index} className="flex items-center gap-2 rounded-lg p-2" style={{ background: "rgba(255,255,255,0.03)" }}>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: submissionCfg.color, background: submissionCfg.bg }}>{submissionCfg.label}</span>
+                      {submission.content_url && <a href={submission.content_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-white/40 hover:text-white truncate max-w-[160px]">{submission.content_url}</a>}
+                      {submission.review_notes && <div className="text-[10px] text-orange-400 ml-auto">{submission.review_notes}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {!done && (
+              isSubmitting ? (
+                <div className="space-y-2">
+                  {["clip", "reel", "screenshot"].includes(b.content_type) ? (
+                    <>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-white/35">Select from Gamefolio</div>
+                      {pickerLoading ? (
+                        <div className="flex items-center justify-center py-5"><Loader2 size={16} className="animate-spin text-white/35" /></div>
+                      ) : (pickerData?.items ?? []).length > 0 ? (
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-52 overflow-y-auto pr-1">
+                          {(pickerData?.items ?? []).map((item: any) => {
+                            const selected = selectedContentId === item.id;
+                            return (
+                              <button
+                                type="button"
+                                key={item.id}
+                                onClick={() => setSelectedContentId(selected ? null : item.id)}
+                                className="relative rounded-lg overflow-hidden aspect-video text-left"
+                                style={{ border: selected ? `2px solid ${NEON}` : "1px solid rgba(255,255,255,0.10)" }}
+                              >
+                                {item.thumbnailUrl ? (
+                                  <img src={item.thumbnailUrl} alt={item.title ?? "Gamefolio content"} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-white/5"><Icon size={16} className="text-white/35" /></div>
+                                )}
+                                {selected && <div className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: NEON }}><Check size={11} color="#070b10" strokeWidth={3} /></div>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="rounded-lg p-3 text-xs text-white/45" style={{ background: "rgba(255,255,255,0.035)" }}>
+                          No matching Gamefolio content yet.
+                        </div>
+                      )}
+                      <a href="/upload" className="inline-flex items-center gap-1.5 text-xs font-black" style={{ color: NEON }}>
+                        <Upload size={12} /> Upload new content
+                      </a>
+                    </>
+                  ) : (
+                    <input
+                      value={submitUrl}
+                      onChange={e => setSubmitUrl(e.target.value)}
+                      placeholder={b.content_type === "feedback" || b.content_type === "bug" ? "Enter your response or paste a supporting link" : "Paste content URL or Gamefolio link"}
+                      className="w-full px-3 py-2 rounded-lg text-sm text-white bg-black/30 border border-white/10 focus:border-white/30 outline-none"
+                    />
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        const body: Record<string, unknown> = { contentType: b.content_type };
+                        if (b.content_type === "clip") body.clipId = selectedContentId;
+                        else if (b.content_type === "reel") body.reelId = selectedContentId;
+                        else if (b.content_type === "screenshot") body.screenshotId = selectedContentId;
+                        else body.contentUrl = submitUrl.trim();
+                        submitMutation.mutate({ bountyId: b.id, body });
+                      }}
+                      disabled={(["clip", "reel", "screenshot"].includes(b.content_type) ? !selectedContentId : !submitUrl.trim()) || submitMutation.isPending}
+                      className="flex-1 py-2 rounded-lg text-sm font-black transition-all hover:brightness-110 disabled:opacity-50"
+                      style={{ background: NEON, color: "#070b10" }}
+                    >
+                      {submitMutation.isPending ? <Loader2 size={14} className="animate-spin mx-auto" /> : "Submit"}
+                    </button>
+                    <button onClick={() => { setSubmitting(null); setSubmitUrl(""); setSelectedContentId(null); }}
+                      className="px-4 py-2 rounded-lg text-sm text-white/50 border border-white/10 hover:text-white">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); }}
+                  className="w-full py-2 rounded-lg text-sm font-black transition-all hover:brightness-110"
+                  style={{ background: "rgba(183,255,24,0.1)", color: NEON, border: "1px solid rgba(183,255,24,0.2)" }}
+                >
+                  Submit Content
+                </button>
+              )
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div className="min-h-screen pb-24 sm:pb-8" style={{ background: PAGE_BG }}>
-      <button onClick={onBack} className="flex items-center gap-2 p-4 text-white/50 hover:text-white transition-colors text-sm font-bold">
-        <ChevronLeft size={16} /> Back to My Campaigns
-      </button>
+    <div className="min-h-screen pb-24 sm:pb-10" style={{ background: "#0F101B" }}>
+      <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
+        <button onClick={onBack} className="flex items-center gap-2 py-4 text-white/50 hover:text-white transition-colors text-sm font-bold">
+          <ChevronLeft size={16} /> Back to My Campaigns
+        </button>
 
-      {/* Campaign header */}
-      <div className="relative h-36 overflow-hidden">
-        {data.game_artwork_url ? (
-          <img src={data.game_artwork_url} alt="" className="w-full h-full object-cover opacity-30" />
-        ) : (
-          <div className="w-full h-full" style={{ background: "rgba(183,255,24,0.04)" }} />
-        )}
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #070b10 0%, transparent 60%)" }} />
-        <div className="absolute bottom-4 left-4">
-          <div className="text-white/40 text-[11px] font-bold">{data.game_name}</div>
-          <div className="text-xl font-black text-white">{data.template_name ?? cp.template_name}</div>
-          <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full mt-1"
-            style={{ color: statusCfg.color, background: statusCfg.bg }}>
-            {statusCfg.label}
-          </span>
-        </div>
-      </div>
+        {/* Compact game and campaign hero */}
+        <section className="relative min-h-[250px] overflow-hidden rounded-2xl" style={{ border: `1px solid ${CARD_BORDER}`, background: CARD_BG }}>
+          <FeaturedHeroBackground campaign={data} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(15,16,27,0.98) 0%, rgba(15,16,27,0.88) 42%, rgba(15,16,27,0.38) 76%, rgba(15,16,27,0.20) 100%)" }} />
+          <div className="absolute inset-0 sm:hidden" style={{ background: "rgba(15,16,27,0.28)" }} />
 
-      <div className="px-4 pb-8 space-y-4 max-w-2xl mx-auto">
-        {/* Progress bar */}
-        <div className="rounded-xl p-4" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-sm font-black text-white">Mission Progress</div>
-            <div className="text-sm font-black" style={{ color: NEON }}>{progressUnits}/{requiredUnits}</div>
+          <div className="relative z-10 min-h-[250px] flex flex-col justify-end p-5 sm:p-7 max-w-3xl">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full"
+                style={{ color: "#070b10", background: NEON }}>
+                <ShieldCheck size={10} /> GF Verified
+              </span>
+              <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-full"
+                style={{ color: statusCfg.color, background: statusCfg.bg }}>
+                {statusCfg.label}
+              </span>
+            </div>
+
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/45">Game</div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">{data.game_name || "Gamefolio"}</h1>
+            <div className="text-sm sm:text-base font-black mt-1" style={{ color: NEON }}>{data.template_name ?? cp.template_name}</div>
+            {data.description && <p className="text-xs sm:text-sm text-white/58 mt-2 max-w-2xl line-clamp-2">{data.description}</p>}
+
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-[11px] font-bold text-white/55">
+              <span>Joined</span>
+              <span aria-hidden="true">·</span>
+              <span className={deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : ""}>{deadlineLabel}</span>
+            </div>
+
+            {missionRewards.length > 0 && (
+              <div className="mt-4">
+                <div className="text-[9px] font-black uppercase tracking-[0.18em] text-white/40 mb-2">Your Rewards</div>
+                <div className="flex flex-wrap gap-2">
+                  {missionRewards.map(({ icon: RewardIcon, label, state, tone }) => (
+                    <div key={label} className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[10px] font-bold"
+                      style={{ background: "rgba(15,16,27,0.78)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                      <RewardIcon size={13} style={{ color: tone }} />
+                      <span className="text-white/85">{label}</span>
+                      <span className="text-white/38 uppercase text-[8px]">{state}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Mission progress and next action */}
+        <section className="rounded-xl p-4 sm:p-5 mt-4" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+          <div className="flex items-center justify-between gap-4 mb-2">
+            <div className="text-xs font-black uppercase tracking-[0.16em] text-white/65">Mission Progress</div>
+            <div className="text-sm font-black tabular-nums" style={{ color: pct >= 100 ? "#4ade80" : NEON }}>{progressUnits} / {requiredUnits}</div>
+          </div>
+          <div className="h-2 rounded-full overflow-hidden" style={{ background: "#1b2231" }}>
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: pct >= 100 ? "#4ade80" : NEON }} />
           </div>
           {nextObjectiveTitle && pct < 100 && (
-            <div className="mt-3 rounded-xl px-3 py-2.5" style={{ background: "rgba(184,255,27,0.08)", border: "1px solid rgba(184,255,27,0.15)" }}>
-              <div className="text-[9px] font-black uppercase tracking-widest" style={{ color: NEON }}>Next Objective</div>
-              <div className="text-sm font-black text-white mt-1">{nextObjectiveTitle}</div>
-            </div>
+            <button
+              onClick={() => {
+                const nextBounty = mandatory.find((b: any) => Number(b.approved_count ?? 0) < Number(b.quantity ?? 1));
+                if (nextBounty) setExpandedBounty(nextBounty.id);
+              }}
+              className="w-full flex items-center justify-between gap-4 mt-3 rounded-lg px-3 py-2.5 text-left hover:bg-white/[0.04] transition-colors"
+              style={{ background: "rgba(184,255,27,0.055)", border: "1px solid rgba(184,255,27,0.13)" }}
+            >
+              <div>
+                <div className="text-[9px] font-black uppercase tracking-widest" style={{ color: NEON }}>Next Objective</div>
+                <div className="text-sm font-black text-white mt-0.5">{nextObjectiveTitle}</div>
+              </div>
+              <ChevronRight size={16} style={{ color: NEON }} />
+            </button>
           )}
-          <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
-            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: NEON }} />
-          </div>
-          {data.deadline && (
-            <div className="text-[11px] text-white/40 mt-2 flex items-center gap-1">
-              <Clock size={10} /> Deadline: {new Date(data.deadline).toLocaleDateString()}
-            </div>
-          )}
-        </div>
+        </section>
 
-        {/* Demo Key */}
-        {data.demo_key_value && (
-          <div className="rounded-xl p-4" style={{ background: "rgba(183,255,24,0.06)", border: "1px solid rgba(183,255,24,0.2)" }}>
-            <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: NEON }}>Your Demo Key</div>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 font-mono text-sm text-white bg-black/30 rounded-lg px-3 py-2 break-all">{data.demo_key_value}</div>
-              <button onClick={() => copyKey(data.demo_key_value, setCopiedDemo)}
-                className="p-2 rounded-lg transition-colors hover:bg-white/10">
-                {copiedDemo ? <Check size={16} color={NEON} /> : <Copy size={16} className="text-white/60" />}
-              </button>
-              {data.game_steam_app_id && (
-                <a href={`https://store.steampowered.com/app/${data.game_steam_app_id}`} target="_blank" rel="noopener noreferrer"
-                  className="p-2 rounded-lg hover:bg-white/10 transition-colors">
-                  <SiSteam size={16} className="text-white/60" />
-                </a>
-              )}
-            </div>
-          </div>
-        )}
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-5 lg:gap-6 mt-5 items-start">
+          <main className="space-y-6 min-w-0">
 
-        {/* Full Key or CTA */}
-        {data.full_key_value ? (
-          <div className="rounded-xl p-4" style={{ background: "rgba(74,222,128,0.06)", border: "1px solid rgba(74,222,128,0.2)" }}>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-green-400 mb-2">Full-Game Key Earned!</div>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 font-mono text-sm text-white bg-black/30 rounded-lg px-3 py-2 break-all">{data.full_key_value}</div>
-              <button onClick={() => copyKey(data.full_key_value, setCopiedFull)}
-                className="p-2 rounded-lg transition-colors hover:bg-white/10">
-                {copiedFull ? <Check size={16} className="text-green-400" /> : <Copy size={16} className="text-white/60" />}
-              </button>
-            </div>
-          </div>
-        ) : canClaimFull ? (
-          <button
-            onClick={() => claimFullMutation.mutate()}
-            disabled={claimFullMutation.isPending}
-            className="w-full py-3.5 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110"
-            style={{ background: "#4ade80", color: "#052e16" }}
-          >
-            {claimFullMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Gift size={16} />}
-            Claim Your Full-Game Key
-          </button>
-        ) : allApproved ? (
-          <div className="rounded-xl p-3 text-center text-sm text-white/50" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-            All bounties approved — claim your full-game key above
-          </div>
-        ) : null}
-
-        {/* Mandatory Bounties */}
+        {/* Required objectives */}
         {mandatory.length > 0 && (
           <div className="space-y-2">
-            <div className="text-xs font-bold uppercase tracking-wider text-white/40">Required Bounties</div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-xs font-black uppercase tracking-wider text-white/55">Required Objectives</div>
+              <div className="text-[11px] font-black tabular-nums text-white/40">{approvedCount} / {mandatory.length}</div>
+            </div>
             {mandatory.map((b: any) => {
               const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
               const approved = Number(b.approved_count ?? 0);
@@ -2148,31 +2335,165 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           </div>
         )}
 
-        {/* Optional */}
+        {/* Optional objectives */}
         {optional.length > 0 && (
           <div className="space-y-2">
-            <div className="text-xs font-bold uppercase tracking-wider text-white/40">Optional Bounties</div>
-            {optional.map((b: any) => {
-              const approved = Number(b.approved_count ?? 0);
-              const qty = Number(b.quantity ?? 1);
-              const done = approved >= qty;
-              return (
-                <CompactObjectiveRow
-                  key={b.id}
-                  title={objectiveLabel(b)}
-                  description={objectiveDescription(b)}
-                  contentType={b.content_type}
-                  xp={Number(b.xp_reward ?? 0)}
-                  quantity={qty}
-                  progress={approved}
-                  isBonus
-                  done={done}
-                  status={done ? "Completed" : "Optional"}
-                />
-              );
-            })}
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-xs font-black uppercase tracking-wider text-white/38">Optional Objectives</div>
+              <div className="text-[11px] font-black tabular-nums text-white/30">{completedOptional} / {optional.length}</div>
+            </div>
+            {optional.map((b: any) => renderObjective(b, true))}
           </div>
         )}
+
+            {/* Campaign details, collapsed by default */}
+            <section className="rounded-xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+              <button
+                type="button"
+                onClick={() => setShowDetails(value => !value)}
+                aria-expanded={showDetails}
+                className="w-full flex items-center justify-between gap-4 px-4 py-3.5 text-left hover:bg-white/[0.03] transition-colors"
+              >
+                <span className="text-xs font-black uppercase tracking-wider text-white/60">Campaign Details</span>
+                <ChevronDown size={16} className={`text-white/40 transition-transform ${showDetails ? "rotate-180" : ""}`} />
+              </button>
+              {showDetails && (
+                <div className="px-4 pb-4 pt-1 grid sm:grid-cols-2 gap-x-6 gap-y-4 border-t border-white/5">
+                  {data.description && (
+                    <div className="sm:col-span-2">
+                      <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Campaign</div>
+                      <p className="text-xs leading-relaxed text-white/55">{data.description}</p>
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Game</div>
+                    <div className="text-xs font-bold text-white/70">{data.game_name || "Gamefolio"}</div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Deadline</div>
+                    <div className={`text-xs font-bold ${deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : "text-white/70"}`}>
+                      {deadlineLabel}{campaignDeadline(data) ? ` · ${new Date(campaignDeadline(data)).toLocaleDateString()}` : ""}
+                    </div>
+                  </div>
+                  {contentRequirements.length > 0 && (
+                    <div className="sm:col-span-2">
+                      <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1.5">Content Requirements</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {contentRequirements.map(requirement => (
+                          <span key={requirement} className="text-[10px] font-bold text-white/58 rounded-md px-2 py-1" style={{ background: "rgba(255,255,255,0.05)" }}>
+                            {requirement}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Verification</div>
+                    <p className="text-xs leading-relaxed text-white/50">Submitted objectives are reviewed before progress and rewards are approved.</p>
+                  </div>
+                  {data.completion_reward_description && (
+                    <div>
+                      <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Reward Conditions</div>
+                      <p className="text-xs leading-relaxed text-white/50">{data.completion_reward_description}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+          </main>
+
+          {/* Desktop sticky summary; normal-flow reward summary on mobile */}
+          <aside className="lg:sticky lg:top-24">
+            <div className="rounded-xl p-4 space-y-4" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+              <div className="text-xs font-black uppercase tracking-[0.16em] text-white/65">Your Campaign</div>
+
+              <div>
+                <div className="flex items-center justify-between text-[10px] font-bold text-white/38 mb-1.5">
+                  <span>Progress</span>
+                  <span className="tabular-nums text-white/65">{progressUnits} / {requiredUnits} objectives</span>
+                </div>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#1b2231" }}>
+                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct >= 100 ? "#4ade80" : NEON }} />
+                </div>
+              </div>
+
+              {nextObjectiveTitle && pct < 100 && (
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-wider text-white/30">Next</div>
+                  <div className="text-xs font-black text-white/75 mt-1">{nextObjectiveTitle}</div>
+                </div>
+              )}
+
+              {missionRewards.length > 0 && (
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-2">Rewards</div>
+                  <div className="space-y-2">
+                    {missionRewards.map(({ icon: RewardIcon, label, state, tone }) => (
+                      <div key={label} className="flex items-start gap-2">
+                        <RewardIcon size={13} className="mt-0.5 flex-shrink-0" style={{ color: tone }} />
+                        <div className="min-w-0">
+                          <div className="text-[11px] font-black text-white/75">{label}</div>
+                          <div className="text-[9px] leading-snug text-white/35">{state}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/5">
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-wider text-white/30">Deadline</div>
+                  <div className={`text-[11px] font-bold mt-1 ${deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : "text-white/65"}`}>{deadlineLabel}</div>
+                </div>
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-wider text-white/30">Status</div>
+                  <div className="text-[11px] font-bold mt-1" style={{ color: statusCfg.color }}>{statusCfg.label}</div>
+                </div>
+              </div>
+
+              {data.demo_key_value && (
+                <div className="pt-3 border-t border-white/5">
+                  <div className="text-[9px] font-black uppercase tracking-wider mb-2" style={{ color: NEON }}>Demo Key · Claimed</div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="min-w-0 flex-1 font-mono text-[10px] text-white/70 bg-black/25 rounded-md px-2 py-2 truncate">{data.demo_key_value}</div>
+                    <button onClick={() => copyKey(data.demo_key_value, setCopiedDemo)} className="p-2 rounded-md hover:bg-white/5" aria-label="Copy demo key">
+                      {copiedDemo ? <Check size={14} color={NEON} /> : <Copy size={14} className="text-white/45" />}
+                    </button>
+                    {data.game_steam_app_id && (
+                      <a href={`https://store.steampowered.com/app/${data.game_steam_app_id}`} target="_blank" rel="noopener noreferrer"
+                        className="p-2 rounded-md hover:bg-white/5" aria-label="Open game on Steam">
+                        <SiSteam size={14} className="text-white/45" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {data.full_key_value ? (
+                <div className="pt-3 border-t border-white/5">
+                  <div className="text-[9px] font-black uppercase tracking-wider text-green-400 mb-2">Full Game · Claimed</div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="min-w-0 flex-1 font-mono text-[10px] text-white/70 bg-black/25 rounded-md px-2 py-2 truncate">{data.full_key_value}</div>
+                    <button onClick={() => copyKey(data.full_key_value, setCopiedFull)} className="p-2 rounded-md hover:bg-white/5" aria-label="Copy full-game key">
+                      {copiedFull ? <Check size={14} className="text-green-400" /> : <Copy size={14} className="text-white/45" />}
+                    </button>
+                  </div>
+                </div>
+              ) : canClaimFull ? (
+                <button
+                  onClick={() => claimFullMutation.mutate()}
+                  disabled={claimFullMutation.isPending}
+                  className="w-full py-2.5 rounded-lg text-xs font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-50"
+                  style={{ background: "#4ade80", color: "#052e16" }}
+                >
+                  {claimFullMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Gift size={14} />}
+                  Claim Full-Game Key
+                </button>
+              ) : null}
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
   );

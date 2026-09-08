@@ -622,6 +622,8 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
         t.duration,
         t.completion_reward,
         t.completion_reward_description,
+        COALESCE(t.xp_tier, 'standard') AS xp_tier,
+        COALESCE(ci.xp_event_multiplier, 1.0) AS xp_event_multiplier,
         g.image_url AS catalog_game_artwork_url,
         igp.header_image_url AS game_profile_header_artwork_url,
         igp.capsule_image_url AS game_profile_capsule_artwork_url,
@@ -735,6 +737,8 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         t.duration,
         t.completion_reward,
         t.completion_reward_description,
+        COALESCE(t.xp_tier, 'standard') AS xp_tier,
+        COALESCE(ci.xp_event_multiplier, 1.0) AS xp_event_multiplier,
         g.image_url AS catalog_game_artwork_url,
         igp.header_image_url AS game_profile_header_artwork_url,
         igp.capsule_image_url AS game_profile_capsule_artwork_url,
@@ -810,7 +814,15 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         : 'not_started';
       return { ...bounty, required_units: quantity, submitted_units: submitted, approved_units: approved, remaining_units: quantity - approved, submission_status };
     });
-    res.json({ ...participation, bounties: enrichedBounties, ...campaignJourney(participation, enrichedBounties) });
+    const tier = (participation.xp_tier || 'standard') as XPTier;
+    const multiplier = Number(participation.xp_event_multiplier ?? 1.0);
+    res.json({
+      ...participation,
+      bounties: enrichedBounties,
+      total_campaign_xp: computeCampaignTotalXP(tier, multiplier),
+      completion_bonus_xp: computeCompletionBonus(tier, multiplier),
+      ...campaignJourney(participation, enrichedBounties),
+    });
   } catch (err) {
     console.error('GET /api/bounties/my/:instanceId error:', err);
     res.status(500).json({ error: 'Failed to load campaign progress' });
