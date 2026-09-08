@@ -3553,6 +3553,7 @@ const ProfilePage = () => {
                   showLiveOverlay={!!(isStreamer && (profile?.twitchVerified || profile?.kickVerified || (profile as any)?.vpzoneVerified))}
                   isLive={profileLiveStatus?.isLive ?? false}
                   themeColor={avatarThemeColor}
+                  borderImageOverride={isTowerdogTheme ? "/attached_assets/Profile-border-v2.png" : undefined}
                   className="h-full w-full"
                 />
               </div>
@@ -4093,6 +4094,7 @@ const ProfilePage = () => {
                   showLiveOverlay={!!(isStreamer && (profile?.twitchVerified || profile?.kickVerified || (profile as any)?.vpzoneVerified))}
                   isLive={profileLiveStatus?.isLive ?? false}
                   themeColor={avatarThemeColor}
+                   borderImageOverride={isTowerdogTheme ? "/attached_assets/Profile-border-v2.png" : undefined}
                 />
               </div>
               {/* Level Badge with Progress - bottom-right of avatar */}

@@ -389,6 +389,7 @@ interface CustomAvatarProps {
   showLiveOverlay?: boolean;
   isLive?: boolean;
   themeColor?: string;
+  borderImageOverride?: string;
   onNftClick?: (userId: number, tokenId: number, imageUrl: string, event: React.MouseEvent) => void;
   onClick?: (event: React.MouseEvent) => void;
 }
@@ -448,6 +449,7 @@ export const CustomAvatar = ({
   showLiveOverlay = false,
   isLive: isLiveProp,
   themeColor,
+  borderImageOverride,
   onNftClick,
   onClick
 }: CustomAvatarProps) => {
@@ -486,9 +488,10 @@ export const CustomAvatar = ({
   });
 
   const avatarBorder = borderData?.avatarBorder;
-  const hasAvatarBorderOverlay = showAvatarBorderOverlay && !!avatarBorder?.imageUrl;
-  const hasTowerdogBorder = avatarBorder?.sourcePath === "red_blue_pixel_waves";
-  const hasSolidBorder = showAvatarBorderOverlay && (avatarBorder?.id === -1 || effectiveBorderId === -1);
+  const activeBorderImageUrl = borderImageOverride || avatarBorder?.imageUrl;
+  const hasAvatarBorderOverlay = showAvatarBorderOverlay && !!activeBorderImageUrl;
+  const hasTowerdogBorder = !!borderImageOverride || avatarBorder?.sourcePath === "red_blue_pixel_waves";
+  const hasSolidBorder = !borderImageOverride && showAvatarBorderOverlay && (avatarBorder?.id === -1 || effectiveBorderId === -1);
   const rasterBorderCalibration = avatarBorder
     ? getRasterBorderCalibration(avatarBorder)
     : undefined;
@@ -613,7 +616,7 @@ export const CustomAvatar = ({
         
         {/* Border overlay is centred on the same wrapper as the avatar. */}
         <InlineSvgBorder
-          svgUrl={avatarBorder.imageUrl}
+          svgUrl={activeBorderImageUrl!}
           color={borderColor}
           className={`absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full${hasTowerdogBorder ? " towerdog-border-wave-response" : ""}`}
           rasterCalibration={rasterBorderCalibration}
