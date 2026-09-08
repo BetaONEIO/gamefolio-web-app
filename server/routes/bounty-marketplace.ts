@@ -109,6 +109,7 @@ export async function ensureBountyMarketplaceTables() {
   try {
     await run(`ALTER TABLE campaign_instances ALTER COLUMN developer_user_id DROP NOT NULL`);
     await run(`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS gamefolio_managed BOOLEAN DEFAULT false`);
+    await run(`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS game_id INTEGER`);
     await run(`ALTER TABLE campaign_templates ADD COLUMN IF NOT EXISTS gamefolio_managed BOOLEAN DEFAULT false`);
     await run(`ALTER TABLE campaign_template_bounties ADD COLUMN IF NOT EXISTS xp_reward INTEGER DEFAULT 500`);
     await run(`ALTER TABLE campaign_participants ADD COLUMN IF NOT EXISTS deadline TIMESTAMP`);
@@ -328,8 +329,10 @@ router.get('/', async (req, res) => {
       SELECT
         ci.id,
         ci.status,
+        ci.game_id,
         ci.game_name,
         ci.game_artwork_url,
+        ci.artwork_url AS campaign_artwork_url,
         ci.game_steam_app_id,
         ci.game_itch_url,
         ci.game_epic_slug,
@@ -357,6 +360,18 @@ router.get('/', async (req, res) => {
         COALESCE(t.xp_tier, 'standard') AS xp_tier,
         COALESCE(ci.xp_event_multiplier, 1.0) AS xp_event_multiplier,
         COALESCE(ci.gamefolio_managed, false) AS gamefolio_managed,
+        g.image_url AS catalog_game_artwork_url,
+        igp.header_image_url AS game_profile_header_artwork_url,
+        igp.capsule_image_url AS game_profile_capsule_artwork_url,
+        igp.screenshot_urls[1] AS game_profile_screenshot_artwork_url,
+        COALESCE(
+          NULLIF(igp.header_image_url, ''),
+          NULLIF(g.image_url, ''),
+          NULLIF(igp.capsule_image_url, ''),
+          NULLIF(igp.screenshot_urls[1], ''),
+          NULLIF(ci.game_artwork_url, ''),
+          NULLIF(ci.artwork_url, '')
+        ) AS hero_artwork_url,
         (SELECT COUNT(*) FROM campaign_participants cp WHERE cp.instance_id = ci.id) AS participant_count,
         (SELECT cp.status FROM campaign_participants cp
          WHERE cp.instance_id = ci.id AND cp.user_id = ${viewerUserId}
@@ -370,6 +385,8 @@ router.get('/', async (req, res) => {
         (SELECT json_agg(b ORDER BY b.completion_order) FROM campaign_template_bounties b WHERE b.template_id = t.id) AS bounties
       FROM campaign_instances ci
       JOIN campaign_templates t ON t.id = ci.template_id
+      LEFT JOIN games g ON g.id = ci.game_id
+      LEFT JOIN indie_game_profiles igp ON igp.catalog_game_id = g.id AND igp.is_primary = true
       WHERE ${statusCondition}
         AND t.status != 'inactive'
       ORDER BY COALESCE(ci.gamefolio_managed, false) DESC, t.recommended DESC, t.featured DESC, ci.actual_start DESC

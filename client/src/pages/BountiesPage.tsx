@@ -314,6 +314,55 @@ function reqPillLabel(ct: string, qty: number) {
   return ct;
 }
 
+function campaignHeroSources(campaign: any): string[] {
+  return Array.from(new Set([
+    campaign.hero_artwork_url,
+    campaign.game_profile_header_artwork_url,
+    campaign.catalog_game_artwork_url,
+    campaign.game_profile_capsule_artwork_url,
+    campaign.game_profile_screenshot_artwork_url,
+    campaign.game_artwork_url,
+    campaign.artwork_url,
+    campaign.campaign_artwork_url,
+  ].filter((source): source is string => typeof source === "string" && source.trim().length > 0)));
+}
+
+function FeaturedHeroBackground({ campaign }: { campaign: any }) {
+  const sources = campaignHeroSources(campaign);
+  const [sourceIndex, setSourceIndex] = useState(0);
+  const source = sources[sourceIndex] ?? null;
+
+  useEffect(() => {
+    setSourceIndex(0);
+  }, [campaign.id, sources.join("|")]);
+
+  useEffect(() => {
+    if (!source) return;
+    const probe = new Image();
+    probe.onerror = () => {
+      setSourceIndex(current => current === sourceIndex ? current + 1 : current);
+    };
+    probe.src = source;
+    return () => {
+      probe.onload = null;
+      probe.onerror = null;
+    };
+  }, [source, sourceIndex]);
+
+  return (
+    <div
+      className="absolute inset-0 bg-center bg-cover bg-no-repeat transition-[background-image] duration-300"
+      aria-hidden="true"
+      style={{
+        backgroundImage: source
+          ? `url("${source}")`
+          : "linear-gradient(135deg, rgba(184,255,27,0.12) 0%, rgba(7,11,16,1) 100%)",
+        backgroundPosition: "center",
+      }}
+    />
+  );
+}
+
 // ── Campaign card ─────────────────────────────────────────────────────────
 function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => void }) {
   const demoLeft  = Number(campaign.demo_keys_remaining ?? 0);
@@ -480,6 +529,24 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
     return () => clearInterval(t);
   }, [campaigns.length]);
 
+  useEffect(() => {
+    if (campaigns.length < 2) return;
+    const adjacent = [
+      campaigns[(idx + 1) % campaigns.length],
+      campaigns[(idx - 1 + campaigns.length) % campaigns.length],
+    ];
+    const preloads = adjacent.map((adjacentCampaign: any) => {
+      const source = campaignHeroSources(adjacentCampaign)[0];
+      if (!source) return null;
+      const image = new Image();
+      image.src = source;
+      return image;
+    }).filter(Boolean);
+    return () => preloads.forEach(image => {
+      if (image) image.src = "";
+    });
+  }, [campaigns, idx]);
+
   if (campaigns.length === 0) return null;
   const campaign = campaigns[idx];
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
@@ -506,20 +573,17 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
         <div className="relative flex-1 overflow-hidden cursor-pointer group rounded-2xl" style={{ height: 420 }}
           onClick={() => onSelect(campaign)}>
 
-          {/* Background */}
+          {/* Associated game artwork, resolved server-side from the game record */}
           <div className="absolute inset-0 transition-opacity duration-300" style={{ opacity: fading ? 0 : 1 }}>
-            {campaign.game_artwork_url ? (
-              <img src={campaign.game_artwork_url} alt={campaign.game_name}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                style={{ opacity: 0.60 }} />
-            ) : (
-              <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(184,255,27,0.12) 0%, rgba(7,11,16,1) 100%)" }} />
-            )}
+            <FeaturedHeroBackground campaign={campaign} />
+            <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-[1.03]"
+              style={{ background: "rgba(255,255,255,0.02)" }} />
           </div>
 
-          {/* Gradients */}
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #070b10 0%, rgba(7,11,16,0.60) 50%, transparent 100%)" }} />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to right, #070b10 0%, transparent 70%)" }} />
+          {/* Readability overlays: directional on desktop, deeper on mobile */}
+          <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(7,11,16,0.96) 0%, rgba(7,11,16,0.82) 35%, rgba(7,11,16,0.45) 65%, rgba(7,11,16,0.20) 100%)" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, #070b10 0%, rgba(7,11,16,0.62) 34%, transparent 78%)" }} />
+          <div className="absolute inset-0 sm:hidden" style={{ background: "rgba(7,11,16,0.22)" }} />
 
           {/* Content */}
           <div className="absolute inset-0 flex flex-col justify-end px-8 pb-8 transition-opacity duration-300"
@@ -538,7 +602,7 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
             {campaign.game_name && (
               <div className="text-sm font-bold mb-0.5" style={{ color: "rgba(255,255,255,0.50)" }}>{campaign.game_name}</div>
             )}
-            <h2 className="text-4xl font-black text-white leading-tight tracking-tight mb-2 max-w-lg">
+            <h2 className="text-3xl sm:text-4xl font-black text-white leading-tight tracking-tight mb-2 max-w-lg">
               {campaign.template_name}
             </h2>
             {campaign.description && (
