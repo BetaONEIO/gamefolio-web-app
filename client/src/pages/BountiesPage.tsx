@@ -10,6 +10,11 @@ import {
   Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown, Store, Flame,
 } from "lucide-react";
 import { SiSteam } from "react-icons/si";
+import {
+  CAMPAIGN_HERO_FALLBACK,
+  campaignHeroSources,
+  nextCampaignHeroSource,
+} from "@/lib/campaign-hero";
 
 const NEON = "#B8FF1B";
 const PAGE_BG = "#070b10";
@@ -367,20 +372,6 @@ function reqPillLabel(ct: string, qty: number) {
   if (ct === "bug")        return `×${qty} Bug Reports`;
   return ct;
 }
-
-function campaignHeroSources(campaign: any): string[] {
-  return Array.from(new Set([
-    campaign.hero_artwork_url,
-    campaign.game_profile_header_artwork_url,
-    campaign.catalog_game_artwork_url,
-    campaign.game_profile_capsule_artwork_url,
-    campaign.game_profile_screenshot_artwork_url,
-    campaign.game_artwork_url,
-    campaign.artwork_url,
-    campaign.campaign_artwork_url,
-  ].filter((source): source is string => typeof source === "string" && source.trim().length > 0)));
-}
-
 function FeaturedHeroBackground({ campaign, className }: { campaign: any; className?: string }) {
   const sources = campaignHeroSources(campaign);
   const [sourceIndex, setSourceIndex] = useState(0);
@@ -394,7 +385,11 @@ function FeaturedHeroBackground({ campaign, className }: { campaign: any; classN
     if (!source) return;
     const probe = new Image();
     probe.onerror = () => {
-      setSourceIndex(current => current === sourceIndex ? current + 1 : current);
+      setSourceIndex(current => {
+        if (current !== sourceIndex) return current;
+        const nextSource = nextCampaignHeroSource(sources, source);
+        return nextSource ? sources.indexOf(nextSource) : sources.length;
+      });
     };
     probe.src = source;
     return () => {
@@ -410,7 +405,7 @@ function FeaturedHeroBackground({ campaign, className }: { campaign: any; classN
       style={{
         backgroundImage: source
           ? `url("${source}")`
-          : `url("/attached_assets/gamefolio-verification-banner.png")`,
+          : CAMPAIGN_HERO_FALLBACK,
         backgroundPosition: "center",
       }}
     />
