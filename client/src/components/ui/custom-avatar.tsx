@@ -7,6 +7,8 @@ import DOMPurify from "dompurify";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";
 
+const TOWERDOG_PROFILE_BORDER_URL = "/attached_assets/Profile-border-v2.png";
+
 interface LiveStatusResponse {
   isLive: boolean;
   twitchLive: boolean;
@@ -485,7 +487,11 @@ export const CustomAvatar = ({
   });
 
   const avatarBorder = borderData?.avatarBorder;
-  const hasAvatarBorderOverlay = showAvatarBorderOverlay && !!avatarBorder?.imageUrl;
+  const hasTowerdogBorder = avatarBorder?.sourcePath === "red_blue_pixel_waves";
+  const activeBorderImageUrl = hasTowerdogBorder
+    ? TOWERDOG_PROFILE_BORDER_URL
+    : avatarBorder?.imageUrl;
+  const hasAvatarBorderOverlay = showAvatarBorderOverlay && !!activeBorderImageUrl;
   const hasSolidBorder = showAvatarBorderOverlay && (avatarBorder?.id === -1 || effectiveBorderId === -1);
   const rasterBorderCalibration = avatarBorder
     ? getRasterBorderCalibration(avatarBorder)
@@ -611,9 +617,9 @@ export const CustomAvatar = ({
         
         {/* Border overlay is centred on the same wrapper as the avatar. */}
         <InlineSvgBorder
-          svgUrl={avatarBorder.imageUrl}
+          svgUrl={activeBorderImageUrl!}
           color={borderColor}
-          className="absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full"
+          className={`absolute pointer-events-none [&>svg]:w-full [&>svg]:h-full${hasTowerdogBorder ? " towerdog-border-wave-response" : ""}`}
           rasterCalibration={rasterBorderCalibration}
           style={{ 
             width: '160%', 
