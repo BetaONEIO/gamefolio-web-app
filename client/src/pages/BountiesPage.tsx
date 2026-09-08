@@ -173,6 +173,19 @@ function objectiveDescription(b: any) {
     ct === "bug" ? `Document ${qty} bug${qty !== 1 ? "s" : ""}` : "Complete this objective");
 }
 
+function objectiveLabel(b: any) {
+  const qty = Number(b.quantity ?? 1);
+  const ct = b.content_type as string;
+  if (ct === "clip")       return `Upload ${qty} Gameplay Clip${qty !== 1 ? "s" : ""}`;
+  if (ct === "screenshot") return `Upload ${qty} Screenshot${qty !== 1 ? "s" : ""}`;
+  if (ct === "feedback")   return "Submit First Impressions";
+  if (ct === "reel")       return `Upload ${qty} Reel${qty !== 1 ? "s" : ""}`;
+  if (ct === "stream")     return "Go Live on Stream";
+  if (ct === "session")    return "Complete a Play Session";
+  if (ct === "bug")        return `File ${qty} Bug Report${qty !== 1 ? "s" : ""}`;
+  return b.title ?? ct;
+}
+
 function campaignProgressUnits(campaign: any) {
   const objectives: any[] = Array.isArray(campaign.objective_progress) ? campaign.objective_progress : [];
   const required = objectives.filter((objective: any) => Boolean(objective.mandatory));
@@ -872,19 +885,6 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
     } finally {
       setPanelSubmitting(false);
     }
-  }
-
-  function objectiveLabel(b: any) {
-    const qty = Number(b.quantity ?? 1);
-    const ct = b.content_type as string;
-    if (ct === "clip")       return `Upload ${qty} Gameplay Clip${qty !== 1 ? "s" : ""}`;
-    if (ct === "screenshot") return `Upload ${qty} Screenshot${qty !== 1 ? "s" : ""}`;
-    if (ct === "feedback")   return "Submit First Impressions";
-    if (ct === "reel")       return `Upload ${qty} Reel${qty !== 1 ? "s" : ""}`;
-    if (ct === "stream")     return "Go Live on Stream";
-    if (ct === "session")    return "Complete a Play Session";
-    if (ct === "bug")        return `File ${qty} Bug Report${qty !== 1 ? "s" : ""}`;
-    return b.title ?? ct;
   }
 
   return (
