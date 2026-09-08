@@ -7,10 +7,12 @@ import { getUncachableStripeClient, getStripeSecretKey } from '../stripeClient';
 import { transferGfTokens } from '../gf-token-service';
 import { EmailService } from '../email-service';
 import { notifyProPurchase } from '../telegram-notify';
-import { provisionProSubscription, grantGiftPro } from './pro-subscription';
+import { provisionProSubscription, provisionPartnerSubscription, grantGiftPro } from './pro-subscription';
 import { captureRouteError } from '../sentry';
 import { provisionIndieDevSubscription } from './indie-dev-subscription';
+import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
 import Stripe from 'stripe';
+import { removePartnerFromMarketing } from '../marketing-sync';
 
 const router = Router();
 
@@ -216,10 +218,42 @@ router.post('/api/stripe/webhook',
         }
       }
 
+      // Streamer Partner subscription checkout — backstop for the client-side
+      // confirm call. Idempotent; grants isPartner + isPro.
+      if (session.metadata?.type === 'partner_subscription' && session.metadata?.userId) {
+        try {
+          const userId = parseInt(session.metadata.userId, 10);
+          const plan: 'monthly' | 'yearly' = session.metadata.plan === 'yearly' ? 'yearly' : 'monthly';
+          const subscriptionId = typeof session.subscription === 'string'
+            ? session.subscription
+            : session.subscription?.id;
+          const customerId = typeof session.customer === 'string'
+            ? session.customer
+            : session.customer?.id;
+
+          if (userId && subscriptionId && customerId) {
+            await provisionPartnerSubscription({ userId, plan, customerId, subscriptionId });
+            console.log(`[GF Webhook] Provisioned Streamer Partner for user ${userId} via checkout.session.completed`);
+          } else {
+            console.warn('[GF Webhook] partner_subscription session missing user/subscription/customer ids');
+          }
+        } catch (error) {
+          console.error('[GF Webhook] Error provisioning Partner subscription:', error);
+        }
+      }
+
       // Game Developer subscription checkout — backstop for the client-side
       // confirm call. Idempotent: safe even if the client already provisioned
       // this session.
       if (session.metadata?.type === 'indie_dev_subscription' && session.metadata?.userId) {
+        if (!GAME_DEVELOPER_PRO_PURCHASES_ENABLED) {
+          console.warn(`[GF Webhook] Ignoring disabled Game Developer checkout session ${session.id}`);
+          return;
+        }
+        if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
+          console.warn(`[GF Webhook] Ignoring unpaid Game Developer checkout session ${session.id} (payment_status: ${session.payment_status})`);
+          return;
+        }
         try {
           const userId = parseInt(session.metadata.userId, 10);
           const plan: 'monthly' | 'yearly' = session.metadata.plan === 'yearly' ? 'yearly' : 'monthly';
@@ -267,6 +301,9 @@ router.post('/api/stripe/webhook',
           console.log(`[GF Webhook] Processing renewal for subscription: ${subscriptionId}`);
 
           const [user] = await db.select().from(users).where(eq(users.stripeSubscriptionId, subscriptionId));
+          const [developer] = user
+            ? [undefined]
+            : await db.select().from(users).where(eq(users.indieDevStripeSubscriptionId, subscriptionId));
 
           if (user) {
             const plan = user.proSubscriptionType as 'monthly' | 'yearly' || 'monthly';
@@ -293,6 +330,18 @@ router.post('/api/stripe/webhook',
             }
 
             notifyProPurchase(user, { kind: 'renewal', plan, source: 'Stripe' });
+          } else if (developer) {
+            const plan = developer.indieDevSubscriptionType === 'yearly' ? 'yearly' : 'monthly';
+            const newEndDate = plan === 'yearly'
+              ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+              : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+            await provisionIndieDevSubscription({
+              userId: developer.id,
+              plan,
+              subscriptionId,
+              endDate: newEndDate,
+            });
+            console.log(`[GF Webhook] Renewed Game Developer Pro for user ${developer.id} until ${newEndDate.toISOString()}`);
           } else {
             console.warn(`[GF Webhook] No user found for subscription: ${subscriptionId}`);
           }
@@ -311,10 +360,15 @@ router.post('/api/stripe/webhook',
         console.log(`[GF Webhook] Processing subscription deletion: ${subscriptionId}`);
 
         const [user] = await db.select().from(users).where(eq(users.stripeSubscriptionId, subscriptionId));
+        const [developer] = user
+          ? [undefined]
+          : await db.select().from(users).where(eq(users.indieDevStripeSubscriptionId, subscriptionId));
 
         if (user) {
           await db.update(users).set({
             isPro: false,
+            isPartner: false,
+            partnerAppliedAt: null,
             stripeSubscriptionId: null,
             proSubscriptionType: null,
             proSubscriptionEndDate: null,
@@ -322,6 +376,7 @@ router.post('/api/stripe/webhook',
           }).where(eq(users.id, user.id));
 
           console.log(`[GF Webhook] Removed Pro status for user ${user.id} (subscription deleted)`);
+          void removePartnerFromMarketing(user.id);
 
           if (user.email) {
             EmailService.sendProCancelledEmail(
@@ -330,6 +385,15 @@ router.post('/api/stripe/webhook',
               new Date()
             ).catch(err => console.error('[GF Webhook] Failed to send cancellation email:', err));
           }
+        } else if (developer) {
+          await db.update(users).set({
+            isIndieDevSubscriber: false,
+            indieDevStripeSubscriptionId: null,
+            indieDevSubscriptionType: null,
+            indieDevSubscriptionEndDate: null,
+            updatedAt: new Date(),
+          }).where(eq(users.id, developer.id));
+          console.log(`[GF Webhook] Removed Game Developer Pro status for user ${developer.id} (subscription deleted)`);
         } else {
           console.warn(`[GF Webhook] No user found for deleted subscription: ${subscriptionId}`);
         }
@@ -354,14 +418,26 @@ router.post('/api/stripe/webhook',
           console.log(`[GF Webhook] Subscription ${subscriptionId} moved to non-active status: ${subscription.status}`);
 
           const [user] = await db.select().from(users).where(eq(users.stripeSubscriptionId, subscriptionId));
+          const [developer] = user
+            ? [undefined]
+            : await db.select().from(users).where(eq(users.indieDevStripeSubscriptionId, subscriptionId));
 
           if (user) {
             await db.update(users).set({
               isPro: false,
+              isPartner: false,
+              partnerAppliedAt: null,
               updatedAt: new Date(),
             }).where(eq(users.id, user.id));
 
             console.log(`[GF Webhook] Revoked Pro for user ${user.id} due to subscription status: ${subscription.status}`);
+            void removePartnerFromMarketing(user.id);
+          } else if (developer) {
+            await db.update(users).set({
+              isIndieDevSubscriber: false,
+              updatedAt: new Date(),
+            }).where(eq(users.id, developer.id));
+            console.log(`[GF Webhook] Revoked Game Developer Pro for user ${developer.id} due to subscription status: ${subscription.status}`);
           } else {
             console.warn(`[GF Webhook] No user found for subscription: ${subscriptionId}`);
           }

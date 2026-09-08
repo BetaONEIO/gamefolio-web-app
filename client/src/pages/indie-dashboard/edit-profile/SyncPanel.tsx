@@ -8,10 +8,11 @@ import { formatFieldName, formatValue, type Profile, type SyncChange, type SyncD
 
 interface SyncPanelProps {
   profile: Profile | null;
+  gameId?: number;
   onSynced: () => void;
 }
 
-export function SyncPanel({ profile, onSynced }: SyncPanelProps) {
+export function SyncPanel({ profile, gameId, onSynced }: SyncPanelProps) {
   const { toast } = useToast();
   const [changes, setChanges] = useState<SyncChange[]>([]);
   const [source, setSource] = useState("");
@@ -26,7 +27,7 @@ export function SyncPanel({ profile, onSynced }: SyncPanelProps) {
   const doCheck = async () => {
     setIsChecking(true);
     try {
-      const data = await (await apiRequest("POST", "/api/indie/sync-check")).json();
+      const data = await (await apiRequest("POST", "/api/indie/sync-check", { gameId })).json();
       const incoming: SyncChange[] = data.changes ?? [];
       setChanges(incoming); setSource(data.source ?? ""); setChecked(true);
       const auto: Record<string, SyncDecision> = {};
@@ -43,7 +44,7 @@ export function SyncPanel({ profile, onSynced }: SyncPanelProps) {
       const fields = changes
         .filter(c => decisions[c.fieldName] === "use")
         .map(c => ({ fieldName: c.fieldName, newValue: c.newValue }));
-      return (await apiRequest("POST", "/api/indie/sync-apply", { fields, source })).json();
+      return (await apiRequest("POST", "/api/indie/sync-apply", { gameId, fields, source })).json();
     },
     onSuccess: async (data: any) => {
       const n = data.applied?.length ?? 0;
@@ -57,7 +58,7 @@ export function SyncPanel({ profile, onSynced }: SyncPanelProps) {
       await queryClient.invalidateQueries({ queryKey: ["/api/indie/profile"] });
       setChecked(false); setChanges([]); setDecisions({}); onSynced();
     },
-    onError: () => toast({ description: "Sync failed.", variant: "gamefolioError" }),
+    onError: (error: Error) => toast({ description: error.message.replace(/^\d+:\s*/, "") || "Sync failed.", variant: "gamefolioError" }),
   });
 
   const useCount = changes.filter(c => decisions[c.fieldName] === "use").length;

@@ -110,6 +110,8 @@ const FeaturedUsersSection = () => {
   const scrollRef    = useRef<HTMLDivElement>(null);
   const rafRef       = useRef<number>(0);
   const dragging     = useRef(false);
+  const didDrag      = useRef(false);
+  const suppressClick = useRef(false);
   const scrollPosition = useRef(0);
   const dragData     = useRef({ startX: 0, startScrollLeft: 0 });
 
@@ -161,11 +163,11 @@ const FeaturedUsersSection = () => {
   /* ── Desktop drag handlers ──────────────────────────────────────────────── */
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = scrollRef.current;
-    if (!el) return;
+    if (!el || (e.pointerType === 'mouse' && e.button !== 0)) return;
     dragging.current = true;
+    didDrag.current = false;
     scrollPosition.current = el.scrollLeft;
     dragData.current = { startX: e.clientX, startScrollLeft: el.scrollLeft };
-    el.setPointerCapture(e.pointerId);
     el.classList.add('dragging');
   };
 
@@ -174,6 +176,12 @@ const FeaturedUsersSection = () => {
     const el = scrollRef.current;
     if (!el) return;
     const dx = e.clientX - dragData.current.startX;
+    if (!didDrag.current) {
+      if (Math.abs(dx) < 6) return;
+      didDrag.current = true;
+      suppressClick.current = true;
+      el.setPointerCapture(e.pointerId);
+    }
     scrollPosition.current = dragData.current.startScrollLeft - dx;
     const track = el.firstElementChild as HTMLElement | null;
     const firstCard = track?.firstElementChild as HTMLElement | null;
@@ -197,6 +205,22 @@ const FeaturedUsersSection = () => {
     el?.classList.remove('dragging');
     if (el?.hasPointerCapture(e.pointerId)) {
       el.releasePointerCapture(e.pointerId);
+    }
+  };
+
+  const onCarouselClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!suppressClick.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    suppressClick.current = false;
+  };
+
+  const onPointerLeave = () => {
+    // Before the drag threshold, no pointer capture has been taken, so a
+    // release outside the carousel would otherwise leave auto-scroll paused.
+    if (!didDrag.current) {
+      dragging.current = false;
+      scrollRef.current?.classList.remove('dragging');
     }
   };
 
@@ -368,6 +392,8 @@ const FeaturedUsersSection = () => {
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
+            onPointerLeave={onPointerLeave}
+            onClickCapture={onCarouselClick}
           >
             <div className="fire-carousel-track" style={{ paddingLeft: CARD_GAP }}>
               {displayEntries.map((entry, idx) => (

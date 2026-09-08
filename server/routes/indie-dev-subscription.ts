@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { hybridAuth } from '../middleware/hybrid-auth';
 import { getGbpRates, detectLocalCurrency } from '../services/currency-service';
 import { captureRouteError } from '../sentry';
+import { GAME_DEVELOPER_PRO_PURCHASES_ENABLED } from '@shared/feature-flags';
 
 const router = Router();
 
@@ -108,18 +109,30 @@ export async function provisionIndieDevSubscription(opts: {
   plan: 'monthly' | 'yearly';
   customerId?: string;
   subscriptionId?: string;
+  endDate?: Date;
 }): Promise<void> {
-  const { userId, plan, customerId, subscriptionId } = opts;
+  const { userId, plan, customerId, subscriptionId, endDate } = opts;
 
   const [before] = await db.select().from(users).where(eq(users.id, userId));
+  // Supabase/Postgres timestamp values can occasionally arrive from the
+  // driver as an invalid Date. Never pass one back through Drizzle: a renewal
+  // would otherwise fail before the subscription end date is updated.
+  const existingStartDate = before?.indieDevSubscriptionStartDate;
+  const startDate = existingStartDate instanceof Date && !Number.isNaN(existingStartDate.getTime())
+    ? existingStartDate
+    : new Date();
+  const requestedEndDate = endDate ?? (plan === 'yearly'
+    ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+  const safeEndDate = requestedEndDate instanceof Date && !Number.isNaN(requestedEndDate.getTime())
+    ? requestedEndDate
+    : new Date(Date.now() + (plan === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000);
 
   await db.update(users).set({
     isIndieDevSubscriber: true,
     indieDevSubscriptionType: plan,
-    indieDevSubscriptionStartDate: before?.indieDevSubscriptionStartDate ?? new Date(),
-    indieDevSubscriptionEndDate: plan === 'yearly'
-      ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    indieDevSubscriptionStartDate: startDate,
+    indieDevSubscriptionEndDate: safeEndDate,
     ...(customerId ? { stripeCustomerId: customerId } : {}),
     ...(subscriptionId ? { indieDevStripeSubscriptionId: subscriptionId } : {}),
     updatedAt: new Date(),
@@ -161,6 +174,9 @@ router.post('/api/stripe/create-indie-dev-subscription', hybridAuth, async (req:
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
+    if (!GAME_DEVELOPER_PRO_PURCHASES_ENABLED) {
+      return res.status(503).json({ error: 'Game Developer Pro purchases are coming soon' });
+    }
 
     const { plan } = req.body;
     if (!plan || !['monthly', 'yearly'].includes(plan)) {
@@ -174,7 +190,7 @@ router.post('/api/stripe/create-indie-dev-subscription', hybridAuth, async (req:
 
     const stripe = await getUncachableStripeClient();
 
-    if (user.isIndieDevSubscriber && user.indieDevStripeSubscriptionId) {
+    if (user.indieDevStripeSubscriptionId) {
       try {
         const existing = await stripe.subscriptions.retrieve(user.indieDevStripeSubscriptionId);
         if (existing.status === 'active' || existing.status === 'trialing') {
@@ -241,6 +257,10 @@ router.post('/api/stripe/create-indie-dev-subscription', hybridAuth, async (req:
 
 router.post('/api/stripe/confirm-indie-dev-subscription', hybridAuth, async (req: Request, res: Response) => {
   try {
+    if (!GAME_DEVELOPER_PRO_PURCHASES_ENABLED) {
+      return res.status(503).json({ error: 'Game Developer Pro purchases are coming soon' });
+    }
+
     const userId = (req as any).user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -260,8 +280,17 @@ router.post('/api/stripe/confirm-indie-dev-subscription', hybridAuth, async (req
     if (session.metadata?.userId !== String(userId)) {
       return res.status(403).json({ error: 'Checkout session does not belong to this user' });
     }
+    if (session.metadata?.type !== 'indie_dev_subscription') {
+      return res.status(400).json({ error: 'Checkout session is not a Game Developer subscription' });
+    }
     if (session.status !== 'complete') {
       return res.status(400).json({ error: 'Checkout has not been completed', status: session.status });
+    }
+    if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
+      return res.status(400).json({
+        error: 'Checkout payment has not completed',
+        paymentStatus: session.payment_status,
+      });
     }
 
     const subscriptionId = typeof session.subscription === 'string'
@@ -273,6 +302,18 @@ router.post('/api/stripe/confirm-indie-dev-subscription', hybridAuth, async (req
 
     if (!subscriptionId || !customerId) {
       return res.status(400).json({ error: 'Subscription is not ready yet. Please try again shortly.' });
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (user?.indieDevStripeSubscriptionId && user.indieDevStripeSubscriptionId !== subscriptionId) {
+      try {
+        const existing = await stripe.subscriptions.retrieve(user.indieDevStripeSubscriptionId);
+        if (existing.status === 'active' || existing.status === 'trialing') {
+          return res.status(409).json({ error: 'You already have an active Game Developer subscription.' });
+        }
+      } catch {
+        // The old subscription no longer exists in Stripe; allow recovery.
+      }
     }
 
     const resolvedPlan: 'monthly' | 'yearly' =

@@ -26,6 +26,8 @@ export interface TrendingEntry {
     avatarBorderColor: string | null;
     accentColor: string | null;
     level?: number | null;
+    isPro?: boolean | null;
+    selectedVerificationBadgeId?: number | null;
     backgroundColor?: string | null;
     primaryColor?: string | null;
     profileBackgroundType?: string | null;
@@ -63,6 +65,7 @@ export function getCardTheme(user: TrendingEntry['user']): { style: React.CSSPro
   const isCyberpunk  = !isLight && accent === '#00d3f2';
   const isZombie     = !isLight && accent === '#9ae600';
   const isGothic     = !isLight && accent === '#c27aff' && bg === '#1e053a';
+  const isSummer     = !isLight && accent === '#35e0ff' && bg === '#061e2a';
   const isBlocks     = !isLight && accent === '#b7ff1a' && bg === '#1a1a1a';
   const isForest     = !isLight && accent === '#b7ff1a' && bg === '#0a2f1f';
   const isElectric   = !isLight && accent === '#ffe033' && bg === '#1a1200';
@@ -87,6 +90,7 @@ export function getCardTheme(user: TrendingEntry['user']): { style: React.CSSPro
   if (isMayhem)    return { style: { background: 'linear-gradient(to bottom right, #00DFFF 0%, #9B30E8 48%, #FF0069 100%)' }, isLight: false, hasCustomBg: true };
   if (isBat)       return { style: { background: 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' }, isLight: false, hasCustomBg: true };
   if (isGothic)    return { style: { background: 'linear-gradient(180deg, #3d0070 0%, #1e053a 100%)' }, isLight: false, hasCustomBg: true };
+  if (isSummer)    return { style: { background: 'radial-gradient(ellipse 95% 70% at 50% 0%, rgba(53,224,255,0.2) 0%, rgba(6,30,42,0.98) 72%), linear-gradient(180deg, #0b6172 0%, #061e2a 100%)' }, isLight: false, hasCustomBg: true };
   if (isBlocks)    return { style: { background: '#87ceeb' }, isLight: true, hasCustomBg: true };
   if (isNeo)       return { style: { background: '#000800' }, isLight: false, hasCustomBg: true };
   if (isForest)    return { style: { background: '#0a2f1f' }, isLight: false, hasCustomBg: true };

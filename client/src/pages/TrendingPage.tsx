@@ -326,7 +326,7 @@ const DesktopShortsViewer: React.FC<{
         className="absolute left-0 top-0 bottom-0 z-[55] flex flex-col"
         style={{
           width: '360px',
-          background: '#0B1218',
+          background: 'var(--gf-surface)',
           borderRight: '1px solid rgba(255,255,255,0.07)',
           transform: showComments ? 'translateX(0)' : 'translateX(-100%)',
           transition: 'transform 0.28s cubic-bezier(0.4,0,0.2,1)',
@@ -361,7 +361,7 @@ const DesktopShortsViewer: React.FC<{
         {/* Pinned comment input — always visible at the bottom of the panel */}
         <div
           className="flex-shrink-0 px-3 py-3"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.07)', background: '#0B1218' }}
+          style={{ borderTop: '1px solid var(--gf-border)', background: 'var(--gf-surface)' }}
         >
           {user ? (
             <div className="flex items-center gap-2">
@@ -417,7 +417,7 @@ const DesktopShortsViewer: React.FC<{
               onClick={goPrev}
               disabled={currentIndex === 0}
               className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
-              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              style={{ background: 'var(--gf-surface)', border: '1px solid var(--gf-border)' }}
               aria-label="Previous"
             >
               <ChevronUp className="h-6 w-6 text-white" />
@@ -426,7 +426,7 @@ const DesktopShortsViewer: React.FC<{
               onClick={goNext}
               disabled={currentIndex === clips.length - 1}
               className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
-              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              style={{ background: 'var(--gf-surface)', border: '1px solid var(--gf-border)' }}
               aria-label="Next"
             >
               <ChevronDown className="h-6 w-6 text-white" />
@@ -463,7 +463,7 @@ const DesktopShortsViewer: React.FC<{
               {clip.user.avatarUrl ? (
                 <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
+                <div className="w-full h-full bg-card flex items-center justify-center">
                   <UserIcon className="h-4 w-4 text-white/60" />
                 </div>
               )}
@@ -530,7 +530,7 @@ const DesktopShortsViewer: React.FC<{
                 className="w-9 h-9 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
                 style={showComments
                   ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
-                  : { background: '#0B1218', border: '1px solid #1B2A33' }
+                  : { background: 'var(--gf-surface)', border: '1px solid var(--gf-border)' }
                 }
               >
                 <MessageCircle className="h-4 w-4" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
@@ -543,7 +543,7 @@ const DesktopShortsViewer: React.FC<{
             <div className="flex items-center gap-2">
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center"
-                style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+                style={{ background: 'var(--gf-surface)', border: '1px solid var(--gf-border)' }}
               >
                 <BarChart2 className="h-4 w-4 text-white/70" />
               </div>
@@ -557,7 +557,7 @@ const DesktopShortsViewer: React.FC<{
             >
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
-                style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+                style={{ background: 'var(--gf-surface)', border: '1px solid var(--gf-border)' }}
               >
                 <ShareLaunchIcon className="h-4 w-4 text-white/70" />
               </div>
@@ -817,7 +817,7 @@ const DesktopShortsViewer: React.FC<{
                   className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
                   style={showComments
                     ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
-                    : { background: '#0B1218', border: '1px solid #1B2A33' }
+                    : { background: 'var(--gf-surface)', border: '1px solid var(--gf-border)' }
                   }
                 >
                   <MessageCircle className="h-5 w-5" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
@@ -829,7 +829,7 @@ const DesktopShortsViewer: React.FC<{
               <div className="flex flex-col items-center gap-1">
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center"
-                  style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+                  style={{ background: 'var(--gf-surface)', border: '1px solid var(--gf-border)' }}
                 >
                   <BarChart2 className="h-5 w-5 text-white/70" />
                 </div>
@@ -844,7 +844,7 @@ const DesktopShortsViewer: React.FC<{
               >
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
-                  style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+                  style={{ background: 'var(--gf-surface)', border: '1px solid var(--gf-border)' }}
                 >
                   <ShareLaunchIcon className="h-5 w-5 text-white/70" />
                 </div>
@@ -864,7 +864,7 @@ const DesktopShortsViewer: React.FC<{
                     {clip.user.avatarUrl ? (
                       <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-[#1B2A33] flex items-center justify-center">
+                      <div className="w-full h-full bg-card flex items-center justify-center">
                         <UserIcon className="h-5 w-5 text-white/60" />
                       </div>
                     )}
@@ -903,7 +903,7 @@ const DesktopShortsViewer: React.FC<{
               onClick={goPrev}
               disabled={currentIndex === 0}
               className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
-              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              style={{ background: 'var(--gf-surface)', border: '1px solid var(--gf-border)' }}
               aria-label="Previous"
             >
               <ChevronUp className="h-6 w-6 text-white" />
@@ -912,7 +912,7 @@ const DesktopShortsViewer: React.FC<{
               onClick={goNext}
               disabled={currentIndex === clips.length - 1}
               className="w-12 h-12 rounded-full flex items-center justify-center transition-all disabled:opacity-20 hover:scale-105"
-              style={{ background: '#0B1218', border: '1px solid #1B2A33' }}
+              style={{ background: 'var(--gf-surface)', border: '1px solid var(--gf-border)' }}
               aria-label="Next"
             >
               <ChevronDown className="h-6 w-6 text-white" />
@@ -996,10 +996,10 @@ const TrendingPage: React.FC = () => {
 
   // Game search results for filter modal
   const { data: gameSearchResults, isLoading: isGameSearchLoading } = useQuery<{ id: number; name: string; imageUrl?: string }[]>({
-    queryKey: ['/api/twitch/games/search', debouncedGameQuery],
+    queryKey: ['/api/game-catalog/search', debouncedGameQuery],
     queryFn: async () => {
       if (debouncedGameQuery.length < 2) return [];
-      const res = await fetch(`/api/twitch/games/search?q=${encodeURIComponent(debouncedGameQuery)}`);
+      const res = await fetch(`/api/game-catalog/search?q=${encodeURIComponent(debouncedGameQuery)}`);
       if (!res.ok) return [];
       const data = await res.json();
       return data.map((g: any) => ({ id: g.id, name: g.name, imageUrl: g.imageUrl || g.box_art_url }));
@@ -1498,7 +1498,7 @@ const TrendingPage: React.FC = () => {
 
         {/* Loading — reels / screenshots only */}
         {activeTab !== 'clips' && isLoadingContent && (
-          <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ background: '#0B1218' }}>
+          <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ background: 'var(--gf-background)' }}>
             <div className="flex flex-col items-center gap-3">
               <div className="w-8 h-8 border-2 border-[#B7FF1A] border-t-transparent rounded-full animate-spin" />
               <p className="text-white/60 text-sm">Loading {activeLabel.toLowerCase()}…</p>
@@ -1508,7 +1508,7 @@ const TrendingPage: React.FC = () => {
 
         {/* Empty state — reels / screenshots only */}
         {activeTab !== 'clips' && !isLoadingContent && activeContent.length === 0 && (
-          <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ background: '#0B1218' }}>
+          <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ background: 'var(--gf-background)' }}>
             <div className="text-center px-8">
               <TrendingUp className="h-14 w-14 mx-auto mb-4" style={{ color: '#B7FF1A' }} />
               <p className="text-white font-semibold mb-1">No trending {activeLabel.toLowerCase()}</p>
@@ -1534,8 +1534,8 @@ const TrendingPage: React.FC = () => {
 
           // Pill / circle base styles for clips-mode hover glow
           const pillBaseStyle = (active: boolean) => ({
-            background: active ? 'rgba(183,255,26,0.18)' : '#0B1218',
-            border: `1px solid ${active ? '#B7FF1A' : '#1B2A33'}`,
+            background: active ? 'rgba(183,255,26,0.18)' : 'var(--gf-surface)',
+            border: `1px solid ${active ? '#B7FF1A' : 'var(--gf-border)'}`,
             color: '#F5F7F2',
             boxShadow: active ? '0 0 0 1px rgba(183,255,26,0.25), 0 0 12px rgba(183,255,26,0.18)' : 'none',
           });
@@ -1592,7 +1592,7 @@ const TrendingPage: React.FC = () => {
             <button
               onClick={() => { setShowContentDropdown(!showContentDropdown); setShowTimeDropdown(false); setShowGameFilter(false); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all hover:shadow-[0_0_12px_rgba(183,255,26,0.35)]"
-              style={{ background: '#0B1218', border: 'none', color: '#F5F7F2' }}
+              style={{ background: 'var(--gf-surface-raised)', border: 'none', color: '#F5F7F2' }}
             >
               <ActiveIcon className="h-3.5 w-3.5" />
               {activeLabel}
@@ -1703,7 +1703,7 @@ const TrendingPage: React.FC = () => {
           >
             <div
               className="w-full rounded-t-3xl flex flex-col"
-              style={{ background: '#0B1218', maxHeight: '82vh' }}
+              style={{ background: 'var(--gf-surface-raised)', maxHeight: '82vh' }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -1757,7 +1757,7 @@ const TrendingPage: React.FC = () => {
                     className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center transition-all"
                     style={{
                       aspectRatio: '3/4',
-                      background: '#101923',
+                      background: 'var(--gf-surface)',
                       border: !selectedGameId ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                     }}
                     onClick={() => {
@@ -1807,7 +1807,7 @@ const TrendingPage: React.FC = () => {
                           className="relative rounded-xl overflow-hidden flex flex-col justify-end transition-all"
                           style={{
                             aspectRatio: '3/4',
-                            background: '#101923',
+                            background: 'var(--gf-surface)',
                             border: isSelected ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                             opacity: isInCurrentTab ? 1 : 0.4,
                             filter: isInCurrentTab ? 'none' : 'grayscale(70%)',
@@ -1868,7 +1868,7 @@ const TrendingPage: React.FC = () => {
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <div className="bg-card/50 dark:bg-card/30 backdrop-blur-sm border-b border-border mb-0 md:mb-6 md:rounded-xl md:border sticky top-0 z-30">
           <div className="px-4 py-3 md:py-4">
-            <TabsList className="grid w-full grid-cols-3 bg-slate-800/90 dark:bg-slate-900/90 p-1 rounded-xl h-auto">
+            <TabsList className="grid w-full grid-cols-3 bg-secondary p-1 rounded-xl h-auto">
               <TabsTrigger
                 value="clips"
                 className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/70 rounded-lg px-4 py-2.5 md:py-3 text-sm md:text-base font-medium transition-all"
@@ -1985,7 +1985,7 @@ const TrendingPage: React.FC = () => {
         >
           <div
             className="rounded-2xl flex flex-col"
-            style={{ background: '#0B1218', maxHeight: '80vh', width: '480px', maxWidth: '90vw' }}
+            style={{ background: 'var(--gf-surface-raised)', maxHeight: '80vh', width: '480px', maxWidth: '90vw' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
@@ -2039,7 +2039,7 @@ const TrendingPage: React.FC = () => {
                   className="relative rounded-xl overflow-hidden flex flex-col items-center justify-center transition-all"
                   style={{
                     aspectRatio: '3/4',
-                    background: '#101923',
+                    background: 'var(--gf-surface)',
                     border: !selectedGameId ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                   }}
                   onClick={() => {
@@ -2079,7 +2079,7 @@ const TrendingPage: React.FC = () => {
                         className="relative rounded-xl overflow-hidden flex flex-col justify-end transition-all"
                         style={{
                           aspectRatio: '3/4',
-                          background: '#101923',
+                          background: 'var(--gf-surface)',
                           border: isSelected ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
                           opacity: isInCurrentTab ? 1 : 0.4,
                           filter: isInCurrentTab ? 'none' : 'grayscale(70%)',

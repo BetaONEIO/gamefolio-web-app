@@ -12,7 +12,7 @@ import {
   SiSteam, SiEpicgames, SiItchdotio,
   SiPlaystation, SiNintendo,
 } from "react-icons/si";
-import { NEON, CARD_BG, CARD_BORDER } from "./constants";
+import { NEON, CARD_BG, CARD_BORDER, DASHBOARD_THEME, rgbaAccent } from "./constants";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -152,12 +152,12 @@ function UploadCard({
   const pct = required > 0 ? Math.min(100, Math.round((available / required) * 100)) : (available > 0 ? 100 : 0);
 
   const isDemo = keyType === "demo";
-  const accent = isDemo ? "#60a5fa" : "#fb923c";
-  const accentRgb = isDemo ? "96,165,250" : "251,146,60";
+  const accent = DASHBOARD_THEME.accent;
+  const accentRgb = DASHBOARD_THEME.accentRgb;
   const label = isDemo ? "Demo Keys" : "Full Game Keys";
   const desc = isDemo
-    ? "Creators receive these immediately after joining your campaign."
-    : "Creators receive these after successfully completing the campaign.";
+    ? "Store demo keys securely for your game."
+    : "Store full-game keys securely for your game.";
 
   // Animate count up on success
   useEffect(() => {
@@ -254,8 +254,8 @@ function UploadCard({
   return (
     <div className="rounded-2xl overflow-hidden flex flex-col"
       style={{
-        background: `rgba(${accentRgb},0.04)`,
-        border: `1px solid rgba(${accentRgb},0.16)`,
+        background: rgbaAccent(0.04),
+        border: `1px solid ${rgbaAccent(0.16)}`,
         transition: "box-shadow 0.2s",
       }}>
 
@@ -263,7 +263,7 @@ function UploadCard({
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-center gap-3 mb-1">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: `rgba(${accentRgb},0.14)` }}>
+             style={{ background: rgbaAccent(0.14) }}>
             <KeyRound className="w-4 h-4" style={{ color: accent }} />
           </div>
           <h3 className="text-base font-black text-white">{label}</h3>
@@ -288,7 +288,7 @@ function UploadCard({
             className="h-full rounded-full transition-all duration-700"
             style={{
               width: `${pct}%`,
-              background: isDone ? NEON : `rgba(${accentRgb},0.8)`,
+               background: isDone ? DASHBOARD_THEME.success : `rgba(${accentRgb},0.8)`,
             }}
           />
         </div>
@@ -311,12 +311,12 @@ function UploadCard({
               className="rounded-xl flex flex-col items-center justify-center text-center cursor-pointer select-none transition-all duration-200"
               style={{
                 minHeight: "140px",
-                background: isDragging ? `rgba(${accentRgb},0.12)` : "rgba(255,255,255,0.025)",
-                border: `2px dashed ${isDragging ? accent : "rgba(255,255,255,0.1)"}`,
-                boxShadow: isDragging ? `0 0 24px rgba(${accentRgb},0.18)` : "none",
+                 background: isDragging ? rgbaAccent(0.12) : "rgba(255,255,255,0.025)",
+                 border: `2px dashed ${isDragging ? accent : DASHBOARD_THEME.border}`,
+                 boxShadow: isDragging ? `0 0 24px ${rgbaAccent(0.18)}` : "none",
               }}>
               <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 transition-all duration-200"
-                style={{ background: isDragging ? `rgba(${accentRgb},0.2)` : "rgba(255,255,255,0.04)" }}>
+                 style={{ background: isDragging ? rgbaAccent(0.2) : CARD_BG }}>
                 <Upload className="w-5 h-5 transition-colors" style={{ color: isDragging ? accent : "rgba(255,255,255,0.25)" }} />
               </div>
               <p className="text-sm font-bold text-white/50 mb-1">
@@ -356,7 +356,7 @@ function UploadCard({
                   onClick={() => pasteText.trim() && handleText(pasteText)}
                   disabled={!pasteText.trim()}
                   className="w-full py-2 rounded-xl text-xs font-black transition-all hover:brightness-110 disabled:opacity-30"
-                  style={{ background: `rgba(${accentRgb},0.15)`, color: accent, border: `1px solid rgba(${accentRgb},0.25)` }}>
+                   style={{ background: rgbaAccent(0.15), color: accent, border: `1px solid ${rgbaAccent(0.25)}` }}>
                   Validate Keys
                 </button>
               </div>
@@ -432,7 +432,7 @@ function UploadCard({
                 onClick={confirm}
                 disabled={validation.valid.length === 0}
                 className="flex-1 py-2.5 rounded-xl text-xs font-black transition-all hover:brightness-110 disabled:opacity-30"
-                style={{ background: `rgba(${accentRgb},0.18)`, color: accent, border: `1px solid rgba(${accentRgb},0.3)` }}>
+                 style={{ background: rgbaAccent(0.18), color: accent, border: `1px solid ${rgbaAccent(0.3)}` }}>
                 Add {validation.valid.length} Key{validation.valid.length !== 1 ? "s" : ""}
               </button>
             </div>
@@ -601,9 +601,7 @@ export default function KeyManagementTab() {
   const demoKeys = bountyStatus?.demoKeys      ?? { available: 0, valid: 0, claimed: 0, uploaded: 0 };
   const fullKeys = bountyStatus?.fullGameKeys  ?? { available: 0, valid: 0, awarded: 0, uploaded: 0 };
 
-  // Required = max participants of the first active campaign (or first campaign)
-  const activeCampaign = bounties.find(b => b.status === "active" || b.status === "live") ?? bounties[0] ?? null;
-  const required = activeCampaign?.maxParticipants ?? 0;
+  const required = 0;
 
   return (
     <div className="space-y-7">
@@ -634,15 +632,6 @@ export default function KeyManagementTab() {
         </div>
       </div>
 
-      {/* ── Compact warning ── */}
-      <div className="flex items-start gap-2.5 rounded-xl px-4 py-3"
-        style={{ background: "rgba(251,146,60,0.06)", border: "1px solid rgba(251,146,60,0.14)" }}>
-        <Lock className="w-3.5 h-3.5 text-orange-400 shrink-0 mt-0.5" />
-        <p className="text-[11px] text-orange-300/70">
-          Keys become locked when your campaign goes live and cannot be withdrawn once creators begin participating.
-        </p>
-      </div>
-
       {/* ── Upload cards ── */}
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
@@ -655,22 +644,6 @@ export default function KeyManagementTab() {
         </div>
       )}
 
-      {/* ── Campaign vaults ── */}
-      {!isLoading && bounties.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2.5 mb-4">
-            <h3 className="text-sm font-black text-white">Campaign Vaults</h3>
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full"
-              style={{ background: "rgba(183,255,24,0.07)", border: "1px solid rgba(183,255,24,0.14)" }}>
-              <Shield className="w-3 h-3" style={{ color: NEON }} />
-              <span className="text-[9px] font-bold" style={{ color: NEON }}>Escrow Protected</span>
-            </div>
-          </div>
-          <div className="space-y-3">
-            {bounties.map(b => <VaultCard key={b.id} bounty={b} />)}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

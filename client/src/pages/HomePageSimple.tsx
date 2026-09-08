@@ -592,7 +592,7 @@ const HomePage = () => {
                           <div className="flex-shrink-0 pt-2 pb-1 sm:pt-4 sm:pb-2 px-3 sm:px-4 flex items-center justify-between">
                             <h2 className="text-lg sm:text-2xl font-bold">Leaderboard</h2>
                             <div className="flex items-center gap-1.5 sm:gap-3">
-                              <span className="text-[9px] sm:text-[10px] text-white/40">🏆 <span className="hidden sm:inline">Season: </span><span className="font-bold text-white/70">Summer Showdown</span></span>
+                              <span className="text-[9px] sm:text-[10px] text-white/40">🏆 <span className="hidden sm:inline">Season: </span><span className="font-bold text-white/70">Autumn Assault</span></span>
                               <button
                                 onClick={() => setLocation('/leaderboard')}
                                 className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-black px-2 sm:px-3 py-1 rounded-lg transition-all hover:opacity-90 active:scale-95"

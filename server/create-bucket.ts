@@ -1,1 +1,0 @@
-const bucketName = 'gamefolio-media';

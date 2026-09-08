@@ -585,9 +585,9 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
           onChange={handleChange}
           disabled={isLoading}
           className="auth-input uppercase"
-          maxLength={8}
+          maxLength={16}
         />
-        <p className="text-xs text-muted-foreground">Have a friend's referral code? Enter it here to earn bonus XP!</p>
+        <p className="text-xs text-muted-foreground">Have a friend's referral code? Enter it here to earn bonus XP! (3–16 characters)</p>
       </div>
 
       <div className="flex items-start gap-2">
@@ -617,7 +617,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <Dialog open={showTerms} onOpenChange={setShowTerms}>
         {/* z above the auth modal (z-[200000]) or the dialog opens behind it and looks like nothing happened */}
-        <DialogContent className="z-[200001] max-w-2xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700">
+        <DialogContent className="z-[200001] max-w-2xl max-h-[80vh] overflow-y-auto bg-popover border-border">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-primary">Terms and Conditions</DialogTitle>
             <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>
@@ -700,7 +700,7 @@ export default function RegisterForm({ onSuccess }: RegisterFormProps) {
 
       <Dialog open={showPrivacy} onOpenChange={setShowPrivacy}>
         {/* z above the auth modal (z-[200000]) or the dialog opens behind it and looks like nothing happened */}
-        <DialogContent className="z-[200001] max-w-2xl max-h-[80vh] overflow-y-auto bg-gray-900 border-gray-700">
+        <DialogContent className="z-[200001] max-w-2xl max-h-[80vh] overflow-y-auto bg-popover border-border">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-primary">Privacy Policy</DialogTitle>
             <p className="text-sm text-muted-foreground">Last updated: {new Date().toLocaleDateString()}</p>

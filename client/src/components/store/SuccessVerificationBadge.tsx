@@ -34,7 +34,7 @@ export function SuccessVerificationBadge({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#0B1218] border-none text-white p-0 max-w-[430px] w-full overflow-hidden flex flex-col [&>button]:hidden">
+      <DialogContent className="bg-popover border-none text-white p-0 max-w-[430px] w-full overflow-hidden flex flex-col [&>button]:hidden">
         <div className="relative flex-1 flex flex-col items-center px-6 pt-16 pb-8 text-center overflow-hidden">
           {/* Background Glows */}
           <div className="absolute top-[-10%] left-[-20%] w-[344px] h-[746px] bg-[#00c95033] blur-[60px] rounded-full pointer-events-none" />

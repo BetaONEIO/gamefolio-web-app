@@ -161,7 +161,7 @@ export function LevelTrackerModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="bg-[#0B1218]/95 backdrop-blur-sm border border-[#1B2A33] text-white p-0 w-[92vw] max-w-[340px] lg:max-w-[385px] lg:w-[385px] rounded-2xl overflow-hidden [&>button]:hidden fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+        className="bg-popover/95 backdrop-blur-sm border border-border text-white p-0 w-[92vw] max-w-[340px] lg:max-w-[385px] lg:w-[385px] rounded-2xl overflow-hidden [&>button]:hidden fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
         data-testid="dialog-level-progress"
       >
         <div className="flex flex-col">
@@ -169,7 +169,7 @@ export function LevelTrackerModal({
             <span className="text-base lg:text-xl font-bold text-[#F5F7F2]">Level Progress</span>
             <button
               onClick={handleClose}
-              className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-[#1B2A33] border border-[#1B2A33] flex items-center justify-center hover:bg-[#22313A] transition-colors"
+              className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-secondary border border-border flex items-center justify-center hover:bg-muted transition-colors"
             >
               <svg className="w-4 h-4 lg:w-5 lg:h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path fillRule="evenodd" clipRule="evenodd" d="M22 12C22 17.523 17.523 22 12 22C6.477 22 2 17.523 2 12C2 6.477 6.477 2 12 2C17.523 2 22 6.477 22 12ZM8.97 8.97C9.26282 8.67755 9.73718 8.67755 10.03 8.97L12 10.94L13.97 8.97C14.2655 8.69464 14.726 8.70277 15.0116 8.98838C15.2972 9.27399 15.3054 9.73449 15.03 10.03L13.06 12L15.03 13.97C15.3054 14.2655 15.2972 14.726 15.0116 15.0116C14.726 15.2972 14.2655 15.3054 13.97 15.03L12 13.06L10.03 15.03C9.73449 15.3054 9.27399 15.2972 8.98838 15.0116C8.70277 14.726 8.69464 14.2655 8.97 13.97L10.94 12L8.97 10.03C8.67755 9.73718 8.67755 9.26282 8.97 8.97Z" fill="#B8C0AE" />
@@ -201,7 +201,7 @@ export function LevelTrackerModal({
                   cx="50"
                   cy="50"
                   r="45"
-                  stroke="#1B2A33"
+                  stroke="var(--gf-border)"
                   strokeWidth="6"
                   fill="none"
                 />
@@ -269,7 +269,7 @@ export function LevelTrackerModal({
                 <motion.div
                   key={segment}
                   className={`flex-1 h-1.5 lg:h-2 rounded-full ${
-                    segment <= filledSegments ? 'bg-[#B7FF1A]' : 'bg-[#1B2A33]'
+                    segment <= filledSegments ? 'bg-[#B7FF1A]' : 'bg-muted'
                   }`}
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}

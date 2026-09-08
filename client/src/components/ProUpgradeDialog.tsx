@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Crown, Loader2, X, Check, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { useRevenueCat } from "@/hooks/use-revenuecat";
+import { useRevenueCat, getAmbassadorOffer } from "@/hooks/use-revenuecat";
 import { useAuth } from "@/hooks/use-auth";
+import { useIndieMode } from "@/hooks/use-indie-mode";
 import type { RcPackage } from "@/hooks/use-revenuecat";
 import { loadStripe, Stripe } from "@stripe/stripe-js";
 import {
@@ -12,7 +13,8 @@ import {
 } from "@stripe/react-stripe-js";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { isNative, openExternal } from "@/lib/platform";
+import { isNative, isAndroid, openExternal } from "@/lib/platform";
+import { AMBASSADOR_DISCOUNT_PERCENT } from "@shared/ambassador";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 import ProOnboardingScreen from "@/components/pro/ProOnboardingScreen";
 
@@ -30,6 +32,7 @@ interface ProUpgradeDialogProps {
   onOpenChange: (open: boolean) => void;
   subtitle?: string;
   onAuthRequired?: () => void;
+  tier?: "pro" | "partner";
 }
 
 const premiumBenefits = [
@@ -181,9 +184,13 @@ function parseApiErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthRequired }: ProUpgradeDialogProps) {
-  const { isInitialized, isLoading, isPro, getCurrentOffering, purchasePackage } = useRevenueCat();
+export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthRequired, tier = "pro" }: ProUpgradeDialogProps) {
+  const { isInitialized, isLoading, isPro, isPartner, getCurrentOffering, getPartnerOffering, purchasePackage } = useRevenueCat();
   const { user } = useAuth();
+  const { isIndieMode } = useIndieMode();
+  const isPartnerTier = tier === "partner";
+  const ownsThisTier = isPartnerTier ? isPartner : isPro;
+  const proProductName = isPartnerTier ? "Streamer Partner" : (isIndieMode ? "Developer Pro" : "Gamefolio Pro");
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
   const [purchasing, setPurchasing] = useState(false);
   const [step, setStep] = useState<"plans" | "checkout" | "success">("plans");
@@ -203,7 +210,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     }
   }, [step, open]);
 
-  const packages = getCurrentOffering();
+  const packages = isPartnerTier ? getPartnerOffering() : getCurrentOffering();
 
   const { monthlyPkg, yearlyPkg } = useMemo(() => {
     if (!packages) return { monthlyPkg: null, yearlyPkg: null };
@@ -357,7 +364,24 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       setPurchasing(true);
       setPurchaseInProgress(true);
       try {
-        const success = await purchasePackage(selectedPackage);
+        // Unlike Stripe (which validates inline when creating the session), the
+        // store sheet can't be corrected once it's open — so check the code
+        // before handing off to StoreKit / Play Billing.
+        const typedCode = ambassadorCode.trim();
+        let validCode: string | undefined;
+        if (typedCode) {
+          try {
+            const res = await apiRequest("POST", "/api/referral/validate-ambassador", { code: typedCode });
+            // The server re-validates on activation, so falling back to the
+            // typed code just preserves attribution if the body is unexpected.
+            validCode = (await res.json())?.code ?? typedCode.toUpperCase();
+          } catch (err: any) {
+            setCheckoutError(parseApiErrorMessage(err, "Invalid ambassador code"));
+            setPurchaseInProgress(false);
+            return;
+          }
+        }
+        const success = await purchasePackage(selectedPackage, { ambassadorCode: validCode });
         if (success) {
           setStep("success");
         }
@@ -370,7 +394,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     }
 
     // Web (Stripe) path — open an embedded Checkout Session. Stripe Adaptive
-    // Pricing (enabled in the Dashboard) converts £2.99 to the buyer's local
+    // Pricing (enabled in the Dashboard) converts the GBP base price to the buyer's local
     // currency inside the checkout; the server only sends the base GBP price.
     if (!webPricing) return;
     setCheckoutLoading(true);
@@ -380,7 +404,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     setPurchaseInProgress(true);
     try {
       await loadStripeInstance();
-      const res = await apiRequest("POST", "/api/stripe/create-pro-subscription", {
+      const res = await apiRequest("POST", isPartnerTier ? "/api/stripe/create-partner-subscription" : "/api/stripe/create-pro-subscription", {
         plan: billingPeriod,
         ambassadorCode: ambassadorCode.trim() || undefined,
       });
@@ -402,7 +426,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     let lootboxReward: LootboxReward | null = null;
     try {
       if (checkoutSessionId) {
-        const res = await apiRequest("POST", "/api/stripe/confirm-pro-subscription", {
+        const res = await apiRequest("POST", isPartnerTier ? "/api/stripe/confirm-partner-subscription" : "/api/stripe/confirm-pro-subscription", {
           sessionId: checkoutSessionId,
           plan: billingPeriod,
         });
@@ -418,17 +442,17 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     setStep("success");
   }, [checkoutSessionId, billingPeriod]);
 
-  if (isPro && step !== "success" && !purchaseInProgress) {
+  if (ownsThisTier && step !== "success" && !purchaseInProgress) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[430px] w-full bg-[#0B1218] border-none p-0 overflow-hidden [&>button]:hidden">
+        <DialogContent className="max-w-[430px] w-full bg-popover border-none p-0 overflow-hidden [&>button]:hidden">
           <div className="p-8 text-center">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#B7FF1A] to-[#6FA800] mb-6">
               <Crown className="w-10 h-10 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">You're already Pro!</h2>
             <p className="text-[#B8C0AE] mb-6">
-              You have full access to all Gamefolio Pro features. Thank you for your support!
+              You have full access to all {proProductName} features. Thank you for your support!
             </p>
             <button
               onClick={() => onOpenChange(false)}
@@ -571,8 +595,16 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
     );
   };
 
-  // Ambassador referral discount — web/Stripe checkout only, validated
-  // server-side against the ambassador's referral code at checkout time.
+  // What an ambassador code is actually worth on this platform. Web gets a
+  // Stripe coupon and Android a discounted Play offer; Apple can't discount a
+  // first-time subscriber at all, so iOS (and Android if the Play offer isn't
+  // live yet) gets bonus XP granted server-side on activation instead.
+  const ambassadorPerkLabel = !isNative || (isAndroid && getAmbassadorOffer(selectedPackage))
+    ? `${AMBASSADOR_DISCOUNT_PERCENT}% off your first payment.`
+    : "500 bonus XP when you subscribe.";
+
+  // Ambassador referral code — validated server-side against the ambassador's
+  // referral code before the purchase starts.
   const ambassadorCodeSection = () => (
     <div className="text-left">
       {!showCodeInput ? (
@@ -596,7 +628,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
             className="w-full bg-[#0B1218] border border-[#1B2A33] rounded-lg px-3 py-2 text-white text-sm placeholder:text-[#475569] focus:outline-none focus:border-[#B7FF1A]"
           />
           <p className="text-[#B8C0AE] text-[10px]">
-            10% off your first payment.
+            {ambassadorPerkLabel}
           </p>
         </div>
       )}
@@ -608,7 +640,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       <div className="absolute inset-0">
         <img
           src={proHeroImage}
-          alt="Gamefolio Pro"
+          alt={proProductName}
           className="w-full h-full object-cover"
           style={{ objectPosition: "center 70%" }}
         />
@@ -641,7 +673,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         <div className="text-center md:text-left mb-1">
           <h2 className="text-xl font-bold leading-tight whitespace-nowrap">
             <span className="text-white">Unlock </span>
-            <span className="text-[#B7FF1A]">Gamefolio Pro</span>
+            <span className="text-[#B7FF1A]">{proProductName}</span>
           </h2>
         </div>
 
@@ -689,7 +721,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
         {planSelector()}
 
-        {!isNative && ambassadorCodeSection()}
+        {ambassadorCodeSection()}
 
         <button
           onClick={handleJoinPro}
@@ -702,7 +734,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
             <Loader2 className="w-5 h-5 animate-spin text-[#071013]" />
           ) : (
             <>
-              <span className="text-[#071013] text-base font-bold">Join Gamefolio Pro</span>
+              <span className="text-[#071013] text-base font-bold">Join {proProductName}</span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#022C22" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -780,11 +812,11 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <div ref={scrollContainerRef} className="flex flex-col md:hidden h-[100dvh] overflow-y-auto" style={{ scrollbarWidth: "none", backgroundColor: "#081017" }}>
+              <div ref={scrollContainerRef} className="flex flex-col md:hidden h-[100dvh] overflow-y-auto overscroll-contain" style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch", backgroundColor: "#081017" }}>
                 <div className="relative w-full flex-shrink-0" style={{ height: "56vh" }}>
                   <img
                     src={proHeroImage}
-                    alt="Gamefolio Pro"
+                    alt={proProductName}
                     className="w-full h-full object-cover"
                     style={{ objectPosition: "center 70%" }}
                   />
@@ -800,7 +832,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                   </button>
                 </div>
 
-                <div className="px-5 pb-5 relative z-10" style={{ marginTop: "-72px", backgroundColor: "transparent" }}>
+                <div className="px-5 relative z-10" style={{ marginTop: "-72px", backgroundColor: "transparent", paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}>
                   <div className="flex justify-center mb-2">
                     <div className="inline-flex items-center gap-1.5 bg-[#14532d4d] border border-[#B7FF1A33] rounded-full px-3 py-1">
                       <svg width="21" height="21" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -815,7 +847,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
                   <h2 className="text-center text-xl font-bold leading-tight mb-0.5">
                     <span className="text-white">Unlock </span>
-                    <span className="text-[#B7FF1A]">Gamefolio Pro</span>
+                    <span className="text-[#B7FF1A]">{proProductName}</span>
                   </h2>
 
                   <p className="text-[#B8C0AE] text-xs text-center leading-relaxed mb-3 max-w-[260px] mx-auto">
@@ -856,7 +888,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
                   {planSelector(true)}
 
-                  {!isNative && ambassadorCodeSection()}
+                  {ambassadorCodeSection()}
 
                   <button
                     onClick={handleJoinPro}
@@ -869,7 +901,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                       <Loader2 className="w-5 h-5 animate-spin text-[#071013]" />
                     ) : (
                       <>
-                        <span className="text-[#071013] text-base font-bold">Join Gamefolio Pro</span>
+                        <span className="text-[#071013] text-base font-bold">Join {proProductName}</span>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#022C22" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>

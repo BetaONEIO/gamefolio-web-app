@@ -7,6 +7,8 @@ import { hybridAuth } from '../middleware/hybrid-auth';
 import { EmailService } from '../email-service';
 import { storage } from '../storage';
 import { notifyProPurchase } from '../telegram-notify';
+import { validateAmbassadorCode, normalizeAmbassadorCode } from '../lib/ambassador-code';
+import { AMBASSADOR_DISCOUNT_PERCENT } from '@shared/ambassador';
 
 const router = Router();
 
@@ -114,11 +116,17 @@ async function getOrCreatePriceId(
   return price.id;
 }
 
-// Ambassador referral discount — a single shared 10%-off, first-payment-only
-// coupon reused for every ambassador/buyer. Which ambassador's code was used
-// is tracked in our own DB (ambassador_conversions), not as separate Stripe
+// Ambassador referral discount — a single shared first-payment-only coupon
+// reused for every ambassador/buyer. Which ambassador's code was used is
+// tracked in our own DB (ambassador_conversions), not as separate Stripe
 // objects per ambassador.
-const AMBASSADOR_COUPON_ID = 'ambassador-referral-10-once';
+//
+// The id embeds the percentage on purpose. Stripe coupons are immutable, so
+// bumping AMBASSADOR_DISCOUNT_PERCENT has to mint a new coupon — reusing a
+// fixed id would just retrieve the old one below and keep charging the old
+// rate. Superseded coupons can be deleted in the Stripe Dashboard once no
+// checkout session references them.
+const AMBASSADOR_COUPON_ID = `ambassador-referral-${AMBASSADOR_DISCOUNT_PERCENT}-once`;
 let cachedAmbassadorCouponId: string | null = null;
 
 async function getOrCreateAmbassadorCoupon(stripe: any): Promise<string> {
@@ -131,15 +139,47 @@ async function getOrCreateAmbassadorCoupon(stripe: any): Promise<string> {
   } catch {
     const coupon = await stripe.coupons.create({
       id: AMBASSADOR_COUPON_ID,
-      percent_off: 10,
+      percent_off: AMBASSADOR_DISCOUNT_PERCENT,
       duration: 'once',
-      name: 'Ambassador Referral 10% Off',
+      name: `Ambassador Referral ${AMBASSADOR_DISCOUNT_PERCENT}% Off`,
     });
     console.log(`✅ Created Stripe coupon: ${coupon.id}`);
     cachedAmbassadorCouponId = coupon.id;
     return coupon.id;
   }
 }
+
+// Validate an ambassador code without starting a purchase. Used by the native
+// paywall, which has to know whether the code is good BEFORE handing off to
+// StoreKit / Play Billing (the store sheet can't be corrected mid-flight).
+// The web/Stripe path validates inline in create-pro-subscription instead.
+router.post('/api/referral/validate-ambassador', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const result = await validateAmbassadorCode(req.body?.code, userId);
+    if (!result.valid) {
+      return res.status(400).json({ valid: false, error: result.error });
+    }
+
+    return res.json({
+      valid: true,
+      code: result.code,
+      ambassador: {
+        username: result.username,
+        displayName: result.displayName,
+        avatarUrl: result.avatarUrl,
+      },
+    });
+  } catch (error: any) {
+    captureRouteError(error);
+    console.error('Ambassador code validation error:', error);
+    return res.status(500).json({ error: 'Failed to validate ambassador code' });
+  }
+});
 
 // Shared, idempotent Pro provisioning. Called by the client-side confirm
 // endpoint (so the success screen + lootbox appear immediately) and by the
@@ -258,13 +298,12 @@ router.post('/api/stripe/create-pro-subscription', hybridAuth, async (req: Reque
     // Ambassador referral discount — entered manually at checkout, separate
     // from whatever `referredBy` the account already has from signup.
     let validatedAmbassadorCode: string | null = null;
-    if (typeof ambassadorCode === 'string' && ambassadorCode.trim()) {
-      const normalizedCode = ambassadorCode.trim().toUpperCase();
-      const codeOwner = await storage.getUserByReferralCode(normalizedCode);
-      if (!codeOwner || !codeOwner.isAmbassador || codeOwner.id === userId) {
-        return res.status(400).json({ error: 'Invalid ambassador code' });
+    if (normalizeAmbassadorCode(ambassadorCode)) {
+      const result = await validateAmbassadorCode(ambassadorCode, userId);
+      if (!result.valid) {
+        return res.status(400).json({ error: result.error });
       }
-      validatedAmbassadorCode = normalizedCode;
+      validatedAmbassadorCode = result.code;
     }
 
     const stripe = await getUncachableStripeClient();
@@ -485,6 +524,338 @@ router.post('/api/pro/gift-checkout', hybridAuth, async (req: Request, res: Resp
     captureRouteError(error);
     console.error('Gift pro checkout error:', error);
     return res.status(500).json({ error: 'Failed to create gift checkout', message: error.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Streamer Pro — paid tier above Pro (every Pro perk plus stream-on-profile
+// and showcase). Mirrors the Pro flow exactly: ONE GBP base price + Stripe
+// Adaptive Pricing inside an embedded Checkout Session. Provisioning grants
+// isPartner AND isPro (partner includes all Pro perks). Native (iOS/Android)
+// purchases flow through RevenueCat ("Gamefolio Streamer Partner" offering),
+// not these endpoints.
+//
+// Pricing: £3.99/mo, £38.40/yr (£3.20/mo). Keep in sync with App Store / Play /
+// RevenueCat Web Billing prices. Override via STRIPE_PARTNER_MONTHLY_PRICE_ID /
+// STRIPE_PARTNER_YEARLY_PRICE_ID, otherwise auto-provisioned in Stripe.
+// ---------------------------------------------------------------------------
+const PARTNER_BASE_PRICE: Record<'monthly' | 'yearly', number> = {
+  monthly: 399,   // £3.99 / month
+  yearly: 3840,   // £38.40 / year (£3.20 / month)
+};
+
+const cachedPartnerPriceIds: { monthly: string | null; yearly: string | null } = {
+  monthly: null,
+  yearly: null,
+};
+
+async function getOrCreatePartnerPriceId(
+  stripe: any,
+  plan: 'monthly' | 'yearly'
+): Promise<string> {
+  const hit = cachedPartnerPriceIds[plan];
+  if (hit) return hit;
+
+  const envPriceId = plan === 'monthly'
+    ? process.env.STRIPE_PARTNER_MONTHLY_PRICE_ID
+    : process.env.STRIPE_PARTNER_YEARLY_PRICE_ID;
+
+  if (envPriceId) {
+    try {
+      const configuredPrice = await stripe.prices.retrieve(envPriceId);
+      const targetAmount = PARTNER_BASE_PRICE[plan];
+      const targetInterval = plan === 'monthly' ? 'month' : 'year';
+      if (
+        configuredPrice.active &&
+        configuredPrice.unit_amount === targetAmount &&
+        configuredPrice.currency === BASE_CURRENCY &&
+        configuredPrice.recurring?.interval === targetInterval
+      ) {
+        cachedPartnerPriceIds[plan] = envPriceId;
+        return envPriceId;
+      }
+      console.warn(`Configured partner price ID ${envPriceId} has stale pricing. Auto-provisioning the current Streamer Pro price...`);
+    } catch {
+      console.warn(`Configured partner price ID ${envPriceId} not found in Stripe. Auto-provisioning...`);
+    }
+  }
+
+  const existingProducts = await stripe.products.list({ limit: 100 });
+  let product = existingProducts.data.find((p: any) =>
+    (p.name === 'Gamefolio Streamer Pro' || p.name === 'Gamefolio Streamer Partner') && p.active
+  );
+
+  if (!product) {
+    product = await stripe.products.create({
+      name: 'Gamefolio Streamer Pro',
+      description: 'Streamer Pro subscription for Gamefolio — every Pro perk plus stream-on-profile and showcase',
+      metadata: { app: 'gamefolio', tier: 'partner' },
+    });
+    console.log(`✅ Created Stripe product: ${product.id}`);
+  } else if (product.name !== 'Gamefolio Streamer Pro') {
+    product = await stripe.products.update(product.id, {
+      name: 'Gamefolio Streamer Pro',
+      description: 'Streamer Pro subscription for Gamefolio — every Pro perk plus stream-on-profile and showcase',
+    });
+  }
+
+  const existingPrices = await stripe.prices.list({ product: product.id, active: true, limit: 100 });
+
+  const targetAmount = PARTNER_BASE_PRICE[plan];
+  const targetInterval = plan === 'monthly' ? 'month' : 'year';
+
+  // Single-currency (GBP) price with no currency_options so Adaptive Pricing
+  // converts to the buyer's local currency at checkout (matches the Pro flow).
+  let price = existingPrices.data.find((p: any) =>
+    p.unit_amount === targetAmount &&
+    p.currency === BASE_CURRENCY &&
+    p.recurring?.interval === targetInterval &&
+    (!p.currency_options || Object.keys(p.currency_options).length === 0)
+  );
+
+  if (!price) {
+    price = await stripe.prices.create({
+      product: product.id,
+      unit_amount: targetAmount,
+      currency: BASE_CURRENCY,
+      recurring: { interval: targetInterval },
+      metadata: { plan, app: 'gamefolio', tier: 'partner' },
+    });
+    console.log(`✅ Created Stripe partner price for ${plan}/${BASE_CURRENCY}: ${price.id}`);
+  }
+
+  cachedPartnerPriceIds[plan] = price.id;
+  console.log(`📌 Using Stripe partner price for ${plan}/${BASE_CURRENCY}: ${price.id}`);
+  return price.id;
+}
+
+// Idempotent Streamer Partner provisioning. Grants isPartner AND isPro (partner
+// includes every Pro perk). Called by the client-side confirm endpoint (so the
+// success screen + lootbox appear immediately) and by the Stripe webhook
+// backstop. Welcome email / Telegram notify fire only the first time; the
+// lootbox grant is itself idempotent.
+export async function provisionPartnerSubscription(opts: {
+  userId: number;
+  plan: 'monthly' | 'yearly';
+  customerId: string;
+  subscriptionId: string;
+}): Promise<{ lootboxReward: { reward: any; isDuplicate: boolean } | null }> {
+  const { userId, plan, customerId, subscriptionId } = opts;
+
+  const [before] = await db.select().from(users).where(eq(users.id, userId));
+  const alreadyProvisioned = !!before?.isPartner && before?.stripeSubscriptionId === subscriptionId;
+
+  await db.update(users).set({
+    isPro: true,
+    isPartner: true,
+    proSubscriptionType: plan,
+    proSubscriptionStartDate: before?.proSubscriptionStartDate ?? new Date(),
+    proSubscriptionEndDate: plan === 'yearly'
+      ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    stripeCustomerId: customerId,
+    stripeSubscriptionId: subscriptionId,
+    updatedAt: new Date(),
+  }).where(eq(users.id, userId));
+
+  if (!alreadyProvisioned) {
+    const [updatedUser] = await db.select().from(users).where(eq(users.id, userId));
+    if (updatedUser?.email) {
+      EmailService.sendProWelcomeEmail(
+        updatedUser.email,
+        updatedUser.username || updatedUser.displayName || 'Gamer',
+        plan,
+      ).catch(err => console.error('Failed to send Partner welcome email:', err));
+    }
+    if (updatedUser) {
+      notifyProPurchase(updatedUser, { kind: 'new', plan, source: 'Stripe (Partner)' });
+    }
+  }
+
+  let lootboxReward: { reward: any; isDuplicate: boolean } | null = null;
+  try {
+    const initialGrant = await storage.grantProLootbox(userId, 'initial');
+    if (initialGrant) {
+      lootboxReward = { reward: initialGrant.reward, isDuplicate: initialGrant.isDuplicate };
+      console.log(`🎁 Initial Pro lootbox granted (partner): ${initialGrant.reward.name}`);
+    }
+  } catch (lootboxErr) {
+    console.error('Failed to grant initial pro lootbox (partner):', lootboxErr);
+  }
+
+  return { lootboxReward };
+}
+
+// Public partner pricing endpoint — base GBP price plus an approximate
+// local-currency conversion when we can detect the visitor's country.
+// Mirrors /api/stripe/pro-pricing; the exact amount is confirmed at checkout.
+router.get('/api/stripe/partner-pricing', async (req: Request, res: Response) => {
+  const base = {
+    currency: BASE_CURRENCY,
+    monthly: PARTNER_BASE_PRICE.monthly / 100,
+    yearly: PARTNER_BASE_PRICE.yearly / 100,
+  };
+
+  try {
+    const localCurrency = await detectLocalCurrency(req as any);
+    if (!localCurrency || localCurrency.toUpperCase() === 'GBP') {
+      return res.json(base);
+    }
+    const rates = await getGbpRates();
+    const rate = rates?.[localCurrency.toUpperCase()];
+    if (!rate) return res.json(base);
+
+    const localMonthly = Math.round(base.monthly * rate * 100) / 100;
+    const localYearly  = Math.round(base.yearly  * rate * 100) / 100;
+    return res.json({ ...base, localCurrency, localMonthly, localYearly });
+  } catch (err) {
+    console.warn('partner-pricing localisation error:', err);
+    return res.json(base);
+  }
+});
+
+router.post('/api/stripe/create-partner-subscription', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { plan } = req.body;
+    if (!plan || !['monthly', 'yearly'].includes(plan)) {
+      return res.status(400).json({ error: 'Invalid plan. Must be "monthly" or "yearly".' });
+    }
+
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const stripe = await getUncachableStripeClient();
+
+    // Guard: block starting a new checkout if there's already an active sub.
+    if (user.isPartner && user.stripeSubscriptionId) {
+      try {
+        const existing = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+        if (existing.status === 'active' || existing.status === 'trialing') {
+          console.warn(`⚠️ User ${userId} already has active subscription ${user.stripeSubscriptionId} — blocking new Partner checkout`);
+          return res.status(409).json({ error: 'You already have an active Streamer Pro subscription.' });
+        }
+      } catch {
+        // Subscription not found in Stripe — allow proceeding
+      }
+    }
+
+    const email = user.email;
+    if (!email) {
+      return res.status(400).json({ error: 'User must have an email address to subscribe' });
+    }
+
+    let customerId: string;
+    if (user.stripeCustomerId) {
+      customerId = user.stripeCustomerId;
+    } else {
+      const existingCustomers = await stripe.customers.list({ email, limit: 1 });
+      if (existingCustomers.data.length > 0) {
+        customerId = existingCustomers.data[0].id;
+      } else {
+        const newCustomer = await stripe.customers.create({
+          email,
+          metadata: { userId: String(userId) },
+        });
+        customerId = newCustomer.id;
+      }
+    }
+
+    const priceId = await getOrCreatePartnerPriceId(stripe, plan);
+
+    // Embedded Checkout Session (subscription mode). Adaptive Pricing localises
+    // the displayed + charged amount. redirect_on_completion: 'never' keeps the
+    // user in-app; the client's onComplete handler calls confirm-partner.
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      ui_mode: 'embedded',
+      customer: customerId,
+      line_items: [{ price: priceId, quantity: 1 }],
+      redirect_on_completion: 'never',
+      subscription_data: {
+        metadata: { userId: String(userId), plan, tier: 'partner' },
+      },
+      metadata: {
+        userId: String(userId),
+        plan,
+        type: 'partner_subscription',
+      },
+    });
+
+    return res.json({
+      clientSecret: session.client_secret,
+      sessionId: session.id,
+    });
+  } catch (error: any) {
+    console.error('Create partner subscription error:', error);
+    return res.status(500).json({
+      error: 'Failed to create partner subscription',
+      message: error.message,
+    });
+  }
+});
+
+router.post('/api/stripe/confirm-partner-subscription', hybridAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { sessionId, plan } = req.body;
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Invalid request. Requires sessionId.' });
+    }
+
+    const stripe = await getUncachableStripeClient();
+    const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ['subscription'] });
+
+    if (!session) {
+      return res.status(404).json({ error: 'Checkout session not found' });
+    }
+    if (session.metadata?.userId !== String(userId)) {
+      return res.status(403).json({ error: 'Checkout session does not belong to this user' });
+    }
+    if (session.status !== 'complete') {
+      return res.status(400).json({ error: 'Checkout has not been completed', status: session.status });
+    }
+
+    const subscriptionId = typeof session.subscription === 'string'
+      ? session.subscription
+      : session.subscription?.id;
+    const customerId = typeof session.customer === 'string'
+      ? session.customer
+      : session.customer?.id;
+
+    if (!subscriptionId || !customerId) {
+      return res.status(400).json({ error: 'Subscription is not ready yet. Please try again shortly.' });
+    }
+
+    const resolvedPlan: 'monthly' | 'yearly' =
+      session.metadata?.plan === 'yearly' || session.metadata?.plan === 'monthly'
+        ? session.metadata.plan
+        : (plan === 'yearly' ? 'yearly' : 'monthly');
+
+    const { lootboxReward } = await provisionPartnerSubscription({
+      userId,
+      plan: resolvedPlan,
+      customerId,
+      subscriptionId,
+    });
+
+    return res.json({ success: true, isPro: true, isPartner: true, subscriptionId, lootboxReward });
+  } catch (error: any) {
+    console.error('Confirm partner subscription error:', error);
+    return res.status(500).json({
+      error: 'Failed to confirm partner subscription',
+      message: error.message,
+    });
   }
 });
 

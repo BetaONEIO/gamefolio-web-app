@@ -1,6 +1,8 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, unique, real, uniqueIndex, uuid, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { pgTable, text, serial, integer, boolean, timestamp, json, unique, real, uniqueIndex, uuid, index, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { DEFAULT_PROFILE_THEME } from "./profile-theme";
 
 // Users table
 export const users = pgTable("users", {
@@ -11,14 +13,15 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").default(false),
   displayName: text("display_name").notNull(),
   bio: text("bio"),
+  clanTag: text("clan_tag"), // Up to 4 chars, A-Z0-9, shown as [TAG] before the display name (COD-style)
   avatarUrl: text("avatar_url"),
   bannerUrl: text("banner_url").default("/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg"),
   // Customization options
-  accentColor: text("accent_color").default("#B7FF1A"), // Default neon green accent
-  primaryColor: text("primary_color").default("#02172C"), // Default navy primary
-  backgroundColor: text("background_color").default("#0B2232"), // Default navy background
-  cardColor: text("card_color").default("#1E3A8A"), // Default card background
-  avatarBorderColor: text("avatar_border_color").default("#4ADE80"), // Default avatar border color
+  accentColor: text("accent_color").default(DEFAULT_PROFILE_THEME.accentColor),
+  primaryColor: text("primary_color").default(DEFAULT_PROFILE_THEME.primaryColor),
+  backgroundColor: text("background_color").default(DEFAULT_PROFILE_THEME.backgroundColor),
+  cardColor: text("card_color").default(DEFAULT_PROFILE_THEME.cardColor),
+  avatarBorderColor: text("avatar_border_color").default(DEFAULT_PROFILE_THEME.avatarBorderColor),
   profileFont: text("profile_font").default("default"),
   profileFontEffect: text("profile_font_effect").default("none"),
   profileFontAnimation: text("profile_font_animation").default("none"),
@@ -34,6 +37,11 @@ export const users = pgTable("users", {
   statsGlassEffect: boolean("stats_glass_effect").default(false),
   profileBackgroundGradient: boolean("profile_background_gradient").default(true),
   profileBackgroundGradientCss: text("profile_background_gradient_css"),
+  // Stable catalog identity for the reusable profile theme system. The
+  // development database already contains these columns; keeping them in the
+  // Drizzle model makes the value type-safe for profile reads and updates.
+  profileBackgroundTheme: text("profile_background_theme").default("default"),
+  profileBackgroundAnimation: text("profile_background_animation").default("none"),
   layoutStyle: text("layout_style").default("grid"), // grid, masonry, classic
   // Platform connections
   steamUsername: text("steam_username"),
@@ -201,6 +209,18 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Versioned, account-level acknowledgement state for seasonal announcements.
+// A composite key keeps each season transition independently dismissible.
+export const userSeasonalAnnouncements = pgTable("user_seasonal_announcements", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  announcementId: text("announcement_id").notNull(),
+  seenAt: timestamp("seen_at").defaultNow().notNull(),
+}, (table) => ({
+  userAnnouncementUnique: unique("user_seasonal_announcements_user_announcement_unique")
+    .on(table.userId, table.announcementId),
+}));
+
 // Games table
 export const games = pgTable("games", {
   id: serial("id").primaryKey(),
@@ -212,6 +232,38 @@ export const games = pgTable("games", {
   showContactBanner: boolean("show_contact_banner").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// AI VOD-clip generation — one job per "generate clips from this VOD" run,
+// implemented in server/services/ai-vod-clip-jobs.ts. These declarations keep
+// the shape production already owns (including the GFT payment columns and
+// named FKs/indexes) so Publish doesn't propose destructive table/column drops.
+export const aiClipJobs = pgTable("ai_clip_jobs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  twitchVodId: text("twitch_vod_id").notNull(),
+  vodTitle: text("vod_title").notNull(),
+  vodDurationSeconds: integer("vod_duration_seconds").notNull(),
+  vodThumbnailUrl: text("vod_thumbnail_url"),
+  status: text("status").default("queued").notNull(),
+  stageProgress: integer("stage_progress").default(0).notNull(),
+  errorReason: text("error_reason"),
+  candidateCount: integer("candidate_count").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  gfAmountCharged: integer("gf_amount_charged"),
+  paymentTxHash: text("payment_tx_hash"),
+  paymentStatus: text("payment_status"),
+  refundTxHash: text("refund_tx_hash"),
+}, (table) => ({
+  userFk: foreignKey({
+    name: "ai_clip_jobs_user_id_fkey",
+    columns: [table.userId],
+    foreignColumns: [users.id],
+  }).onDelete("cascade"),
+  userIdx: index("ai_clip_jobs_user_idx").on(table.userId),
+  statusIdx: index("ai_clip_jobs_status_idx").on(table.status),
+}));
 
 // Clips table
 export const clips = pgTable("clips", {
@@ -237,10 +289,9 @@ export const clips = pgTable("clips", {
   // Provenance: "upload" (default, manual), "twitch_clip_import", "ai_vod_highlight".
   source: text("source").default("upload"),
   // Set only for source="ai_vod_highlight" — the job that generated this clip.
-  // References ai_clip_jobs, declared below; the lazy closure means declaration
-  // order in this file doesn't matter (Drizzle resolves it on first use, not
-  // at module-init time).
-  aiJobId: integer("ai_job_id").references((): any => aiClipJobs.id),
+  // The FK is declared as a named constraint in the table extras below to match
+  // the one production already owns (clips_ai_job_id_fkey).
+  aiJobId: integer("ai_job_id"),
   // Spam/multi-account detection signals — captured server-side at upload time.
   uploadIp: text("upload_ip"),
   uploadDeviceId: text("upload_device_id"),
@@ -252,81 +303,89 @@ export const clips = pgTable("clips", {
   status: text("status").default("ready").notNull(), // "processing" | "ready" | "failed"
   processingError: text("processing_error"),
   rawUploadPath: text("raw_upload_path"),
+  // Browser-generated key used to acknowledge a completed upload when its
+  // process-video response was interrupted. It is unique per creator so a
+  // retry cannot create a second clip for the same upload attempt.
+  uploadAttemptId: text("upload_attempt_id"),
   processingAttempts: integer("processing_attempts").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  aiJobFk: foreignKey({
+    name: "clips_ai_job_id_fkey",
+    columns: [table.aiJobId],
+    foreignColumns: [aiClipJobs.id],
+  }),
+  userUploadAttemptIdx: uniqueIndex("clips_user_upload_attempt_idx").on(table.userId, table.uploadAttemptId),
+}));
 
-// AI VOD-clip generation jobs — one per "generate clips from this VOD" run.
-export const aiClipJobs = pgTable("ai_clip_jobs", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  twitchVodId: text("twitch_vod_id").notNull(),
-  vodTitle: text("vod_title").notNull(),
-  vodDurationSeconds: integer("vod_duration_seconds").notNull(),
-  vodThumbnailUrl: text("vod_thumbnail_url"),
-  // queued | downloading | transcribing | analyzing | cutting | completed | failed
-  status: text("status").default("queued").notNull(),
-  stageProgress: integer("stage_progress").default(0).notNull(), // coarse 0-100 within current stage
-  errorReason: text("error_reason"),
-  candidateCount: integer("candidate_count").default(0).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  completedAt: timestamp("completed_at"),
-});
-
-// Per-user daily job count, so free vs Pro can be rate-limited differently
-// (this pipeline is compute-heavy — local Whisper + Claude — so unlimited
-// generation isn't viable). Mirrors the user_daily_imports convention used
-// elsewhere for Twitch clip-import limits. Reset is by UTC calendar day.
 export const aiClipDailyUsage = pgTable("ai_clip_daily_usage", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  usageDate: text("usage_date").notNull(), // YYYY-MM-DD, UTC
+  userId: integer("user_id").notNull(),
+  usageDate: text("usage_date").notNull(),
   jobsCount: integer("jobs_count").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
-  userDateUnique: unique().on(table.userId, table.usageDate),
+  userFk: foreignKey({
+    name: "ai_clip_daily_usage_user_id_fkey",
+    columns: [table.userId],
+    foreignColumns: [users.id],
+  }).onDelete("cascade"),
+  userDateUnique: unique("ai_clip_daily_usage_user_id_usage_date_key").on(table.userId, table.usageDate),
 }));
 
-// Candidate highlight clips produced by a job, staged for user review before
-// (optionally) being published into the real `clips` table.
 export const aiClipCandidates = pgTable("ai_clip_candidates", {
   id: serial("id").primaryKey(),
-  jobId: integer("job_id").notNull().references(() => aiClipJobs.id, { onDelete: "cascade" }),
-  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  jobId: integer("job_id").notNull(),
+  userId: integer("user_id").notNull(),
   title: text("title").notNull(),
-  reasoning: text("reasoning"), // Claude's rationale for why this moment was picked
-  startTime: real("start_time").notNull(), // seconds into the source VOD
+  reasoning: text("reasoning"),
+  startTime: real("start_time").notNull(),
   endTime: real("end_time").notNull(),
   durationSeconds: real("duration_seconds").notNull(),
-  rank: integer("rank").default(0).notNull(), // ordering by confidence, best first
-  draftVideoPath: text("draft_video_path").notNull(), // staging path in gamefolio-media
+  rank: integer("rank").default(0).notNull(),
+  draftVideoPath: text("draft_video_path").notNull(),
   draftVideoUrl: text("draft_video_url").notNull(),
   draftThumbnailPath: text("draft_thumbnail_path"),
   draftThumbnailUrl: text("draft_thumbnail_url"),
-  status: text("status").default("pending").notNull(), // pending | published | discarded | expired
-  publishedClipId: integer("published_clip_id").references((): any => clips.id),
+  status: text("status").default("pending").notNull(),
+  publishedClipId: integer("published_clip_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  // Draft storage is temporary, not a permanent home for generated clips —
-  // unpublished candidates past this timestamp get their staged files
-  // deleted and status flipped to "expired" by a cleanup sweep, so storage
-  // doesn't accumulate from abandoned/forgotten jobs.
-  expiresAt: timestamp("expires_at").notNull(),
-});
+  expiresAt: timestamp("expires_at").default(sql`now() + interval '7 days'`).notNull(),
+}, (table) => ({
+  jobFk: foreignKey({
+    name: "ai_clip_candidates_job_id_fkey",
+    columns: [table.jobId],
+    foreignColumns: [aiClipJobs.id],
+  }).onDelete("cascade"),
+  userFk: foreignKey({
+    name: "ai_clip_candidates_user_id_fkey",
+    columns: [table.userId],
+    foreignColumns: [users.id],
+  }).onDelete("cascade"),
+  publishedClipFk: foreignKey({
+    name: "ai_clip_candidates_published_clip_id_fkey",
+    columns: [table.publishedClipId],
+    foreignColumns: [clips.id],
+  }),
+  jobIdx: index("ai_clip_candidates_job_idx").on(table.jobId),
+}));
 
-// Admin on/off control for AI VOD-clip generation (e.g. to pause new job
-// creation if the local Whisper/Claude pipeline is overloaded). Singleton
-// row, same shape convention as bannerSettings.
 export const aiClipSettings = pgTable("ai_clip_settings", {
   id: serial("id").primaryKey(),
   isEnabled: boolean("is_enabled").default(true).notNull(),
-  disabledMessage: text("disabled_message"), // shown to users when isEnabled=false
-  updatedBy: integer("updated_by").references(() => users.id),
+  disabledMessage: text("disabled_message"),
+  updatedBy: integer("updated_by"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  updatedByFk: foreignKey({
+    name: "ai_clip_settings_updated_by_fkey",
+    columns: [table.updatedBy],
+    foreignColumns: [users.id],
+  }),
+}));
 
 // Likes table
 export const likes = pgTable("likes", {
@@ -393,12 +452,16 @@ export const scheduledPosts = pgTable("scheduled_posts", {
   publishedAt: timestamp("published_at"),
   publishedContentId: integer("published_content_id"),
   errorMessage: text("error_message"),
+  // Matches the client upload attempt so retries can return the already
+  // queued post instead of adding another scheduled item.
+  uploadAttemptId: text("upload_attempt_id"),
   attempts: integer("attempts").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
   dueIdx: index("scheduled_posts_due_idx").on(table.status, table.scheduledAt),
   userIdx: index("scheduled_posts_user_idx").on(table.userId, table.status),
+  userUploadAttemptIdx: uniqueIndex("scheduled_posts_user_upload_attempt_idx").on(table.userId, table.uploadAttemptId),
 }));
 
 // UserGameFavorites table
@@ -1346,6 +1409,30 @@ export const topContributors = pgTable("top_contributors", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// One durable record per seasonal rank payout. The unique season/rank key makes
+// the close job safe to run repeatedly without double-sending a transfer.
+export const leaderboardRewardPayouts = pgTable("leaderboard_reward_payouts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  seasonNumber: integer("season_number").notNull(),
+  rank: integer("rank").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  amount: real("amount").notNull(),
+  walletAddress: text("wallet_address"),
+  status: text("status").notNull().default("pending"), // pending, paid, skipped_no_wallet, failed
+  txHash: text("tx_hash"),
+  errorMessage: text("error_message"),
+  retryable: boolean("retryable").notNull().default(false),
+  attempts: integer("attempts").notNull().default(0),
+  lastAttemptAt: timestamp("last_attempt_at"),
+  nextRetryAt: timestamp("next_retry_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  paidAt: timestamp("paid_at"),
+}, (table) => ({
+  seasonRankUnique: unique("leaderboard_reward_payouts_season_rank_unique").on(table.seasonNumber, table.rank),
+  seasonIdx: index("leaderboard_reward_payouts_season_idx").on(table.seasonNumber),
+  userIdx: index("leaderboard_reward_payouts_user_idx").on(table.userId),
+}));
+
 // Schema for inserting monthly leaderboard entries
 export const insertMonthlyLeaderboardSchema = createInsertSchema(monthlyLeaderboard).omit({
   id: true,
@@ -1381,6 +1468,12 @@ export const insertTopContributorSchema = createInsertSchema(topContributors).om
   id: true,
   achievedAt: true,
   createdAt: true,
+});
+
+export const insertLeaderboardRewardPayoutSchema = createInsertSchema(leaderboardRewardPayouts).omit({
+  id: true,
+  createdAt: true,
+  paidAt: true,
 });
 
 // Schema for inserting clip reactions
@@ -1670,6 +1763,8 @@ export type WeeklyLeaderboard = typeof weeklyLeaderboard.$inferSelect;
 export type InsertWeeklyLeaderboard = z.infer<typeof insertWeeklyLeaderboardSchema>;
 export type TopContributor = typeof topContributors.$inferSelect;
 export type InsertTopContributor = z.infer<typeof insertTopContributorSchema>;
+export type LeaderboardRewardPayout = typeof leaderboardRewardPayouts.$inferSelect;
+export type InsertLeaderboardRewardPayout = z.infer<typeof insertLeaderboardRewardPayoutSchema>;
 export type UserPointsHistory = typeof userPointsHistory.$inferSelect;
 export type InsertUserPointsHistory = z.infer<typeof insertUserPointsHistorySchema>;
 export type UserXPHistory = typeof userXPHistory.$inferSelect;
@@ -1863,11 +1958,18 @@ export type UserWithStats = User & {
     following: number;
     clips: number;
     screenshots: number;
+    views?: number;
     clipViews: number;
     likesReceived: number;
     firesReceived: number;
   };
   favoriteGames?: Game[];
+  seasonStats?: {
+    seasonName: string;
+    seasonNumber: number;
+    seasonXP: number;
+    seasonViews: number;
+  };
 };
 
 export type UserWithBadges = User & {
@@ -2329,6 +2431,10 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   isPrimary: boolean("is_primary").default(false).notNull(),
   sortOrder: integer("sort_order").default(0).notNull(),
+  // The approved Gamefolio catalogue entry created for this developer-owned game.
+  // Keeping the relationship explicit prevents title changes from disconnecting
+  // community uploads or accidentally attaching to another developer's game.
+  catalogGameId: integer("catalog_game_id").references(() => games.id, { onDelete: "set null" }),
 
   // Section 1: Basic Info
   gameName: text("game_name"),
@@ -2375,6 +2481,11 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
   websiteUrl: text("website_url"),
   twitterUrl: text("twitter_url"),
   discordUrl: text("discord_url"),
+  youtubeUrl: text("youtube_url"),
+  twitchUrl: text("twitch_url"),
+  instagramUrl: text("instagram_url"),
+  facebookUrl: text("facebook_url"),
+  tiktokUrl: text("tiktok_url"),
 
   // Section 9: Store-Specific Info
   ageRating: text("age_rating"),
@@ -2393,6 +2504,24 @@ export const indieGameProfiles = pgTable("indie_game_profiles", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+// Privacy-preserving, first-party events for an indie game's public hub.
+// visitorKey is a one-way server-generated digest; raw IP and user-agent values
+// must never be persisted here.
+export const indieGameAnalyticsEvents = pgTable("indie_game_analytics_events", {
+  id: serial("id").primaryKey(),
+  profileId: integer("profile_id").notNull().references(() => indieGameProfiles.id, { onDelete: "cascade" }),
+  catalogGameId: integer("catalog_game_id").notNull().references(() => games.id, { onDelete: "cascade" }),
+  eventType: text("event_type").notNull(), // game_page_view | game_store_click
+  store: text("store"), // steam | epic | itch for store-click events
+  visitorKey: text("visitor_key").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  profileCreatedIdx: index("indie_game_analytics_events_profile_created_idx").on(table.profileId, table.createdAt),
+  catalogCreatedIdx: index("indie_game_analytics_events_catalog_created_idx").on(table.catalogGameId, table.createdAt),
+  visitorDedupeIdx: index("indie_game_analytics_events_visitor_dedupe_idx").on(table.profileId, table.eventType, table.visitorKey, table.createdAt),
+  storeCreatedIdx: index("indie_game_analytics_events_store_created_idx").on(table.profileId, table.store, table.createdAt),
+}));
 
 // Per-field import/override metadata — tracks source of truth for each field
 export const indieGameFieldOverrides = pgTable("indie_game_field_overrides", {

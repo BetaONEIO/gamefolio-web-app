@@ -1,31 +1,30 @@
 import { useState } from "react";
-import { Check, X, Edit2, RotateCcw, ExternalLink, Plus, Trash2, ChevronDown, ChevronRight, Monitor, Smartphone, Globe, Gamepad2 } from "lucide-react";
+import { Check, X, Edit2, RotateCcw, ExternalLink, Plus, Trash2, ChevronDown, ChevronRight, Gamepad2 } from "lucide-react";
+import {
+  SiAndroid, SiIos, SiLinux, SiMacos, SiNintendoswitch, SiPlaystation,
+} from "react-icons/si";
+import { FaWindows, FaXbox } from "react-icons/fa6";
 import { NEON, CARD_BG, CARD_BORDER } from "../../IndieDashboardPage";
-import { SOURCE_COLORS, PLATFORM_OPTIONS, formatFieldName, type FieldMeta, type Profile, type FieldType } from "./types";
+import { getSourceColor, getSourceLabel, PLATFORM_OPTIONS, formatFieldName, formatValue, type FieldMeta, type Profile, type FieldType } from "./types";
 
 // ─── Source Badge ─────────────────────────────────────────────────────────────
 
 export function SourceBadge({ fieldName, fieldMeta }: { fieldName: string; fieldMeta: FieldMeta }) {
   const meta = fieldMeta[fieldName];
-  if (!meta) return null;
-  if (meta.isManualOverride) {
-    return (
-      <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
-        style={{ background: `${NEON}22`, color: NEON, border: `1px solid ${NEON}44` }}>
-        Manual
-      </span>
-    );
-  }
-  if (meta.importSource) {
-    const color = SOURCE_COLORS[meta.importSource] ?? "#aaa";
-    return (
-      <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
-        style={{ background: `${color}22`, color, border: `1px solid ${color}44` }}>
-        {meta.importSource}
-      </span>
-    );
-  }
-  return null;
+  const label = getSourceLabel(meta);
+  if (!label) return null;
+  const color = getSourceColor(label);
+  const title = label === "OVERRIDDEN"
+    ? "Manual value is overriding an imported value"
+    : label === "MANUAL"
+      ? "Entered directly in Gamefolio"
+      : `Imported from ${label === "ITCH.IO" ? "itch.io" : label === "EPIC" ? "Epic Games" : label === "STEAM" ? "Steam" : "another connected source"}`;
+  return (
+    <span title={title} className="inline-flex text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded"
+      style={{ background: `${color}14`, color, border: `1px solid ${color}35` }}>
+      {label}
+    </span>
+  );
 }
 
 // ─── Tag Array Editor ─────────────────────────────────────────────────────────
@@ -91,14 +90,23 @@ export function UrlArrayEditor({ values, onChange }: { values: string[]; onChang
 
 // ─── Platform Select ──────────────────────────────────────────────────────────
 
-const ICON_MAP = { Monitor, Globe, Gamepad2, Smartphone };
+const ICON_MAP: Record<string, React.ElementType> = {
+  windows: FaWindows,
+  mac: SiMacos,
+  linux: SiLinux,
+  ps5: SiPlaystation,
+  xbox: FaXbox,
+  switch: SiNintendoswitch,
+  ios: SiIos,
+  android: SiAndroid,
+};
 
 export function PlatformToggleGrid({ values, onChange }: { values: string[]; onChange: (v: string[]) => void }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
       {PLATFORM_OPTIONS.map(opt => {
         const selected = values.includes(opt.id);
-        const Icon = ICON_MAP[opt.icon as keyof typeof ICON_MAP];
+         const Icon = ICON_MAP[opt.id] ?? Gamepad2;
         return (
           <button key={opt.id}
             onClick={() => onChange(selected ? values.filter(p => p !== opt.id) : [...values, opt.id])}
@@ -132,6 +140,10 @@ export function FieldRow({ fieldName, label, profile, fieldMeta, type, selectOpt
   const meta = fieldMeta[fieldName];
   const currentVal = (profile as any)?.[fieldName] ?? (type.includes("array") || type === "platform-select" ? [] : null);
   const canRevert = meta?.isManualOverride && !!(meta?.importedValue);
+  const importedValue = (() => {
+    if (!meta?.importedValue) return null;
+    try { return JSON.parse(meta.importedValue); } catch { return meta.importedValue; }
+  })();
 
   const startEdit = () => {
     setEditVal(type.includes("array") || type === "platform-select" ? [] : "");
@@ -151,7 +163,7 @@ export function FieldRow({ fieldName, label, profile, fieldMeta, type, selectOpt
           {canRevert && !editing && (
             <button onClick={() => onRevert(fieldName)} disabled={isSaving} title="Revert to imported value"
               className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded opacity-60 hover:opacity-100 transition-opacity"
-              style={{ color: SOURCE_COLORS[(meta as any).importSource ?? ""] ?? "#aaa", border: "1px solid currentColor" }}>
+              style={{ color: meta?.importSource ? getSourceColor(getSourceLabel(meta) ?? "IMPORTED") : "#aaa", border: "1px solid currentColor" }}>
               <RotateCcw size={9} /> Revert
             </button>
           )}
@@ -192,7 +204,7 @@ export function FieldRow({ fieldName, label, profile, fieldMeta, type, selectOpt
               <div className="flex flex-wrap gap-1.5 mt-1">
                 {(currentVal as string[]).map(p => {
                   const opt = PLATFORM_OPTIONS.find(o => o.id === p);
-                  const Icon = ICON_MAP[(opt?.icon ?? "Gamepad2") as keyof typeof ICON_MAP];
+                   const Icon = ICON_MAP[p] ?? Gamepad2;
                   return (
                     <span key={p} className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
                       style={{ background: "rgba(255,255,255,0.07)", border: `1px solid ${CARD_BORDER}` }}>
@@ -215,6 +227,12 @@ export function FieldRow({ fieldName, label, profile, fieldMeta, type, selectOpt
               {String(currentVal).length > 300 ? String(currentVal).slice(0, 297) + "…" : String(currentVal)}
             </span>
           ) : <span className="opacity-30 italic text-sm">Not set</span>}
+          {meta?.isManualOverride && importedValue !== null && (
+            <div className="mt-2 text-[11px] text-white/35">
+              Imported {meta.importSource ? (getSourceLabel({ importSource: meta.importSource, isManualOverride: false }) ?? "value") : "value"}:{" "}
+              <span className="text-white/50">{formatValue(importedValue)}</span>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-2">

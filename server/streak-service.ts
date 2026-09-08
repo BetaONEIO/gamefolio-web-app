@@ -187,7 +187,7 @@ export class StreakService {
           const notif = await storage.createNotification({
             userId,
             type: 'streak',
-            title: isNewMilestone ? `🔥 ${currentStreak}-Day Streak Milestone!` : `🔥 Day ${currentStreak} Streak!`,
+            title: isNewMilestone ? `${currentStreak}-Day Streak Milestone` : `Day ${currentStreak} Streak`,
             message: isNewMilestone
               ? `You earned ${DAILY_LOGIN_XP} daily XP + ${bonusAwarded} milestone bonus XP for your ${currentStreak}-day streak!`
               : `You earned ${DAILY_LOGIN_XP} XP for logging in ${currentStreak} day${currentStreak > 1 ? 's' : ''} in a row.`,

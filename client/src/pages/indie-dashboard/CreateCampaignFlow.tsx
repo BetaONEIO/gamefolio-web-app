@@ -10,7 +10,7 @@ import {
   CheckCircle2, Calendar, Bot, Sliders,
   ChevronLeft, ChevronRight, ChevronDown, ClipboardList,
 } from "lucide-react";
-import { NEON } from "./constants";
+import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const CARD_BG     = "#0e1520";
@@ -140,7 +140,7 @@ const fieldStyle: React.CSSProperties = {
 // Confetti component
 // ─────────────────────────────────────────────
 
-const CONFETTI_COLOURS = ["#B8FF1B","#60a5fa","#fb923c","#f472b6","#a78bfa","#34d399"];
+const CONFETTI_COLOURS = [NEON];
 function Confetti() {
   const pieces = Array.from({ length: 55 }, (_, i) => ({
     id: i,
@@ -370,16 +370,13 @@ function StepCard({
 
 const TYPE_ACCENT: Record<string, string> = {
   "quick-creator":    NEON,
-  "content-boost":    "#60a5fa",
-  "creator-showcase": "#fb923c",
+  "content-boost":    NEON,
+  "creator-showcase": NEON,
 };
 
 // Hex accent → rgb components for rgba() usage
 const ACCENT_RGB: Record<string, string> = {
-  "#60a5fa": "96,165,250",
   [NEON]:    "183,255,27",
-  "#fb923c": "251,146,60",
-  "#a78bfa": "167,139,250",
 };
 
 // Per-campaign floating decoration sets

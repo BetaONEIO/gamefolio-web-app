@@ -1,8 +1,7 @@
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, Wallet, Loader2 } from "lucide-react";
+import { ArrowLeft, Wallet, Loader2, Gift, Layers3, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useWallet } from "@/hooks/use-wallet";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { isNative, openExternal } from "@/lib/platform";
@@ -36,7 +35,6 @@ export default function WalletPage() {
   const { openModal } = useAuthModal();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
-  const { walletAddress: connectedWalletAddress, isReady, isConnecting, connect } = useWallet();
   const [showBuyDialog, setShowBuyDialog] = useState(false);
   const [showBuyScreen, setShowBuyScreen] = useState(false);
   const [showReviewScreen, setShowReviewScreen] = useState(false);
@@ -138,6 +136,14 @@ export default function WalletPage() {
     enabled: !!user,
   });
 
+  const {
+    createWallet,
+    isCreating: isCreatingWallet,
+    error: walletError,
+    walletAddress: newWalletAddress
+  } = useAutoWallet();
+  const walletInitiatedRef = useRef(false);
+
   const { data: onChainData } = useQuery<{
     balance: string;
     walletAddress: string | null;
@@ -155,43 +161,24 @@ export default function WalletPage() {
       if (!res.ok) throw new Error('Failed to fetch on-chain balance');
       return res.json();
     },
-    enabled: !!user?.walletAddress,
+    enabled: !!(user?.walletAddress || newWalletAddress),
     refetchInterval: 30000,
   });
 
   const onChainBalance = onChainData?.balance || '0';
   const walletBreakdown = onChainData?.wallets || [];
 
-  const { 
-    createWallet, 
-    isCreating: isCreatingWallet, 
-    error: walletError,
-    walletAddress: newWalletAddress
-  } = useAutoWallet();
-  const walletInitiatedRef = useRef(false);
-
-  const hasExistingWallet = !!(user?.walletAddress || (isReady && connectedWalletAddress) || newWalletAddress);
-  const [showWalletDetails, setShowWalletDetails] = useState(false);
-
-  useEffect(() => {
-    if (hasExistingWallet) {
-      setShowWalletDetails(true);
-    }
-  }, [hasExistingWallet]);
+  const hasExistingWallet = !!(user?.walletAddress || newWalletAddress);
 
   const handleRetryWalletCreation = () => {
     walletInitiatedRef.current = false;
-    createWallet();
+    void createWallet();
   };
 
-  const handleConnectWallet = () => {
-    if (user?.email && user?.emailVerified) {
-      if (!walletInitiatedRef.current) {
-        walletInitiatedRef.current = true;
-        createWallet();
-      }
-    } else {
-      connect();
+  const handleCreateWallet = () => {
+    if (!walletInitiatedRef.current && !isCreatingWallet) {
+      walletInitiatedRef.current = true;
+      void createWallet();
     }
   };
 
@@ -288,7 +275,7 @@ export default function WalletPage() {
         onBack={() => setShowReviewScreen(false)}
         amount={purchaseAmount}
         gftAmount={gftAmount}
-        walletAddress={user.walletAddress || connectedWalletAddress || newWalletAddress || ''}
+        walletAddress={user.walletAddress || newWalletAddress || ''}
         onProceed={() => {
           setShowReviewScreen(false);
           setShowCardEntry(true);
@@ -311,8 +298,8 @@ export default function WalletPage() {
     );
   }
 
-  if (hasExistingWallet && showWalletDetails) {
-    const displayWalletAddress = user.walletAddress || connectedWalletAddress || newWalletAddress || '';
+  if (hasExistingWallet) {
+    const displayWalletAddress = user.walletAddress || newWalletAddress || '';
     
     return (
       <WalletHomepage
@@ -335,7 +322,7 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-[calc(var(--mobile-nav-height,3.5rem)+1.5rem+env(safe-area-inset-bottom,0px))] md:pb-6">
       <div className="container mx-auto px-4 py-4 md:px-6 md:py-6 max-w-6xl">
         <div className="mb-8">
           <Link href="/">
@@ -350,33 +337,37 @@ export default function WalletPage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 items-center">
+        <div className="grid md:grid-cols-2 gap-6 md:gap-8 items-start md:items-center">
           <div>
             <img 
               src={walletPromo} 
               alt="Wallet Features" 
-              className="w-full max-w-md mx-auto rounded-2xl shadow-2xl"
+              className="w-full max-w-md max-h-[220px] md:max-h-none object-contain mx-auto rounded-2xl shadow-2xl"
             />
           </div>
 
           <div className="space-y-6">
             <h2 className="text-2xl font-bold">Your Gaming Wallet</h2>
             <p className="text-muted-foreground">
-              Get your own blockchain wallet to store GF Tokens, collect NFTs, and unlock exclusive features.
+              Create your secure Gamefolio wallet to hold GFT, receive rewards, and use wallet-powered Gamefolio features.
             </p>
 
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-primary" />
-                <span>Hold and manage GF Tokens</span>
+                <Wallet className="w-4 h-4 shrink-0 text-primary" />
+                <span>Hold and manage GFT</span>
               </li>
               <li className="flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-primary" />
-                <span>Stake tokens to earn rewards</span>
+                <Gift className="w-4 h-4 shrink-0 text-primary" />
+                <span>Receive Gamefolio rewards</span>
               </li>
               <li className="flex items-center gap-2">
-                <Wallet className="w-4 h-4 text-primary" />
-                <span>Ability to mint and trade NFTs</span>
+                <Layers3 className="w-4 h-4 shrink-0 text-primary" />
+                <span>Manage supported digital collectibles</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 shrink-0 text-primary" />
+                <span>Keep your Gamefolio assets in one secure wallet</span>
               </li>
             </ul>
 
@@ -413,7 +404,7 @@ export default function WalletPage() {
                         <div>
                           <p className="text-sm font-medium">Creating Your Wallet</p>
                           <p className="text-xs text-muted-foreground">
-                            Setting up your secure blockchain wallet...
+                            Creating your secure Gamefolio wallet…
                           </p>
                         </div>
                       </div>
@@ -422,17 +413,13 @@ export default function WalletPage() {
                 </div>
               ) : (
                 <Button 
-                  onClick={handleConnectWallet}
-                  disabled={isCreatingWallet || isConnecting}
-                  className="w-auto px-6"
+                  onClick={handleCreateWallet}
+                  disabled={isCreatingWallet}
+                  className="w-full md:w-auto px-6 bg-primary text-[#0F101B] font-bold hover:bg-primary/90"
                   data-testid="button-create-wallet"
                 >
-                  {isConnecting ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Wallet className="w-4 h-4 mr-2" />
-                  )}
-                  {user?.emailVerified ? "Create Wallet" : "Connect Wallet"}
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Create Your Wallet
                 </Button>
               )}
             </div>

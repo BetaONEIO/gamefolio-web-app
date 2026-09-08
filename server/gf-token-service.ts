@@ -43,15 +43,17 @@ export interface TransferResult {
   success: boolean;
   txHash?: string;
   error?: string;
+  retryable?: boolean;
 }
 
 export async function transferGfTokens(
   toAddress: string,
   amount: number
 ): Promise<TransferResult> {
+  let submittedHash: string | undefined;
   try {
     if (!toAddress || !toAddress.startsWith('0x')) {
-      return { success: false, error: 'Invalid recipient wallet address' };
+      return { success: false, error: 'Invalid recipient wallet address', retryable: false };
     }
 
     const amountInWei = parseUnits(amount.toString(), GF_TOKEN_DECIMALS);
@@ -68,6 +70,7 @@ export async function transferGfTokens(
       return {
         success: false,
         error: `Insufficient treasury balance. Required: ${amount}, Available: ${formatUnits(treasuryBalance, GF_TOKEN_DECIMALS)}`,
+        retryable: true,
       };
     }
 
@@ -88,6 +91,7 @@ export async function transferGfTokens(
       args: [toAddress as Address, amountInWei],
       gasPrice,
     });
+    submittedHash = hash;
 
     const receipt = await publicClient.waitForTransactionReceipt({
       hash,
@@ -98,13 +102,17 @@ export async function transferGfTokens(
       console.log(`[Treasury] Transfer confirmed. TX: ${hash}`);
       return { success: true, txHash: hash };
     } else {
-      return { success: false, txHash: hash, error: 'Transaction reverted' };
+      return { success: false, txHash: hash, error: 'Transaction reverted', retryable: true };
     }
   } catch (error: any) {
     console.error('[Treasury] GF Token transfer error:', error);
     return {
       success: false,
+      txHash: submittedHash,
       error: error.message || 'Unknown transfer error',
+      // Once a hash exists, the transfer may still have landed even if
+      // confirmation timed out, so it must be manually reconciled.
+      retryable: !submittedHash,
     };
   }
 }
