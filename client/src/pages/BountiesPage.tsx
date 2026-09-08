@@ -381,7 +381,7 @@ function campaignHeroSources(campaign: any): string[] {
   ].filter((source): source is string => typeof source === "string" && source.trim().length > 0)));
 }
 
-function FeaturedHeroBackground({ campaign }: { campaign: any }) {
+function FeaturedHeroBackground({ campaign, className }: { campaign: any; className?: string }) {
   const sources = campaignHeroSources(campaign);
   const [sourceIndex, setSourceIndex] = useState(0);
   const source = sources[sourceIndex] ?? null;
@@ -405,12 +405,12 @@ function FeaturedHeroBackground({ campaign }: { campaign: any }) {
 
   return (
     <div
-      className="absolute inset-0 bg-center bg-cover bg-no-repeat transition-[background-image] duration-300"
+      className={className ?? "absolute inset-0 bg-center bg-cover bg-no-repeat transition-[background-image] duration-300"}
       aria-hidden="true"
       style={{
         backgroundImage: source
           ? `url("${source}")`
-          : "linear-gradient(135deg, rgba(184,255,27,0.12) 0%, rgba(7,11,16,1) 100%)",
+          : `url("/attached_assets/gamefolio-verification-banner.png")`,
         backgroundPosition: "center",
       }}
     />
@@ -2115,29 +2115,42 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         </button>
 
         {/* Compact game and campaign hero */}
-        <section className="relative min-h-[250px] overflow-hidden rounded-2xl" style={{ border: `1px solid ${CARD_BORDER}`, background: CARD_BG }}>
-          <FeaturedHeroBackground campaign={data} />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(15,16,27,0.98) 0%, rgba(15,16,27,0.88) 42%, rgba(15,16,27,0.38) 76%, rgba(15,16,27,0.20) 100%)" }} />
-          <div className="absolute inset-0 sm:hidden" style={{ background: "rgba(15,16,27,0.28)" }} />
+        <section className="relative overflow-hidden rounded-xl bg-[#0F101B] sm:min-h-[400px]">
+          <FeaturedHeroBackground
+            campaign={data}
+            className="absolute inset-x-0 top-0 h-[220px] bg-center bg-cover bg-no-repeat transition-[background-image] duration-300 sm:inset-0 sm:h-auto"
+          />
+          <div
+            className="absolute inset-x-0 top-0 h-[245px] sm:hidden"
+            style={{ background: "linear-gradient(180deg, rgba(15,16,27,0.02) 0%, rgba(15,16,27,0.08) 55%, rgba(15,16,27,0.92) 88%, #0F101B 100%)" }}
+          />
+          <div
+            className="absolute inset-0 hidden sm:block"
+            style={{ background: "linear-gradient(90deg, rgba(15,16,27,0.99) 0%, rgba(15,16,27,0.95) 28%, rgba(15,16,27,0.74) 46%, rgba(15,16,27,0.22) 70%, rgba(15,16,27,0.04) 100%)" }}
+          />
+          <div className="absolute inset-0 hidden sm:block" style={{ background: "linear-gradient(0deg, rgba(15,16,27,0.42) 0%, transparent 35%)" }} />
 
-          <div className="relative z-10 min-h-[250px] flex flex-col justify-end p-5 sm:p-7 max-w-3xl">
+          <div className="relative z-10 flex flex-col justify-end px-5 pb-6 pt-[225px] sm:min-h-[400px] sm:w-[50%] sm:justify-center sm:px-9 sm:py-8 lg:px-11">
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full"
                 style={{ color: "#070b10", background: NEON }}>
                 <ShieldCheck size={10} /> GF Verified
               </span>
-              <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wider px-2 py-1 rounded-full"
-                style={{ color: statusCfg.color, background: statusCfg.bg }}>
-                {statusCfg.label}
-              </span>
+              <span className="text-[9px] font-black uppercase tracking-[0.16em] text-white/62">Joined</span>
+              {statusCfg.label !== "Joined" && (
+                <>
+                  <span className="text-white/25" aria-hidden="true">·</span>
+                  <span className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: statusCfg.color }}>{statusCfg.label}</span>
+                </>
+              )}
             </div>
 
             <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/45">Game</div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">{data.game_name || "Gamefolio"}</h1>
-            <div className="text-sm sm:text-base font-black mt-1" style={{ color: NEON }}>{data.template_name ?? cp.template_name}</div>
-            {data.description && <p className="text-xs sm:text-sm text-white/58 mt-2 max-w-2xl line-clamp-2">{data.description}</p>}
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white leading-[0.95] mt-1">{data.game_name || "Gamefolio"}</h1>
+            <div className="text-sm sm:text-lg font-black uppercase tracking-[0.08em] mt-2" style={{ color: NEON }}>{data.template_name ?? cp.template_name}</div>
+            {data.description && <p className="text-sm text-white/62 mt-3 max-w-xl leading-relaxed line-clamp-3">{data.description}</p>}
 
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-[11px] font-bold text-white/55">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-4 text-[11px] font-bold text-white/55">
               <span>Joined</span>
               <span aria-hidden="true">·</span>
               <span className={deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : ""}>{deadlineLabel}</span>
@@ -2148,11 +2161,11 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 <div className="text-[9px] font-black uppercase tracking-[0.18em] text-white/40 mb-2">Your Rewards</div>
                 <div className="flex flex-wrap gap-2">
                   {missionRewards.map(({ icon: RewardIcon, label, state, tone }) => (
-                    <div key={label} className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[10px] font-bold"
-                      style={{ background: "rgba(15,16,27,0.78)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                    <div key={label} className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[10px] font-bold"
+                      style={{ background: "rgba(6,8,14,0.74)", border: "1px solid rgba(255,255,255,0.12)" }}>
                       <RewardIcon size={13} style={{ color: tone }} />
                       <span className="text-white/85">{label}</span>
-                      <span className="text-white/38 uppercase text-[8px]">{state}</span>
+                      <span className="text-white/38 text-[8px]">· {state}</span>
                     </div>
                   ))}
                 </div>
