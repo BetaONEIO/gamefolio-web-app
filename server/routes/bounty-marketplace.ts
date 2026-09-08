@@ -606,16 +606,34 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
         cp.demo_key_id,
         cp.full_key_id,
         ci.id AS instance_id,
+        ci.game_id,
         ci.game_name,
         ci.game_artwork_url,
+        ci.artwork_url AS campaign_artwork_url,
         ci.game_steam_app_id,
+        ci.game_itch_url,
+        ci.game_epic_slug,
         ci.end_date,
         t.name AS template_name,
         t.slug AS template_slug,
         t.category,
+        t.description,
+        t.best_use_case,
         t.duration,
         t.completion_reward,
         t.completion_reward_description,
+        g.image_url AS catalog_game_artwork_url,
+        igp.header_image_url AS game_profile_header_artwork_url,
+        igp.capsule_image_url AS game_profile_capsule_artwork_url,
+        igp.screenshot_urls[1] AS game_profile_screenshot_artwork_url,
+        COALESCE(
+          NULLIF(igp.header_image_url, ''),
+          NULLIF(g.image_url, ''),
+          NULLIF(igp.capsule_image_url, ''),
+          NULLIF(igp.screenshot_urls[1], ''),
+          NULLIF(ci.game_artwork_url, ''),
+          NULLIF(ci.artwork_url, '')
+        ) AS hero_artwork_url,
         (SELECT COUNT(*) FROM campaign_template_bounties WHERE template_id = t.id AND mandatory = true) AS mandatory_bounty_count,
         (SELECT COUNT(*) FROM campaign_bounty_submissions bs WHERE bs.instance_id = ci.id AND bs.participant_id = ${userId} AND bs.status = 'approved') AS approved_bounties,
         (SELECT COUNT(*) FROM campaign_bounty_submissions bs WHERE bs.instance_id = ci.id AND bs.participant_id = ${userId}) AS submitted_bounties,
@@ -640,6 +658,8 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
       FROM campaign_participants cp
       JOIN campaign_instances ci ON ci.id = cp.instance_id
       JOIN campaign_templates t ON t.id = ci.template_id
+      LEFT JOIN games g ON g.id = ci.game_id
+      LEFT JOIN indie_game_profiles igp ON igp.catalog_game_id = g.id AND igp.is_primary = true
       WHERE cp.user_id = ${userId}
       ORDER BY cp.joined_at DESC
     `);
@@ -699,22 +719,41 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         cp.demo_key_id,
         cp.full_key_id,
         ci.id AS instance_id,
+        ci.game_id,
         ci.game_name,
         ci.game_artwork_url,
+        ci.artwork_url AS campaign_artwork_url,
         ci.game_steam_app_id,
         ci.game_itch_url,
+        ci.game_epic_slug,
         ci.end_date,
         t.id AS template_id,
         t.name AS template_name,
         t.category,
+        t.description,
+        t.best_use_case,
         t.duration,
         t.completion_reward,
         t.completion_reward_description,
+        g.image_url AS catalog_game_artwork_url,
+        igp.header_image_url AS game_profile_header_artwork_url,
+        igp.capsule_image_url AS game_profile_capsule_artwork_url,
+        igp.screenshot_urls[1] AS game_profile_screenshot_artwork_url,
+        COALESCE(
+          NULLIF(igp.header_image_url, ''),
+          NULLIF(g.image_url, ''),
+          NULLIF(igp.capsule_image_url, ''),
+          NULLIF(igp.screenshot_urls[1], ''),
+          NULLIF(ci.game_artwork_url, ''),
+          NULLIF(ci.artwork_url, '')
+        ) AS hero_artwork_url,
         (SELECT key_value FROM game_keys gk WHERE gk.id = cp.demo_key_id) AS demo_key_value,
         (SELECT key_value FROM game_keys gk WHERE gk.id = cp.full_key_id) AS full_key_value
       FROM campaign_participants cp
       JOIN campaign_instances ci ON ci.id = cp.instance_id
       JOIN campaign_templates t ON t.id = ci.template_id
+      LEFT JOIN games g ON g.id = ci.game_id
+      LEFT JOIN indie_game_profiles igp ON igp.catalog_game_id = g.id AND igp.is_primary = true
       WHERE cp.instance_id = ${instanceId} AND cp.user_id = ${userId}
     `)) as any[];
 
