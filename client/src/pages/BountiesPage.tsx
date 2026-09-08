@@ -171,6 +171,118 @@ function objectiveDescription(b: any) {
     ct === "bug" ? `Document ${qty} bug${qty !== 1 ? "s" : ""}` : "Complete this objective");
 }
 
+function campaignProgressUnits(campaign: any) {
+  const objectives: any[] = Array.isArray(campaign.objective_progress) ? campaign.objective_progress : [];
+  const required = objectives.filter((objective: any) => Boolean(objective.mandatory));
+  const requiredUnits = required.reduce((sum: number, objective: any) => sum + Math.max(Number(objective.quantity ?? 1), 1), 0);
+  const approvedUnits = required.reduce((sum: number, objective: any) => sum + Math.min(Number(objective.approved_count ?? 0), Math.max(Number(objective.quantity ?? 1), 1)), 0);
+  const submittedUnits = required.reduce((sum: number, objective: any) => sum + Math.min(Number(objective.submitted_count ?? 0), Math.max(Number(objective.quantity ?? 1), 1)), 0);
+
+  return {
+    requiredUnits: Number(campaign.required_objective_units ?? requiredUnits),
+    approvedUnits: Number(campaign.approved_objective_units ?? approvedUnits),
+    submittedUnits: Number(campaign.submitted_objective_units ?? submittedUnits),
+  };
+}
+
+function campaignJourneyStatus(campaign: any) {
+  return campaign.journey_status ?? campaign.participant_status;
+}
+
+function campaignTabStatus(campaign: any): MyTab {
+  const status = campaignJourneyStatus(campaign);
+  if (["under_review", "submitted_for_review"].includes(status)) return "submitted";
+  if (["completed", "completed_and_verified", "full_game_awarded"].includes(status)) return "completed";
+  if (["expired", "rejected", "cancelled"].includes(status)) return "expired";
+  return "active";
+}
+
+function campaignDeadline(campaign: any) {
+  return campaign.deadline ?? campaign.end_date ?? null;
+}
+
+function campaignDeadlineLabel(campaign: any) {
+  const deadline = campaignDeadline(campaign);
+  if (!deadline) return "No deadline";
+  const diff = new Date(deadline).getTime() - Date.now();
+  if (!Number.isFinite(diff)) return "No deadline";
+  if (diff <= 0) return "Ended";
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return "Ends today";
+  if (days === 1) return "Ends tomorrow";
+  return `Ends in ${days} days`;
+}
+
+function campaignDeadlineUrgency(campaign: any) {
+  const deadline = campaignDeadline(campaign);
+  if (!deadline) return "normal";
+  const diff = new Date(deadline).getTime() - Date.now();
+  if (!Number.isFinite(diff) || diff <= 0) return "urgent";
+  if (diff <= 2 * 86400000) return "urgent";
+  if (diff <= 7 * 86400000) return "soon";
+  return "normal";
+}
+
+function campaignNextObjective(campaign: any, progress: { requiredUnits: number; approvedUnits: number; submittedUnits: number }) {
+  const status = campaignJourneyStatus(campaign);
+  const next = campaign.next_objective;
+  if (status === "changes_requested") {
+    return { title: "Resubmit requested content", detail: next?.title ?? "Review the requested changes", progress: null };
+  }
+  if (status === "under_review" || status === "submitted_for_review") {
+    return { title: "Awaiting developer verification", detail: next?.title ?? null, progress: null };
+  }
+  if (next) {
+    const quantity = Math.max(Number(next.quantity ?? 1), 1);
+    const submitted = Math.min(Number(next.submitted_units ?? 0), quantity);
+    const approved = Math.min(Number(next.approved_units ?? 0), quantity);
+    return {
+      title: next.title ?? objectiveDescription(next),
+      detail: next.description ?? objectiveDescription(next),
+      progress: `${Math.max(submitted, approved)}/${quantity}`,
+    };
+  }
+  if (progress.requiredUnits > 0 && progress.approvedUnits >= progress.requiredUnits) {
+    return { title: "All objectives complete — rewards pending", detail: null, progress: null };
+  }
+  if (campaignTabStatus(campaign) === "completed") {
+    return { title: "Campaign complete", detail: null, progress: null };
+  }
+  return { title: "No required objectives configured", detail: null, progress: null };
+}
+
+function campaignRewardSummary(campaign: any) {
+  const objectives: any[] = Array.isArray(campaign.objective_progress) ? campaign.objective_progress : [];
+  const objectiveXp = objectives.reduce((sum: number, objective: any) => sum + Number(objective.xp_reward ?? 0), 0);
+  const completionDescription = String(campaign.completion_reward_description ?? "");
+  const completionXp = Number(completionDescription.match(/([\d,]+)\s*XP/i)?.[1]?.replace(/,/g, "") ?? 0);
+  const gft = completionDescription.match(/([\d,]+)\s*GFT/i)?.[1];
+  const rewards: { icon: any; label: string; tone?: string }[] = [];
+  const totalXp = objectiveXp + completionXp;
+
+  if (totalXp > 0) rewards.push({ icon: Zap, label: `+${totalXp.toLocaleString()} XP`, tone: NEON });
+  if (gft) rewards.push({ icon: Trophy, label: `${gft} GFT`, tone: "#fbbf24" });
+  if (campaign.completion_reward === "full_game_key" || /full[- ]game/i.test(completionDescription)) {
+    rewards.push({ icon: Gift, label: "Full game", tone: "#a78bfa" });
+  }
+  if (campaign.completion_reward === "xp_badge" || /badge/i.test(completionDescription)) {
+    rewards.push({ icon: Star, label: "Profile badge", tone: "#60a5fa" });
+  }
+  if (rewards.length === 0 && completionDescription) {
+    rewards.push({ icon: Gift, label: completionDescription, tone: "rgba(255,255,255,0.68)" });
+  }
+  return rewards;
+}
+
+function CampaignRewardChip({ icon: Icon, label, tone }: { icon: any; label: string; tone?: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold whitespace-nowrap" style={{ color: tone ?? "rgba(255,255,255,0.62)" }}>
+      <Icon size={12} strokeWidth={2.4} />
+      {label}
+    </span>
+  );
+}
+
 // ── Requirement pill ──────────────────────────────────────────────────────
 const REQ_ICON: Record<string, any> = {
   clip: Film, screenshot: Camera, feedback: MessageSquare,
@@ -2002,6 +2114,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
 
 function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => void }) {
   const [myTab, setMyTab] = useState<MyTab>("active");
+  const [sortBy, setSortBy] = useState<"recent" | "ending" | "completion" | "reward">("recent");
   const { user } = useAuth();
 
   const { data: campaigns = [], isLoading } = useQuery<any[]>({
@@ -2010,13 +2123,13 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
     enabled: !!user,
   });
 
-  const filter = (statuses: string[]) => (campaigns as any[]).filter(c => statuses.includes(c.journey_status ?? c.participant_status));
-  const tabs: { key: MyTab; label: string; statuses: string[] }[] = [
-    { key: "active",    label: "Active",    statuses: ["enrolled", "demo_key_claimed", "in_progress", "changes_requested"] },
-    { key: "submitted", label: "Under Review", statuses: ["submitted_for_review", "under_review"] },
-    { key: "completed", label: "Completed", statuses: ["completed_and_verified", "completed", "full_game_awarded"] },
-    { key: "expired",   label: "Expired",   statuses: ["rejected", "expired", "cancelled"] },
+  const tabs: { key: MyTab; label: string }[] = [
+    { key: "active",    label: "Active" },
+    { key: "submitted", label: "Under Review" },
+    { key: "completed", label: "Completed" },
+    { key: "expired",   label: "Expired" },
   ];
+  const filter = (tab: MyTab) => (campaigns as any[]).filter(c => campaignTabStatus(c) === tab);
 
   if (!user) {
     return (
@@ -2032,30 +2145,72 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
     return <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-white/30" /></div>;
   }
 
-  const currentCampaigns = filter(tabs.find(t => t.key === myTab)!.statuses);
+  const currentCampaigns = filter(myTab).sort((a, b) => {
+    if (sortBy === "ending") {
+      const aDate = new Date(campaignDeadline(a) ?? "9999-12-31").getTime();
+      const bDate = new Date(campaignDeadline(b) ?? "9999-12-31").getTime();
+      return aDate - bDate;
+    }
+    if (sortBy === "completion") {
+      const aProgress = campaignProgressUnits(a);
+      const bProgress = campaignProgressUnits(b);
+      const aPct = aProgress.requiredUnits > 0 ? aProgress.approvedUnits / aProgress.requiredUnits : 0;
+      const bPct = bProgress.requiredUnits > 0 ? bProgress.approvedUnits / bProgress.requiredUnits : 0;
+      return bPct - aPct;
+    }
+    if (sortBy === "reward") {
+      const rewardTotal = (campaign: any) => campaignRewardSummary(campaign)
+        .reduce((sum, reward) => sum + Number(reward.label.match(/[\d,]+/)?.[0]?.replace(/,/g, "") ?? 0), 0);
+      return rewardTotal(b) - rewardTotal(a);
+    }
+    return new Date(b.joined_at ?? 0).getTime() - new Date(a.joined_at ?? 0).getTime();
+  });
 
   return (
-    <div className="space-y-4 pb-24 sm:pb-8">
-      {/* Sub-tabs */}
-      <div className="flex gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.04)" }}>
+    <div className="space-y-5 pb-24 sm:pb-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Status navigation */}
+        <div className="flex gap-1 p-1 rounded-xl overflow-x-auto" style={{ background: "rgba(255,255,255,0.04)" }} role="tablist" aria-label="Campaign status">
         {tabs.map(t => {
-          const count = filter(t.statuses).length;
+          const count = filter(t.key).length;
           return (
-            <button key={t.key} onClick={() => setMyTab(t.key)}
-              className="flex-1 py-2 rounded-lg text-xs font-bold transition-all relative"
+            <button
+              key={t.key}
+              onClick={() => setMyTab(t.key)}
+              role="tab"
+              aria-selected={myTab === t.key}
+              className="flex items-center justify-center gap-2 min-w-max px-3.5 py-2 rounded-lg text-xs font-bold transition-all"
               style={myTab === t.key
                 ? { background: NEON, color: "#070b10" }
-                : { color: "rgba(255,255,255,0.5)" }}>
+                : { color: "rgba(255,255,255,0.5)" }}
+            >
               {t.label}
-              {count > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center"
-                  style={{ background: myTab === t.key ? "#070b10" : NEON, color: myTab === t.key ? NEON : "#070b10" }}>
+              <span
+                className="min-w-4 h-4 px-1 rounded-full text-[9px] font-black flex items-center justify-center"
+                style={{ background: myTab === t.key ? "rgba(7,11,16,0.22)" : "rgba(255,255,255,0.09)", color: myTab === t.key ? "#070b10" : "rgba(255,255,255,0.48)" }}
+              >
                   {count}
-                </span>
-              )}
+              </span>
             </button>
           );
         })}
+        </div>
+
+        <label className="flex items-center gap-2 self-start sm:self-auto text-[11px] font-bold text-white/40">
+          <SlidersHorizontal size={13} />
+          Sort by
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value as typeof sortBy)}
+            className="rounded-lg px-2.5 py-2 text-[11px] font-bold text-white outline-none cursor-pointer"
+            style={{ background: "#111820", border: "1px solid rgba(255,255,255,0.10)" }}
+          >
+            <option value="recent">Recently joined</option>
+            <option value="ending">Ending soon</option>
+            <option value="completion">Closest to completion</option>
+            <option value="reward">Highest reward</option>
+          </select>
+        </label>
       </div>
 
       {currentCampaigns.length === 0 ? (
@@ -2065,75 +2220,89 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
           {myTab === "active" && <div className="text-white/30 text-xs">Browse the Marketplace to find and join campaigns</div>}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {currentCampaigns.map((c: any) => {
-            const effectiveStatus = c.journey_status ?? c.participant_status;
+            const effectiveStatus = campaignJourneyStatus(c);
             const statusCfg = STATUS_CONFIG[effectiveStatus] ?? STATUS_CONFIG.enrolled;
-            const requiredUnits = Number(c.required_objective_units ?? c.mandatory_bounty_count ?? 0);
-            const approvedUnits = Number(c.approved_objective_units ?? c.approved_bounties ?? 0);
-            const submittedUnits = Number(c.submitted_objective_units ?? c.submitted_bounties ?? 0);
+            const progress = campaignProgressUnits(c);
+            const requiredUnits = progress.requiredUnits;
+            const progressUnits = Math.max(progress.approvedUnits, progress.submittedUnits);
+            const approvedUnits = progress.approvedUnits;
             const progressUnits = Math.max(approvedUnits, submittedUnits);
             const pct = requiredUnits > 0 ? Math.min(100, Math.round((progressUnits / requiredUnits) * 100)) : 0;
-            const nextTitle = c.next_objective?.title ?? c.next_objective_title ?? "Review your mission objectives";
+            const nextObjective = campaignNextObjective(c, progress);
+            const deadlineLabel = campaignDeadlineLabel(c);
+            const deadlineUrgency = campaignDeadlineUrgency(c);
+            const rewards = campaignRewardSummary(c);
+            const needsAction = effectiveStatus === "changes_requested";
+            const demoKeyActive = Boolean(c.demo_key_value || c.demo_key_id);
+            const fullKeyActive = Boolean(c.full_key_value || c.full_key_id);
 
             return (
-              <div key={c.instance_id} className="rounded-xl p-4 space-y-3" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-                <div className="flex items-start gap-3">
+              <div key={c.instance_id} className="rounded-xl px-3.5 py-3 sm:px-4 sm:py-3.5" style={{ background: CARD_BG, border: `1px solid ${needsAction ? "rgba(249,115,22,0.30)" : CARD_BORDER}` }}>
+                <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[minmax(220px,0.9fr)_minmax(250px,1.4fr)_auto] sm:items-center sm:gap-5">
+                  <div className="flex items-center gap-3 min-w-0">
                   {c.game_artwork_url ? (
-                    <img src={c.game_artwork_url} alt="" className="w-12 h-14 object-cover rounded-lg flex-shrink-0" />
+                    <img src={c.game_artwork_url} alt="" className="w-14 h-14 object-cover rounded-lg flex-shrink-0" />
                   ) : (
-                    <div className="w-12 h-14 rounded-lg flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(183,255,24,0.06)" }}>
-                      <Target size={18} color="rgba(183,255,24,0.3)" />
+                    <div className="w-14 h-14 rounded-lg flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(183,255,24,0.06)" }}>
+                      <Target size={20} color="rgba(183,255,24,0.3)" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] text-white/40 font-bold">{c.game_name}</div>
-                    <div className="text-sm font-black text-white leading-tight">{c.template_name}</div>
-                    <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full mt-1"
+                    <div className="text-sm font-black text-white leading-tight truncate">{c.template_name}</div>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                    <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full"
                       style={{ color: statusCfg.color, background: statusCfg.bg }}>
                       {statusCfg.label}
                     </span>
+                      {needsAction && <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full text-orange-300 bg-orange-400/10">Action required</span>}
+                    </div>
                   </div>
                 </div>
 
-                {/* Progress */}
-                {requiredUnits > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="text-[11px] text-white/40">Required progress</div>
-                      <div className="text-[11px] font-black" style={{ color: NEON }}>{progressUnits}/{requiredUnits}</div>
+                  <div className="min-w-0">
+                    <div className="flex items-center justify-between gap-3 mb-1.5">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-white/35">Required progress</div>
+                      <div className="text-[11px] font-black tabular-nums" style={{ color: pct >= 100 ? "#4ade80" : NEON }}>{progressUnits}/{requiredUnits || 0}</div>
                     </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
-                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: NEON }} />
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#182334" }}>
+                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: pct >= 100 ? "#4ade80" : NEON }} />
+                    </div>
+                    <div className="flex items-center justify-between gap-3 mt-2">
+                      <div className="text-[10px] text-white/42 truncate">
+                        <span className="font-black text-white/70">Next objective</span>
+                        {" · "}
+                        {nextObjective.title}
+                        {nextObjective.progress && <span className="text-white/35"> · {nextObjective.progress}</span>}
+                      </div>
+                      <span className={`flex items-center gap-1 text-[10px] whitespace-nowrap ${deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : "text-white/40"}`}>
+                        <Clock size={11} />
+                        {deadlineLabel}
+                      </span>
                     </div>
                   </div>
-                )}
 
-                <div className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.035)" }}>
-                  <div className="text-[9px] font-black uppercase tracking-widest text-white/30">Next objective</div>
-                  <div className="text-xs font-black text-white mt-1 truncate">{nextTitle}</div>
-                  {c.deadline && <div className="text-[10px] text-white/35 mt-1 flex items-center gap-1"><Clock size={10} /> Ends {new Date(c.deadline).toLocaleDateString()}</div>}
+                  <div className="flex items-center justify-between sm:justify-end gap-4 sm:min-w-[175px]">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+                      {rewards.map((reward, index) => <CampaignRewardChip key={`${reward.label}-${index}`} {...reward} />)}
+                      {demoKeyActive && <CampaignRewardChip icon={Key} label="Demo key active" tone={NEON} />}
+                      {fullKeyActive && <CampaignRewardChip icon={Gift} label="Full game claimed" tone="#4ade80" />}
+                    </div>
+                    <button
+                      onClick={() => onViewProgress(c)}
+                      className="flex-shrink-0 px-3.5 py-2 rounded-lg text-xs font-black flex items-center justify-center gap-1 transition-all hover:brightness-110"
+                      style={{ background: NEON, color: "#070b10" }}
+                    >
+                      {myTab === "active" && needsAction ? "Submit Content" :
+                        myTab === "submitted" ? "View Submission" :
+                        myTab === "completed" ? "View Results" :
+                        "View Mission"}
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
                 </div>
-
-                {/* Demo key status */}
-                {c.demo_key_value && (
-                  <div className="text-[11px] flex items-center gap-1.5" style={{ color: NEON }}>
-                    <Key size={11} /> Demo key active
-                  </div>
-                )}
-                {c.full_key_value && (
-                  <div className="text-[11px] flex items-center gap-1.5 text-green-400">
-                    <Gift size={11} /> Full-game key claimed
-                  </div>
-                )}
-
-                <button
-                  onClick={() => onViewProgress(c)}
-                  className="w-full py-2.5 rounded-xl text-sm font-black flex items-center justify-center gap-1.5 transition-all hover:brightness-110"
-                  style={{ background: NEON, color: "#070b10" }}>
-                  <ChevronRight size={15} />
-                  {myTab === "completed" ? "View Campaign" : "Continue Campaign"}
-                </button>
               </div>
             );
           })}
