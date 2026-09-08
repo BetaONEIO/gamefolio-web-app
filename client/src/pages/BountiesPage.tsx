@@ -2115,7 +2115,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         </button>
 
         {/* Compact game and campaign hero */}
-        <section className="relative overflow-hidden rounded-xl bg-[#0F101B] sm:min-h-[400px]">
+        <section className="relative overflow-hidden rounded-xl bg-[#0F101B] sm:min-h-[430px]">
           <FeaturedHeroBackground
             campaign={data}
             className="absolute inset-x-0 top-0 h-[220px] bg-center bg-cover bg-no-repeat transition-[background-image] duration-300 sm:inset-0 sm:h-auto"
@@ -2130,7 +2130,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           />
           <div className="absolute inset-0 hidden sm:block" style={{ background: "linear-gradient(0deg, rgba(15,16,27,0.42) 0%, transparent 35%)" }} />
 
-          <div className="relative z-10 flex flex-col justify-end px-5 pb-6 pt-[225px] sm:min-h-[400px] sm:w-[50%] sm:justify-center sm:px-9 sm:py-8 lg:px-11">
+          <div className="relative z-10 flex flex-col justify-end px-5 pb-6 pt-[225px] sm:min-h-[430px] sm:max-w-[600px] sm:justify-center sm:px-9 sm:py-8 lg:px-11">
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full"
                 style={{ color: "#070b10", background: NEON }}>
