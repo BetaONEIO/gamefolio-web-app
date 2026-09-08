@@ -31,6 +31,8 @@ const CONTENT_TYPE_LABEL: Record<string, string> = {
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  active:                  { label: "In Progress",             color: "#60a5fa", bg: "rgba(96,165,250,0.12)" },
+  under_review:            { label: "Under Review",             color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
   enrolled:               { label: "Joined",                  color: "#94a3b8", bg: "rgba(148,163,184,0.12)" },
   demo_key_claimed:       { label: "Demo Key Claimed",        color: NEON,      bg: "rgba(183,255,24,0.12)" },
   in_progress:            { label: "In Progress",             color: "#60a5fa", bg: "rgba(96,165,250,0.12)" },
@@ -2227,8 +2229,6 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
             const progress = campaignProgressUnits(c);
             const requiredUnits = progress.requiredUnits;
             const progressUnits = Math.max(progress.approvedUnits, progress.submittedUnits);
-            const approvedUnits = progress.approvedUnits;
-            const progressUnits = Math.max(approvedUnits, submittedUnits);
             const pct = requiredUnits > 0 ? Math.min(100, Math.round((progressUnits / requiredUnits) * 100)) : 0;
             const nextObjective = campaignNextObjective(c, progress);
             const deadlineLabel = campaignDeadlineLabel(c);
@@ -2298,7 +2298,7 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
                       {myTab === "active" && needsAction ? "Submit Content" :
                         myTab === "submitted" ? "View Submission" :
                         myTab === "completed" ? "View Results" :
-                        "View Mission"}
+                        "Continue Mission"}
                       <ChevronRight size={14} />
                     </button>
                   </div>
