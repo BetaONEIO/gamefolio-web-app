@@ -224,6 +224,7 @@ import authRouter from "./routes/auth-routes";
 import tokenAuthRouter from "./routes/token-auth";
 import { JWTService } from "./services/jwt-service";
 import uploadRouter, { parseScheduledAt } from "./routes/upload";
+import aiVodClipsRouter from "./routes/ai-vod-clips";
 import scheduledPostsRouter from "./routes/scheduled-posts";
 import migrationRouter from "./routes/migration";
 import viewRouter from "./routes/view";
@@ -16453,6 +16454,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mount upload routes
   app.use('/api/upload', uploadRouter);
+
+  // Mount AI VOD-clip generation routes (POC)
+  app.use('/api/ai-vod-clips', aiVodClipsRouter);
 
   // Mount scheduled posts routes
   app.use('/api/scheduled-posts', scheduledPostsRouter);

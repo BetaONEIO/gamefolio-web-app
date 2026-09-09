@@ -302,6 +302,29 @@ export class SupabaseStorage {
   }
 
   /**
+   * Move/rename an object within the bucket without re-uploading bytes.
+   * Used to promote a staged draft (e.g. an AI-generated clip candidate)
+   * into its canonical published path once a user approves it.
+   */
+  async moveFile(fromPath: string, toPath: string): Promise<{ url: string; path: string }> {
+    const client = this.supabaseAdmin || this.supabase;
+    const { error } = await client.storage
+      .from(this.bucketName)
+      .move(fromPath, toPath);
+
+    if (error) {
+      console.error('Supabase move error:', error);
+      throw error;
+    }
+
+    const { data: { publicUrl } } = client.storage
+      .from(this.bucketName)
+      .getPublicUrl(toPath);
+
+    return { url: publicUrl, path: toPath };
+  }
+
+  /**
    * Get signed URL for direct client-side upload to Supabase
    */
   async getSignedUploadUrl(filePath: string, contentType: string): Promise<{ uploadUrl: string; publicUrl: string }> {

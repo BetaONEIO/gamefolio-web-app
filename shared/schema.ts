@@ -236,10 +236,10 @@ export const games = pgTable("games", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Legacy AI VOD-clip job records are retained as compatibility schema. The
-// feature is no longer active, but production still owns these tables and
-// clips.source values. Keeping their original shape in development prevents
-// Publish from proposing destructive table/column drops.
+// AI VOD-clip generation — one job per "generate clips from this VOD" run,
+// implemented in server/services/ai-vod-clip-jobs.ts. These declarations keep
+// the shape production already owns (including the GFT payment columns and
+// named FKs/indexes) so Publish doesn't propose destructive table/column drops.
 export const aiClipJobs = pgTable("ai_clip_jobs", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
@@ -289,6 +289,12 @@ export const clips = pgTable("clips", {
   ageRestricted: boolean("age_restricted").default(false).notNull(),
   shareCode: text("share_code").unique(),
   pinnedAt: timestamp("pinned_at"),
+  // Provenance: "upload" (default, manual), "twitch_clip_import", "ai_vod_highlight".
+  source: text("source").default("upload"),
+  // Set only for source="ai_vod_highlight" — the job that generated this clip.
+  // The FK is declared as a named constraint in the table extras below to match
+  // the one production already owns (clips_ai_job_id_fkey).
+  aiJobId: integer("ai_job_id"),
   // Spam/multi-account detection signals — captured server-side at upload time.
   uploadIp: text("upload_ip"),
   uploadDeviceId: text("upload_device_id"),
@@ -305,10 +311,6 @@ export const clips = pgTable("clips", {
   // retry cannot create a second clip for the same upload attempt.
   uploadAttemptId: text("upload_attempt_id"),
   processingAttempts: integer("processing_attempts").default(0).notNull(),
-  // Legacy AI VOD-clip provenance. Retained for production compatibility; new
-  // uploads do not use these fields.
-  source: text("source").default("upload"),
-  aiJobId: integer("ai_job_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
@@ -1170,6 +1172,25 @@ export const insertClipSchema = createInsertSchema(clips).omit({
   tags: z.array(z.string().max(50, "Each tag must be 50 characters or less")).max(20, "Maximum 20 tags allowed").optional(),
 });
 
+// Schema for creating an AI VOD-clip job
+export const insertAiClipJobSchema = createInsertSchema(aiClipJobs).omit({
+  id: true,
+  status: true,
+  stageProgress: true,
+  errorReason: true,
+  candidateCount: true,
+  createdAt: true,
+  updatedAt: true,
+  completedAt: true,
+});
+
+// Schema for creating/updating AI VOD-clip settings
+export const insertAiClipSettingsSchema = createInsertSchema(aiClipSettings).omit({
+  id: true,
+  updatedAt: true,
+  createdAt: true,
+});
+
 // Schema for inserting a like
 export const insertLikeSchema = createInsertSchema(likes).omit({
   id: true,
@@ -1780,6 +1801,12 @@ export type InsertGame = z.infer<typeof insertGameSchema>;
 
 export type Clip = typeof clips.$inferSelect;
 export type InsertClip = z.infer<typeof insertClipSchema>;
+export type AiClipJob = typeof aiClipJobs.$inferSelect;
+export type InsertAiClipJob = z.infer<typeof insertAiClipJobSchema>;
+export type AiClipCandidate = typeof aiClipCandidates.$inferSelect;
+export type AiClipSettings = typeof aiClipSettings.$inferSelect;
+export type AiClipDailyUsage = typeof aiClipDailyUsage.$inferSelect;
+export type InsertAiClipSettings = z.infer<typeof insertAiClipSettingsSchema>;
 
 export type Like = typeof likes.$inferSelect;
 export type InsertLike = z.infer<typeof insertLikeSchema>;

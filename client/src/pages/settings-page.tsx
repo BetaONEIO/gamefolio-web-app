@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useAiClipsStatus } from "@/hooks/use-ai-vod-clips";
 import { useMobile } from "@/hooks/use-mobile";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -884,6 +885,7 @@ function PartnerSettings() {
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
+  const { data: aiClipsStatus } = useAiClipsStatus();
   const resolvedUserTheme = resolveProfileTheme(user || {});
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -5414,6 +5416,20 @@ export default function SettingsPage() {
                             disabled={savingStreamerSettings}
                             onCheckedChange={(val) => handleStreamerSettingsSave({ twitchShowOnProfile: val })}
                           />
+                        </div>
+                        <div className="border-t border-[#9146FF]/15 pt-3">
+                          {aiClipsStatus?.enabled === false ? (
+                            <div className="text-xs text-slate-400 text-center py-1.5">
+                              AI clip generation is temporarily unavailable{aiClipsStatus.disabledMessage ? ` — ${aiClipsStatus.disabledMessage}` : ""}
+                            </div>
+                          ) : (
+                            <Link href="/ai-clips">
+                              <Button variant="outline" size="sm" className="w-full gap-1.5 border-[#9146FF]/30 text-[#9146FF] hover:bg-[#9146FF]/10">
+                                <Sparkles className="w-4 h-4" />
+                                Generate AI clips from a past stream
+                              </Button>
+                            </Link>
+                          )}
                         </div>
                       </div>
                     ) : oauthConfig?.twitch === false ? (
