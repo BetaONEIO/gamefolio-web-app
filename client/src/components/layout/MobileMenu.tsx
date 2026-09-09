@@ -142,10 +142,6 @@ const MobileMenu = () => {
   });
   const followerCount = (ownProfileData as any)?._count?.followers ?? 0;
   const followingCount = (ownProfileData as any)?._count?.following ?? 0;
-  const isIndieDeveloperPersona = user?.userType
-    ?.split(",")
-    .map((type) => type.trim())
-    .includes("indie_developer") ?? false;
   const isStreamerPartner = isPartnerType(user, "streamer");
   const canAccessIndieGame = GAME_DEVELOPER_FEATURES_ENABLED && !!user && (
     user.role === "admin" ||
@@ -485,18 +481,16 @@ const MobileMenu = () => {
                       <span>Account Settings</span>
                     </Link>
                   </li>
-                  {!isIndieDeveloperPersona && (
-                    <li>
-                      <Link
-                        href="/settings/profile"
-                        onClick={handleClose}
-                        className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
-                      >
-                        <GamefolioProfileSettingsIcon className="mr-3 h-5 w-5 opacity-70 group-hover:opacity-100 group-hover:text-[#071013]" />
-                        <span>Profile &amp; Appearance</span>
-                      </Link>
-                    </li>
-                  )}
+                  <li>
+                    <Link
+                      href="/settings/profile"
+                      onClick={handleClose}
+                      className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
+                    >
+                      <GamefolioProfileSettingsIcon className="mr-3 h-5 w-5 opacity-70 group-hover:opacity-100 group-hover:text-[#071013]" />
+                      <span>Profile &amp; Appearance</span>
+                    </Link>
+                  </li>
                 </ul>
               </>
             )}
