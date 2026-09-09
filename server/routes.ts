@@ -23,7 +23,7 @@ import { promisify } from "util";
 import { scrypt, randomBytes, timingSafeEqual, createHash } from "crypto";
 import { nanoid } from "nanoid";
 import jwt from "jsonwebtoken";
-import { eq, sql, desc, inArray, and } from "drizzle-orm";
+import { eq, sql, desc, inArray, and, isNull, lte } from "drizzle-orm";
 import { verifyFirebaseIdToken } from "./services/firebase-admin";
 import { db } from "./db";
 import { captureRouteError } from "./sentry";
@@ -19080,10 +19080,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let subscriptionCurrency: string | null = null;
       let subscriptionAmount: number | null = null;
       const hasActiveEndDate = user.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date();
+      const hasExpiredOrphanedPro =
+        user.isPro &&
+        !user.isPartner &&
+        !!user.proSubscriptionEndDate &&
+        !hasActiveEndDate &&
+        !user.stripeSubscriptionId &&
+        !user.revenuecatUserId;
+      let effectiveIsPro = user.isPro;
+      let effectiveSubscriptionType = user.proSubscriptionType;
 
-      if (!user.isPro && hasActiveEndDate) {
+      // Legacy/manual Pro records may have no provider identifier for a
+      // cancellation webhook to match. Once their recorded paid period has
+      // expired, reconcile the stale flag when the user checks their status.
+      if (hasExpiredOrphanedPro) {
+        await db.update(users).set({
+          isPro: false,
+          proSubscriptionType: null,
+          updatedAt: new Date(),
+        }).where(and(
+          eq(users.id, user.id),
+          eq(users.isPro, true),
+          eq(users.isPartner, false),
+          lte(users.proSubscriptionEndDate, new Date()),
+          isNull(users.stripeSubscriptionId),
+          isNull(users.revenuecatUserId),
+        ));
+
+        // Re-read after the conditional write. If a provider activated between
+        // the first read and this update, the WHERE clause leaves it untouched.
+        const reconciledUser = await storage.getUserById(user.id);
+        effectiveIsPro = reconciledUser?.isPro || false;
+        effectiveSubscriptionType = reconciledUser?.proSubscriptionType ?? null;
+        if (!effectiveIsPro) {
+          console.log(`Reconciled expired orphaned Pro entitlement for user ${user.id}`);
+        }
+      }
+
+      if (!effectiveIsPro && hasActiveEndDate) {
         isCancelled = true;
-      } else if (user.isPro && user.proSubscriptionEndDate) {
+      } else if (effectiveIsPro && user.proSubscriptionEndDate) {
         try {
           const { getUncachableStripeClient } = await import('./stripeClient');
           const stripe = await getUncachableStripeClient();
@@ -19131,11 +19167,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.json({
-        isPro: user.isPro || false,
+        isPro: effectiveIsPro || false,
         userId: user.id,
         isCancelled,
         proSubscriptionEndDate: user.proSubscriptionEndDate,
-        proSubscriptionType: user.proSubscriptionType,
+        proSubscriptionType: effectiveSubscriptionType,
         subscriptionCurrency,
         subscriptionAmount,
       });
