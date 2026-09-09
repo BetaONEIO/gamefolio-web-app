@@ -830,14 +830,23 @@ function CampaignAccordion({
                 <p className="text-[11px] sm:text-xs text-white/55 mt-1 truncate">{type.tagline}</p>
               </div>
 
-              <div className="hidden sm:flex items-center gap-5 shrink-0 text-[10px] text-white/50">
-                <span><strong className="block text-xs text-white/85">{type.duration}d</strong>Duration</span>
-                <span><strong className="block text-xs text-white/85">{type.capacity}</strong>Creators</span>
-                <span><strong className="block text-xs" style={{ color: NEON }}>{type.xpReward.toLocaleString()}</strong>XP</span>
+              <div className="order-3 sm:order-none basis-full sm:basis-auto flex items-center justify-center gap-4 sm:gap-8 shrink-0 self-center">
+                <span className="min-w-[52px] sm:min-w-[64px] flex flex-col items-center justify-center text-center whitespace-nowrap">
+                  <strong className="block text-[17px] sm:text-[20px] leading-[1.1] font-bold text-white">{type.duration}d</strong>
+                  <span className="block mt-1 text-[10px] sm:text-[11px] leading-tight font-semibold uppercase tracking-[0.08em] text-white/75">Duration</span>
+                </span>
+                <span className="min-w-[52px] sm:min-w-[64px] flex flex-col items-center justify-center text-center whitespace-nowrap">
+                  <strong className="block text-[17px] sm:text-[20px] leading-[1.1] font-bold text-white">{type.capacity}</strong>
+                  <span className="block mt-1 text-[10px] sm:text-[11px] leading-tight font-semibold uppercase tracking-[0.08em] text-white/75">Creators</span>
+                </span>
+                <span className="min-w-[52px] sm:min-w-[64px] flex flex-col items-center justify-center text-center whitespace-nowrap">
+                  <strong className="block text-[17px] sm:text-[20px] leading-[1.1] font-bold" style={{ color: "#B9FF1A" }}>{type.xpReward.toLocaleString()}</strong>
+                  <span className="block mt-1 text-[10px] sm:text-[11px] leading-tight font-semibold uppercase tracking-[0.08em] text-white/75">XP</span>
+                </span>
               </div>
 
               <ChevronDown
-                className="w-5 h-5 shrink-0 text-white/45 transition-transform duration-200"
+                className="order-2 sm:order-none w-5 h-5 shrink-0 text-white/45 transition-transform duration-200"
                 style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
                 aria-hidden="true" />
             </button>
