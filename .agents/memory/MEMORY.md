@@ -59,3 +59,4 @@
 - [Towerdog theme entitlement](towerdog-theme-entitlement.md) — Towerdog Pixel Surge uses the immutable original signup referral, never mutable post-registration referral history.
 - [Full-page profile theme shell](full-page-profile-theme-shell.md) — fixed themed layers must escape app scrolling/stacking contexts and neutralize opaque template surfaces.
 - [Towerdog pixel-art language](towerdog-pixel-art-language.md) — use sparse hard-edged square blocks, not gradients, stripes, diamonds, or diagonal effects.
+- [Pro entitlement expiry CAS](pro-entitlement-expiry-cas.md) — expiry writes must repeat eligibility guards and re-read state so concurrent provider activation wins.

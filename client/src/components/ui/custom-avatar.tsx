@@ -7,6 +7,8 @@ import DOMPurify from "dompurify";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import NftProfilePopup from "@/components/nft/NftProfilePopup";
 
+const TOWERDOG_PROFILE_BORDER_URL = "/attached_assets/Profile-border-v2.png";
+
 interface LiveStatusResponse {
   isLive: boolean;
   twitchLive: boolean;
@@ -126,23 +128,22 @@ type RasterBorderCalibration = {
 // Calibrated from the main blue summer tube in the 1254x1254 source PNG.
 // Decorations outside the tube are intentionally ignored when measuring the
 // ring centre and opening.
-const SUMMER_RASTER_BORDER_CALIBRATION: RasterBorderCalibration = {
-  ringCenterX: 0.5,
-  ringCenterY: 0.486,
-  innerDiameter: 0.83,
-  overlap: 0.02,
-  sizeAdjustment: 0.96,
+const RASTER_BORDER_CALIBRATIONS: Record<string, RasterBorderCalibration> = {
+  "player2-blue-summer-border": {
+    ringCenterX: 0.5,
+    ringCenterY: 0.486,
+    innerDiameter: 0.83,
+    overlap: 0.02,
+    sizeAdjustment: 0.96,
+  },
 };
 
 const getRasterBorderCalibration = (border: AssetReward): RasterBorderCalibration | undefined => {
   if (
     border.id === 44 ||
-    border.name.trim().toLowerCase() === "player2 blue summer border" ||
-    border.name.trim().toLowerCase() === "red blue pixel waves" ||
-    border.name.trim().toLowerCase() === "red and blue pixel wave border" ||
-    border.sourcePath === "red_blue_pixel_waves"
+    border.name.trim().toLowerCase() === "player2 blue summer border"
   ) {
-    return SUMMER_RASTER_BORDER_CALIBRATION;
+    return RASTER_BORDER_CALIBRATIONS["player2-blue-summer-border"];
   }
 
   return undefined;
@@ -488,10 +489,13 @@ export const CustomAvatar = ({
   });
 
   const avatarBorder = borderData?.avatarBorder;
-  const activeBorderImageUrl = borderImageOverride || avatarBorder?.imageUrl;
-  const hasAvatarBorderOverlay = showAvatarBorderOverlay && !!activeBorderImageUrl;
   const hasTowerdogBorder = !!borderImageOverride || avatarBorder?.sourcePath === "red_blue_pixel_waves";
-  const hasSolidBorder = !borderImageOverride && showAvatarBorderOverlay && (avatarBorder?.id === -1 || effectiveBorderId === -1);
+  const activeBorderImageUrl = borderImageOverride
+    || (hasTowerdogBorder ? TOWERDOG_PROFILE_BORDER_URL : avatarBorder?.imageUrl);
+  const hasAvatarBorderOverlay = showAvatarBorderOverlay && !!activeBorderImageUrl;
+  const hasSolidBorder = !borderImageOverride
+    && showAvatarBorderOverlay
+    && (avatarBorder?.id === -1 || effectiveBorderId === -1);
   const rasterBorderCalibration = avatarBorder
     ? getRasterBorderCalibration(avatarBorder)
     : undefined;

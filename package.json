@@ -16,7 +16,9 @@
     "mobile:build:ios": "vite build && cap sync ios",
     "mobile:ios": "cap open ios",
     "mobile:android": "cap open android",
-    "cap:sync": "cap sync"
+    "cap:sync": "cap sync",
+    "test:campaign-artwork": "node --import tsx --test tests/campaign-artwork.test.ts",
+    "test:pro-entitlement-reconciliation": "node --import tsx --test tests/pro-entitlement-reconciliation.test.ts"
   },
   "dependencies": {
     "0xsequence": "^2.3.39",

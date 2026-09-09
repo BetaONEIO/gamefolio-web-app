@@ -14,6 +14,7 @@ import {
   type XPTier,
   type XPProfile,
 } from '../bounty-xp-service';
+import { NotificationService } from '../notification-service';
 
 const router = express.Router();
 
@@ -39,6 +40,59 @@ function requireAdmin(req: any, res: any, next: any) {
   next();
 }
 
+function asArray(value: any): any[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try { return JSON.parse(value); } catch { return []; }
+  }
+  return [];
+}
+
+function objectiveProgress(objectives: any[], mandatory: boolean) {
+  const selected = objectives.filter((objective) => Boolean(objective.mandatory) === mandatory);
+  const total = selected.reduce((sum, objective) => sum + Math.max(Number(objective.quantity ?? 1), 1), 0);
+  const submitted = selected.reduce((sum, objective) => sum + Math.min(Number(objective.submitted_count ?? 0), Math.max(Number(objective.quantity ?? 1), 1)), 0);
+  const approved = selected.reduce((sum, objective) => sum + Math.min(Number(objective.approved_count ?? 0), Math.max(Number(objective.quantity ?? 1), 1)), 0);
+  return { total_units: total, submitted_units: submitted, approved_units: approved, remaining_units: Math.max(total - approved, 0), percent_complete: total ? Math.round((approved / total) * 100) : 100 };
+}
+
+function campaignJourney(participant: any, objectives: any[]) {
+  const required = objectiveProgress(objectives, true);
+  const bonus = objectiveProgress(objectives, false);
+  const now = Date.now();
+  const deadline = participant.deadline ? new Date(participant.deadline).getTime() : NaN;
+  const isExpired = Number.isFinite(deadline) && deadline < now && !['completed', 'completed_and_verified', 'full_game_awarded'].includes(participant.participant_status);
+  const next = objectives.find((objective) => objective.mandatory && Number(objective.approved_count ?? 0) < Math.max(Number(objective.quantity ?? 1), 1));
+  const hasChangesRequested = objectives.some((objective) => Number(objective.changes_requested_count ?? 0) > 0);
+  const hasAwaitingReview = objectives.some((objective) => Number(objective.pending_count ?? 0) + Number(objective.under_review_count ?? 0) > 0);
+  const journey_status = isExpired ? 'expired'
+    : ['completed', 'completed_and_verified', 'full_game_awarded'].includes(participant.participant_status) ? 'completed'
+    : hasChangesRequested ? 'changes_requested'
+    : required.submitted_units >= required.total_units && hasAwaitingReview ? 'under_review'
+    : 'active';
+  return {
+    required_progress: required,
+    bonus_progress: bonus,
+    required_objective_units: required.total_units,
+    submitted_objective_units: required.submitted_units,
+    approved_objective_units: required.approved_units,
+    bonus_objective_units: bonus.total_units,
+    submitted_bonus_units: bonus.submitted_units,
+    approved_bonus_units: bonus.approved_units,
+    next_objective: next ? {
+      id: next.id, title: next.title, description: next.description, content_type: next.content_type,
+      quantity: Math.max(Number(next.quantity ?? 1), 1),
+      submitted_units: Math.min(Number(next.submitted_count ?? 0), Math.max(Number(next.quantity ?? 1), 1)),
+      approved_units: Math.min(Number(next.approved_count ?? 0), Math.max(Number(next.quantity ?? 1), 1)),
+      remaining_units: Math.max(Math.max(Number(next.quantity ?? 1), 1) - Number(next.approved_count ?? 0), 0),
+      xp_reward: next.xp_reward,
+    } : null,
+    next_objective_title: next?.title ?? null,
+    journey_status,
+    is_expired: isExpired,
+  };
+}
+
 // ─────────────────────────────────────────────
 // TABLE SETUP
 // ─────────────────────────────────────────────
@@ -55,6 +109,7 @@ export async function ensureBountyMarketplaceTables() {
   try {
     await run(`ALTER TABLE campaign_instances ALTER COLUMN developer_user_id DROP NOT NULL`);
     await run(`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS gamefolio_managed BOOLEAN DEFAULT false`);
+    await run(`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS game_id INTEGER`);
     await run(`ALTER TABLE campaign_templates ADD COLUMN IF NOT EXISTS gamefolio_managed BOOLEAN DEFAULT false`);
     await run(`ALTER TABLE campaign_template_bounties ADD COLUMN IF NOT EXISTS xp_reward INTEGER DEFAULT 500`);
     await run(`ALTER TABLE campaign_participants ADD COLUMN IF NOT EXISTS deadline TIMESTAMP`);
@@ -266,6 +321,7 @@ async function seedGamefolioCampaignsWithPool(pool: Pool) {
 router.get('/', async (req, res) => {
   try {
     const { filter, genre, platform } = req.query;
+    const viewerUserId = req.user?.id ?? null;
 
     let statusCondition = sql`ci.status IN ('live', 'approved')`;
 
@@ -273,8 +329,10 @@ router.get('/', async (req, res) => {
       SELECT
         ci.id,
         ci.status,
+        ci.game_id,
         ci.game_name,
         ci.game_artwork_url,
+        ci.artwork_url AS campaign_artwork_url,
         ci.game_steam_app_id,
         ci.game_itch_url,
         ci.game_epic_slug,
@@ -302,12 +360,33 @@ router.get('/', async (req, res) => {
         COALESCE(t.xp_tier, 'standard') AS xp_tier,
         COALESCE(ci.xp_event_multiplier, 1.0) AS xp_event_multiplier,
         COALESCE(ci.gamefolio_managed, false) AS gamefolio_managed,
+        g.image_url AS catalog_game_artwork_url,
+        igp.header_image_url AS game_profile_header_artwork_url,
+        igp.capsule_image_url AS game_profile_capsule_artwork_url,
+        igp.screenshot_urls[1] AS game_profile_screenshot_artwork_url,
+        COALESCE(
+          NULLIF(igp.header_image_url, ''),
+          NULLIF(g.image_url, ''),
+          NULLIF(igp.capsule_image_url, ''),
+          NULLIF(igp.screenshot_urls[1], ''),
+          NULLIF(ci.game_artwork_url, ''),
+          NULLIF(ci.artwork_url, '')
+        ) AS hero_artwork_url,
         (SELECT COUNT(*) FROM campaign_participants cp WHERE cp.instance_id = ci.id) AS participant_count,
+        (SELECT cp.status FROM campaign_participants cp
+         WHERE cp.instance_id = ci.id AND cp.user_id = ${viewerUserId}
+         LIMIT 1) AS participant_status,
+        EXISTS(
+          SELECT 1 FROM campaign_participants cp
+          WHERE cp.instance_id = ci.id AND cp.user_id = ${viewerUserId}
+        ) AS is_joined,
         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo' AND gk.status = 'available') AS demo_keys_remaining,
         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full' AND gk.status = 'available') AS full_keys_remaining,
         (SELECT json_agg(b ORDER BY b.completion_order) FROM campaign_template_bounties b WHERE b.template_id = t.id) AS bounties
       FROM campaign_instances ci
       JOIN campaign_templates t ON t.id = ci.template_id
+      LEFT JOIN games g ON g.id = ci.game_id
+      LEFT JOIN indie_game_profiles igp ON igp.catalog_game_id = g.id AND igp.is_primary = true
       WHERE ${statusCondition}
         AND t.status != 'inactive'
       ORDER BY COALESCE(ci.gamefolio_managed, false) DESC, t.recommended DESC, t.featured DESC, ci.actual_start DESC
@@ -404,7 +483,7 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
 
     // 1. Load campaign
     const [campaign] = toRows(await db.execute(sql`
-      SELECT ci.*, t.participant_capacity, t.demo_keys_required
+      SELECT ci.*, t.participant_capacity, t.demo_keys_required, t.duration
       FROM campaign_instances ci
       JOIN campaign_templates t ON t.id = ci.template_id
       WHERE ci.id = ${instanceId} AND ci.status IN ('live', 'approved')
@@ -414,9 +493,19 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
 
     // 2. Check already joined
     const [existing] = toRows(await db.execute(sql`
-      SELECT id, status FROM campaign_participants WHERE instance_id = ${instanceId} AND user_id = ${userId}
+      SELECT id, status, deadline, joined_at FROM campaign_participants WHERE instance_id = ${instanceId} AND user_id = ${userId}
     `));
-    if (existing) return res.status(409).json({ error: 'You have already joined this campaign', status: (existing as any).status });
+    if (existing) return res.status(409).json({
+      error: 'You have already joined this campaign',
+      status: (existing as any).status,
+      participantId: (existing as any).id,
+      deadline: (existing as any).deadline,
+      joinedAt: (existing as any).joined_at,
+    });
+
+    if (campaign.end_date && new Date(campaign.end_date).getTime() <= Date.now()) {
+      return res.status(409).json({ error: 'This campaign has expired' });
+    }
 
     // 3. Check capacity
     const [counts] = toRows(await db.execute(sql`
@@ -463,6 +552,9 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
     // 5. Create participant record
     const deadline = new Date();
     deadline.setDate(deadline.getDate() + Number(campaign.duration ?? 14));
+    if (campaign.end_date && new Date(campaign.end_date).getTime() < deadline.getTime()) {
+      deadline.setTime(new Date(campaign.end_date).getTime());
+    }
 
     await db.execute(sql`
       INSERT INTO campaign_participants
@@ -479,6 +571,9 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
     if (demoKeyValue) {
       await awardCampaignXP(userId, profile.demoClaimXP, 'campaign_demo_claim', `Claimed demo key for campaign #${instanceId}`, instanceId);
     }
+    // Existing notification service has no dedicated campaign-join event. Do not
+    // overload unrelated notification types; submission/review notifications are
+    // dispatched below through its bounty-specific methods.
 
     res.json({
       success: true,
@@ -511,28 +606,69 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
         cp.demo_key_id,
         cp.full_key_id,
         ci.id AS instance_id,
+        ci.game_id,
         ci.game_name,
         ci.game_artwork_url,
+        ci.artwork_url AS campaign_artwork_url,
         ci.game_steam_app_id,
+        ci.game_itch_url,
+        ci.game_epic_slug,
         ci.end_date,
         t.name AS template_name,
         t.slug AS template_slug,
         t.category,
+        t.description,
+        t.best_use_case,
         t.duration,
         t.completion_reward,
         t.completion_reward_description,
+        COALESCE(t.xp_tier, 'standard') AS xp_tier,
+        COALESCE(ci.xp_event_multiplier, 1.0) AS xp_event_multiplier,
+        g.image_url AS catalog_game_artwork_url,
+        igp.header_image_url AS game_profile_header_artwork_url,
+        igp.capsule_image_url AS game_profile_capsule_artwork_url,
+        igp.screenshot_urls[1] AS game_profile_screenshot_artwork_url,
+        COALESCE(
+          NULLIF(igp.header_image_url, ''),
+          NULLIF(g.image_url, ''),
+          NULLIF(igp.capsule_image_url, ''),
+          NULLIF(igp.screenshot_urls[1], ''),
+          NULLIF(ci.game_artwork_url, ''),
+          NULLIF(ci.artwork_url, '')
+        ) AS hero_artwork_url,
         (SELECT COUNT(*) FROM campaign_template_bounties WHERE template_id = t.id AND mandatory = true) AS mandatory_bounty_count,
         (SELECT COUNT(*) FROM campaign_bounty_submissions bs WHERE bs.instance_id = ci.id AND bs.participant_id = ${userId} AND bs.status = 'approved') AS approved_bounties,
         (SELECT COUNT(*) FROM campaign_bounty_submissions bs WHERE bs.instance_id = ci.id AND bs.participant_id = ${userId}) AS submitted_bounties,
+        (
+          SELECT json_agg(objective ORDER BY objective.completion_order)
+          FROM (
+            SELECT b.id, b.title, b.description, b.content_type, b.mandatory, b.quantity, b.xp_reward, b.completion_order,
+              COUNT(bs.id) FILTER (WHERE bs.status IN ('pending', 'under_review', 'approved')) AS submitted_count,
+              COUNT(bs.id) FILTER (WHERE bs.status = 'approved') AS approved_count,
+              COUNT(bs.id) FILTER (WHERE bs.status = 'pending') AS pending_count,
+              COUNT(bs.id) FILTER (WHERE bs.status = 'under_review') AS under_review_count,
+              COUNT(bs.id) FILTER (WHERE bs.status = 'changes_requested') AS changes_requested_count
+            FROM campaign_template_bounties b
+            LEFT JOIN campaign_bounty_submissions bs ON bs.bounty_id = b.id
+              AND bs.instance_id = ci.id AND bs.participant_id = ${userId}
+            WHERE b.template_id = t.id
+            GROUP BY b.id
+          ) objective
+        ) AS objective_progress,
         (SELECT key_value FROM game_keys gk WHERE gk.id = cp.demo_key_id) AS demo_key_value,
         (SELECT key_value FROM game_keys gk WHERE gk.id = cp.full_key_id) AS full_key_value
       FROM campaign_participants cp
       JOIN campaign_instances ci ON ci.id = cp.instance_id
       JOIN campaign_templates t ON t.id = ci.template_id
+      LEFT JOIN games g ON g.id = ci.game_id
+      LEFT JOIN indie_game_profiles igp ON igp.catalog_game_id = g.id AND igp.is_primary = true
       WHERE cp.user_id = ${userId}
       ORDER BY cp.joined_at DESC
     `);
-    res.json(toRows(campaigns));
+    res.json(toRows(campaigns).map((campaign: any) => {
+      const objectives = asArray(campaign.objective_progress);
+      return { ...campaign, ...campaignJourney(campaign, objectives) };
+    }));
   } catch (err) {
     console.error('GET /api/bounties/my/campaigns error:', err);
     res.status(500).json({ error: 'Failed to load campaigns' });
@@ -585,22 +721,43 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         cp.demo_key_id,
         cp.full_key_id,
         ci.id AS instance_id,
+        ci.game_id,
         ci.game_name,
         ci.game_artwork_url,
+        ci.artwork_url AS campaign_artwork_url,
         ci.game_steam_app_id,
         ci.game_itch_url,
+        ci.game_epic_slug,
         ci.end_date,
         t.id AS template_id,
         t.name AS template_name,
         t.category,
+        t.description,
+        t.best_use_case,
         t.duration,
         t.completion_reward,
         t.completion_reward_description,
+        COALESCE(t.xp_tier, 'standard') AS xp_tier,
+        COALESCE(ci.xp_event_multiplier, 1.0) AS xp_event_multiplier,
+        g.image_url AS catalog_game_artwork_url,
+        igp.header_image_url AS game_profile_header_artwork_url,
+        igp.capsule_image_url AS game_profile_capsule_artwork_url,
+        igp.screenshot_urls[1] AS game_profile_screenshot_artwork_url,
+        COALESCE(
+          NULLIF(igp.header_image_url, ''),
+          NULLIF(g.image_url, ''),
+          NULLIF(igp.capsule_image_url, ''),
+          NULLIF(igp.screenshot_urls[1], ''),
+          NULLIF(ci.game_artwork_url, ''),
+          NULLIF(ci.artwork_url, '')
+        ) AS hero_artwork_url,
         (SELECT key_value FROM game_keys gk WHERE gk.id = cp.demo_key_id) AS demo_key_value,
         (SELECT key_value FROM game_keys gk WHERE gk.id = cp.full_key_id) AS full_key_value
       FROM campaign_participants cp
       JOIN campaign_instances ci ON ci.id = cp.instance_id
       JOIN campaign_templates t ON t.id = ci.template_id
+      LEFT JOIN games g ON g.id = ci.game_id
+      LEFT JOIN indie_game_profiles igp ON igp.catalog_game_id = g.id AND igp.is_primary = true
       WHERE cp.instance_id = ${instanceId} AND cp.user_id = ${userId}
     `)) as any[];
 
@@ -619,12 +776,53 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
           SELECT COUNT(*) FROM campaign_bounty_submissions s
           WHERE s.bounty_id = b.id AND s.instance_id = ${instanceId} AND s.participant_id = ${userId} AND s.status = 'approved'
         ) AS approved_count
+        ,(
+          SELECT COUNT(*) FROM campaign_bounty_submissions s
+          WHERE s.bounty_id = b.id AND s.instance_id = ${instanceId} AND s.participant_id = ${userId}
+            AND s.status IN ('pending', 'under_review', 'approved')
+        ) AS submitted_count
+        ,(
+          SELECT COUNT(*) FROM campaign_bounty_submissions s
+          WHERE s.bounty_id = b.id AND s.instance_id = ${instanceId} AND s.participant_id = ${userId} AND s.status = 'pending'
+        ) AS pending_count
+        ,(
+          SELECT COUNT(*) FROM campaign_bounty_submissions s
+          WHERE s.bounty_id = b.id AND s.instance_id = ${instanceId} AND s.participant_id = ${userId} AND s.status = 'under_review'
+        ) AS under_review_count
+        ,(
+          SELECT COUNT(*) FROM campaign_bounty_submissions s
+          WHERE s.bounty_id = b.id AND s.instance_id = ${instanceId} AND s.participant_id = ${userId} AND s.status = 'changes_requested'
+        ) AS changes_requested_count
+        ,(
+          SELECT COUNT(*) FROM campaign_bounty_submissions s
+          WHERE s.bounty_id = b.id AND s.instance_id = ${instanceId} AND s.participant_id = ${userId} AND s.status = 'rejected'
+        ) AS rejected_count
       FROM campaign_template_bounties b
       WHERE b.template_id = ${participation.template_id}
       ORDER BY b.completion_order ASC
     `));
 
-    res.json({ ...participation, bounties });
+    const enrichedBounties = bounties.map((bounty: any) => {
+      const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
+      const approved = Math.min(Number(bounty.approved_count ?? 0), quantity);
+      const submitted = Math.min(Number(bounty.submitted_count ?? 0), quantity);
+      const submission_status = approved >= quantity ? 'approved'
+        : Number(bounty.changes_requested_count ?? 0) > 0 ? 'changes_requested'
+        : Number(bounty.rejected_count ?? 0) > 0 ? 'rejected'
+        : Number(bounty.under_review_count ?? 0) > 0 ? 'under_review'
+        : Number(bounty.pending_count ?? 0) > 0 ? 'submitted'
+        : 'not_started';
+      return { ...bounty, required_units: quantity, submitted_units: submitted, approved_units: approved, remaining_units: quantity - approved, submission_status };
+    });
+    const tier = (participation.xp_tier || 'standard') as XPTier;
+    const multiplier = Number(participation.xp_event_multiplier ?? 1.0);
+    res.json({
+      ...participation,
+      bounties: enrichedBounties,
+      total_campaign_xp: computeCampaignTotalXP(tier, multiplier),
+      completion_bonus_xp: computeCompletionBonus(tier, multiplier),
+      ...campaignJourney(participation, enrichedBounties),
+    });
   } catch (err) {
     console.error('GET /api/bounties/my/:instanceId error:', err);
     res.status(500).json({ error: 'Failed to load campaign progress' });
@@ -641,19 +839,28 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
     const userId = req.user!.id;
     const instanceId = Number(req.params.instanceId);
     const bountyId = Number(req.params.bountyId);
+    if (!Number.isInteger(instanceId) || !Number.isInteger(bountyId)) {
+      return res.status(400).json({ error: 'Invalid campaign or bounty id' });
+    }
 
     // Verify participation
     const [participation] = toRows(await db.execute(sql`
-      SELECT id, status FROM campaign_participants
-      WHERE instance_id = ${instanceId} AND user_id = ${userId}
+      SELECT cp.id, cp.status, cp.deadline, ci.end_date
+      FROM campaign_participants cp
+      JOIN campaign_instances ci ON ci.id = cp.instance_id
+      WHERE cp.instance_id = ${instanceId} AND cp.user_id = ${userId}
     `)) as any[];
 
     if (!participation) return res.status(403).json({ error: 'You are not participating in this campaign' });
-    if (participation.status === 'completed') return res.status(400).json({ error: 'Campaign is already completed' });
+    if (['completed', 'completed_and_verified', 'full_game_awarded'].includes(participation.status)) return res.status(400).json({ error: 'Campaign is already completed' });
+    if ((participation.deadline && new Date(participation.deadline).getTime() < Date.now()) ||
+        (participation.end_date && new Date(participation.end_date).getTime() < Date.now())) {
+      return res.status(400).json({ error: 'Campaign submission deadline has expired' });
+    }
 
     // Load bounty definition + campaign tier
     const [bounty] = toRows(await db.execute(sql`
-      SELECT b.*, t.id AS template_id, COALESCE(t.xp_tier, 'standard') AS xp_tier
+      SELECT b.*, t.id AS template_id, COALESCE(t.xp_tier, 'standard') AS xp_tier, ci.developer_user_id
       FROM campaign_template_bounties b
       JOIN campaign_templates t ON t.id = b.template_id
       JOIN campaign_instances ci ON ci.template_id = t.id
@@ -666,6 +873,28 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
       contentType, contentUrl, contentData,
       clipId, screenshotId, reelId,
     } = req.body;
+    if (contentType && contentType !== bounty.content_type) {
+      return res.status(400).json({ error: `This objective requires ${bounty.content_type} content` });
+    }
+    // A content id may only reference the authenticated participant's own upload.
+    if (clipId || reelId) {
+      const contentId = Number(clipId ?? reelId);
+      const [clip] = toRows(await db.execute(sql`SELECT id FROM clips WHERE id = ${contentId} AND user_id = ${userId}`));
+      if (!clip) return res.status(403).json({ error: 'Selected clip does not belong to you' });
+    }
+    if (screenshotId) {
+      const [screenshot] = toRows(await db.execute(sql`SELECT id FROM screenshots WHERE id = ${Number(screenshotId)} AND user_id = ${userId}`));
+      if (!screenshot) return res.status(403).json({ error: 'Selected screenshot does not belong to you' });
+    }
+
+    const [existingUnits] = toRows(await db.execute(sql`
+      SELECT COUNT(*) AS count FROM campaign_bounty_submissions
+      WHERE instance_id = ${instanceId} AND participant_id = ${userId} AND bounty_id = ${bountyId}
+        AND status IN ('pending', 'under_review', 'approved')
+    `)) as any[];
+    if (Number(existingUnits?.count ?? 0) >= Math.max(Number(bounty.quantity ?? 1), 1)) {
+      return res.status(409).json({ error: 'All required submission units for this objective have already been submitted' });
+    }
 
     // Compute XP for this submission (deferred until approval, but compute now for preview)
     const tier = (bounty.xp_tier || 'standard') as XPTier;
@@ -693,14 +922,18 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
       RETURNING *
     `)) as any[];
 
-    // Check if all mandatory bounties now have at least one pending/approved submission
+    // Each objective can require several submission units. Completion must count
+    // units (capped at the objective quantity), not just distinct bounty ids.
     const [completionCheck] = toRows(await db.execute(sql`
       SELECT
-        COUNT(*) FILTER (WHERE b.mandatory = true) AS mandatory_total,
-        COUNT(DISTINCT bs.bounty_id) FILTER (WHERE b.mandatory = true AND bs.status IN ('pending', 'under_review', 'approved')) AS mandatory_submitted
+        COALESCE(SUM(CASE WHEN b.mandatory THEN GREATEST(COALESCE(b.quantity, 1), 1) ELSE 0 END), 0) AS mandatory_total,
+        COALESCE(SUM(CASE WHEN b.mandatory THEN LEAST(GREATEST(COALESCE(b.quantity, 1), 1),
+          (SELECT COUNT(*) FROM campaign_bounty_submissions unit_submission
+           WHERE unit_submission.bounty_id = b.id AND unit_submission.instance_id = ${instanceId}
+             AND unit_submission.participant_id = ${userId}
+             AND unit_submission.status IN ('pending', 'under_review', 'approved'))) ELSE 0 END), 0) AS mandatory_submitted
       FROM campaign_template_bounties b
       JOIN campaign_instances ci ON ci.template_id = b.template_id
-      LEFT JOIN campaign_bounty_submissions bs ON bs.bounty_id = b.id AND bs.instance_id = ${instanceId} AND bs.participant_id = ${userId}
       WHERE ci.id = ${instanceId}
     `)) as any[];
 
@@ -713,6 +946,11 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
         UPDATE campaign_participants SET status = 'submitted_for_review'
         WHERE instance_id = ${instanceId} AND user_id = ${userId} AND status != 'completed'
       `);
+    }
+    if (bounty.developer_user_id) {
+      void NotificationService.createBountySubmissionNotification(
+        Number(bounty.developer_user_id), userId, bountyId, bounty.title
+      );
     }
 
     res.status(201).json({ submission, allMandatorySubmitted, xpPreview });
@@ -739,14 +977,16 @@ router.post('/my/:instanceId/claim-full-key', requireAuth, async (req, res) => {
     if (!participation) return res.status(404).json({ error: 'Not a participant' });
     if (participation.full_key_id) return res.status(409).json({ error: 'You have already claimed a full-game key' });
 
-    // Check all mandatory bounties are approved
+    // Check all mandatory submission units are approved (not merely one per bounty).
     const [check] = toRows(await db.execute(sql`
       SELECT
-        COUNT(*) FILTER (WHERE b.mandatory = true) AS mandatory_total,
-        COUNT(DISTINCT bs.bounty_id) FILTER (WHERE b.mandatory = true AND bs.status = 'approved') AS mandatory_approved
+        COALESCE(SUM(CASE WHEN b.mandatory THEN GREATEST(COALESCE(b.quantity, 1), 1) ELSE 0 END), 0) AS mandatory_total,
+        COALESCE(SUM(CASE WHEN b.mandatory THEN LEAST(GREATEST(COALESCE(b.quantity, 1), 1),
+          (SELECT COUNT(*) FROM campaign_bounty_submissions unit_submission
+           WHERE unit_submission.bounty_id = b.id AND unit_submission.instance_id = ${instanceId}
+             AND unit_submission.participant_id = ${userId} AND unit_submission.status = 'approved')) ELSE 0 END), 0) AS mandatory_approved
       FROM campaign_template_bounties b
       JOIN campaign_instances ci ON ci.template_id = b.template_id
-      LEFT JOIN campaign_bounty_submissions bs ON bs.bounty_id = b.id AND bs.instance_id = ${instanceId} AND bs.participant_id = ${userId}
       WHERE ci.id = ${instanceId}
     `)) as any[];
 
@@ -832,6 +1072,13 @@ router.patch('/admin/submissions/:id/review', requireAdmin, async (req, res) => 
   try {
     const submissionId = Number(req.params.id);
     const { verdict, notes } = req.body; // verdict: 'approved' | 'rejected' | 'changes_requested'
+    if (!['approved', 'rejected', 'changes_requested', 'under_review'].includes(verdict)) {
+      return res.status(400).json({ error: 'Invalid review verdict' });
+    }
+    const [currentSubmission] = toRows(await db.execute(sql`
+      SELECT status FROM campaign_bounty_submissions WHERE id = ${submissionId}
+    `)) as any[];
+    if (!currentSubmission) return res.status(404).json({ error: 'Submission not found' });
 
     await db.execute(sql`
       UPDATE campaign_bounty_submissions
@@ -840,16 +1087,18 @@ router.patch('/admin/submissions/:id/review', requireAdmin, async (req, res) => 
     `);
 
     // If approved, check if campaign participant can claim full key
-    if (verdict === 'approved') {
+    if (verdict === 'approved' && currentSubmission.status !== 'approved') {
       const [sub] = toRows(await db.execute(sql`SELECT instance_id, participant_id FROM campaign_bounty_submissions WHERE id = ${submissionId}`)) as any[];
       if (sub) {
         const [check] = toRows(await db.execute(sql`
           SELECT
-            COUNT(*) FILTER (WHERE b.mandatory = true) AS mandatory_total,
-            COUNT(DISTINCT bs.bounty_id) FILTER (WHERE b.mandatory = true AND bs.status = 'approved') AS mandatory_approved
+        COALESCE(SUM(CASE WHEN b.mandatory THEN GREATEST(COALESCE(b.quantity, 1), 1) ELSE 0 END), 0) AS mandatory_total,
+        COALESCE(SUM(CASE WHEN b.mandatory THEN LEAST(GREATEST(COALESCE(b.quantity, 1), 1),
+          (SELECT COUNT(*) FROM campaign_bounty_submissions unit_submission
+           WHERE unit_submission.bounty_id = b.id AND unit_submission.instance_id = ${sub.instance_id}
+             AND unit_submission.participant_id = ${sub.participant_id} AND unit_submission.status = 'approved')) ELSE 0 END), 0) AS mandatory_approved
           FROM campaign_template_bounties b
           JOIN campaign_instances ci ON ci.template_id = b.template_id
-          LEFT JOIN campaign_bounty_submissions bs ON bs.bounty_id = b.id AND bs.instance_id = ${sub.instance_id} AND bs.participant_id = ${sub.participant_id}
           WHERE ci.id = ${sub.instance_id}
         `)) as any[];
 
@@ -875,7 +1124,7 @@ router.patch('/admin/submissions/:id/review', requireAdmin, async (req, res) => 
 
         // Load bounty details to compute XP
         const [bountyInfo] = toRows(await db.execute(sql`
-          SELECT b.content_type, b.quantity FROM campaign_template_bounties b
+          SELECT b.id AS bounty_id, b.content_type, b.quantity, b.title FROM campaign_template_bounties b
           JOIN campaign_bounty_submissions bs ON bs.bounty_id = b.id
           WHERE bs.id = ${submissionId}
         `)) as any[];
@@ -892,7 +1141,25 @@ router.patch('/admin/submissions/:id/review', requireAdmin, async (req, res) => 
           const totalXP = Math.round(bountyXP * mult4);
           await awardCampaignXP(sub.participant_id, totalXP, 'bounty_approved', `Bounty approved in campaign #${sub.instance_id}`, sub.instance_id);
           await db.execute(sql`UPDATE campaign_bounty_submissions SET xp_awarded = ${totalXP} WHERE id = ${submissionId}`);
+          void NotificationService.createBountySubmissionReviewedNotification(
+            sub.participant_id, bountyInfo.bounty_id, bountyInfo.title, true, notes
+          );
         }
+      }
+    }
+    // The existing review notification supports approval/rejection wording only;
+    // use it for actual rejections and avoid mislabeling "under review" or
+    // "changes requested" as a rejection.
+    if (verdict === 'rejected') {
+      const [submissionInfo] = toRows(await db.execute(sql`
+        SELECT bs.participant_id, bs.bounty_id, b.title
+        FROM campaign_bounty_submissions bs JOIN campaign_template_bounties b ON b.id = bs.bounty_id
+        WHERE bs.id = ${submissionId}
+      `)) as any[];
+      if (submissionInfo) {
+        void NotificationService.createBountySubmissionReviewedNotification(
+          submissionInfo.participant_id, submissionInfo.bounty_id, submissionInfo.title, false, notes
+        );
       }
     }
 

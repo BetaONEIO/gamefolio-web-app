@@ -7,9 +7,14 @@ import {
   Target, ShieldCheck, Clock, Users, Key, ChevronRight, ChevronLeft,
   Zap, Copy, Check, Loader2, Lock,
   Film, Camera, MessageSquare, Star, AlertCircle, Upload, Plus,
-  Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown, Store,
+  Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown, Store, Flame,
 } from "lucide-react";
 import { SiSteam } from "react-icons/si";
+import {
+  CAMPAIGN_HERO_FALLBACK,
+  campaignHeroSources,
+  nextCampaignHeroSource,
+} from "@/lib/campaign-hero";
 
 const NEON = "#B8FF1B";
 const PAGE_BG = "#070b10";
@@ -31,6 +36,9 @@ const CONTENT_TYPE_LABEL: Record<string, string> = {
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  active:                  { label: "In Progress",             color: "#60a5fa", bg: "rgba(96,165,250,0.12)" },
+  under_review:            { label: "Under Review",             color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
+  pending:                 { label: "Submitted for Review",     color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
   enrolled:               { label: "Joined",                  color: "#94a3b8", bg: "rgba(148,163,184,0.12)" },
   demo_key_claimed:       { label: "Demo Key Claimed",        color: NEON,      bg: "rgba(183,255,24,0.12)" },
   in_progress:            { label: "In Progress",             color: "#60a5fa", bg: "rgba(96,165,250,0.12)" },
@@ -87,6 +95,272 @@ function RewardCol({ icon, label, sublabel, value, active }: { icon: any; label:
   );
 }
 
+function CompactObjectiveRow({
+  title,
+  description,
+  contentType,
+  xp,
+  quantity,
+  progress = 0,
+  isBonus = false,
+  interactive = false,
+  flat = false,
+  done = false,
+  status,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  contentType: string;
+  xp: number;
+  quantity: number;
+  progress?: number;
+  isBonus?: boolean;
+  interactive?: boolean;
+  flat?: boolean;
+  done?: boolean;
+  status?: string;
+  onClick?: () => void;
+}) {
+  const Icon = CONTENT_TYPE_ICON[contentType] ?? Target;
+  const accent = done ? "#4ade80" : isBonus ? "rgba(255,255,255,0.42)" : NEON;
+  const clampedProgress = Math.min(progress, quantity);
+  const rowClass = `relative w-full ${flat ? "rounded-sm px-1 py-4 sm:px-2" : "rounded-xl p-4"} flex items-center gap-3 sm:gap-4 text-left transition-colors ${interactive ? "cursor-pointer hover:bg-white/[0.035]" : ""}`;
+
+  return (
+    <div
+      role={interactive ? "button" : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onClick={interactive ? onClick : undefined}
+      onKeyDown={interactive ? e => { if (e.key === "Enter" || e.key === " ") onClick?.(); } : undefined}
+      className={rowClass}
+      style={flat ? {
+        opacity: isBonus && !done ? 0.9 : 1,
+      } : {
+        background: done ? "rgba(74,222,128,0.045)" : isBonus ? "rgba(255,255,255,0.025)" : CARD_BG,
+        border: `1px solid ${done ? "rgba(74,222,128,0.22)" : "rgba(255,255,255,0.09)"}`,
+        opacity: isBonus && !done ? 0.82 : 1,
+      }}
+    >
+      <div className={`${flat ? "w-7 h-7" : "w-9 h-9 rounded-lg"} flex items-center justify-center flex-shrink-0`}
+        style={{ background: flat ? "transparent" : done ? "rgba(74,222,128,0.12)" : "rgba(184,255,27,0.08)", color: accent }}>
+        {done ? <Check size={16} strokeWidth={3} /> : <Icon size={16} />}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="text-sm font-black text-white leading-tight">{title}</div>
+          {status && <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full" style={{ color: done ? "#4ade80" : NEON, background: done ? "rgba(74,222,128,0.10)" : "rgba(184,255,27,0.08)" }}>{status}</span>}
+        </div>
+        <div className="text-[11px] text-white/40 truncate mt-1">{description}</div>
+        {interactive && !flat && (
+          <div className="h-1.5 rounded-full overflow-hidden mt-2 max-w-sm" style={{ background: "rgba(255,255,255,0.07)" }}>
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${quantity > 0 ? (clampedProgress / quantity) * 100 : 0}%`, background: done ? "#4ade80" : NEON }} />
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        {xp > 0 && <div className="text-xs font-black tabular-nums" style={{ color: NEON }}>+{xp.toLocaleString()} XP</div>}
+        <div className="text-[11px] font-black tabular-nums" style={{ color: done ? "#4ade80" : "rgba(255,255,255,0.52)" }}>
+          {interactive ? `${clampedProgress} / ${quantity}` : `${quantity} required`}
+        </div>
+        {interactive && <ChevronRight size={14} className="text-white/25" />}
+      </div>
+    </div>
+  );
+}
+
+function objectiveDescription(b: any) {
+  const qty = Number(b.quantity ?? 1);
+  const ct = b.content_type as string;
+  return b.description ?? (ct === "clip" ? `Upload at least ${qty} gameplay clip${qty !== 1 ? "s" : ""}` :
+    ct === "screenshot" ? `Capture ${qty} in-game screenshot${qty !== 1 ? "s" : ""}` :
+    ct === "feedback" ? "Share your impressions of the game" :
+    ct === "reel" ? `Create ${qty} highlight reel${qty !== 1 ? "s" : ""}` :
+    ct === "stream" ? "Go live and stream your gameplay" :
+    ct === "bug" ? `Document ${qty} bug${qty !== 1 ? "s" : ""}` : "Complete this objective");
+}
+
+function objectiveLabel(b: any) {
+  const qty = Number(b.quantity ?? 1);
+  const ct = b.content_type as string;
+  if (ct === "clip")       return `Upload ${qty} Gameplay Clip${qty !== 1 ? "s" : ""}`;
+  if (ct === "screenshot") return `Upload ${qty} Screenshot${qty !== 1 ? "s" : ""}`;
+  if (ct === "feedback")   return "Submit First Impressions";
+  if (ct === "reel")       return `Upload ${qty} Reel${qty !== 1 ? "s" : ""}`;
+  if (ct === "stream")     return "Go Live on Stream";
+  if (ct === "session")    return "Complete a Play Session";
+  if (ct === "bug")        return `File ${qty} Bug Report${qty !== 1 ? "s" : ""}`;
+  return b.title ?? ct;
+}
+
+function campaignProgressUnits(campaign: any) {
+  const objectives: any[] = Array.isArray(campaign.objective_progress) ? campaign.objective_progress : [];
+  const required = objectives.filter((objective: any) => Boolean(objective.mandatory));
+  const requiredUnits = required.reduce((sum: number, objective: any) => sum + Math.max(Number(objective.quantity ?? 1), 1), 0);
+  const approvedUnits = required.reduce((sum: number, objective: any) => sum + Math.min(Number(objective.approved_count ?? 0), Math.max(Number(objective.quantity ?? 1), 1)), 0);
+  const submittedUnits = required.reduce((sum: number, objective: any) => sum + Math.min(Number(objective.submitted_count ?? 0), Math.max(Number(objective.quantity ?? 1), 1)), 0);
+
+  return {
+    requiredUnits: Number(campaign.required_objective_units ?? requiredUnits),
+    approvedUnits: Number(campaign.approved_objective_units ?? approvedUnits),
+    submittedUnits: Number(campaign.submitted_objective_units ?? submittedUnits),
+  };
+}
+
+function campaignJourneyStatus(campaign: any) {
+  return campaign.journey_status ?? campaign.participant_status;
+}
+
+function campaignTabStatus(campaign: any): MyTab {
+  const status = campaignJourneyStatus(campaign);
+  if (["under_review", "submitted_for_review"].includes(status)) return "submitted";
+  if (["completed", "completed_and_verified", "full_game_awarded"].includes(status)) return "completed";
+  if (["expired", "rejected", "cancelled"].includes(status)) return "expired";
+  return "active";
+}
+
+function campaignDeadline(campaign: any) {
+  return campaign.deadline ?? campaign.end_date ?? null;
+}
+
+function campaignDeadlineLabel(campaign: any) {
+  const deadline = campaignDeadline(campaign);
+  if (!deadline) return "No deadline";
+  const diff = new Date(deadline).getTime() - Date.now();
+  if (!Number.isFinite(diff)) return "No deadline";
+  if (diff <= 0) return "Ended";
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return "Ends today";
+  if (days === 1) return "Ends tomorrow";
+  return `Ends in ${days} days`;
+}
+
+function campaignDeadlineUrgency(campaign: any) {
+  const deadline = campaignDeadline(campaign);
+  if (!deadline) return "normal";
+  const diff = new Date(deadline).getTime() - Date.now();
+  if (!Number.isFinite(diff) || diff <= 0) return "urgent";
+  if (diff <= 2 * 86400000) return "urgent";
+  if (diff <= 7 * 86400000) return "soon";
+  return "normal";
+}
+
+function campaignNextObjective(campaign: any, progress: { requiredUnits: number; approvedUnits: number; submittedUnits: number }) {
+  const status = campaignJourneyStatus(campaign);
+  const next = campaign.next_objective;
+  if (status === "changes_requested") {
+    return { title: "Resubmit requested content", detail: next?.title ?? "Review the requested changes", progress: null };
+  }
+  if (status === "under_review" || status === "submitted_for_review") {
+    return { title: "Awaiting developer verification", detail: next?.title ?? null, progress: null };
+  }
+  if (next) {
+    const quantity = Math.max(Number(next.quantity ?? 1), 1);
+    const submitted = Math.min(Number(next.submitted_units ?? 0), quantity);
+    const approved = Math.min(Number(next.approved_units ?? 0), quantity);
+    return {
+      title: next.title ?? objectiveDescription(next),
+      detail: next.description ?? objectiveDescription(next),
+      progress: `${Math.max(submitted, approved)}/${quantity}`,
+    };
+  }
+  if (progress.requiredUnits > 0 && progress.approvedUnits >= progress.requiredUnits) {
+    return { title: "All objectives complete — rewards pending", detail: null, progress: null };
+  }
+  if (campaignTabStatus(campaign) === "completed") {
+    return { title: "Campaign complete", detail: null, progress: null };
+  }
+  return { title: "No required objectives configured", detail: null, progress: null };
+}
+
+function campaignRewardSummary(campaign: any) {
+  const objectives: any[] = Array.isArray(campaign.objective_progress) ? campaign.objective_progress : [];
+  const objectiveXp = objectives.reduce((sum: number, objective: any) => sum + Number(objective.xp_reward ?? 0), 0);
+  const completionDescription = String(campaign.completion_reward_description ?? "");
+  const completionXp = Number(completionDescription.match(/([\d,]+)\s*XP/i)?.[1]?.replace(/,/g, "") ?? 0);
+  const gft = completionDescription.match(/([\d,]+)\s*GFT/i)?.[1];
+  const rewards: { icon: any; label: string; tone?: string }[] = [];
+  const totalXp = objectiveXp + completionXp;
+
+  if (totalXp > 0) rewards.push({ icon: Zap, label: `+${totalXp.toLocaleString()} XP`, tone: NEON });
+  if (gft) rewards.push({ icon: Trophy, label: `${gft} GFT`, tone: "#fbbf24" });
+  if (campaign.completion_reward === "full_game_key" || /full[- ]game/i.test(completionDescription)) {
+    rewards.push({ icon: Gift, label: "Full game", tone: "#a78bfa" });
+  }
+  if (campaign.completion_reward === "xp_badge" || /badge/i.test(completionDescription)) {
+    rewards.push({ icon: Star, label: "Profile badge", tone: "#60a5fa" });
+  }
+  if (rewards.length === 0 && completionDescription) {
+    rewards.push({ icon: Gift, label: completionDescription, tone: "rgba(255,255,255,0.68)" });
+  }
+  return rewards;
+}
+
+function missionRewardItems(campaign: any, bounties: any[], complete: boolean) {
+  const completionDescription = String(campaign.completion_reward_description ?? "");
+  const gft = completionDescription.match(/([\d,]+)\s*GFT/i)?.[1];
+  const awardedXp = bounties.reduce((total: number, bounty: any) => {
+    const submissions = Array.isArray(bounty.submissions) ? bounty.submissions : [];
+    return total + submissions.reduce((sum: number, submission: any) =>
+      sum + (submission.status === "approved" ? Number(submission.xp_awarded ?? 0) : 0), 0);
+  }, 0);
+  const configuredXp = Number(campaign.total_campaign_xp ?? 0);
+  const rewards: { icon: any; label: string; state: string; tone: string }[] = [];
+
+  if (campaign.demo_key_id || campaign.demo_key_value) {
+    rewards.push({
+      icon: Key,
+      label: "Demo Key",
+      state: campaign.demo_key_value ? "Claimed" : "Unlocked",
+      tone: NEON,
+    });
+  }
+  if (configuredXp > 0) {
+    rewards.push({
+      icon: Zap,
+      label: `${configuredXp.toLocaleString()} XP`,
+      state: `${Math.min(awardedXp, configuredXp).toLocaleString()}/${configuredXp.toLocaleString()} earned`,
+      tone: NEON,
+    });
+  }
+  if (gft) {
+    rewards.push({
+      icon: Trophy,
+      label: `${gft} GFT`,
+      state: complete ? "Earned" : "Complete required objectives",
+      tone: "#fbbf24",
+    });
+  }
+  if (campaign.completion_reward === "full_game_key" || /full[- ]game/i.test(completionDescription)) {
+    rewards.push({
+      icon: Gift,
+      label: "Full Game",
+      state: campaign.full_key_value ? "Claimed" : complete ? "Unlocked" : "Complete required objectives",
+      tone: campaign.full_key_value ? "#4ade80" : "#a78bfa",
+    });
+  }
+  if (campaign.completion_reward === "xp_badge" || /badge/i.test(completionDescription)) {
+    rewards.push({
+      icon: Star,
+      label: "Profile Badge",
+      state: complete ? "Earned" : "Complete required objectives",
+      tone: "#60a5fa",
+    });
+  }
+  return rewards;
+}
+
+function CampaignRewardChip({ icon: Icon, label, tone }: { icon: any; label: string; tone?: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold whitespace-nowrap" style={{ color: tone ?? "rgba(255,255,255,0.62)" }}>
+      <Icon size={12} strokeWidth={2.4} />
+      {label}
+    </span>
+  );
+}
+
 // ── Requirement pill ──────────────────────────────────────────────────────
 const REQ_ICON: Record<string, any> = {
   clip: Film, screenshot: Camera, feedback: MessageSquare,
@@ -102,6 +376,45 @@ function reqPillLabel(ct: string, qty: number) {
   if (ct === "bug")        return `×${qty} Bug Reports`;
   return ct;
 }
+function FeaturedHeroBackground({ campaign, className }: { campaign: any; className?: string }) {
+  const sources = campaignHeroSources(campaign);
+  const [sourceIndex, setSourceIndex] = useState(0);
+  const source = sources[sourceIndex] ?? null;
+
+  useEffect(() => {
+    setSourceIndex(0);
+  }, [campaign.id, sources.join("|")]);
+
+  useEffect(() => {
+    if (!source) return;
+    const probe = new Image();
+    probe.onerror = () => {
+      setSourceIndex(current => {
+        if (current !== sourceIndex) return current;
+        const nextSource = nextCampaignHeroSource(sources, source);
+        return nextSource ? sources.indexOf(nextSource) : sources.length;
+      });
+    };
+    probe.src = source;
+    return () => {
+      probe.onload = null;
+      probe.onerror = null;
+    };
+  }, [source, sourceIndex]);
+
+  return (
+    <div
+      className={className ?? "absolute inset-0 bg-center bg-cover bg-no-repeat transition-[background-image] duration-300"}
+      aria-hidden="true"
+      style={{
+        backgroundImage: source
+          ? `url("${source}")`
+          : CAMPAIGN_HERO_FALLBACK,
+        backgroundPosition: "center",
+      }}
+    />
+  );
+}
 
 // ── Campaign card ─────────────────────────────────────────────────────────
 function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => void }) {
@@ -113,6 +426,7 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
   const tLeft = timeRemaining(endDate);
   const nearlyFull = demoLeft > 0 && demoLeft <= 5;
   const trending = Number(campaign.participant_count ?? 0) >= 10;
+  const accepted = Boolean(campaign.is_joined || campaign.joined || campaign.participant_status);
 
   // Deduplicated requirement pills from bounties
   const seen = new Set<string>();
@@ -132,8 +446,8 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
       onMouseLeave={e => (e.currentTarget.style.borderColor = CARD_BORDER)}
       onClick={onClick}
     >
-      {/* Hero artwork */}
-      <div className="relative h-48 overflow-hidden">
+      {/* Discovery artwork */}
+      <div className="relative h-36 overflow-hidden">
         {campaign.game_artwork_url ? (
           <img src={campaign.game_artwork_url} alt={campaign.game_name}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
@@ -161,14 +475,14 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
           <div className="absolute top-3 right-3">
             <span className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded-full"
               style={{ background: "rgba(245,158,11,0.90)", color: "#070b10" }}>
-              ⚡ {demoLeft} Left
+              {demoLeft} Left
             </span>
           </div>
         )}
       </div>
 
       {/* Body */}
-      <div className="px-5 pb-5 pt-4 space-y-3.5">
+      <div className="px-4 pb-4 pt-3.5 space-y-3">
         {/* Title + description */}
         <div>
           <h3 className="text-lg font-black text-white leading-tight tracking-tight">
@@ -209,24 +523,15 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
           )}
         </div>
 
-        {/* Rewards — 4 equal columns */}
-        <div className="grid grid-cols-4 gap-1.5">
-          <RewardCol
-            icon={<img src="/icons/demo-key-icon.png" alt="Demo" className="w-[45px] h-[45px] object-contain" />}
-            sublabel="Immediate" label="Demo Key"
-            value={demoLeft > 0 ? `${demoLeft}` : "—"} active={demoLeft > 0} />
-          <RewardCol
-            icon={<img src="/icons/full-game-icon.png" alt="Full" className="w-[45px] h-[45px] object-contain" />}
-            sublabel="Reward" label="Full Game"
-            value={fullLeft > 0 ? `${fullLeft}` : "—"} active={fullLeft > 0} />
-          <RewardCol
-            icon={<Zap size={45} color={NEON} />}
-            sublabel="Progress" label="XP"
-            value={totalXP > 0 ? totalXP.toLocaleString() : "—"} active={totalXP > 0} />
-          <RewardCol
-            icon={<img src="/icons/token-icon.png" alt="Token" className="w-[45px] h-[45px] object-contain" />}
-            sublabel="Bonus" label="GFT"
-            value="—" active={false} />
+        {/* Compact reward summary: discovery, not a reward wall */}
+        <div className="rounded-xl px-3 py-2.5" style={{ background: "rgba(184,255,27,0.045)", border: "1px solid rgba(184,255,27,0.12)" }}>
+          <div className="text-[9px] font-black uppercase tracking-[0.18em] mb-1.5" style={{ color: "rgba(184,255,27,0.65)" }}>Rewards</div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-bold text-white/70">
+            {demoLeft > 0 && <span className="inline-flex items-center gap-1"><img src="/icons/demo-key-icon.png" alt="" className="w-4 h-4 object-contain" /> Demo Key</span>}
+            {fullLeft > 0 && <span className="inline-flex items-center gap-1"><img src="/icons/full-game-icon.png" alt="" className="w-4 h-4 object-contain" /> Full Game</span>}
+            {totalXP > 0 && <span className="inline-flex items-center gap-1"><Zap size={13} color={NEON} /> {totalXP.toLocaleString()} XP</span>}
+            <span className="inline-flex items-center gap-1"><img src="/icons/token-icon.png" alt="" className="w-4 h-4 object-contain" /> GFT</span>
+          </div>
         </div>
 
         {/* CTA */}
@@ -235,7 +540,7 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
           style={{ background: NEON, color: "#070b10" }}
           onClick={e => { e.stopPropagation(); onClick(); }}
         >
-          <ShieldCheck size={15} /> Accept Mission
+          <ChevronRight size={15} /> {accepted ? "Continue Mission" : "View Campaign"}
         </button>
       </div>
     </div>
@@ -277,6 +582,24 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
     return () => clearInterval(t);
   }, [campaigns.length]);
 
+  useEffect(() => {
+    if (campaigns.length < 2) return;
+    const adjacent = [
+      campaigns[(idx + 1) % campaigns.length],
+      campaigns[(idx - 1 + campaigns.length) % campaigns.length],
+    ];
+    const preloads = adjacent.map((adjacentCampaign: any) => {
+      const source = campaignHeroSources(adjacentCampaign)[0];
+      if (!source) return null;
+      const image = new Image();
+      image.src = source;
+      return image;
+    }).filter(Boolean);
+    return () => preloads.forEach(image => {
+      if (image) image.src = "";
+    });
+  }, [campaigns, idx]);
+
   if (campaigns.length === 0) return null;
   const campaign = campaigns[idx];
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
@@ -303,20 +626,17 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
         <div className="relative flex-1 overflow-hidden cursor-pointer group rounded-2xl" style={{ height: 420 }}
           onClick={() => onSelect(campaign)}>
 
-          {/* Background */}
+          {/* Associated game artwork, resolved server-side from the game record */}
           <div className="absolute inset-0 transition-opacity duration-300" style={{ opacity: fading ? 0 : 1 }}>
-            {campaign.game_artwork_url ? (
-              <img src={campaign.game_artwork_url} alt={campaign.game_name}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                style={{ opacity: 0.60 }} />
-            ) : (
-              <div className="w-full h-full" style={{ background: "linear-gradient(135deg, rgba(184,255,27,0.12) 0%, rgba(7,11,16,1) 100%)" }} />
-            )}
+            <FeaturedHeroBackground campaign={campaign} />
+            <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-[1.03]"
+              style={{ background: "rgba(255,255,255,0.02)" }} />
           </div>
 
-          {/* Gradients */}
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #070b10 0%, rgba(7,11,16,0.60) 50%, transparent 100%)" }} />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(to right, #070b10 0%, transparent 70%)" }} />
+          {/* Readability overlays: directional on desktop, deeper on mobile */}
+          <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(7,11,16,0.96) 0%, rgba(7,11,16,0.82) 35%, rgba(7,11,16,0.45) 65%, rgba(7,11,16,0.20) 100%)" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(0deg, #070b10 0%, rgba(7,11,16,0.62) 34%, transparent 78%)" }} />
+          <div className="absolute inset-0 sm:hidden" style={{ background: "rgba(7,11,16,0.22)" }} />
 
           {/* Content */}
           <div className="absolute inset-0 flex flex-col justify-end px-8 pb-8 transition-opacity duration-300"
@@ -324,7 +644,7 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
             <div className="flex items-center gap-2 mb-3">
               <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm"
                 style={{ color: NEON, background: "rgba(184,255,27,0.12)", border: "1px solid rgba(184,255,27,0.25)" }}>
-                ⭐ Featured Campaign
+                Featured Campaign
               </span>
               <span className="flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full"
                 style={{ background: NEON, color: "#070b10" }}>
@@ -335,7 +655,7 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
             {campaign.game_name && (
               <div className="text-sm font-bold mb-0.5" style={{ color: "rgba(255,255,255,0.50)" }}>{campaign.game_name}</div>
             )}
-            <h2 className="text-4xl font-black text-white leading-tight tracking-tight mb-2 max-w-lg">
+            <h2 className="text-3xl sm:text-4xl font-black text-white leading-tight tracking-tight mb-2 max-w-lg">
               {campaign.template_name}
             </h2>
             {campaign.description && (
@@ -374,7 +694,7 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
                 className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black transition-all hover:brightness-110 hover:scale-[1.02] active:scale-[0.98]"
                 style={{ background: NEON, color: "#070b10" }}
                 onClick={e => { e.stopPropagation(); onSelect(campaign); }}>
-                <ShieldCheck size={16} /> Accept Mission
+                <ChevronRight size={16} /> View Campaign
               </button>
               <span className="text-xs text-white/40 font-bold">
                 {demoLeft > 0 ? `${demoLeft} demo keys remaining` : "Open campaign"}
@@ -574,7 +894,7 @@ function FilterSidebar({
   );
 }
 
-function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack: () => void; onJoined: () => void }) {
+function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack: () => void; onJoined: (campaign: any) => void }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -597,7 +917,13 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
       qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
       toast({ title: "Mission Accepted!", description: data.message });
       setShowModal(false);
-      onJoined();
+      onJoined({
+        ...campaign,
+        instance_id: campaign.id,
+        participant_status: "demo_key_claimed",
+        deadline: data.deadline,
+        demo_key_value: data.demoKey,
+      });
     },
     onError: async (err: any) => {
       const msg = err?.message ?? "Failed to join campaign";
@@ -610,7 +936,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const [activePanel, setActivePanel] = useState<{ bounty: any } | null>(null);
   const [selectedItems, setSelectedItems] = useState<Record<number, any[]>>({});
   const [submittedItems, setSubmittedItems] = useState<Record<number, any[]>>({});
-  const [hasJoined, setHasJoined] = useState(false);
+  const [hasJoined, setHasJoined] = useState(Boolean(campaign.is_joined || campaign.participant_status));
   const [panelSubmitting, setPanelSubmitting] = useState(false);
 
   const activePanelCt = activePanel?.bounty?.content_type ?? "none";
@@ -678,28 +1004,15 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
     }
   }
 
-  function objectiveLabel(b: any) {
-    const qty = Number(b.quantity ?? 1);
-    const ct = b.content_type as string;
-    if (ct === "clip")       return `Upload ${qty} Gameplay Clip${qty !== 1 ? "s" : ""}`;
-    if (ct === "screenshot") return `Upload ${qty} Screenshot${qty !== 1 ? "s" : ""}`;
-    if (ct === "feedback")   return "Submit First Impressions";
-    if (ct === "reel")       return `Upload ${qty} Reel${qty !== 1 ? "s" : ""}`;
-    if (ct === "stream")     return "Go Live on Stream";
-    if (ct === "session")    return "Complete a Play Session";
-    if (ct === "bug")        return `File ${qty} Bug Report${qty !== 1 ? "s" : ""}`;
-    return b.title ?? ct;
-  }
-
   return (
-    <div className="min-h-screen" style={{ background: PAGE_BG }}>
+    <div className="min-h-screen" style={{ background: "#0F101B" }}>
       {/* Back */}
       <button onClick={onBack} className="flex items-center gap-2 px-5 py-3 text-white/50 hover:text-white transition-colors text-sm font-bold">
         <ChevronLeft size={16} /> Back to Bounty Hub
       </button>
 
       {/* ── CINEMATIC HERO ── */}
-      <div className="relative overflow-hidden" style={{ minHeight: 460 }}>
+      <div className="relative overflow-hidden" style={{ minHeight: 390 }}>
         {/* Artwork */}
         {campaign.game_artwork_url ? (
           <img src={campaign.game_artwork_url} alt={campaign.game_name} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.65 }} />
@@ -711,8 +1024,8 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,16,1) 0%, rgba(7,11,16,0.50) 42%, transparent 100%)" }} />
 
         {/* Content */}
-        <div className="relative z-10 flex flex-col justify-end" style={{ minHeight: 460 }}>
-          <div className="px-6 pb-8 pt-24">
+        <div className="relative z-10 flex flex-col justify-end" style={{ minHeight: 390 }}>
+          <div className="px-6 pb-8 pt-20">
             <div className="max-w-[1400px] mx-auto flex items-end justify-between gap-10">
 
               {/* LEFT: Game info */}
@@ -720,6 +1033,9 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                 <div className="flex items-center gap-2 mb-4">
                   <span className="flex items-center gap-1.5 text-[10px] font-black px-3 py-1.5 rounded-full" style={{ color: "#070b10", background: NEON }}>
                     <ShieldCheck size={10} /> GF Verified
+                  </span>
+                  <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.65)" }}>
+                    {isGF ? "Gamefolio Campaign" : "Creator Campaign"}
                   </span>
                   {campaign.platform && (
                     <span className="text-[11px] font-bold px-3 py-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.65)" }}>
@@ -730,38 +1046,33 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                 {campaign.game_name && (
                   <div className="text-xs font-black uppercase tracking-[0.22em] mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{campaign.game_name}</div>
                 )}
-                <div className="font-black text-white leading-none mb-5 uppercase" style={{ fontSize: "clamp(2.2rem,5vw,4rem)", letterSpacing: "-0.02em", textShadow: "0 4px 60px rgba(0,0,0,0.80)" }}>
+                <div className="font-black text-white leading-none mb-4 uppercase" style={{ fontSize: "clamp(2rem,4vw,3.5rem)", letterSpacing: "-0.02em", textShadow: "0 4px 60px rgba(0,0,0,0.80)" }}>
                   {campaign.template_name}
                 </div>
                 {campaign.description && (
                   <p className="text-sm leading-relaxed mb-6 max-w-lg" style={{ color: "rgba(255,255,255,0.50)" }}>{campaign.description}</p>
                 )}
-                <div className="flex items-center gap-6 flex-wrap">
-                  {campaign.platform && (
-                    <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: "rgba(255,255,255,0.45)" }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-                      {campaign.platform}
-                    </div>
-                  )}
+                <div className="flex items-center gap-x-5 gap-y-2 flex-wrap text-xs font-bold" style={{ color: "rgba(255,255,255,0.52)" }}>
+                  <div className="flex items-center gap-1.5"><Target size={13} /> {mandatory.length} required</div>
+                  {optional.length > 0 && <div className="flex items-center gap-1.5"><Star size={13} /> {optional.length} bonus</div>}
+                  <div className="flex items-center gap-1.5"><Clock size={13} /> Est. {bounties.length <= 2 ? "1–2 hrs" : bounties.length <= 4 ? "2–4 hrs" : "4+ hrs"}</div>
                   {timeLeft !== "Ended" && timeLeft !== "Ongoing" && (
-                    <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: "rgba(255,255,255,0.45)" }}>
-                      <Clock size={13} /> Time Left: <span style={{ color: "rgba(255,255,255,0.78)" }}>{timeLeft}</span>
-                    </div>
+                    <div className="flex items-center gap-1.5"><Clock size={13} /> <span style={{ color: "rgba(255,255,255,0.78)" }}>{timeLeft}</span></div>
                   )}
                   {!isGF && demoLeft > 0 && (
                     <div className="flex items-center gap-1.5 text-xs font-black" style={{ color: NEON }}>
                       <img src="/icons/demo-key-icon.png" alt="" className="w-3.5 h-3.5 object-contain" />
-                      Demo Keys: {demoLeft} Left
+                      {demoLeft} places remaining
                     </div>
                   )}
-                  <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: "rgba(255,255,255,0.45)" }}>
-                    <Users size={13} /> Creators Joined: <span style={{ color: "rgba(255,255,255,0.78)" }}>{campaign.participant_count ?? 0}</span>
+                  <div className="flex items-center gap-1.5">
+                    <Users size={13} /> <span style={{ color: "rgba(255,255,255,0.78)" }}>{campaign.participant_count ?? 0} creators joined</span>
                   </div>
                 </div>
               </div>
 
               {/* RIGHT: Circular campaign completion widget */}
-              <div className="flex-shrink-0 hidden md:flex flex-col items-center p-6 rounded-3xl" style={{ background: "rgba(7,11,16,0.85)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(20px)", minWidth: 210 }}>
+              {hasJoined && <div className="flex-shrink-0 hidden md:flex flex-col items-center p-6 rounded-3xl" style={{ background: "rgba(7,11,16,0.85)", border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(20px)", minWidth: 210 }}>
                 <div className="text-[10px] font-black uppercase tracking-widest mb-5" style={{ color: "rgba(255,255,255,0.32)" }}>Campaign Completion</div>
                 <div className="relative" style={{ width: 128, height: 128 }}>
                   <svg width="128" height="128" viewBox="0 0 128 128">
@@ -789,7 +1100,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                 {overallPct === 100 && (
                   <div className="mt-2 text-[10px] font-black px-3 py-1 rounded-full" style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e" }}>✓ Complete</div>
                 )}
-              </div>
+              </div>}
 
             </div>
           </div>
@@ -799,9 +1110,9 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
       {/* ── MAIN CONTENT ── */}
       <div className="px-4 sm:px-6 lg:px-8 pt-8 max-w-[1400px] mx-auto">
 
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_390px] gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6 mb-8 items-start">
 
-          {/* ══ LEFT: Mission Workspace ══ */}
+          {/* ══ LEFT: Mission Objectives / post-acceptance workspace ══ */}
           <div>
             {/* Section header */}
             <div className="flex items-center justify-between mb-5">
@@ -810,20 +1121,92 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                   <Target size={17} color={NEON} />
                 </div>
                 <div>
-                  <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: NEON }}>Mission Workspace</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest" style={{ color: NEON }}>{hasJoined ? "Mission Workspace" : "Mission Objectives"}</div>
                   <div className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.30)" }}>{mandatory.length} required · {optional.length} bonus</div>
                 </div>
               </div>
-              {completedMandatoryCount > 0 && (
+              {hasJoined && completedMandatoryCount > 0 && (
                 <div className="flex items-center gap-1.5 text-xs font-black px-3 py-1.5 rounded-full" style={{ background: "rgba(34,197,94,0.10)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.22)" }}>
                   <Check size={11} strokeWidth={3} /> {completedMandatoryCount}/{mandatory.length} done
                 </div>
               )}
             </div>
 
-            {/* ── Objective cards ── */}
-            <div className="space-y-6">
-              <div className={`grid gap-4 ${mandatory.length <= 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3"}`}>
+            {hasJoined && completedMandatoryCount < mandatory.length && (() => {
+              const nextObjective = mandatory.find((b: any) => !isObjectiveDone(b));
+              if (!nextObjective) return null;
+              const NextIcon = CONTENT_TYPE_ICON[nextObjective.content_type] ?? Target;
+              const nextQty = Number(nextObjective.quantity ?? 1);
+              const nextProgress = getProgress(nextObjective.id);
+              return (
+                <div className="mb-6 rounded-2xl p-5" style={{ background: "linear-gradient(110deg, rgba(184,255,27,0.14), rgba(184,255,27,0.035))", border: "1px solid rgba(184,255,27,0.28)" }}>
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-2" style={{ color: NEON }}>What do I do next?</div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,255,27,0.18)" }}><NextIcon size={20} color={NEON} /></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-lg font-black text-white">{objectiveLabel(nextObjective)}</div>
+                      <div className="text-xs text-white/45 mt-0.5">{nextProgress} of {nextQty} submitted · +{Number(nextObjective.xp_reward ?? 0)} XP</div>
+                    </div>
+                    <button onClick={() => setActivePanel({ bounty: nextObjective })} className="px-3 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 flex-shrink-0" style={{ background: NEON, color: "#070b10" }}>
+                      <Upload size={13} /> Complete
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── Compact quest-log objectives ── */}
+            <div className="space-y-3 max-w-3xl">
+              {mandatory.map((b: any) => {
+                const progress = getProgress(b.id);
+                const quantity = Number(b.quantity ?? 1);
+                const done = progress >= quantity;
+                return (
+                  <CompactObjectiveRow
+                    key={b.id}
+                    title={objectiveLabel(b)}
+                    description={objectiveDescription(b)}
+                    contentType={b.content_type}
+                    xp={Number(b.xp_reward ?? 0)}
+                    quantity={quantity}
+                    progress={progress}
+                    interactive={hasJoined && !!user}
+                    done={done}
+                    status={hasJoined ? (done ? "Completed" : progress > 0 ? "In Progress" : "Not Started") : undefined}
+                    onClick={() => setActivePanel({ bounty: b })}
+                  />
+                );
+              })}
+              {optional.length > 0 && (
+                <>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-white/30 pt-4 px-1">Bonus Objectives <span className="text-white/20">· Optional</span></div>
+                  {optional.map((b: any) => {
+                    const progress = getProgress(b.id);
+                    const quantity = Number(b.quantity ?? 1);
+                    return (
+                      <CompactObjectiveRow
+                        key={b.id}
+                        title={objectiveLabel(b)}
+                        description={objectiveDescription(b)}
+                        contentType={b.content_type}
+                        xp={Number(b.xp_reward ?? 0)}
+                        quantity={quantity}
+                        progress={progress}
+                        isBonus
+                        interactive={hasJoined && !!user}
+                        done={progress >= quantity}
+                        status={hasJoined ? (progress >= quantity ? "Completed" : progress > 0 ? "In Progress" : "Not Started") : undefined}
+                        onClick={() => setActivePanel({ bounty: b })}
+                      />
+                    );
+                  })}
+                </>
+              )}
+            </div>
+
+            {/* ── Legacy detailed objective layout retained for the accepted picker path ── */}
+            <div className="hidden">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {mandatory.map((b: any, idx: number) => {
                   const ct = b.content_type as string;
                   const qty = Number(b.quantity ?? 1);
@@ -920,7 +1303,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                       style={{ background: done ? "rgba(34,197,94,0.05)" : "rgba(255,255,255,0.03)", border: done ? "1px solid rgba(34,197,94,0.28)" : "1px solid rgba(255,255,255,0.08)", boxShadow: done ? "0 0 20px rgba(34,197,94,0.08)" : "none" }}
                     >
                       {/* Artwork zone */}
-                      <div className="relative overflow-hidden flex-shrink-0" style={{ height: 160 }}>
+                      <div className="relative overflow-hidden flex-shrink-0" style={{ height: 105 }}>
                         {artwork}
                         {done && (
                           <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(34,197,94,0.22)" }}>
@@ -977,38 +1360,37 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                           </div>
                         )}
 
-                        {/* Progress bar */}
-                        <div className="mt-auto">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] font-bold transition-colors duration-500" style={{ color: done ? "#22c55e" : "rgba(255,255,255,0.28)" }}>
-                              {prog} / {qty}{done ? " ✓" : ""}
-                            </span>
-                            {!done && prog > 0 && <span className="text-[10px] text-white/22">{Math.round(prog / qty * 100)}%</span>}
+                        {hasJoined ? (
+                          <div className="mt-auto">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[10px] font-bold transition-colors duration-500" style={{ color: done ? "#22c55e" : "rgba(255,255,255,0.28)" }}>
+                                {prog} / {qty}{done ? " ✓" : ""}
+                              </span>
+                              {!done && prog > 0 && <span className="text-[10px] text-white/22">{Math.round(prog / qty * 100)}%</span>}
+                            </div>
+                            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+                              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(prog / qty * 100, 100)}%`, background: done ? "#22c55e" : accentColor }} />
+                            </div>
                           </div>
-                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
-                            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(prog / qty * 100, 100)}%`, background: done ? "#22c55e" : accentColor, boxShadow: done ? "0 0 8px rgba(34,197,94,0.50)" : "none" }} />
-                          </div>
-                        </div>
+                        ) : (
+                          <div className="mt-auto text-[11px] font-bold text-white/45">{qty} {CONTENT_TYPE_LABEL[ct] ?? ct}{qty !== 1 ? "s" : ""} required</div>
+                        )}
 
                         {/* Dynamic action button */}
-                        <button
+                        {hasJoined && <button
                           onClick={() => !done && user ? setActivePanel({ bounty: b }) : undefined}
                           disabled={done || !user}
                           className="w-full py-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all duration-200 hover:brightness-110 disabled:cursor-default"
                           style={done
                             ? { background: "rgba(34,197,94,0.10)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.22)" }
-                            : !user
-                            ? { background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.22)", border: "1px solid rgba(255,255,255,0.07)" }
                             : { background: accentBg, color: accentColor, border: `1px solid ${ct === "stream" ? "rgba(239,68,68,0.22)" : ct === "bug" ? "rgba(251,146,60,0.22)" : "rgba(184,255,27,0.22)"}` }}
                         >
                           {done
                             ? <><Check size={11} strokeWidth={3} /> Submitted for Review</>
-                            : !user
-                            ? <><Lock size={11} /> Sign in to Submit</>
                             : prog > 0
                             ? <><Plus size={11} /> Continue ({prog}/{qty})</>
                             : <><Upload size={11} /> {ct === "clip" ? "Add Clips" : ct === "screenshot" ? "Add Screenshots" : ct === "reel" ? "Add Reels" : ct === "feedback" ? "Write Feedback" : ct === "stream" ? "Go Live" : ct === "bug" ? "Report Bugs" : "Add Content"}</>}
-                        </button>
+                        </button>}
                       </div>
                     </div>
                   );
@@ -1041,15 +1423,15 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                             </div>
                             <div className="flex items-center gap-1">
                               <Star size={9} className="text-white/20 flex-shrink-0" />
-                              <span className="text-[10px] text-white/22">Bonus · {prog}/{qty}</span>
+                              <span className="text-[10px] text-white/22">{hasJoined ? `Bonus · ${prog}/${qty}` : `${qty} required`}</span>
                             </div>
-                            <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
+                            {hasJoined && <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
                               <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(prog / qty * 100, 100)}%`, background: done ? "#22c55e" : "rgba(255,255,255,0.18)" }} />
-                            </div>
-                            <button onClick={() => user && !done && setActivePanel({ bounty: b })} disabled={done || !user} className="w-full mt-0.5 py-1.5 rounded-lg text-[11px] font-black flex items-center justify-center gap-1 transition-all"
+                            </div>}
+                            {hasJoined && <button onClick={() => user && !done && setActivePanel({ bounty: b })} disabled={done || !user} className="w-full mt-0.5 py-1.5 rounded-lg text-[11px] font-black flex items-center justify-center gap-1 transition-all"
                               style={{ background: done ? "rgba(34,197,94,0.08)" : "rgba(255,255,255,0.04)", color: done ? "#22c55e" : "rgba(255,255,255,0.28)", border: done ? "1px solid rgba(34,197,94,0.18)" : "1px dashed rgba(255,255,255,0.09)" }}>
-                              {done ? <><Check size={10} strokeWidth={3} /> Done</> : <><Plus size={10} /> Add</>}
-                            </button>
+                              {done ? <><Check size={10} strokeWidth={3} /> Done</> : hasJoined ? <><Plus size={10} /> Add</> : <><Lock size={10} /> Unlock after accepting</>}
+                            </button>}
                           </div>
                         </div>
                       );
@@ -1061,7 +1443,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
           </div>
 
           {/* ══ RIGHT: Mission Rewards ══ */}
-          <div className="rounded-3xl flex flex-col" style={{ background: CARD_BG, border: "1px solid rgba(184,255,27,0.20)", boxShadow: "0 0 50px rgba(184,255,27,0.06)" }}>
+          <div className="rounded-3xl flex flex-col lg:sticky lg:top-4" style={{ background: CARD_BG, border: "1px solid rgba(184,255,27,0.20)", boxShadow: "0 0 50px rgba(184,255,27,0.06)" }}>
 
             {/* Card header */}
             <div className="px-6 pt-6 pb-4 flex items-center gap-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
@@ -1172,7 +1554,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                 <div className="space-y-3">
                   {completedMandatoryCount === mandatory.length && mandatory.length > 0 ? (
                     <div className="rounded-2xl p-4 text-center space-y-1.5" style={{ background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.25)", boxShadow: "0 0 24px rgba(34,197,94,0.07)" }}>
-                      <div className="text-2xl">🎉</div>
+                      <Trophy size={20} color={NEON} className="mx-auto" />
                       <div className="text-sm font-black text-white">Mission Complete!</div>
                       <div className="text-[11px] leading-relaxed" style={{ color: "rgba(255,255,255,0.38)" }}>Awaiting developer verification. Rewards distributed once approved.</div>
                       <div className="flex items-center justify-center gap-1.5 text-[11px] font-black" style={{ color: "#22c55e" }}>
@@ -1221,7 +1603,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         </div>
 
         {/* ── FULL-WIDTH CAMPAIGN PROGRESS ── */}
-        <div className="mb-8 rounded-3xl overflow-hidden transition-all duration-700"
+        {hasJoined && <div className="mb-8 rounded-3xl overflow-hidden transition-all duration-700"
           style={{ background: CARD_BG, border: `1px solid ${overallPct > 0 ? "rgba(184,255,27,0.25)" : CARD_BORDER}`, boxShadow: overallPct > 0 ? "0 0 40px rgba(184,255,27,0.07)" : "none" }}>
           <div className="p-6 sm:p-8">
             {/* Header row */}
@@ -1230,7 +1612,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                 <div className="text-[10px] font-black uppercase tracking-widest mb-1" style={{ color: overallPct > 0 ? NEON : "rgba(255,255,255,0.28)" }}>Campaign Progress</div>
                 <div className="text-2xl font-black text-white">
                   {completedMandatoryCount === mandatory.length && mandatory.length > 0
-                    ? "🎉 Mission Complete!"
+                    ? "Mission Complete"
                     : `${completedMandatoryCount} of ${mandatory.length} Objectives Complete`}
                 </div>
               </div>
@@ -1275,10 +1657,10 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
               )}
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* ── HOW IT WORKS ── */}
-        <div className="mb-10 rounded-3xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+        {hasJoined && <div className="mb-10 rounded-3xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
           <div className="px-6 sm:px-8 py-6 flex flex-col sm:flex-row items-center sm:items-stretch gap-0 sm:gap-0">
             {([
               { icon: <ShieldCheck size={16} color={NEON} />, num: "1", label: "Accept Mission", sub: "Get your demo key" },
@@ -1328,7 +1710,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
               </div>
             )}
           </div>
-        </div>
+        </div>}
 
         {/* bottom spacer */}
         <div className="pb-8" />
@@ -1368,7 +1750,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                 </div>
               ) : (pickerData?.items ?? []).length === 0 ? (
                 <div className="text-center py-12 space-y-2">
-                  <div className="text-3xl">🎮</div>
+                  <Target size={28} color={NEON} className="mx-auto" />
                   <div className="text-sm font-bold text-white/40">No existing content found</div>
                   <div className="text-xs text-white/25 max-w-xs mx-auto">Upload {activePanel.bounty.content_type === "screenshot" ? "screenshots" : "clips"} to your Gamefolio profile first, then return here to submit them</div>
                 </div>
@@ -1387,7 +1769,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                       const atMax = (selectedItems[activePanel.bounty.id] ?? []).length >= qty && !isSelected;
                       const Ic = CONTENT_TYPE_ICON[activePanel.bounty.content_type] ?? Target;
                       return (
-                        <button key={item.id} onClick={() => !atMax && toggleItem(activePanel.bounty.id, item, qty)} disabled={atMax}
+                            <button key={item.id} onClick={() => !atMax && toggleItem(activePanel.bounty.id, item, qty)} disabled={atMax}
                           className="relative rounded-xl overflow-hidden transition-all duration-200 aspect-video"
                           style={{ border: isSelected ? "2px solid #22c55e" : "1px solid rgba(255,255,255,0.08)", opacity: atMax ? 0.28 : 1, boxShadow: isSelected ? "0 0 14px rgba(34,197,94,0.35)" : "none" }}>
                           {item.thumbnailUrl
@@ -1427,11 +1809,9 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                   ? "Select items to continue"
                   : <><Check size={16} /> Submit {(selectedItems[activePanel.bounty.id] ?? []).length} Item{(selectedItems[activePanel.bounty.id] ?? []).length !== 1 ? "s" : ""} to Campaign</>}
               </button>
-              {!hasJoined && (
-                <p className="text-center text-[11px] mt-2" style={{ color: "rgba(255,255,255,0.24)" }}>
-                  Accepting the mission happens automatically on your first submission
-                </p>
-              )}
+              <p className="text-center text-[11px] mt-2" style={{ color: "rgba(255,255,255,0.24)" }}>
+                Your submission will be sent for developer review.
+              </p>
             </div>
           </div>
         </div>
@@ -1452,17 +1832,19 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
             <div className="flex items-center gap-3">
               <img src="/icons/demo-key-icon.png" alt="" className="w-11 h-11 object-contain" />
               <div>
-                <div className="text-lg font-black text-white">Claim Demo Key</div>
-                <div className="text-xs text-white/45">Gamefolio Verified Campaign</div>
+                <div className="text-lg font-black text-white">Accept {campaign.template_name}?</div>
+                <div className="text-xs text-white/45">You are joining a Gamefolio campaign</div>
               </div>
             </div>
-            <p className="text-sm text-white/60">You are about to join this campaign. You will immediately receive one demo key.</p>
+            <p className="text-sm text-white/60">Once accepted, this campaign moves to My Campaigns. Track objectives, submit content and unlock rewards from your Mission Workspace.</p>
             <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(184,255,27,0.05)", border: "1px solid rgba(184,255,27,0.12)" }}>
-              <div className="text-[10px] font-black uppercase tracking-widest text-white/35 mb-1">Complete the mission to unlock</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-white/35 mb-1">Mission briefing</div>
+              <div className="text-xs text-white/60">{mandatory.length} required objectives · {optional.length} bonus objective{optional.length === 1 ? "" : "s"} · {timeLeft === "Ongoing" ? "Ongoing campaign" : timeLeft}</div>
+              {!isGF && demoLeft > 0 && <div className="text-xs font-bold mt-2" style={{ color: NEON }}>1 Demo Key will be reserved for you.</div>}
               {[
-                { icon: <img src="/icons/full-game-icon.png" alt="" className="w-5 h-5 object-contain" />, text: "Full Game Key" },
+                { icon: <img src="/icons/full-game-icon.png" alt="" className="w-5 h-5 object-contain" />, text: "Full Game after required objectives" },
                 { icon: <Zap size={16} color={NEON} />, text: totalXp > 0 ? `${totalXp.toLocaleString()} XP` : "XP Rewards" },
-                { icon: <img src="/icons/token-icon.png" alt="" className="w-5 h-5 object-contain" />, text: "GFT / SKL Tokens" },
+                { icon: <img src="/icons/token-icon.png" alt="" className="w-5 h-5 object-contain" />, text: "GFT after verification" },
               ].map(({ icon, text }) => (
                 <div key={text} className="flex items-center gap-2.5 text-sm text-white/75">
                   {icon}<span>{text}</span>
@@ -1503,10 +1885,26 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const [expandedBounty, setExpandedBounty] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState<number | null>(null);
   const [submitUrl, setSubmitUrl] = useState("");
+  const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   const { data: progress, isLoading } = useQuery<any>({
     queryKey: ["/api/bounties/my", cp.instance_id],
     queryFn: getQueryFn({ on401: "returnNull" }),
+  });
+
+  const progressBounties: any[] = progress?.bounties ?? cp.bounties ?? [];
+  const submittingBounty = progressBounties.find((b: any) => b.id === submitting);
+  const usesExistingContent = ["clip", "reel", "screenshot"].includes(submittingBounty?.content_type);
+  const { data: pickerData, isLoading: pickerLoading } = useQuery<any>({
+    queryKey: ["/api/bounties/my/content-picker", submittingBounty?.content_type],
+    queryFn: async () => {
+      const res = await fetch(`/api/bounties/my/content-picker?contentType=${encodeURIComponent(submittingBounty.content_type)}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Could not load your Gamefolio content");
+      return res.json();
+    },
+    enabled: Boolean(submittingBounty && usesExistingContent),
+    staleTime: 30_000,
   });
 
   const claimFullMutation = useMutation({
@@ -1515,7 +1913,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       const data = await res.json();
       qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
       qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] });
-      toast({ title: "🎉 Full-game key claimed!", description: `Your key: ${data.fullKey}` });
+      toast({ title: "Full-game key claimed", description: `Your key: ${data.fullKey}` });
     },
     onError: async (err: any) => {
       toast({ title: "Could not claim key", description: err?.message ?? "Error", variant: "destructive" });
@@ -1523,13 +1921,14 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   });
 
   const submitMutation = useMutation({
-    mutationFn: ({ bountyId, url }: { bountyId: number; url: string }) =>
-      apiRequest("POST", `/api/bounties/my/${cp.instance_id}/submit/${bountyId}`, { contentUrl: url }),
+    mutationFn: ({ bountyId, body }: { bountyId: number; body: Record<string, unknown> }) =>
+      apiRequest("POST", `/api/bounties/my/${cp.instance_id}/submit/${bountyId}`, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] });
       qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
       setSubmitting(null);
       setSubmitUrl("");
+      setSelectedContentId(null);
       toast({ title: "Submitted for review", description: "Gamefolio will verify your submission" });
     },
     onError: async (err: any) => {
@@ -1556,141 +1955,294 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const bounties: any[] = data.bounties ?? [];
   const mandatory = bounties.filter((b: any) => b.mandatory);
   const optional = bounties.filter((b: any) => !b.mandatory);
+  const requiredUnits = Number(data.required_objective_units ?? mandatory.reduce((sum: number, b: any) => sum + Number(b.quantity ?? 1), 0));
+  const approvedUnits = Number(data.approved_objective_units ?? mandatory.reduce((sum: number, b: any) => sum + Math.min(Number(b.quantity ?? 1), Number(b.approved_count ?? 0)), 0));
+  const submittedUnits = Number(data.submitted_objective_units ?? mandatory.reduce((sum: number, b: any) => sum + Math.min(Number(b.quantity ?? 1), Number(b.submitted_count ?? 0)), 0));
+  const progressUnits = Math.max(approvedUnits, submittedUnits);
   const approvedCount = mandatory.filter((b: any) => Number(b.approved_count ?? 0) >= Number(b.quantity ?? 1)).length;
-  const pct = mandatory.length > 0 ? Math.round((approvedCount / mandatory.length) * 100) : 0;
-  const statusCfg = STATUS_CONFIG[data.participant_status] ?? STATUS_CONFIG.enrolled;
-  const canClaimFull = pct === 100 && !data.full_key_value;
-  const allApproved = pct === 100;
+  const pct = requiredUnits > 0 ? Math.min(100, Math.round((progressUnits / requiredUnits) * 100)) : 0;
+  const nextObjectiveTitle = data.next_objective?.title ?? data.next_objective_title ?? mandatory.find((b: any) => Number(b.approved_count ?? 0) < Number(b.quantity ?? 1))?.title ?? mandatory.find((b: any) => Number(b.approved_count ?? 0) < Number(b.quantity ?? 1))?.description;
+  const statusCfg = STATUS_CONFIG[data.journey_status ?? data.participant_status] ?? STATUS_CONFIG.enrolled;
+  const allApproved = requiredUnits > 0 && approvedUnits >= requiredUnits;
+  const canClaimFull = allApproved && !data.full_key_value;
+  const deadlineLabel = campaignDeadlineLabel(data);
+  const deadlineUrgency = campaignDeadlineUrgency(data);
+  const missionRewards = missionRewardItems(data, bounties, allApproved);
+  const completedOptional = optional.filter((b: any) => Number(b.approved_count ?? 0) >= Number(b.quantity ?? 1)).length;
+  const contentRequirements = bountyRequirements(bounties);
+
+  const renderObjective = (b: any, isBonus = false) => {
+    const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
+    const approved = Number(b.approved_count ?? 0);
+    const submitted = Number(b.submitted_count ?? 0);
+    const qty = Number(b.quantity ?? 1);
+    const done = approved >= qty;
+    const visibleProgress = Math.max(approved, submitted);
+    const subs: any[] = b.submissions ?? [];
+    const lastSub = subs[0];
+    const isExpanded = expandedBounty === b.id;
+    const isSubmitting = submitting === b.id;
+    const subStatusCfg = lastSub ? (STATUS_CONFIG[lastSub.status] ?? { label: lastSub.status, color: "#94a3b8", bg: "" }) : null;
+    const rowStatus = subStatusCfg?.label ?? (done ? "Completed" : submitted > 0 ? "In Progress" : "Not Started");
+
+    return (
+      <div key={b.id} className="overflow-hidden border-b border-white/[0.08] last:border-b-0">
+        <CompactObjectiveRow
+          title={objectiveLabel(b)}
+          description={objectiveDescription(b)}
+          contentType={b.content_type}
+          xp={Number(b.xp_reward ?? 0)}
+          quantity={qty}
+          progress={visibleProgress}
+          interactive
+          flat
+          isBonus={isBonus}
+          done={done}
+          status={isBonus && !done ? undefined : rowStatus}
+          onClick={() => setExpandedBounty(isExpanded ? null : b.id)}
+        />
+
+        {isExpanded && (
+          <div className="px-1 sm:px-10 pb-5 border-t border-white/[0.06] pt-4 space-y-4">
+            {b.description && <div className="text-xs text-white/50">{b.description}</div>}
+
+            {subs.length > 0 && (
+              <div className="space-y-1.5">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-white/30">Submissions</div>
+                {subs.map((submission: any, index: number) => {
+                  const submissionCfg = STATUS_CONFIG[submission.status] ?? { label: submission.status, color: "#94a3b8", bg: "" };
+                  return (
+                    <div key={index} className="flex items-center gap-2 py-2 border-b border-white/[0.05] last:border-b-0">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: submissionCfg.color, background: submissionCfg.bg }}>{submissionCfg.label}</span>
+                      {submission.content_url && <a href={submission.content_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-white/40 hover:text-white truncate max-w-[160px]">{submission.content_url}</a>}
+                      {submission.review_notes && <div className="text-[10px] text-orange-400 ml-auto">{submission.review_notes}</div>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {!done && (
+              isSubmitting ? (
+                <div className="space-y-2">
+                  {["clip", "reel", "screenshot"].includes(b.content_type) ? (
+                    <>
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-white/35">Select from Gamefolio</div>
+                      {pickerLoading ? (
+                        <div className="flex items-center justify-center py-5"><Loader2 size={16} className="animate-spin text-white/35" /></div>
+                      ) : (pickerData?.items ?? []).length > 0 ? (
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-52 overflow-y-auto pr-1">
+                          {(pickerData?.items ?? []).map((item: any) => {
+                            const selected = selectedContentId === item.id;
+                            return (
+                              <button
+                                type="button"
+                                key={item.id}
+                                onClick={() => setSelectedContentId(selected ? null : item.id)}
+                                className="relative rounded-lg overflow-hidden aspect-video text-left"
+                                style={{ border: selected ? `2px solid ${NEON}` : "1px solid rgba(255,255,255,0.10)" }}
+                              >
+                                {item.thumbnailUrl ? (
+                                  <img src={item.thumbnailUrl} alt={item.title ?? "Gamefolio content"} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-white/5"><Icon size={16} className="text-white/35" /></div>
+                                )}
+                                {selected && <div className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: NEON }}><Check size={11} color="#070b10" strokeWidth={3} /></div>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="py-3 text-xs text-white/45">
+                          No matching Gamefolio content yet.
+                        </div>
+                      )}
+                      <a href="/upload" className="inline-flex items-center gap-1.5 text-xs font-black" style={{ color: NEON }}>
+                        <Upload size={12} /> Upload new content
+                      </a>
+                    </>
+                  ) : (
+                    <input
+                      value={submitUrl}
+                      onChange={e => setSubmitUrl(e.target.value)}
+                      placeholder={b.content_type === "feedback" || b.content_type === "bug" ? "Enter your response or paste a supporting link" : "Paste content URL or Gamefolio link"}
+                      className="w-full px-3 py-2 rounded-lg text-sm text-white bg-black/30 border border-white/10 focus:border-white/30 outline-none"
+                    />
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        const body: Record<string, unknown> = { contentType: b.content_type };
+                        if (b.content_type === "clip") body.clipId = selectedContentId;
+                        else if (b.content_type === "reel") body.reelId = selectedContentId;
+                        else if (b.content_type === "screenshot") body.screenshotId = selectedContentId;
+                        else body.contentUrl = submitUrl.trim();
+                        submitMutation.mutate({ bountyId: b.id, body });
+                      }}
+                      disabled={(["clip", "reel", "screenshot"].includes(b.content_type) ? !selectedContentId : !submitUrl.trim()) || submitMutation.isPending}
+                      className="flex-1 py-2 rounded-lg text-sm font-black transition-all hover:brightness-110 disabled:opacity-50"
+                      style={{ background: NEON, color: "#070b10" }}
+                    >
+                      {submitMutation.isPending ? <Loader2 size={14} className="animate-spin mx-auto" /> : "Submit"}
+                    </button>
+                    <button onClick={() => { setSubmitting(null); setSubmitUrl(""); setSelectedContentId(null); }}
+                      className="px-4 py-2 rounded-lg text-sm text-white/50 border border-white/10 hover:text-white">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); }}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-black transition-all hover:brightness-110"
+                  style={{ background: NEON, color: "#070b10" }}
+                >
+                  Submit Content
+                </button>
+              )
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div className="min-h-screen" style={{ background: PAGE_BG }}>
-      <button onClick={onBack} className="flex items-center gap-2 p-4 text-white/50 hover:text-white transition-colors text-sm font-bold">
-        <ChevronLeft size={16} /> Back to My Campaigns
-      </button>
+    <div className="min-h-screen pb-24 sm:pb-10" style={{ background: "#0F101B" }}>
+      <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
+        <button onClick={onBack} className="flex items-center gap-2 py-4 text-white/50 hover:text-white transition-colors text-sm font-bold">
+          <ChevronLeft size={16} /> Back to My Campaigns
+        </button>
 
-      {/* Campaign header */}
-      <div className="relative h-36 overflow-hidden">
-        {data.game_artwork_url ? (
-          <img src={data.game_artwork_url} alt="" className="w-full h-full object-cover opacity-30" />
-        ) : (
-          <div className="w-full h-full" style={{ background: "rgba(183,255,24,0.04)" }} />
-        )}
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #070b10 0%, transparent 60%)" }} />
-        <div className="absolute bottom-4 left-4">
-          <div className="text-white/40 text-[11px] font-bold">{data.game_name}</div>
-          <div className="text-xl font-black text-white">{data.template_name ?? cp.template_name}</div>
-          <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full mt-1"
-            style={{ color: statusCfg.color, background: statusCfg.bg }}>
-            {statusCfg.label}
-          </span>
-        </div>
-      </div>
+        {/* Compact game and campaign hero */}
+        <section className="relative overflow-hidden rounded-xl bg-[#0F101B] sm:min-h-[430px]">
+          <FeaturedHeroBackground
+            campaign={data}
+            className="absolute inset-x-0 top-0 h-[220px] bg-center bg-cover bg-no-repeat transition-[background-image] duration-300 sm:inset-0 sm:h-auto"
+          />
+          <div
+            className="absolute inset-x-0 top-0 h-[245px] sm:hidden"
+            style={{ background: "linear-gradient(180deg, rgba(15,16,27,0.02) 0%, rgba(15,16,27,0.08) 55%, rgba(15,16,27,0.92) 88%, #0F101B 100%)" }}
+          />
+          <div
+            className="absolute inset-0 hidden sm:block"
+            style={{ background: "linear-gradient(90deg, rgba(15,16,27,0.99) 0%, rgba(15,16,27,0.95) 28%, rgba(15,16,27,0.74) 46%, rgba(15,16,27,0.22) 70%, rgba(15,16,27,0.04) 100%)" }}
+          />
+          <div className="absolute inset-0 hidden sm:block" style={{ background: "linear-gradient(0deg, rgba(15,16,27,0.42) 0%, transparent 35%)" }} />
 
-      <div className="px-4 pb-8 space-y-4 max-w-2xl mx-auto">
-        {/* Progress bar */}
-        <div className="rounded-xl p-4" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-sm font-black text-white">Mandatory Progress</div>
-            <div className="text-sm font-black" style={{ color: NEON }}>{approvedCount}/{mandatory.length}</div>
-          </div>
-          <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
-            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: NEON }} />
-          </div>
-          {data.deadline && (
-            <div className="text-[11px] text-white/40 mt-2 flex items-center gap-1">
-              <Clock size={10} /> Deadline: {new Date(data.deadline).toLocaleDateString()}
-            </div>
-          )}
-        </div>
-
-        {/* Demo Key */}
-        {data.demo_key_value && (
-          <div className="rounded-xl p-4" style={{ background: "rgba(183,255,24,0.06)", border: "1px solid rgba(183,255,24,0.2)" }}>
-            <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: NEON }}>Your Demo Key</div>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 font-mono text-sm text-white bg-black/30 rounded-lg px-3 py-2 break-all">{data.demo_key_value}</div>
-              <button onClick={() => copyKey(data.demo_key_value, setCopiedDemo)}
-                className="p-2 rounded-lg transition-colors hover:bg-white/10">
-                {copiedDemo ? <Check size={16} color={NEON} /> : <Copy size={16} className="text-white/60" />}
-              </button>
-              {data.game_steam_app_id && (
-                <a href={`https://store.steampowered.com/app/${data.game_steam_app_id}`} target="_blank" rel="noopener noreferrer"
-                  className="p-2 rounded-lg hover:bg-white/10 transition-colors">
-                  <SiSteam size={16} className="text-white/60" />
-                </a>
+          <div className="relative z-10 flex flex-col justify-end px-5 pb-6 pt-[225px] sm:min-h-[430px] sm:max-w-[600px] sm:justify-center sm:px-9 sm:py-8 lg:px-11">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full"
+                style={{ color: "#070b10", background: NEON }}>
+                <ShieldCheck size={10} /> GF Verified
+              </span>
+              <span className="text-[9px] font-black uppercase tracking-[0.16em] text-white/62">Joined</span>
+              {statusCfg.label !== "Joined" && (
+                <>
+                  <span className="text-white/25" aria-hidden="true">·</span>
+                  <span className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: statusCfg.color }}>{statusCfg.label}</span>
+                </>
               )}
             </div>
-          </div>
-        )}
 
-        {/* Full Key or CTA */}
-        {data.full_key_value ? (
-          <div className="rounded-xl p-4" style={{ background: "rgba(74,222,128,0.06)", border: "1px solid rgba(74,222,128,0.2)" }}>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-green-400 mb-2">Full-Game Key Earned!</div>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 font-mono text-sm text-white bg-black/30 rounded-lg px-3 py-2 break-all">{data.full_key_value}</div>
-              <button onClick={() => copyKey(data.full_key_value, setCopiedFull)}
-                className="p-2 rounded-lg transition-colors hover:bg-white/10">
-                {copiedFull ? <Check size={16} className="text-green-400" /> : <Copy size={16} className="text-white/60" />}
-              </button>
+            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/45">Game</div>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white leading-[0.95] mt-1">{data.game_name || "Gamefolio"}</h1>
+            <div className="text-sm sm:text-lg font-black uppercase tracking-[0.08em] mt-2" style={{ color: NEON }}>{data.template_name ?? cp.template_name}</div>
+            {data.description && <p className="text-sm text-white/62 mt-3 max-w-xl leading-relaxed line-clamp-3">{data.description}</p>}
+
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-4 text-[11px] font-bold text-white/55">
+              <span>Joined</span>
+              <span aria-hidden="true">·</span>
+              <span className={deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : ""}>{deadlineLabel}</span>
             </div>
-          </div>
-        ) : canClaimFull ? (
-          <button
-            onClick={() => claimFullMutation.mutate()}
-            disabled={claimFullMutation.isPending}
-            className="w-full py-3.5 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110"
-            style={{ background: "#4ade80", color: "#052e16" }}
-          >
-            {claimFullMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <Gift size={16} />}
-            Claim Your Full-Game Key
-          </button>
-        ) : allApproved ? (
-          <div className="rounded-xl p-3 text-center text-sm text-white/50" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-            All bounties approved — claim your full-game key above
-          </div>
-        ) : null}
 
-        {/* Mandatory Bounties */}
+            {missionRewards.length > 0 && (
+              <div className="mt-4">
+                <div className="text-[9px] font-black uppercase tracking-[0.18em] text-white/40 mb-2">Your Rewards</div>
+                <div className="flex flex-wrap gap-2">
+                  {missionRewards.map(({ icon: RewardIcon, label, state, tone }) => (
+                    <div key={label} className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[10px] font-bold"
+                      style={{ background: "rgba(6,8,14,0.74)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                      <RewardIcon size={13} style={{ color: tone }} />
+                      <span className="text-white/85">{label}</span>
+                      <span className="text-white/38 text-[8px]">· {state}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Mission progress and next action */}
+        <section className="mt-7 pb-7 border-b border-white/[0.08]">
+          <div className="flex items-center justify-between gap-4 mb-3">
+            <div className="text-xs font-black uppercase tracking-[0.16em] text-white/65">Mission Progress</div>
+            <div className="text-sm font-black tabular-nums" style={{ color: pct >= 100 ? "#4ade80" : NEON }}>{progressUnits} / {requiredUnits}</div>
+          </div>
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#252938" }}>
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: pct >= 100 ? "#4ade80" : NEON }} />
+          </div>
+          {nextObjectiveTitle && pct < 100 && (
+            <button
+              onClick={() => {
+                const nextBounty = mandatory.find((b: any) => Number(b.approved_count ?? 0) < Number(b.quantity ?? 1));
+                if (nextBounty) setExpandedBounty(nextBounty.id);
+              }}
+              className="w-full flex items-center justify-between gap-4 mt-5 rounded-sm px-1 py-2.5 text-left hover:bg-white/[0.03] transition-colors"
+            >
+              <div>
+                <div className="text-[9px] font-black uppercase tracking-widest" style={{ color: NEON }}>Next Objective</div>
+                <div className="text-sm font-black text-white mt-0.5">{nextObjectiveTitle}</div>
+              </div>
+              <ChevronRight size={16} style={{ color: NEON }} />
+            </button>
+          )}
+        </section>
+
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-8 lg:gap-10 mt-8 items-start">
+          <main className="space-y-8 min-w-0">
+
+        {/* Required objectives */}
         {mandatory.length > 0 && (
-          <div className="space-y-2">
-            <div className="text-xs font-bold uppercase tracking-wider text-white/40">Required Bounties</div>
+          <section>
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-xs font-black uppercase tracking-wider text-white/55">Required Objectives</div>
+              <div className="text-[11px] font-black tabular-nums text-white/40">{approvedCount} / {mandatory.length}</div>
+            </div>
             {mandatory.map((b: any) => {
               const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
               const approved = Number(b.approved_count ?? 0);
+              const submitted = Number(b.submitted_count ?? 0);
               const qty = Number(b.quantity ?? 1);
               const done = approved >= qty;
+              const visibleProgress = Math.max(approved, submitted);
               const subs: any[] = b.submissions ?? [];
               const lastSub = subs[0];
               const isExpanded = expandedBounty === b.id;
               const isSubmitting = submitting === b.id;
 
               const subStatusCfg = lastSub ? (STATUS_CONFIG[lastSub.status] ?? { label: lastSub.status, color: "#94a3b8", bg: "" }) : null;
+              const rowStatus = subStatusCfg?.label ?? (done ? "Completed" : submitted > 0 ? "Submitted" : "Not Started");
 
               return (
-                <div key={b.id} className="rounded-xl overflow-hidden" style={{ background: CARD_BG, border: `1px solid ${done ? "rgba(74,222,128,0.3)" : CARD_BORDER}` }}>
-                  <div className="flex items-center gap-3 p-3 cursor-pointer" onClick={() => setExpandedBounty(isExpanded ? null : b.id)}>
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: done ? "rgba(74,222,128,0.12)" : "rgba(183,255,24,0.08)" }}>
-                      {done ? <Check size={14} className="text-green-400" /> : <Icon size={14} color={NEON} />}
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-bold text-white">{b.title}</div>
-                      {subStatusCfg && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                          style={{ color: subStatusCfg.color, background: subStatusCfg.bg }}>
-                          {subStatusCfg.label}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-sm font-black" style={{ color: done ? "#4ade80" : NEON }}>{approved}/{qty}</div>
-                      <ChevronRight size={14} className={`text-white/30 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
-                    </div>
-                  </div>
+                <div key={b.id} className="overflow-hidden border-b border-white/[0.08] last:border-b-0">
+                  <CompactObjectiveRow
+                    title={objectiveLabel(b)}
+                    description={objectiveDescription(b)}
+                    contentType={b.content_type}
+                    xp={Number(b.xp_reward ?? 0)}
+                    quantity={qty}
+                    progress={visibleProgress}
+                    interactive
+                    flat
+                    done={done}
+                    status={rowStatus}
+                    onClick={() => setExpandedBounty(isExpanded ? null : b.id)}
+                  />
 
                   {isExpanded && (
-                    <div className="px-3 pb-3 border-t border-white/05 pt-3 space-y-3">
+                    <div className="px-1 sm:px-10 pb-5 border-t border-white/[0.06] pt-4 space-y-4">
                       {b.description && <div className="text-xs text-white/50">{b.description}</div>}
 
                       {/* Submission history */}
@@ -1700,7 +2252,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                           {subs.map((s: any, i: number) => {
                             const sCfg = STATUS_CONFIG[s.status] ?? { label: s.status, color: "#94a3b8", bg: "" };
                             return (
-                              <div key={i} className="flex items-center gap-2 rounded-lg p-2" style={{ background: "rgba(255,255,255,0.03)" }}>
+                              <div key={i} className="flex items-center gap-2 py-2 border-b border-white/[0.05] last:border-b-0">
                                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: sCfg.color, background: sCfg.bg }}>{sCfg.label}</span>
                                 {s.content_url && <a href={s.content_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-white/40 hover:text-white truncate max-w-[160px]">{s.content_url}</a>}
                                 {s.review_notes && <div className="text-[10px] text-orange-400 ml-auto">{s.review_notes}</div>}
@@ -1714,21 +2266,66 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                       {!done && (
                         isSubmitting ? (
                           <div className="space-y-2">
-                            <input
-                              value={submitUrl}
-                              onChange={e => setSubmitUrl(e.target.value)}
-                              placeholder="Paste content URL or Gamefolio link"
-                              className="w-full px-3 py-2 rounded-lg text-sm text-white bg-black/30 border border-white/10 focus:border-white/30 outline-none"
-                            />
+                            {["clip", "reel", "screenshot"].includes(b.content_type) ? (
+                              <>
+                                <div className="text-[10px] font-bold uppercase tracking-wider text-white/35">Select from Gamefolio</div>
+                                {pickerLoading ? (
+                                  <div className="flex items-center justify-center py-5"><Loader2 size={16} className="animate-spin text-white/35" /></div>
+                                ) : (pickerData?.items ?? []).length > 0 ? (
+                                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-52 overflow-y-auto pr-1">
+                                    {(pickerData?.items ?? []).map((item: any) => {
+                                      const selected = selectedContentId === item.id;
+                                      return (
+                                        <button
+                                          type="button"
+                                          key={item.id}
+                                          onClick={() => setSelectedContentId(selected ? null : item.id)}
+                                          className="relative rounded-lg overflow-hidden aspect-video text-left"
+                                          style={{ border: selected ? `2px solid ${NEON}` : "1px solid rgba(255,255,255,0.10)" }}
+                                        >
+                                          {item.thumbnailUrl ? (
+                                            <img src={item.thumbnailUrl} alt={item.title ?? "Gamefolio content"} className="w-full h-full object-cover" />
+                                          ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-white/5"><Icon size={16} className="text-white/35" /></div>
+                                          )}
+                                          {selected && <div className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: NEON }}><Check size={11} color="#070b10" strokeWidth={3} /></div>}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <div className="py-3 text-xs text-white/45">
+                                    No matching Gamefolio content yet.
+                                  </div>
+                                )}
+                                <a href="/upload" className="inline-flex items-center gap-1.5 text-xs font-black" style={{ color: NEON }}>
+                                  <Upload size={12} /> Upload new content
+                                </a>
+                              </>
+                            ) : (
+                              <input
+                                value={submitUrl}
+                                onChange={e => setSubmitUrl(e.target.value)}
+                                placeholder={b.content_type === "feedback" || b.content_type === "bug" ? "Enter your response or paste a supporting link" : "Paste content URL or Gamefolio link"}
+                                className="w-full px-3 py-2 rounded-lg text-sm text-white bg-black/30 border border-white/10 focus:border-white/30 outline-none"
+                              />
+                            )}
                             <div className="flex gap-2">
                               <button
-                                onClick={() => submitMutation.mutate({ bountyId: b.id, url: submitUrl })}
-                                disabled={!submitUrl.trim() || submitMutation.isPending}
+                                onClick={() => {
+                                  const body: Record<string, unknown> = { contentType: b.content_type };
+                                  if (b.content_type === "clip") body.clipId = selectedContentId;
+                                  else if (b.content_type === "reel") body.reelId = selectedContentId;
+                                  else if (b.content_type === "screenshot") body.screenshotId = selectedContentId;
+                                  else body.contentUrl = submitUrl.trim();
+                                  submitMutation.mutate({ bountyId: b.id, body });
+                                }}
+                                disabled={(["clip", "reel", "screenshot"].includes(b.content_type) ? !selectedContentId : !submitUrl.trim()) || submitMutation.isPending}
                                 className="flex-1 py-2 rounded-lg text-sm font-black transition-all hover:brightness-110 disabled:opacity-50"
                                 style={{ background: NEON, color: "#070b10" }}>
                                 {submitMutation.isPending ? <Loader2 size={14} className="animate-spin mx-auto" /> : "Submit"}
                               </button>
-                              <button onClick={() => { setSubmitting(null); setSubmitUrl(""); }}
+                              <button onClick={() => { setSubmitting(null); setSubmitUrl(""); setSelectedContentId(null); }}
                                 className="px-4 py-2 rounded-lg text-sm text-white/50 border border-white/10 hover:text-white">
                                 Cancel
                               </button>
@@ -1736,9 +2333,9 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                           </div>
                         ) : (
                           <button
-                            onClick={() => setSubmitting(b.id)}
-                            className="w-full py-2 rounded-lg text-sm font-black transition-all hover:brightness-110"
-                            style={{ background: "rgba(183,255,24,0.1)", color: NEON, border: `1px solid rgba(183,255,24,0.2)` }}>
+                            onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); }}
+                            className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-black transition-all hover:brightness-110"
+                            style={{ background: NEON, color: "#070b10" }}>
                             Submit Content
                           </button>
                         )
@@ -1748,32 +2345,169 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 </div>
               );
             })}
-          </div>
+          </section>
         )}
 
-        {/* Optional */}
+        {/* Optional objectives */}
         {optional.length > 0 && (
-          <div className="space-y-2">
-            <div className="text-xs font-bold uppercase tracking-wider text-white/40">Optional Bounties</div>
-            {optional.map((b: any) => {
-              const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
-              const approved = Number(b.approved_count ?? 0);
-              const qty = Number(b.quantity ?? 1);
-              const done = approved >= qty;
-              return (
-                <div key={b.id} className="flex items-center gap-3 p-3 rounded-xl opacity-70" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,255,255,0.04)" }}>
-                    {done ? <Check size={14} className="text-green-400" /> : <Icon size={14} className="text-white/40" />}
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-bold text-white/70">{b.title}</div>
-                  </div>
-                  <div className="text-sm font-black text-white/40">{approved}/{qty}</div>
-                </div>
-              );
-            })}
-          </div>
+          <section>
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-xs font-black uppercase tracking-wider text-white/55">Optional Objectives</div>
+              <div className="text-[11px] font-black tabular-nums text-white/40">{completedOptional} / {optional.length}</div>
+            </div>
+            {optional.map((b: any) => renderObjective(b, true))}
+          </section>
         )}
+
+            {/* Campaign details, collapsed by default */}
+            <section className="border-y border-white/[0.08]">
+              <button
+                type="button"
+                onClick={() => setShowDetails(value => !value)}
+                aria-expanded={showDetails}
+                className="w-full flex items-center justify-between gap-4 px-1 py-4 text-left hover:bg-white/[0.025] transition-colors"
+              >
+                <span className="text-xs font-black uppercase tracking-wider text-white/60">Campaign Details</span>
+                <ChevronDown size={16} className={`text-white/40 transition-transform ${showDetails ? "rotate-180" : ""}`} />
+              </button>
+              {showDetails && (
+                <div className="px-1 pb-5 pt-5 grid sm:grid-cols-2 gap-x-8 gap-y-5 border-t border-white/[0.06]">
+                  {data.description && (
+                    <div className="sm:col-span-2">
+                      <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Campaign</div>
+                      <p className="text-xs leading-relaxed text-white/55">{data.description}</p>
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Game</div>
+                    <div className="text-xs font-bold text-white/70">{data.game_name || "Gamefolio"}</div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Deadline</div>
+                    <div className={`text-xs font-bold ${deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : "text-white/70"}`}>
+                      {deadlineLabel}{campaignDeadline(data) ? ` · ${new Date(campaignDeadline(data)).toLocaleDateString()}` : ""}
+                    </div>
+                  </div>
+                  {contentRequirements.length > 0 && (
+                    <div className="sm:col-span-2">
+                      <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1.5">Content Requirements</div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                        {contentRequirements.map(requirement => (
+                          <span key={requirement} className="inline-flex items-center gap-1.5 text-[10px] font-bold text-white/58">
+                            <span className="w-1 h-1 rounded-full" style={{ background: NEON }} />
+                            {requirement}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Verification</div>
+                    <p className="text-xs leading-relaxed text-white/50">Submitted objectives are reviewed before progress and rewards are approved.</p>
+                  </div>
+                  {data.completion_reward_description && (
+                    <div>
+                      <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Reward Conditions</div>
+                      <p className="text-xs leading-relaxed text-white/50">{data.completion_reward_description}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+          </main>
+
+          {/* Desktop sticky summary; normal-flow reward summary on mobile */}
+          <aside className="lg:sticky lg:top-24">
+            <div className="rounded-xl p-4 space-y-4" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+              <div className="text-xs font-black uppercase tracking-[0.16em] text-white/65">Your Campaign</div>
+
+              <div>
+                <div className="flex items-center justify-between text-[10px] font-bold text-white/38 mb-1.5">
+                  <span>Progress</span>
+                  <span className="tabular-nums text-white/65">{progressUnits} / {requiredUnits} objectives</span>
+                </div>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#1b2231" }}>
+                  <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct >= 100 ? "#4ade80" : NEON }} />
+                </div>
+              </div>
+
+              {nextObjectiveTitle && pct < 100 && (
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-wider text-white/30">Next</div>
+                  <div className="text-xs font-black text-white/75 mt-1">{nextObjectiveTitle}</div>
+                </div>
+              )}
+
+              {missionRewards.length > 0 && (
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-2">Rewards</div>
+                  <div className="space-y-2">
+                    {missionRewards.map(({ icon: RewardIcon, label, state, tone }) => (
+                      <div key={label} className="flex items-start gap-2">
+                        <RewardIcon size={13} className="mt-0.5 flex-shrink-0" style={{ color: tone }} />
+                        <div className="min-w-0">
+                          <div className="text-[11px] font-black text-white/75">{label}</div>
+                          <div className="text-[9px] leading-snug text-white/35">{state}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/5">
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-wider text-white/30">Deadline</div>
+                  <div className={`text-[11px] font-bold mt-1 ${deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : "text-white/65"}`}>{deadlineLabel}</div>
+                </div>
+                <div>
+                  <div className="text-[9px] font-black uppercase tracking-wider text-white/30">Status</div>
+                  <div className="text-[11px] font-bold mt-1" style={{ color: statusCfg.color }}>{statusCfg.label}</div>
+                </div>
+              </div>
+
+              {data.demo_key_value && (
+                <div className="pt-3 border-t border-white/5">
+                  <div className="text-[9px] font-black uppercase tracking-wider mb-2" style={{ color: NEON }}>Demo Key · Claimed</div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="min-w-0 flex-1 font-mono text-[10px] text-white/70 bg-black/25 rounded-md px-2 py-2 truncate">{data.demo_key_value}</div>
+                    <button onClick={() => copyKey(data.demo_key_value, setCopiedDemo)} className="p-2 rounded-md hover:bg-white/5" aria-label="Copy demo key">
+                      {copiedDemo ? <Check size={14} color={NEON} /> : <Copy size={14} className="text-white/45" />}
+                    </button>
+                    {data.game_steam_app_id && (
+                      <a href={`https://store.steampowered.com/app/${data.game_steam_app_id}`} target="_blank" rel="noopener noreferrer"
+                        className="p-2 rounded-md hover:bg-white/5" aria-label="Open game on Steam">
+                        <SiSteam size={14} className="text-white/45" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {data.full_key_value ? (
+                <div className="pt-3 border-t border-white/5">
+                  <div className="text-[9px] font-black uppercase tracking-wider text-green-400 mb-2">Full Game · Claimed</div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="min-w-0 flex-1 font-mono text-[10px] text-white/70 bg-black/25 rounded-md px-2 py-2 truncate">{data.full_key_value}</div>
+                    <button onClick={() => copyKey(data.full_key_value, setCopiedFull)} className="p-2 rounded-md hover:bg-white/5" aria-label="Copy full-game key">
+                      {copiedFull ? <Check size={14} className="text-green-400" /> : <Copy size={14} className="text-white/45" />}
+                    </button>
+                  </div>
+                </div>
+              ) : canClaimFull ? (
+                <button
+                  onClick={() => claimFullMutation.mutate()}
+                  disabled={claimFullMutation.isPending}
+                  className="w-full py-2.5 rounded-lg text-xs font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-50"
+                  style={{ background: "#4ade80", color: "#052e16" }}
+                >
+                  {claimFullMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Gift size={14} />}
+                  Claim Full-Game Key
+                </button>
+              ) : null}
+            </div>
+          </aside>
+        </div>
       </div>
     </div>
   );
@@ -1781,6 +2515,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
 
 function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => void }) {
   const [myTab, setMyTab] = useState<MyTab>("active");
+  const [sortBy, setSortBy] = useState<"recent" | "ending" | "completion" | "reward">("recent");
   const { user } = useAuth();
 
   const { data: campaigns = [], isLoading } = useQuery<any[]>({
@@ -1789,13 +2524,13 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
     enabled: !!user,
   });
 
-  const filter = (statuses: string[]) => (campaigns as any[]).filter(c => statuses.includes(c.participant_status));
-  const tabs: { key: MyTab; label: string; statuses: string[] }[] = [
-    { key: "active",    label: "Active",    statuses: ["enrolled", "demo_key_claimed", "in_progress", "changes_requested"] },
-    { key: "submitted", label: "Submitted", statuses: ["submitted_for_review"] },
-    { key: "completed", label: "Completed", statuses: ["completed_and_verified", "completed", "full_game_awarded"] },
-    { key: "expired",   label: "Expired",   statuses: ["rejected", "expired", "cancelled"] },
+  const tabs: { key: MyTab; label: string }[] = [
+    { key: "active",    label: "Active" },
+    { key: "submitted", label: "Under Review" },
+    { key: "completed", label: "Completed" },
+    { key: "expired",   label: "Expired" },
   ];
+  const filter = (tab: MyTab) => (campaigns as any[]).filter(c => campaignTabStatus(c) === tab);
 
   if (!user) {
     return (
@@ -1811,30 +2546,72 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
     return <div className="flex items-center justify-center py-20"><Loader2 size={24} className="animate-spin text-white/30" /></div>;
   }
 
-  const currentCampaigns = filter(tabs.find(t => t.key === myTab)!.statuses);
+  const currentCampaigns = filter(myTab).sort((a, b) => {
+    if (sortBy === "ending") {
+      const aDate = new Date(campaignDeadline(a) ?? "9999-12-31").getTime();
+      const bDate = new Date(campaignDeadline(b) ?? "9999-12-31").getTime();
+      return aDate - bDate;
+    }
+    if (sortBy === "completion") {
+      const aProgress = campaignProgressUnits(a);
+      const bProgress = campaignProgressUnits(b);
+      const aPct = aProgress.requiredUnits > 0 ? aProgress.approvedUnits / aProgress.requiredUnits : 0;
+      const bPct = bProgress.requiredUnits > 0 ? bProgress.approvedUnits / bProgress.requiredUnits : 0;
+      return bPct - aPct;
+    }
+    if (sortBy === "reward") {
+      const rewardTotal = (campaign: any) => campaignRewardSummary(campaign)
+        .reduce((sum, reward) => sum + Number(reward.label.match(/[\d,]+/)?.[0]?.replace(/,/g, "") ?? 0), 0);
+      return rewardTotal(b) - rewardTotal(a);
+    }
+    return new Date(b.joined_at ?? 0).getTime() - new Date(a.joined_at ?? 0).getTime();
+  });
 
   return (
-    <div className="space-y-4">
-      {/* Sub-tabs */}
-      <div className="flex gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.04)" }}>
+    <div className="space-y-5 pb-24 sm:pb-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Status navigation */}
+        <div className="flex gap-1 p-1 rounded-xl overflow-x-auto" style={{ background: "rgba(255,255,255,0.04)" }} role="tablist" aria-label="Campaign status">
         {tabs.map(t => {
-          const count = filter(t.statuses).length;
+          const count = filter(t.key).length;
           return (
-            <button key={t.key} onClick={() => setMyTab(t.key)}
-              className="flex-1 py-2 rounded-lg text-xs font-bold transition-all relative"
+            <button
+              key={t.key}
+              onClick={() => setMyTab(t.key)}
+              role="tab"
+              aria-selected={myTab === t.key}
+              className="flex items-center justify-center gap-2 min-w-max px-3.5 py-2 rounded-lg text-xs font-bold transition-all"
               style={myTab === t.key
                 ? { background: NEON, color: "#070b10" }
-                : { color: "rgba(255,255,255,0.5)" }}>
+                : { color: "rgba(255,255,255,0.5)" }}
+            >
               {t.label}
-              {count > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center"
-                  style={{ background: myTab === t.key ? "#070b10" : NEON, color: myTab === t.key ? NEON : "#070b10" }}>
+              <span
+                className="min-w-4 h-4 px-1 rounded-full text-[9px] font-black flex items-center justify-center"
+                style={{ background: myTab === t.key ? "rgba(7,11,16,0.22)" : "rgba(255,255,255,0.09)", color: myTab === t.key ? "#070b10" : "rgba(255,255,255,0.48)" }}
+              >
                   {count}
-                </span>
-              )}
+              </span>
             </button>
           );
         })}
+        </div>
+
+        <label className="flex items-center gap-2 self-start sm:self-auto text-[11px] font-bold text-white/40">
+          <SlidersHorizontal size={13} />
+          Sort by
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value as typeof sortBy)}
+            className="rounded-lg px-2.5 py-2 text-[11px] font-bold text-white outline-none cursor-pointer"
+            style={{ background: "#111820", border: "1px solid rgba(255,255,255,0.10)" }}
+          >
+            <option value="recent">Recently joined</option>
+            <option value="ending">Ending soon</option>
+            <option value="completion">Closest to completion</option>
+            <option value="reward">Highest reward</option>
+          </select>
+        </label>
       </div>
 
       {currentCampaigns.length === 0 ? (
@@ -1844,65 +2621,87 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
           {myTab === "active" && <div className="text-white/30 text-xs">Browse the Marketplace to find and join campaigns</div>}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {currentCampaigns.map((c: any) => {
-            const statusCfg = STATUS_CONFIG[c.participant_status] ?? STATUS_CONFIG.enrolled;
-            const mandatory = Number(c.mandatory_bounty_count ?? 0);
-            const approved = Number(c.approved_bounties ?? 0);
-            const pct = mandatory > 0 ? Math.round((approved / mandatory) * 100) : 0;
+            const effectiveStatus = campaignJourneyStatus(c);
+            const statusCfg = STATUS_CONFIG[effectiveStatus] ?? STATUS_CONFIG.enrolled;
+            const progress = campaignProgressUnits(c);
+            const requiredUnits = progress.requiredUnits;
+            const progressUnits = Math.max(progress.approvedUnits, progress.submittedUnits);
+            const pct = requiredUnits > 0 ? Math.min(100, Math.round((progressUnits / requiredUnits) * 100)) : 0;
+            const nextObjective = campaignNextObjective(c, progress);
+            const deadlineLabel = campaignDeadlineLabel(c);
+            const deadlineUrgency = campaignDeadlineUrgency(c);
+            const rewards = campaignRewardSummary(c);
+            const needsAction = effectiveStatus === "changes_requested";
+            const demoKeyActive = Boolean(c.demo_key_value || c.demo_key_id);
+            const fullKeyActive = Boolean(c.full_key_value || c.full_key_id);
 
             return (
-              <div key={c.instance_id} className="rounded-xl p-4 space-y-3" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-                <div className="flex items-start gap-3">
+              <div key={c.instance_id} className="rounded-xl px-3.5 py-3 sm:px-4 sm:py-3.5" style={{ background: CARD_BG, border: `1px solid ${needsAction ? "rgba(249,115,22,0.30)" : CARD_BORDER}` }}>
+                <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[minmax(220px,0.9fr)_minmax(250px,1.4fr)_auto] sm:items-center sm:gap-5">
+                  <div className="flex items-center gap-3 min-w-0">
                   {c.game_artwork_url ? (
-                    <img src={c.game_artwork_url} alt="" className="w-12 h-14 object-cover rounded-lg flex-shrink-0" />
+                    <img src={c.game_artwork_url} alt="" className="w-14 h-14 object-cover rounded-lg flex-shrink-0" />
                   ) : (
-                    <div className="w-12 h-14 rounded-lg flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(183,255,24,0.06)" }}>
-                      <Target size={18} color="rgba(183,255,24,0.3)" />
+                    <div className="w-14 h-14 rounded-lg flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(183,255,24,0.06)" }}>
+                      <Target size={20} color="rgba(183,255,24,0.3)" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] text-white/40 font-bold">{c.game_name}</div>
-                    <div className="text-sm font-black text-white leading-tight">{c.template_name}</div>
-                    <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full mt-1"
+                    <div className="text-sm font-black text-white leading-tight truncate">{c.template_name}</div>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                    <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full"
                       style={{ color: statusCfg.color, background: statusCfg.bg }}>
                       {statusCfg.label}
                     </span>
+                      {needsAction && <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full text-orange-300 bg-orange-400/10">Action required</span>}
+                    </div>
                   </div>
                 </div>
 
-                {/* Progress */}
-                {mandatory > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="text-[11px] text-white/40">Bounty Progress</div>
-                      <div className="text-[11px] font-black" style={{ color: NEON }}>{approved}/{mandatory}</div>
+                  <div className="min-w-0">
+                    <div className="flex items-center justify-between gap-3 mb-1.5">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-white/35">Required progress</div>
+                      <div className="text-[11px] font-black tabular-nums" style={{ color: pct >= 100 ? "#4ade80" : NEON }}>{progressUnits}/{requiredUnits || 0}</div>
                     </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
-                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: NEON }} />
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#182334" }}>
+                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: pct >= 100 ? "#4ade80" : NEON }} />
+                    </div>
+                    <div className="flex items-center justify-between gap-3 mt-2">
+                      <div className="text-[10px] text-white/42 truncate">
+                        <span className="font-black text-white/70">Next objective</span>
+                        {" · "}
+                        {nextObjective.title}
+                        {nextObjective.progress && <span className="text-white/35"> · {nextObjective.progress}</span>}
+                      </div>
+                      <span className={`flex items-center gap-1 text-[10px] whitespace-nowrap ${deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : "text-white/40"}`}>
+                        <Clock size={11} />
+                        {deadlineLabel}
+                      </span>
                     </div>
                   </div>
-                )}
 
-                {/* Demo key status */}
-                {c.demo_key_value && (
-                  <div className="text-[11px] flex items-center gap-1.5" style={{ color: NEON }}>
-                    <Key size={11} /> Demo key active
+                  <div className="flex items-center justify-between sm:justify-end gap-4 sm:min-w-[175px]">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+                      {rewards.map((reward, index) => <CampaignRewardChip key={`${reward.label}-${index}`} {...reward} />)}
+                      {demoKeyActive && <CampaignRewardChip icon={Key} label="Demo key active" tone={NEON} />}
+                      {fullKeyActive && <CampaignRewardChip icon={Gift} label="Full game claimed" tone="#4ade80" />}
+                    </div>
+                    <button
+                      onClick={() => onViewProgress(c)}
+                      className="flex-shrink-0 px-3.5 py-2 rounded-lg text-xs font-black flex items-center justify-center gap-1 transition-all hover:brightness-110"
+                      style={{ background: NEON, color: "#070b10" }}
+                    >
+                      {myTab === "active" && needsAction ? "Submit Content" :
+                        myTab === "submitted" ? "View Submission" :
+                        myTab === "completed" ? "View Results" :
+                        "Continue Mission"}
+                      <ChevronRight size={14} />
+                    </button>
                   </div>
-                )}
-                {c.full_key_value && (
-                  <div className="text-[11px] flex items-center gap-1.5 text-green-400">
-                    <Gift size={11} /> Full-game key claimed
-                  </div>
-                )}
-
-                <button
-                  onClick={() => onViewProgress(c)}
-                  className="w-full py-2.5 rounded-xl text-sm font-black flex items-center justify-center gap-1.5 transition-all hover:brightness-110"
-                  style={{ background: NEON, color: "#070b10" }}>
-                  <ChevronRight size={15} />
-                  {myTab === "completed" ? "View Campaign" : "Continue Campaign"}
-                </button>
+                </div>
               </div>
             );
           })}
@@ -1926,15 +2725,13 @@ export default function BountiesPage() {
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
-  // Bounty Hub = indie only (Gamefolio-managed campaigns live elsewhere)
-  const indieCampaigns = useMemo(
-    () => allCampaigns.filter((c: any) => !c.gamefolio_managed),
-    [allCampaigns],
-  );
+  // The hub is available to every authenticated Gamefolio user. This includes
+  // Gamefolio-managed starter campaigns alongside developer campaigns.
+  const availableCampaigns = useMemo(() => allCampaigns, [allCampaigns]);
 
   // Apply search + filters
   const filtered = useMemo(() => {
-    let list = indieCampaigns;
+    let list = availableCampaigns;
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -1985,20 +2782,28 @@ export default function BountiesPage() {
     }
 
     return list;
-  }, [indieCampaigns, search, activeFilters]);
+  }, [availableCampaigns, search, activeFilters]);
 
   // Top 3 trending campaigns for the hero slider — must be before early returns
   const featuredSlides = useMemo(() => {
-    const sorted = [...indieCampaigns].sort(
+    const sorted = [...availableCampaigns].sort(
       (a: any, b: any) => Number(b.participant_count ?? 0) - Number(a.participant_count ?? 0),
     );
     const pinned = sorted.find((c: any) => c.is_featured);
     const rest = sorted.filter((c: any) => !c.is_featured);
     const ordered = pinned ? [pinned, ...rest] : sorted;
     return ordered.slice(0, 3);
-  }, [indieCampaigns]);
+  }, [availableCampaigns]);
 
-  const openDetail = (c: any) => { setSelectedCampaign(c); setView("detail"); };
+  const openDetail = (c: any) => {
+    if (c.is_joined || c.participant_status) {
+      setProgressCampaign({ ...c, instance_id: c.instance_id ?? c.id });
+      setView("progress");
+      return;
+    }
+    setSelectedCampaign(c);
+    setView("detail");
+  };
 
   // ── Sub-views ──────────────────────────────────────────────────────────
   if (view === "detail" && selectedCampaign) {
@@ -2006,7 +2811,12 @@ export default function BountiesPage() {
       <CampaignDetail
         campaign={selectedCampaign}
         onBack={() => { setView("marketplace"); setSelectedCampaign(null); }}
-        onJoined={() => { setView("marketplace"); setMainTab("my"); setSelectedCampaign(null); }}
+        onJoined={(joinedCampaign) => {
+          setProgressCampaign(joinedCampaign);
+          setSelectedCampaign(null);
+          setMainTab("my");
+          setView("progress");
+        }}
       />
     );
   }
@@ -2032,8 +2842,8 @@ export default function BountiesPage() {
       <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
 
         {/* ── Community Stats strip ── */}
-        {mainTab === "marketplace" && !isLoading && indieCampaigns.length > 0 && (
-          <CommunityStats campaigns={indieCampaigns} />
+        {mainTab === "marketplace" && !isLoading && availableCampaigns.length > 0 && (
+          <CommunityStats campaigns={availableCampaigns} />
         )}
 
         {/* ── Tabs row ── */}
