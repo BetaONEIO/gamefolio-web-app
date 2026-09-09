@@ -8,7 +8,7 @@ import {
   MessageSquare, Target, AlertCircle, Gamepad2,
   Sparkles, Cog, Upload, FileText, X, ArrowRight,
   CheckCircle2, Calendar, Bot, Sliders,
-  ChevronLeft, ChevronRight, ChevronDown, ClipboardList,
+  ChevronRight, ChevronDown, ClipboardList,
 } from "lucide-react";
 import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
 
@@ -65,7 +65,7 @@ const CAMPAIGN_TYPES: CampaignType[] = [
     description: "A short campaign designed to generate first impressions, gameplay content and useful creator feedback.",
     bestFor: "🚀 New Launches",
     bestForList: ["New game launches", "Steam demos", "Early Access", "First wave of creator content"],
-    duration: 5, capacity: 20, demoKeys: 20, fullKeys: 20, xpReward: 750, icon: Zap,
+    duration: 5, capacity: 20, demoKeys: 20, fullKeys: 20, xpReward: 750, recommended: true, icon: Zap,
     pills: [{ ct: "clip", qty: 2 }, { ct: "screenshot", qty: 2 }, { ct: "feedback", qty: 1 }],
   },
   {
@@ -76,7 +76,7 @@ const CAMPAIGN_TYPES: CampaignType[] = [
     description: "A multi-format campaign designed to generate gameplay clips, vertical content, screenshots and creator feedback for future marketing.",
     bestFor: "📈 Content Library",
     bestForList: ["Social media marketing", "Building a content library", "Steam page promotion", "Increasing game discovery"],
-    duration: 10, capacity: 35, demoKeys: 35, fullKeys: 35, xpReward: 1200, recommended: true, icon: Sparkles,
+    duration: 10, capacity: 35, demoKeys: 35, fullKeys: 35, xpReward: 1200, icon: Sparkles,
     pills: [{ ct: "clip", qty: 2 }, { ct: "reel", qty: 3 }, { ct: "screenshot", qty: 2 }, { ct: "feedback", qty: 1 }],
   },
   {
@@ -455,127 +455,123 @@ function CampaignIllustration({ slug, accent, selected, hovered, height = "120px
 }
 
 function TypeCard({
-  type, selected, anySelected, onSelect,
+  type, selected, onSelect,
 }: {
-  type: CampaignType; selected: boolean; anySelected: boolean; onSelect: () => void;
+  type: CampaignType; selected: boolean; onSelect: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const accent = TYPE_ACCENT[type.slug] ?? NEON;
   const rgb    = ACCENT_RGB[accent] ?? "183,255,27";
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onSelect}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="rounded-2xl cursor-pointer flex flex-col overflow-hidden"
+      aria-pressed={selected}
+      className="group relative rounded-2xl cursor-pointer flex flex-col overflow-hidden text-left w-full min-h-[620px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#070b10]"
       style={{
-        background: selected
-          ? `linear-gradient(180deg, rgba(${rgb},0.09) 0%, rgba(7,11,16,0.98) 55%)`
-          : "rgba(255,255,255,0.03)",
-        border: `1.5px solid ${selected ? accent : hovered ? `rgba(${rgb},0.25)` : "rgba(255,255,255,0.07)"}`,
+        background: selected ? "#172317" : "#111923",
+        border: `1.5px solid ${selected ? accent : hovered ? `rgba(${rgb},0.42)` : "rgba(255,255,255,0.12)"}`,
         boxShadow: selected
-          ? `0 16px 56px 0 rgba(${rgb},0.2), 0 0 0 1px rgba(${rgb},0.1)`
-          : hovered ? `0 8px 32px 0 rgba(0,0,0,0.5)` : "none",
-        transform: selected
-          ? "translateY(-4px) scale(1.02)"
-          : hovered && !anySelected ? "translateY(-3px) scale(1.01)"
-          : anySelected && !selected ? "scale(0.98)" : "scale(1)",
-        opacity: anySelected && !selected ? 0.45 : 1,
-        filter: anySelected && !selected ? "saturate(0.35) brightness(0.8)" : "saturate(1) brightness(1)",
-        transition: "all 0.28s cubic-bezier(0.22,1,0.36,1)",
+          ? `0 0 0 1px rgba(${rgb},0.16), 0 10px 28px rgba(${rgb},0.10)`
+          : hovered ? "0 8px 24px rgba(0,0,0,0.28)" : "0 4px 14px rgba(0,0,0,0.16)",
+        transition: "border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease",
       }}>
 
-      {/* Large illustration zone */}
+      {/* Illustration zone */}
       <div className="relative">
-        <CampaignIllustration slug={type.slug} accent={accent} selected={selected} hovered={hovered} />
+        <CampaignIllustration slug={type.slug} accent={accent} selected={selected} hovered={hovered} height="132px" />
 
-        {/* Animated selection tick — top right */}
-        <div className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300"
+        {/* Selection indicator */}
+        <div className="absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center transition-colors duration-200"
           style={{
-            background: selected ? accent : "rgba(7,11,16,0.65)",
-            border: `1.5px solid ${selected ? "transparent" : "rgba(255,255,255,0.18)"}`,
-            backdropFilter: "blur(6px)",
-            transform: selected ? "scale(1)" : "scale(0.8)",
-            opacity: selected ? 1 : hovered ? 0.7 : 0.5,
+            background: selected ? accent : "#18232d",
+            border: `1.5px solid ${selected ? accent : "rgba(255,255,255,0.24)"}`,
           }}>
           {selected
-            ? <Check className="w-3.5 h-3.5" style={{ color: "#070b10" }} />
-            : <div className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.3)" }} />
+            ? <Check className="w-4 h-4" style={{ color: "#070b10" }} strokeWidth={3} />
+            : <div className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.40)" }} />
           }
-        </div>
-
-        {/* Best-for pill — bottom left of illustration */}
-        <div className="absolute bottom-3 left-3 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all duration-300"
-          style={{
-            background: selected ? `rgba(${rgb},0.15)` : "rgba(7,11,16,0.7)",
-            color: selected ? accent : "rgba(255,255,255,0.55)",
-            border: `1px solid ${selected ? `rgba(${rgb},0.3)` : "rgba(255,255,255,0.1)"}`,
-            backdropFilter: "blur(8px)",
-          }}>
-          {type.bestFor}
         </div>
 
         {/* Recommended badge */}
         {type.recommended && (
-          <div className="absolute top-3 left-3 text-[9px] font-bold px-2 py-0.5 rounded-full"
-            style={{ background: "rgba(251,146,60,0.15)", color: "#fb923c", border: "1px solid rgba(251,146,60,0.25)", backdropFilter: "blur(6px)" }}>
-            ★ Recommended
+          <div className="absolute top-3 left-3 text-[9px] font-black px-2.5 py-1 rounded-full"
+            style={{ background: NEON, color: "#070b10" }}>
+            Recommended
           </div>
         )}
       </div>
 
       {/* Card body */}
-      <div className="flex-1 flex flex-col px-4 pt-3 pb-4 gap-3">
-        {/* Name */}
-        <div>
-          <h3 className="text-sm font-black text-white leading-tight">{type.shortName}</h3>
-          <p className="text-[11px] mt-1 leading-relaxed transition-colors duration-300"
-            style={{ color: selected ? `rgba(${rgb},0.85)` : "rgba(255,255,255,0.38)" }}>
+      <div className="flex-1 flex flex-col px-5 pt-4 pb-5 gap-4">
+        <div className="min-h-[68px]">
+          <h3 className="text-base font-black text-white leading-tight">{type.shortName}</h3>
+          {type.recommended && (
+            <div className="text-[10px] font-bold mt-1" style={{ color: accent }}>Best for getting started</div>
+          )}
+          <p className="text-[11px] mt-1.5 leading-relaxed" style={{ color: "rgba(255,255,255,0.62)" }}>
             {type.shortDesc}
           </p>
         </div>
 
-        {/* Inline stats — no boxes */}
-        <div className="flex flex-wrap gap-x-3 gap-y-1 pt-2.5"
-          style={{ borderTop: `1px solid ${selected ? `rgba(${rgb},0.15)` : "rgba(255,255,255,0.06)"}` }}>
+        {/* Comparable details stay aligned in every card */}
+        <div className="grid grid-cols-2 gap-2">
           {[
-            { e: "🕒", v: `${type.duration} Days` },
-            { e: "👥", v: `${type.capacity} Creators` },
-            { e: "🔑", v: `${type.demoKeys} Demo` },
-            { e: "🏆", v: `${type.fullKeys} Full` },
-          ].map(s => (
-            <span key={s.e} className="text-[10px] transition-colors duration-300"
-              style={{ color: selected ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.32)" }}>
-              {s.e} {s.v}
-            </span>
+            { Icon: Clock, label: "Duration", value: `${type.duration} days` },
+            { Icon: Users, label: "Creator slots", value: `${type.capacity}` },
+            { Icon: KeyRound, label: "Demo keys", value: `${type.demoKeys}` },
+            { Icon: KeyRound, label: "Full keys", value: `${type.fullKeys}` },
+          ].map(({ Icon, label, value }) => (
+            <div key={label} className="rounded-xl px-3 py-2.5" style={{ background: "#18232d", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-wider font-bold text-white/40">
+                <Icon size={11} /> {label}
+              </div>
+              <div className="text-xs font-black text-white mt-1">{value}</div>
+            </div>
           ))}
         </div>
 
-        {/* Expanded: content requirements — shown only when selected */}
-        {selected && (
-          <div className="gf-fade-up space-y-2.5" style={{ marginTop: "2px" }}>
-            <div>
-              <div className="text-[9px] uppercase tracking-widest mb-1.5" style={{ color: "rgba(255,255,255,0.2)" }}>Creator Requirements</div>
-              <div className="flex flex-wrap gap-1.5">
-                {type.pills.map(({ ct, qty }) => {
-                  const PIcon = REQ_ICON[ct] ?? Target;
-                  return (
-                    <span key={ct} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md"
-                      style={{ background: `rgba(${rgb},0.08)`, color: accent, border: `1px solid rgba(${rgb},0.18)` }}>
-                      <PIcon size={9} /> {reqPillLabel(ct, qty)}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="text-[10px] pt-1" style={{ color: "rgba(255,255,255,0.22)", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-              Est. {type.estimated.viewsMin.toLocaleString()}–{type.estimated.viewsMax.toLocaleString()} views
-            </div>
+        <div className="min-h-[112px]">
+          <div className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: accent }}>Creator Objectives</div>
+          <div className="flex flex-wrap gap-1.5">
+            {type.pills.map(({ ct, qty }) => {
+              const PIcon = REQ_ICON[ct] ?? Target;
+              const label =
+                ct === "clip"       ? `${qty} Gameplay Clip${qty > 1 ? "s" : ""}` :
+                ct === "screenshot" ? `${qty} Screenshot${qty > 1 ? "s" : ""}` :
+                ct === "reel"       ? `${qty} Vertical Reel${qty > 1 ? "s" : ""}` :
+                ct === "stream"     ? "1 Livestream (30+ min)" :
+                ct === "feedback"   ? "1 Creator Review" : `${qty} ${ct}`;
+              return (
+                <span key={ct} className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full"
+                  style={{ background: selected ? `rgba(${rgb},0.12)` : "#1b2934", color: selected ? accent : "rgba(255,255,255,0.68)", border: `1px solid ${selected ? `rgba(${rgb},0.28)` : "rgba(255,255,255,0.10)"}` }}>
+                  <PIcon size={9} /> {label}
+                </span>
+              );
+            })}
           </div>
-        )}
+        </div>
+
+        <div className="min-h-[82px]">
+          <div className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: accent }}>Best for</div>
+          <div className="flex flex-wrap gap-1.5">
+            {type.bestForList.map(label => (
+              <span key={label} className="text-[10px] px-2.5 py-1 rounded-full"
+                style={{ background: "#1b2934", color: "rgba(255,255,255,0.68)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-auto pt-3 text-[11px] font-bold" style={{ borderTop: "1px solid rgba(255,255,255,0.10)", color: selected ? accent : "rgba(255,255,255,0.48)" }}>
+          {type.xpReward.toLocaleString()} XP potential
+        </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -751,89 +747,47 @@ function ThinTypeCard({
 }
 
 // ─────────────────────────────────────────────
-// Campaign type carousel — 3 cards visible, center elevated
+// Campaign type selection — equal cards on desktop, stacked on mobile
 // ─────────────────────────────────────────────
 
 function TypeCardCarousel({
   selectedType,
   onSelectAndContinue,
+  onBack,
 }: {
   selectedType: CampaignType | null;
   onSelectAndContinue: (type: CampaignType) => void;
+  onBack: () => void;
 }) {
-  const n = CAMPAIGN_TYPES.length;
-  const initIdx = selectedType
-    ? Math.max(0, CAMPAIGN_TYPES.findIndex(t => t.slug === selectedType.slug))
-    : 1;
-  const [centerIdx, setCenterIdx] = useState(initIdx);
-
-  const prev = (centerIdx - 1 + n) % n;
-  const next = (centerIdx + 1) % n;
-
-  const visible = [
-    { type: CAMPAIGN_TYPES[prev],      isCenter: false, idx: prev },
-    { type: CAMPAIGN_TYPES[centerIdx], isCenter: true,  idx: centerIdx },
-    { type: CAMPAIGN_TYPES[next],      isCenter: false, idx: next },
-  ];
-
   return (
-    <div className="space-y-5">
-      {/* Arrow row above cards */}
-      <div className="flex items-center justify-between px-1">
-        <button
-          onClick={() => setCenterIdx(prev)}
-          className="flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full transition-all hover:opacity-80"
-          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.55)" }}>
-          <ChevronLeft style={{ width: "14px", height: "14px" }} /> Prev
-        </button>
-
-        <span className="text-[11px] font-bold" style={{ color: "rgba(255,255,255,0.28)" }}>
-          {centerIdx + 1} / {n}
-        </span>
-
-        <button
-          onClick={() => setCenterIdx(next)}
-          className="flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-full transition-all hover:opacity-80"
-          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.55)" }}>
-          Next <ChevronRight style={{ width: "14px", height: "14px" }} />
-        </button>
-      </div>
-
-      {/* Three cards */}
-      <div className="flex items-end gap-3 pb-4">
-        {visible.map(({ type, isCenter, idx: i }) => (
-          <ThinTypeCard
+    <div className="space-y-7">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+        {CAMPAIGN_TYPES.map(type => (
+          <TypeCard
             key={type.slug}
             type={type}
-            isCenter={isCenter}
-            onClick={() => {
-              if (!isCenter) {
-                setCenterIdx(i);
-              } else {
-                onSelectAndContinue(type);
-              }
-            }}
+            selected={selectedType?.slug === type.slug}
+            onSelect={() => onSelectAndContinue(type)}
           />
         ))}
       </div>
 
-      {/* Dot indicators */}
-      <div className="flex justify-center items-center gap-2">
-        {CAMPAIGN_TYPES.map((t, i) => {
-          const a = TYPE_ACCENT[t.slug] ?? NEON;
-          return (
-            <button
-              key={t.slug}
-              onClick={() => setCenterIdx(i)}
-              className="transition-all duration-300"
-              style={{
-                height: "7px",
-                width: i === centerIdx ? "22px" : "7px",
-                borderRadius: "9999px",
-                background: i === centerIdx ? a : "rgba(255,255,255,0.16)",
-              }} />
-          );
-        })}
+      <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+        <button
+          type="button"
+          onClick={onBack}
+          className="w-full sm:w-auto px-5 py-3 rounded-xl text-sm font-bold transition-colors hover:text-white"
+          style={{ color: "rgba(255,255,255,0.58)", border: "1px solid rgba(255,255,255,0.14)", background: "#111923" }}>
+          Back
+        </button>
+        <button
+          type="button"
+          onClick={() => selectedType && onSelectAndContinue(selectedType)}
+          disabled={!selectedType}
+          className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-35"
+          style={{ background: NEON, color: "#070b10" }}>
+          Continue with {selectedType?.shortName ?? "a campaign"} <ArrowRight className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );
@@ -2034,64 +1988,98 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
           /* Active — open, breathable, no heavy box */
           <div className="gf-fade-up">
             {/* Title row + Automatic toggle */}
-            <div className="flex items-start justify-between mb-8 gap-4">
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-8 gap-5">
               <div>
                 <p className="text-[10px] uppercase tracking-widest mb-1.5 font-bold" style={{ color: "rgba(255,255,255,0.25)" }}>Step 1</p>
-                <h2 className="text-2xl font-black text-white leading-tight">Create a Campaign</h2>
+                <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">Choose Your Campaign Type</h2>
+                <p className="text-sm text-white/55 mt-2 max-w-xl">Select the campaign that best matches what you want creators to produce.</p>
+                <div className="mt-4 text-[11px] font-bold tracking-wide text-white/45" aria-label="Campaign creation steps">
+                  <span style={{ color: NEON }}>1 Choose Type</span>
+                  <span className="mx-2 text-white/25">→</span>
+                  <span>2 Personalise</span>
+                  <span className="mx-2 text-white/25">→</span>
+                  <span>3 Review</span>
+                </div>
               </div>
 
               {/* Inline toggle pill */}
-              <button
-                onClick={() => {
-                  const next = mode === "auto" ? "manual" : "auto";
-                  setMode(next);
-                  setAutoStep(1);
-                  setCurrentStep(1);
-                  setConfirmed(false);
-                  setAutoConfirmed(false);
-                  setSelectedType(null);
-                }}
-                className="shrink-0 flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl transition-all duration-300"
-                style={{
-                  background: mode === "auto" ? "rgba(167,139,250,0.12)" : "rgba(255,255,255,0.04)",
-                  border: `1px solid ${mode === "auto" ? "rgba(167,139,250,0.32)" : "rgba(255,255,255,0.10)"}`,
-                }}>
-                {/* Toggle track */}
-                <div className="relative shrink-0"
-                  style={{ width: "34px", height: "18px", borderRadius: "9999px",
-                    background: mode === "auto" ? "#a78bfa" : "rgba(255,255,255,0.15)",
-                    transition: "background 0.25s ease" }}>
-                  <div style={{
-                    position: "absolute", top: "2px",
-                    width: "14px", height: "14px", borderRadius: "50%",
-                    background: "#fff",
-                    left: mode === "auto" ? "18px" : "2px",
-                    transition: "left 0.25s cubic-bezier(0.22,1,0.36,1)",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
-                  }} />
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <div className="text-[11px] font-bold text-white/65">Automatic selection</div>
+                  <div className="text-[10px] text-white/40 mt-0.5">Automatically select the recommended campaign.</div>
                 </div>
-                <span className="text-[12px] font-bold whitespace-nowrap"
-                  style={{ color: mode === "auto" ? "#a78bfa" : "rgba(255,255,255,0.40)" }}>
-                  Automatic
-                </span>
-              </button>
+                <button
+                  type="button"
+                  aria-pressed={mode === "auto"}
+                  onClick={() => {
+                    const next = mode === "auto" ? "manual" : "auto";
+                    setMode(next);
+                    setAutoStep(1);
+                    setCurrentStep(1);
+                    setConfirmed(false);
+                    setAutoConfirmed(false);
+                    setSelectedType(next === "auto" ? (CAMPAIGN_TYPES.find(t => t.recommended) ?? null) : null);
+                  }}
+                  className="shrink-0 flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
+                  style={{
+                    background: mode === "auto" ? "rgba(167,139,250,0.12)" : "#111923",
+                    border: `1px solid ${mode === "auto" ? "rgba(167,139,250,0.42)" : "rgba(255,255,255,0.14)"}`,
+                  }}>
+                  <div className="relative shrink-0"
+                    style={{ width: "34px", height: "18px", borderRadius: "9999px",
+                      background: mode === "auto" ? "#a78bfa" : "rgba(255,255,255,0.15)",
+                      transition: "background 0.25s ease" }}>
+                    <div style={{
+                      position: "absolute", top: "2px",
+                      width: "14px", height: "14px", borderRadius: "50%",
+                      background: "#fff",
+                      left: mode === "auto" ? "18px" : "2px",
+                      transition: "left 0.25s cubic-bezier(0.22,1,0.36,1)",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
+                    }} />
+                  </div>
+                  <span className="text-[12px] font-bold whitespace-nowrap"
+                    style={{ color: mode === "auto" ? "#a78bfa" : "rgba(255,255,255,0.60)" }}>
+                    Automatic
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Mode content — keyed so React remounts it on toggle, triggering animation */}
             <div key={mode} className="gf-fade-up">
               {mode === "auto" ? (
                 <>
+                  <div className="flex items-center gap-3 rounded-xl px-4 py-3 mb-5"
+                    style={{ background: "#172317", border: `1px solid rgba(183,255,24,0.28)` }}>
+                    <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: NEON }} />
+                    <div>
+                      <div className="text-xs font-black text-white">Quick Creator selected</div>
+                      <div className="text-[11px] text-white/50 mt-0.5">Recommended · Best for getting started</div>
+                    </div>
+                  </div>
                   <AutoCampaignInfo />
-                  <button
-                    onClick={() => setAutoStep(2)}
-                    className="w-full mt-6 py-4 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110"
-                    style={{ background: "#a78bfa", color: "#070b10", boxShadow: "0 0 32px 0 rgba(167,139,250,0.2)" }}>
-                    Continue with Automatic Campaigns <ArrowRight className="w-4 h-4" />
-                  </button>
+                  <div className="flex flex-col-reverse sm:flex-row gap-3 mt-6">
+                    <button
+                      type="button"
+                      onClick={onComplete}
+                      className="sm:w-auto px-5 py-3 rounded-xl text-sm font-bold text-white/60 hover:text-white transition-colors"
+                      style={{ background: "#111923", border: "1px solid rgba(255,255,255,0.14)" }}>
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAutoStep(2)}
+                      className="flex-1 py-4 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110"
+                      style={{ background: "#a78bfa", color: "#070b10", boxShadow: "0 0 24px 0 rgba(167,139,250,0.16)" }}>
+                      Continue with Automatic Campaigns <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </>
               ) : (
                 <TypeCardCarousel
                   selectedType={selectedType}
+                  onBack={onComplete}
                   onSelectAndContinue={(t) => {
                     setSelectedType(t);
                     setConfirmed(false);
