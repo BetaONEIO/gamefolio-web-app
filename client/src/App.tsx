@@ -120,6 +120,7 @@ const IndieDashboardPage = lazyWithRecovery(() => import("./pages/IndieDashboard
 const StreamerDashboardPage = lazyWithRecovery(() => import("./pages/StreamerDashboardPage"));
 const BulkUploadPage = lazyWithRecovery(() => import("./pages/BulkUploadPage"));
 const ScreenshotUploadPage = lazyWithRecovery(() => import("./pages/ScreenshotUploadPage"));
+const AiVodClipsPage = lazyWithRecovery(() => import("./pages/AiVodClipsPage"));
 const AccountSettingsPage = lazyWithRecovery(() => import("./pages/AccountSettingsPage"));
 const GameCategoriesPage = lazyWithRecovery(() => import("./pages/GameCategoriesPage"));
 const LeaderboardPage = lazyWithRecovery(() => import("./pages/LeaderboardPage"));
@@ -566,6 +567,7 @@ function Router() {
           <Route path="/streamer/dashboard" component={StreamerDashboardPage} />
           <ProtectedRoute path="/upload/bulk" component={BulkUploadPage} />
           <ProtectedRoute path="/upload/screenshots" component={ScreenshotUploadPage} />
+          <ProtectedRoute path="/ai-clips" component={AiVodClipsPage} />
           <ProtectedRoute path="/upload-success" component={PostUploadSuccessPage} />
           <ProtectedRoute path="/upload-success/:contentType/:contentId" component={PostUploadSuccessPage} />
           <ProtectedRoute path="/account/settings" component={AccountSettingsPage} />
