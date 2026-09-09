@@ -47,6 +47,7 @@ import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
 import ManageGameSettings from "@/components/indie/ManageGameSettings";
 import { DEFAULT_PROFILE_THEME, PROFILE_THEMES, resolveProfileTheme } from "@shared/profile-theme";
+import { STREAMER_PARTNER_PURCHASES_ENABLED } from "@/lib/feature-flags";
 
 const EMOJI_CATEGORIES = [
   {
@@ -2450,11 +2451,12 @@ export default function SettingsPage() {
                 <span className="sm:hidden">Stream</span>
               </TabsTrigger>
             )}
-            <TabsTrigger value="partner" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Star className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Partner</span>
-              <span className="sm:hidden">Partner</span>
-            </TabsTrigger>
+            {(STREAMER_PARTNER_PURCHASES_ENABLED || user.isPartner) && (
+              <TabsTrigger value="partner" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Star className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span>Partner</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Profile Tab */}
@@ -5323,7 +5325,7 @@ export default function SettingsPage() {
                       ))}
                     </ul>
                   </div>
-                ) : (
+                ) : STREAMER_PARTNER_PURCHASES_ENABLED ? (
                   <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent px-4 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
@@ -5360,7 +5362,7 @@ export default function SettingsPage() {
                       Sign up here — pick a monthly or yearly plan and your partner status activates instantly.
                     </p>
                   </div>
-                )}
+                ) : null}
 
                 {/* Is Streamer Toggle */}
                 <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
@@ -6036,9 +6038,11 @@ export default function SettingsPage() {
           </TabsContent>
 
           {/* Partner Tab */}
-          <TabsContent value="partner">
-            <PartnerSettings />
-          </TabsContent>
+          {(STREAMER_PARTNER_PURCHASES_ENABLED || user.isPartner) && (
+            <TabsContent value="partner">
+              <PartnerSettings />
+            </TabsContent>
+          )}
         </Tabs>
 
         {/* Save Button */}
@@ -6834,12 +6838,14 @@ export default function SettingsPage() {
       />
 
       {/* Streamer Partner Upgrade Dialog */}
-      <ProUpgradeDialog
-        open={showPartnerDialog}
-        onOpenChange={setShowPartnerDialog}
-        tier="partner"
-        subtitle="Feature your live stream on your profile and across Gamefolio"
-      />
+      {STREAMER_PARTNER_PURCHASES_ENABLED && (
+        <ProUpgradeDialog
+          open={showPartnerDialog}
+          onOpenChange={setShowPartnerDialog}
+          tier="partner"
+          subtitle="Feature your live stream on your profile and across Gamefolio"
+        />
+      )}
 
     </KeyboardAvoidingWrapper>
   );

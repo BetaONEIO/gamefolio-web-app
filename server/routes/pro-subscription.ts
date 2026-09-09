@@ -9,6 +9,7 @@ import { storage } from '../storage';
 import { notifyProPurchase } from '../telegram-notify';
 import { validateAmbassadorCode, normalizeAmbassadorCode } from '../lib/ambassador-code';
 import { AMBASSADOR_DISCOUNT_PERCENT } from '@shared/ambassador';
+import { STREAMER_PARTNER_PURCHASES_ENABLED } from '@shared/feature-flags';
 
 const router = Router();
 
@@ -690,6 +691,10 @@ export async function provisionPartnerSubscription(opts: {
 // local-currency conversion when we can detect the visitor's country.
 // Mirrors /api/stripe/pro-pricing; the exact amount is confirmed at checkout.
 router.get('/api/stripe/partner-pricing', async (req: Request, res: Response) => {
+  if (!STREAMER_PARTNER_PURCHASES_ENABLED) {
+    return res.status(404).json({ error: 'Streamer Partner subscriptions are not available yet' });
+  }
+
   const base = {
     currency: BASE_CURRENCY,
     monthly: PARTNER_BASE_PRICE.monthly / 100,
@@ -715,6 +720,10 @@ router.get('/api/stripe/partner-pricing', async (req: Request, res: Response) =>
 });
 
 router.post('/api/stripe/create-partner-subscription', hybridAuth, async (req: Request, res: Response) => {
+  if (!STREAMER_PARTNER_PURCHASES_ENABLED) {
+    return res.status(404).json({ error: 'Streamer Partner subscriptions are not available yet' });
+  }
+
   try {
     const userId = (req as any).user?.id;
     if (!userId) {
@@ -802,6 +811,10 @@ router.post('/api/stripe/create-partner-subscription', hybridAuth, async (req: R
 });
 
 router.post('/api/stripe/confirm-partner-subscription', hybridAuth, async (req: Request, res: Response) => {
+  if (!STREAMER_PARTNER_PURCHASES_ENABLED) {
+    return res.status(404).json({ error: 'Streamer Partner subscriptions are not available yet' });
+  }
+
   try {
     const userId = (req as any).user?.id;
     if (!userId) {
