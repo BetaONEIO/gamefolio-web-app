@@ -9,6 +9,20 @@ import { createJob, retryJob, publishCandidate, discardCandidate, getVodClipLimi
 
 const router = express.Router();
 
+function requireAdminOrAmbassador(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+) {
+  const user = req.user as { role?: string; isAmbassador?: boolean } | undefined;
+  if (user?.role !== 'admin' && !user?.isAmbassador) {
+    return res.status(403).json({ error: 'AI clipping is available only to Admins and Ambassadors' });
+  }
+  next();
+}
+
+router.use(hybridFullAccess, requireAdminOrAmbassador);
+
 function handleError(res: express.Response, error: unknown) {
   if (error instanceof AiVodClipError) {
     return res.status(error.status).json({ error: error.message });
@@ -17,9 +31,8 @@ function handleError(res: express.Response, error: unknown) {
   return res.status(500).json({ error: 'Something went wrong' });
 }
 
-// Public: whether the feature is currently accepting new generation jobs
-// (admin-controlled — see AdminPage "AI Clips" tab). No auth so entry-point
-// UI (Settings, Upload) can check this before even showing the button.
+// Whether the private feature is currently accepting new generation jobs
+// (admin-controlled — see AdminPage "AI Clips" tab).
 router.get('/status', async (req, res) => {
   try {
     const settings = await storage.getAiClipSettings();
@@ -33,7 +46,7 @@ router.get('/status', async (req, res) => {
 });
 
 // List the connected Twitch account's past broadcasts, flagged for eligibility.
-router.get('/vods', hybridFullAccess, async (req, res) => {
+router.get('/vods', async (req, res) => {
   try {
     const user = await storage.getUser(req.user!.id);
     if (!user?.twitchVerified || !user.twitchUserId) {
@@ -56,7 +69,7 @@ router.get('/vods', hybridFullAccess, async (req, res) => {
   }
 });
 
-router.post('/jobs', hybridFullAccess, async (req, res) => {
+router.post('/jobs', async (req, res) => {
   try {
     const settings = await storage.getAiClipSettings();
     if (settings && !settings.isEnabled) {
@@ -74,7 +87,7 @@ router.post('/jobs', hybridFullAccess, async (req, res) => {
   }
 });
 
-router.get('/jobs', hybridFullAccess, async (req, res) => {
+router.get('/jobs', async (req, res) => {
   try {
     const jobs = await db.select().from(aiClipJobs)
       .where(eq(aiClipJobs.userId, req.user!.id))
@@ -85,7 +98,7 @@ router.get('/jobs', hybridFullAccess, async (req, res) => {
   }
 });
 
-router.get('/jobs/:jobId', hybridFullAccess, async (req, res) => {
+router.get('/jobs/:jobId', async (req, res) => {
   try {
     const jobId = parseInt(req.params.jobId, 10);
     const [job] = await db.select().from(aiClipJobs)
@@ -102,7 +115,7 @@ router.get('/jobs/:jobId', hybridFullAccess, async (req, res) => {
   }
 });
 
-router.post('/jobs/:jobId/retry', hybridFullAccess, async (req, res) => {
+router.post('/jobs/:jobId/retry', async (req, res) => {
   try {
     const jobId = parseInt(req.params.jobId, 10);
     const job = await retryJob(req.user!.id, jobId);
@@ -112,7 +125,7 @@ router.post('/jobs/:jobId/retry', hybridFullAccess, async (req, res) => {
   }
 });
 
-router.post('/candidates/:candidateId/publish', hybridFullAccess, async (req, res) => {
+router.post('/candidates/:candidateId/publish', async (req, res) => {
   try {
     const candidateId = parseInt(req.params.candidateId, 10);
     const { title, description, gameId, tags, ageRestricted } = req.body || {};
@@ -123,7 +136,7 @@ router.post('/candidates/:candidateId/publish', hybridFullAccess, async (req, re
   }
 });
 
-router.post('/candidates/:candidateId/discard', hybridFullAccess, async (req, res) => {
+router.post('/candidates/:candidateId/discard', async (req, res) => {
   try {
     const candidateId = parseInt(req.params.candidateId, 10);
     await discardCandidate(req.user!.id, candidateId);

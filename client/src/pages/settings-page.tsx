@@ -886,7 +886,8 @@ function PartnerSettings() {
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
-  const { data: aiClipsStatus } = useAiClipsStatus();
+  const canAccessAiClips = user?.role === "admin" || !!user?.isAmbassador;
+  const { data: aiClipsStatus } = useAiClipsStatus(canAccessAiClips);
   const resolvedUserTheme = resolveProfileTheme(user || {});
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -5419,6 +5420,7 @@ export default function SettingsPage() {
                             onCheckedChange={(val) => handleStreamerSettingsSave({ twitchShowOnProfile: val })}
                           />
                         </div>
+                        {canAccessAiClips && (
                         <div className="border-t border-[#9146FF]/15 pt-3">
                           {aiClipsStatus?.enabled === false ? (
                             <div className="text-xs text-slate-400 text-center py-1.5">
@@ -5433,6 +5435,7 @@ export default function SettingsPage() {
                             </Link>
                           )}
                         </div>
+                        )}
                       </div>
                     ) : oauthConfig?.twitch === false ? (
                       <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">

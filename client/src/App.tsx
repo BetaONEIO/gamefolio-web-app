@@ -27,6 +27,7 @@ import { ProtectedRoute } from "@/components/auth/protected-route";
 import { PartnerProtectedRoute } from "@/components/auth/partner-protected-route";
 import { AdminProtectedRoute } from "@/components/auth/admin-protected-route";
 import { AmbassadorProtectedRoute } from "@/components/auth/ambassador-protected-route";
+import { AdminOrAmbassadorProtectedRoute } from "@/components/auth/admin-or-ambassador-protected-route";
 import { OnboardingGuard } from "@/components/auth/onboarding-guard";
 import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
@@ -567,7 +568,7 @@ function Router() {
           <Route path="/streamer/dashboard" component={StreamerDashboardPage} />
           <ProtectedRoute path="/upload/bulk" component={BulkUploadPage} />
           <ProtectedRoute path="/upload/screenshots" component={ScreenshotUploadPage} />
-          <ProtectedRoute path="/ai-clips" component={AiVodClipsPage} />
+          <AdminOrAmbassadorProtectedRoute path="/ai-clips" component={AiVodClipsPage} />
           <ProtectedRoute path="/upload-success" component={PostUploadSuccessPage} />
           <ProtectedRoute path="/upload-success/:contentType/:contentId" component={PostUploadSuccessPage} />
           <ProtectedRoute path="/account/settings" component={AccountSettingsPage} />

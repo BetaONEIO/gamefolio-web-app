@@ -247,7 +247,8 @@ const UploadPage = () => {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { data: aiClipsStatus } = useAiClipsStatus();
+  const canAccessAiClips = user?.role === "admin" || !!user?.isAmbassador;
+  const { data: aiClipsStatus } = useAiClipsStatus(canAccessAiClips);
   
   // Content type selection
   const [contentType, setContentType] = useState<'clips' | 'reels' | 'screenshots'>('clips');
@@ -1887,7 +1888,7 @@ const UploadPage = () => {
         <h1 className="text-2xl font-bold">Upload Content</h1>
       </div>
 
-      {user?.twitchVerified && aiClipsStatus?.enabled !== false && (
+      {canAccessAiClips && user?.twitchVerified && aiClipsStatus?.enabled !== false && (
         <Link href="/ai-clips">
           <div className="mb-4 rounded-xl border border-[#9146FF]/30 bg-[#9146FF]/5 px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-[#9146FF]/10 transition-colors">
             <div className="w-8 h-8 rounded-lg bg-[#9146FF]/15 flex items-center justify-center flex-shrink-0">

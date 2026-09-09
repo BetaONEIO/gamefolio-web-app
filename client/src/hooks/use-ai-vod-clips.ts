@@ -15,9 +15,10 @@ export interface TwitchVodOption {
 
 const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
 
-export function useAiClipsStatus() {
+export function useAiClipsStatus(enabled = true) {
   return useQuery<{ enabled: boolean; disabledMessage: string | null }>({
     queryKey: ["/api/ai-vod-clips/status"],
+    enabled,
   });
 }
 
