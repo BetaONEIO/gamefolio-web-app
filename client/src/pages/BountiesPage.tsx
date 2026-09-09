@@ -486,7 +486,7 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
         {/* Title + description */}
         <div>
           <h3 className="text-lg font-black text-white leading-tight tracking-tight">
-            {campaign.game_name || campaign.template_name}
+            {campaign.campaign_title || campaign.game_name || campaign.template_name}
           </h3>
           {campaign.description && (
             <p className="text-[12px] mt-1 line-clamp-1" style={{ color: "rgba(255,255,255,0.45)" }}>
@@ -656,7 +656,7 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
               <div className="text-sm font-bold mb-0.5" style={{ color: "rgba(255,255,255,0.50)" }}>{campaign.game_name}</div>
             )}
             <h2 className="text-3xl sm:text-4xl font-black text-white leading-tight tracking-tight mb-2 max-w-lg">
-              {campaign.template_name}
+              {campaign.campaign_title || campaign.template_name}
             </h2>
             {campaign.description && (
               <p className="text-sm mb-4 max-w-md line-clamp-1" style={{ color: "rgba(255,255,255,0.55)" }}>
@@ -1047,7 +1047,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                   <div className="text-xs font-black uppercase tracking-[0.22em] mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>{campaign.game_name}</div>
                 )}
                 <div className="font-black text-white leading-none mb-4 uppercase" style={{ fontSize: "clamp(2rem,4vw,3.5rem)", letterSpacing: "-0.02em", textShadow: "0 4px 60px rgba(0,0,0,0.80)" }}>
-                  {campaign.template_name}
+                  {campaign.campaign_title || campaign.template_name}
                 </div>
                 {campaign.description && (
                   <p className="text-sm leading-relaxed mb-6 max-w-lg" style={{ color: "rgba(255,255,255,0.50)" }}>{campaign.description}</p>
@@ -2147,7 +2147,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
 
             <div className="text-[9px] font-black uppercase tracking-[0.2em] text-white/45">Game</div>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black uppercase tracking-tight text-white leading-[0.95] mt-1">{data.game_name || "Gamefolio"}</h1>
-            <div className="text-sm sm:text-lg font-black uppercase tracking-[0.08em] mt-2" style={{ color: NEON }}>{data.template_name ?? cp.template_name}</div>
+            <div className="text-sm sm:text-lg font-black uppercase tracking-[0.08em] mt-2" style={{ color: NEON }}>{data.campaign_title || data.template_name || cp.template_name}</div>
             {data.description && <p className="text-sm text-white/62 mt-3 max-w-xl leading-relaxed line-clamp-3">{data.description}</p>}
 
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-4 text-[11px] font-bold text-white/55">
@@ -2650,7 +2650,7 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] text-white/40 font-bold">{c.game_name}</div>
-                    <div className="text-sm font-black text-white leading-tight truncate">{c.template_name}</div>
+                    <div className="text-sm font-black text-white leading-tight truncate">{c.campaign_title || c.template_name}</div>
                     <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                     <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full"
                       style={{ color: statusCfg.color, background: statusCfg.bg }}>
@@ -2737,6 +2737,7 @@ export default function BountiesPage() {
       const q = search.toLowerCase();
       list = list.filter((c: any) =>
         (c.game_name ?? "").toLowerCase().includes(q) ||
+        (c.campaign_title ?? "").toLowerCase().includes(q) ||
         (c.template_name ?? "").toLowerCase().includes(q) ||
         (c.description ?? "").toLowerCase().includes(q),
       );

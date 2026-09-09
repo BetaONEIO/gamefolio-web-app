@@ -58,6 +58,10 @@ async function ensureCampaignTables() {
         id SERIAL PRIMARY KEY,
         template_id INTEGER NOT NULL REFERENCES campaign_templates(id),
         developer_user_id INTEGER NOT NULL,
+        campaign_title TEXT,
+        description TEXT,
+        regions TEXT DEFAULT 'worldwide',
+        platforms TEXT[],
         game_id INTEGER,
         game_name TEXT,
         game_artwork_url TEXT,
@@ -80,6 +84,11 @@ async function ensureCampaignTables() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
+    // Additive fields for campaigns created before the personalised setup flow.
+    await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS campaign_title TEXT`).catch(() => {});
+    await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS description TEXT`).catch(() => {});
+    await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS regions TEXT DEFAULT 'worldwide'`).catch(() => {});
+    await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS platforms TEXT[]`).catch(() => {});
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS game_key_batches (
         id SERIAL PRIMARY KEY,
@@ -708,7 +717,8 @@ router.post('/instances', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
     const {
-      templateId, gameId, gameName, gameArtworkUrl, gameSteamAppId, gameItchUrl, gameEpicSlug,
+      templateId, campaignTitle, description, regions, platforms,
+      gameId, gameName, gameArtworkUrl, gameSteamAppId, gameItchUrl, gameEpicSlug,
       startType, scheduledStart, artworkUrl,
     } = req.body;
 
@@ -741,11 +751,14 @@ router.post('/instances', requireAuth, async (req, res) => {
 
     const [instance] = toRows(await db.execute(sql`
       INSERT INTO campaign_instances
-        (template_id, developer_user_id, game_id, game_name, game_artwork_url,
+        (template_id, developer_user_id, campaign_title, description, regions, platforms,
+         game_id, game_name, game_artwork_url,
          game_steam_app_id, game_itch_url, game_epic_slug,
          artwork_url, start_type, scheduled_start, status)
       VALUES
-        (${Number(templateId)}, ${userId}, ${gameId ?? null}, ${gameName ?? null}, ${gameArtworkUrl ?? null},
+        (${Number(templateId)}, ${userId}, ${campaignTitle?.trim() || null}, ${description?.trim() || null},
+         ${regions ?? 'worldwide'}, ${platforms?.length ? platforms : null},
+         ${gameId ?? null}, ${gameName ?? null}, ${gameArtworkUrl ?? null},
          ${gameSteamAppId ?? null}, ${gameItchUrl ?? null}, ${gameEpicSlug ?? null},
          ${artworkUrl ?? null}, ${startType ?? 'asap'}, ${scheduledStart ?? null}, 'draft')
       RETURNING *
@@ -764,6 +777,7 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
     const userId = req.user!.id;
     const instanceId = Number(req.params.id);
     const {
+      campaignTitle, description, regions, platforms,
       gameId, gameName, gameArtworkUrl, gameSteamAppId, gameItchUrl, gameEpicSlug,
       startType, scheduledStart, artworkUrl, status,
     } = req.body;
@@ -780,6 +794,10 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
 
     await db.execute(sql`
       UPDATE campaign_instances SET
+        campaign_title = COALESCE(${campaignTitle?.trim() || null}, campaign_title),
+        description = COALESCE(${description?.trim() || null}, description),
+        regions = COALESCE(${regions ?? null}, regions),
+        platforms = COALESCE(${platforms !== undefined ? platforms : null}, platforms),
         game_id = COALESCE(${gameId ?? null}, game_id),
         game_name = COALESCE(${gameName ?? null}, game_name),
         game_artwork_url = COALESCE(${gameArtworkUrl ?? null}, game_artwork_url),

@@ -99,8 +99,9 @@ const CAMPAIGN_TYPES: CampaignType[] = [
 ];
 
 interface CampaignSettings {
-  description: string; gameName: string; gameId: number | null; gameImageUrl: string | null;
-  startType: "asap" | "scheduled"; scheduledDate: string; regions: string; platforms: string[];
+  campaignTitle: string; description: string; gameName: string; gameId: number | null; gameImageUrl: string | null;
+  startType: "asap" | "scheduled"; scheduledDate: string; scheduledTime: string; timeZone: string;
+  regions: string; platforms: string[];
   customDuration?: number; customCapacity?: number;
 }
 
@@ -134,6 +135,10 @@ function reqPillLabel(ct: string, qty: number) {
   if (ct === "reel")       return `×${qty} Reels`;
   if (ct === "stream")     return "Livestream";
   return ct;
+}
+
+function campaignSummary(type: CampaignType) {
+  return `${type.shortName} · ${type.duration} days · ${type.capacity} creators · ${type.xpReward.toLocaleString()} XP`;
 }
 
 const fieldStyle: React.CSSProperties = {
@@ -975,127 +980,318 @@ function StepPersonalise({ type, settings, onChange }: {
     queryKey: ["/api/indie/profile"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
+  const autoTitleRef = useRef("");
 
   useEffect(() => {
-    if (indieProfile?.profile?.gameName && !settings.gameName) {
-      onChange({
-        gameName: indieProfile.profile.gameName,
-        gameId: indieProfile.profile.gameId ?? null,
-        gameImageUrl: indieProfile.profile.headerImageUrl ?? null,
-      });
+    const profile = indieProfile?.profile ?? {};
+    const profileGameName = profile.gameName ?? "";
+    const nextGameName = settings.gameName || profileGameName || "Your Game";
+    const nextTitle = `${nextGameName} ${type.shortName} Campaign`;
+    const patch: Partial<CampaignSettings> = {};
+
+    if (profileGameName && !settings.gameName) {
+      patch.gameName = profileGameName;
+      patch.gameId = profile.gameId ?? null;
+      patch.gameImageUrl = profile.headerImageUrl ?? null;
     }
-  }, [indieProfile]);
+    if (!settings.campaignTitle || settings.campaignTitle === autoTitleRef.current) {
+      patch.campaignTitle = nextTitle;
+      autoTitleRef.current = nextTitle;
+    }
+    if (Object.keys(patch).length > 0) {
+      onChange(patch);
+    }
+  }, [indieProfile, settings.gameName, settings.campaignTitle, type.shortName]);
 
   const accent      = TYPE_ACCENT[type.slug] ?? NEON;
   const rgb         = ACCENT_RGB[accent] ?? "183,255,27";
-  const seed        = CARD_IMG_SEED[type.slug] ?? "1000";
-  const labelStyle  = "text-[10px] font-bold text-white/30 uppercase tracking-wider block mb-2.5";
+  const profile     = indieProfile?.profile ?? {};
+  const gameName    = settings.gameName || profile.gameName || "Your Game";
+  const gameImage   = settings.gameImageUrl || profile.headerImageUrl || null;
+  const studioName  = profile.studioName || profile.developerName || "Independent developer";
+  const profilePlatforms = Array.isArray(profile.platforms) ? profile.platforms : [];
+  const labelStyle  = "text-[11px] font-bold text-white/75 uppercase tracking-[0.08em] block mb-2";
+  const helperStyle = "text-[11px] leading-relaxed text-white/55 mt-1.5";
   const tomorrow    = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = tomorrow.toISOString().split("T")[0];
+  const timeZoneOptions = Array.from(new Set([
+    settings.timeZone || "UTC",
+    "UTC",
+    "Europe/London",
+    "America/New_York",
+    "America/Los_Angeles",
+    "Asia/Tokyo",
+  ]));
+  const regionLabel = REGION_OPTIONS.find(r => r.id === settings.regions)?.label ?? settings.regions;
+  const platformLabels = settings.platforms.length > 0
+    ? PLATFORM_OPTIONS.filter(p => settings.platforms.includes(p.id)).map(p => p.label)
+    : ["All platforms"];
 
   return (
-    <div className="space-y-6 gf-fade-up">
+    <div className="gf-fade-up -mx-1 rounded-2xl px-1 py-1" style={{ background: "#0F101B" }}>
+      <div className="mx-auto max-w-[1200px] grid grid-cols-1 lg:grid-cols-[minmax(0,1.8fr)_minmax(280px,1fr)] gap-8 items-start">
+        <div className="space-y-8">
+          <div>
+            <p className="text-sm leading-relaxed text-white/60 max-w-2xl">
+              Tell creators about your game and choose when and where your campaign will be available.
+            </p>
+          </div>
 
-      {/* ── Campaign Description ── */}
-      <div>
-        <label className={labelStyle}>
-          Campaign Description{" "}
-          <span className="text-white/20 normal-case font-normal tracking-normal">— optional</span>
-        </label>
-        <textarea
-          style={{ ...fieldStyle, minHeight: "72px", resize: "none" } as any}
-          value={settings.description}
-          onChange={e => onChange({ description: e.target.value })}
-          placeholder="What makes your game worth playing? One sentence is plenty." />
-      </div>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="campaign-title" className={labelStyle}>Campaign Title <span style={{ color: NEON }}>*</span></label>
+              <input
+                id="campaign-title"
+                required
+                maxLength={120}
+                style={fieldStyle}
+                value={settings.campaignTitle}
+                onChange={e => onChange({ campaignTitle: e.target.value })}
+                placeholder={`${gameName} ${type.shortName} Campaign`} />
+              <p className={helperStyle}>This is the title creators will see in the Bounty Hub.</p>
+            </div>
 
-      {/* ── Launch Timing ── */}
-      <div>
-        <label className={labelStyle}>Launch Timing</label>
-        <div className="flex gap-2">
-          {([
-            { value: "asap",      label: "Launch Immediately" },
-            { value: "scheduled", label: "Schedule Launch" },
-          ] as const).map(opt => {
-            const on = settings.startType === opt.value;
-            return (
-              <button key={opt.value} onClick={() => onChange({ startType: opt.value })}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[12px] font-bold transition-all"
-                style={{
-                  background: on ? `rgba(${rgb},0.10)` : "rgba(255,255,255,0.03)",
-                  border: `1.5px solid ${on ? `rgba(${rgb},0.35)` : "rgba(255,255,255,0.07)"}`,
-                  color: on ? accent : "rgba(255,255,255,0.42)",
-                }}>
-                <div className="w-3.5 h-3.5 rounded-full border-2 shrink-0 flex items-center justify-center"
-                  style={{ borderColor: on ? accent : "rgba(255,255,255,0.22)", background: on ? accent : "transparent" }}>
-                  {on && <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#070b10" }} />}
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <label htmlFor="campaign-brief" className={labelStyle}>Campaign Brief <span style={{ color: NEON }}>*</span></label>
+                <span className="text-[11px] text-white/55 tabular-nums">{settings.description.length} / 300</span>
+              </div>
+              <textarea
+                id="campaign-brief"
+                required
+                maxLength={300}
+                style={{ ...fieldStyle, minHeight: "132px", resize: "vertical" } as any}
+                value={settings.description}
+                onChange={e => onChange({ description: e.target.value })}
+                placeholder="What makes your game worth playing, and what would you like creators to focus on?" />
+              <p className={helperStyle}>Give creators a clear introduction to your game and the experience you want them to capture.</p>
+            </div>
+          </div>
+
+          <div className="pt-1">
+            <div className="flex items-start justify-between gap-4 mb-3">
+              <div>
+                <label className={labelStyle}>Selected Game</label>
+                <p className="text-[11px] text-white/50">The game associated with this campaign.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-xl px-3.5 py-3"
+              style={{ background: "#111923", border: "1px solid rgba(255,255,255,0.12)" }}>
+              {gameImage ? (
+                <img src={gameImage} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
+              ) : (
+                <div className="w-14 h-14 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: `rgba(${rgb},0.12)` }}>
+                  <Gamepad2 className="w-6 h-6" style={{ color: accent }} />
                 </div>
-                {opt.label}
-                {opt.value === "asap" && on && (
-                  <span className="text-[9px] font-black px-1.5 py-0.5 rounded"
-                    style={{ background: `rgba(${rgb},0.15)`, color: accent }}>Now</span>
+              )}
+              <div className="min-w-0">
+                <div className="text-sm font-black text-white truncate">{gameName}</div>
+                <div className="text-[11px] text-white/60 mt-1 truncate">{studioName}</div>
+                {profilePlatforms.length > 0 && (
+                  <div className="text-[10px] text-white/45 mt-1 truncate">
+                    {profilePlatforms.join(" · ")}
+                  </div>
                 )}
-              </button>
-            );
-          })}
-        </div>
-        {settings.startType === "scheduled" && (
-          <input type="date"
-            style={{ ...fieldStyle, colorScheme: "dark", marginTop: "10px" } as any}
-            value={settings.scheduledDate} min={tomorrowStr}
-            onChange={e => onChange({ scheduledDate: e.target.value })} />
-        )}
-      </div>
-
-      {/* ── Supported Platforms — chip style ── */}
-      <div>
-        <label className={labelStyle}>Supported Platforms</label>
-        <div className="flex flex-wrap gap-2">
-          {PLATFORM_OPTIONS.map(p => {
-            const on = settings.platforms.includes(p.id);
-            return (
-              <button key={p.id}
-                onClick={() => onChange({ platforms: on ? settings.platforms.filter(x => x !== p.id) : [...settings.platforms, p.id] })}
-                className="px-3.5 py-1.5 rounded-full text-[11px] font-bold transition-all duration-200"
-                style={{
-                  background: on ? NEON : "rgba(255,255,255,0.04)",
-                  color: on ? "#070b10" : "rgba(255,255,255,0.45)",
-                  border: `1.5px solid ${on ? "transparent" : "rgba(255,255,255,0.10)"}`,
-                  boxShadow: on ? `0 0 14px 0 rgba(183,255,27,0.22)` : "none",
-                }}>
-                {p.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Eligible Region ── */}
-      <div>
-        <label className={labelStyle}>Eligible Region</label>
-        <select style={{ ...fieldStyle, paddingRight: "32px" } as any}
-          value={settings.regions} onChange={e => onChange({ regions: e.target.value })}>
-          {REGION_OPTIONS.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
-        </select>
-      </div>
-
-      {/* ── Custom overrides (custom campaign only) ── */}
-      {type.custom && (
-        <div className="grid grid-cols-2 gap-4 pt-5" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-          <div>
-            <label className={labelStyle}>Duration (days)</label>
-            <input type="number" min={3} max={60} style={fieldStyle}
-              value={settings.customDuration ?? type.duration}
-              onChange={e => onChange({ customDuration: Math.max(3, Math.min(60, Number(e.target.value))) })} />
+              </div>
+            </div>
           </div>
+
           <div>
-            <label className={labelStyle}>Creator Capacity</label>
-            <input type="number" min={5} max={100} style={fieldStyle}
-              value={settings.customCapacity ?? type.capacity}
-              onChange={e => onChange({ customCapacity: Math.max(5, Math.min(100, Number(e.target.value))) })} />
+            <label className={labelStyle}>Launch Timing</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {([
+                { value: "asap" as const, title: "Launch Immediately", description: "Start the campaign as soon as it has been approved.", Icon: Rocket },
+                { value: "scheduled" as const, title: "Schedule Launch", description: "Choose a future date and time for the campaign to begin.", Icon: Calendar },
+              ]).map(opt => {
+                const on = settings.startType === opt.value;
+                const Icon = opt.Icon;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => onChange({ startType: opt.value })}
+                    className="text-left rounded-xl p-3.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
+                    style={{
+                      background: on ? "#182817" : "#111923",
+                      border: `1.5px solid ${on ? "#B9FF1A" : "rgba(255,255,255,0.12)"}`,
+                    }}>
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                        style={{ background: on ? "rgba(185,255,26,0.16)" : "#1a2732", color: on ? "#B9FF1A" : "rgba(255,255,255,0.58)" }}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0"
+                            style={{ borderColor: on ? "#B9FF1A" : "rgba(255,255,255,0.30)", background: on ? "#B9FF1A" : "transparent" }}>
+                            {on && <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#070b10" }} />}
+                          </span>
+                          <span className="text-xs font-black" style={{ color: on ? "#fff" : "rgba(255,255,255,0.78)" }}>{opt.title}</span>
+                        </div>
+                        <p className="text-[11px] leading-relaxed text-white/55 mt-2">{opt.description}</p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {settings.startType === "scheduled" && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                <div>
+                  <label htmlFor="launch-date" className="text-[10px] font-bold uppercase tracking-wider text-white/65 block mb-1.5">Launch date</label>
+                  <input id="launch-date" type="date" min={tomorrowStr}
+                    style={{ ...fieldStyle, colorScheme: "dark" } as any}
+                    value={settings.scheduledDate}
+                    onChange={e => onChange({ scheduledDate: e.target.value })} />
+                </div>
+                <div>
+                  <label htmlFor="launch-time" className="text-[10px] font-bold uppercase tracking-wider text-white/65 block mb-1.5">Launch time</label>
+                  <input id="launch-time" type="time"
+                    style={{ ...fieldStyle, colorScheme: "dark" } as any}
+                    value={settings.scheduledTime}
+                    onChange={e => onChange({ scheduledTime: e.target.value })} />
+                </div>
+                <div>
+                  <label htmlFor="launch-timezone" className="text-[10px] font-bold uppercase tracking-wider text-white/65 block mb-1.5">Time zone</label>
+                  <select id="launch-timezone" style={{ ...fieldStyle, paddingRight: "28px" } as any}
+                    value={settings.timeZone}
+                    onChange={e => onChange({ timeZone: e.target.value })}>
+                    {timeZoneOptions.map(zone => <option key={zone} value={zone}>{zone}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
+
+          <div>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <label className={labelStyle}>Supported Platforms</label>
+                <p className="text-[11px] text-white/55">Select the platforms creators must use to take part.</p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0 pt-0.5">
+                <button type="button" onClick={() => onChange({ platforms: PLATFORM_OPTIONS.map(p => p.id) })}
+                  className="text-[10px] font-bold hover:text-white transition-colors" style={{ color: NEON }}>Select all</button>
+                <button type="button" onClick={() => onChange({ platforms: [] })}
+                  className="text-[10px] font-bold text-white/55 hover:text-white transition-colors">Clear all</button>
+              </div>
+            </div>
+            <p className="text-[10px] text-white/45 mt-2">Choose one or more platforms.</p>
+            <div className="flex flex-wrap gap-2 mt-3">
+              {PLATFORM_OPTIONS.map(p => {
+                const on = settings.platforms.includes(p.id);
+                return (
+                  <button key={p.id} type="button"
+                    aria-pressed={on}
+                    onClick={() => onChange({ platforms: on ? settings.platforms.filter(x => x !== p.id) : [...settings.platforms, p.id] })}
+                    className="px-3.5 py-2 rounded-lg text-[11px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
+                    style={{
+                      background: on ? "#182817" : "#111923",
+                      color: on ? "#F4FFD7" : "rgba(255,255,255,0.72)",
+                      border: `1.5px solid ${on ? "#B9FF1A" : "rgba(255,255,255,0.14)"}`,
+                    }}>
+                    <span className="inline-flex items-center gap-1.5">
+                      {on && <Check className="w-3 h-3" style={{ color: "#B9FF1A" }} />}
+                      {p.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="eligible-region" className={labelStyle}>Eligible Region</label>
+            <p className="text-[11px] text-white/55 mb-2.5">Choose where creators must be based or where your game keys can be activated.</p>
+            <select id="eligible-region" style={{ ...fieldStyle, paddingRight: "32px" } as any}
+              value={settings.regions} onChange={e => onChange({ regions: e.target.value })}>
+              {REGION_OPTIONS.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
+            </select>
+          </div>
+
+          {type.custom && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-5" style={{ borderTop: "1px solid rgba(255,255,255,0.10)" }}>
+              <div>
+                <label className={labelStyle}>Duration (days)</label>
+                <input type="number" min={3} max={60} style={fieldStyle}
+                  value={settings.customDuration ?? type.duration}
+                  onChange={e => onChange({ customDuration: Math.max(3, Math.min(60, Number(e.target.value))) })} />
+              </div>
+              <div>
+                <label className={labelStyle}>Creator Capacity</label>
+                <input type="number" min={5} max={100} style={fieldStyle}
+                  value={settings.customCapacity ?? type.capacity}
+                  onChange={e => onChange({ customCapacity: Math.max(5, Math.min(100, Number(e.target.value))) })} />
+              </div>
+            </div>
+          )}
         </div>
-      )}
+
+        <aside className="lg:sticky lg:top-5 rounded-2xl overflow-hidden"
+          style={{ background: "#111923", border: "1px solid rgba(255,255,255,0.14)" }}>
+          <div className="p-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.10)" }}>
+            <p className="text-[10px] uppercase tracking-[0.16em] font-bold text-white/55">Campaign Summary</p>
+            <p className="text-sm font-black text-white mt-2 leading-relaxed">{campaignSummary(type)}</p>
+          </div>
+          <div className="p-5 space-y-5">
+            <div className="flex items-center gap-3">
+              {gameImage ? (
+                <img src={gameImage} alt="" className="w-16 h-16 rounded-xl object-cover shrink-0" />
+              ) : (
+                <div className="w-16 h-16 rounded-xl flex items-center justify-center shrink-0" style={{ background: `rgba(${rgb},0.12)` }}>
+                  <Gamepad2 className="w-7 h-7" style={{ color: accent }} />
+                </div>
+              )}
+              <div className="min-w-0">
+                <div className="text-[11px] text-white/55">Game</div>
+                <div className="text-sm font-black text-white truncate mt-1">{gameName}</div>
+                <div className="text-[11px] text-white/55 truncate mt-1">{studioName}</div>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[10px] uppercase tracking-wider font-bold text-white/50">Campaign</div>
+              <div className="text-sm font-bold text-white mt-1 break-words">{settings.campaignTitle || `${gameName} ${type.shortName} Campaign`}</div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-4 gap-y-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.10)" }}>
+              {[
+                { label: "Duration", value: `${type.duration} days` },
+                { label: "Creator slots", value: `${type.capacity}` },
+                { label: "Keys required", value: campaignKeySummary(type) },
+                { label: "XP potential", value: `${type.xpReward.toLocaleString()} XP`, accent: true },
+              ].map(item => (
+                <div key={item.label}>
+                  <div className="text-[10px] uppercase tracking-wider font-bold text-white/50">{item.label}</div>
+                  <div className="text-xs font-black mt-1 leading-snug" style={{ color: item.accent ? "#B9FF1A" : "#fff" }}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-3 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.10)" }}>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider font-bold text-white/50">Launch timing</div>
+                <div className="text-xs text-white/85 mt-1">
+                  {settings.startType === "asap"
+                    ? "Launch immediately after approval"
+                    : `${settings.scheduledDate || "Date pending"} · ${settings.scheduledTime || "Time pending"} · ${settings.timeZone}`}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider font-bold text-white/50">Platforms</div>
+                <div className="text-xs text-white/85 mt-1 leading-relaxed">{platformLabels.join(" · ")}</div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider font-bold text-white/50">Eligible region</div>
+                <div className="text-xs text-white/85 mt-1">{regionLabel}</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }
@@ -1937,7 +2133,9 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
   const [useVaultDemo, setUseVaultDemo] = useState(true);
   const [useVaultFull, setUseVaultFull] = useState(true);
   const [settings, setSettings] = useState<CampaignSettings>({
-    description: "", startType: "asap", scheduledDate: "",
+    campaignTitle: "", description: "", startType: "asap", scheduledDate: "",
+    scheduledTime: "12:00",
+    timeZone: typeof Intl !== "undefined" ? (Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC") : "UTC",
     gameName: "", gameId: null, gameImageUrl: null,
     regions: "worldwide", platforms: [],
   });
@@ -1982,6 +2180,10 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
   const keysReady = !!selectedType &&
     (effectiveVaultDemo + pendDemo >= selectedType.demoKeys) &&
     (effectiveVaultFull + pendFull >= selectedType.fullKeys);
+  const personaliseReady = !!selectedType &&
+    settings.campaignTitle.trim().length > 0 &&
+    settings.description.trim().length > 0 &&
+    (settings.startType === "asap" || (settings.scheduledDate.length > 0 && settings.scheduledTime.length > 0));
 
   // Auto pool counts (adds pasted keys to pool live count)
   const poolDemo    = (poolStatus?.demoKeys ?? 0) + parseKeyLines(autoDemoKeys).length;
@@ -2004,9 +2206,11 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
     setSubmitting(true);
     try {
       const inst = await apiRequest("POST", "/api/campaigns/instances", {
-        templateId, gameName: settings.gameName, gameId: settings.gameId,
+        templateId, campaignTitle: settings.campaignTitle, gameName: settings.gameName, gameId: settings.gameId,
         gameArtworkUrl: settings.gameImageUrl, startType: settings.startType,
-        scheduledStart: settings.startType === "scheduled" && settings.scheduledDate ? settings.scheduledDate : null,
+        scheduledStart: settings.startType === "scheduled" && settings.scheduledDate
+          ? `${settings.scheduledDate}T${settings.scheduledTime || "12:00"}:00`
+          : null,
         artworkUrl: settings.gameImageUrl || null,
         description: settings.description || undefined,
         regions: settings.regions,
@@ -2098,7 +2302,7 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
 
   const step1ManualSummary = selectedType?.name ?? "";
   const step2ManualSummary = [
-    settings.startType === "asap" ? "Launch Immediately" : `Scheduled: ${settings.scheduledDate}`,
+    settings.startType === "asap" ? "Launch Immediately" : `Scheduled: ${settings.scheduledDate} ${settings.scheduledTime}`,
     settings.platforms.length ? settings.platforms.join(", ") : "All platforms",
   ].join(" · ");
   const step3ManualSummary = keysReady
@@ -2108,6 +2312,8 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
   const autoStep1Summary = mode === "auto" ? "Automatic Campaigns" : "";
   const autoStep2Summary = `${poolDemo} demo · ${poolFull} full keys in pool`;
   const autoStep3Summary = `${autoLimits.maxCreators} creators · ${FREQUENCY_OPTS.find(f => f.id === autoLimits.frequency)?.label}`;
+  const SelectedTypeIcon = selectedType?.icon ?? Gamepad2;
+  const selectedTypeSummary = selectedType ? campaignSummary(selectedType) : "";
 
   return (
     <>
@@ -2128,22 +2334,40 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
       )}
 
       <div className="space-y-3">
+        {mode === "manual" && currentStep > 1 && (
+          <div className="mx-auto max-w-[1200px] flex flex-wrap items-center gap-2 sm:gap-3 pb-2 text-[10px] sm:text-[11px] font-bold tracking-wide"
+            aria-label="Campaign setup progress">
+            <span className="text-white/45"><span className="text-[#B9FF1A]">1</span> Choose Type</span>
+            <span className="text-white/25">→</span>
+            <span className={currentStep === 2 ? "text-[#B9FF1A]" : "text-white/45"}><span>2</span> Personalise</span>
+            <span className="text-white/25">→</span>
+            <span className={currentStep === 3 ? "text-[#B9FF1A]" : "text-white/45"}><span>3</span> Upload Keys</span>
+            <span className="text-white/25">→</span>
+            <span className={currentStep === 4 ? "text-[#B9FF1A]" : "text-white/45"}><span>4</span> Review &amp; Launch</span>
+          </div>
+        )}
 
         {/* ── Step 1: open layout when active, compact row when completed ── */}
         {(mode === "auto" ? autoStep > 1 : currentStep > 1) ? (
           /* Completed row — matches StepCard completed style */
-          <div className="flex items-center gap-3.5 py-2.5"
+          <div className="flex items-center gap-3.5 py-3"
             style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
             <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
               style={{ background: NEON }}>
               <Check className="w-3.5 h-3.5" style={{ color: "#070b10" }} />
             </div>
+            {mode === "manual" && selectedType && (
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: "rgba(185,255,26,0.10)", color: NEON }}>
+                <SelectedTypeIcon className="w-4 h-4" />
+              </div>
+            )}
             <div className="flex-1 min-w-0">
-              <span className="text-sm font-bold text-white/65">
+              <span className="block text-sm font-bold text-white">
                 {mode === "auto" ? "Automatic Campaigns" : selectedType?.shortName ?? ""}
               </span>
               {mode === "manual" && selectedType && (
-                <span className="text-[11px] text-white/30 ml-2">{selectedType.bestFor}</span>
+                <span className="block text-[11px] text-white/55 mt-1 truncate">{selectedTypeSummary}</span>
               )}
             </div>
             <button
@@ -2151,7 +2375,8 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
                 if (mode === "auto") setAutoStep(1);
                 else { setCurrentStep(1); setConfirmed(false); }
               }}
-              className="text-[11px] font-bold text-white/30 hover:text-white/70 transition-colors shrink-0 px-2 py-1">
+              className="text-[11px] font-bold transition-colors shrink-0 px-2 py-1"
+              style={{ color: NEON }}>
               Change
             </button>
           </div>
@@ -2169,7 +2394,9 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
                   <span className="mx-2 text-white/25">→</span>
                   <span>2 Personalise</span>
                   <span className="mx-2 text-white/25">→</span>
-                  <span>3 Review</span>
+                  <span>3 Upload Keys</span>
+                  <span className="mx-2 text-white/25">→</span>
+                  <span>4 Review &amp; Launch</span>
                 </div>
               </div>
 
@@ -2290,12 +2517,27 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
               {selectedType && (
                 <div>
                   <StepPersonalise type={selectedType} settings={settings} onChange={updateSettings} />
-                  <button
-                    onClick={() => setCurrentStep(3)}
-                    className="w-full mt-6 py-3 rounded-2xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110"
-                    style={{ background: NEON, color: "#070b10" }}>
-                    Continue <ArrowRight className="w-4 h-4" />
-                  </button>
+                  <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 mt-8">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(1)}
+                      className="w-full sm:w-auto px-5 py-3 rounded-xl text-sm font-bold transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
+                      style={{ background: "#111923", color: "rgba(255,255,255,0.70)", border: "1px solid rgba(255,255,255,0.16)" }}>
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(3)}
+                      disabled={!personaliseReady}
+                      className="w-full sm:w-[290px] px-5 py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-colors disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
+                      style={{
+                        background: personaliseReady ? "#B9FF1A" : "#263039",
+                        color: personaliseReady ? "#070b10" : "rgba(255,255,255,0.78)",
+                        border: personaliseReady ? "1px solid transparent" : "1px solid rgba(255,255,255,0.16)",
+                      }}>
+                      Continue to Upload Keys <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               )}
             </StepCard>

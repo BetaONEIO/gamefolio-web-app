@@ -331,6 +331,7 @@ router.get('/', async (req, res) => {
         ci.status,
         ci.game_id,
         ci.game_name,
+        ci.campaign_title,
         ci.game_artwork_url,
         ci.artwork_url AS campaign_artwork_url,
         ci.game_steam_app_id,
@@ -608,6 +609,7 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
         ci.id AS instance_id,
         ci.game_id,
         ci.game_name,
+        ci.campaign_title,
         ci.game_artwork_url,
         ci.artwork_url AS campaign_artwork_url,
         ci.game_steam_app_id,
@@ -723,6 +725,7 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         ci.id AS instance_id,
         ci.game_id,
         ci.game_name,
+        ci.campaign_title,
         ci.game_artwork_url,
         ci.artwork_url AS campaign_artwork_url,
         ci.game_steam_app_id,
@@ -1052,6 +1055,7 @@ router.get('/admin/submissions', requireAdmin, async (req, res) => {
         bs.*,
         u.username, u.display_name,
         ci.game_name,
+        ci.campaign_title,
         b.title AS bounty_title,
         b.content_type
       FROM campaign_bounty_submissions bs
