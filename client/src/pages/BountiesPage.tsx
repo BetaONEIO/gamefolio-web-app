@@ -2109,7 +2109,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
 
   return (
     <div className="min-h-screen pb-24 sm:pb-10" style={{ background: "#0F101B" }}>
-      <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
         <button onClick={onBack} className="flex items-center gap-2 py-4 text-white/50 hover:text-white transition-colors text-sm font-bold">
           <ChevronLeft size={16} /> Back to My Campaigns
         </button>
