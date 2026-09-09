@@ -42,6 +42,12 @@ const ANIM_CSS = `
   .gf-fade-up    { animation: gfFadeUp 0.34s cubic-bezier(0.22,1,0.36,1) both; }
   .gf-scale-in   { animation: gfScaleIn 0.28s ease-out both; }
   .gf-check-draw { stroke-dasharray:40; animation: gfCheckDraw 0.4s ease-out 0.1s both; }
+  @media (prefers-reduced-motion: reduce) {
+    .gf-accordion-motion, .gf-accordion-motion * {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 `;
 
 // ─────────────────────────────────────────────
@@ -747,46 +753,202 @@ function ThinTypeCard({
 }
 
 // ─────────────────────────────────────────────
-// Campaign type selection — equal cards on desktop, stacked on mobile
+const CAMPAIGN_ARTWORK: Record<string, string> = {
+  "quick-creator": "/attached_assets/generated_images/campaign-quick-creator.png",
+  "content-boost": "/attached_assets/generated_images/campaign-content-boost.png",
+  "creator-showcase": "/attached_assets/generated_images/campaign-creator-showcase.png",
+};
+
+function campaignKeySummary(type: CampaignType) {
+  if (type.demoKeys > 0 && type.fullKeys > 0) {
+    return `${type.demoKeys} demo keys + ${type.fullKeys} full-game keys`;
+  }
+  return `Keys required: ${type.demoKeys + type.fullKeys}`;
+}
+
+// Campaign type selection — full-width accessible accordion
 // ─────────────────────────────────────────────
 
-function TypeCardCarousel({
+function CampaignAccordion({
   selectedType,
-  onSelectAndContinue,
+  onSelect,
+  onContinue,
   onBack,
 }: {
   selectedType: CampaignType | null;
-  onSelectAndContinue: (type: CampaignType) => void;
+  onSelect: (type: CampaignType) => void;
+  onContinue: () => void;
   onBack: () => void;
 }) {
-  return (
-    <div className="space-y-7">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
-        {CAMPAIGN_TYPES.map(type => (
-          <TypeCard
-            key={type.slug}
-            type={type}
-            selected={selectedType?.slug === type.slug}
-            onSelect={() => onSelectAndContinue(type)}
-          />
-        ))}
-      </div>
+  const [expandedSlug, setExpandedSlug] = useState(
+    () => CAMPAIGN_TYPES.find(type => type.recommended)?.slug ?? CAMPAIGN_TYPES[0].slug,
+  );
 
-      <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+  return (
+    <div className="space-y-3" role="region" aria-label="Campaign types">
+      {CAMPAIGN_TYPES.map(type => {
+        const expanded = expandedSlug === type.slug;
+        const selected = selectedType?.slug === type.slug;
+        const accent = TYPE_ACCENT[type.slug] ?? NEON;
+        const rgb = ACCENT_RGB[accent] ?? "183,255,24";
+        const panelId = `campaign-panel-${type.slug}`;
+        const rowId = `campaign-row-${type.slug}`;
+
+        return (
+          <section
+            key={type.slug}
+            className="gf-accordion-motion overflow-hidden rounded-2xl transition-[border-color,box-shadow,background-color] duration-200"
+            style={{
+              border: `1.5px solid ${selected ? NEON : expanded ? `rgba(${rgb},0.34)` : "rgba(255,255,255,0.12)"}`,
+              background: selected ? "#111d17" : "#111923",
+              boxShadow: selected ? "0 0 20px rgba(183,255,24,0.08)" : "none",
+            }}>
+            <button
+              id={rowId}
+              type="button"
+              aria-expanded={expanded}
+              aria-controls={panelId}
+              onClick={() => setExpandedSlug(expanded ? null : type.slug)}
+              className="w-full min-h-[88px] px-4 sm:px-5 py-4 flex items-center gap-3 sm:gap-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B7FF18]"
+              style={{ background: expanded ? "#17212b" : "transparent" }}>
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: `rgba(${rgb},0.12)`, color: accent }}>
+                <type.icon size={22} aria-hidden="true" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {selected && <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: NEON }} aria-label="Selected" />}
+                  <h3 className="text-sm sm:text-base font-black text-white truncate">{type.shortName}</h3>
+                  {type.recommended && (
+                    <span className="text-[9px] font-black px-2 py-0.5 rounded-full shrink-0"
+                      style={{ background: NEON, color: "#070b10" }}>
+                      Recommended
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] sm:text-xs text-white/55 mt-1 truncate">{type.tagline}</p>
+              </div>
+
+              <div className="hidden sm:flex items-center gap-5 shrink-0 text-[10px] text-white/50">
+                <span><strong className="block text-xs text-white/85">{type.duration}d</strong>Duration</span>
+                <span><strong className="block text-xs text-white/85">{type.capacity}</strong>Creators</span>
+                <span><strong className="block text-xs" style={{ color: NEON }}>{type.xpReward.toLocaleString()}</strong>XP</span>
+              </div>
+
+              <ChevronDown
+                className="w-5 h-5 shrink-0 text-white/45 transition-transform duration-200"
+                style={{ transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
+                aria-hidden="true" />
+            </button>
+
+            <div
+              id={panelId}
+              role="region"
+              aria-labelledby={rowId}
+              aria-hidden={!expanded}
+              className="grid transition-[grid-template-rows] duration-200 ease-out"
+              style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}>
+              <div className="min-h-0 overflow-hidden">
+                <div
+                  className="relative min-h-[420px] px-4 sm:px-7 py-6 sm:py-7 flex items-stretch"
+                  style={{
+                    backgroundImage: `linear-gradient(90deg, rgba(7,11,16,0.92) 0%, rgba(7,11,16,0.86) 42%, rgba(7,11,16,0.66) 68%, rgba(7,11,16,0.58) 100%), url("${CAMPAIGN_ARTWORK[type.slug]}")`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }}>
+                  <div className="relative z-10 w-full md:max-w-[68%] flex flex-col gap-4">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.18em] font-bold mb-2" style={{ color: accent }}>Campaign overview</p>
+                      <p className="text-sm leading-relaxed text-white/78 max-w-2xl">{type.description}</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { label: "Duration", value: `${type.duration} days`, Icon: Clock },
+                        { label: "Creator slots", value: `${type.capacity}`, Icon: Users },
+                        { label: "Keys required", value: campaignKeySummary(type), Icon: KeyRound },
+                        { label: "XP potential", value: `${type.xpReward.toLocaleString()} XP`, Icon: Zap },
+                      ].map(({ label, value, Icon }) => (
+                        <div key={label} className="rounded-lg px-3 py-2.5"
+                          style={{ background: "rgba(11,20,29,0.82)", border: "1px solid rgba(255,255,255,0.10)" }}>
+                          <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-wider font-bold text-white/50">
+                            <Icon size={11} aria-hidden="true" /> {label}
+                          </div>
+                          <div className="text-xs font-black text-white mt-1 leading-snug">{value}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.18em] font-bold mb-2" style={{ color: accent }}>Creator objectives</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {type.pills.map(({ ct, qty }) => {
+                          const PIcon = REQ_ICON[ct] ?? Target;
+                          return (
+                            <span key={ct} className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full"
+                              style={{ background: `rgba(${rgb},0.12)`, color: "#f5f7fa", border: `1px solid rgba(${rgb},0.30)` }}>
+                              <PIcon size={10} aria-hidden="true" /> {reqPillLabel(ct, qty)}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-[10px] uppercase tracking-[0.18em] font-bold mb-2" style={{ color: accent }}>Best for</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {type.bestForList.map(label => (
+                          <span key={label} className="text-[10px] px-2.5 py-1 rounded-full text-white/80"
+                            style={{ background: "rgba(11,20,29,0.82)", border: "1px solid rgba(255,255,255,0.12)" }}>
+                            {label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-auto pt-1">
+                      <button
+                        type="button"
+                        tabIndex={expanded ? 0 : -1}
+                        aria-pressed={selected}
+                        onClick={() => onSelect(type)}
+                        className="w-full sm:w-auto min-w-[190px] px-5 py-3 rounded-xl text-sm font-black transition-all hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b141d]"
+                        style={{
+                          background: selected ? "#263a25" : NEON,
+                          color: selected ? NEON : "#070b10",
+                          border: selected ? `1px solid ${NEON}` : "1px solid transparent",
+                        }}>
+                        {selected ? "Selected" : `Select ${type.shortName}`}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        );
+      })}
+
+      <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-4">
         <button
           type="button"
           onClick={onBack}
-          className="w-full sm:w-auto px-5 py-3 rounded-xl text-sm font-bold transition-colors hover:text-white"
-          style={{ color: "rgba(255,255,255,0.58)", border: "1px solid rgba(255,255,255,0.14)", background: "#111923" }}>
+          className="w-full sm:w-auto px-5 py-3 rounded-xl text-sm font-bold transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
+          style={{ color: "rgba(255,255,255,0.62)", border: "1px solid rgba(255,255,255,0.14)", background: "#111923" }}>
           Back
         </button>
         <button
           type="button"
-          onClick={() => selectedType && onSelectAndContinue(selectedType)}
+          onClick={onContinue}
           disabled={!selectedType}
-          className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-35"
-          style={{ background: NEON, color: "#070b10" }}>
-          Continue with {selectedType?.shortName ?? "a campaign"} <ArrowRight className="w-4 h-4" />
+          className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
+          style={{
+            background: selectedType ? NEON : "#263039",
+            color: selectedType ? "#070b10" : "rgba(255,255,255,0.78)",
+            border: selectedType ? "1px solid transparent" : "1px solid rgba(255,255,255,0.16)",
+          }}>
+          {selectedType ? `Continue with ${selectedType.shortName} →` : "Select a campaign to continue"}
         </button>
       </div>
     </div>
@@ -2005,8 +2167,8 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
               {/* Inline toggle pill */}
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <div className="text-[11px] font-bold text-white/65">Automatic selection</div>
-                  <div className="text-[10px] text-white/40 mt-0.5">Automatically select the recommended campaign.</div>
+                  <div className="text-[11px] font-bold text-white/65">Help me choose</div>
+                  <div className="text-[10px] text-white/40 mt-0.5">Automatically select the campaign that best matches your goals.</div>
                 </div>
                 <button
                   type="button"
@@ -2022,12 +2184,12 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
                   }}
                   className="shrink-0 flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
                   style={{
-                    background: mode === "auto" ? "rgba(167,139,250,0.12)" : "#111923",
-                    border: `1px solid ${mode === "auto" ? "rgba(167,139,250,0.42)" : "rgba(255,255,255,0.14)"}`,
+                    background: mode === "auto" ? "rgba(183,255,24,0.12)" : "#111923",
+                    border: `1px solid ${mode === "auto" ? "rgba(183,255,24,0.42)" : "rgba(255,255,255,0.14)"}`,
                   }}>
                   <div className="relative shrink-0"
                     style={{ width: "34px", height: "18px", borderRadius: "9999px",
-                      background: mode === "auto" ? "#a78bfa" : "rgba(255,255,255,0.15)",
+                      background: mode === "auto" ? NEON : "rgba(255,255,255,0.15)",
                       transition: "background 0.25s ease" }}>
                     <div style={{
                       position: "absolute", top: "2px",
@@ -2039,54 +2201,27 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
                     }} />
                   </div>
                   <span className="text-[12px] font-bold whitespace-nowrap"
-                    style={{ color: mode === "auto" ? "#a78bfa" : "rgba(255,255,255,0.60)" }}>
+                    style={{ color: mode === "auto" ? NEON : "rgba(255,255,255,0.60)" }}>
                     Automatic
                   </span>
                 </button>
               </div>
             </div>
 
-            {/* Mode content — keyed so React remounts it on toggle, triggering animation */}
+            {/* Accordion content — keyed so Automatic can open Quick Creator by default */}
             <div key={mode} className="gf-fade-up">
-              {mode === "auto" ? (
-                <>
-                  <div className="flex items-center gap-3 rounded-xl px-4 py-3 mb-5"
-                    style={{ background: "#172317", border: `1px solid rgba(183,255,24,0.28)` }}>
-                    <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: NEON }} />
-                    <div>
-                      <div className="text-xs font-black text-white">Quick Creator selected</div>
-                      <div className="text-[11px] text-white/50 mt-0.5">Recommended · Best for getting started</div>
-                    </div>
-                  </div>
-                  <AutoCampaignInfo />
-                  <div className="flex flex-col-reverse sm:flex-row gap-3 mt-6">
-                    <button
-                      type="button"
-                      onClick={onComplete}
-                      className="sm:w-auto px-5 py-3 rounded-xl text-sm font-bold text-white/60 hover:text-white transition-colors"
-                      style={{ background: "#111923", border: "1px solid rgba(255,255,255,0.14)" }}>
-                      Back
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setAutoStep(2)}
-                      className="flex-1 py-4 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all hover:brightness-110"
-                      style={{ background: "#a78bfa", color: "#070b10", boxShadow: "0 0 24px 0 rgba(167,139,250,0.16)" }}>
-                      Continue with Automatic Campaigns <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <TypeCardCarousel
-                  selectedType={selectedType}
-                  onBack={onComplete}
-                  onSelectAndContinue={(t) => {
-                    setSelectedType(t);
-                    setConfirmed(false);
-                    setCurrentStep(2);
-                  }}
-                />
-              )}
+              <CampaignAccordion
+                selectedType={selectedType}
+                onBack={onComplete}
+                onSelect={(t) => {
+                  setSelectedType(t);
+                  setConfirmed(false);
+                }}
+                onContinue={() => {
+                  if (mode === "auto") setAutoStep(2);
+                  else setCurrentStep(2);
+                }}
+              />
             </div>
           </div>
         )}
