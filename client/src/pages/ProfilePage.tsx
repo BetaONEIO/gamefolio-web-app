@@ -130,6 +130,18 @@ interface OwnedNft {
   listingActive?: boolean;
 }
 
+interface DeveloperGameShowcase {
+  id: number;
+  catalogGameId: number | null;
+  gameName: string | null;
+  headerImageUrl: string | null;
+  capsuleImageUrl: string | null;
+  isPrimary: boolean;
+  releaseStatus: string | null;
+  catalogGameName: string | null;
+  catalogImageUrl: string | null;
+}
+
 interface OwnedNftsData {
   nfts: OwnedNft[];
   count: number;
@@ -556,6 +568,10 @@ const ProfilePage = () => {
   // Determine if content should be hidden due to privacy settings
   const isPrivateProfile = profile?.isPrivate && !isOwnProfile;
   const canViewContent = !isPrivateProfile || isFollowing;
+  const isIndieDeveloperProfile = !!profile?.userType
+    ?.split(",")
+    .map((type) => type.trim())
+    .includes("indie_developer");
 
   // Fetch user clips (only if allowed to view content). While any clip/reel
   // is still background-processing, poll so the "processing" badge clears
@@ -576,6 +592,13 @@ const ProfilePage = () => {
     queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!username && canViewContent,
   });
+
+  const { data: developerGamesData, isLoading: isLoadingDeveloperGames } = useQuery<{ games: DeveloperGameShowcase[] }>({
+    queryKey: [`/api/games/indie/${username}/list`],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!username && isIndieDeveloperProfile && canViewContent,
+  });
+  const developerGames = developerGamesData?.games ?? [];
 
   // Fetch all games for screenshot lightbox
   const { data: games = [] } = useQuery<Game[]>({
@@ -5567,6 +5590,94 @@ const ProfilePage = () => {
                   )}
                 </div>
               </div>
+            ) : isIndieDeveloperProfile && isLoadingDeveloperGames ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="aspect-video w-full rounded-xl" />
+                ))}
+              </div>
+            ) : isIndieDeveloperProfile ? (
+              developerGames.length > 0 ? (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-lg font-semibold">Games by {profile.displayName || profile.username}</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Games published and managed by this developer.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {developerGames.map((game) => {
+                      const gameName = game.catalogGameName || game.gameName || "Untitled game";
+                      const gameSlug = gameName.toLowerCase().replace(/[^a-z0-9]/g, "");
+                      const imageUrl = game.catalogImageUrl || game.capsuleImageUrl || game.headerImageUrl || "/placeholder-game.png";
+                      return (
+                        <Link
+                          key={game.id}
+                          href={`/games/${gameSlug}`}
+                          className="group overflow-hidden rounded-xl border transition-transform hover:-translate-y-1"
+                          style={{ backgroundColor: cardColor, borderColor: `${accentColor}35` }}
+                        >
+                          <div className="relative aspect-video overflow-hidden bg-muted">
+                            <img
+                              src={imageUrl}
+                              alt={gameName}
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              onError={(event) => {
+                                event.currentTarget.src = "/placeholder-game.png";
+                              }}
+                            />
+                            {game.isPrimary && (
+                              <Badge className="absolute left-3 top-3 border-0 bg-black/75 text-white">
+                                Featured
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="p-4">
+                            <h3 className="font-semibold">{gameName}</h3>
+                            {game.releaseStatus && (
+                              <p className="mt-1 text-xs capitalize text-muted-foreground">
+                                {game.releaseStatus.replace(/_/g, " ")}
+                              </p>
+                            )}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                  {isOwnProfile && (
+                    <div className="flex justify-center pt-2">
+                      <Button
+                        variant="outline"
+                        style={{ borderColor: accentColor, color: accentColor }}
+                        onClick={() => setLocation("/game-dashboard")}
+                      >
+                        <Gamepad2 className="mr-2 h-4 w-4" />
+                        Manage Games
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <Gamepad2 className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
+                  <h3 className="text-lg font-medium mb-2">No games published yet</h3>
+                  <p className="text-muted-foreground">
+                    {isOwnProfile
+                      ? "Add your first game from the Game Developer Dashboard."
+                      : `${profile.displayName || profile.username} hasn't added any games yet.`}
+                  </p>
+                  {isOwnProfile && (
+                    <Button
+                      className="mt-5"
+                      variant="outline"
+                      style={{ borderColor: accentColor, color: accentColor }}
+                      onClick={() => setLocation("/game-dashboard")}
+                    >
+                      Open Game Developer Dashboard
+                    </Button>
+                  )}
+                </div>
+              )
             ) : isLoadingFavorites ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {[1, 2, 3, 4, 5].map((i) => (

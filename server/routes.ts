@@ -13796,15 +13796,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const result = await storage.getIndieGameProfilesByUsername(req.params.username);
       if (!result) return res.status(404).json({ error: "Indie game profile not found" });
-      res.json({
-        games: result.profiles.map(p => ({
+      const games = await Promise.all(result.profiles.map(async (p) => {
+        const catalogGame = p.catalogGameId ? await storage.getGame(p.catalogGameId) : null;
+        return {
           id: p.id,
           catalogGameId: p.catalogGameId,
           gameName: p.gameName,
           headerImageUrl: p.headerImageUrl,
           capsuleImageUrl: p.capsuleImageUrl,
           isPrimary: p.isPrimary,
-        })),
+          releaseStatus: p.releaseStatus,
+          catalogGameName: catalogGame?.name ?? null,
+          catalogImageUrl: catalogGame?.imageUrl ?? null,
+        };
+      }));
+      res.json({
+        games,
       });
     } catch (err) {
       console.error("GET /api/games/indie/:username/list error:", err);
