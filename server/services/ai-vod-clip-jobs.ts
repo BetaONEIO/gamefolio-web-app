@@ -16,19 +16,20 @@ import { LeaderboardService, POINT_VALUES } from '../leaderboard-service';
 // transcription + Claude calls), so limits are tiered free vs Pro rather
 // than a single flat cap — same shape as the upload-size/duration limits in
 // database-storage.ts#getUploadLimits.
-const PRO_MAX_VOD_DURATION_SECONDS = parseInt(process.env.AI_VOD_MAX_VOD_DURATION_SECONDS || '2700', 10); // 45 min
-const FREE_MAX_VOD_DURATION_SECONDS = parseInt(process.env.AI_VOD_FREE_MAX_VOD_DURATION_SECONDS || '1200', 10); // 20 min
+const PRO_MAX_VOD_DURATION_SECONDS = parseInt(process.env.AI_VOD_MAX_VOD_DURATION_SECONDS || '21600', 10); // 6 hours
+const FREE_MAX_VOD_DURATION_SECONDS = parseInt(process.env.AI_VOD_FREE_MAX_VOD_DURATION_SECONDS || '14400', 10); // 4 hours
 const PRO_DAILY_JOB_LIMIT = parseInt(process.env.AI_VOD_PRO_DAILY_JOBS || '3', 10);
 const FREE_DAILY_JOB_LIMIT = parseInt(process.env.AI_VOD_FREE_DAILY_JOBS || '1', 10);
 const CANDIDATE_TTL_DAYS = parseInt(process.env.AI_VOD_CANDIDATE_TTL_DAYS || '7', 10);
 const TEMP_DIR = path.join(process.cwd(), 'temp', 'ai-vod-clips');
 
-// Admins get Pro-tier limits too — same convention as getUploadLimits().
-function isProTier(user: Pick<User, 'isPro' | 'role'>): boolean {
-  return !!user.isPro || user.role === 'admin';
+// While the feature is private, every eligible tester gets the eventual
+// Pro-tier allowance. Public access remains restricted at the route layer.
+function isProTier(user: Pick<User, 'isPro' | 'role' | 'isAmbassador'>): boolean {
+  return !!user.isPro || user.role === 'admin' || !!user.isAmbassador;
 }
 
-export function getVodClipLimits(user: Pick<User, 'isPro' | 'role'>) {
+export function getVodClipLimits(user: Pick<User, 'isPro' | 'role' | 'isAmbassador'>) {
   const isPro = isProTier(user);
   return {
     isPro,

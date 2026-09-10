@@ -159,7 +159,7 @@ export default function AiVodClipsPage() {
         ) : (
           <VodPickerList
             vods={vodData?.vods || []}
-            maxDurationSeconds={vodData?.maxDurationSeconds || 2700}
+            maxDurationSeconds={vodData?.maxDurationSeconds || 21600}
             onSelect={handleSelectVod}
             disabled={createJob.isPending}
           />
