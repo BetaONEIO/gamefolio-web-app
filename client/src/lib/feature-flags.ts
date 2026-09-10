@@ -3,7 +3,7 @@
 // "Bounties" entry point at once (Header dropdown, indie dashboard tabs,
 // studio profile tabs, home page CTAs, etc).
 export const CAMPAIGNS_ENABLED = true;
-export const BOUNTIES_ENABLED = true;
+export const BOUNTIES_ENABLED = false;
 export const GAME_KEYS_ENABLED = true;
 export {
   GAME_DEVELOPER_PRO_PURCHASES_ENABLED,
