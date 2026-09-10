@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import type { AiClipJob, AiClipCandidate } from "@shared/schema";
 
 export interface TwitchVodOption {
@@ -18,6 +18,7 @@ const TERMINAL_STATUSES = new Set(["completed", "failed", "cancelled"]);
 export function useAiClipsStatus(enabled = true) {
   return useQuery<{ enabled: boolean; disabledMessage: string | null }>({
     queryKey: ["/api/ai-vod-clips/status"],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled,
   });
 }
@@ -33,6 +34,7 @@ export interface TwitchVodsResponse {
 export function useTwitchVods() {
   return useQuery<TwitchVodsResponse>({
     queryKey: ["/api/ai-vod-clips/vods"],
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 }
 
@@ -52,6 +54,7 @@ export function useCreateAiClipJob() {
 export function useAiClipJob(jobId: number | null) {
   return useQuery<{ job: AiClipJob; candidates: AiClipCandidate[] }>({
     queryKey: [`/api/ai-vod-clips/jobs/${jobId}`],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: jobId != null,
     refetchInterval: (query) => {
       const status = query.state.data?.job?.status;
