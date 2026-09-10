@@ -18,7 +18,8 @@
     "mobile:android": "cap open android",
     "cap:sync": "cap sync",
     "test:campaign-artwork": "node --import tsx --test tests/campaign-artwork.test.ts",
-    "test:pro-entitlement-reconciliation": "node --import tsx --test tests/pro-entitlement-reconciliation.test.ts"
+    "test:pro-entitlement-reconciliation": "node --import tsx --test tests/pro-entitlement-reconciliation.test.ts",
+    "test:ai-vod-clip-policy": "node --import tsx --test tests/ai-vod-clip-policy.test.ts"
   },
   "dependencies": {
     "0xsequence": "^2.3.39",

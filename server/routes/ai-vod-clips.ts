@@ -5,7 +5,8 @@ import { aiClipJobs, aiClipCandidates } from '@shared/schema';
 import { storage } from '../storage';
 import { hybridFullAccess } from '../middleware/hybrid-auth';
 import { twitchApi } from '../services/twitch-api';
-import { createJob, retryJob, publishCandidate, discardCandidate, getVodClipLimits, getAiClipDailyUsage, AiVodClipError } from '../services/ai-vod-clip-jobs';
+import { createJob, retryJob, publishCandidate, discardCandidate, getAiClipDailyUsage, AiVodClipError } from '../services/ai-vod-clip-jobs';
+import { canAccessPrivateAiVodClipper, getVodClipLimits } from '../services/ai-vod-clip-policy';
 
 const router = express.Router();
 
@@ -15,7 +16,7 @@ function requireAdminOrAmbassador(
   next: express.NextFunction,
 ) {
   const user = req.user as { role?: string; isAmbassador?: boolean } | undefined;
-  if (user?.role !== 'admin' && !user?.isAmbassador) {
+  if (!canAccessPrivateAiVodClipper(user)) {
     return res.status(403).json({ error: 'AI clipping is available only to Admins and Ambassadors' });
   }
   next();
