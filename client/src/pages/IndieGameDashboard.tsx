@@ -38,6 +38,14 @@ const BORDER = "rgba(255,255,255,0.08)";
 const cardStyle = { background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px" };
 const neonStyle = { background: "rgba(183,255,24,0.1)", border: `1px solid rgba(183,255,24,0.25)`, color: NEON };
 
+function toPublicGameSlug(name: string | null | undefined) {
+  return (name || "untitled-game")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "untitled-game";
+}
+
 const TABS = [
   { id: "profile",       label: "Profile Showcase", icon: Crown },
   { id: "overview",      label: "Overview",      icon: Gamepad2 },
@@ -577,9 +585,9 @@ export default function IndieGameDashboard() {
       {/* Header */}
       <div className="border-b border-white/8" style={{ background: "rgba(11,19,25,0.95)" }}>
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-4">
-          <Link href={`/${user.username}`}
+          <Link href={`/indie-games/${toPublicGameSlug(form.gameName)}`}
             className="flex items-center gap-1.5 text-white/40 hover:text-white text-sm transition-colors">
-            <ArrowLeft size={15} /> Gamefolio Profile
+            <ArrowLeft size={15} /> Public Game Page
           </Link>
           <ChevronRight size={14} className="text-white/20" />
           <div className="flex items-center gap-2">
@@ -671,7 +679,7 @@ export default function IndieGameDashboard() {
             </div>
           )}
           <div className="ml-auto flex items-center gap-2">
-            <a href={`/${user.username}`} target="_blank" rel="noopener noreferrer"
+            <a href={`/indie-games/${toPublicGameSlug(form.gameName)}`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-xs font-semibold text-white/40 hover:text-white transition-colors">
               <ExternalLink size={13} /> View Public Page
             </a>
