@@ -32,7 +32,7 @@ import { OnboardingGuard } from "@/components/auth/onboarding-guard";
 import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { PageTransition } from "@/components/ui/page-transition";
-import { BannerSettings } from "@shared/schema";
+import { BannerSettings, UserWithStats } from "@shared/schema";
 import { toGameSlug } from "@/lib/game-routes";
 import { WebPlatformRedirect } from "@/components/WebPlatformRedirect";
 
@@ -176,6 +176,7 @@ const TwoFactorVerifyPage = lazyWithRecovery(() => import("./pages/TwoFactorVeri
 const MintNFTPage = lazyWithRecovery(() => import("./pages/MintNFTPage"));
 const NFTDetailsPage = lazyWithRecovery(() => import("./pages/NFTDetailsPage"));
 const IndieGamePage = lazyWithRecovery(() => import("./pages/indie-game-page"));
+const IndieGameProfileLayout = lazyWithRecovery(() => import("./pages/profile-layouts/IndieGameProfileLayout"));
 const IndieGameProfilePage = lazyWithRecovery(() => import("./pages/IndieGameProfilePage"));
 const IndieGameDashboard = lazyWithRecovery(() => import("./pages/IndieGameDashboard"));
 const BountiesPage = lazyWithRecovery(() => import("./pages/BountiesPage"));
@@ -216,8 +217,24 @@ function CanonicalGamePage() {
     enabled: !!game?.id,
     retry: false,
   });
+  const developerUsername = indieProfile?.user?.username;
+  const { data: developerProfile, isLoading: developerProfileLoading } = useQuery<UserWithStats>({
+    queryKey: [`/api/users/${developerUsername}`],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!developerUsername,
+    retry: false,
+  });
 
-  if (gameLoading || (game && indieLoading)) return <RouteLoader />;
+  if (gameLoading || (game && (indieLoading || developerProfileLoading))) return <RouteLoader />;
+  if (indieProfile && developerProfile) {
+    return (
+      <IndieGameProfileLayout
+        profile={developerProfile}
+        isOwnProfile={false}
+        gameId={game?.id}
+      />
+    );
+  }
   return indieProfile ? <IndieGamePage /> : <GamePage />;
 }
 

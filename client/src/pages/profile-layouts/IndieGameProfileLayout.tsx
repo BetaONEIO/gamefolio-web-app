@@ -72,6 +72,7 @@ type PublicGameScreenshot = {
 interface Props {
   profile: UserWithStats;
   isOwnProfile: boolean;
+  gameId?: number;
 }
 
 const accent = '#B7FF18';
@@ -276,12 +277,13 @@ function PublicMediaSection({
   );
 }
 
-export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props) {
+export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }: Props) {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>('OVERVIEW');
   const [selectedGameId, setSelectedGameId] = useState<number | null>(() => {
+    if (typeof gameId === 'number' && Number.isFinite(gameId)) return gameId;
     const rawGameId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('gameId') : null;
     const parsedGameId = rawGameId ? Number(rawGameId) : NaN;
     return Number.isFinite(parsedGameId) ? parsedGameId : null;
