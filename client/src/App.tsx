@@ -176,7 +176,6 @@ const TwoFactorVerifyPage = lazyWithRecovery(() => import("./pages/TwoFactorVeri
 const MintNFTPage = lazyWithRecovery(() => import("./pages/MintNFTPage"));
 const NFTDetailsPage = lazyWithRecovery(() => import("./pages/NFTDetailsPage"));
 const IndieGamePage = lazyWithRecovery(() => import("./pages/indie-game-page"));
-const DesignedIndieGamePage = lazyWithRecovery(() => import("./pages/indie-game-page-designed"));
 const IndieGameProfilePage = lazyWithRecovery(() => import("./pages/IndieGameProfilePage"));
 const IndieGameDashboard = lazyWithRecovery(() => import("./pages/IndieGameDashboard"));
 const BountiesPage = lazyWithRecovery(() => import("./pages/BountiesPage"));
@@ -219,7 +218,7 @@ function CanonicalGamePage() {
   });
 
   if (gameLoading || (game && indieLoading)) return <RouteLoader />;
-  return indieProfile ? <DesignedIndieGamePage /> : <GamePage />;
+  return indieProfile ? <IndieGamePage /> : <GamePage />;
 }
 
 function ManageGameRedirect() {
