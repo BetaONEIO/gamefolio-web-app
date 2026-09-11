@@ -231,7 +231,7 @@ function CanonicalGamePage() {
       <IndieGameProfileLayout
         profile={developerProfile}
         isOwnProfile={false}
-        gameId={game?.id}
+        gameId={indieProfile.profile.id}
       />
     );
   }
