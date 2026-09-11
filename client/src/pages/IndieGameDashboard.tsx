@@ -39,6 +39,7 @@ const cardStyle = { background: CARD, border: `1px solid ${BORDER}`, borderRadiu
 const neonStyle = { background: "rgba(183,255,24,0.1)", border: `1px solid rgba(183,255,24,0.25)`, color: NEON };
 
 const TABS = [
+  { id: "profile",       label: "Profile Showcase", icon: Crown },
   { id: "overview",      label: "Overview",      icon: Gamepad2 },
   { id: "game-info",     label: "Game Info",      icon: Info },
   { id: "studio",        label: "Studio",         icon: Users },
@@ -576,9 +577,9 @@ export default function IndieGameDashboard() {
       {/* Header */}
       <div className="border-b border-white/8" style={{ background: "rgba(11,19,25,0.95)" }}>
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-4">
-          <Link href={`/studio/${user.username}`}
+          <Link href={`/${user.username}`}
             className="flex items-center gap-1.5 text-white/40 hover:text-white text-sm transition-colors">
-            <ArrowLeft size={15} /> Studio Profile
+            <ArrowLeft size={15} /> Gamefolio Profile
           </Link>
           <ChevronRight size={14} className="text-white/20" />
           <div className="flex items-center gap-2">
@@ -670,7 +671,7 @@ export default function IndieGameDashboard() {
             </div>
           )}
           <div className="ml-auto flex items-center gap-2">
-            <a href={`/studio/${user.username}`} target="_blank" rel="noopener noreferrer"
+            <a href={`/${user.username}`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-xs font-semibold text-white/40 hover:text-white transition-colors">
               <ExternalLink size={13} /> View Public Page
             </a>
@@ -717,6 +718,87 @@ export default function IndieGameDashboard() {
         </div>
 
         {/* ── OVERVIEW ── */}
+        {activeTab === "profile" && (
+          <div className="space-y-4">
+            <SectionCard title="Your Gamefolio Showcase" icon={Crown}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-white/75">
+                    Choose the game to feature on your Gamefolio profile and manage the games players see there.
+                  </p>
+                  <p className="mt-1 text-xs text-white/40">
+                    A game’s name, artwork, status, and short description are taken from its Game Info, Descriptions, and Media sections.
+                  </p>
+                </div>
+                <Link
+                  href={`/${user.username}`}
+                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-white/15 px-3 py-2 text-xs font-semibold text-white/70 transition-colors hover:border-white/30 hover:text-white"
+                >
+                  <ExternalLink size={13} /> View Profile
+                </Link>
+              </div>
+            </SectionCard>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {games.map((game) => {
+                const isSelected = game.id === activeGameId;
+                return (
+                  <div key={game.id} style={cardStyle} className="overflow-hidden">
+                    <div className="relative h-32 bg-white/5">
+                      {game.headerImageUrl || game.capsuleImageUrl ? (
+                        <img
+                          src={game.headerImageUrl || game.capsuleImageUrl || ""}
+                          alt=""
+                          className="h-full w-full object-cover opacity-70"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-white/20"><Gamepad2 size={32} /></div>
+                      )}
+                      {game.isPrimary && (
+                        <Badge className="absolute left-3 top-3 border-0 bg-[#b7ff18] text-black">
+                          <Crown size={12} className="mr-1" /> Featured on profile
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="space-y-3 p-4">
+                      <div>
+                        <h3 className="font-bold text-white">{game.gameName?.trim() || "Untitled game"}</h3>
+                        <p className="mt-1 text-xs capitalize text-white/45">
+                          {game.releaseStatus?.replace(/_/g, " ") || "Coming soon"}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {!game.isPrimary && (
+                          <Button
+                            size="sm"
+                            onClick={() => makePrimary(game.id)}
+                            disabled={busy}
+                            style={{ background: NEON, color: "#000" }}
+                            className="font-bold"
+                          >
+                            <Crown size={13} className="mr-1.5" /> Feature this game
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (!isSelected) switchGame(game.id);
+                            setActiveTab("game-info");
+                          }}
+                          className="border-white/15 text-white/70 hover:bg-white/10 hover:text-white"
+                        >
+                          Edit game info
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {activeTab === "overview" && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

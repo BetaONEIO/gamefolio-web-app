@@ -13806,6 +13806,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           capsuleImageUrl: p.capsuleImageUrl,
           isPrimary: p.isPrimary,
           releaseStatus: p.releaseStatus,
+          shortDescription: p.shortDescription,
           catalogGameName: catalogGame?.name ?? null,
           catalogImageUrl: catalogGame?.imageUrl ?? null,
         };

@@ -138,6 +138,7 @@ interface DeveloperGameShowcase {
   capsuleImageUrl: string | null;
   isPrimary: boolean;
   releaseStatus: string | null;
+  shortDescription: string | null;
   catalogGameName: string | null;
   catalogImageUrl: string | null;
 }
@@ -579,7 +580,7 @@ const ProfilePage = () => {
   const { data: clips, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/users/${username}/clips`],
     queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!username && canViewContent,
+    enabled: !!username && !!profile && canViewContent && !isIndieDeveloperProfile,
     refetchInterval: (query) => {
       const data = query.state.data as ClipWithUser[] | undefined;
       return data?.some((c) => c.status === "processing") ? 5000 : false;
@@ -590,13 +591,13 @@ const ProfilePage = () => {
   const { data: favoriteGames, isLoading: isLoadingFavorites } = useQuery<Game[]>({
     queryKey: [`/api/users/${username}/games/favorites`],
     queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!username && canViewContent,
+    enabled: !!username && !!profile && canViewContent && !isIndieDeveloperProfile,
   });
 
   const { data: developerGamesData, isLoading: isLoadingDeveloperGames } = useQuery<{ games: DeveloperGameShowcase[] }>({
     queryKey: [`/api/games/indie/${username}/list`],
     queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!username && isIndieDeveloperProfile && canViewContent,
+    enabled: !!username && !!profile && isIndieDeveloperProfile && canViewContent,
   });
   const developerGames = developerGamesData?.games ?? [];
 
@@ -611,7 +612,7 @@ const ProfilePage = () => {
   const { data: screenshots, isLoading: isLoadingScreenshots } = useQuery<Screenshot[]>({
     queryKey: [`/api/users/${profile?.id}/screenshots`],
     queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!profile?.id && canViewContent,
+    enabled: !!profile?.id && canViewContent && !isIndieDeveloperProfile,
   });
 
   // Fetch user's selected name tag
@@ -775,6 +776,12 @@ const ProfilePage = () => {
     return "clips";
   };
   const [activeTab, setActiveTab] = useState(getInitialTab);
+
+  useEffect(() => {
+    if (isIndieDeveloperProfile && ["clips", "reels", "screenshots"].includes(activeTab)) {
+      setActiveTab("favorites");
+    }
+  }, [isIndieDeveloperProfile, activeTab]);
 
   // Sync tab state with URL for browser back/forward navigation
   const isInitialMount = useRef(true);
@@ -4961,7 +4968,7 @@ const ProfilePage = () => {
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#28c840', border: '0.5px solid rgba(0,0,0,0.15)', flexShrink: 0 }} />
               </div>
             )}
-            <TabsTrigger 
+            {!isIndieDeveloperProfile && <TabsTrigger
               ref={clipsTabRef}
               value="clips" 
               className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
@@ -4974,9 +4981,9 @@ const ProfilePage = () => {
                   <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'clips' ? '#1a1a1a' : '#ef4444' } : undefined}>Clips</span>
                 </span>
               )}
-            </TabsTrigger>
+            </TabsTrigger>}
 
-            <TabsTrigger 
+            {!isIndieDeveloperProfile && <TabsTrigger
               ref={reelsTabRef}
               value="reels" 
               className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
@@ -4989,7 +4996,7 @@ const ProfilePage = () => {
                   <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'reels' ? '#1a1a1a' : '#3b82f6' } : undefined}>Reels</span>
                 </span>
               )}
-            </TabsTrigger>
+            </TabsTrigger>}
 
             <TabsTrigger 
               ref={favoritesTabRef}
@@ -5006,7 +5013,7 @@ const ProfilePage = () => {
               )}
             </TabsTrigger>
 
-            <TabsTrigger 
+            {!isIndieDeveloperProfile && <TabsTrigger
               ref={screenshotsTabRef}
               value="screenshots" 
               className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
@@ -5042,7 +5049,7 @@ const ProfilePage = () => {
                   />
                 </span>
               )}
-            </TabsTrigger>
+            </TabsTrigger>}
 
             {profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0 && (
               <TabsTrigger
@@ -5075,7 +5082,7 @@ const ProfilePage = () => {
           })()}
 
           {/* Clips Tab */}
-          <TabsContent value="clips" className="pt-4 px-1 md:px-4 pb-24">
+          {!isIndieDeveloperProfile && <TabsContent value="clips" className="pt-4 px-1 md:px-4 pb-24">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -5222,10 +5229,10 @@ const ProfilePage = () => {
                 </Button>
               </div>
             )}
-          </TabsContent>
+          </TabsContent>}
 
           {/* Reels Tab */}
-          <TabsContent value="reels" className="pt-4 px-1 md:px-4">
+          {!isIndieDeveloperProfile && <TabsContent value="reels" className="pt-4 px-1 md:px-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -5373,10 +5380,10 @@ const ProfilePage = () => {
                 </Button>
               </div>
             )}
-          </TabsContent>
+          </TabsContent>}
 
           {/* Screenshots Tab */}
-          <TabsContent value="screenshots" className="pt-4 px-1 md:px-4">
+          {!isIndieDeveloperProfile && <TabsContent value="screenshots" className="pt-4 px-1 md:px-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -5531,7 +5538,7 @@ const ProfilePage = () => {
                 </Button>
               </div>
             )}
-          </TabsContent>
+          </TabsContent>}
 
           {/* Favorite Games Tab */}
           <TabsContent value="favorites" className="pt-6 px-1 md:px-4 pb-24">
@@ -5610,10 +5617,9 @@ const ProfilePage = () => {
                       const gameName = game.catalogGameName || game.gameName || "Untitled game";
                       const gameSlug = gameName.toLowerCase().replace(/[^a-z0-9]/g, "");
                       const imageUrl = game.catalogImageUrl || game.capsuleImageUrl || game.headerImageUrl || "/placeholder-game.png";
-                      return (
-                        <Link
+                      const card = (
+                        <div
                           key={game.id}
-                          href={`/games/${gameSlug}`}
                           className="group overflow-hidden rounded-xl border transition-transform hover:-translate-y-1"
                           style={{ backgroundColor: cardColor, borderColor: `${accentColor}35` }}
                         >
@@ -5639,9 +5645,17 @@ const ProfilePage = () => {
                                 {game.releaseStatus.replace(/_/g, " ")}
                               </p>
                             )}
+                            {game.shortDescription && (
+                              <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                                {game.shortDescription}
+                              </p>
+                            )}
                           </div>
-                        </Link>
+                        </div>
                       );
+                      return game.catalogGameId
+                        ? <Link key={game.id} href={`/games/${gameSlug}`}>{card}</Link>
+                        : card;
                     })}
                   </div>
                   {isOwnProfile && (
