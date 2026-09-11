@@ -77,6 +77,7 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
+import IndieGameProfileLayout from "@/pages/profile-layouts/IndieGameProfileLayout";
 import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
 import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreenshotsViewer";
 import { LikeButton } from "@/components/engagement/LikeButton";
@@ -573,6 +574,7 @@ const ProfilePage = () => {
     ?.split(",")
     .map((type) => type.trim())
     .includes("indie_developer");
+  const usesIndieGameLayout = isIndieDeveloperProfile || profile?.layoutStyle === "indie-game";
 
   // Fetch user clips (only if allowed to view content). While any clip/reel
   // is still background-processing, poll so the "processing" badge clears
@@ -1288,7 +1290,7 @@ const ProfilePage = () => {
   const resolvedBannerUrl = bannerSignedUrl || profile?.bannerUrl;
   const resolvedProfileTheme = resolveProfileTheme(profile || {});
   const shouldApplyTowerdogPageTheme =
-    resolvedProfileTheme.theme?.slug === "towerdog_pixel_surge";
+    !usesIndieGameLayout && resolvedProfileTheme.theme?.slug === "towerdog_pixel_surge";
 
   useEffect(() => {
     const syncTowerdogPageState = () => {
@@ -2247,6 +2249,11 @@ const ProfilePage = () => {
       </div>
     );
   })() : null;
+
+  // Keep layout dispatch after all hooks so changing profile types preserves hook order.
+  if (usesIndieGameLayout) {
+    return <IndieGameProfileLayout key={profile.username} profile={profile} isOwnProfile={isOwnProfile} />;
+  }
 
   return (
     <>

@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
 import { UserWithStats } from "@shared/schema";
-import IndieDeveloperProfile from "@/pages/IndieDeveloperProfile";
+import IndieGameProfileLayout from "@/pages/profile-layouts/IndieGameProfileLayout";
 import { getQueryFn } from "@/lib/queryClient";
 
 export default function IndieGameProfilePage() {
@@ -70,7 +70,8 @@ export default function IndieGameProfilePage() {
   const isOwnProfile = currentUser?.id === profile.id;
 
   return (
-    <IndieDeveloperProfile
+    <IndieGameProfileLayout
+      key={profile.username}
       profile={profile}
       isOwnProfile={isOwnProfile}
     />
