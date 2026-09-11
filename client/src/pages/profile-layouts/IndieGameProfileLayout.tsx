@@ -308,7 +308,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }
   const { getSignedUrl: getGameImageUrl } = useSignedUrls(gameListImageSources);
 
   const gameProfileQueryKey = selectedGameId
-    ? [`/api/games/indie/${profile.username}`, { gameId: selectedGameId }]
+    ? [`/api/games/indie/${profile.username}?gameId=${selectedGameId}`]
     : [`/api/games/indie/${profile.username}`];
   const { data: indieData } = useQuery<IndieResponse | null>({
     queryKey: gameProfileQueryKey,
