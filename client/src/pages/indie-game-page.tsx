@@ -20,6 +20,7 @@ import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
 import { CreatorDashboard } from "@/components/indie-bounty/CreatorDashboard";
 import { DeveloperDashboard } from "@/components/indie-bounty/DeveloperDashboard";
 import { GamePlatformBadges, GameSocialBadges } from "@/components/indie/GameProfileBadges";
+import { GAME_SOCIAL_LINKS } from "@/lib/indie-game-links";
 import {
   ArrowLeft, Play, Camera, Users, Clock, Eye,
   Trophy, Zap, Key, Star, Gift, Sword, Plus, Upload, X,
@@ -27,6 +28,7 @@ import {
   BarChart3, Video, Globe, Heart, Gamepad2, Check,
   Gamepad, Monitor, Smartphone,
   Film, MessageSquare, AlertCircle, ShieldCheck, Unlock, Rocket,
+  Share2,
 } from "lucide-react";
 
 const UploadPage = lazy(() => import("./UploadPage"));
@@ -1204,8 +1206,12 @@ interface IndieGameMeta {
 
 const IndieGamePage = () => {
   const [, navigate] = useLocation();
-  const [match, params] = useRoute("/indie-games/:slug");
-  const gameSlug = params?.slug;
+  // The canonical public URL is /games/:gameSlug. Read the legacy shape as
+  // well so this page remains safe if mounted directly by an older caller.
+  const [canonicalMatch, canonicalParams] = useRoute("/games/:gameSlug");
+  const [legacyMatch, legacyParams] = useRoute("/indie-games/:slug");
+  const match = canonicalMatch || legacyMatch;
+  const gameSlug = canonicalParams?.gameSlug ?? legacyParams?.slug;
   const isMobile = useMobile();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -1433,6 +1439,20 @@ const IndieGamePage = () => {
     followers: game?.indieMeta?.followers ?? 0,
     publisher: game?.indieMeta?.publisher ?? "Indie",
   };
+  const canManageGame = !!user && user.id === indieProfileData?.user?.id;
+
+  useEffect(() => {
+    if (!game || !gameSlug) return;
+    const canonicalUrl = `${window.location.origin}/games/${encodeURIComponent(gameSlug)}`;
+    document.title = `${game.name} | Gamefolio`;
+    let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      document.head.appendChild(canonical);
+    }
+    canonical.href = canonicalUrl;
+  }, [game, gameSlug]);
 
   // Tracking is deliberately non-blocking: the public game page and outbound
   // links must continue to work if analytics is unavailable.
@@ -1619,7 +1639,7 @@ const IndieGamePage = () => {
           <div className="flex items-center gap-3 mb-8 flex-wrap justify-center">
             {indieProfileData?.user?.username ? (
               <a
-                href={`/studio/${indieProfileData.user.username}`}
+                href={`/developer/${indieProfileData.user.username}`}
                 className="text-sm font-semibold text-white/60 hover:text-white transition-colors underline-offset-2 hover:underline"
               >
                 {meta.developerName}
@@ -1656,10 +1676,6 @@ const IndieGamePage = () => {
               <Eye className="w-3.5 h-3.5" style={{ color: NEON }} />
               {totalViews.toLocaleString()} views
             </span>
-            <span className="flex items-center gap-1.5 text-xs font-bold text-white/60">
-              <Radio className="w-3.5 h-3.5" style={{ color: NEON }} />
-              {0} streams
-            </span>
             {meta.website && (
               <button
                 onClick={() => openExternal(meta.website)}
@@ -1669,6 +1685,27 @@ const IndieGamePage = () => {
               </button>
             )}
             <GameSocialBadges links={meta} onOpen={openExternal} />
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/games/${encodeURIComponent(gameSlug)}`;
+                if (navigator.share) {
+                  void navigator.share({ title: game.name, url }).catch(() => undefined);
+                } else {
+                  void navigator.clipboard?.writeText(url);
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white/70 transition-all hover:bg-white/5 border border-white/10">
+              <Share2 className="w-3.5 h-3.5" />
+              Share
+            </button>
+            {canManageGame && (
+              <Link
+                href={`/manage/games/${encodeURIComponent(gameSlug)}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-[#C1FF00] transition-all hover:bg-[#C1FF00]/10 border border-[#C1FF00]/30">
+                <Gamepad2 className="w-3.5 h-3.5" />
+                Game Dashboard
+              </Link>
+            )}
             <button
               onClick={handleOpenUpload}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/5"

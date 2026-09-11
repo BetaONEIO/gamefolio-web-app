@@ -1,9 +1,9 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Link } from "wouter";
+import { Link, useRoute } from "wouter";
 import {
   Gamepad2, Upload, Image as ImageIcon, Video, Globe, Twitter, MessageSquare,
   ExternalLink, Save, RefreshCw, ChevronRight, X, Plus, CheckCircle2,
@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import IndieDevUpgradeDialog from "@/components/IndieDevUpgradeDialog";
 import HlsVideo from "@/components/media/HlsVideo";
+import { publicGamePath, toGameSlug } from "@/lib/game-routes";
 
 const NEON = "#B7FF18";
 const BG = "#0B1319";
@@ -37,14 +38,6 @@ const BORDER = "rgba(255,255,255,0.08)";
 
 const cardStyle = { background: CARD, border: `1px solid ${BORDER}`, borderRadius: "12px" };
 const neonStyle = { background: "rgba(183,255,24,0.1)", border: `1px solid rgba(183,255,24,0.25)`, color: NEON };
-
-function toPublicGameSlug(name: string | null | undefined) {
-  return (name || "untitled-game")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "") || "untitled-game";
-}
 
 const TABS = [
   { id: "profile",       label: "Profile Showcase", icon: Crown },
@@ -158,6 +151,7 @@ function UploadZone({ onFile, accept, label, preview }: { onFile: (f: File) => v
 }
 
 export default function IndieGameDashboard() {
+  const [, routeParams] = useRoute("/manage/games/:slug");
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -174,6 +168,15 @@ export default function IndieGameDashboard() {
     enabled: !!user,
   });
   const games = gamesData?.games ?? [];
+
+  // Deep links identify a specific game without introducing a second
+  // dashboard component. Fall back to the server-selected primary game when
+  // the slug is absent or cannot be matched.
+  useEffect(() => {
+    if (!routeParams?.slug || !games.length || selectedGameId !== null) return;
+    const requestedGame = games.find(game => toGameSlug(game.gameName) === routeParams.slug);
+    if (requestedGame) setSelectedGameId(requestedGame.id);
+  }, [routeParams?.slug, games, selectedGameId]);
 
   const { data, isLoading } = useQuery<{ profile: IndieProfile; fieldMeta: FieldMeta }>({
     queryKey: selectedGameId
@@ -585,7 +588,7 @@ export default function IndieGameDashboard() {
       {/* Header */}
       <div className="border-b border-white/8" style={{ background: "rgba(11,19,25,0.95)" }}>
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-4">
-          <Link href={`/indie-games/${toPublicGameSlug(form.gameName)}`}
+          <Link href={publicGamePath(form.gameName)}
             className="flex items-center gap-1.5 text-white/40 hover:text-white text-sm transition-colors">
             <ArrowLeft size={15} /> Public Game Page
           </Link>
@@ -679,7 +682,7 @@ export default function IndieGameDashboard() {
             </div>
           )}
           <div className="ml-auto flex items-center gap-2">
-            <a href={`/indie-games/${toPublicGameSlug(form.gameName)}`} target="_blank" rel="noopener noreferrer"
+            <a href={publicGamePath(form.gameName)} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-xs font-semibold text-white/40 hover:text-white transition-colors">
               <ExternalLink size={13} /> View Public Page
             </a>

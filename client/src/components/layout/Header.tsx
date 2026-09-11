@@ -664,10 +664,10 @@ const Header = () => {
 
                     <DropdownMenuItem
                       className="cursor-pointer"
-                      onClick={() => setLocation(`/profile/${user.username}`)}
+                       onClick={() => setLocation(isIndieMode ? `/developer/${user.username}` : `/profile/${user.username}`)}
                     >
                       <span className="mr-2 inline-flex items-center justify-center h-4 w-4 overflow-visible flex-shrink-0">
-                        <GamefolioIcon glow={location === `/profile/${user.username}`} className="h-4 w-4 scale-[1.85]" />
+                         <GamefolioIcon glow={location === (isIndieMode ? `/developer/${user.username}` : `/profile/${user.username}`)} className="h-4 w-4 scale-[1.85]" />
                       </span>
                       <span>My Gamefolio</span>
                     </DropdownMenuItem>

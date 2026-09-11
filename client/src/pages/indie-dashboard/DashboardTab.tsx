@@ -2,6 +2,7 @@ import { useState, type ComponentType, type SVGProps } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { publicUrl } from "@/lib/platform";
+import { publicGamePath } from "@/lib/game-routes";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import {
   ArrowUpRight, CheckCircle2, ChevronRight, CircleAlert,
@@ -379,8 +380,8 @@ export default function DashboardTab({
   const communityContent = allContent;
   const communityContentTotal = contentData?.ownedGameContentTotal;
   const metrics = analyticsData?.metrics;
-  const profileUrl = user?.username && profile?.id
-    ? publicUrl(`/studio/${encodeURIComponent(user.username)}?gameId=${profile.id}`)
+  const profileUrl = profile?.gameName || analyticsData?.game?.name
+    ? publicUrl(publicGamePath(profile?.gameName ?? analyticsData?.game?.name))
     : null;
   const rawFirstMissing = progress.missingRequired[0] ?? progress.missingRecommended[0] ?? "gameName";
   // STORE_LINK_GROUP is a checklist id, not a real form field — open the Steam

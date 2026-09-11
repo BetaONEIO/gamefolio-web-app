@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect, useLocation, useParams } from "wouter";
+import { Switch, Route, Redirect, useLocation, useParams, useRoute } from "wouter";
 import { queryClient, getQueryFn } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -33,6 +33,7 @@ import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBann
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { PageTransition } from "@/components/ui/page-transition";
 import { BannerSettings } from "@shared/schema";
+import { toGameSlug } from "@/lib/game-routes";
 import { WebPlatformRedirect } from "@/components/WebPlatformRedirect";
 
 // Layout components
@@ -178,6 +179,62 @@ const IndieGamePage = lazyWithRecovery(() => import("./pages/indie-game-page"));
 const IndieGameProfilePage = lazyWithRecovery(() => import("./pages/IndieGameProfilePage"));
 const IndieGameDashboard = lazyWithRecovery(() => import("./pages/IndieGameDashboard"));
 const BountiesPage = lazyWithRecovery(() => import("./pages/BountiesPage"));
+
+// Legacy public URLs redirect to the canonical game/developer URLs. Keeping
+// these as small route components avoids maintaining duplicate page trees.
+function LegacyGamePageRedirect() {
+  const [, params] = useRoute("/indie-games/:slug");
+  return <Redirect to={`/games/${params?.slug ?? ""}${window.location.search}`} />;
+}
+
+function LegacyDeveloperPageRedirect() {
+  const [, params] = useRoute("/studio/:username");
+  return <Redirect to={`/developer/${params?.username ?? ""}${window.location.search}`} />;
+}
+
+function CanonicalGamePage() {
+  const [, params] = useRoute("/games/:gameSlug");
+  const gameSlug = params?.gameSlug;
+  const { data: game, isLoading: gameLoading } = useQuery<{ id: number }>({
+    queryKey: ["/api/games/slug", gameSlug],
+    queryFn: async () => {
+      const response = await fetch(`/api/games/slug/${encodeURIComponent(gameSlug || "")}`, { credentials: "include" });
+      if (!response.ok) throw new Error("Game not found");
+      return response.json();
+    },
+    enabled: !!gameSlug,
+    retry: false,
+  });
+  const { data: indieProfile, isLoading: indieLoading } = useQuery({
+    queryKey: ["/api/games", game?.id, "indie-profile", "route-dispatch"],
+    queryFn: async () => {
+      const response = await fetch(`/api/games/${game?.id}/indie-profile`, { credentials: "include" });
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error("Unable to resolve game profile");
+      return response.json();
+    },
+    enabled: !!game?.id,
+    retry: false,
+  });
+
+  if (gameLoading || (game && indieLoading)) return <RouteLoader />;
+  return indieProfile ? <IndieGamePage /> : <GamePage />;
+}
+
+function ManageGameRedirect() {
+  const [, params] = useRoute("/manage/games/:slug");
+  const slug = params?.slug;
+  const { data, isLoading } = useQuery<{ games: Array<{ id: number; gameName: string | null }> }>({
+    queryKey: ["/api/indie/games"],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+  if (isLoading) return <RouteLoader />;
+  const game = data?.games?.find((item) => toGameSlug(item.gameName) === slug);
+  if (!game) {
+    return <div className="flex min-h-[60vh] items-center justify-center text-muted-foreground">Managed game not found.</div>;
+  }
+  return <Redirect to={`/game-dashboard?gameId=${game.id}`} />;
+}
 
 // Loading component for lazy-loaded routes
 function RouteLoader() {
@@ -550,9 +607,10 @@ function Router() {
 
           {/* Protected routes requiring authentication */}
           <Route path="/explore" component={ExplorePage} />
-          <Route path="/games/:gameSlug" component={GamePage} />
-          <Route path="/indie-games/:slug" component={IndieGamePage} />
-          <Route path="/studio/:username" component={IndieGameProfilePage} />
+          <Route path="/games/:gameSlug" component={CanonicalGamePage} />
+          <Route path="/indie-games/:slug" component={LegacyGamePageRedirect} />
+          <Route path="/studio/:username" component={LegacyDeveloperPageRedirect} />
+          <PartnerProtectedRoute path="/manage/games/:slug" partnerType="indie" component={ManageGameRedirect} />
           <PartnerProtectedRoute path="/studio-dashboard" partnerType="indie" component={IndieGameDashboard} />
           <Route path="/games/:gameId/clips" component={GameClipsPage} />
           <ProtectedRoute path="/hashtag/:hashtag" component={HashtagPage} />
@@ -602,6 +660,8 @@ function Router() {
           <ProtectedRoute path="/developer/apps/new" component={CreateAppPage} />
           <ProtectedRoute path="/developer/apps/:id" component={AppDetailPage} />
           <ProtectedRoute path="/developer/apps" component={MyAppsPage} />
+          {/* Keep the username route after the reserved developer app paths. */}
+          <Route path="/developer/:username" component={IndieGameProfilePage} />
           <Route path="/settings/connected-apps" component={ConnectedAppsPage} />
           <Route path="/2fa-verify" component={TwoFactorVerifyPage} />
           <Route path="/terms" component={TermsPage} />

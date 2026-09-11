@@ -26,6 +26,7 @@ import { FaSteam, FaDiscord, FaTwitter, FaYoutube, FaGlobe } from "react-icons/f
 import { SiEpicgames, SiItchdotio, SiGogdotcom } from "react-icons/si";
 import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
 import { getSourceColor, getSourceLabel, getSourceLabelFromValue, type SourceLabel } from "@/pages/indie-dashboard/edit-profile/types";
+import { publicGamePath } from "@/lib/game-routes";
 
 const GREEN = "#B8FF1B";
 
@@ -323,10 +324,10 @@ export default function ManageGameSettings() {
       <div className="max-w-4xl mx-auto px-3 md:px-6 py-6 pb-24">
         <div className="mb-6">
           <Button variant="ghost" size="sm"
-            onClick={() => setLocation(`/studio/${user?.username}`)}
+            onClick={() => setLocation(publicGamePath(profile.gameName))}
             className="flex items-center gap-2 mb-3 text-gray-400 hover:text-white px-0">
             <ArrowLeft className="h-4 w-4" />
-            Back to Game Profile
+            Back to Public Game Page
           </Button>
           <h1 className="text-2xl sm:text-3xl font-black text-white">Manage Game Profile</h1>
           <p className="text-sm text-gray-500 mt-1">Manage your game information, artwork, media, store links and public Gamefolio page.</p>

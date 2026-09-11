@@ -230,7 +230,7 @@ const MobileMenu = () => {
                 <div 
                   className="cursor-pointer"
                   onClick={() => {
-                    setLocation(`/profile/${user.username}`);
+                    setLocation(canAccessIndieGame ? `/developer/${user.username}` : `/profile/${user.username}`);
                     handleClose();
                   }}
                 >
@@ -432,7 +432,7 @@ const MobileMenu = () => {
                   {myGamefolioExpanded && (
                     <div className="ml-3 mt-0.5 space-y-0.5 pl-5 border-l border-border">
                       <Link
-                        href={`/profile/${user.username}`}
+                        href={canAccessIndieGame ? `/developer/${user.username}` : `/profile/${user.username}`}
                         onClick={handleClose}
                         className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors no-underline"
                       >

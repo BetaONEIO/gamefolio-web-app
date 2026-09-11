@@ -18,6 +18,7 @@ import { FaWindows, FaXbox } from "react-icons/fa6";
 import { NEON, CARD_BG, CARD_BORDER } from "./constants";
 import { useAuth } from "@/hooks/use-auth";
 import { publicUrl } from "@/lib/platform";
+import { publicGamePath } from "@/lib/game-routes";
 import {
   GAME_SOCIAL_LINKS,
   emptyGameSocialValues,
@@ -1978,8 +1979,8 @@ export default function GameProfileTab({
     if (section) setActiveSection(section);
     setActiveFocusRequest({ field });
   };
-  const profileUrl = user?.username && profile?.id
-    ? publicUrl(`/studio/${encodeURIComponent(user.username)}?gameId=${profile.id}`)
+  const profileUrl = profile?.gameName
+    ? publicUrl(publicGamePath(profile.gameName))
     : null;
   const toggleSection = (section: ProfileSectionId) => {
     setActiveSection(current => current === section ? null : section);

@@ -4,12 +4,13 @@ import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
 import { UserWithStats } from "@shared/schema";
-import IndieGameProfileLayout from "@/pages/profile-layouts/IndieGameProfileLayout";
+import IndieDeveloperProfile from "@/pages/IndieDeveloperProfile";
 import { getQueryFn } from "@/lib/queryClient";
 
 export default function IndieGameProfilePage() {
-  const [, params] = useRoute("/studio/:username");
-  const username = params?.username;
+  const [, canonicalParams] = useRoute("/developer/:username");
+  const [, legacyParams] = useRoute("/studio/:username");
+  const username = canonicalParams?.username ?? legacyParams?.username;
   const { user: currentUser } = useAuth();
 
   const { data: profile, isLoading, error } = useQuery<UserWithStats>({
@@ -69,7 +70,7 @@ export default function IndieGameProfilePage() {
   const isOwnProfile = currentUser?.id === profile.id;
 
   return (
-    <IndieGameProfileLayout
+    <IndieDeveloperProfile
       profile={profile}
       isOwnProfile={isOwnProfile}
     />
