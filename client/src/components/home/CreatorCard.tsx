@@ -159,7 +159,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
 
               {/* Stats box — identical to standard */}
               <div
-                className="mx-3 mt-3 flex-shrink-0 grid grid-cols-3 gap-1 rounded-xl py-2"
+                className="mx-3 mt-3 flex-shrink-0 grid grid-cols-4 gap-0 rounded-xl py-2"
                 style={{ background: '#0B1319', border: '1px solid rgba(255,255,255,0.06)' }}
               >
                 {[
@@ -357,7 +357,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
 
             {/* Stats box */}
             <div
-              className="mx-3 mt-3 flex-shrink-0 grid grid-cols-3 gap-1 rounded-xl py-2"
+              className="mx-3 mt-3 flex-shrink-0 grid grid-cols-4 gap-0 rounded-xl py-2"
               style={{ background: '#0B1319', border: '1px solid rgba(255,255,255,0.06)' }}
             >
               {[

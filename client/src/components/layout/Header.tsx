@@ -169,6 +169,10 @@ const Header = () => {
   }, [user?.id, (user as any)?.userType]);
   const { isPro } = useRevenueCat();
   const { isIndieMode } = useIndieMode();
+  const isIndieGameUser = user?.userType
+    ?.split(",")
+    .map((type) => type.trim())
+    .includes("indie_developer");
   const hasStandardPro = !!(
     isPro ||
     user?.isPro ||
@@ -744,14 +748,16 @@ const Header = () => {
                         <AccountSettingsIcon className="mr-2 h-4 w-4" />
                         <span>Account Settings</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => setLocation("/settings/profile")}
-                        data-testid="button-profile-settings"
-                      >
-                        <GamefolioProfileIcon className="mr-2 h-4 w-4" />
-                        <span>Profile &amp; Appearance</span>
-                      </DropdownMenuItem>
+                      {!isIndieGameUser && (
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => setLocation("/settings/profile")}
+                          data-testid="button-profile-settings"
+                        >
+                          <GamefolioProfileIcon className="mr-2 h-4 w-4" />
+                          <span>Profile &amp; Appearance</span>
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuGroup>
 
                     <DropdownMenuSeparator />
