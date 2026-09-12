@@ -432,12 +432,22 @@ const MobileMenu = () => {
                   {myGamefolioExpanded && (
                     <div className="ml-3 mt-0.5 space-y-0.5 pl-5 border-l border-border">
                       <Link
-                        href={canAccessIndieGame ? `/developer/${user.username}` : `/profile/${user.username}`}
+                         href={`/profile/${user.username}`}
                         onClick={handleClose}
                         className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors no-underline"
                       >
                         View Profile
                       </Link>
+                       {canAccessIndieGame && (
+                         <Link
+                           href="/game-dashboard?tab=game-profile"
+                           onClick={handleClose}
+                           className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors no-underline"
+                         >
+                           <Rocket className="h-3.5 w-3.5 shrink-0" />
+                           <span>My Game</span>
+                         </Link>
+                       )}
                       <Link
                         href="/bookmarks"
                         onClick={handleClose}

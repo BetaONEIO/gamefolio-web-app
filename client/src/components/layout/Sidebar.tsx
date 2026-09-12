@@ -336,6 +336,14 @@ const Sidebar = () => {
                           View Profile
                         </div>
                       </Link>
+                      {canAccessIndieGame && (
+                        <Link href="/game-dashboard?tab=game-profile" onClick={() => { closeClipDialog(); setMyGamefolioExpanded(false); }}>
+                          <div className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors cursor-pointer">
+                            <Rocket className="h-3.5 w-3.5 shrink-0" />
+                            <span>My Game</span>
+                          </div>
+                        </Link>
+                      )}
                       <Link href="/bookmarks" onClick={() => { closeClipDialog(); setMyGamefolioExpanded(false); }}>
                         <div className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors cursor-pointer">
                           <Bookmark className="h-3.5 w-3.5 shrink-0" />
