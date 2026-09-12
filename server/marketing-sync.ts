@@ -1,5 +1,5 @@
 /**
- * Server-to-server sync of Gamefolio Pro Streamer Partners into the
+ * Server-to-server sync of streamer accounts into the
  * gamefolio.com marketing site, which is the source of truth for the
  * public /streamers directory.
  *
@@ -37,7 +37,7 @@ function derivePlatforms(user: User): string[] {
  * Register or update a partner on the marketing site. Fire-and-forget:
  * failures are logged and never propagated to the caller.
  */
-export async function syncPartnerToMarketing(user: User): Promise<void> {
+export async function syncStreamerToMarketing(user: User): Promise<void> {
   if (!isConfigured()) return;
 
   try {
@@ -56,8 +56,10 @@ export async function syncPartnerToMarketing(user: User): Promise<void> {
         youtubeHandle: user.youtubeUsername || null,
         kickHandle: user.kickChannelName || null,
         bannerImageUrl: user.bannerUrl || null,
-        contactEmail: user.email || null,
+        gamesPlayed: user.streamMainGame ? [user.streamMainGame] : [],
+        schedule: user.streamFrequency || null,
         featuredStreamUrl: user.partnerFeaturedStreamUrl || null,
+        isOfficialPartner: user.isPartner === true && user.partnerType === "streamer",
         visible: user.partnerStreamerVisible !== false,
       }),
     });
@@ -71,6 +73,8 @@ export async function syncPartnerToMarketing(user: User): Promise<void> {
     console.error(`[MarketingSync] sync error for user ${user.id}:`, err);
   }
 }
+
+export const syncPartnerToMarketing = syncStreamerToMarketing;
 
 /**
  * Remove a partner from the marketing site (partner status revoked or Pro

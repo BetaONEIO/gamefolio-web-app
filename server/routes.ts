@@ -36,6 +36,7 @@ import { getLeaderboardRewardsForSeason } from "@shared/leaderboard-rewards";
 import { alwaysRequiresOnboarding } from "@shared/onboarding";
 import { TOWERDOG_REFERRAL_CODE } from "@shared/profile-theme";
 import { reconcileExpiredOrphanedPro } from "./services/pro-entitlement-reconciliation";
+import { syncStreamerToMarketing } from "./marketing-sync";
 
 const SEASONAL_ANNOUNCEMENT_ID = "summer_2026_end_autumn_2026_launch";
 const SUMMER_SEASON_NUMBER = 8;
@@ -12903,7 +12904,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         patch.streamFrequency = req.body.streamFrequency.trim().slice(0, 50);
       }
 
-      await db.update(users).set(patch).where(eq(users.id, userId));
+      const [updatedUser] = await db
+        .update(users)
+        .set(patch)
+        .where(eq(users.id, userId))
+        .returning();
+
+      // The marketing site upserts by app user ID, so retries are safe.
+      if (updatedUser) void syncStreamerToMarketing(updatedUser);
       res.json({ ok: true });
     } catch (err) {
       console.error("POST /api/streamer/onboarding-profile error:", err);
