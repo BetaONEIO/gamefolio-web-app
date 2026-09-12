@@ -5,7 +5,6 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
   CalendarDays,
-  Check,
   ExternalLink,
   Eye,
   Gamepad2,
@@ -15,7 +14,6 @@ import {
   MessageSquareText,
   MousePointerClick,
   Pencil,
-  Share2,
   SlidersHorizontal,
   Store,
   UserPlus,
@@ -27,6 +25,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { publicGamePath } from "@/lib/game-routes";
 import { BannerLightbox, useBannerLightbox } from "@/components/ui/banner-lightbox";
 import { ProfilePictureLightbox, useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
+import { GamefolioShareDialog } from "@/components/profile/GamefolioShareDialog";
+import ShareLaunchIcon from "@/components/ui/ShareIcon";
 import type { UserWithStats } from "@shared/schema";
 import { DEFAULT_PROFILE_THEME, resolveProfileTheme } from "@shared/profile-theme";
 
@@ -307,7 +307,6 @@ function LinkItem({ label, href, icon }: { label: string; href?: string | null; 
 
 export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) {
   const { user: currentUser } = useAuth();
-  const [shared, setShared] = useState(false);
   const { lightboxData, openLightbox, closeLightbox } = useProfilePictureLightbox();
   const { lightboxData: bannerLightboxData, openLightbox: openBannerLightbox, closeLightbox: closeBannerLightbox } = useBannerLightbox();
   const { data: gamesData, isLoading: gamesLoading, error: gamesError } = useQuery<{ games?: StudioGame[]; studio?: StudioLinks }>({
@@ -412,14 +411,6 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
       }
     : { background: backgroundGradient || backgroundColor };
 
-  const share = async () => {
-    const url = window.location.href;
-    if (navigator.share) await navigator.share({ title: displayName, url }).catch(() => undefined);
-    else await navigator.clipboard?.writeText(url);
-    setShared(true);
-    window.setTimeout(() => setShared(false), 1800);
-  };
-
   const openStudioAvatar = () => {
     if (profile.avatarUrl) openLightbox(profile.avatarUrl, displayName, profile.username);
   };
@@ -486,7 +477,32 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
             </div>
             <div className="flex flex-wrap gap-2 pb-1">
               {!isOwnProfile && <button type="button" onClick={() => currentUser ? followMutation.mutate() : window.location.assign("/auth")} disabled={followMutation.isPending} className="studio-accent-bg studio-button-text inline-flex min-h-10 items-center gap-2 rounded-xl px-4 text-sm font-black hover:brightness-110 disabled:opacity-60"><UserPlus className="h-4 w-4" />{following ? "Following" : requested ? "Requested" : "Follow"}</button>}
-              <button type="button" onClick={share} className="studio-surface studio-border studio-text studio-hover-accent-border inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-sm font-bold">{shared ? <Check className="studio-accent-text h-4 w-4" /> : <Share2 className="h-4 w-4" />} {shared ? "Copied" : "Share"}</button>
+              <GamefolioShareDialog
+                username={profile.username}
+                userId={profile.id}
+                userProfile={{
+                  displayName: profile.displayName,
+                  bio: profile.bio,
+                  avatarUrl: profile.avatarUrl,
+                  bannerUrl: bannerImage,
+                  hideBanner,
+                  accentColor,
+                  backgroundColor,
+                  cardColor: surfaceColor,
+                  primaryColor: resolvedTheme.primaryColor,
+                }}
+                userStats={{
+                  views: totalContentViews,
+                  uploads: communityPosts,
+                  followers,
+                }}
+                favoriteGames={games.slice(0, 5).map((game) => ({
+                  id: game.id,
+                  name: game.catalogGameName || game.gameName || game.title || "Untitled game",
+                  imageUrl: game.headerImageUrl || game.capsuleImageUrl || game.catalogImageUrl,
+                }))}
+                trigger={<button type="button" className="studio-surface studio-border studio-text studio-hover-accent-border inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-sm font-bold"><ShareLaunchIcon size={16} /> Share</button>}
+              />
               {isOwnProfile && <><Link href="/game-dashboard" className="studio-accent-border studio-accent-text studio-hover-accent-bg inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-sm font-bold"><SlidersHorizontal className="h-4 w-4" /> Manage games</Link><Link href="/settings/profile" className="studio-border studio-text studio-hover-accent-border inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-sm font-bold"><Pencil className="h-4 w-4" /> Edit profile</Link></>}
             </div>
           </div>
