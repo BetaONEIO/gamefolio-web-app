@@ -9,6 +9,8 @@ import {
   Image as ImageIcon, Video, Globe, Gamepad2,
   Play, Sparkles, Building2, Package, Download,
   ArrowUpRight, ChevronDown, ChevronRight, Share2,
+  Monitor, ShoppingBag, Search, RefreshCw,
+  type LucideIcon,
 } from "lucide-react";
 import {
   SiSteam, SiEpicgames, SiItchdotio, SiMacos, SiLinux,
@@ -50,6 +52,12 @@ const HEALTH_FIELDS = [
 ] as const;
 
 type ProfileSectionId = "basics" | "platforms" | "stores" | "media" | "details" | "developer" | "advanced";
+type ProfileSectionStatusKind = "complete" | "missing" | "sync" | "neutral";
+type ProfileSectionStatus = {
+  label: string;
+  color: string;
+  kind: ProfileSectionStatusKind;
+};
 
 const PROFILE_SECTION_BY_FIELD: Record<string, ProfileSectionId> = {
   gameName: "basics",
@@ -109,11 +117,12 @@ function computeHealth(profile: Profile | null) {
   return { pct, top3: missing.sort((a, b) => b.pts - a.pts).slice(0, 3), missing, missingCount: missing.length };
 }
 
-function getSectionStatus(profile: Profile | null, section: ProfileSectionId) {
+function getSectionStatus(profile: Profile | null, section: ProfileSectionId): ProfileSectionStatus {
   if (section === "advanced") {
     return {
-      label: profile?.steamAppId || profile?.epicSlug ? "Sync ready" : "Import available",
-      color: profile?.steamAppId || profile?.epicSlug ? NEON : "rgba(255,255,255,0.5)",
+      label: profile?.steamAppId || profile?.epicSlug ? "Ready to sync" : "Not started",
+      color: profile?.steamAppId || profile?.epicSlug ? "#78B7FF" : "#A5ADBA",
+      kind: profile?.steamAppId || profile?.epicSlug ? "sync" : "neutral",
     };
   }
 
@@ -125,8 +134,9 @@ function getSectionStatus(profile: Profile | null, section: ProfileSectionId) {
       !!profile?.websiteUrl,
     ].filter(Boolean).length;
     return {
-      label: connected ? `${connected} link${connected === 1 ? "" : "s"} connected` : "No links connected",
-      color: connected ? NEON : "#f59e0b",
+      label: connected ? `${connected} link${connected === 1 ? "" : "s"} connected` : "Not started",
+      color: connected ? NEON : "#A5ADBA",
+      kind: connected ? "complete" : "neutral",
     };
   }
 
@@ -134,8 +144,13 @@ function getSectionStatus(profile: Profile | null, section: ProfileSectionId) {
   const filled = fields.filter(field => isFieldFilled(profile, field)).length;
   const missing = fields.length - filled;
   return {
-    label: missing === 0 ? "Complete" : `${missing} to add`,
-    color: missing === 0 ? NEON : filled > 0 ? "#d8b24c" : "#f59e0b",
+    label: missing === 0
+      ? "Complete"
+      : filled === 0
+        ? "Not started"
+        : `${missing} field${missing === 1 ? "" : "s"} missing`,
+    color: missing === 0 ? NEON : filled > 0 ? "#F4C95D" : "#A5ADBA",
+    kind: missing === 0 ? "complete" : filled > 0 ? "missing" : "neutral",
   };
 }
 
@@ -613,20 +628,16 @@ function AboutCard({
 
   return (
     <>
-      <div data-profile-section="about" className="scroll-mt-24 rounded-2xl overflow-hidden" style={{ border: `1px solid ${CARD_BORDER}` }}>
-        <div className="flex items-center justify-between px-5 py-4"
-          style={{ background: "rgba(255,255,255,0.03)", borderBottom: `1px solid ${CARD_BORDER}` }}>
-          <div className="flex items-center gap-2.5">
-            <Sparkles size={16} style={{ color: NEON }} />
-            <span className="text-sm font-bold text-white">About Your Game</span>
-          </div>
+      <div data-profile-section="about" className="scroll-mt-24 space-y-4">
+        <div className="flex items-center justify-between gap-3 border-b pb-3" style={{ borderColor: CARD_BORDER }}>
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#A5ADBA]">Identity</span>
           <button onClick={openModal}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/10"
             style={{ border: `1px solid ${CARD_BORDER}`, color: "white" }}>
             <Pencil size={11} /> Edit
           </button>
         </div>
-        <div className="p-5 space-y-4">
+        <div className="space-y-4">
           {/* Game name */}
           {profile?.gameName ? (
             <h2 className="text-2xl font-black text-white">{profile.gameName}</h2>
@@ -704,7 +715,7 @@ function AboutCard({
       </div>
 
       {open && (
-        <EditModal title="About Your Game" onClose={() => setOpen(false)} focusField={focusRequest?.field}
+        <EditModal title="Core Game Information" onClose={() => setOpen(false)} focusField={focusRequest?.field}
           onSave={() => save.mutate({ gameId: profile?.id, gameName: name, shortDescription: short, fullDescription: full, genres, tags, keyFeatures: features, releaseStatus: status, releaseDate: releaseDate || null, price })}
           isSaving={save.isPending}>
           <FieldInput fieldName="gameName" label="Game Name" value={name} onChange={setName} placeholder="My Awesome Game" />
@@ -1720,14 +1731,14 @@ function GameDetailsSummary({ profile, onEdit }: { profile: Profile | null; onEd
         <div className="flex items-center gap-2.5">
           <Sparkles size={16} style={{ color: NEON }} />
           <div>
-            <span className="text-sm font-bold text-white">Game details</span>
-            <p className="mt-0.5 text-[11px] text-white/35">Tell players what makes this game worth discovering.</p>
+            <span className="text-sm font-bold text-white">Discovery &amp; Metadata</span>
+            <p className="mt-0.5 text-[11px] text-white/45">Help players find and understand your game.</p>
           </div>
         </div>
         <button type="button" onClick={() => onEdit("fullDescription")}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/10"
           style={{ border: `1px solid ${CARD_BORDER}`, color: "white" }}>
-          <Pencil size={11} /> Edit in Game Basics
+          <Pencil size={11} /> Edit in Core Game Information
         </button>
       </div>
       <div className="p-5">
@@ -1787,6 +1798,7 @@ function ProfileAccordion({
   id,
   title,
   description,
+  icon: Icon,
   status,
   open,
   onToggle,
@@ -1795,36 +1807,64 @@ function ProfileAccordion({
   id: ProfileSectionId;
   title: string;
   description: string;
-  status: { label: string; color: string };
+  icon: LucideIcon;
+  status: ProfileSectionStatus;
   open: boolean;
   onToggle: () => void;
   children: React.ReactNode;
 }) {
   const headingId = `profile-section-heading-${id}`;
   const contentId = `profile-section-content-${id}`;
+  const statusIcon = status.kind === "complete"
+    ? <Check size={12} strokeWidth={3} />
+    : status.kind === "sync"
+      ? <RefreshCw size={12} strokeWidth={2.5} />
+      : <span className="h-1.5 w-1.5 rounded-full" style={{ background: status.color }} />;
 
   return (
-    <section data-profile-section={id} className="scroll-mt-24 overflow-hidden rounded-2xl"
-      style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
+    <section data-profile-section={id}
+      className={`scroll-mt-24 overflow-hidden rounded-[14px] transition-[margin] duration-200 motion-reduce:transition-none ${open ? "mb-3 sm:mb-4" : ""}`}
+      style={{
+        background: "#141A22",
+        border: "1px solid #2A3440",
+        borderLeft: open ? `4px solid ${NEON}` : "1px solid #2A3440",
+      }}>
       <button
         type="button"
         id={headingId}
         aria-expanded={open}
         aria-controls={contentId}
         onClick={onToggle}
-        className="flex min-h-[4.5rem] w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.035] sm:px-5"
+        className={`flex min-h-[72px] w-full items-center gap-3 px-4 py-3.5 text-left transition-colors duration-200 hover:bg-[#1C2430] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B9FF1A] motion-reduce:transition-none sm:min-h-[84px] sm:gap-4 sm:px-5 sm:py-4 ${open ? "bg-[#1B242D]" : "bg-[#171D27]"}`}
       >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-          style={{ background: open ? `${NEON}16` : "rgba(255,255,255,0.045)", color: open ? NEON : "rgba(255,255,255,0.5)" }}>
-          {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px] border sm:h-11 sm:w-11"
+          style={{
+            background: open ? "#203A2A" : "#101B2A",
+            borderColor: open ? `${NEON}66` : "#2A3440",
+            color: NEON,
+          }}>
+          <Icon size={19} strokeWidth={2.25} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-bold text-white">{title}</span>
-          <span className="mt-0.5 block truncate text-[11px] text-white/35">{description}</span>
+          <span className="block text-[16px] font-bold leading-tight text-white sm:text-[18px]">{title}</span>
+          <span className="mt-1 block line-clamp-2 text-[13px] font-normal leading-snug text-[#A5ADBA] sm:truncate sm:text-[14px]">{description}</span>
+          <span
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold sm:hidden"
+            style={{ color: status.color, background: "#101820", borderColor: `${status.color}66"`.replace('"', "") }}
+          >
+            {statusIcon}
+            {status.label}
+          </span>
         </span>
-        <span className="flex shrink-0 items-center gap-1.5 text-[11px] font-semibold" style={{ color: status.color }}>
-          <span className="h-1.5 w-1.5 rounded-full" style={{ background: status.color }} />
-          <span className="hidden sm:inline">{status.label}</span>
+        <span
+          className="hidden shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold sm:inline-flex"
+          style={{ color: status.color, background: "#101820", borderColor: `${status.color}66` }}
+        >
+          {statusIcon}
+          {status.label}
+        </span>
+        <span className={`shrink-0 text-[#A5ADBA] transition-transform duration-200 motion-reduce:transition-none ${open ? "rotate-180" : ""}`} aria-hidden="true">
+          <ChevronDown size={19} />
         </span>
       </button>
       <div
@@ -1832,10 +1872,10 @@ function ProfileAccordion({
         role="region"
         aria-labelledby={headingId}
         aria-hidden={!open}
-        className={`grid transition-[grid-template-rows] duration-200 ease-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+        className={`grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
       >
         <div className={`min-h-0 overflow-hidden ${open ? "visible" : "invisible pointer-events-none"}`}>
-          <div className="space-y-4 border-t px-4 pb-4 pt-4 sm:px-5 sm:pb-5">
+          <div className="space-y-4 border-t px-4 pb-4 pt-4 sm:px-5 sm:pb-5" style={{ borderColor: "#2A3440" }}>
             {children}
           </div>
         </div>
