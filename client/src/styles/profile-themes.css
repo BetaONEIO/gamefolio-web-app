@@ -53,8 +53,10 @@
   opacity: 0.82;
   background-image: var(--profile-theme-pattern);
   background-size: auto, auto;
+  background-position: 0 0;
   mix-blend-mode: screen;
   animation: profile-theme-drift 18s ease-in-out infinite alternate;
+  will-change: background-position, opacity, filter;
 }
 
 .profile-theme-atmosphere::before,
@@ -111,8 +113,8 @@
 }
 
 @keyframes profile-theme-drift {
-  from { transform: translate3d(-1%, -0.5%, 0) scale(1.01); }
-  to { transform: translate3d(1%, 0.5%, 0) scale(1.04); }
+  from { background-position: 0 0; }
+  to { background-position: 48px 24px; }
 }
 
 @keyframes profile-theme-scan {
