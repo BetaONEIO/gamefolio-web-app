@@ -360,6 +360,7 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
     ? ""
     : (profile as any).profileBackgroundGradientCss || themeDefinition?.profileBackgroundGradientCss || "";
   const backgroundPattern = themeDefinition?.assets.decorativeOverlay || themeDefinition?.patternCss || "none";
+  const backgroundAnimation = themeDefinition?.assets.backgroundAnimation || themeDefinition?.animation || "none";
   const profileFont = PROFILE_FONTS[(profile as any).profileFont || "default"] || themeDefinition?.fontFamily || PROFILE_FONTS.default;
   const profileFontEffect = FONT_EFFECTS[(profile as any).profileFontEffect || "none"] || "none";
   const profileFontAnimation = FONT_ANIMATIONS[(profile as any).profileFontAnimation || "none"] || "";
@@ -373,6 +374,7 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
     "--studio-accent": accentColor,
     "--studio-avatar-border": resolvedTheme.avatarBorderColor,
     "--studio-border": borderColor,
+    "--studio-primary": resolvedTheme.primaryColor,
     "--studio-button-text": themeTokens?.buttonText || "#071018",
     fontFamily: profileFont,
   } as CSSProperties;
@@ -395,18 +397,23 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
   };
 
   return (
-    <main className={`studio-profile-theme profile-theme-scope relative min-h-[100dvh] overflow-x-hidden pb-20 text-white ${statsGlassEffect ? "studio-stats-glass" : ""}`} style={studioThemeStyle}>
-      <div className="fixed inset-0" style={studioBackgroundStyle} aria-hidden="true" />
+    <main
+      className={`studio-profile-theme profile-theme-scope relative min-h-[100dvh] overflow-x-hidden pb-20 text-white ${statsGlassEffect ? "studio-stats-glass" : ""}`}
+      data-profile-theme={isDefaultStudioTheme ? "default" : themeDefinition?.slug}
+      data-profile-animation={backgroundAnimation}
+      style={studioThemeStyle}
+    >
+      <div className="studio-theme-background fixed inset-0" style={{ ...studioBackgroundStyle, backgroundAttachment: "fixed" }} aria-hidden="true" />
       {backgroundPattern !== "none" && <div className="fixed inset-0 opacity-60" style={{ backgroundImage: backgroundPattern }} aria-hidden="true" />}
       <div className="relative z-[1] mx-auto max-w-[1200px]">
         <section className="relative px-4 pt-4 sm:px-6 lg:px-0 lg:pt-6">
-          {!hideBanner && <div className="studio-border relative h-[180px] overflow-hidden rounded-2xl border bg-[linear-gradient(135deg,#101c38,#1e3b47)] sm:h-[235px] lg:h-[280px]">
+          {!hideBanner && <div className="studio-border relative h-[180px] overflow-hidden rounded-2xl border sm:h-[235px] lg:h-[280px]" style={{ background: `linear-gradient(135deg, ${resolvedTheme.primaryColor}, ${backgroundColor})` }}>
             <SafeSignedImage
               url={bannerImage}
               alt=""
               loading="eager"
               className="h-full w-full object-cover opacity-80"
-              fallback={<div className="h-full w-full bg-[radial-gradient(circle_at_75%_25%,rgba(183,255,24,.16),transparent_32%),linear-gradient(135deg,#101c38,#1e3b47)]" />}
+               fallback={<div className="h-full w-full" style={{ background: `radial-gradient(circle at 75% 25%, ${accentColor}28, transparent 32%), linear-gradient(135deg, ${resolvedTheme.primaryColor}, ${backgroundColor})` }} />}
             />
             <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${backgroundColor}, transparent 72%)` }} />
           </div>}
