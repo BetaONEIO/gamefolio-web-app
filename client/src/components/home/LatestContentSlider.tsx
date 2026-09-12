@@ -136,12 +136,32 @@ export default function LatestContentSlider() {
     if (videoRef.current) videoRef.current.muted = next;
   };
 
-  const handleFullscreen = (e: React.MouseEvent) => {
+  const handleFullscreen = async (e: React.MouseEvent) => {
     e.stopPropagation();
     const el = containerRef.current;
     if (!el) return;
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    else el.requestFullscreen().catch(() => {});
+    if (document.fullscreenElement && typeof document.exitFullscreen === "function") {
+      await document.exitFullscreen().catch(() => {});
+      return;
+    }
+
+    if (typeof el.requestFullscreen === "function") {
+      await el.requestFullscreen().catch(() => {});
+      return;
+    }
+
+    // iOS Safari/WKWebView does not expose requestFullscreen on arbitrary
+    // elements, but it can hand the video off to the native fullscreen player.
+    const iosVideo = videoRef.current as (HTMLVideoElement & {
+      webkitEnterFullscreen?: () => void;
+    }) | null;
+    if (typeof iosVideo?.webkitEnterFullscreen === "function") {
+      try {
+        iosVideo.webkitEnterFullscreen();
+      } catch {
+        // Fullscreen is an enhancement; leave playback in place if unavailable.
+      }
+    }
   };
 
   const handleUpload = () => {
