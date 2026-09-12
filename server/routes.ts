@@ -8822,7 +8822,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       type FeedItem = {
         id: string;
-        kind: 'xp' | 'streak' | 'trending' | 'levelup';
+        kind: 'xp' | 'bolt' | 'streak' | 'trending' | 'levelup';
         username: string;
         text: string;
         timestamp?: string | null;
@@ -8839,12 +8839,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (source === 'upload')         text = `${name} earned +${xp} XP from uploading`;
         else if (source === 'daily_login') text = `${name} earned +${xp} XP daily login bonus`;
         else if (source === 'like_received') text = `${name} earned +${xp} XP from likes`;
-        else if (source === 'fire_received') text = `${name} earned +${xp} XP from fire reactions`;
+        else if (source === 'fire_received') text = `${name} earned +${xp} XP from Bolt`;
         else if (source === 'welcome_bonus') text = `${name} earned +${xp} XP welcome bonus`;
         else text = `${name} earned +${xp} XP`;
         activities.push({
           id: `xp-${row.id}`,
-          kind: 'xp',
+          kind: source === 'fire_received' ? 'bolt' : 'xp',
           username: row.username,
           text,
           timestamp: row.created_at ? new Date(row.created_at).toISOString() : null,
