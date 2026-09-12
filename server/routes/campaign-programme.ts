@@ -451,9 +451,9 @@ async function seedCampaignTemplates() {
             estimated_feedback = ${t.estimatedFeedback},
             estimated_views_min = ${t.estimatedViewsMin},
             estimated_views_max = ${t.estimatedViewsMax},
-            bounty_xp_reward = ${t.bountyXpReward},
-            completion_bonus_xp = ${t.completionBonusXp},
-            reward_config = ${JSON.stringify(t.rewardConfig)}::jsonb,
+            bounty_xp_reward = ${t.bountyXpReward ?? 0},
+            completion_bonus_xp = ${t.completionBonusXp ?? 0},
+            reward_config = ${JSON.stringify(t.rewardConfig ?? null)}::jsonb,
             status = ${t.status},
             featured = ${t.featured},
             recommended = ${t.recommended},
@@ -477,7 +477,7 @@ async function seedCampaignTemplates() {
              ${t.completionReward}, ${t.completionRewardDescription},
              ${t.estimatedClips}, ${t.estimatedReels ?? 0}, ${t.estimatedScreenshots}, ${t.estimatedFeedback},
              ${t.estimatedViewsMin}, ${t.estimatedViewsMax},
-              ${t.bountyXpReward}, ${t.completionBonusXp}, ${JSON.stringify(t.rewardConfig)}::jsonb,
+               ${t.bountyXpReward ?? 0}, ${t.completionBonusXp ?? 0}, ${JSON.stringify(t.rewardConfig ?? null)}::jsonb,
              ${t.status}, ${t.featured}, ${t.recommended}, ${t.displayOrder})
           RETURNING id
         `));
@@ -491,9 +491,9 @@ async function seedCampaignTemplates() {
         await db.execute(sql`
           UPDATE campaign_instances
           SET template_id = ${templateId},
-              bounty_xp_reward = ${t.bountyXpReward},
-              completion_bonus_xp = ${t.completionBonusXp},
-              reward_config = ${JSON.stringify(t.rewardConfig)}::jsonb,
+              bounty_xp_reward = ${t.bountyXpReward ?? 0},
+              completion_bonus_xp = ${t.completionBonusXp ?? 0},
+              reward_config = ${JSON.stringify(t.rewardConfig ?? null)}::jsonb,
               updated_at = NOW()
           WHERE template_id = ${archivedTemplateId}
             AND status IN ('draft', 'awaiting_review', 'changes_requested')

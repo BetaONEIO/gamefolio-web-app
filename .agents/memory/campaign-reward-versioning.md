@@ -7,4 +7,4 @@ Reusable campaign templates are shared rows, so changing their objective rows in
 
 **Why:** Historical submissions and payouts must remain tied to the reward terms that were active when the campaign launched.
 
-**How to apply:** Any future campaign reward change must version the template and keep server-side idempotency keys stable per campaign, participant, objective, and completion award.
+**How to apply:** Any future campaign reward change must version the template and keep server-side idempotency keys stable per campaign, participant, objective, and completion award. Coalesce optional reward fields to `0` or `null` before interpolating them into Drizzle/Postgres SQL; undefined values can produce invalid empty SQL expressions.

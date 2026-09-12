@@ -130,11 +130,13 @@ const REQ_ICON: Record<string, any> = {
   reel: Film, session: Zap, bug: AlertCircle, stream: Zap,
 };
 function reqPillLabel(ct: string, qty: number) {
-  if (ct === "clip")       return `×${qty} Clips`;
-  if (ct === "screenshot") return `×${qty} Screenshots`;
-  if (ct === "feedback")   return "Feedback";
-  if (ct === "reel")       return `×${qty} Reels`;
-  if (ct === "stream")     return "Livestream";
+  if (ct === "clip")       return `${qty} Gameplay Clip${qty === 1 ? "" : "s"}`;
+  if (ct === "screenshot") return `${qty} Screenshot${qty === 1 ? "" : "s"}`;
+  if (ct === "feedback")   return `${qty} Creator Review${qty === 1 ? "" : "s"}`;
+  if (ct === "reel")       return `${qty} Gameplay Reel${qty === 1 ? "" : "s"}`;
+  if (ct === "stream")     return "1 Livestream";
+  if (ct === "session")    return "Play the Game";
+  if (ct === "bug")        return `${qty} Bug Report${qty === 1 ? "" : "s"}`;
   return ct;
 }
 
@@ -818,37 +820,37 @@ function CampaignAccordion({
               onClick={() => setExpandedSlug(expanded ? null : type.slug)}
               className="w-full min-h-[88px] px-4 sm:px-5 py-4 flex items-center gap-3 sm:gap-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#B7FF18]"
               style={{ background: expanded ? "#17212b" : "transparent" }}>
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0"
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl flex items-center justify-center shrink-0"
                 style={{ background: `rgba(${rgb},0.12)`, color: accent }}>
-                <type.icon size={22} aria-hidden="true" />
+                <type.icon size={26} aria-hidden="true" />
               </div>
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   {selected && <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: NEON }} aria-label="Selected" />}
-                  <h3 className="text-sm sm:text-base font-black text-white truncate">{type.shortName}</h3>
+                  <h3 className="text-lg sm:text-xl font-black text-white truncate">{type.shortName}</h3>
                   {type.recommended && (
-                    <span className="text-[9px] font-black px-2 py-0.5 rounded-full shrink-0"
+                    <span className="text-[10px] font-black px-2.5 py-1 rounded-full shrink-0"
                       style={{ background: NEON, color: "#070b10" }}>
                       Recommended
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] sm:text-xs text-white/55 mt-1 truncate">{type.tagline}</p>
+                <p className="text-sm sm:text-[15px] text-white/70 mt-1.5 truncate">{type.tagline}</p>
               </div>
 
-              <div className="order-3 sm:order-none basis-full sm:basis-auto flex items-center justify-center gap-4 sm:gap-8 shrink-0 self-center">
-                <span className="min-w-[52px] sm:min-w-[64px] flex flex-col items-center justify-center text-center whitespace-nowrap">
-                  <strong className="block text-[17px] sm:text-[20px] leading-[1.1] font-bold text-white">{type.duration}d</strong>
-                  <span className="block mt-1 text-[10px] sm:text-[11px] leading-tight font-semibold uppercase tracking-[0.08em] text-white/75">Duration</span>
+              <div className="order-3 sm:order-none basis-full sm:basis-auto flex items-center justify-center gap-5 sm:gap-7 shrink-0 self-center">
+                <span className="min-w-[90px] sm:min-w-[100px] flex flex-col items-center justify-center text-center whitespace-nowrap">
+                  <strong className="block text-[23px] sm:text-[27px] leading-[1.1] font-bold text-white">{type.duration}d</strong>
+                  <span className="block mt-1.5 text-[11px] sm:text-xs leading-[1.2] font-bold uppercase tracking-[0.05em] text-white/85">DURATION</span>
                 </span>
-                <span className="min-w-[52px] sm:min-w-[64px] flex flex-col items-center justify-center text-center whitespace-nowrap">
-                  <strong className="block text-[17px] sm:text-[20px] leading-[1.1] font-bold text-white">{type.capacity}</strong>
-                  <span className="block mt-1 text-[10px] sm:text-[11px] leading-tight font-semibold uppercase tracking-[0.08em] text-white/75">Creators</span>
+                <span className="min-w-[90px] sm:min-w-[100px] flex flex-col items-center justify-center text-center whitespace-nowrap">
+                  <strong className="block text-[23px] sm:text-[27px] leading-[1.1] font-bold text-white">{type.capacity}</strong>
+                  <span className="block mt-1.5 text-[11px] sm:text-xs leading-[1.2] font-bold uppercase tracking-[0.05em] text-white/85">CREATORS</span>
                 </span>
-                <span className="min-w-[52px] sm:min-w-[64px] flex flex-col items-center justify-center text-center whitespace-nowrap">
-                  <strong className="block text-[17px] sm:text-[20px] leading-[1.1] font-bold" style={{ color: "#B9FF1A" }}>{type.xpReward.toLocaleString()}</strong>
-                  <span className="block mt-1 text-[10px] sm:text-[11px] leading-tight font-semibold uppercase tracking-[0.08em] text-white/75">XP</span>
+                <span className="min-w-[120px] sm:min-w-[132px] flex flex-col items-center justify-center text-center whitespace-nowrap">
+                  <strong className="block text-[23px] sm:text-[27px] leading-[1.1] font-bold" style={{ color: "#B9FF1A" }}>{type.xpReward.toLocaleString()}</strong>
+                  <span className="block mt-1.5 text-[11px] sm:text-xs leading-[1.2] font-bold uppercase tracking-[0.05em] text-[#B9FF1A]">BOUNTY XP</span>
                 </span>
               </div>
 
@@ -867,44 +869,36 @@ function CampaignAccordion({
               style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}>
               <div className="min-h-0 overflow-hidden">
                 <div
-                  className="relative min-h-0 px-4 py-6 sm:px-7 sm:py-7 flex items-center lg:min-h-[460px] xl:min-h-[500px]"
+                  className="relative min-h-0 px-4 py-7 sm:px-7 sm:py-8 flex items-center lg:min-h-[460px] xl:min-h-[500px]"
                   style={{
                     backgroundImage: `linear-gradient(90deg, rgba(7,11,16,0.95) 0%, rgba(7,11,16,0.88) 30%, rgba(7,11,16,0.74) 55%, rgba(7,11,16,0.24) 100%), url("${CAMPAIGN_ARTWORK[type.slug]}")`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                   }}>
-                  <div className="relative z-10 flex w-full flex-col justify-center gap-5 lg:w-[55%] lg:max-w-[55%]">
+                  <div className="relative z-10 flex w-full flex-col justify-center gap-7 lg:w-[55%] lg:max-w-[55%]">
                     <div>
-                      <p className="text-[10px] uppercase tracking-[0.18em] font-bold mb-2" style={{ color: accent }}>Campaign overview</p>
-                      <p className="text-sm leading-relaxed text-white/78 max-w-2xl">{type.description}</p>
+                      <p className="text-xs uppercase tracking-[0.16em] font-bold mb-3" style={{ color: accent }}>CAMPAIGN OVERVIEW</p>
+                      <p className="text-[17px] leading-[1.55] font-normal text-white/90 max-w-[680px]">{type.description}</p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
-                      {[
-                        { label: "Duration", value: `${type.duration} days`, Icon: Clock },
-                        { label: "Creator slots", value: `${type.capacity}`, Icon: Users },
-                        { label: "Keys required", value: campaignKeySummary(type), Icon: KeyRound },
-                        { label: "Bounty XP Reward", value: `${type.xpReward.toLocaleString()} XP`, Icon: Zap },
-                      ].map(({ label, value, Icon }) => (
-                        <div key={label} className="rounded-lg px-3 py-2.5"
-                          style={{ background: "rgba(11,20,29,0.82)", border: "1px solid rgba(255,255,255,0.10)" }}>
-                          <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-wider font-bold text-white/50">
-                            <Icon size={11} aria-hidden="true" /> {label}
-                          </div>
-                          <div className="text-xs font-black text-white mt-1 leading-snug">{value}</div>
-                        </div>
-                      ))}
+                    <div className="min-h-[76px] rounded-xl px-4 py-4 flex items-center gap-3"
+                      style={{ background: "#0b141d", border: "1px solid rgba(255,255,255,0.14)" }}>
+                      <KeyRound size={22} className="shrink-0" style={{ color: accent }} aria-hidden="true" />
+                      <div className="min-w-0">
+                        <div className="text-xs uppercase tracking-[0.08em] font-bold text-white/75">KEYS REQUIRED</div>
+                        <div className="text-lg sm:text-xl font-bold text-white mt-1 leading-snug">{campaignKeySummary(type)}</div>
+                      </div>
                     </div>
 
                     <div>
-                      <div className="text-[10px] uppercase tracking-[0.18em] font-bold mb-2" style={{ color: accent }}>Creator objectives</div>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="text-xs uppercase tracking-[0.16em] font-bold mb-3" style={{ color: accent }}>CREATOR OBJECTIVES</div>
+                      <div className="flex flex-wrap gap-2">
                         {type.pills.map(({ ct, qty }) => {
                           const PIcon = REQ_ICON[ct] ?? Target;
                           return (
-                            <span key={ct} className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full"
+                            <span key={ct} className="inline-flex items-center gap-2 min-h-[38px] text-sm font-semibold px-4 py-2 rounded-lg"
                               style={{ background: `rgba(${rgb},0.12)`, color: "#f5f7fa", border: `1px solid rgba(${rgb},0.30)` }}>
-                              <PIcon size={10} aria-hidden="true" /> {reqPillLabel(ct, qty)}
+                              <PIcon size={15} aria-hidden="true" /> {reqPillLabel(ct, qty)}
                             </span>
                           );
                         })}
@@ -912,10 +906,10 @@ function CampaignAccordion({
                     </div>
 
                     <div>
-                      <div className="text-[10px] uppercase tracking-[0.18em] font-bold mb-2" style={{ color: accent }}>Best for</div>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="text-xs uppercase tracking-[0.16em] font-bold mb-3" style={{ color: accent }}>BEST FOR</div>
+                      <div className="flex flex-wrap gap-2">
                         {type.bestForList.map(label => (
-                          <span key={label} className="text-[10px] px-2.5 py-1 rounded-full text-white/80"
+                          <span key={label} className="min-h-[36px] inline-flex items-center text-[13px] font-medium px-4 py-2 rounded-lg text-white/85"
                             style={{ background: "rgba(11,20,29,0.82)", border: "1px solid rgba(255,255,255,0.12)" }}>
                             {label}
                           </span>
@@ -923,7 +917,7 @@ function CampaignAccordion({
                       </div>
                     </div>
 
-                    <div className="pt-1">
+                    <div className="pt-1 sm:pt-2">
                       <button
                         type="button"
                         tabIndex={expanded ? 0 : -1}

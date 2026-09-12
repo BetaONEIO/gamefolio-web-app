@@ -448,15 +448,10 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
     >
       {/* Discovery artwork */}
       <div className="relative h-36 overflow-hidden">
-        {campaign.game_artwork_url ? (
-          <img src={campaign.game_artwork_url} alt={campaign.game_name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #0d1624 0%, #0a1020 100%)" }}>
-            <Target size={44} color="rgba(184,255,27,0.12)" />
-          </div>
-        )}
+        <FeaturedHeroBackground
+          campaign={campaign}
+          className="absolute inset-0 bg-center bg-cover bg-no-repeat transition-transform duration-500 group-hover:scale-[1.05]"
+        />
         <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #0e1520 0%, rgba(14,21,32,0.18) 60%, transparent 100%)" }} />
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5">
@@ -1014,11 +1009,10 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
       {/* ── CINEMATIC HERO ── */}
       <div className="relative overflow-hidden" style={{ minHeight: 390 }}>
         {/* Artwork */}
-        {campaign.game_artwork_url ? (
-          <img src={campaign.game_artwork_url} alt={campaign.game_name} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.65 }} />
-        ) : (
-          <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, rgba(184,255,27,0.16) 0%, rgba(7,11,16,0.90) 100%)` }} />
-        )}
+        <FeaturedHeroBackground
+          campaign={campaign}
+          className="absolute inset-0 bg-center bg-cover bg-no-repeat"
+        />
         {/* Gradients */}
         <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(7,11,16,1) 0%, rgba(7,11,16,0.88) 35%, rgba(7,11,16,0.28) 68%, rgba(7,11,16,0.60) 100%)" }} />
         <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(7,11,16,1) 0%, rgba(7,11,16,0.50) 42%, transparent 100%)" }} />
@@ -2646,13 +2640,10 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
               <div key={c.instance_id} className="rounded-xl px-3.5 py-3 sm:px-4 sm:py-3.5" style={{ background: CARD_BG, border: `1px solid ${needsAction ? "rgba(249,115,22,0.30)" : CARD_BORDER}` }}>
                 <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[minmax(220px,0.9fr)_minmax(250px,1.4fr)_auto] sm:items-center sm:gap-5">
                   <div className="flex items-center gap-3 min-w-0">
-                  {c.game_artwork_url ? (
-                    <img src={c.game_artwork_url} alt="" className="w-14 h-14 object-cover rounded-lg flex-shrink-0" />
-                  ) : (
-                    <div className="w-14 h-14 rounded-lg flex-shrink-0 flex items-center justify-center" style={{ background: "rgba(183,255,24,0.06)" }}>
-                      <Target size={20} color="rgba(183,255,24,0.3)" />
-                    </div>
-                  )}
+                  <FeaturedHeroBackground
+                    campaign={c}
+                    className="w-14 h-14 rounded-lg flex-shrink-0 bg-center bg-cover bg-no-repeat"
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] text-white/40 font-bold">{c.game_name}</div>
                     <div className="text-sm font-black text-white leading-tight truncate">{c.campaign_title || c.template_name}</div>
