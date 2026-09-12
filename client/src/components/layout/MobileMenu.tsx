@@ -143,10 +143,6 @@ const MobileMenu = () => {
   const followerCount = (ownProfileData as any)?._count?.followers ?? 0;
   const followingCount = (ownProfileData as any)?._count?.following ?? 0;
   const isStreamerPartner = isPartnerType(user, "streamer");
-  const isIndieGameUser = user?.userType
-    ?.split(",")
-    .map((type) => type.trim())
-    .includes("indie_developer");
   const canAccessIndieGame = GAME_DEVELOPER_FEATURES_ENABLED && !!user && (
     user.role === "admin" ||
     isPartnerType(user, "indie") ||
@@ -438,6 +434,14 @@ const MobileMenu = () => {
                       >
                         View Profile
                       </Link>
+                      <Link
+                        href="/settings/profile"
+                        onClick={handleClose}
+                        className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors no-underline"
+                      >
+                        <GamefolioProfileSettingsIcon className="h-3.5 w-3.5 shrink-0" />
+                        <span>Profile &amp; Appearance</span>
+                      </Link>
                        {canAccessIndieGame && (
                          <Link
                            href="/game-dashboard?tab=game-profile"
@@ -495,18 +499,16 @@ const MobileMenu = () => {
                       <span>Account Settings</span>
                     </Link>
                   </li>
-                  {!isIndieGameUser && (
-                    <li>
-                      <Link
-                        href="/settings/profile"
-                        onClick={handleClose}
-                        className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
-                      >
-                        <GamefolioProfileSettingsIcon className="mr-3 h-5 w-5 opacity-70 group-hover:opacity-100 group-hover:text-[#071013]" />
-                        <span>Profile &amp; Appearance</span>
-                      </Link>
-                    </li>
-                  )}
+                  <li>
+                    <Link
+                      href="/settings/profile"
+                      onClick={handleClose}
+                      className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
+                    >
+                      <GamefolioProfileSettingsIcon className="mr-3 h-5 w-5 opacity-70 group-hover:opacity-100 group-hover:text-[#071013]" />
+                      <span>Profile &amp; Appearance</span>
+                    </Link>
+                  </li>
                 </ul>
               </>
             )}

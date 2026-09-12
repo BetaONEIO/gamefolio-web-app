@@ -46,7 +46,6 @@ import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWra
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
-import ManageGameSettings from "@/components/indie/ManageGameSettings";
 import { DEFAULT_PROFILE_THEME, PROFILE_THEMES, resolveProfileTheme } from "@shared/profile-theme";
 import { STREAMER_PARTNER_PURCHASES_ENABLED } from "@/lib/feature-flags";
 
@@ -2378,12 +2377,6 @@ export default function SettingsPage() {
 
   if (!user) {
     return <div>Please log in to access settings.</div>;
-  }
-
-  // Indie Game accounts get a completely separate management experience
-  const isIndieGame = user.isPartner && user.partnerType === "indie";
-  if (isIndieGame) {
-    return <ManageGameSettings />;
   }
 
   // Convert hex colors to RGB for opacity support

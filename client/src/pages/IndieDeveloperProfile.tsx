@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Link } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
@@ -23,10 +23,70 @@ import { getQueryFn, queryClient } from "@/lib/queryClient";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { useAuth } from "@/hooks/use-auth";
 import { publicGamePath } from "@/lib/game-routes";
-import EditProfileModal from "@/components/profile/EditProfileModal";
 import type { UserWithStats } from "@shared/schema";
+import { resolveProfileTheme } from "@shared/profile-theme";
 
 const DEFAULT_BANNER_URL = "/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg";
+
+const PROFILE_FONTS: Record<string, string> = {
+  default: "system-ui, sans-serif",
+  inter: "'Inter', sans-serif",
+  roboto: "'Roboto', sans-serif",
+  poppins: "'Poppins', sans-serif",
+  montserrat: "'Montserrat', sans-serif",
+  oswald: "'Oswald', sans-serif",
+  playfair: "'Playfair Display', serif",
+  raleway: "'Raleway', sans-serif",
+  "space-grotesk": "'Space Grotesk', sans-serif",
+  orbitron: "'Orbitron', sans-serif",
+  "press-start": "'Press Start 2P', cursive",
+  "russo-one": "'Russo One', sans-serif",
+  "bungee-shade": "'Bungee Shade', cursive",
+  nabla: "'Nabla', cursive",
+  silkscreen: "'Silkscreen', cursive",
+  "rubik-bubbles": "'Rubik Bubbles', cursive",
+  monoton: "'Monoton', cursive",
+  creepster: "'Creepster', cursive",
+  "permanent-marker": "'Permanent Marker', cursive",
+  bangers: "'Bangers', cursive",
+  fredoka: "'Fredoka', sans-serif",
+  righteous: "'Righteous', cursive",
+  "bungee-inline": "'Bungee Inline', cursive",
+  notable: "'Notable', sans-serif",
+  "bungee-spice": "'Bungee Spice', cursive",
+  honk: "'Honk', system-ui",
+};
+
+const FONT_EFFECTS: Record<string, string> = {
+  none: "none",
+  "drop-shadow": "2px 2px 4px rgba(0,0,0,.8)",
+  "hard-shadow": "3px 3px 0 rgba(0,0,0,.9)",
+  "neon-green": "0 0 7px #00ff00, 0 0 20px #00ff00",
+  "neon-blue": "0 0 7px #00bfff, 0 0 20px #00bfff",
+  "neon-pink": "0 0 7px #ff00de, 0 0 20px #ff00de",
+  "neon-red": "0 0 7px #ff0000, 0 0 20px #ff1a1a",
+  "neon-purple": "0 0 7px #bf00ff, 0 0 20px #bf00ff",
+  "neon-yellow": "0 0 7px #ffff00, 0 0 20px #ffff00",
+  fire: "0 0 4px #ff4500, 0 0 19px #ff6600",
+  ice: "0 0 5px #e0f7ff, 0 0 20px #7ec8e3",
+  gold: "0 0 5px #ffd700, 0 0 20px #ffaa00",
+  retro: "2px 2px 0 #ff0000, -2px -2px 0 #00bfff",
+  "outline-white": "-1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff",
+  "outline-black": "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000",
+  rainbow: "0 0 5px #f00, 0 0 12px #0f0, 0 0 20px #00f",
+};
+
+const FONT_ANIMATIONS: Record<string, string> = {
+  bounce: "animate-font-bounce",
+  shake: "animate-font-shake",
+  pulse: "animate-font-pulse",
+  float: "animate-font-float",
+  wave: "animate-font-wave",
+  flicker: "animate-font-flicker",
+  rubberband: "animate-font-rubberband",
+  jello: "animate-font-jello",
+  swing: "animate-font-swing",
+};
 
 type StudioLinks = {
   websiteUrl?: string | null;
@@ -91,7 +151,7 @@ function Avatar({ url, name, className = "" }: { url?: string | null; name: stri
       url={url}
       alt={`${name} logo`}
       className={`object-cover ${className}`}
-      fallback={<div className={`flex items-center justify-center bg-[#b7ff18] font-black text-[#09100c] ${className}`}>{name.slice(0, 2).toUpperCase()}</div>}
+      fallback={<div className={`studio-accent-bg studio-button-text flex items-center justify-center font-black ${className}`}>{name.slice(0, 2).toUpperCase()}</div>}
     />
   );
 }
@@ -125,7 +185,7 @@ function Artwork({ game, className = "" }: { game: StudioGame; className?: strin
       alt=""
       loading="lazy"
       className={`h-full w-full object-cover ${className}`}
-      fallback={<div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#16203b,#263f46)]"><ImageOff className="h-7 w-7 text-white/20" /></div>}
+      fallback={<div className="studio-surface flex h-full w-full items-center justify-center"><ImageOff className="studio-muted h-7 w-7" /></div>}
     />
   );
 }
@@ -138,7 +198,7 @@ function GamePath({ game }: { game: StudioGame }) {
 }
 
 function MetaPill({ children }: { children: ReactNode }) {
-  return <span className="rounded-full border border-white/10 bg-white/[.035] px-2.5 py-1 text-[11px] font-semibold text-white/60">{children}</span>;
+  return <span className="studio-border studio-muted rounded-full border bg-white/[.035] px-2.5 py-1 text-[11px] font-semibold">{children}</span>;
 }
 
 function StoreLinks({ game, compact = false }: { game: StudioGame; compact?: boolean }) {
@@ -151,7 +211,7 @@ function StoreLinks({ game, compact = false }: { game: StudioGame; compact?: boo
   return (
     <div className={`flex flex-wrap gap-2 ${compact ? "" : "mt-4"}`}>
       {links.map((link) => (
-        <a key={link.label} href={link.href!} target="_blank" rel="noreferrer" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/15 px-3 text-xs font-bold text-white/70 transition-colors hover:border-[#b7ff18]/60 hover:text-[#b7ff18]">
+        <a key={link.label} href={link.href!} target="_blank" rel="noreferrer" className="studio-border studio-muted studio-hover-accent inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-bold transition-colors">
           <Store className="h-3.5 w-3.5" /> {link.label} <ExternalLink className="h-3 w-3 opacity-50" />
         </a>
       ))}
@@ -162,25 +222,25 @@ function StoreLinks({ game, compact = false }: { game: StudioGame; compact?: boo
 function GameCard({ game }: { game: StudioGame }) {
   const title = game.catalogGameName || game.gameName || game.title || "Untitled game";
   return (
-    <article className="group overflow-hidden rounded-2xl border border-white/[.11] bg-[#151725] transition-colors hover:border-[#b7ff18]/55">
-      <Link href={GamePath({ game })} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#b7ff18]">
+    <article className="studio-surface studio-border studio-hover-accent-border group overflow-hidden rounded-2xl border transition-colors">
+      <Link href={GamePath({ game })} className="studio-focus-accent block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset">
         <div className="relative aspect-[16/8] overflow-hidden bg-[#182039]">
           <Artwork game={game} className="transition-transform duration-300 group-hover:scale-[1.03]" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#151725] via-transparent to-transparent" />
-          {(game.isFeatured || game.isPrimary) && <span className="absolute left-3 top-3 rounded-md bg-[#b7ff18] px-2 py-1 text-[10px] font-black uppercase tracking-widest text-[#07100a]">Featured</span>}
+          {(game.isFeatured || game.isPrimary) && <span className="studio-accent-bg studio-button-text absolute left-3 top-3 rounded-md px-2 py-1 text-[10px] font-black uppercase tracking-widest">Featured</span>}
         </div>
       </Link>
       <div className="p-5">
         <div className="flex items-start justify-between gap-3">
-          <Link href={GamePath({ game })} className="text-lg font-black tracking-tight text-white hover:text-[#b7ff18]">{title}</Link>
-          <span className="shrink-0 rounded-full border border-white/15 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white/55">{formatStatus(game.releaseStatus)}</span>
+          <Link href={GamePath({ game })} className="studio-text studio-hover-accent text-lg font-black tracking-tight">{title}</Link>
+          <span className="studio-border studio-muted shrink-0 rounded-full border px-2 py-1 text-[10px] font-bold uppercase tracking-wide">{formatStatus(game.releaseStatus)}</span>
         </div>
-        {(game.shortDescription || game.fullDescription) && <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/58">{game.shortDescription || game.fullDescription}</p>}
+        {(game.shortDescription || game.fullDescription) && <p className="studio-muted mt-2 line-clamp-2 text-sm leading-6">{game.shortDescription || game.fullDescription}</p>}
         <div className="mt-4 flex flex-wrap gap-2">
           {game.genres?.slice(0, 2).map((genre) => <MetaPill key={genre}>{genre}</MetaPill>)}
           {game.platforms?.slice(0, 2).map((platform) => <MetaPill key={platform}>{platform}</MetaPill>)}
         </div>
-        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-white/42">
+        <div className="studio-muted mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs">
           {game.followerCount != null && <span><Users className="mr-1 inline h-3.5 w-3.5" />{formatNumber(game.followerCount)} followers</span>}
           {game.communityUploads != null && <span><Gamepad2 className="mr-1 inline h-3.5 w-3.5" />{formatNumber(game.communityUploads)} uploads</span>}
         </div>
@@ -192,33 +252,33 @@ function GameCard({ game }: { game: StudioGame }) {
 function FeaturedGame({ game, isOwnProfile }: { game: StudioGame; isOwnProfile: boolean }) {
   const title = game.catalogGameName || game.gameName || game.title || "Untitled game";
   return (
-    <article className="overflow-hidden rounded-2xl border border-white/[.12] bg-[#151725]">
+    <article className="studio-surface studio-border overflow-hidden rounded-2xl border">
       <div className="grid lg:grid-cols-[minmax(0,1.02fr)_minmax(0,.98fr)]">
-        <Link href={GamePath({ game })} className="group relative min-h-[250px] overflow-hidden bg-[#182039] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#b7ff18] sm:min-h-[320px]">
+        <Link href={GamePath({ game })} className="studio-focus-accent group relative min-h-[250px] overflow-hidden bg-[#182039] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset sm:min-h-[320px]">
           <Artwork game={game} className="transition-transform duration-500 group-hover:scale-[1.03]" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#151725] via-transparent to-transparent lg:bg-gradient-to-r lg:from-transparent lg:to-[#151725]" />
-          {(game.isFeatured || game.isPrimary) && <span className="absolute left-4 top-4 rounded-md bg-[#b7ff18] px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-[#07100a]">Featured game</span>}
+          {(game.isFeatured || game.isPrimary) && <span className="studio-accent-bg studio-button-text absolute left-4 top-4 rounded-md px-2.5 py-1 text-[10px] font-black uppercase tracking-widest">Featured game</span>}
         </Link>
         <div className="flex flex-col justify-center p-6 sm:p-8">
-          <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[.16em] text-[#b7ff18]">
+          <div className="studio-accent-text flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-[.16em]">
             <span>{formatStatus(game.releaseStatus)}</span>
-            {game.releaseDate && <><span className="text-white/20">•</span><span>{new Date(game.releaseDate).getFullYear()}</span></>}
+            {game.releaseDate && <><span className="studio-muted">•</span><span>{new Date(game.releaseDate).getFullYear()}</span></>}
           </div>
-          <h3 className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">{title}</h3>
-          {(game.shortDescription || game.fullDescription) && <p className="mt-3 max-w-xl text-sm leading-6 text-white/62">{game.shortDescription || game.fullDescription}</p>}
+          <h3 className="studio-text mt-3 text-3xl font-black tracking-tight sm:text-4xl">{title}</h3>
+          {(game.shortDescription || game.fullDescription) && <p className="studio-muted mt-3 max-w-xl text-sm leading-6">{game.shortDescription || game.fullDescription}</p>}
           <div className="mt-5 flex flex-wrap gap-2">
             {game.genres?.map((genre) => <MetaPill key={genre}>{genre}</MetaPill>)}
             {game.platforms?.map((platform) => <MetaPill key={platform}>{platform}</MetaPill>)}
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-3 border-y border-white/10 py-4 sm:grid-cols-3">
+          <div className="studio-border mt-6 grid grid-cols-2 gap-3 border-y py-4 sm:grid-cols-3">
             <MiniStat label="Followers" value={game.followerCount} icon={<Users className="h-3.5 w-3.5" />} />
             <MiniStat label="Uploads" value={game.communityUploads} icon={<Gamepad2 className="h-3.5 w-3.5" />} />
             <MiniStat label="Views" value={game.views} icon={<Eye className="h-3.5 w-3.5" />} />
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
-            <Link href={GamePath({ game })} className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#b7ff18] px-4 text-xs font-black text-[#07100a] hover:brightness-110">View Game</Link>
+            <Link href={GamePath({ game })} className="studio-accent-bg studio-button-text inline-flex min-h-10 items-center justify-center rounded-lg px-4 text-xs font-black hover:brightness-110">View Game</Link>
             <StoreLinks game={game} compact />
-            {isOwnProfile && <Link href={`/game-dashboard?tab=game-profile&gameId=${game.id}`} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#b7ff18]/35 px-4 text-xs font-bold text-[#b7ff18] hover:bg-[#b7ff18]/10"><SlidersHorizontal className="h-3.5 w-3.5" /> Manage Game</Link>}
+            {isOwnProfile && <Link href={`/game-dashboard?tab=game-profile&gameId=${game.id}`} className="studio-accent-border studio-accent-text studio-hover-accent-bg inline-flex min-h-10 items-center gap-2 rounded-lg border px-4 text-xs font-bold"><SlidersHorizontal className="h-3.5 w-3.5" /> Manage Game</Link>}
           </div>
         </div>
       </div>
@@ -227,13 +287,13 @@ function FeaturedGame({ game, isOwnProfile }: { game: StudioGame; isOwnProfile: 
 }
 
 function MiniStat({ label, value, icon }: { label: string; value?: number | null; icon: ReactNode }) {
-  return <div><div className="flex items-center gap-1.5 text-[#b7ff18]">{icon}<span className="text-sm font-black text-white">{formatNumber(value)}</span></div><p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-white/35">{label}</p></div>;
+  return <div><div className="studio-accent-text flex items-center gap-1.5">{icon}<span className="studio-text text-sm font-black">{formatNumber(value)}</span></div><p className="studio-muted mt-1 text-[10px] font-bold uppercase tracking-wider">{label}</p></div>;
 }
 
 function LinkItem({ label, href, icon }: { label: string; href?: string | null; icon?: ReactNode }) {
   const safe = validHref(href);
   if (!safe) return null;
-  return <a href={safe} target="_blank" rel="noreferrer" className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-bold text-white/55 transition-colors hover:border-[#b7ff18]/50 hover:text-[#b7ff18]">{icon}{label}<ExternalLink className="h-3 w-3 opacity-45" /></a>;
+  return <a href={safe} target="_blank" rel="noreferrer" className="studio-border studio-muted studio-hover-accent inline-flex min-h-9 items-center gap-2 rounded-lg border px-3 text-xs font-bold transition-colors">{icon}{label}<ExternalLink className="h-3 w-3 opacity-45" /></a>;
 }
 
 export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) {
@@ -275,9 +335,53 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
   const totalViews = games.reduce((total, game) => total + Number(game.views || 0), 0);
   const followers = (profile as any)._count?.followers;
   const bio = profile.bio?.trim() || "";
-  const hasStudioBio = !!bio && bio.toLowerCase() !== "love this game";
+  const normalisedBio = bio.toLowerCase().replace(/[^a-z]/g, "");
+  const hasStudioBio = !!bio && !["lovethisgame", "lovehtisgame"].includes(normalisedBio);
   const following = !!followStatus?.following;
   const requested = !!followStatus?.requested;
+  const { signedUrl: signedBackgroundImage } = useSignedUrl((profile as any).profileBackgroundImageUrl || null);
+  const resolvedTheme = resolveProfileTheme(profile as any);
+  const themeDefinition = resolvedTheme.theme;
+  const themeTokens = themeDefinition?.tokens;
+  const accentColor = themeTokens?.accent || resolvedTheme.accentColor;
+  const backgroundColor = themeTokens?.background || resolvedTheme.backgroundColor;
+  const surfaceColor = themeTokens?.surface || resolvedTheme.cardColor;
+  const savedFontColor = (profile as any).profileFontColor || "";
+  const textColor = savedFontColor && savedFontColor.toUpperCase() !== "#FFFFFF"
+    ? savedFontColor
+    : themeTokens?.text || "#f8fafc";
+  const mutedColor = themeTokens?.textSecondary || "#cbd5e1";
+  const borderColor = themeTokens?.border || `${accentColor}55`;
+  const backgroundImage = signedBackgroundImage || (profile as any).profileBackgroundImageUrl || "";
+  const backgroundGradient = (profile as any).profileBackgroundGradient === false
+    ? ""
+    : (profile as any).profileBackgroundGradientCss || themeDefinition?.profileBackgroundGradientCss || "";
+  const backgroundPattern = themeDefinition?.assets.decorativeOverlay || themeDefinition?.patternCss || "none";
+  const profileFont = PROFILE_FONTS[(profile as any).profileFont || "default"] || themeDefinition?.fontFamily || PROFILE_FONTS.default;
+  const profileFontEffect = FONT_EFFECTS[(profile as any).profileFontEffect || "none"] || "none";
+  const profileFontAnimation = FONT_ANIMATIONS[(profile as any).profileFontAnimation || "none"] || "";
+  const hideBanner = !!(profile as any).hideBanner;
+  const statsGlassEffect = !!(profile as any).statsGlassEffect;
+  const studioThemeStyle = {
+    "--studio-background": backgroundColor,
+    "--studio-surface": surfaceColor,
+    "--studio-text": textColor,
+    "--studio-muted": mutedColor,
+    "--studio-accent": accentColor,
+    "--studio-avatar-border": resolvedTheme.avatarBorderColor,
+    "--studio-border": borderColor,
+    "--studio-button-text": themeTokens?.buttonText || "#071018",
+    fontFamily: profileFont,
+  } as CSSProperties;
+  const studioBackgroundStyle: CSSProperties = backgroundImage
+    ? {
+        backgroundColor,
+        backgroundImage: `url("${backgroundImage}")`,
+        backgroundPosition: `${(profile as any).profileBackgroundDesktopX || (profile as any).profileBackgroundPositionX || "50"}% ${(profile as any).profileBackgroundDesktopY || (profile as any).profileBackgroundPositionY || "50"}%`,
+        backgroundSize: `${(profile as any).profileBackgroundDesktopZoom || (profile as any).profileBackgroundZoom || "100"}%`,
+        backgroundRepeat: "no-repeat",
+      }
+    : { background: backgroundGradient || backgroundColor };
 
   const share = async () => {
     const url = window.location.href;
@@ -288,10 +392,12 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
   };
 
   return (
-    <main className="min-h-[100dvh] overflow-x-hidden bg-[#0F101B] pb-20 text-white">
-      <div className="mx-auto max-w-[1200px]">
+    <main className={`studio-profile-theme profile-theme-scope relative min-h-[100dvh] overflow-x-hidden pb-20 text-white ${statsGlassEffect ? "studio-stats-glass" : ""}`} style={studioThemeStyle}>
+      <div className="fixed inset-0" style={studioBackgroundStyle} aria-hidden="true" />
+      {backgroundPattern !== "none" && <div className="fixed inset-0 opacity-60" style={{ backgroundImage: backgroundPattern }} aria-hidden="true" />}
+      <div className="relative z-[1] mx-auto max-w-[1200px]">
         <section className="relative px-4 pt-4 sm:px-6 lg:px-0 lg:pt-6">
-          <div className="relative h-[180px] overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,#101c38,#1e3b47)] sm:h-[235px] lg:h-[280px]">
+          {!hideBanner && <div className="studio-border relative h-[180px] overflow-hidden rounded-2xl border bg-[linear-gradient(135deg,#101c38,#1e3b47)] sm:h-[235px] lg:h-[280px]">
             <SafeSignedImage
               url={bannerImage}
               alt=""
@@ -299,50 +405,50 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
               className="h-full w-full object-cover opacity-80"
               fallback={<div className="h-full w-full bg-[radial-gradient(circle_at_75%_25%,rgba(183,255,24,.16),transparent_32%),linear-gradient(135deg,#101c38,#1e3b47)]" />}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0F101B] via-[#0F101B]/20 to-transparent" />
-          </div>
-          <div className="relative -mt-14 flex flex-col gap-5 px-2 sm:-mt-16 sm:flex-row sm:items-end sm:px-5 lg:px-6">
-            <Avatar url={profile.avatarUrl} name={displayName} className="h-28 w-28 shrink-0 rounded-2xl border-4 border-[#0F101B] text-3xl shadow-xl sm:h-32 sm:w-32" />
+            <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${backgroundColor}, transparent 72%)` }} />
+          </div>}
+          <div className={`relative flex flex-col gap-5 px-2 sm:flex-row sm:items-end sm:px-5 lg:px-6 ${hideBanner ? "mt-8" : "-mt-14 sm:-mt-16"}`}>
+            <Avatar url={profile.avatarUrl} name={displayName} className="studio-avatar-border h-28 w-28 shrink-0 rounded-2xl border-4 text-3xl shadow-xl sm:h-32 sm:w-32" />
             <div className="min-w-0 flex-1 pb-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-3xl font-black tracking-tight sm:text-5xl">{displayName}</h1>
-                <BadgeCheck className="h-6 w-6 text-[#b7ff18]" aria-label="Verified indie developer" />
+                <h1 className={`text-3xl font-black tracking-tight sm:text-5xl ${profileFontAnimation}`} style={{ textShadow: profileFontEffect }}>{displayName}</h1>
+                <BadgeCheck className="studio-accent-text h-6 w-6" aria-label="Verified indie developer" />
               </div>
-              <p className="mt-1 text-sm font-semibold text-white/48">@{profile.username} <span className="mx-2 text-white/20">/</span> Developer / Studio</p>
+              <p className="studio-muted mt-1 text-sm font-semibold">@{profile.username} <span className="mx-2 opacity-50">/</span> Developer / Studio</p>
             </div>
             <div className="flex flex-wrap gap-2 pb-1">
-              {!isOwnProfile && <button type="button" onClick={() => currentUser ? followMutation.mutate() : window.location.assign("/auth")} disabled={followMutation.isPending} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#b7ff18] px-4 text-sm font-black text-[#07100a] hover:brightness-110 disabled:opacity-60"><UserPlus className="h-4 w-4" />{following ? "Following" : requested ? "Requested" : "Follow"}</button>}
-              <button type="button" onClick={share} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/15 bg-[#151725] px-4 text-sm font-bold hover:border-white/35">{shared ? <Check className="h-4 w-4 text-[#b7ff18]" /> : <Share2 className="h-4 w-4" />} {shared ? "Copied" : "Share"}</button>
-              {isOwnProfile && <><Link href="/game-dashboard" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#b7ff18]/40 px-4 text-sm font-bold text-[#b7ff18] hover:bg-[#b7ff18]/10"><SlidersHorizontal className="h-4 w-4" /> Manage games</Link><EditProfileModal profile={profile} trigger={<button type="button" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-bold hover:border-white/35"><Pencil className="h-4 w-4" /> Edit profile</button>} /></>}
+              {!isOwnProfile && <button type="button" onClick={() => currentUser ? followMutation.mutate() : window.location.assign("/auth")} disabled={followMutation.isPending} className="studio-accent-bg studio-button-text inline-flex min-h-10 items-center gap-2 rounded-xl px-4 text-sm font-black hover:brightness-110 disabled:opacity-60"><UserPlus className="h-4 w-4" />{following ? "Following" : requested ? "Requested" : "Follow"}</button>}
+              <button type="button" onClick={share} className="studio-surface studio-border studio-text studio-hover-accent-border inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-sm font-bold">{shared ? <Check className="studio-accent-text h-4 w-4" /> : <Share2 className="h-4 w-4" />} {shared ? "Copied" : "Share"}</button>
+              {isOwnProfile && <><Link href="/game-dashboard" className="studio-accent-border studio-accent-text studio-hover-accent-bg inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-sm font-bold"><SlidersHorizontal className="h-4 w-4" /> Manage games</Link><Link href="/settings/profile" className="studio-border studio-text studio-hover-accent-border inline-flex min-h-10 items-center gap-2 rounded-xl border px-4 text-sm font-bold"><Pencil className="h-4 w-4" /> Edit profile</Link></>}
             </div>
           </div>
         </section>
 
         <div className="grid gap-8 px-4 py-9 sm:px-6 lg:grid-cols-[minmax(0,1fr)_275px] lg:px-0 lg:py-12">
           <div className="min-w-0">
-            {hasStudioBio ? <section><p className="text-xs font-black uppercase tracking-[.2em] text-[#b7ff18]">About the Studio</p><p className="mt-2 max-w-2xl text-base leading-7 text-white/72">{bio}</p></section> : isOwnProfile ? <section className="rounded-xl border border-dashed border-[#b7ff18]/35 bg-[#b7ff18]/[.04] p-5"><p className="text-sm font-bold text-white">Add a short introduction</p><p className="mt-1 text-sm leading-6 text-white/50">Tell players what your studio makes. It will appear here on your public studio profile.</p><EditProfileModal profile={profile} trigger={<button type="button" className="mt-4 inline-flex min-h-9 items-center gap-2 rounded-lg bg-[#b7ff18] px-3 text-xs font-black text-[#07100a]"><Pencil className="h-3.5 w-3.5" /> Edit profile</button>} /></section> : null}
+            {hasStudioBio ? <section><p className="studio-accent-text text-xs font-black uppercase tracking-[.2em]">About the Studio</p><p className="studio-muted mt-2 max-w-2xl text-base leading-7">{bio}</p></section> : isOwnProfile ? <section className="studio-accent-border rounded-xl border border-dashed p-5"><p className="studio-text text-sm font-bold">Add a short introduction</p><p className="studio-muted mt-1 text-sm leading-6">Tell players what your studio makes. It will appear here on your public studio profile.</p><Link href="/settings/profile" className="studio-accent-bg studio-button-text mt-4 inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-black"><Pencil className="h-3.5 w-3.5" /> Edit profile</Link></section> : null}
             <div className="mt-5 flex flex-wrap gap-2">
               <LinkItem label="Website" href={website} icon={<Globe2 className="h-3.5 w-3.5" />} />
-              {location && <span className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-bold text-white/55"><MapPin className="h-3.5 w-3.5" /> {location}</span>}
+              {location && <span className="studio-border studio-muted inline-flex min-h-9 items-center gap-2 rounded-lg border px-3 text-xs font-bold"><MapPin className="h-3.5 w-3.5" /> {location}</span>}
               {social.map((item) => <LinkItem key={item.label} label={item.label} href={item.href} />)}
             </div>
 
             <section className="mt-12">
-              <div className="flex items-end justify-between gap-4 border-b border-white/10 pb-4">
-                <div><p className="text-xs font-black uppercase tracking-[.2em] text-[#b7ff18]">Studio portfolio</p><h2 className="mt-2 text-2xl font-black">Games <span className="text-white/35">({publishedGames})</span></h2></div>
+              <div className="studio-border flex items-end justify-between gap-4 border-b pb-4">
+                <div><p className="studio-accent-text text-xs font-black uppercase tracking-[.2em]">Studio portfolio</p><h2 className="studio-text mt-2 text-2xl font-black">Games <span className="studio-muted">({publishedGames})</span></h2></div>
               </div>
-              {gamesLoading ? <div className="mt-6 grid gap-5 md:grid-cols-2">{[1, 2].map((n) => <div key={n} className="aspect-[16/10] animate-pulse rounded-2xl bg-white/[.06]" />)}</div> : gamesError ? <p className="mt-6 rounded-xl border border-red-400/20 p-5 text-sm text-red-200/75">Games could not be loaded. Please try again later.</p> : games.length === 0 ? <div className="mt-6 rounded-2xl border border-dashed border-white/15 p-10 text-center"><p className="font-bold text-white/65">{isOwnProfile ? "Your studio has no published games yet." : "This studio has no published games yet."}</p>{isOwnProfile && <Link href="/game-dashboard" className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-[#b7ff18] px-4 text-xs font-black text-[#07100a]">Add your first game</Link>}</div> : games.length === 1 ? <div className="mt-6"><FeaturedGame game={games[0]} isOwnProfile={isOwnProfile} /></div> : <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">{games.map((game) => <GameCard key={game.id} game={game} />)}</div>}
+              {gamesLoading ? <div className="mt-6 grid gap-5 md:grid-cols-2">{[1, 2].map((n) => <div key={n} className="studio-surface aspect-[16/10] animate-pulse rounded-2xl opacity-60" />)}</div> : gamesError ? <p className="mt-6 rounded-xl border border-red-400/40 p-5 text-sm text-red-500">Games could not be loaded. Please try again later.</p> : games.length === 0 ? <div className="studio-border mt-6 rounded-2xl border border-dashed p-10 text-center"><p className="studio-muted font-bold">{isOwnProfile ? "Your studio has no published games yet." : "This studio has no published games yet."}</p>{isOwnProfile && <Link href="/game-dashboard" className="studio-accent-bg studio-button-text mt-4 inline-flex min-h-10 items-center rounded-lg px-4 text-xs font-black">Add your first game</Link>}</div> : games.length === 1 ? <div className="mt-6"><FeaturedGame game={games[0]} isOwnProfile={isOwnProfile} /></div> : <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">{games.map((game) => <GameCard key={game.id} game={game} />)}</div>}
             </section>
           </div>
-          <aside className="h-fit lg:border-l lg:border-white/10 lg:pl-7">
-            <p className="text-xs font-black uppercase tracking-[.2em] text-white/40">Studio at a glance</p>
+          <aside className="studio-border h-fit lg:border-l lg:pl-7">
+            <p className="studio-muted text-xs font-black uppercase tracking-[.2em]">Studio at a glance</p>
             <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-1">
               <Stat label={publishedGames === 1 ? "Published game" : "Published games"} value={publishedGames} icon={<Gamepad2 className="h-4 w-4" />} />
               <Stat label="Developer followers" value={followers} icon={<Users className="h-4 w-4" />} />
               <Stat label="Community uploads" value={communityUploads} icon={<UploadIcon />} />
               <Stat label="Total views" value={totalViews} icon={<Eye className="h-4 w-4" />} />
             </div>
-            {primaryGame?.releaseDate && <div className="mt-5 flex items-center gap-2 text-xs text-white/45"><CalendarDays className="h-4 w-4 text-[#b7ff18]" /> Next release: {new Date(primaryGame.releaseDate).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</div>}
+            {primaryGame?.releaseDate && <div className="studio-muted mt-5 flex items-center gap-2 text-xs"><CalendarDays className="studio-accent-text h-4 w-4" /> Next release: {new Date(primaryGame.releaseDate).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</div>}
           </aside>
         </div>
       </div>
@@ -355,5 +461,5 @@ function UploadIcon() {
 }
 
 function Stat({ label, value, icon }: { label: string; value: unknown; icon?: ReactNode }) {
-  return <div className="rounded-xl border border-white/10 bg-[#151725] p-4"><div className="flex items-center gap-2 text-[#b7ff18]">{icon}<span className="text-2xl font-black text-white">{formatNumber(value)}</span></div><p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-white/40">{label}</p></div>;
+  return <div className="studio-stat-card studio-surface studio-border rounded-xl border p-4"><div className="studio-accent-text flex items-center gap-2">{icon}<span className="studio-text text-2xl font-black">{formatNumber(value)}</span></div><p className="studio-muted mt-1 text-[11px] font-bold uppercase tracking-wider">{label}</p></div>;
 }

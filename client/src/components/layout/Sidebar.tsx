@@ -28,6 +28,7 @@ import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboar
 import { GamefolioDashboardIcon } from "@/components/icons/GamefolioDashboardIcon";
 import { GamefolioMessagesIcon } from "@/components/icons/GamefolioMessagesIcon";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
+import { GamefolioProfileSettingsIcon } from "@/components/icons/GamefolioProfileSettingsIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
@@ -334,6 +335,12 @@ const Sidebar = () => {
                       <Link href={item.href} onClick={() => { closeClipDialog(); setMyGamefolioExpanded(false); }}>
                         <div className="flex items-center px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors cursor-pointer">
                           View Profile
+                        </div>
+                      </Link>
+                      <Link href="/settings/profile" onClick={() => { closeClipDialog(); setMyGamefolioExpanded(false); }}>
+                        <div className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors cursor-pointer">
+                          <GamefolioProfileSettingsIcon className="h-3.5 w-3.5 shrink-0" />
+                          <span>Profile &amp; Appearance</span>
                         </div>
                       </Link>
                       {canAccessIndieGame && (
