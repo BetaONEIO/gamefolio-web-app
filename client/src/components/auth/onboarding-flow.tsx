@@ -165,7 +165,7 @@ function TrendingGamesGrid({ onSelectGame, selectedGames }: TrendingGamesGridPro
 // Onboarding steps
 enum OnboardingStep {
   Welcome = 0,
-  ChoosePath = 1,  // Choose path (Gamer / Streamer / Indie) — happens right after Welcome
+  ChoosePath = 1,  // Choose path (Gamer / eSports Player / Streamer / Indie) — happens right after Welcome
   Intro1 = 2,      // Path-specific intro screen 1
   Intro2 = 3,      // Path-specific intro screen 2
   Username = 5,    // Google users only
@@ -177,7 +177,7 @@ enum OnboardingStep {
   Complete = 11,
 }
 
-type UserPath = "gamer" | "streamer" | "indie" | null;
+type UserPath = "gamer" | "esports" | "streamer" | "indie" | null;
 
 const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
@@ -366,9 +366,10 @@ export default function OnboardingFlow({
 
   // Path selection state
   const [selectedPath, setSelectedPath] = useState<UserPath>(null);
+  const isGamingPath = selectedPath === 'gamer' || selectedPath === 'esports';
   const [pathCardIndex, setPathCardIndex] = useState(0);
   const pathTouchStartX = useRef<number | null>(null);
-  // Reset carousel to Indie (first card) every time the user enters ChoosePath
+  // Reset carousel to Gamer (first card) every time the user enters ChoosePath.
   useEffect(() => {
     if (currentStep === OnboardingStep.ChoosePath) setPathCardIndex(0);
   }, [currentStep]);
@@ -687,8 +688,8 @@ export default function OnboardingFlow({
       case OnboardingStep.Welcome:    return OnboardingStep.ChoosePath;
       case OnboardingStep.ChoosePath: return OnboardingStep.Intro1;
       case OnboardingStep.Intro1:     return OnboardingStep.Intro2;
-      case OnboardingStep.Intro2:     return isGoogleUser ? OnboardingStep.Username : (selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar);
-      case OnboardingStep.Username:   return selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar;
+      case OnboardingStep.Intro2:     return isGoogleUser ? OnboardingStep.Username : (isGamingPath ? OnboardingStep.Games : OnboardingStep.Avatar);
+      case OnboardingStep.Username:   return isGamingPath ? OnboardingStep.Games : OnboardingStep.Avatar;
       case OnboardingStep.Games:      return OnboardingStep.Avatar;
       case OnboardingStep.Avatar:     return OnboardingStep.PathSetup;
       case OnboardingStep.PathSetup:  return OnboardingStep.Wallet;
@@ -760,16 +761,16 @@ export default function OnboardingFlow({
   // Auto-skip username for non-Google users
   useEffect(() => {
     if (currentStep === OnboardingStep.Username && !isGoogleUser) {
-      skipToStep(selectedPath === 'gamer' ? OnboardingStep.Games : OnboardingStep.Avatar);
+      skipToStep(isGamingPath ? OnboardingStep.Games : OnboardingStep.Avatar);
     }
-  }, [currentStep, isGoogleUser, selectedPath]);
+  }, [currentStep, isGoogleUser, isGamingPath]);
 
   // Auto-skip Games for non-gamer paths
   useEffect(() => {
-    if (currentStep === OnboardingStep.Games && selectedPath !== 'gamer') {
+    if (currentStep === OnboardingStep.Games && !isGamingPath) {
       skipToStep(OnboardingStep.Avatar);
     }
-  }, [currentStep, selectedPath]);
+  }, [currentStep, isGamingPath]);
 
   // Sync wallet states
   useEffect(() => {
@@ -1013,6 +1014,7 @@ export default function OnboardingFlow({
       // Build user type from path
       let userType = "viewer";
       if (selectedPath === "gamer") userType = gamerInterests.length > 0 ? gamerInterests.join(",") : "gamer";
+      else if (selectedPath === "esports") userType = gamerInterests.length > 0 ? `esports_player,${gamerInterests.join(",")}` : "esports_player";
       else if (selectedPath === "streamer") userType = "streamer";
       else if (selectedPath === "indie") userType = "indie_developer";
 
@@ -1020,6 +1022,8 @@ export default function OnboardingFlow({
       let bio = "Just joined Gamefolio!";
       if (selectedPath === "streamer" && streamerData.mainPlatform) {
         bio = `Streaming on ${streamerData.mainPlatform}${streamerData.mainGame ? ` — ${streamerData.mainGame}` : ''}`;
+      } else if (selectedPath === "esports") {
+        bio = "Competitive eSports player on Gamefolio.";
       } else if (selectedPath === "indie" && indieGames[0]?.gameName) {
         const lead = indieGames[0];
         const others = indieGames.length - 1;
@@ -1155,6 +1159,8 @@ export default function OnboardingFlow({
           ? { titleA: 'CONNECT YOUR', titleB: 'STREAMS', sub: 'Connect your streaming platforms and build a creator profile that showcases your best content.' }
           : selectedPath === 'indie'
           ? { titleA: 'PROMOTE YOUR', titleB: 'GAME', sub: 'Create a game profile and showcase your indie title to the Gamefolio community.', img: imgIndieGame, imgAlt: 'Indie game cartridge' }
+          : selectedPath === 'esports'
+          ? { titleA: 'BUILD YOUR', titleB: 'ESPORTS PROFILE', sub: 'Showcase the games you compete in, your best moments, and your identity as an eSports player.', img: imgGamefolioCard, imgAlt: 'eSports player profile card' }
           : { titleA: 'BUILD YOUR', titleB: 'GAMEFOLIO', sub: 'Your gaming legacy, all in one place. Connect accounts and showcase your best moments.', img: imgGamefolioCard, imgAlt: 'Gamefolio profile card' };
         return (
           <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-background overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
@@ -1237,6 +1243,8 @@ export default function OnboardingFlow({
           ? { titleA: 'UPLOAD YOUR', titleB: 'STREAM CLIPS', sub: 'Turn your best moments into clips, highlights and reels that continue growing your audience long after your stream ends.' }
           : selectedPath === 'indie'
           ? { titleA: 'CONNECT WITH', titleB: 'CREATORS', sub: 'Creators upload clips, reels, and screenshots to build community around your game.' }
+          : selectedPath === 'esports'
+          ? { titleA: 'SHOW YOUR', titleB: 'COMPETITIVE EDGE', sub: 'Share match highlights, build your reputation, and connect with the competitive gaming community.', img: imgProgression, imgAlt: 'eSports player progression' }
           : { titleA: 'TRACK YOUR', titleB: 'PROGRESS', sub: 'Watch your skills grow. Every action earns XP and builds your legendary status.', img: imgProgression, imgAlt: 'Track progression' };
         return (
           <div className="flex flex-col flex-1 -mx-5 sm:-mx-6 md:-mx-8 bg-background overflow-hidden relative" style={{ marginBottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
@@ -1509,7 +1517,7 @@ export default function OnboardingFlow({
 
       // ── STEP 7: CHOOSE YOUR PATH ───────────────────────────────────────────
       case OnboardingStep.ChoosePath: {
-        // Order: Gamer → Streamer → Indie Game
+        // Order: Gamer → Streamer → Game Developer → eSports Player
         const pathCards = [
           {
             id: 'gamer' as UserPath,
@@ -1587,6 +1595,20 @@ export default function OnboardingFlow({
               </div>
             ),
           }] : []),
+          {
+            id: 'esports' as UserPath,
+            title: 'ESPORTS PLAYER',
+            ctaLabel: 'Continue as eSports Player',
+            visual: (
+              <div className="relative flex items-center justify-center flex-shrink-0 w-full"
+                style={{ height: 'clamp(220px, calc(100dvh - 447px), 300px)' }}>
+                <div className="ob-float relative flex h-48 w-48 items-center justify-center rounded-full border-2 border-cyan-400/50 bg-cyan-400/10 shadow-[0_0_70px_rgba(34,211,238,0.25)]">
+                  <Swords className="h-24 w-24 text-cyan-300" strokeWidth={1.5} aria-hidden="true" />
+                  <Trophy className="absolute -bottom-3 -right-3 h-16 w-16 rounded-full border border-yellow-400/40 bg-[#0a0f1c] p-3 text-yellow-400" aria-hidden="true" />
+                </div>
+              </div>
+            ),
+          },
         ];
 
         const totalCards = pathCards.length;
@@ -1620,15 +1642,20 @@ export default function OnboardingFlow({
           >
             {/* Full-screen per-card backgrounds */}
             <div className="absolute inset-x-0 top-0 pointer-events-none transition-opacity duration-500 z-0"
-                 style={{ opacity: pathCardIndex === 0 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
+                 style={{ opacity: currentCard.id === 'gamer' ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
               <div className="absolute w-72 h-72 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.18)', top: '20%', left: '5%' }} />
               <div className="absolute w-64 h-64 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.15)', top: '35%', right: '5%' }} />
               <div className="absolute w-56 h-56 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.12)', bottom: '20%', left: '10%' }} />
             </div>
+            <div className="absolute inset-x-0 top-0 pointer-events-none transition-opacity duration-500 z-0"
+                 style={{ opacity: currentCard.id === 'esports' ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
+              <div className="absolute h-80 w-80 rounded-full bg-cyan-400/20 blur-[90px]" style={{ top: '18%', left: '8%' }} />
+              <div className="absolute h-64 w-64 rounded-full bg-blue-500/15 blur-[80px]" style={{ bottom: '18%', right: '5%' }} />
+            </div>
             <div className="absolute inset-x-0 top-0 ob-spark-burst pointer-events-none transition-opacity duration-500 z-0"
-                 style={{ opacity: pathCardIndex === 1 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }} />
+                 style={{ opacity: currentCard.id === 'streamer' ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }} />
             <div className="absolute inset-x-0 top-0 pointer-events-none transition-opacity duration-500 z-0 flex items-center justify-center"
-                 style={{ opacity: pathCardIndex === 2 ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
+                 style={{ opacity: currentCard.id === 'indie' ? 1 : 0, bottom: 'calc(-1 * (max(2.5rem, env(safe-area-inset-bottom, 0px)) + 0.5rem))' }}>
               <div className="w-72 h-72 rounded-full blur-[80px]" style={{ background: 'rgba(193,255,0,0.18)' }} />
             </div>
             {/* ── STATIC: back + dots — never move ── */}
@@ -1748,7 +1775,7 @@ export default function OnboardingFlow({
       // ── STEP 9: PATH SETUP (varies by path) ────────────────────────────────
       case OnboardingStep.PathSetup:
         // Gamer: interest selection (up to 2)
-        if (selectedPath === 'gamer') {
+        if (isGamingPath) {
           const gamerOptions = [
             { id: "gamer", label: "Gamer", icon: Gamepad2 },
             { id: "content_creator", label: "Content Creator", icon: Video },
@@ -1773,7 +1800,7 @@ export default function OnboardingFlow({
           return (
             <div className="flex flex-col flex-1 min-h-0">
               <div className="flex-1 overflow-y-auto">
-                <h2 className="text-2xl font-bold text-white mb-1">Your Gamer Profile</h2>
+                <h2 className="text-2xl font-bold text-white mb-1">{selectedPath === 'esports' ? 'Your eSports Player Profile' : 'Your Gamer Profile'}</h2>
                 <p className="text-gray-400 mb-5">How would you describe yourself? Select up to 2.</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                   {gamerOptions.map((opt) => {
@@ -2382,6 +2409,13 @@ export default function OnboardingFlow({
             benefits: ['Larger & unlimited uploads', 'Animated profile banners & GIF avatars', 'Exclusive avatar borders & Pro badge', 'Welcome + monthly bonus lootboxes', 'Up to 20% off in the Gamefolio store'],
             proLabel: 'View Gamefolio Pro',
           },
+          esports: {
+            titleA: 'GAMEFOLIO',  titleB: 'PRO',
+            sub: 'Stand out, share more highlights, and grow your competitive profile.',
+            emoji: '🏆',
+            benefits: ['Larger & unlimited uploads', 'Animated profile banners & GIF avatars', 'Exclusive avatar borders & Pro badge', 'Welcome + monthly bonus lootboxes', 'Up to 20% off in the Gamefolio store'],
+            proLabel: 'View Gamefolio Pro',
+          },
           indie: {
             titleA: 'GAME DEVELOPER',  titleB: 'PRO',
             sub: 'Game Developer Pro is coming soon. Get ready for expanded developer benefits.',
@@ -2443,6 +2477,8 @@ export default function OnboardingFlow({
           ? "Start by uploading your first stream clip or connecting your Kick/Twitch channel."
           : selectedPath === 'indie'
           ? "Complete your game profile and add your store links to get discovered."
+          : selectedPath === 'esports'
+          ? "Upload a match highlight and start building your competitive player profile."
           : "Start by uploading your first clip or screenshot to build your Gamefolio.";
 
         return (

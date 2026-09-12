@@ -9,6 +9,7 @@ import {
   UserPlus,
   UserCheck,
   Trophy,
+  Swords,
   Video,
   Gamepad2,
   Upload,
@@ -73,6 +74,11 @@ const userTypeConfig: Record<string, { label: string; icon: any; color: string }
     label: "Pro Gamer",
     icon: Trophy,
     color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+  },
+  esports_player: {
+    label: "eSports Player",
+    icon: Swords,
+    color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
   },
   content_creator: {
     label: "Creator",

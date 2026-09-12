@@ -326,7 +326,7 @@ app.use((req, res, next) => {
         // Build rich description from user data
         const userTypesArr = (profile.userType || '').split(',').map((t: string) => t.trim()).filter(Boolean);
         const typeLabels: Record<string, string> = {
-          streamer: 'Streamer', gamer: 'Gamer', professional_gamer: 'Pro Gamer',
+          streamer: 'Streamer', gamer: 'Gamer', professional_gamer: 'Pro Gamer', esports_player: 'eSports Player',
           content_creator: 'Creator', viewer: 'Viewer',
           filthy_casual: 'Casual', doom_scroller: 'Doom Scroller'
         };

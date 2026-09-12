@@ -130,8 +130,9 @@ function planLabel(plan: string | null | undefined): string {
 /**
  * Onboarding persona tags, as written by client/src/components/auth/
  * onboarding-flow.tsx into users.user_type (a comma-separated string).
- * The three top-level paths are "gamer" (which additionally stores up to two
- * interest tags), "streamer", and "indie" (stored as `indie_developer`).
+ * The four top-level paths are "gamer" (which additionally stores up to two
+ * interest tags), "esports" (stored as `esports_player`), "streamer", and
+ * "indie" (stored as `indie_developer`).
  * The trailing entries are legacy values from the previous onboarding that
  * still exist on older accounts.
  */
@@ -139,6 +140,7 @@ const USER_TYPE_LABELS: Record<string, string> = {
   gamer: 'Gamer',
   content_creator: 'Content Creator',
   professional_gamer: 'Pro Gamer',
+  esports_player: 'eSports Player',
   viewer: 'Viewer',
   competitive: 'Competitive',
   casual: 'Casual Gamer',
@@ -164,6 +166,7 @@ function parseUserTypes(userType: string | null | undefined): string[] {
 function pathFor(tags: string[]): { emoji: string; label: string } | null {
   if (tags.includes('indie_developer')) return { emoji: '\u{1F6E0}\uFE0F', label: 'Game Developer' };
   if (tags.includes('streamer')) return { emoji: '\u{1F4FA}', label: 'Streamer' };
+  if (tags.includes('esports_player')) return { emoji: '\u{1F3C6}', label: 'eSports Player' };
   if (tags.length > 0) return { emoji: '\u{1F3AE}', label: 'Gamer' };
   return null;
 }
@@ -205,7 +208,7 @@ export function notifyNewSignup(user: User): void {
 
 /**
  * Fired when a user finishes onboarding and picks their path (Gamer /
- * Streamer / Game Developer).
+ * eSports Player / Streamer / Game Developer).
  *
  * This is deliberately a separate message from notifyNewSignup: user_type is
  * still null at account-creation time — OAuth sign-in routes explicitly null

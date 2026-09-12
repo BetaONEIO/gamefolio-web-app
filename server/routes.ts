@@ -6828,6 +6828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'streamer': 'Streamer',
         'gamer': 'Gamer', 
         'professional_gamer': 'Pro Gamer',
+        'esports_player': 'eSports Player',
         'content_creator': 'Creator',
         'viewer': 'Viewer',
         'filthy_casual': 'Casual',
