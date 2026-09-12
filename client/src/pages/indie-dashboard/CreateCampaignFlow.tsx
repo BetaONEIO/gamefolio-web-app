@@ -865,19 +865,19 @@ function CampaignAccordion({
               style={{ gridTemplateRows: expanded ? "1fr" : "0fr" }}>
               <div className="min-h-0 overflow-hidden">
                 <div
-                  className="relative min-h-[420px] px-4 sm:px-7 py-6 sm:py-7 flex items-stretch"
+                  className="relative min-h-0 px-4 py-6 sm:px-7 sm:py-7 flex items-center lg:min-h-[460px] xl:min-h-[500px]"
                   style={{
-                    backgroundImage: `linear-gradient(90deg, rgba(7,11,16,0.92) 0%, rgba(7,11,16,0.86) 42%, rgba(7,11,16,0.66) 68%, rgba(7,11,16,0.58) 100%), url("${CAMPAIGN_ARTWORK[type.slug]}")`,
+                    backgroundImage: `linear-gradient(90deg, rgba(7,11,16,0.95) 0%, rgba(7,11,16,0.88) 30%, rgba(7,11,16,0.74) 55%, rgba(7,11,16,0.24) 100%), url("${CAMPAIGN_ARTWORK[type.slug]}")`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                   }}>
-                  <div className="relative z-10 w-full md:max-w-[68%] flex flex-col gap-4">
+                  <div className="relative z-10 flex w-full flex-col justify-center gap-5 lg:w-[55%] lg:max-w-[55%]">
                     <div>
                       <p className="text-[10px] uppercase tracking-[0.18em] font-bold mb-2" style={{ color: accent }}>Campaign overview</p>
                       <p className="text-sm leading-relaxed text-white/78 max-w-2xl">{type.description}</p>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
                       {[
                         { label: "Duration", value: `${type.duration} days`, Icon: Clock },
                         { label: "Creator slots", value: `${type.capacity}`, Icon: Users },
@@ -921,7 +921,7 @@ function CampaignAccordion({
                       </div>
                     </div>
 
-                    <div className="mt-auto pt-1">
+                    <div className="pt-1">
                       <button
                         type="button"
                         tabIndex={expanded ? 0 : -1}
