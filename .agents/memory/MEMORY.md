@@ -61,3 +61,4 @@
 - [Pro entitlement expiry CAS](pro-entitlement-expiry-cas.md) — expiry writes must repeat eligibility guards and re-read state so concurrent provider activation wins.
 - [AI VOD clipper access tier](ai-vod-clipper-access-tier.md) — private Admin/Ambassador testers receive Pro limits; public launch is intended to be Pro-only.
 - [Indie studio appearance ownership](indie-studio-appearance-ownership.md) — `/profile/:username` is the themed studio identity; `/developer/:handle` stays a separate legacy game-oriented route.
+- [Bun override compatibility](bun-override-compatibility.md) — Bun ignores nested npm overrides; use a globally compatible patched version and verify with `bun audit`.
