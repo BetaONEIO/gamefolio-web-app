@@ -1850,7 +1850,7 @@ function ProfileAccordion({
           <span className="mt-1 block line-clamp-2 text-[13px] font-normal leading-snug text-[#A5ADBA] sm:truncate sm:text-[14px]">{description}</span>
           <span
             className="mt-2 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold sm:hidden"
-            style={{ color: status.color, background: "#101820", borderColor: `${status.color}66"`.replace('"', "") }}
+            style={{ color: status.color, background: "#101820", borderColor: `${status.color}66` }}
           >
             {statusIcon}
             {status.label}
@@ -1911,7 +1911,7 @@ function ProfileEditorHeader({
            <h1 className="text-xl font-black tracking-tight text-white sm:text-2xl">
              Game profile
            </h1>
-           <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-white/40">
+           <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-[#A5ADBA]">
              Manage the information players see on your public game page.
           </p>
         </div>
@@ -1959,7 +1959,7 @@ function ProfileEditorHeader({
             ))}
           </div>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 border-t pt-3 text-[11px] text-white/30" style={{ borderColor: CARD_BORDER }}>
+        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 border-t pt-3 text-[11px] text-[#A5ADBA]" style={{ borderColor: CARD_BORDER }}>
           <span>Imported values stay separate from direct edits.</span>
           <DataSourceExplainer showOverridden={hasOverrides} />
         </div>
@@ -2040,53 +2040,53 @@ export default function GameProfileTab({
           Loading your game profile…
         </div>
       ) : (
-        <div className="space-y-3">
-           <ProfileAccordion id="basics" title="Game Basics"
-             description="Name, description, release status, and genres"
+         <div className="space-y-4">
+            <ProfileAccordion id="basics" title="Core Game Information" icon={Gamepad2}
+              description="Game title, description, status, price, genres and key features"
             status={getSectionStatus(profile, "basics")} open={activeSection === "basics"}
             onToggle={() => toggleSection("basics")}>
             <AboutCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
           </ProfileAccordion>
 
-           <ProfileAccordion id="platforms" title="Platforms"
-             description="Choose where players can play and follow your game"
+            <ProfileAccordion id="platforms" title="Platforms & Availability" icon={Monitor}
+              description="Where players can access and play your game"
              status={getSectionStatus(profile, "platforms")} open={activeSection === "platforms"}
              onToggle={() => toggleSection("platforms")}>
              <PlatformCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
              <CommunitySocialCard profile={profile} focusRequest={activeFocusRequest} />
            </ProfileAccordion>
 
-          <ProfileAccordion id="stores" title="Store & Purchase Links"
-            description="Connect the places where players can buy or learn more about your game"
+           <ProfileAccordion id="stores" title="Store Links" icon={ShoppingBag}
+             description="Connect the places where players can buy or follow your game"
             status={getSectionStatus(profile, "stores")} open={activeSection === "stores"}
             onToggle={() => toggleSection("stores")}>
             <StoreListingCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
           </ProfileAccordion>
 
-          <ProfileAccordion id="media" title="Media & Branding"
-            description="Banner, capsule artwork, trailer, and screenshots"
+           <ProfileAccordion id="media" title="Media & Branding" icon={ImageIcon}
+             description="Manage your game artwork, trailer and screenshots"
             status={getSectionStatus(profile, "media")} open={activeSection === "media"}
             onToggle={() => toggleSection("media")}>
             <MediaCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
           </ProfileAccordion>
 
-          <ProfileAccordion id="details" title="Game Details"
-            description="Detailed descriptions, features, discovery tags, and store metadata"
+           <ProfileAccordion id="details" title="Discovery & Metadata" icon={Search}
+             description="Help players find and understand your game"
             status={getSectionStatus(profile, "details")} open={activeSection === "details"}
             onToggle={() => toggleSection("details")}>
             <GameDetailsSummary profile={profile} onEdit={requestFocus} />
             <MetadataCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
           </ProfileAccordion>
 
-          <ProfileAccordion id="developer" title="Developer Information"
-            description="Studio identity, location, team size, and developer website"
+           <ProfileAccordion id="developer" title="Studio Information" icon={Building2}
+             description="Developer identity, location, team size and website"
             status={getSectionStatus(profile, "developer")} open={activeSection === "developer"}
             onToggle={() => toggleSection("developer")}>
             <StudioCard profile={profile} fieldMeta={fieldMeta} focusRequest={activeFocusRequest} />
           </ProfileAccordion>
 
-          <ProfileAccordion id="advanced" title="Advanced Settings"
-            description="Import fields from a store or review updates before syncing them"
+           <ProfileAccordion id="advanced" title="Imports & Data Sync" icon={RefreshCw}
+             description="Review imported store data and control synchronisation"
             status={getSectionStatus(profile, "advanced")} open={activeSection === "advanced"}
             onToggle={() => toggleSection("advanced")}>
             <AdvancedCard profile={profile} fieldMeta={fieldMeta} />
