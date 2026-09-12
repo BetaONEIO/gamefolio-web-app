@@ -21,7 +21,7 @@ export default function IndieGameProfilePage() {
 
   if (!username) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0B1319" }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#0A0A10" }}>
         <p className="text-white/50">No developer specified.</p>
       </div>
     );
@@ -29,9 +29,9 @@ export default function IndieGameProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen" style={{ background: "#0B1319" }}>
+      <div className="min-h-screen" style={{ background: "#0A0A10" }}>
         <div className="relative w-full pt-32 pb-16 px-6 flex flex-col items-center"
-          style={{ background: "linear-gradient(135deg, #0B1319 0%, #1a0b30 50%, #0d1f2d 100%)" }}>
+          style={{ background: "linear-gradient(135deg, #0A0A10 0%, #1a0b30 50%, #0d1f2d 100%)" }}>
           <Skeleton className="w-24 h-24 rounded-full mb-6" />
           <Skeleton className="h-12 w-72 mb-4" />
           <Skeleton className="h-4 w-40 mb-8" />
@@ -56,7 +56,7 @@ export default function IndieGameProfilePage() {
 
   if (error || !profile) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: "#0B1319" }}>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: "#0A0A10" }}>
         <Link href="/explore"
           className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors mb-4">
           <ArrowLeft className="w-4 h-4" /> Back to Explore

@@ -185,10 +185,10 @@ export function LevelTrackerModal({
                 exit={{ opacity: 0, y: -5 }}
                 className="flex justify-center -mt-1 mb-1 lg:mb-2"
               >
-                <div className="flex items-center gap-1.5 px-3 py-1 lg:px-4 lg:py-1.5 bg-gradient-to-r from-[#B7FF1A]/20 to-[#22d3ee]/20 border border-[#B7FF1A]/30 rounded-full">
-                  <Sparkles className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-[#B7FF1A] animate-pulse" />
-                  <span className="text-[#B7FF1A] font-bold text-sm lg:text-base">+{xpDelta} XP</span>
-                  <Sparkles className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-[#B7FF1A] animate-pulse" />
+                <div className="flex items-center gap-1.5 px-3 py-1 lg:px-4 lg:py-1.5 bg-gradient-to-r from-[#B7FF18]/20 to-[#22d3ee]/20 border border-[#B7FF18]/30 rounded-full">
+                  <Sparkles className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-[#B7FF18] animate-pulse" />
+                  <span className="text-[#B7FF18] font-bold text-sm lg:text-base">+{xpDelta} XP</span>
+                  <Sparkles className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-[#B7FF18] animate-pulse" />
                 </div>
               </motion.div>
             )}
@@ -209,7 +209,7 @@ export function LevelTrackerModal({
                   cx="50"
                   cy="50"
                   r="45"
-                  stroke="#B7FF1A"
+                  stroke="#B7FF18"
                   strokeWidth="6"
                   strokeLinecap="round"
                   fill="none"
@@ -269,7 +269,7 @@ export function LevelTrackerModal({
                 <motion.div
                   key={segment}
                   className={`flex-1 h-1.5 lg:h-2 rounded-full ${
-                    segment <= filledSegments ? 'bg-[#B7FF1A]' : 'bg-muted'
+                    segment <= filledSegments ? 'bg-[#B7FF18]' : 'bg-muted'
                   }`}
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
@@ -282,7 +282,7 @@ export function LevelTrackerModal({
           <div className="px-4 pb-4 lg:px-6 lg:pb-5">
             <Button
               onClick={handleClose}
-              className="w-full h-11 lg:h-12 rounded-xl bg-[#B7FF1A] hover:bg-[#A2F000] text-[#071013] text-sm lg:text-base font-bold shadow-[0_4px_6px_-4px_rgba(0,0,0,0.1),0_10px_15px_-3px_rgba(0,0,0,0.1)]"
+              className="w-full h-11 lg:h-12 rounded-xl bg-[#B7FF18] hover:bg-[#A2F000] text-[#0A0A10] text-sm lg:text-base font-bold shadow-[0_4px_6px_-4px_rgba(0,0,0,0.1),0_10px_15px_-3px_rgba(0,0,0,0.1)]"
             >
               Continue
             </Button>

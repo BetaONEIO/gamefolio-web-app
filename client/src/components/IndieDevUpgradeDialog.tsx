@@ -24,32 +24,32 @@ const perks = [
   {
     title: "Create & manage bounties",
     description: "Give gamers and streamers challenges to complete using your game.",
-    icon: <Trophy className="w-4 h-4 text-[#B7FF1A]" />,
+    icon: <Trophy className="w-4 h-4 text-[#B7FF18]" />,
   },
   {
     title: "Share game keys with creators",
     description: "Help selected players create clips, reels, streams and more.",
-    icon: <KeyRound className="w-4 h-4 text-[#B7FF1A]" />,
+    icon: <KeyRound className="w-4 h-4 text-[#B7FF18]" />,
   },
   {
     title: "Get your game promoted",
     description: "Eligible games can receive exposure across Gamefolio and featured placements.",
-    icon: <Megaphone className="w-4 h-4 text-[#B7FF1A]" />,
+    icon: <Megaphone className="w-4 h-4 text-[#B7FF18]" />,
   },
   {
     title: "Reach gamers & streamers",
     description: "Put your game in front of creators who can discover and play it.",
-    icon: <Users className="w-4 h-4 text-[#B7FF1A]" />,
+    icon: <Users className="w-4 h-4 text-[#B7FF18]" />,
   },
   {
     title: "Stand out across Gamefolio",
     description: "Get additional opportunities for visibility and discovery.",
-    icon: <Eye className="w-4 h-4 text-[#B7FF1A]" />,
+    icon: <Eye className="w-4 h-4 text-[#B7FF18]" />,
   },
   {
     title: "Developer Pro badge",
     description: "Show your Developer Pro status on your Indie Game profile.",
-    icon: <BadgeCheck className="w-4 h-4 text-[#B7FF1A]" />,
+    icon: <BadgeCheck className="w-4 h-4 text-[#B7FF18]" />,
   },
 ];
 
@@ -116,9 +116,9 @@ function DeveloperVideoPanel({ onClose }: { onClose: () => void }) {
         <X className="h-4 w-4" />
       </button>
       <div className="absolute inset-x-0 bottom-0 z-10 p-5">
-        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[#B7FF1A33] bg-[#14532d66] px-2.5 py-1">
-          <Rocket className="h-3.5 w-3.5 text-[#B7FF1A]" />
-          <span className="text-[10px] font-bold uppercase tracking-[1px] text-[#B7FF1A]">
+        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[#B7FF1833] bg-[#14532d66] px-2.5 py-1">
+          <Rocket className="h-3.5 w-3.5 text-[#B7FF18]" />
+          <span className="text-[10px] font-bold uppercase tracking-[1px] text-[#B7FF18]">
             Developer Pro
           </span>
         </div>
@@ -285,7 +285,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
               <p className="mb-6 text-[#B8C0AE]">Your developer benefits are active. Thanks for supporting the Gamefolio creator community.</p>
               <button
                 onClick={() => onOpenChange(false)}
-                className="w-full rounded-2xl bg-[#B7FF1A] py-4 text-lg font-bold text-[#071013] transition-colors hover:bg-[#A2F000]"
+                className="w-full rounded-2xl bg-[#B7FF18] py-4 text-lg font-bold text-[#0A0A10] transition-colors hover:bg-[#A2F000]"
               >
                 Close
               </button>
@@ -304,11 +304,11 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
   const showPurchaseUI = isNative ? hasNativePackages : true;
 
   const plansScreen = (
-    <div className="flex h-full max-h-[100dvh] flex-col overflow-hidden bg-[#0B1218] md:grid md:max-h-[90vh] md:grid-cols-2">
+    <div className="flex h-full max-h-[100dvh] flex-col overflow-hidden bg-[#0A0A10] md:grid md:max-h-[90vh] md:grid-cols-2">
       <DeveloperVideoPanel onClose={() => onOpenChange(false)} />
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-[#0B1218] p-6 md:p-7" style={{ scrollbarWidth: "none" }}>
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-[#0A0A10] p-6 md:p-7" style={{ scrollbarWidth: "none" }}>
         <div className="mb-5">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-[1.5px] text-[#B7FF1A]">Game Developer Pro</p>
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[1.5px] text-[#B7FF18]">Game Developer Pro</p>
           <h2 className="mb-2 text-3xl font-bold leading-tight text-white">Turn players into creators.</h2>
           <p className="text-sm leading-relaxed text-[#B8C0AE]">
             Create bounties, distribute game keys and get the Gamefolio community creating content around your game.
@@ -337,14 +337,14 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
               onClick={() => setBillingPeriod("yearly")}
               disabled={!GAME_DEVELOPER_PRO_PURCHASES_ENABLED}
               className={`relative w-full rounded-xl border-2 p-3 text-left transition-all ${
-                billingPeriod === "yearly" ? "border-[#B7FF1A] bg-[#B7FF1A0d]" : "border-[#1B2A33] bg-[#0B1218] hover:border-[#22313A]"
+                billingPeriod === "yearly" ? "border-[#B7FF18] bg-[#B7FF180d]" : "border-[#1B2A33] bg-[#0A0A10] hover:border-[#22313A]"
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-white">Yearly</span>
                   {!GAME_DEVELOPER_PRO_PURCHASES_ENABLED && (
-                    <span className="rounded-full bg-[#B7FF1A1a] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#B7FF1A]">
+                    <span className="rounded-full bg-[#B7FF181a] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#B7FF18]">
                       Coming soon
                     </span>
                   )}
@@ -357,14 +357,14 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
               onClick={() => setBillingPeriod("monthly")}
               disabled={!GAME_DEVELOPER_PRO_PURCHASES_ENABLED}
               className={`relative w-full rounded-xl border-2 p-3 text-left transition-all ${
-                billingPeriod === "monthly" ? "border-[#B7FF1A] bg-[#B7FF1A0d]" : "border-[#1B2A33] bg-[#0B1218] hover:border-[#22313A]"
+                billingPeriod === "monthly" ? "border-[#B7FF18] bg-[#B7FF180d]" : "border-[#1B2A33] bg-[#0A0A10] hover:border-[#22313A]"
               }`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-white">Monthly</span>
                   {!GAME_DEVELOPER_PRO_PURCHASES_ENABLED && (
-                    <span className="rounded-full bg-[#B7FF1A1a] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#B7FF1A]">
+                    <span className="rounded-full bg-[#B7FF181a] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#B7FF18]">
                       Coming soon
                     </span>
                   )}
@@ -381,7 +381,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
           <button
             onClick={handleUpgrade}
             disabled={buttonDisabled}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#B7FF1A] py-4 text-lg font-bold text-[#071013] transition-colors hover:bg-[#A2F000] disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#B7FF18] py-4 text-lg font-bold text-[#0A0A10] transition-colors hover:bg-[#A2F000] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {(purchasing || checkoutLoading) && <Loader2 className="h-5 w-5 animate-spin" />}
             {GAME_DEVELOPER_PRO_PURCHASES_ENABLED ? "Upgrade to Developer Pro" : "Developer Pro coming soon"}
@@ -389,9 +389,9 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
         ) : (
           <button
             onClick={() => onOpenChange(false)}
-            className="flex w-full items-center justify-center rounded-2xl bg-[#B7FF1A] py-3 transition-all hover:bg-[#A2F000]"
+            className="flex w-full items-center justify-center rounded-2xl bg-[#B7FF18] py-3 transition-all hover:bg-[#A2F000]"
           >
-            <span className="text-base font-bold text-[#071013]">Got it</span>
+            <span className="text-base font-bold text-[#0A0A10]">Got it</span>
           </button>
         )}
       </div>
@@ -399,7 +399,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
   );
 
   const checkoutScreen = (
-    <div className="flex flex-col h-full bg-[#0B1218]">
+    <div className="flex flex-col h-full bg-[#0A0A10]">
       <div className="flex items-center py-[25px] px-6 border-b border-[#1B2A3380]">
         <button
           onClick={() => setStep("plans")}
@@ -420,7 +420,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
           </EmbeddedCheckoutProvider>
         ) : (
           <div className="flex items-center justify-center min-h-[400px]">
-            <Loader2 className="w-8 h-8 animate-spin text-[#B7FF1A]" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#B7FF18]" />
           </div>
         )}
       </div>
@@ -428,15 +428,15 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
   );
 
   const successScreen = (
-    <div className="flex flex-col items-center justify-center h-full bg-[#0B1218] p-8 text-center">
-      <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#B7FF1A] to-[#6FA800] mb-6">
+    <div className="flex flex-col items-center justify-center h-full bg-[#0A0A10] p-8 text-center">
+      <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#B7FF18] to-[#6FA800] mb-6">
         <Rocket className="w-10 h-10 text-white" />
       </div>
       <h2 className="text-2xl font-bold text-white mb-2">Welcome to Game Developer Pro!</h2>
       <p className="text-[#B8C0AE] mb-6">Your developer benefits are now active.</p>
       <button
         onClick={() => onOpenChange(false)}
-        className="w-full py-4 bg-[#B7FF1A] hover:bg-[#A2F000] text-[#071013] font-bold text-lg rounded-2xl transition-colors"
+        className="w-full py-4 bg-[#B7FF18] hover:bg-[#A2F000] text-[#0A0A10] font-bold text-lg rounded-2xl transition-colors"
       >
         Done
       </button>
@@ -447,7 +447,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         aria-describedby={undefined}
-        className="max-w-[430px] md:max-w-[840px] w-full h-[100dvh] md:h-auto md:max-h-[90vh] bg-[#0B1218] border-none p-0 overflow-hidden [&>button]:hidden top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
+        className="max-w-[430px] md:max-w-[840px] w-full h-[100dvh] md:h-auto md:max-h-[90vh] bg-[#0A0A10] border-none p-0 overflow-hidden [&>button]:hidden top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
         data-testid="dialog-developer-pro-upgrade"
         onOpenAutoFocus={(event) => event.preventDefault()}
       >

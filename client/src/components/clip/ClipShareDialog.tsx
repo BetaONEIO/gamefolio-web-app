@@ -267,7 +267,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-border shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <ShareLaunchIcon size={18} className="text-[#B7FF1A] shrink-0" />
+            <ShareLaunchIcon size={18} className="text-[#B7FF18] shrink-0" />
             <span className="text-[#F5F7F2] text-base font-bold truncate">
               {isOwnContent ? `Share your ${label}` : `Share ${label}`}
             </span>
@@ -289,7 +289,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
         <div className="flex flex-col gap-4 overflow-y-auto flex-1 min-h-0 p-4 pb-5">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin w-8 h-8 border-4 border-[#B7FF1A] border-t-transparent rounded-full" />
+              <div className="animate-spin w-8 h-8 border-4 border-[#B7FF18] border-t-transparent rounded-full" />
             </div>
           ) : error ? (
             <div className="py-2">
@@ -337,7 +337,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                   </div>
                   <button
                     onClick={handleCopyLink}
-                    className="flex items-center gap-1.5 bg-[#B7FF1A] hover:bg-[#A2F000] active:scale-95 text-[#071013] rounded-xl px-3 py-2.5 transition-all shrink-0 font-semibold text-sm"
+                    className="flex items-center gap-1.5 bg-[#B7FF18] hover:bg-[#A2F000] active:scale-95 text-[#0A0A10] rounded-xl px-3 py-2.5 transition-all shrink-0 font-semibold text-sm"
                     aria-label="Copy clip URL"
                   >
                     <Copy className="w-4 h-4" />
@@ -350,7 +350,7 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
               {hasNativeShare && (
                 <button
                   onClick={handleNativeShare}
-                  className="flex items-center justify-center gap-2 bg-[#B7FF1A]/10 border border-[#B7FF1A]/30 hover:bg-[#B7FF1A]/20 active:scale-[0.98] text-[#B7FF1A] rounded-xl py-3 transition-all font-medium text-sm"
+                  className="flex items-center justify-center gap-2 bg-[#B7FF18]/10 border border-[#B7FF18]/30 hover:bg-[#B7FF18]/20 active:scale-[0.98] text-[#B7FF18] rounded-xl py-3 transition-all font-medium text-sm"
                   aria-label="Share using device share menu"
                 >
                   <ShareLaunchIcon size={16} />
@@ -380,10 +380,10 @@ export function ClipShareDialog({ clipId, trigger, open, onOpenChange, isOwnCont
                       >
                         <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border flex items-center justify-center transition-colors ${
                           isSelected
-                            ? 'border-[#B7FF1A] bg-[#B7FF1A]/20'
-                            : 'border-[#B7FF1A]/30 bg-secondary hover:border-[#B7FF1A] hover:bg-[#B7FF1A]/10'
+                            ? 'border-[#B7FF18] bg-[#B7FF18]/20'
+                            : 'border-[#B7FF18]/30 bg-secondary hover:border-[#B7FF18] hover:bg-[#B7FF18]/10'
                         }`}>
-                          <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors ${isSelected ? 'text-[#B7FF1A]' : 'text-[#F5F7F2] hover:text-[#B7FF1A]'}`} />
+                          <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors ${isSelected ? 'text-[#B7FF18]' : 'text-[#F5F7F2] hover:text-[#B7FF18]'}`} />
                         </div>
                       </button>
                     );

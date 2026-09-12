@@ -3563,7 +3563,7 @@ const AdminPage = () => {
                         <XAxis dataKey="name" />
                         <YAxis />
                         <Tooltip />
-                        <Bar dataKey="value" name="Users" fill="#B7FF1A">
+                        <Bar dataKey="value" name="Users" fill="#B7FF18">
                           {formatAgeRangeData().map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
@@ -3875,7 +3875,7 @@ const AdminPage = () => {
                                   size="icon"
                                   onClick={() => handleRemovePartner(user.id)}
                                   title="Remove Partner"
-                                  style={{ color: '#B7FF1A' }}
+                                  style={{ color: '#B7FF18' }}
                                 >
                                   <Star className="h-4 w-4 fill-current" />
                                 </Button>

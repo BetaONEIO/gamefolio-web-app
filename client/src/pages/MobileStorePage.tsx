@@ -31,9 +31,9 @@ function rarityClasses(rarity?: string): string {
     case "legendary":
       return "bg-gradient-to-r from-yellow-500 to-amber-600 text-white";
     case "epic":
-      return "bg-gradient-to-r from-[#B7FF1A] to-[#A2F000] text-black";
+      return "bg-gradient-to-r from-[#B7FF18] to-[#A2F000] text-black";
     case "rare":
-      return "bg-gradient-to-r from-[#B7FF1A] to-[#6FA800] text-white";
+      return "bg-gradient-to-r from-[#B7FF18] to-[#6FA800] text-white";
     default:
       return "bg-gray-600 text-white";
   }

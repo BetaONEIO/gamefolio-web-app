@@ -37,17 +37,17 @@ const ReelCard: React.FC<{ reel: any; reelsList?: any[] }> = ({ reel, reelsList 
       className="group cursor-pointer"
     >
       {/* 9:16 Thumbnail */}
-      <div className="relative aspect-[9/16] overflow-hidden rounded-xl bg-[#0B1218] border border-[#1B2A33]">
+      <div className="relative aspect-[9/16] overflow-hidden rounded-xl bg-[#0A0A10] border border-[#1B2A33]">
         <LazyImage
           src={reel.thumbnailUrl || `/api/clips/${reel.id}/thumbnail`}
           alt={reel.title}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%230B1218'/%3e%3c/svg%3e"
+          placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%230F101B'/%3e%3c/svg%3e"
           showLoadingSpinner={true}
           rootMargin="50px"
           containerClassName="absolute inset-0"
           fallback={
-            <div className="w-full h-full flex items-center justify-center bg-[#0B1218]">
+            <div className="w-full h-full flex items-center justify-center bg-[#0A0A10]">
               <Play className="h-12 w-12 text-gray-600" />
             </div>
           }
@@ -85,7 +85,7 @@ const ReelCard: React.FC<{ reel: any; reelsList?: any[] }> = ({ reel, reelsList 
         {reel.game?.name && (
           <span
             className="inline-block mt-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded"
-            style={{ background: '#B7FF1A', color: '#03080A' }}
+            style={{ background: '#B7FF18', color: '#03080A' }}
           >
             {reel.game.name}
           </span>

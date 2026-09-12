@@ -1148,7 +1148,7 @@ function StoreListingCard({
      {stores.map(s => (
             <div key={s.key}
               className="flex items-center gap-3 p-4 rounded-xl transition-all"
-               style={{ background: "#0F101B", border: `1px solid ${CARD_BORDER}` }}>
+               style={{ background: "#0A0A10", border: `1px solid ${CARD_BORDER}` }}>
               <div className="shrink-0">{s.icon}</div>
               <div className="flex-1 min-w-0">
                  <div className="flex items-center gap-2 text-xs font-bold text-white/70">
@@ -1305,7 +1305,7 @@ function PlatformCard({
             aria-pressed={on}
             className={`flex flex-col items-center gap-2 rounded-xl border p-3 transition-[background-color,border-color,color,transform] hover:-translate-y-0.5 ${
               on
-                ? "border-[#B7FF18] bg-[#B7FF18] text-[#0F101B]"
+                ? "border-[#B7FF18] bg-[#B7FF18] text-[#0A0A10]"
                 : "border-[#252938] bg-[#151724] text-[#F8FAFC] hover:border-[#B7FF18] hover:bg-[#1A1D2B]"
             }`}>
             <Icon size={21} />
@@ -1675,7 +1675,7 @@ function CommunitySocialCard({
               onClick={() => save.mutate({ gameId: profile?.id, ...socialValues })}
               disabled={save.isPending || hasSocialErrors}
               className="flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-              style={{ background: NEON, color: "#0F101B" }}
+              style={{ background: NEON, color: "#0A0A10" }}
             >
               {save.isPending ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
               {save.isPending ? "Saving…" : "Save social platforms"}
@@ -1884,7 +1884,7 @@ function ProfileEditorHeader({
           {publicProfileUrl && (
             <a href={publicProfileUrl} target="_blank" rel="noreferrer"
                className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2.5 text-xs font-black text-white transition-colors hover:bg-white/10"
-               style={{ background: "#0F101B", border: `1px solid ${CARD_BORDER}` }}>
+               style={{ background: "#0A0A10", border: `1px solid ${CARD_BORDER}` }}>
                View public page <ArrowUpRight size={13} />
             </a>
           )}

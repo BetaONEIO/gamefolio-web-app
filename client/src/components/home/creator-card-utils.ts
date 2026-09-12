@@ -55,9 +55,9 @@ export function isLightHex(hex: string): boolean {
 
 export function getCardTheme(user: TrendingEntry['user']): { style: React.CSSProperties; isLight: boolean; hasCustomBg: boolean } {
   const rawBg = (user.backgroundColor || '').toLowerCase();
-  const bg = /^#[0-9a-f]{6}$/i.test(rawBg) ? rawBg : '#0b1319';
-  const accent = (user.accentColor || '#B7FF1A').toLowerCase();
-  const primary = user.primaryColor || '#071013';
+  const bg = /^#[0-9a-f]{6}$/i.test(rawBg) ? rawBg : '#0A0A10';
+  const accent = (user.accentColor || '#B7FF18').toLowerCase();
+  const primary = user.primaryColor || '#0A0A10';
   const isLight = isLightHex(bg);
 
   const isMayhem     = !isLight && accent === '#00dfff';
@@ -72,12 +72,12 @@ export function getCardTheme(user: TrendingEntry['user']): { style: React.CSSPro
   const isBat        = !isLight && accent === '#ff8c00' && (bg === '#111111' || bg === '#0a0010');
   const isWatermelon = accent === '#b7ff1a' && bg === '#ff4d6d';
 
-  const isDefault = bg === '#0b1319' || bg === '#121f2b' || bg === '#000000';
+  const isDefault = bg === '#0A0A10' || bg === '#121f2b' || bg === '#000000';
 
   if (user.profileBackgroundImageUrl) {
     return {
       style: {
-        backgroundColor: '#0B1319',
+        backgroundColor: '#0A0A10',
         backgroundImage: `url(${user.profileBackgroundImageUrl})`,
         backgroundSize: 'cover',
         backgroundPosition: '50% 30%',
@@ -103,7 +103,7 @@ export function getCardTheme(user: TrendingEntry['user']): { style: React.CSSPro
     return { style: { background: user.profileBackgroundGradientCss }, isLight: false, hasCustomBg: true };
   }
 
-  if (isDefault) return { style: { background: '#0B1319' }, isLight: false, hasCustomBg: false };
+  if (isDefault) return { style: { background: '#0A0A10' }, isLight: false, hasCustomBg: false };
 
   if (user.profileBackgroundGradient !== false && !isLight) {
     return {

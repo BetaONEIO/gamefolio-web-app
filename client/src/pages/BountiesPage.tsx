@@ -1005,7 +1005,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   }
 
   return (
-    <div className="min-h-screen" style={{ background: "#0F101B" }}>
+    <div className="min-h-screen" style={{ background: "#0A0A10" }}>
       {/* Back */}
       <button onClick={onBack} className="flex items-center gap-2 px-5 py-3 text-white/50 hover:text-white transition-colors text-sm font-bold">
         <ChevronLeft size={16} /> Back to Bounty Hub
@@ -2108,21 +2108,21 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   };
 
   return (
-    <div className="min-h-screen pb-24 sm:pb-10" style={{ background: "#0F101B" }}>
+    <div className="min-h-screen pb-24 sm:pb-10" style={{ background: "#0A0A10" }}>
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
         <button onClick={onBack} className="flex items-center gap-2 py-4 text-white/50 hover:text-white transition-colors text-sm font-bold">
           <ChevronLeft size={16} /> Back to My Campaigns
         </button>
 
         {/* Compact game and campaign hero */}
-        <section className="relative overflow-hidden rounded-xl bg-[#0F101B] sm:min-h-[430px]">
+        <section className="relative overflow-hidden rounded-xl bg-[#0A0A10] sm:min-h-[430px]">
           <FeaturedHeroBackground
             campaign={data}
             className="absolute inset-x-0 top-0 h-[220px] bg-center bg-cover bg-no-repeat transition-[background-image] duration-300 sm:inset-0 sm:h-auto"
           />
           <div
             className="absolute inset-x-0 top-0 h-[245px] sm:hidden"
-            style={{ background: "linear-gradient(180deg, rgba(15,16,27,0.02) 0%, rgba(15,16,27,0.08) 55%, rgba(15,16,27,0.92) 88%, #0F101B 100%)" }}
+            style={{ background: "linear-gradient(180deg, rgba(15,16,27,0.02) 0%, rgba(15,16,27,0.08) 55%, rgba(15,16,27,0.92) 88%, #0A0A10 100%)" }}
           />
           <div
             className="absolute inset-0 hidden sm:block"

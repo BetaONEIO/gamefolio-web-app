@@ -100,8 +100,8 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
   legendary: {
     bg: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
     glow: "shadow-[0_0_25px_rgba(236,72,153,0.4)]",
-    dotColor: "bg-primary shadow-[0_0_8px_#B7FF1A]",
-    textStyle: "text-[#B7FF1A] font-black",
+    dotColor: "bg-primary shadow-[0_0_8px_#B7FF18]",
+    textStyle: "text-[#B7FF18] font-black",
     nameColor: "text-slate-800",
   },
   epic: {
@@ -112,9 +112,9 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
     nameColor: "text-slate-50",
   },
   rare: {
-    bg: "bg-gradient-to-b from-[#B7FF1A33] via-[#14532d4d] to-[#B7FF1A33]",
+    bg: "bg-gradient-to-b from-[#B7FF1833] via-[#14532d4d] to-[#B7FF1833]",
     glow: "",
-    dotColor: "bg-primary shadow-[0_0_8px_#B7FF1A]",
+    dotColor: "bg-primary shadow-[0_0_8px_#B7FF18]",
     textStyle: "text-slate-400 font-normal",
     nameColor: "text-slate-50",
   },
@@ -130,7 +130,7 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
 const rarityDotColors: Record<string, string> = {
   legendary: "bg-primary shadow-[0_0_8px_#A2F000]",
   epic: "bg-primary shadow-[0_0_8px_#6FA800]",
-  rare: "bg-primary shadow-[0_0_8px_#B7FF1A]",
+  rare: "bg-primary shadow-[0_0_8px_#B7FF18]",
   common: "bg-slate-400/50 shadow-[0_0_8px_#1B2A33]",
 };
 
@@ -358,7 +358,7 @@ export default function CollectionPage() {
                 onClick={() => setCollectionTab(key)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   collectionTab === key
-                    ? "bg-primary text-primary shadow-[0_0_15px_-5px_#B7FF1A]"
+                    ? "bg-primary text-primary shadow-[0_0_15px_-5px_#B7FF18]"
                     : "bg-slate-800 text-slate-400 hover:text-slate-300 hover:bg-slate-700"
                 }`}
               >
@@ -371,7 +371,7 @@ export default function CollectionPage() {
 
         {collectionTab === "nfts" && (
           <>
-            <div className="bg-gradient-to-b from-[#B7FF1A]/10 to-transparent py-6 md:py-8 px-6 md:px-12 lg:px-16">
+            <div className="bg-gradient-to-b from-[#B7FF18]/10 to-transparent py-6 md:py-8 px-6 md:px-12 lg:px-16">
               <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
                 <div>
                   {nftData && nftData.count > 0 && (
@@ -399,7 +399,7 @@ export default function CollectionPage() {
                     onClick={() => setNftTab("owned")}
                     className={`flex-1 md:w-44 h-10 rounded-2xl flex items-center justify-center gap-2 text-sm font-bold transition-all ${
                       nftTab === "owned"
-                        ? "bg-primary text-primary shadow-[0_0_15px_-5px_#B7FF1A]"
+                        ? "bg-primary text-primary shadow-[0_0_15px_-5px_#B7FF18]"
                         : "text-slate-400 hover:text-slate-300"
                     }`}
                   >
@@ -416,7 +416,7 @@ export default function CollectionPage() {
                     onClick={() => setNftTab("sold")}
                     className={`flex-1 md:w-44 h-10 rounded-2xl flex items-center justify-center gap-2 text-sm transition-all ${
                       nftTab === "sold"
-                        ? "bg-primary text-primary font-bold shadow-[0_0_15px_-5px_#B7FF1A]"
+                        ? "bg-primary text-primary font-bold shadow-[0_0_15px_-5px_#B7FF18]"
                         : "text-slate-400 hover:text-slate-300"
                     }`}
                   >

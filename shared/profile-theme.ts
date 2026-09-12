@@ -1,6 +1,6 @@
 export const DEFAULT_PROFILE_THEME = {
-  backgroundColor: "#0F101B",
-  primaryColor: "#0F101B",
+  backgroundColor: "#0A0A10",
+  primaryColor: "#0A0A10",
   bannerColor: "#171A27",
   cardColor: "#1A1D2B",
   accentColor: "#B7FF18",
@@ -218,7 +218,7 @@ export const PROFILE_THEMES: ProfileThemeDefinition[] = THEME_SPECS.map((spec) =
 export const PROFILE_THEME_BY_SLUG = new Map(PROFILE_THEMES.map((theme) => [theme.slug, theme]));
 
 const LEGACY_DEFAULT_BACKGROUNDS = new Set(["#0b2232", "#121f2b", "#071013"]);
-const LEGACY_DEFAULT_ACCENTS = new Set(["#b7ff1a", "#4ade80"]);
+const LEGACY_DEFAULT_ACCENTS = new Set(["#b7ff1a", "#4ade80", "#4c8"]);
 const LEGACY_DEFAULT_PRIMARY_COLORS = new Set(["#02172c", "#071013", "#0b1218"]);
 const LEGACY_DEFAULT_CARD_COLORS = new Set(["#1e3a8a"]);
 const LEGACY_DEFAULT_AVATAR_BORDERS = new Set(["#4ade80", "#b7ff1a"]);

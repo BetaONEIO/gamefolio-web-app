@@ -6,7 +6,7 @@ import { motion, useReducedMotion } from 'framer-motion';
  * ZapReactionIcon — pixel-art lightning bolt reaction icon.
  *
  * Bolt shape: 11×14 unit grid.
- * Active colour: Gamefolio neon green (#B7FF1A).
+ * Active colour: Gamefolio neon green (#B7FF18).
  * Inactive: outline only, muted via currentColor.
  *
  * Animations:
@@ -20,17 +20,17 @@ const ZAP_PATH = 'M 6 0 H 11 L 5 7 H 10 L 2 14 L 4 8 H 0 Z';
 
 // Pixel sparks placed around the bolt perimeter
 const SPARKS = [
-  { x:  5.0, y: -2.0, color: '#B7FF1A', delay:   0 },
+  { x:  5.0, y: -2.0, color: '#B7FF18', delay:   0 },
   { x:  8.5, y: -2.0, color: '#d4ff6b', delay:  30 },
-  { x: 11.5, y:  2.0, color: '#B7FF1A', delay:  60 },
+  { x: 11.5, y:  2.0, color: '#B7FF18', delay:  60 },
   { x: 11.0, y:  7.0, color: '#d4ff6b', delay:  10 },
-  { x:  9.5, y: 14.5, color: '#B7FF1A', delay:  50 },
+  { x:  9.5, y: 14.5, color: '#B7FF18', delay:  50 },
   { x:  1.0, y: 14.5, color: '#d4ff6b', delay:  80 },
-  { x: -2.0, y:  9.0, color: '#B7FF1A', delay:  20 },
+  { x: -2.0, y:  9.0, color: '#B7FF18', delay:  20 },
   { x: -2.0, y:  3.0, color: '#d4ff6b', delay:  70 },
 ];
 
-const NEON = '#B7FF1A';
+const NEON = '#B7FF18';
 
 let _zapStylesInjected = false;
 function ensureZapStyles() {
@@ -182,7 +182,7 @@ export interface ZapIconSvgProps {
 }
 
 export function ZapIconSvg({ size, active = false, className = '', style, color }: ZapIconSvgProps) {
-  const NEON = '#B7FF1A';
+  const NEON = '#B7FF18';
   const activeColor = color || NEON;
   const w = size ? Math.round(size * 11 / 14) : undefined;
   return (
@@ -251,13 +251,13 @@ export function useZapFly() {
 
 // Landing spark positions (normalised around bolt centre)
 const FLY_SPARKS = [
-  { dx: -14, dy: -18, color: '#B7FF1A', delay: 0.00 },
+  { dx: -14, dy: -18, color: '#B7FF18', delay: 0.00 },
   { dx:  12, dy: -20, color: '#d4ff6b', delay: 0.03 },
-  { dx:  20, dy:  -4, color: '#B7FF1A', delay: 0.06 },
+  { dx:  20, dy:  -4, color: '#B7FF18', delay: 0.06 },
   { dx:  18, dy:  12, color: '#d4ff6b', delay: 0.01 },
-  { dx:   4, dy:  20, color: '#B7FF1A', delay: 0.05 },
+  { dx:   4, dy:  20, color: '#B7FF18', delay: 0.05 },
   { dx: -16, dy:  16, color: '#d4ff6b', delay: 0.08 },
-  { dx: -22, dy:   2, color: '#B7FF1A', delay: 0.02 },
+  { dx: -22, dy:   2, color: '#B7FF18', delay: 0.02 },
   { dx:  -8, dy: -22, color: '#d4ff6b', delay: 0.07 },
 ];
 
@@ -429,13 +429,13 @@ export function ZapFlyOverlay({
             left: tcx,
             top: tcy - 22,
             transform: 'translateX(-50%)',
-            color: '#B7FF1A',
+            color: '#B7FF18',
             fontWeight: 900,
             fontSize: 17,
             fontFamily: 'monospace',
             letterSpacing: '0.04em',
             whiteSpace: 'nowrap',
-            textShadow: '0 0 8px #B7FF1A, 0 0 20px #B7FF1A',
+            textShadow: '0 0 8px #B7FF18, 0 0 20px #B7FF18',
             userSelect: 'none',
           }}
         >

@@ -288,7 +288,7 @@ function OnboardingStepIndicator({ currentStep, isGoogleUser, selectedPath }: On
                   isDone
                     ? "bg-primary/20 border-primary text-primary"
                     : isActive
-                    ? "bg-primary border-primary text-[#071013] font-bold ob-step-active-glow"
+                    ? "bg-primary border-primary text-[#0A0A10] font-bold ob-step-active-glow"
                     : "bg-card border-primary/20 text-gray-500"
                 }`}
               >
@@ -1427,7 +1427,7 @@ export default function OnboardingFlow({
             </div>
             <div id="games-step-bottom" className="flex flex-col gap-3 mt-auto pt-4">
               <div className="flex gap-3">
-                <Button onClick={goToNextStep} disabled={selectedGames.length === 0} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
+                <Button onClick={goToNextStep} disabled={selectedGames.length === 0} className="flex-1 bg-primary hover:bg-primary/90 text-[#0A0A10] font-semibold">
                   Next <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
@@ -1476,7 +1476,7 @@ export default function OnboardingFlow({
               </div>
             </div>
             <div className="flex gap-3 mt-auto">
-              <Button onClick={goToNextStep} disabled={isUploadingAvatar} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
+              <Button onClick={goToNextStep} disabled={isUploadingAvatar} className="flex-1 bg-primary hover:bg-primary/90 text-[#0A0A10] font-semibold">
                 {avatarUrl ? <>Next <ArrowRight className="h-4 w-4 ml-2" /></> : <span>Skip for now</span>}
               </Button>
             </div>
@@ -1809,7 +1809,7 @@ export default function OnboardingFlow({
               </div>
               <div className="flex flex-col gap-3 mt-4">
                 <div className="flex gap-3">
-                  <Button onClick={goToNextStep} disabled={gamerInterests.length === 0} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
+                  <Button onClick={goToNextStep} disabled={gamerInterests.length === 0} className="flex-1 bg-primary hover:bg-primary/90 text-[#0A0A10] font-semibold">
                     Next <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
@@ -1854,7 +1854,7 @@ export default function OnboardingFlow({
                         connectedName={(user as any)?.kickVerified ? (user as any)?.kickChannelName : null}
                         icon={<SiKick className="w-4 h-4" />}
                         brand="#53FC18"
-                        brandText="#071013"
+                        brandText="#0A0A10"
                         onConnect={() => startSocialConnect("/api/auth/kick/connect")}
                       />
                     )}
@@ -1909,7 +1909,7 @@ export default function OnboardingFlow({
 
               <div className="flex flex-col gap-3 mt-4">
                 <div className="flex gap-3">
-                  <Button onClick={goToNextStep} disabled={!streamerData.mainPlatform || (isProductionBuild && !hasVerifiedStream)} className="flex-1 bg-primary hover:bg-primary/90 text-[#071013] font-semibold">
+                  <Button onClick={goToNextStep} disabled={!streamerData.mainPlatform || (isProductionBuild && !hasVerifiedStream)} className="flex-1 bg-primary hover:bg-primary/90 text-[#0A0A10] font-semibold">
                     Next <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
@@ -2251,7 +2251,7 @@ export default function OnboardingFlow({
               <Button
                 onClick={goToNextStep}
                 disabled={!indieGameData.gameName.trim() || !indieGameData.releaseStatus}
-                className="bg-primary hover:bg-primary/90 text-[#071013] font-semibold px-6"
+                className="bg-primary hover:bg-primary/90 text-[#0A0A10] font-semibold px-6"
               >
                 Continue <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
@@ -2420,7 +2420,7 @@ export default function OnboardingFlow({
             <div className="space-y-3 mt-auto">
               <Button
                 onClick={() => selectedPath === 'indie' ? setShowIndieDevUpgrade(true) : setShowProUpgrade(true)}
-                className="w-full bg-primary hover:bg-primary/90 text-[#071013] font-bold py-5 rounded-xl"
+                className="w-full bg-primary hover:bg-primary/90 text-[#0A0A10] font-bold py-5 rounded-xl"
               >
                 {upsell.proLabel}
               </Button>
@@ -2449,7 +2449,7 @@ export default function OnboardingFlow({
           <div className="flex flex-col flex-1">
             <div className="flex flex-col items-center text-center mb-6">
               <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center mb-5" style={{ boxShadow: '0 0 40px rgba(183,255,26,0.4)' }}>
-                <Check className="h-10 w-10 text-[#071013]" />
+                <Check className="h-10 w-10 text-[#0A0A10]" />
               </div>
               <h2 className="text-2xl font-black text-white mb-2">You're all set!</h2>
               <p className="text-gray-300 mb-3">Your Gamefolio profile is ready to go.</p>
@@ -2457,7 +2457,7 @@ export default function OnboardingFlow({
                 <span className="text-primary font-semibold">💡 Next step: </span>{pathMessage}
               </div>
             </div>
-            <Button onClick={completeOnboarding} disabled={isLoading} className="w-full mt-auto bg-primary hover:bg-primary/90 text-[#071013] font-bold py-6 rounded-xl">
+            <Button onClick={completeOnboarding} disabled={isLoading} className="w-full mt-auto bg-primary hover:bg-primary/90 text-[#0A0A10] font-bold py-6 rounded-xl">
               {isLoading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Finalizing...</> : "Take me to Gamefolio 🎮"}
             </Button>
           </div>

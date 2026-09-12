@@ -32,7 +32,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
   const { user } = entry;
   const [bannerError, setBannerError] = useState(false);
   const [, setLocation] = useLocation();
-  const borderColor = user.avatarBorderColor || user.accentColor || '#B7FF1A';
+  const borderColor = user.avatarBorderColor || user.accentColor || '#B7FF18';
   const hasBanner = !!user.bannerUrl && !bannerError;
   const theme = getCardTheme(user);
   const displayPeriod = entry.effectivePeriod ?? period;
@@ -160,7 +160,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
               {/* Stats box — identical to standard */}
               <div
                 className="mx-3 mt-3 flex-shrink-0 grid grid-cols-4 gap-0 rounded-xl py-2"
-                style={{ background: '#0B1319', border: '1px solid rgba(255,255,255,0.06)' }}
+                style={{ background: '#0A0A10', border: '1px solid rgba(255,255,255,0.06)' }}
               >
                 {[
                   { icon: Zap,   label: 'XP',        value: entry.totalPoints ?? 0 },
@@ -169,8 +169,8 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
                   { icon: Users, label: 'FOLLOWERS', value: entry.followersCount ?? 0 },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex flex-col items-center gap-0.5">
-                    <Icon className="w-3 h-3" style={{ color: label === 'XP' ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }} />
-                    <span className="text-[13px] font-bold leading-tight" style={{ color: label === 'XP' ? '#B7FF1A' : 'white' }}>{fmt(value)}</span>
+                    <Icon className="w-3 h-3" style={{ color: label === 'XP' ? '#B7FF18' : 'rgba(255,255,255,0.5)' }} />
+                    <span className="text-[13px] font-bold leading-tight" style={{ color: label === 'XP' ? '#B7FF18' : 'white' }}>{fmt(value)}</span>
                     <span className="text-white/30 text-[7px] font-semibold tracking-wide">{label}</span>
                   </div>
                 ))}
@@ -180,7 +180,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
               <div className="mx-3 mt-2.5 flex-shrink-0" style={{ height: 46 }}>
                 <div
                   className="flex items-center gap-2.5 px-2.5 h-full rounded-xl"
-                  style={{ background: '#0B1319', border: '1px solid rgba(255,255,255,0.055)' }}
+                  style={{ background: '#0A0A10', border: '1px solid rgba(255,255,255,0.055)' }}
                 >
                   <Gamepad2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.38)' }} />
                   <div className="flex flex-col justify-center gap-[3px] min-w-0 flex-1">
@@ -207,7 +207,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
               <div className="mx-3 mt-1.5 flex-shrink-0" style={{ height: 46 }}>
                 <div
                   className="flex items-center gap-2.5 px-2.5 h-full rounded-xl transition-colors"
-                  style={{ background: '#0B1319', border: '1px solid rgba(255,255,255,0.055)', cursor: entry.recentUpload ? 'pointer' : 'default' }}
+                  style={{ background: '#0A0A10', border: '1px solid rgba(255,255,255,0.055)', cursor: entry.recentUpload ? 'pointer' : 'default' }}
                   onClick={(e) => {
                     if (!entry.recentUpload) return;
                     e.preventDefault();
@@ -220,7 +220,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
                     );
                   }}
                 >
-                  <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: entry.recentUpload ? '#B7FF1A' : 'rgba(255,255,255,0.28)', opacity: entry.recentUpload ? 0.75 : 1 }} />
+                  <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: entry.recentUpload ? '#B7FF18' : 'rgba(255,255,255,0.28)', opacity: entry.recentUpload ? 0.75 : 1 }} />
                   <div className="flex flex-col justify-center gap-[2px] min-w-0 flex-1">
                     <span className="text-[9px] font-medium tracking-[0.08em] leading-none uppercase" style={{ color: 'rgba(255,255,255,0.5)' }}>
                       Recently Uploaded
@@ -243,7 +243,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
                <div className="px-3 pt-3 pb-3 flex-shrink-0">
                  <div
                    className="w-full rounded-xl py-2.5 flex items-center justify-center gap-1.5 text-xs font-bold"
-                   style={{ background: '#B7FF1A', color: '#0B1319', boxShadow: '0 0 12px rgba(183,255,26,0.4)', letterSpacing: '0.01em' }}
+                   style={{ background: '#B7FF18', color: '#0A0A10', boxShadow: '0 0 12px rgba(183,255,26,0.4)', letterSpacing: '0.01em' }}
                  >
                    <Zap className="w-3 h-3" />
                    {ctaText}
@@ -358,7 +358,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
             {/* Stats box */}
             <div
               className="mx-3 mt-3 flex-shrink-0 grid grid-cols-4 gap-0 rounded-xl py-2"
-              style={{ background: '#0B1319', border: '1px solid rgba(255,255,255,0.06)' }}
+              style={{ background: '#0A0A10', border: '1px solid rgba(255,255,255,0.06)' }}
             >
               {[
                 { icon: Zap,   label: 'XP',        value: entry.totalPoints ?? 0 },
@@ -367,8 +367,8 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
                 { icon: Users, label: 'FOLLOWERS', value: entry.followersCount ?? 0 },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="flex flex-col items-center gap-0.5">
-                  <Icon className="w-3 h-3" style={{ color: label === 'XP' ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }} />
-                  <span className="text-[13px] font-bold leading-tight" style={{ color: label === 'XP' ? '#B7FF1A' : 'white' }}>{fmt(value)}</span>
+                  <Icon className="w-3 h-3" style={{ color: label === 'XP' ? '#B7FF18' : 'rgba(255,255,255,0.5)' }} />
+                  <span className="text-[13px] font-bold leading-tight" style={{ color: label === 'XP' ? '#B7FF18' : 'white' }}>{fmt(value)}</span>
                   <span className="text-white/30 text-[7px] font-semibold tracking-wide">{label}</span>
                 </div>
               ))}
@@ -378,7 +378,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
             <div className="mx-3 mt-2.5 flex-shrink-0" style={{ height: 46 }}>
               <div
                 className="flex items-center gap-2.5 px-2.5 h-full rounded-xl"
-                style={{ background: '#0B1319', border: '1px solid rgba(255,255,255,0.055)' }}
+                style={{ background: '#0A0A10', border: '1px solid rgba(255,255,255,0.055)' }}
               >
                 <Gamepad2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'rgba(255,255,255,0.38)' }} />
                 <div className="flex flex-col justify-center gap-[3px] min-w-0 flex-1">
@@ -410,7 +410,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
             <div className="mx-3 mt-1.5 flex-shrink-0" style={{ height: 46 }}>
               <div
                 className="flex items-center gap-2.5 px-2.5 h-full rounded-xl transition-colors"
-                style={{ background: '#0B1319', border: '1px solid rgba(255,255,255,0.055)', cursor: entry.recentUpload ? 'pointer' : 'default' }}
+                style={{ background: '#0A0A10', border: '1px solid rgba(255,255,255,0.055)', cursor: entry.recentUpload ? 'pointer' : 'default' }}
                 onClick={(e) => {
                   if (!entry.recentUpload) return;
                   e.preventDefault();
@@ -423,7 +423,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
                   );
                 }}
               >
-                <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: entry.recentUpload ? '#B7FF1A' : 'rgba(255,255,255,0.28)', opacity: entry.recentUpload ? 0.75 : 1 }} />
+                <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: entry.recentUpload ? '#B7FF18' : 'rgba(255,255,255,0.28)', opacity: entry.recentUpload ? 0.75 : 1 }} />
                 <div className="flex flex-col justify-center gap-[2px] min-w-0 flex-1">
                   <span className="text-[9px] font-medium tracking-[0.08em] leading-none uppercase" style={{ color: 'rgba(255,255,255,0.5)' }}>
                     Recently Uploaded
@@ -449,7 +449,7 @@ export function CreatorCard({ entry, period = 'alltime', className = '', compact
             <div className="px-3 pb-3 flex-shrink-0">
               <div
                 className="w-full rounded-xl py-2.5 flex items-center justify-center gap-1.5 text-xs font-bold"
-                style={{ background: '#B7FF1A', color: '#0B1319', boxShadow: '0 0 12px rgba(183,255,26,0.4)', letterSpacing: '0.01em' }}
+                style={{ background: '#B7FF18', color: '#0A0A10', boxShadow: '0 0 12px rgba(183,255,26,0.4)', letterSpacing: '0.01em' }}
               >
                 <Zap className="w-3 h-3" />
                 {ctaText}

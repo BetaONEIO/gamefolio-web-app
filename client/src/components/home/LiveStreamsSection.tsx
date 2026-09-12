@@ -64,7 +64,7 @@ function StreamCard({ stream }: { stream: TwitchStream }) {
         {stream.game_name && (
           <span
             className="inline-block mt-2 text-[10px] font-medium px-2 py-0.5 rounded-full"
-            style={{ background: 'rgba(183,255,26,0.12)', color: '#B7FF1A' }}
+            style={{ background: 'rgba(183,255,26,0.12)', color: '#B7FF18' }}
           >
             {stream.game_name}
           </span>

@@ -230,7 +230,7 @@ const TagInput = ({
                     setDropdownOpen(true);
                   }}
                 >
-                  <Hash className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "#B7FF1A" }} />
+                  <Hash className="h-3.5 w-3.5 flex-shrink-0" style={{ color: "#B7FF18" }} />
                   {tag}
                 </button>
               </li>

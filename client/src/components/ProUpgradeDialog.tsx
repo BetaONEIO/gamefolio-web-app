@@ -41,8 +41,8 @@ const premiumBenefits = [
     description: "Clips 500MB / 10 min, reels 250MB / 3 min, screenshots 50MB",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 16V8M12 8L9 11M12 8L15 11" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M22 12C22 17.523 17.523 22 12 22C6.477 22 2 17.523 2 12C2 6.477 6.477 2 12 2C17.523 2 22 6.477 22 12Z" stroke="#B7FF1A" strokeWidth="1.5"/>
+        <path d="M12 16V8M12 8L9 11M12 8L15 11" stroke="#B7FF18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M22 12C22 17.523 17.523 22 12 22C6.477 22 2 17.523 2 12C2 6.477 6.477 2 12 2C17.523 2 22 6.477 22 12Z" stroke="#B7FF18" strokeWidth="1.5"/>
       </svg>
     ),
   },
@@ -51,9 +51,9 @@ const premiumBenefits = [
     description: "No daily quotas or storage caps",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M17 8L12 3L7 8" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M12 3V15" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="#B7FF18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M17 8L12 3L7 8" stroke="#B7FF18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 3V15" stroke="#B7FF18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
   },
@@ -62,7 +62,7 @@ const premiumBenefits = [
     description: "Custom banners, neon effects & animated GIF avatars",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M9 3.5V2M15 3.5V2M9 21.5V20M15 21.5V20M20.5 9H22M20.5 15H22M3.5 9H2M3.5 15H2M12 8L13.5 11H16L14 13.5L15 17L12 15L9 17L10 13.5L8 11H10.5L12 8Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M9 3.5V2M15 3.5V2M9 21.5V20M15 21.5V20M20.5 9H22M20.5 15H22M3.5 9H2M3.5 15H2M12 8L13.5 11H16L14 13.5L15 17L12 15L9 17L10 13.5L8 11H10.5L12 8Z" stroke="#B7FF18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
   },
@@ -71,8 +71,8 @@ const premiumBenefits = [
     description: "Premium avatar borders, visual themes & Pro badge",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 15C15.866 15 19 11.866 19 8C19 4.13401 15.866 1 12 1C8.13401 1 5 4.13401 5 8C5 11.866 8.13401 15 12 15Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M8.21 13.89L7 23L12 20L17 23L15.79 13.88" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 15C15.866 15 19 11.866 19 8C19 4.13401 15.866 1 12 1C8.13401 1 5 4.13401 5 8C5 11.866 8.13401 15 12 15Z" stroke="#B7FF18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M8.21 13.89L7 23L12 20L17 23L15.79 13.88" stroke="#B7FF18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
   },
@@ -81,11 +81,11 @@ const premiumBenefits = [
     description: "Free bonus reward when you first subscribe",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M20 12V22H4V12" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M22 7H2V12H22V7Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M12 22V7" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M12 7H7.5C6.83696 7 6.20107 6.73661 5.73223 6.26777C5.26339 5.79893 5 5.16304 5 4.5C5 3.83696 5.26339 3.20107 5.73223 2.73223C6.20107 2.26339 6.83696 2 7.5 2C11 2 12 7 12 7Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M12 7H16.5C17.163 7 17.7989 6.73661 18.2678 6.26777C18.7366 5.79893 19 5.16304 19 4.5C19 3.83696 18.7366 3.20107 18.2678 2.73223C17.7989 2.26339 17.163 2 16.5 2C13 2 12 7 12 7Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M20 12V22H4V12" stroke="#B7FF18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M22 7H2V12H22V7Z" stroke="#B7FF18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 22V7" stroke="#B7FF18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 7H7.5C6.83696 7 6.20107 6.73661 5.73223 6.26777C5.26339 5.79893 5 5.16304 5 4.5C5 3.83696 5.26339 3.20107 5.73223 2.73223C6.20107 2.26339 6.83696 2 7.5 2C11 2 12 7 12 7Z" stroke="#B7FF18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 7H16.5C17.163 7 17.7989 6.73661 18.2678 6.26777C18.7366 5.79893 19 5.16304 19 4.5C19 3.83696 18.7366 3.20107 18.2678 2.73223C17.7989 2.26339 17.163 2 16.5 2C13 2 12 7 12 7Z" stroke="#B7FF18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
   },
@@ -94,8 +94,8 @@ const premiumBenefits = [
     description: "Fresh bonus rewards every month",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 8V12L15 15" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 8V12L15 15" stroke="#B7FF18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21Z" stroke="#B7FF18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
   },
@@ -104,8 +104,8 @@ const premiumBenefits = [
     description: "Up to 20% off name tags, borders & exclusive items",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M9 15L15 9M21.41 11.41L12.58 2.58C12.21 2.21 11.7 2 11.17 2H4C2.9 2 2 2.9 2 4V11.17C2 11.7 2.21 12.21 2.59 12.58L11.41 21.41C12.19 22.2 13.45 22.2 14.24 21.41L21.41 14.24C22.2 13.45 22.2 12.19 21.41 11.41Z" stroke="#B7FF1A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-        <circle cx="7" cy="7" r="1.5" fill="#B7FF1A"/>
+        <path d="M9 15L15 9M21.41 11.41L12.58 2.58C12.21 2.21 11.7 2 11.17 2H4C2.9 2 2 2.9 2 4V11.17C2 11.7 2.21 12.21 2.59 12.58L11.41 21.41C12.19 22.2 13.45 22.2 14.24 21.41L21.41 14.24C22.2 13.45 22.2 12.19 21.41 11.41Z" stroke="#B7FF18" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <circle cx="7" cy="7" r="1.5" fill="#B7FF18"/>
       </svg>
     ),
   },
@@ -447,7 +447,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-[430px] w-full bg-popover border-none p-0 overflow-hidden [&>button]:hidden">
           <div className="p-8 text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#B7FF1A] to-[#6FA800] mb-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-[#B7FF18] to-[#6FA800] mb-6">
               <Crown className="w-10 h-10 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-white mb-2">You're already Pro!</h2>
@@ -456,7 +456,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
             </p>
             <button
               onClick={() => onOpenChange(false)}
-              className="w-full py-4 bg-[#B7FF1A] hover:bg-[#A2F000] text-[#071013] font-bold text-lg rounded-2xl transition-colors"
+              className="w-full py-4 bg-[#B7FF18] hover:bg-[#A2F000] text-[#0A0A10] font-bold text-lg rounded-2xl transition-colors"
             >
               Close
             </button>
@@ -482,11 +482,11 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   const nativeDismissCta = (
     <button
       onClick={() => onOpenChange(false)}
-      className="w-full py-3 bg-[#B7FF1A] hover:bg-[#A2F000] rounded-2xl flex items-center justify-center transition-all mt-1"
-      style={{ boxShadow: "0 0 30px -5px #B7FF1A" }}
+      className="w-full py-3 bg-[#B7FF18] hover:bg-[#A2F000] rounded-2xl flex items-center justify-center transition-all mt-1"
+      style={{ boxShadow: "0 0 30px -5px #B7FF18" }}
       data-testid="button-pro-dismiss-native"
     >
-      <span className="text-[#071013] text-base font-bold">Got it</span>
+      <span className="text-[#0A0A10] text-base font-bold">Got it</span>
     </button>
   );
 
@@ -503,21 +503,21 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
             onClick={() => setBillingPeriod("yearly")}
             className={`relative w-full rounded-xl border-2 transition-all p-3 text-left ${
               billingPeriod === "yearly"
-                ? "border-[#B7FF1A] bg-[#B7FF1A0d]"
-                : "border-[#1B2A33] bg-[#0B1218] hover:border-[#22313A]"
+                ? "border-[#B7FF18] bg-[#B7FF180d]"
+                : "border-[#1B2A33] bg-[#0A0A10] hover:border-[#22313A]"
             }`}
           >
             {savings > 0 && (
-              <div className="absolute -top-2.5 right-3 bg-[#B7FF1A] text-[#071013] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+              <div className="absolute -top-2.5 right-3 bg-[#B7FF18] text-[#0A0A10] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
                 Save {savings}%
               </div>
             )}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                  billingPeriod === "yearly" ? "border-[#B7FF1A] bg-[#B7FF1A]" : "border-[#475569]"
+                  billingPeriod === "yearly" ? "border-[#B7FF18] bg-[#B7FF18]" : "border-[#475569]"
                 }`}>
-                  {billingPeriod === "yearly" && <Check className="w-2.5 h-2.5 text-[#071013]" strokeWidth={3} />}
+                  {billingPeriod === "yearly" && <Check className="w-2.5 h-2.5 text-[#0A0A10]" strokeWidth={3} />}
                 </div>
                 <div>
                   <div className="text-white font-semibold text-sm">Yearly</div>
@@ -540,16 +540,16 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
             onClick={() => setBillingPeriod("monthly")}
             className={`w-full rounded-xl border-2 transition-all p-3 text-left ${
               billingPeriod === "monthly"
-                ? "border-[#B7FF1A] bg-[#B7FF1A0d]"
-                : "border-[#1B2A33] bg-[#0B1218] hover:border-[#22313A]"
+                ? "border-[#B7FF18] bg-[#B7FF180d]"
+                : "border-[#1B2A33] bg-[#0A0A10] hover:border-[#22313A]"
             }`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                  billingPeriod === "monthly" ? "border-[#B7FF1A] bg-[#B7FF1A]" : "border-[#475569]"
+                  billingPeriod === "monthly" ? "border-[#B7FF18] bg-[#B7FF18]" : "border-[#475569]"
                 }`}>
-                  {billingPeriod === "monthly" && <Check className="w-2.5 h-2.5 text-[#071013]" strokeWidth={3} />}
+                  {billingPeriod === "monthly" && <Check className="w-2.5 h-2.5 text-[#0A0A10]" strokeWidth={3} />}
                 </div>
                 <div>
                   <div className="text-white font-semibold text-sm">Monthly</div>
@@ -567,11 +567,11 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         )}
 
         {!monthlyView && !yearlyView && packages && packages.length > 0 && (
-          <div className="w-full rounded-xl border-2 border-[#B7FF1A] bg-[#B7FF1A0d] p-3">
+          <div className="w-full rounded-xl border-2 border-[#B7FF18] bg-[#B7FF180d] p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-4 h-4 rounded-full border-2 border-[#B7FF1A] bg-[#B7FF1A] flex items-center justify-center flex-shrink-0">
-                  <Check className="w-2.5 h-2.5 text-[#071013]" strokeWidth={3} />
+                <div className="w-4 h-4 rounded-full border-2 border-[#B7FF18] bg-[#B7FF18] flex items-center justify-center flex-shrink-0">
+                  <Check className="w-2.5 h-2.5 text-[#0A0A10]" strokeWidth={3} />
                 </div>
                 <div>
                   <div className="text-white font-semibold text-sm">{packages[0].displayName || "Pro"}</div>
@@ -625,7 +625,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
             value={ambassadorCode}
             onChange={(e) => setAmbassadorCode(e.target.value)}
             placeholder="e.g. TOWER"
-            className="w-full bg-[#0B1218] border border-[#1B2A33] rounded-lg px-3 py-2 text-white text-sm placeholder:text-[#475569] focus:outline-none focus:border-[#B7FF1A]"
+            className="w-full bg-[#0A0A10] border border-[#1B2A33] rounded-lg px-3 py-2 text-white text-sm placeholder:text-[#475569] focus:outline-none focus:border-[#B7FF18]"
           />
           <p className="text-[#B8C0AE] text-[10px]">
             {ambassadorPerkLabel}
@@ -659,12 +659,12 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
       <div className="absolute bottom-0 left-0 right-0 z-10 px-5 pb-4">
         <div className="flex justify-center mb-3 md:justify-start">
-          <div className="inline-flex items-center gap-1.5 bg-[#14532d4d] border border-[#B7FF1A33] rounded-full px-3 py-1">
+          <div className="inline-flex items-center gap-1.5 bg-[#14532d4d] border border-[#B7FF1833] rounded-full px-3 py-1">
             <svg width="24" height="24" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" clipRule="evenodd" d="M13.3953 9.55057L13.524 8.28791C13.5926 7.61391 13.6373 7.16924 13.602 6.88858H13.6153C14.196 6.88858 14.6673 6.39124 14.6673 5.77791C14.6673 5.16458 14.196 4.66658 13.6146 4.66658C13.0333 4.66658 12.562 5.16391 12.562 5.77791C12.562 6.05524 12.6586 6.30924 12.818 6.50391C12.5893 6.65258 12.29 6.96724 11.8393 7.44058C11.4926 7.80524 11.3193 7.98724 11.126 8.01591C11.0186 8.03123 10.909 8.01502 10.8106 7.96924C10.632 7.88658 10.5126 7.66124 10.2746 7.20991L9.01864 4.83325C8.87197 4.55525 8.74864 4.32258 8.63731 4.13525C9.09264 3.88991 9.40397 3.39058 9.40397 2.81525C9.40397 1.99592 8.77597 1.33325 8.00064 1.33325C7.22531 1.33325 6.59731 1.99658 6.59731 2.81458C6.59731 3.39058 6.90864 3.88991 7.36398 4.13458C7.25264 4.32258 7.12998 4.55525 6.98264 4.83325L5.72731 7.21058C5.48864 7.66124 5.36931 7.88658 5.19065 7.96991C5.09227 8.01568 4.98272 8.0319 4.87531 8.01657C4.68198 7.98791 4.50865 7.80524 4.16198 7.44058C3.71131 6.96724 3.41198 6.65258 3.18331 6.50391C3.34331 6.30924 3.43931 6.05524 3.43931 5.77725C3.43931 5.16458 2.96732 4.66658 2.38598 4.66658C1.80598 4.66658 1.33398 5.16391 1.33398 5.77791C1.33398 6.39124 1.80532 6.88858 2.38665 6.88858H2.39932C2.36332 7.16858 2.40865 7.61391 2.47732 8.28791L2.60598 9.55057C2.67732 10.2512 2.73665 10.9179 2.80998 11.5186H13.1913C13.2646 10.9186 13.324 10.2512 13.3953 9.55057Z" fill="#B7FF1A" />
-              <path fillRule="evenodd" clipRule="evenodd" d="M7.23731 14.6666H8.76397C10.754 14.6666 11.7493 14.6666 12.4133 14.0399C12.7026 13.7652 12.8866 13.2719 13.0186 12.6292H2.98265C3.11465 13.2719 3.29798 13.7652 3.58798 14.0392C4.25198 14.6666 5.24731 14.6666 7.23731 14.6666Z" fill="#B7FF1A" />
+              <path fillRule="evenodd" clipRule="evenodd" d="M13.3953 9.55057L13.524 8.28791C13.5926 7.61391 13.6373 7.16924 13.602 6.88858H13.6153C14.196 6.88858 14.6673 6.39124 14.6673 5.77791C14.6673 5.16458 14.196 4.66658 13.6146 4.66658C13.0333 4.66658 12.562 5.16391 12.562 5.77791C12.562 6.05524 12.6586 6.30924 12.818 6.50391C12.5893 6.65258 12.29 6.96724 11.8393 7.44058C11.4926 7.80524 11.3193 7.98724 11.126 8.01591C11.0186 8.03123 10.909 8.01502 10.8106 7.96924C10.632 7.88658 10.5126 7.66124 10.2746 7.20991L9.01864 4.83325C8.87197 4.55525 8.74864 4.32258 8.63731 4.13525C9.09264 3.88991 9.40397 3.39058 9.40397 2.81525C9.40397 1.99592 8.77597 1.33325 8.00064 1.33325C7.22531 1.33325 6.59731 1.99658 6.59731 2.81458C6.59731 3.39058 6.90864 3.88991 7.36398 4.13458C7.25264 4.32258 7.12998 4.55525 6.98264 4.83325L5.72731 7.21058C5.48864 7.66124 5.36931 7.88658 5.19065 7.96991C5.09227 8.01568 4.98272 8.0319 4.87531 8.01657C4.68198 7.98791 4.50865 7.80524 4.16198 7.44058C3.71131 6.96724 3.41198 6.65258 3.18331 6.50391C3.34331 6.30924 3.43931 6.05524 3.43931 5.77725C3.43931 5.16458 2.96732 4.66658 2.38598 4.66658C1.80598 4.66658 1.33398 5.16391 1.33398 5.77791C1.33398 6.39124 1.80532 6.88858 2.38665 6.88858H2.39932C2.36332 7.16858 2.40865 7.61391 2.47732 8.28791L2.60598 9.55057C2.67732 10.2512 2.73665 10.9179 2.80998 11.5186H13.1913C13.2646 10.9186 13.324 10.2512 13.3953 9.55057Z" fill="#B7FF18" />
+              <path fillRule="evenodd" clipRule="evenodd" d="M7.23731 14.6666H8.76397C10.754 14.6666 11.7493 14.6666 12.4133 14.0399C12.7026 13.7652 12.8866 13.2719 13.0186 12.6292H2.98265C3.11465 13.2719 3.29798 13.7652 3.58798 14.0392C4.25198 14.6666 5.24731 14.6666 7.23731 14.6666Z" fill="#B7FF18" />
             </svg>
-            <span className="text-[#B7FF1A] text-xs font-bold uppercase tracking-[0.6px]">
+            <span className="text-[#B7FF18] text-xs font-bold uppercase tracking-[0.6px]">
               Exclusive Offer
             </span>
           </div>
@@ -673,7 +673,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         <div className="text-center md:text-left mb-1">
           <h2 className="text-xl font-bold leading-tight whitespace-nowrap">
             <span className="text-white">Unlock </span>
-            <span className="text-[#B7FF1A]">{proProductName}</span>
+            <span className="text-[#B7FF18]">{proProductName}</span>
           </h2>
         </div>
 
@@ -685,7 +685,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   );
 
   const rightPanel = (
-    <div className="flex flex-col justify-between h-full px-5 py-5 bg-[#0B1218]">
+    <div className="flex flex-col justify-between h-full px-5 py-5 bg-[#0A0A10]">
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 mb-4">
         {premiumBenefits.map((benefit, index) => (
           <motion.div
@@ -726,15 +726,15 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
         <button
           onClick={handleJoinPro}
           disabled={buttonDisabled}
-          className="w-full py-3 bg-[#B7FF1A] hover:bg-[#A2F000] rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-1"
-          style={{ boxShadow: "0 0 30px -5px #B7FF1A" }}
+          className="w-full py-3 bg-[#B7FF18] hover:bg-[#A2F000] rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-1"
+          style={{ boxShadow: "0 0 30px -5px #B7FF18" }}
           data-testid="button-upgrade-pro"
         >
           {purchasing || isLoading || checkoutLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin text-[#071013]" />
+            <Loader2 className="w-5 h-5 animate-spin text-[#0A0A10]" />
           ) : (
             <>
-              <span className="text-[#071013] text-base font-bold">Join {proProductName}</span>
+              <span className="text-[#0A0A10] text-base font-bold">Join {proProductName}</span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#022C22" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -766,7 +766,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   );
 
   const checkoutScreen = (
-    <div className="flex flex-col h-full bg-[#0B1218]">
+    <div className="flex flex-col h-full bg-[#0A0A10]">
       <div className="flex items-center py-[25px] px-6 border-b border-[#1B2A3380]">
         <button
           onClick={() => setStep("plans")}
@@ -790,7 +790,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
           </EmbeddedCheckoutProvider>
         ) : (
           <div className="flex items-center justify-center min-h-[400px]">
-            <Loader2 className="w-8 h-8 animate-spin text-[#B7FF1A]" />
+            <Loader2 className="w-8 h-8 animate-spin text-[#B7FF18]" />
           </div>
         )}
       </div>
@@ -800,7 +800,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-[430px] md:max-w-[780px] w-full bg-[#0B1218] border-none text-white p-0 overflow-hidden [&>button]:hidden max-h-[100dvh] h-[100dvh] md:h-auto md:max-h-[90vh] gap-0 rounded-none sm:rounded-none top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
+        className="max-w-[430px] md:max-w-[780px] w-full bg-[#0A0A10] border-none text-white p-0 overflow-hidden [&>button]:hidden max-h-[100dvh] h-[100dvh] md:h-auto md:max-h-[90vh] gap-0 rounded-none sm:rounded-none top-0 translate-y-0 md:top-[50%] md:translate-y-[-50%]"
         data-testid="dialog-pro-upgrade"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
@@ -834,12 +834,12 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
                 <div className="px-5 relative z-10" style={{ marginTop: "-72px", backgroundColor: "transparent", paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}>
                   <div className="flex justify-center mb-2">
-                    <div className="inline-flex items-center gap-1.5 bg-[#14532d4d] border border-[#B7FF1A33] rounded-full px-3 py-1">
+                    <div className="inline-flex items-center gap-1.5 bg-[#14532d4d] border border-[#B7FF1833] rounded-full px-3 py-1">
                       <svg width="21" height="21" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path fillRule="evenodd" clipRule="evenodd" d="M13.3953 9.55057L13.524 8.28791C13.5926 7.61391 13.6373 7.16924 13.602 6.88858H13.6153C14.196 6.88858 14.6673 6.39124 14.6673 5.77791C14.6673 5.16458 14.196 4.66658 13.6146 4.66658C13.0333 4.66658 12.562 5.16391 12.562 5.77791C12.562 6.05524 12.6586 6.30924 12.818 6.50391C12.5893 6.65258 12.29 6.96724 11.8393 7.44058C11.4926 7.80524 11.3193 7.98724 11.126 8.01591C11.0186 8.03123 10.909 8.01502 10.8106 7.96924C10.632 7.88658 10.5126 7.66124 10.2746 7.20991L9.01864 4.83325C8.87197 4.55525 8.74864 4.32258 8.63731 4.13525C9.09264 3.88991 9.40397 3.39058 9.40397 2.81525C9.40397 1.99592 8.77597 1.33325 8.00064 1.33325C7.22531 1.33325 6.59731 1.99658 6.59731 2.81458C6.59731 3.39058 6.90864 3.88991 7.36398 4.13458C7.25264 4.32258 7.12998 4.55525 6.98264 4.83325L5.72731 7.21058C5.48864 7.66124 5.36931 7.88658 5.19065 7.96991C5.09227 8.01568 4.98272 8.0319 4.87531 8.01657C4.68198 7.98791 4.50865 7.80524 4.16198 7.44058C3.71131 6.96724 3.41198 6.65258 3.18331 6.50391C3.34331 6.30924 3.43931 6.05524 3.43931 5.77725C3.43931 5.16458 2.96732 4.66658 2.38598 4.66658C1.80598 4.66658 1.33398 5.16391 1.33398 5.77791C1.33398 6.39124 1.80532 6.88858 2.38665 6.88858H2.39932C2.36332 7.16858 2.40865 7.61391 2.47732 8.28791L2.60598 9.55057C2.67732 10.2512 2.73665 10.9179 2.80998 11.5186H13.1913C13.2646 10.9186 13.324 10.2512 13.3953 9.55057Z" fill="#B7FF1A" />
-                        <path fillRule="evenodd" clipRule="evenodd" d="M7.23731 14.6666H8.76397C10.754 14.6666 11.7493 14.6666 12.4133 14.0399C12.7026 13.7652 12.8866 13.2719 13.0186 12.6292H2.98265C3.11465 13.2719 3.29798 13.7652 3.58798 14.0392C4.25198 14.6666 5.24731 14.6666 7.23731 14.6666Z" fill="#B7FF1A" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M13.3953 9.55057L13.524 8.28791C13.5926 7.61391 13.6373 7.16924 13.602 6.88858H13.6153C14.196 6.88858 14.6673 6.39124 14.6673 5.77791C14.6673 5.16458 14.196 4.66658 13.6146 4.66658C13.0333 4.66658 12.562 5.16391 12.562 5.77791C12.562 6.05524 12.6586 6.30924 12.818 6.50391C12.5893 6.65258 12.29 6.96724 11.8393 7.44058C11.4926 7.80524 11.3193 7.98724 11.126 8.01591C11.0186 8.03123 10.909 8.01502 10.8106 7.96924C10.632 7.88658 10.5126 7.66124 10.2746 7.20991L9.01864 4.83325C8.87197 4.55525 8.74864 4.32258 8.63731 4.13525C9.09264 3.88991 9.40397 3.39058 9.40397 2.81525C9.40397 1.99592 8.77597 1.33325 8.00064 1.33325C7.22531 1.33325 6.59731 1.99658 6.59731 2.81458C6.59731 3.39058 6.90864 3.88991 7.36398 4.13458C7.25264 4.32258 7.12998 4.55525 6.98264 4.83325L5.72731 7.21058C5.48864 7.66124 5.36931 7.88658 5.19065 7.96991C5.09227 8.01568 4.98272 8.0319 4.87531 8.01657C4.68198 7.98791 4.50865 7.80524 4.16198 7.44058C3.71131 6.96724 3.41198 6.65258 3.18331 6.50391C3.34331 6.30924 3.43931 6.05524 3.43931 5.77725C3.43931 5.16458 2.96732 4.66658 2.38598 4.66658C1.80598 4.66658 1.33398 5.16391 1.33398 5.77791C1.33398 6.39124 1.80532 6.88858 2.38665 6.88858H2.39932C2.36332 7.16858 2.40865 7.61391 2.47732 8.28791L2.60598 9.55057C2.67732 10.2512 2.73665 10.9179 2.80998 11.5186H13.1913C13.2646 10.9186 13.324 10.2512 13.3953 9.55057Z" fill="#B7FF18" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M7.23731 14.6666H8.76397C10.754 14.6666 11.7493 14.6666 12.4133 14.0399C12.7026 13.7652 12.8866 13.2719 13.0186 12.6292H2.98265C3.11465 13.2719 3.29798 13.7652 3.58798 14.0392C4.25198 14.6666 5.24731 14.6666 7.23731 14.6666Z" fill="#B7FF18" />
                       </svg>
-                      <span className="text-[#B7FF1A] text-[11px] font-bold uppercase tracking-[0.5px]">
+                      <span className="text-[#B7FF18] text-[11px] font-bold uppercase tracking-[0.5px]">
                         Exclusive Offer
                       </span>
                     </div>
@@ -847,7 +847,7 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
 
                   <h2 className="text-center text-xl font-bold leading-tight mb-0.5">
                     <span className="text-white">Unlock </span>
-                    <span className="text-[#B7FF1A]">{proProductName}</span>
+                    <span className="text-[#B7FF18]">{proProductName}</span>
                   </h2>
 
                   <p className="text-[#B8C0AE] text-xs text-center leading-relaxed mb-3 max-w-[260px] mx-auto">
@@ -893,15 +893,15 @@ export default function ProUpgradeDialog({ open, onOpenChange, subtitle, onAuthR
                   <button
                     onClick={handleJoinPro}
                     disabled={buttonDisabled}
-                    className="w-full py-3 bg-[#B7FF1A] hover:bg-[#A2F000] rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-3"
-                    style={{ boxShadow: "0 0 30px -5px #B7FF1A" }}
+                    className="w-full py-3 bg-[#B7FF18] hover:bg-[#A2F000] rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed mt-3"
+                    style={{ boxShadow: "0 0 30px -5px #B7FF18" }}
                     data-testid="button-upgrade-pro-mobile"
                   >
                     {purchasing || isLoading || checkoutLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-[#071013]" />
+                      <Loader2 className="w-5 h-5 animate-spin text-[#0A0A10]" />
                     ) : (
                       <>
-                        <span className="text-[#071013] text-base font-bold">Join {proProductName}</span>
+                        <span className="text-[#0A0A10] text-base font-bold">Join {proProductName}</span>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#022C22" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>

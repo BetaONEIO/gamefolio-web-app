@@ -165,7 +165,7 @@ const ReelCard: React.FC<{ reel: ClipWithUser; reelsList: ClipWithUser[]; onOpen
         {reel.game && (
           <Link
             href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
-            className="inline-block bg-primary text-[#071013] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
+            className="inline-block bg-primary text-[#0A0A10] text-[10px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
           >
             {reel.game.name}
           </Link>
@@ -229,8 +229,8 @@ const DesktopShortsViewer: React.FC<{
   const { label: activeLabel, Icon: ActiveIcon } = contentMeta[activeTab];
   const pillBase = (active: boolean) => ({
     background: active ? 'rgba(183,255,26,0.15)' : 'rgba(255,255,255,0.07)',
-    border: `1px solid ${active ? '#B7FF1A' : 'rgba(255,255,255,0.12)'}`,
-    color: active ? '#B7FF1A' : '#F5F7F2',
+    border: `1px solid ${active ? '#B7FF18' : 'rgba(255,255,255,0.12)'}`,
+    color: active ? '#B7FF18' : '#F5F7F2',
   });
 
   const clip = clips[currentIndex];
@@ -339,7 +339,7 @@ const DesktopShortsViewer: React.FC<{
           style={{ paddingTop: '16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}
         >
           <div className="flex items-center gap-2">
-            <MessageCircle className="h-5 w-5" style={{ color: '#B7FF1A' }} />
+            <MessageCircle className="h-5 w-5" style={{ color: '#B7FF18' }} />
             <span className="text-white font-bold text-base">Comments</span>
           </div>
           <button
@@ -390,7 +390,7 @@ const DesktopShortsViewer: React.FC<{
                   }}
                   disabled={!inlineComment.trim() || createCommentMutation.isPending}
                   className="flex-shrink-0 transition-opacity disabled:opacity-30"
-                  style={{ color: '#B7FF1A' }}
+                  style={{ color: '#B7FF18' }}
                 >
                   <Send className="h-4 w-4" />
                 </button>
@@ -402,7 +402,7 @@ const DesktopShortsViewer: React.FC<{
               className="w-full text-center text-sm py-2 rounded-full"
               style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)' }}
             >
-              <span style={{ color: '#B7FF1A' }}>Sign in</span> to comment
+              <span style={{ color: '#B7FF18' }}>Sign in</span> to comment
             </button>
           )}
         </div>
@@ -472,7 +472,7 @@ const DesktopShortsViewer: React.FC<{
             <div className="min-w-0 flex-1 cursor-default">
               <div className="flex items-center gap-2 flex-wrap">
                 <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
-                  <span className="text-white font-semibold text-sm hover:text-[#B7FF1A] transition-colors">
+                  <span className="text-white font-semibold text-sm hover:text-[#B7FF18] transition-colors">
                     {clip.user.displayName || clip.user.username}
                   </span>
                 </Link>
@@ -480,8 +480,8 @@ const DesktopShortsViewer: React.FC<{
                 {clip.game && (
                   <Link
                     href={`/games/${gameSlug}`}
-                    className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
-                    style={{ background: '#B7FF1A' }}
+                    className="inline-block text-[#0A0A10] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
+                    style={{ background: '#B7FF18' }}
                     onClick={onClose}
                   >
                     {clip.game.name}
@@ -529,13 +529,13 @@ const DesktopShortsViewer: React.FC<{
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
                 style={showComments
-                  ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
+                  ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF18' }
                   : { background: 'var(--gf-surface)', border: '1px solid var(--gf-border)' }
                 }
               >
-                <MessageCircle className="h-4 w-4" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+                <MessageCircle className="h-4 w-4" style={{ color: showComments ? '#B7FF18' : 'rgba(255,255,255,0.7)' }} />
               </div>
-              <span className="text-sm font-medium" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }}>
+              <span className="text-sm font-medium" style={{ color: showComments ? '#B7FF18' : 'rgba(255,255,255,0.5)' }}>
                 {fmt(comments)}
               </span>
             </button>
@@ -572,11 +572,11 @@ const DesktopShortsViewer: React.FC<{
                 onClick={() => { setShowContentDropdown(false); setShowTimeDropdown(false); setControlsVisible(v => !v); }}
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
                 style={{
-                  border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.5)'}`,
+                  border: `2px solid ${controlsVisible ? '#B7FF18' : 'rgba(100,116,139,0.5)'}`,
                   background: controlsVisible ? 'rgba(183,255,26,0.12)' : 'rgba(30,41,59,0.5)',
                 }}
               >
-                <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.7)' }} />
+                <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF18' : 'rgba(100,116,139,0.7)' }} />
               </button>
 
               {controlsVisible && (
@@ -613,7 +613,7 @@ const DesktopShortsViewer: React.FC<{
                           <button
                             key={period}
                             className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                            style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                            style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF18' } : { color: '#B8C0AE' }}
                             onClick={() => { onTimePeriodChange(period); setShowTimeDropdown(false); setControlsVisible(false); }}
                           >
                             {label}
@@ -644,7 +644,7 @@ const DesktopShortsViewer: React.FC<{
                           <button
                             key={type}
                             className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                            style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                            style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF18' } : { color: '#B8C0AE' }}
                             onClick={() => { onTabChange(type); setShowContentDropdown(false); setControlsVisible(false); }}
                           >
                             <Icon className="h-3.5 w-3.5" />
@@ -694,11 +694,11 @@ const DesktopShortsViewer: React.FC<{
                   onClick={() => { setShowContentDropdown(false); setShowTimeDropdown(false); setControlsVisible(v => !v); }}
                   className="w-10 h-10 rounded-full flex items-center justify-center transition-all"
                   style={{
-                    border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.5)'}`,
+                    border: `2px solid ${controlsVisible ? '#B7FF18' : 'rgba(100,116,139,0.5)'}`,
                     background: controlsVisible ? 'rgba(183,255,26,0.12)' : 'rgba(30,41,59,0.5)',
                   }}
                 >
-                  <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.7)' }} />
+                  <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF18' : 'rgba(100,116,139,0.7)' }} />
                 </button>
 
                 {/* Horizontal flyout — expands to the RIGHT of Eye when open */}
@@ -736,7 +736,7 @@ const DesktopShortsViewer: React.FC<{
                             <button
                               key={period}
                               className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                              style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                              style={timePeriod === period ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF18' } : { color: '#B8C0AE' }}
                               onClick={() => { onTimePeriodChange(period); setShowTimeDropdown(false); }}
                             >
                               {label}
@@ -767,7 +767,7 @@ const DesktopShortsViewer: React.FC<{
                             <button
                               key={type}
                               className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                              style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                              style={activeTab === type ? { background: 'rgba(183,255,26,0.15)', color: '#B7FF18' } : { color: '#B8C0AE' }}
                               onClick={() => { onTabChange(type); setShowContentDropdown(false); setControlsVisible(false); }}
                             >
                               <Icon className="h-3.5 w-3.5" />
@@ -816,13 +816,13 @@ const DesktopShortsViewer: React.FC<{
                 <div
                   className="w-10 h-10 rounded-full flex items-center justify-center transition-all group-hover:scale-105"
                   style={showComments
-                    ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF1A' }
+                    ? { background: 'rgba(183,255,26,0.15)', border: '1px solid #B7FF18' }
                     : { background: 'var(--gf-surface)', border: '1px solid var(--gf-border)' }
                   }
                 >
-                  <MessageCircle className="h-5 w-5" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.7)' }} />
+                  <MessageCircle className="h-5 w-5" style={{ color: showComments ? '#B7FF18' : 'rgba(255,255,255,0.7)' }} />
                 </div>
-                <span className="text-[11px] font-medium" style={{ color: showComments ? '#B7FF1A' : 'rgba(255,255,255,0.5)' }}>
+                <span className="text-[11px] font-medium" style={{ color: showComments ? '#B7FF18' : 'rgba(255,255,255,0.5)' }}>
                   {fmt(comments)}
                 </span>
               </button>
@@ -859,7 +859,7 @@ const DesktopShortsViewer: React.FC<{
                 <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
                   <div
                     className="w-11 h-11 rounded-full overflow-hidden border-2 flex-shrink-0 hover:scale-105 transition-transform"
-                    style={{ borderColor: '#B7FF1A' }}
+                    style={{ borderColor: '#B7FF18' }}
                   >
                     {clip.user.avatarUrl ? (
                       <img src={clip.user.avatarUrl} alt="" className="w-full h-full object-cover" />
@@ -874,7 +874,7 @@ const DesktopShortsViewer: React.FC<{
                 <ProfileHoverCard username={clip.user.username}>
                 <div className="flex flex-col gap-1 items-start cursor-default">
                   <Link href={`/profile/${clip.user.username}`} onClick={onClose}>
-                    <p className="text-white font-bold text-sm hover:text-[#B7FF1A] transition-colors leading-tight">
+                    <p className="text-white font-bold text-sm hover:text-[#B7FF18] transition-colors leading-tight">
                       {clip.user.displayName || clip.user.username}
                     </p>
                   </Link>
@@ -884,8 +884,8 @@ const DesktopShortsViewer: React.FC<{
                   {clip.game && (
                     <Link
                       href={`/games/${gameSlug}`}
-                      className="inline-block text-[#071013] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
-                      style={{ background: '#B7FF1A' }}
+                      className="inline-block text-[#0A0A10] text-[10px] px-2 py-0.5 rounded font-bold hover:opacity-80 transition-opacity"
+                      style={{ background: '#B7FF18' }}
                       onClick={onClose}
                     >
                       {clip.game.name}
@@ -1340,7 +1340,7 @@ const TrendingPage: React.FC = () => {
                           <Link
                             href={`/games/${reel.game.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-block bg-primary text-[#071013] text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
+                            className="inline-block bg-primary text-[#0A0A10] text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap max-w-full overflow-hidden text-ellipsis hover:opacity-80 transition-opacity"
                           >
                             {reel.game.name}
                           </Link>
@@ -1466,7 +1466,7 @@ const TrendingPage: React.FC = () => {
               </div>
             ) : !trendingClips?.length ? (
               <div className="flex flex-col items-center justify-center py-24 px-8">
-                <TrendingUp className="h-14 w-14 mb-4" style={{ color: '#B7FF1A' }} />
+                <TrendingUp className="h-14 w-14 mb-4" style={{ color: '#B7FF18' }} />
                 <p className="text-white font-semibold mb-1">No trending clips</p>
                 <p className="text-white/50 text-sm text-center">Check back later!</p>
               </div>
@@ -1500,7 +1500,7 @@ const TrendingPage: React.FC = () => {
         {activeTab !== 'clips' && isLoadingContent && (
           <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ background: 'var(--gf-background)' }}>
             <div className="flex flex-col items-center gap-3">
-              <div className="w-8 h-8 border-2 border-[#B7FF1A] border-t-transparent rounded-full animate-spin" />
+              <div className="w-8 h-8 border-2 border-[#B7FF18] border-t-transparent rounded-full animate-spin" />
               <p className="text-white/60 text-sm">Loading {activeLabel.toLowerCase()}…</p>
             </div>
           </div>
@@ -1510,7 +1510,7 @@ const TrendingPage: React.FC = () => {
         {activeTab !== 'clips' && !isLoadingContent && activeContent.length === 0 && (
           <div className="fixed inset-0 z-[65] flex items-center justify-center" style={{ background: 'var(--gf-background)' }}>
             <div className="text-center px-8">
-              <TrendingUp className="h-14 w-14 mx-auto mb-4" style={{ color: '#B7FF1A' }} />
+              <TrendingUp className="h-14 w-14 mx-auto mb-4" style={{ color: '#B7FF18' }} />
               <p className="text-white font-semibold mb-1">No trending {activeLabel.toLowerCase()}</p>
               <p className="text-white/50 text-sm">Check back later!</p>
             </div>
@@ -1535,7 +1535,7 @@ const TrendingPage: React.FC = () => {
           // Pill / circle base styles for clips-mode hover glow
           const pillBaseStyle = (active: boolean) => ({
             background: active ? 'rgba(183,255,26,0.18)' : 'var(--gf-surface)',
-            border: `1px solid ${active ? '#B7FF1A' : 'var(--gf-border)'}`,
+            border: `1px solid ${active ? '#B7FF18' : 'var(--gf-border)'}`,
             color: '#F5F7F2',
             boxShadow: active ? '0 0 0 1px rgba(183,255,26,0.25), 0 0 12px rgba(183,255,26,0.18)' : 'none',
           });
@@ -1566,12 +1566,12 @@ const TrendingPage: React.FC = () => {
             }}
             className="w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0"
             style={{
-              border: `2px solid ${controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.5)'}`,
+              border: `2px solid ${controlsVisible ? '#B7FF18' : 'rgba(100,116,139,0.5)'}`,
               background: 'rgba(30,41,59,0.7)',
               order: orderEye,
             }}
           >
-            <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF1A' : 'rgba(100,116,139,0.7)' }} />
+            <Eye className="h-5 w-5" style={{ color: controlsVisible ? '#B7FF18' : 'rgba(100,116,139,0.7)' }} />
           </button>
 
           {/* 2. Content-type pill (Clips ▼) */}
@@ -1607,7 +1607,7 @@ const TrendingPage: React.FC = () => {
                   <button
                     key={type}
                     className="flex items-center gap-3 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                    style={activeTab === type ? { background: 'rgba(183, 255, 26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                    style={activeTab === type ? { background: 'rgba(183, 255, 26,0.15)', color: '#B7FF18' } : { color: '#B8C0AE' }}
                     onClick={() => { setActiveTab(type); setShowContentDropdown(false); }}
                   >
                     <Icon className="h-3.5 w-3.5" />
@@ -1639,7 +1639,7 @@ const TrendingPage: React.FC = () => {
               className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:shadow-[0_0_12px_rgba(183,255,26,0.35)] flex-shrink-0"
               style={pillBaseStyle(!!selectedGameId)}
             >
-              <Gamepad2 className="h-5 w-5" style={{ color: selectedGameId ? '#B7FF1A' : '#F5F7F2' }} />
+              <Gamepad2 className="h-5 w-5" style={{ color: selectedGameId ? '#B7FF18' : '#F5F7F2' }} />
             </button>
           </div>
 
@@ -1665,10 +1665,10 @@ const TrendingPage: React.FC = () => {
                 ? pillBaseStyle(showTimeDropdown)
                 : {
                     background: showTimeDropdown ? 'rgba(183, 255, 26,0.18)' : 'rgba(30,41,59,0.88)',
-                    border: showTimeDropdown ? '1px solid #B7FF1A' : '1px solid rgba(183, 255, 26,0.3)',
+                    border: showTimeDropdown ? '1px solid #B7FF18' : '1px solid rgba(183, 255, 26,0.3)',
                   }}
             >
-              <Clock className="h-5 w-5" style={{ color: showTimeDropdown ? '#B7FF1A' : (isClipsMode ? '#F5F7F2' : '#fff') }} />
+              <Clock className="h-5 w-5" style={{ color: showTimeDropdown ? '#B7FF18' : (isClipsMode ? '#F5F7F2' : '#fff') }} />
             </button>
             {showTimeDropdown && (
               <div
@@ -1680,7 +1680,7 @@ const TrendingPage: React.FC = () => {
                   <button
                     key={period}
                     className="flex items-center gap-2.5 px-3.5 py-2.5 w-full text-left text-xs font-medium"
-                    style={timePeriod === period ? { background: 'rgba(183, 255, 26,0.15)', color: '#B7FF1A' } : { color: '#B8C0AE' }}
+                    style={timePeriod === period ? { background: 'rgba(183, 255, 26,0.15)', color: '#B7FF18' } : { color: '#B8C0AE' }}
                     onClick={() => { setTimePeriod(period); setShowTimeDropdown(false); }}
                   >
                     {label}
@@ -1709,7 +1709,7 @@ const TrendingPage: React.FC = () => {
               {/* Header */}
               <div className="flex items-center justify-between px-5 pt-5 pb-4">
                 <div className="flex items-center gap-2.5">
-                  <Gamepad2 className="h-6 w-6" style={{ color: '#B7FF1A' }} />
+                  <Gamepad2 className="h-6 w-6" style={{ color: '#B7FF18' }} />
                   <span className="text-white font-bold text-lg">
                     Filter {activeLabel} by Game
                   </span>
@@ -1747,7 +1747,7 @@ const TrendingPage: React.FC = () => {
               <div className="flex-1 overflow-y-auto px-3 pb-8">
                 {isGameSearchLoading && (
                   <div className="flex items-center justify-center py-10">
-                    <div className="w-6 h-6 border-2 border-[#B7FF1A] border-t-transparent rounded-full animate-spin" />
+                    <div className="w-6 h-6 border-2 border-[#B7FF18] border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
 
@@ -1758,7 +1758,7 @@ const TrendingPage: React.FC = () => {
                     style={{
                       aspectRatio: '3/4',
                       background: 'var(--gf-surface)',
-                      border: !selectedGameId ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
+                      border: !selectedGameId ? '2.5px solid #B7FF18' : '2px solid rgba(255,255,255,0.08)',
                     }}
                     onClick={() => {
                       setSelectedGameId(null);
@@ -1773,12 +1773,12 @@ const TrendingPage: React.FC = () => {
                     {!selectedGameId && (
                       <div
                         className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
-                        style={{ background: '#B7FF1A' }}
+                        style={{ background: '#B7FF18' }}
                       >
                         <Check className="h-3 w-3 text-black" strokeWidth={3} />
                       </div>
                     )}
-                    <Gamepad2 className="h-7 w-7 mb-1" style={{ color: '#B7FF1A' }} />
+                    <Gamepad2 className="h-7 w-7 mb-1" style={{ color: '#B7FF18' }} />
                     <span className="text-white text-[11px] font-bold text-center px-1 leading-tight">All Games</span>
                   </button>
 
@@ -1808,7 +1808,7 @@ const TrendingPage: React.FC = () => {
                           style={{
                             aspectRatio: '3/4',
                             background: 'var(--gf-surface)',
-                            border: isSelected ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
+                            border: isSelected ? '2.5px solid #B7FF18' : '2px solid rgba(255,255,255,0.08)',
                             opacity: isInCurrentTab ? 1 : 0.4,
                             filter: isInCurrentTab ? 'none' : 'grayscale(70%)',
                             cursor: isInCurrentTab ? 'pointer' : 'not-allowed',
@@ -1839,7 +1839,7 @@ const TrendingPage: React.FC = () => {
                           {isSelected && (
                             <div
                               className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
-                              style={{ background: '#B7FF1A' }}
+                              style={{ background: '#B7FF18' }}
                             >
                               <Check className="h-3 w-3 text-black" strokeWidth={3} />
                             </div>
@@ -1991,7 +1991,7 @@ const TrendingPage: React.FC = () => {
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-5 pb-4">
               <div className="flex items-center gap-2.5">
-                <Gamepad2 className="h-6 w-6" style={{ color: '#B7FF1A' }} />
+                <Gamepad2 className="h-6 w-6" style={{ color: '#B7FF18' }} />
                 <span className="text-white font-bold text-lg">
                   Filter by Game
                 </span>
@@ -2029,7 +2029,7 @@ const TrendingPage: React.FC = () => {
             <div className="flex-1 overflow-y-auto px-3 pb-6">
               {isGameSearchLoading && (
                 <div className="flex items-center justify-center py-10">
-                  <div className="w-6 h-6 border-2 border-[#B7FF1A] border-t-transparent rounded-full animate-spin" />
+                  <div className="w-6 h-6 border-2 border-[#B7FF18] border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
 
@@ -2040,7 +2040,7 @@ const TrendingPage: React.FC = () => {
                   style={{
                     aspectRatio: '3/4',
                     background: 'var(--gf-surface)',
-                    border: !selectedGameId ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
+                    border: !selectedGameId ? '2.5px solid #B7FF18' : '2px solid rgba(255,255,255,0.08)',
                   }}
                   onClick={() => {
                     setSelectedGameId(null);
@@ -2053,11 +2053,11 @@ const TrendingPage: React.FC = () => {
                   }}
                 >
                   {!selectedGameId && (
-                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: '#B7FF1A' }}>
+                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: '#B7FF18' }}>
                       <Check className="h-3 w-3 text-black" strokeWidth={3} />
                     </div>
                   )}
-                  <Gamepad2 className="h-7 w-7 mb-1" style={{ color: '#B7FF1A' }} />
+                  <Gamepad2 className="h-7 w-7 mb-1" style={{ color: '#B7FF18' }} />
                   <span className="text-white text-[11px] font-bold text-center px-1 leading-tight">All Games</span>
                 </button>
 
@@ -2080,7 +2080,7 @@ const TrendingPage: React.FC = () => {
                         style={{
                           aspectRatio: '3/4',
                           background: 'var(--gf-surface)',
-                          border: isSelected ? '2.5px solid #B7FF1A' : '2px solid rgba(255,255,255,0.08)',
+                          border: isSelected ? '2.5px solid #B7FF18' : '2px solid rgba(255,255,255,0.08)',
                           opacity: isInCurrentTab ? 1 : 0.4,
                           filter: isInCurrentTab ? 'none' : 'grayscale(70%)',
                           cursor: isInCurrentTab ? 'pointer' : 'not-allowed',
@@ -2100,7 +2100,7 @@ const TrendingPage: React.FC = () => {
                         {imgSrc && <img src={imgSrc} alt={game.name} className="absolute inset-0 w-full h-full object-cover" />}
                         <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 55%, transparent 100%)' }} />
                         {isSelected && (
-                          <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: '#B7FF1A' }}>
+                          <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: '#B7FF18' }}>
                             <Check className="h-3 w-3 text-black" strokeWidth={3} />
                           </div>
                         )}

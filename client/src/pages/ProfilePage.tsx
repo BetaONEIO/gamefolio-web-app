@@ -222,8 +222,8 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
   legendary: {
     bg: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
     glow: "shadow-[0_0_25px_rgba(236,72,153,0.4)]",
-    dotColor: "bg-primary shadow-[0_0_8px_#B7FF1A]",
-    textStyle: "bg-gradient-to-r from-[#B7FF1A] to-[#B7FF1A] bg-clip-text text-transparent font-black",
+    dotColor: "bg-primary shadow-[0_0_8px_#B7FF18]",
+    textStyle: "bg-gradient-to-r from-[#B7FF18] to-[#B7FF18] bg-clip-text text-transparent font-black",
     nameColor: "text-slate-800",
   },
   epic: {
@@ -234,9 +234,9 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
     nameColor: "text-slate-50",
   },
   rare: {
-    bg: "bg-gradient-to-b from-[#B7FF1A33] via-[#14532d4d] to-[#B7FF1A33]",
+    bg: "bg-gradient-to-b from-[#B7FF1833] via-[#14532d4d] to-[#B7FF1833]",
     glow: "",
-    dotColor: "bg-primary shadow-[0_0_8px_#B7FF1A]",
+    dotColor: "bg-primary shadow-[0_0_8px_#B7FF18]",
     textStyle: "text-slate-400 font-normal",
     nameColor: "text-slate-50",
   },
@@ -250,10 +250,10 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
 };
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
-  streamer: { label: "Streamer", icon: Video, color: "bg-[#B7FF1A]/20 text-[#B7FF1A] border-[#B7FF1A]/30" },
-  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-[#B7FF1A]/20 text-[#B7FF1A] border-[#B7FF1A]/30" },
+  streamer: { label: "Streamer", icon: Video, color: "bg-[#B7FF18]/20 text-[#B7FF18] border-[#B7FF18]/30" },
+  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-[#B7FF18]/20 text-[#B7FF18] border-[#B7FF18]/30" },
   professional_gamer: { label: "Professional Gamer", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
-  content_creator: { label: "Content Creator", icon: Upload, color: "bg-[#B7FF1A]/20 text-[#B7FF1A] border-[#B7FF1A]/30" },
+  content_creator: { label: "Content Creator", icon: Upload, color: "bg-[#B7FF18]/20 text-[#B7FF18] border-[#B7FF18]/30" },
   viewer: { label: "Viewer", icon: Eye, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
   filthy_casual: { label: "Filthy Casual", icon: Coffee, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
   doom_scroller: { label: "Doom Scroller", icon: Scroll, color: "bg-red-500/20 text-red-400 border-red-500/30" },
@@ -1331,12 +1331,12 @@ const ProfilePage = () => {
   //     // Use requestAnimationFrame to batch updates and prevent visual flashing
   //     requestAnimationFrame(() => {
   //       // Ensure complete isolation - set CSS custom properties only on this element
-  //       scope.style.setProperty('--user-accent-color', profile.accentColor || '#B7FF1A');
-  //       scope.style.setProperty('--user-primary-color', profile.primaryColor || '#071013');
-  //       scope.style.setProperty('--user-avatar-border-color', profile.avatarBorderColor || '#B7FF1A');
+  //       scope.style.setProperty('--user-accent-color', profile.accentColor || '#B7FF18');
+  //       scope.style.setProperty('--user-primary-color', profile.primaryColor || '#0A0A10');
+  //       scope.style.setProperty('--user-avatar-border-color', profile.avatarBorderColor || '#B7FF18');
 
   //       // Calculate alpha version of accent color for subtle effects
-  //       const accentColor = profile.accentColor || '#B7FF1A';
+  //       const accentColor = profile.accentColor || '#B7FF18';
   //       const alpha = `${accentColor}33`;
   //       scope.style.setProperty('--user-accent-color-alpha', alpha);
   //     });
@@ -2689,7 +2689,7 @@ const ProfilePage = () => {
         if (profile.birthday !== todayMMDD) return null;
         return (
           <div className="relative overflow-hidden rounded-xl mx-1 md:mx-0 mb-3" style={{
-            background: 'linear-gradient(135deg, #B7FF1A 0%, #B7FF1A 50%, #EAB308 100%)',
+            background: 'linear-gradient(135deg, #B7FF18 0%, #B7FF18 50%, #EAB308 100%)',
             padding: '1px',
           }}>
             <div className="relative rounded-xl px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-center gap-3 text-center" style={{
@@ -4808,8 +4808,8 @@ const ProfilePage = () => {
         {profileSectionTab === 'collection' ? (
           <div className="w-full">
             <div 
-              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-nft-header' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : isMacTheme ? 'rounded-full' : isGothicTheme ? 'rounded-2xl' : isCartoonTheme ? 'rounded-xl' : isDefaultTheme ? 'rounded-full bg-[#0F101B] border border-[#2B3042]' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
-              style={isBlocksTheme ? undefined : isWatermelonTheme ? { background: '#ffb3c1', border: '5px solid #1d3932', borderRadius: '9999px' } : isZombieTheme ? { background: '#1a1d1a' } : isMacTheme ? { background: 'linear-gradient(180deg, #ebebeb 0%, #d6d6d6 100%)', border: '1px solid #bdbdbd', borderRadius: '9999px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)', position: 'relative' } : isGothicTheme ? { background: 'rgba(15,2,38,0.92)', border: '1px solid #c27aff33', borderRadius: '16px', boxShadow: '0 0 18px #c27aff15' } : isCartoonTheme ? { background: '#ffffff', border: '3px solid #1d1d1f', borderRadius: '12px', boxShadow: '4px 4px 0 #1d1d1f' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : isDefaultTheme ? { background: '#0F101B', border: '1px solid #2B3042' } : undefined}
+              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-nft-header' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : isMacTheme ? 'rounded-full' : isGothicTheme ? 'rounded-2xl' : isCartoonTheme ? 'rounded-xl' : isDefaultTheme ? 'rounded-full bg-[#0A0A10] border border-[#2B3042]' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
+              style={isBlocksTheme ? undefined : isWatermelonTheme ? { background: '#ffb3c1', border: '5px solid #1d3932', borderRadius: '9999px' } : isZombieTheme ? { background: '#1a1d1a' } : isMacTheme ? { background: 'linear-gradient(180deg, #ebebeb 0%, #d6d6d6 100%)', border: '1px solid #bdbdbd', borderRadius: '9999px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)', position: 'relative' } : isGothicTheme ? { background: 'rgba(15,2,38,0.92)', border: '1px solid #c27aff33', borderRadius: '16px', boxShadow: '0 0 18px #c27aff15' } : isCartoonTheme ? { background: '#ffffff', border: '3px solid #1d1d1f', borderRadius: '12px', boxShadow: '4px 4px 0 #1d1d1f' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : isDefaultTheme ? { background: '#0A0A10', border: '1px solid #2B3042' } : undefined}
             >
               {isMacTheme && (
                 <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6, alignItems: 'center', zIndex: 2 }}>
@@ -4882,9 +4882,9 @@ const ProfilePage = () => {
                   background: 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)',
                   color: '#ffffff',
                  } : isDefaultTheme ? {
-                    background: '#0F101B',
+                    background: '#0A0A10',
                     color: '#ffffff',
-                    border: '1px solid #B7FF1A',
+                    border: '1px solid #B7FF18',
                 } : {
                   background: `hsl(var(--primary))`,
                   color: '#ffffff',
@@ -5235,7 +5235,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(15 clip limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-[#B7FF1A] hover:bg-[#B7FF1A]/90 text-[#071013] font-semibold px-8"
+                  className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#0A0A10] font-semibold px-8"
                 >
                   Go PRO
                 </Button>
@@ -5386,7 +5386,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(15 reel limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-[#B7FF1A] hover:bg-[#B7FF1A]/90 text-[#071013] font-semibold px-8"
+                  className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#0A0A10] font-semibold px-8"
                 >
                   Go PRO
                 </Button>
@@ -5544,7 +5544,7 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(10 screenshot limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-[#B7FF1A] hover:bg-[#B7FF1A]/90 text-[#071013] font-semibold px-8"
+                  className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#0A0A10] font-semibold px-8"
                 >
                   Go PRO
                 </Button>

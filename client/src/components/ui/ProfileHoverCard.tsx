@@ -97,7 +97,7 @@ function ProfilePreview({ username, profile, badgeData, signedBannerUrl, accent,
     { label: "FOLLOWERS", value: profile._count?.followers ?? 0 },
   ];
 
-  const bgFrom = profile.primaryColor || profile.backgroundColor || "#0B1218";
+  const bgFrom = profile.primaryColor || profile.backgroundColor || "#0A0A10";
   const bgTo   = profile.backgroundColor || "#1B2A33";
 
   return (
@@ -141,7 +141,7 @@ function ProfilePreview({ username, profile, badgeData, signedBannerUrl, accent,
 
       {/* Avatar + name row — pl-1 keeps content off the left edge */}
       <div className="flex items-end gap-2 mb-1.5 pl-1" style={{ marginTop: -14 }}>
-        <div className="ring-2 ring-[#0B1218] rounded-full flex-shrink-0">
+        <div className="ring-2 ring-[#0A0A10] rounded-full flex-shrink-0">
           <CustomAvatar user={profile} size="sm" showBorder />
         </div>
         <div className="min-w-0 pb-0.5">
@@ -229,8 +229,8 @@ function ProfilePreview({ username, profile, badgeData, signedBannerUrl, accent,
         <button
           className="w-full font-bold py-1.5 rounded-lg transition-opacity hover:opacity-90"
           style={{
-            background: "#B7FF1A",
-            color: "#071013",
+            background: "#B7FF18",
+            color: "#0A0A10",
             fontSize: "0.65rem",
           }}
         >
@@ -274,7 +274,7 @@ export function ProfileHoverCard({ username, children }: ProfileHoverCardProps) 
     isSupabaseBanner ? profile!.bannerUrl : null
   );
 
-  const accent = profile?.accentColor  || "#B7FF1A";
+  const accent = profile?.accentColor  || "#B7FF18";
   const cardBg = profile?.primaryColor || profile?.backgroundColor || "#101923";
   const theme  = getThemeTokens(accent);
 
@@ -362,7 +362,7 @@ export function MobileProfilePreview({ username, children }: MobileProfilePrevie
     isSupabaseBanner ? profile!.bannerUrl : null
   );
 
-  const accent = profile?.accentColor || "#B7FF1A";
+  const accent = profile?.accentColor || "#B7FF18";
   const cardBg = profile?.primaryColor || profile?.backgroundColor || "#101923";
   const theme = getThemeTokens(accent);
 

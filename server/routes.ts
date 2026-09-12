@@ -3088,7 +3088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileFontAnimation: u.profileFontAnimation || 'none',
           profileFontColor: u.profileFontColor || '#FFFFFF',
           cardColor: u.cardColor || '#1A1D2B',
-          primaryColor: u.primaryColor || '#0F101B',
+          primaryColor: u.primaryColor || '#0A0A10',
           avatarBorderColor: u.avatarBorderColor || '#B7FF18',
           hideBanner: u.hideBanner || false,
           statsGlassEffect: u.statsGlassEffect || false,

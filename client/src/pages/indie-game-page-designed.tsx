@@ -39,7 +39,7 @@ const TABS: Array<{ id: TabId; label: string; icon: typeof Play }> = [
 ];
 
 const ACCENT = "#B7FF18";
-const PAGE_BG = "#0B1319";
+const PAGE_BG = "#0A0A10";
 const CARD_STYLE = {
   background: "rgba(255, 255, 255, 0.04)",
   border: "1px solid rgba(183, 255, 24, 0.15)",
@@ -189,7 +189,7 @@ function DesignedIndieGamePage() {
 
   if (gameLoading || profileLoading) {
     return (
-      <div className="min-h-screen bg-[#0B1319] p-6 md:p-12">
+      <div className="min-h-screen bg-[#0A0A10] p-6 md:p-12">
         <div className="mx-auto max-w-5xl space-y-5 pt-20">
           <Skeleton className="mx-auto h-8 w-64 bg-white/10" />
           <Skeleton className="mx-auto h-24 w-2/3 bg-white/10" />
@@ -200,30 +200,30 @@ function DesignedIndieGamePage() {
   }
 
   if (!game || !indieProfileData) {
-    return <div className="flex min-h-[60vh] items-center justify-center bg-[#0B1319] p-8 text-white/60">Game not found.</div>;
+    return <div className="flex min-h-[60vh] items-center justify-center bg-[#0A0A10] p-8 text-white/60">Game not found.</div>;
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#0B1319] text-white" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div className="min-h-screen overflow-x-hidden bg-[#0A0A10] text-white" style={{ fontFamily: "Inter, sans-serif" }}>
       <style>{`
         @keyframes gamefolio-scanline { from { transform: translateY(-100%); } to { transform: translateY(100vh); } }
         @keyframes gamefolio-pulse { 0%,100% { box-shadow: 0 0 20px rgba(183,255,24,.2); } 50% { box-shadow: 0 0 40px rgba(183,255,24,.4); } }
         .gamefolio-scanline { animation: gamefolio-scanline 8s linear infinite; }
         .gamefolio-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
-        .gamefolio-scrollbar::-webkit-scrollbar-track { background: #0B1319; }
+        .gamefolio-scrollbar::-webkit-scrollbar-track { background: #0A0A10; }
         .gamefolio-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 4px; }
       `}</style>
 
       <section
         className="relative flex min-h-[520px] items-center justify-center overflow-hidden border-b border-white/5 px-6 pb-20 pt-24 md:px-12"
-        style={{ background: "linear-gradient(135deg, #0B1319 0%, #1a0b30 50%, #0d1f2d 100%)" }}
+        style={{ background: "linear-gradient(135deg, #0A0A10 0%, #1a0b30 50%, #0d1f2d 100%)" }}
       >
         <div className="gamefolio-scanline pointer-events-none absolute left-0 top-0 z-10 h-2 w-full bg-gradient-to-b from-transparent via-[#B7FF18]/30 to-transparent" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.15)_0%,transparent_50%)]" />
         <div className="relative z-20 mx-auto flex w-full max-w-5xl flex-col items-center text-center">
           <div className="mb-6 flex flex-wrap justify-center gap-3">
             {tags.map((tag) => (
-              <span key={tag} className="rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#0B1319]" style={{ background: ACCENT }}>
+              <span key={tag} className="rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#0A0A10]" style={{ background: ACCENT }}>
                 {tag}
               </span>
             ))}
@@ -277,7 +277,7 @@ function DesignedIndieGamePage() {
         </div>
       </section>
 
-      <nav className="sticky top-0 z-40 border-b border-white/10 bg-[#0B1319]/80 px-4 backdrop-blur-xl md:px-6">
+      <nav className="sticky top-0 z-40 border-b border-white/10 bg-[#0A0A10]/80 px-4 backdrop-blur-xl md:px-6">
         <div className="gamefolio-scrollbar mx-auto flex max-w-6xl overflow-x-auto">
           {TABS.map((tab) => {
             const Icon = tab.icon;
@@ -360,13 +360,13 @@ function DesignedIndieGamePage() {
       )}
 
       <div className="fixed bottom-6 right-6 z-30 flex flex-col gap-3 sm:flex-row">
-        <button onClick={share} className="flex items-center justify-center gap-2 rounded-lg border border-white/20 bg-[#0B1319]/90 px-4 py-3 text-sm font-bold text-white shadow-xl backdrop-blur transition-colors hover:bg-white/10"><Users size={16} />Share</button>
-        <button onClick={openUpload} className="flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-bold text-[#0B1319] shadow-xl transition-transform hover:scale-105" style={{ background: ACCENT }}><Upload size={16} />Upload</button>
-        {canManage && <Link href={`/manage/games/${encodeURIComponent(gameSlug || "")}`} className="flex items-center justify-center gap-2 rounded-lg border border-[#B7FF18]/40 bg-[#0B1319]/90 px-4 py-3 text-sm font-bold text-[#B7FF18] shadow-xl backdrop-blur hover:bg-[#B7FF18]/10"><Terminal size={16} />Dashboard</Link>}
+        <button onClick={share} className="flex items-center justify-center gap-2 rounded-lg border border-white/20 bg-[#0A0A10]/90 px-4 py-3 text-sm font-bold text-white shadow-xl backdrop-blur transition-colors hover:bg-white/10"><Users size={16} />Share</button>
+        <button onClick={openUpload} className="flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-bold text-[#0A0A10] shadow-xl transition-transform hover:scale-105" style={{ background: ACCENT }}><Upload size={16} />Upload</button>
+        {canManage && <Link href={`/manage/games/${encodeURIComponent(gameSlug || "")}`} className="flex items-center justify-center gap-2 rounded-lg border border-[#B7FF18]/40 bg-[#0A0A10]/90 px-4 py-3 text-sm font-bold text-[#B7FF18] shadow-xl backdrop-blur hover:bg-[#B7FF18]/10"><Terminal size={16} />Dashboard</Link>}
       </div>
 
       <Dialog open={uploadOpen} onOpenChange={(open) => !open && closeUpload()}>
-        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto bg-[#0B1218] p-0">
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto bg-[#0A0A10] p-0">
           <Suspense fallback={<div className="p-8 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-[#B7FF18]" /></div>}>
             <UploadPage />
           </Suspense>

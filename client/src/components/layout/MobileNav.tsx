@@ -177,7 +177,7 @@ const MobileNav = () => {
                     />
                   </span>
                   <span className={cn(
-                    isActive ? 'text-[#B7FF1A]' : 'text-muted-foreground'
+                    isActive ? 'text-[#B7FF18]' : 'text-muted-foreground'
                   )}>
                     {item.label}
                   </span>

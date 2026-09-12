@@ -155,7 +155,7 @@ export default function NFTDetailsPage() {
           store to find another NFT.
         </p>
         <Link href="/store">
-          <Button className="bg-[#B7FF1A] hover:bg-[#A2F000] text-black font-bold" data-testid="button-back-to-store">
+          <Button className="bg-[#B7FF18] hover:bg-[#A2F000] text-black font-bold" data-testid="button-back-to-store">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Store
           </Button>
@@ -167,7 +167,7 @@ export default function NFTDetailsPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background text-white flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#B7FF1A]" />
+        <Loader2 className="w-8 h-8 animate-spin text-[#B7FF18]" />
       </div>
     );
   }

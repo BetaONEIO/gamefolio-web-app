@@ -91,7 +91,7 @@ const VideoClipGridItem = ({
           // No preview thumbnail available (generation timed out/failed) —
           // fall back to a plain placeholder instead of trying to play the
           // raw, not-yet-processed video.
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-[#0B1218]">
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-[#0A0A10]">
             {isFailed ? (
               <AlertTriangle size={compact ? 18 : 24} className="text-red-400" />
             ) : (
@@ -129,7 +129,7 @@ const VideoClipGridItem = ({
               className={`w-full h-full relative z-[2] ${
                 isReel ? "object-contain" : showBlur ? "object-contain" : "object-cover"
               }`}
-              placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%230B1218'/%3e%3c/svg%3e"
+              placeholder="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='100'%20height='100'%3e%3crect%20width='100'%20height='100'%20fill='%230F101B'/%3e%3c/svg%3e"
               showLoadingSpinner={true}
               rootMargin="100px"
               threshold={0.1}
@@ -237,7 +237,7 @@ const VideoClipGridItem = ({
                 <span
                   className="inline-block mt-1 font-bold rounded hover:opacity-90 transition-opacity"
                   style={{
-                    background: "#B7FF1A",
+                    background: "#B7FF18",
                     color: "#03080A",
                     fontSize: compact ? "8px" : "10px",
                     padding: compact ? "1px 5px" : "2px 6px",

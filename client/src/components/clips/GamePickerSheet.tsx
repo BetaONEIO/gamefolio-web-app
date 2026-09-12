@@ -23,7 +23,7 @@ function GameCard({
       style={{
         aspectRatio: "3/4",
         background: "var(--gf-surface-raised)",
-        border: isSelected ? "2.5px solid #B7FF1A" : "2px solid rgba(255,255,255,0.08)",
+        border: isSelected ? "2.5px solid #B7FF18" : "2px solid rgba(255,255,255,0.08)",
       }}
       onClick={() => {
         onSelect(isSelected ? null : game);
@@ -44,7 +44,7 @@ function GameCard({
       {isSelected && (
         <div
           className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
-          style={{ background: "#B7FF1A" }}
+          style={{ background: "#B7FF18" }}
         >
           <Check className="h-3 w-3 text-black" strokeWidth={3} />
         </div>
@@ -226,7 +226,7 @@ export function GamePickerSheet({
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4">
           <div className="flex items-center gap-2.5">
-            <Gamepad2 className="h-6 w-6" style={{ color: "#B7FF1A" }} />
+            <Gamepad2 className="h-6 w-6" style={{ color: "#B7FF18" }} />
             <span className="text-white font-bold text-lg">{title}</span>
           </div>
           <button
@@ -288,7 +288,7 @@ export function GamePickerSheet({
 
             {isLoading && (
               <div className="flex items-center justify-center py-10">
-                <div className="w-6 h-6 border-2 border-[#B7FF1A] border-t-transparent rounded-full animate-spin" />
+                <div className="w-6 h-6 border-2 border-[#B7FF18] border-t-transparent rounded-full animate-spin" />
               </div>
             )}
 
@@ -312,11 +312,11 @@ export function GamePickerSheet({
                   disabled={isCreatingCustom}
                 >
                   {isCreatingCustom ? (
-                    <Loader2 className="h-6 w-6 animate-spin" style={{ color: "#B7FF1A" }} />
+                    <Loader2 className="h-6 w-6 animate-spin" style={{ color: "#B7FF18" }} />
                   ) : (
-                    <Plus className="h-6 w-6" style={{ color: "#B7FF1A" }} />
+                    <Plus className="h-6 w-6" style={{ color: "#B7FF18" }} />
                   )}
-                  <span className="text-[10px] font-bold text-center px-1 leading-tight" style={{ color: "#B7FF1A" }}>
+                  <span className="text-[10px] font-bold text-center px-1 leading-tight" style={{ color: "#B7FF18" }}>
                     {showCustomOption ? `Add "${searchQuery.trim()}"` : "Add Game"}
                   </span>
                 </button>

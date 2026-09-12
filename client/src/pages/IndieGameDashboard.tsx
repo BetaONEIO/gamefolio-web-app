@@ -32,7 +32,7 @@ import HlsVideo from "@/components/media/HlsVideo";
 import { publicGamePath, toGameSlug } from "@/lib/game-routes";
 
 const NEON = "#B7FF18";
-const BG = "#0B1319";
+const BG = "#0A0A10";
 const CARD = "rgba(255,255,255,0.04)";
 const BORDER = "rgba(255,255,255,0.08)";
 

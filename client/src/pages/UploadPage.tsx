@@ -2512,7 +2512,7 @@ const UploadPage = () => {
                     checked={ageRestricted}
                     onCheckedChange={(checked) => setAgeRestricted(checked as boolean)}
                     data-testid="checkbox-age-restricted"
-                    className="h-5 w-5 rounded-full border-gray-500 bg-transparent data-[state=checked]:bg-transparent data-[state=checked]:border-gray-500 [&_svg]:text-[#B7FF1A] [&_svg]:h-3.5 [&_svg]:w-3.5"
+                    className="h-5 w-5 rounded-full border-gray-500 bg-transparent data-[state=checked]:bg-transparent data-[state=checked]:border-gray-500 [&_svg]:text-[#B7FF18] [&_svg]:h-3.5 [&_svg]:w-3.5"
                   />
                   <div className="flex-1">
                     <Label
@@ -3196,7 +3196,7 @@ const UploadPage = () => {
                     checked={ageRestricted}
                     onCheckedChange={(checked) => setAgeRestricted(checked as boolean)}
                     data-testid="checkbox-reel-age-restricted"
-                    className="h-5 w-5 rounded-full border-gray-500 bg-transparent data-[state=checked]:bg-transparent data-[state=checked]:border-gray-500 [&_svg]:text-[#B7FF1A] [&_svg]:h-3.5 [&_svg]:w-3.5"
+                    className="h-5 w-5 rounded-full border-gray-500 bg-transparent data-[state=checked]:bg-transparent data-[state=checked]:border-gray-500 [&_svg]:text-[#B7FF18] [&_svg]:h-3.5 [&_svg]:w-3.5"
                   />
                   <div className="flex-1">
                     <Label
@@ -3502,7 +3502,7 @@ const UploadPage = () => {
                     checked={screenshotAgeRestricted}
                     onCheckedChange={(checked) => setScreenshotAgeRestricted(checked as boolean)}
                     data-testid="checkbox-screenshot-age-restricted"
-                    className="h-5 w-5 rounded-full border-gray-500 bg-transparent data-[state=checked]:bg-transparent data-[state=checked]:border-gray-500 [&_svg]:text-[#B7FF1A] [&_svg]:h-3.5 [&_svg]:w-3.5"
+                    className="h-5 w-5 rounded-full border-gray-500 bg-transparent data-[state=checked]:bg-transparent data-[state=checked]:border-gray-500 [&_svg]:text-[#B7FF18] [&_svg]:h-3.5 [&_svg]:w-3.5"
                   />
                   <div className="flex-1">
                     <Label
@@ -3559,7 +3559,7 @@ const UploadPage = () => {
       {isUploading && !uploadModalDismissed && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-0">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative w-full sm:max-w-2xl bg-[#0B1218] rounded-2xl overflow-hidden shadow-2xl border border-[#1e3a4a]/50">
+          <div className="relative w-full sm:max-w-2xl bg-[#0A0A10] rounded-2xl overflow-hidden shadow-2xl border border-[#1e3a4a]/50">
             <div className="flex flex-col items-center justify-center px-6 py-10 sm:px-10 sm:py-14 gap-6">
               <div className="flex items-center gap-1">
                 <span className="text-6xl sm:text-8xl font-black text-white tracking-tighter leading-none" style={{ letterSpacing: '-4px' }}>
@@ -3568,14 +3568,14 @@ const UploadPage = () => {
                 <span className="text-2xl sm:text-3xl font-black text-white mt-2">%</span>
               </div>
 
-              <span className="text-[#B7FF1A] text-xs font-bold tracking-[5px] uppercase">
+              <span className="text-[#B7FF18] text-xs font-bold tracking-[5px] uppercase">
                 {uploadProgress < 100 ? "Upload in progress" : "Upload complete"}
               </span>
 
               <div className="w-full space-y-3 px-2 sm:px-4">
                 <div className="w-full h-1.5 bg-[#1e3a4a]/50 rounded-full overflow-hidden relative">
                   <div
-                    className="h-full bg-[#B7FF1A] rounded-full transition-all duration-500 ease-out"
+                    className="h-full bg-[#B7FF18] rounded-full transition-all duration-500 ease-out"
                     style={{
                       width: `${uploadProgress}%`,
                       boxShadow: '0 0 20px rgba(183, 255, 26, 0.6)',
@@ -3583,10 +3583,10 @@ const UploadPage = () => {
                   />
                 </div>
                 <div className="flex justify-between text-[10px] font-bold tracking-[1px] uppercase text-[#4a6a7a]">
-                  <span className={uploadProgress >= 25 ? "text-[#B7FF1A]/60" : ""}>25%</span>
-                  <span className={uploadProgress >= 50 ? "text-[#B7FF1A]/60" : ""}>50%</span>
-                  <span className={uploadProgress >= 75 ? "text-[#B7FF1A]/60" : ""}>75%</span>
-                  <span className={uploadProgress >= 100 ? "text-[#B7FF1A]/60" : ""}>100%</span>
+                  <span className={uploadProgress >= 25 ? "text-[#B7FF18]/60" : ""}>25%</span>
+                  <span className={uploadProgress >= 50 ? "text-[#B7FF18]/60" : ""}>50%</span>
+                  <span className={uploadProgress >= 75 ? "text-[#B7FF18]/60" : ""}>75%</span>
+                  <span className={uploadProgress >= 100 ? "text-[#B7FF18]/60" : ""}>100%</span>
                 </div>
               </div>
 
@@ -3601,14 +3601,14 @@ const UploadPage = () => {
                 </p>
               </div>
 
-              <div className="flex items-center gap-3 bg-[#B7FF1A]/5 border border-[#B7FF1A]/10 rounded-full px-6 py-2.5">
-                <div className="w-2 h-2 bg-[#B7FF1A] rounded-full" style={{ boxShadow: '0 0 10px #B7FF1A' }} />
-                <span className="text-[#B7FF1A] text-[10px] font-bold tracking-[2px] uppercase">
+              <div className="flex items-center gap-3 bg-[#B7FF18]/5 border border-[#B7FF18]/10 rounded-full px-6 py-2.5">
+                <div className="w-2 h-2 bg-[#B7FF18] rounded-full" style={{ boxShadow: '0 0 10px #B7FF18' }} />
+                <span className="text-[#B7FF18] text-[10px] font-bold tracking-[2px] uppercase">
                   {uploadProgress < 100
                     ? "Please keep this tab open while uploading"
                     : "You can safely leave this page now"}
                 </span>
-                <div className="w-2 h-2 bg-[#B7FF1A] rounded-full" style={{ boxShadow: '0 0 10px #B7FF1A' }} />
+                <div className="w-2 h-2 bg-[#B7FF18] rounded-full" style={{ boxShadow: '0 0 10px #B7FF18' }} />
               </div>
             </div>
 
@@ -3625,7 +3625,7 @@ const UploadPage = () => {
                     });
                     navigate('/');
                   }}
-                  className="flex items-center gap-2.5 bg-[#B7FF1A] rounded-full px-8 py-4 shadow-lg text-[#0B1218] text-sm font-bold tracking-[1.4px] uppercase hover:brightness-110 transition-all"
+                  className="flex items-center gap-2.5 bg-[#B7FF18] rounded-full px-8 py-4 shadow-lg text-[#0A0A10] text-sm font-bold tracking-[1.4px] uppercase hover:brightness-110 transition-all"
                 >
                   You can leave this page now
                 </button>
@@ -3645,9 +3645,9 @@ const UploadPage = () => {
                 >
                   Cancel
                 </button>
-                <div className="flex items-center gap-2.5 bg-[#B7FF1A]/10 border border-[#B7FF1A]/20 rounded-full px-8 py-4 shadow-lg">
-                  <div className="w-5 h-5 border-2 border-[#B7FF1A]/30 border-t-[#B7FF1A] rounded-full animate-spin" />
-                  <span className="text-[#B7FF1A] text-sm font-bold tracking-[1.4px] uppercase">
+                <div className="flex items-center gap-2.5 bg-[#B7FF18]/10 border border-[#B7FF18]/20 rounded-full px-8 py-4 shadow-lg">
+                  <div className="w-5 h-5 border-2 border-[#B7FF18]/30 border-t-[#B7FF18] rounded-full animate-spin" />
+                  <span className="text-[#B7FF18] text-sm font-bold tracking-[1.4px] uppercase">
                     Uploading {uploadProgress}%
                   </span>
                 </div>

@@ -168,7 +168,7 @@ function ScreenshotCarousel({
             key={screenshot.id}
             type="button"
             onClick={(event) => onSelect(screenshot, event.currentTarget)}
-            className="group/shot relative min-w-[min(78vw,360px)] snap-start overflow-hidden rounded-xl border border-white/10 bg-[#0B1218] text-left outline-none transition hover:border-white/25 focus-visible:ring-2 focus-visible:ring-[#B7FF1A] sm:min-w-[360px] lg:min-w-[410px]"
+            className="group/shot relative min-w-[min(78vw,360px)] snap-start overflow-hidden rounded-xl border border-white/10 bg-[#0A0A10] text-left outline-none transition hover:border-white/25 focus-visible:ring-2 focus-visible:ring-[#B7FF18] sm:min-w-[360px] lg:min-w-[410px]"
             aria-label={`View ${screenshot.title || `screenshot ${index + 1}`} full screen`}
           >
             <div className="aspect-video">

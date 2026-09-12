@@ -319,8 +319,8 @@ const Sidebar = () => {
                     className={cn(
                       "flex items-center p-3 rounded-lg transition-all cursor-pointer group",
                       isActive
-                        ? "text-[#071013] bg-primary"
-                        : "text-muted-foreground hover:bg-primary hover:text-[#071013]"
+                        ? "text-[#0A0A10] bg-primary"
+                        : "text-muted-foreground hover:bg-primary hover:text-[#0A0A10]"
                     )}
                     onClick={() => { closeClipDialog(); setMyGamefolioExpanded(prev => !prev); }}
                   >
@@ -394,8 +394,8 @@ const Sidebar = () => {
                   className={cn(
                     "flex items-center p-3 rounded-lg transition-all cursor-pointer group",
                     isActive
-                      ? "text-[#071013] bg-primary"
-                      : "text-muted-foreground hover:bg-primary hover:text-[#071013]"
+                      ? "text-[#0A0A10] bg-primary"
+                      : "text-muted-foreground hover:bg-primary hover:text-[#0A0A10]"
                   )}
                 >
                   {isGamefolioItem ? (
@@ -406,7 +406,7 @@ const Sidebar = () => {
                     <span
                       className={cn(
                         "transition-all duration-300 inline-flex",
-                        !isActive && "group-hover:[filter:drop-shadow(0_0_7px_#B7FF1A)]"
+                        !isActive && "group-hover:[filter:drop-shadow(0_0_7px_#B7FF18)]"
                       )}
                     >
                       <item.icon

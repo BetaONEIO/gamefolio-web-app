@@ -23,7 +23,7 @@ export function BookmarkButton({
   className,
   iconClassName,
   size = 18,
-  activeColor = '#B7FF1A',
+  activeColor = '#B7FF18',
   inactiveColor = '#7E887A',
   onUnauthenticatedAction,
 }: BookmarkButtonProps) {

@@ -712,7 +712,7 @@ const Header = () => {
                     {!(isIndieMode ? hasDeveloperPro : hasStandardPro) && (
                       <DropdownMenuItem
                         className="cursor-pointer text-white"
-                        style={{ background: 'linear-gradient(to right, #B7FF1A 0%, rgba(30, 41, 59, 0) 70%)' }}
+                        style={{ background: 'linear-gradient(to right, #B7FF18 0%, rgba(30, 41, 59, 0) 70%)' }}
                         onClick={() => setProUpgradeOpen(true)}
                         data-testid="button-go-pro"
                       >

@@ -145,42 +145,42 @@ function buildChallenges(activity: DailyActivity | undefined, canOpenLootbox: bo
     {
       id: 'login', icon: ICONS.login, title: 'Daily Login',
       xp: 25, progress: activity ? (activity.loginXPToday > 0 ? 1 : 0) : 0, total: 1,
-      href: '/', color: '#B7FF1A', rarity: 'common',
+      href: '/', color: '#B7FF18', rarity: 'common',
     },
     {
       id: 'watch5', icon: ICONS.watch5, title: 'Watch 5 Clips',
       xp: 10, progress: activity ? Math.min(activity.clipsWatchedToday, 5) : 0, total: 5,
-      href: '/explore', color: '#B7FF1A', rarity: 'common',
+      href: '/explore', color: '#B7FF18', rarity: 'common',
     },
     {
       id: 'watch20', icon: ICONS.watch20, title: 'Watch 20 Clips',
       xp: 30, progress: activity ? Math.min(activity.clipsWatchedToday, 20) : 0, total: 20,
-      href: '/explore', color: '#B7FF1A', rarity: 'rare',
+      href: '/explore', color: '#B7FF18', rarity: 'rare',
     },
     {
       id: 'comment', icon: ICONS.comment, title: 'Comment on a Clip',
       xp: 15, progress: activity ? (activity.commentedToday ? 1 : 0) : 0, total: 1,
-      href: '/explore', color: '#B7FF1A', rarity: 'common',
+      href: '/explore', color: '#B7FF18', rarity: 'common',
     },
     {
       id: 'like', icon: ICONS.like, title: 'Like a Clip',
       xp: 5, progress: activity ? (activity.likedToday ? 1 : 0) : 0, total: 1,
-      href: '/explore', color: '#B7FF1A', rarity: 'common',
+      href: '/explore', color: '#B7FF18', rarity: 'common',
     },
     {
       id: 'share', icon: ICONS.share, title: 'Share a Clip',
       xp: 20, progress: activity ? (activity.sharedToday ? 1 : 0) : 0, total: 1,
-      href: '/explore', color: '#B7FF1A', rarity: 'rare',
+      href: '/explore', color: '#B7FF18', rarity: 'rare',
     },
     {
       id: 'upload', icon: ICONS.upload, title: 'Upload Today',
       xp: 100, progress: activity ? (activity.firstUploadOfDayDone ? 1 : 0) : 0, total: 1,
-      href: '/upload', color: '#B7FF1A', rarity: 'epic',
+      href: '/upload', color: '#B7FF18', rarity: 'epic',
     },
     {
       id: 'lootbox', icon: ICONS.lootbox, title: 'Open Lootbox',
       xp: 100, progress: activity ? (activity.lootboxOpenedToday ? 1 : 0) : 0, total: 1,
-      href: '/level-tracker', color: '#B7FF1A', rarity: 'legendary',
+      href: '/level-tracker', color: '#B7FF18', rarity: 'legendary',
     },
   ];
 }
@@ -536,7 +536,7 @@ export function DailyXPChallenges() {
           <Link
             href="/level-tracker"
             className="flex-shrink-0 text-xs font-bold hover:opacity-80 transition-opacity px-3 py-2 rounded-xl"
-            style={{ background: 'rgba(183,255,26,0.12)', color: '#B7FF1A', border: '1px solid rgba(183,255,26,0.2)' }}
+            style={{ background: 'rgba(183,255,26,0.12)', color: '#B7FF18', border: '1px solid rgba(183,255,26,0.2)' }}
           >
             View All <span aria-hidden="true">→</span>
           </Link>

@@ -813,7 +813,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                           {signedGameIconUrl && (
                             <img src={signedGameIconUrl} alt="" loading="lazy" className="w-4 h-4 rounded" />
                           )}
-                          <span className="text-[#B7FF1A] text-sm font-medium drop-shadow-lg">
+                          <span className="text-[#B7FF18] text-sm font-medium drop-shadow-lg">
                             {clip.game.name}
                           </span>
                         </div>
@@ -969,7 +969,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                                   ? "bg-gray-600 hover:bg-gray-700 text-white"
                                   : followRequestStatus === 'requested'
                                     ? "bg-orange-500 hover:bg-orange-600 text-white"
-                                    : "bg-primary hover:bg-primary/90 text-[#071013]"
+                                    : "bg-primary hover:bg-primary/90 text-[#0A0A10]"
                               )}
                             >
                               {followRequestStatus === 'following' ? 'Following' : followRequestStatus === 'requested' ? 'Requested' : 'Follow'}
@@ -983,7 +983,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                         {clip.game && (
                           <div className="mt-1 flex items-center gap-1.5">
                             {signedGameIconUrl && <img src={signedGameIconUrl} alt="" loading="lazy" className="w-4 h-4 rounded" />}
-                            <span className="text-[#B7FF1A] text-sm font-medium drop-shadow-lg">{clip.game.name}</span>
+                            <span className="text-[#B7FF18] text-sm font-medium drop-shadow-lg">{clip.game.name}</span>
                           </div>
                         )}
                       </div>
@@ -1282,7 +1282,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                             e.stopPropagation();
                             onClose();
                           }}>
-                            <span className="bg-primary text-[#071013] px-3 py-1.5 rounded text-sm font-bold hover:bg-primary cursor-pointer transition-colors">
+                            <span className="bg-primary text-[#0A0A10] px-3 py-1.5 rounded text-sm font-bold hover:bg-primary cursor-pointer transition-colors">
                               {clip.game.name}
                             </span>
                           </Link>
@@ -1404,7 +1404,7 @@ const ClipDialog = ({ clipId, isOpen, onClose, onNext, onPrevious, showNavigatio
                       </form>
                     ) : (
                       <Button variant="outline" onClick={() => openDialog('comment')} className="w-full text-sm">
-                        <span style={{ color: '#B7FF1A' }}>Sign in</span>&nbsp;to comment
+                        <span style={{ color: '#B7FF18' }}>Sign in</span>&nbsp;to comment
                       </Button>
                     )}
                   </div>

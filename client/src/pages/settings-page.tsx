@@ -718,7 +718,7 @@ function PartnerSettings() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-[#B7FF1A]" />
+              <Star className="h-5 w-5 text-[#B7FF18]" />
               Streamer Partner
             </CardTitle>
             <CardDescription>
@@ -764,7 +764,7 @@ function PartnerSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Star className="h-5 w-5 text-[#B7FF1A] fill-current" />
+            <Star className="h-5 w-5 text-[#B7FF18] fill-current" />
             Streamer Partner
           </CardTitle>
           <CardDescription>
@@ -819,7 +819,7 @@ function PartnerSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Star className="h-5 w-5 text-[#B7FF1A]" />
+            <Star className="h-5 w-5 text-[#B7FF18]" />
             Streamer Partner
           </CardTitle>
         </CardHeader>
@@ -844,7 +844,7 @@ function PartnerSettings() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Star className="h-5 w-5 text-[#B7FF1A]" />
+          <Star className="h-5 w-5 text-[#B7FF18]" />
           Apply to be a Streamer Partner
         </CardTitle>
         <CardDescription>
@@ -3676,8 +3676,8 @@ export default function SettingsPage() {
                                   )}
                                   {/* ── Theme-specific visual overlays ── */}
                                   {theme.name === 'None' && <>
-                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #B7FF1A06 1px, transparent 1px), linear-gradient(90deg, #B7FF1A06 1px, transparent 1px)', backgroundSize:'14px 14px' }} />
-                                    <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'2px', background:'linear-gradient(90deg, transparent, #B7FF1Acc, transparent)', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #B7FF1806 1px, transparent 1px), linear-gradient(90deg, #B7FF1806 1px, transparent 1px)', backgroundSize:'14px 14px' }} />
+                                    <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'2px', background:'linear-gradient(90deg, transparent, #B7FF18cc, transparent)', pointerEvents:'none' }} />
                                   </>}
                                   {theme.name === 'Zombie' && <>
                                     <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #9ae60028 1px, transparent 1px), linear-gradient(90deg, #9ae60028 1px, transparent 1px)', backgroundSize:'18px 18px' }} />
@@ -4253,7 +4253,7 @@ export default function SettingsPage() {
                                   </button>
                                 </div>
                                 <div className="flex flex-wrap gap-2 justify-center">
-                                  {['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0099FF', '#FF00FF', '#FFFF00', '#FF8800', '#00FFFF', '#FF69B4', '#7B68EE', '#B7FF1A'].map(preset => (
+                                  {['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0099FF', '#FF00FF', '#FFFF00', '#FF8800', '#00FFFF', '#FF69B4', '#7B68EE', '#B7FF18'].map(preset => (
                                     <button
                                       key={preset}
                                       type="button"
@@ -4783,7 +4783,7 @@ export default function SettingsPage() {
                             <div className="flex items-center gap-2">
                               <div className="text-sm font-medium text-slate-200">{platform.label}</div>
                               {isConnected && isXboxVerified && (
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#107C10]/20 text-[#B7FF1A] border border-[#107C10]/30">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#107C10]/20 text-[#B7FF18] border border-[#107C10]/30">
                                   <Check className="w-2.5 h-2.5" />
                                   Verified
                                 </span>
@@ -4946,7 +4946,7 @@ export default function SettingsPage() {
                                 {/* For platforms without a URL, show a simple username preview */}
                                 {platformHandle.trim() && !getPlatformUrl(platform.key, platformHandle) && !validatePlatformInput(platform.key, platformHandle) && (
                                   <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
-                                    <Check className="w-3 h-3 flex-shrink-0 text-[#B7FF1A]" />
+                                    <Check className="w-3 h-3 flex-shrink-0 text-[#B7FF18]" />
                                     <span>Will show as <span className="text-white font-medium">{platformHandle}</span> on your profile</span>
                                   </div>
                                 )}
@@ -6196,7 +6196,7 @@ export default function SettingsPage() {
       {showNftSelector && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/70" onClick={() => setShowNftSelector(false)} />
-          <div className="relative bg-[#0B1218] border border-slate-700 rounded-xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl mx-4">
+          <div className="relative bg-[#0A0A10] border border-slate-700 rounded-xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl mx-4">
             <div className="flex items-center justify-between p-4 border-b border-slate-700">
               <h3 className="text-lg font-semibold text-white">Select NFT as Profile Picture</h3>
               <button
@@ -6243,7 +6243,7 @@ export default function SettingsPage() {
                       const cardBg: Record<string, string> = {
                         legendary: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
                         epic: "bg-slate-900",
-                        rare: "bg-gradient-to-b from-[#B7FF1A33] via-[#14532d4d] to-[#B7FF1A33]",
+                        rare: "bg-gradient-to-b from-[#B7FF1833] via-[#14532d4d] to-[#B7FF1833]",
                         common: "bg-slate-900",
                       };
                       const cardGlow: Record<string, string> = {
@@ -6253,13 +6253,13 @@ export default function SettingsPage() {
                         common: "",
                       };
                       const dotColor: Record<string, string> = {
-                        legendary: "bg-primary shadow-[0_0_8px_#B7FF1A]",
+                        legendary: "bg-primary shadow-[0_0_8px_#B7FF18]",
                         epic: "bg-primary shadow-[0_0_8px_#6FA800]",
-                        rare: "bg-primary shadow-[0_0_8px_#B7FF1A]",
+                        rare: "bg-primary shadow-[0_0_8px_#B7FF18]",
                         common: "bg-slate-400/50 shadow-[0_0_8px_#1B2A33]",
                       };
                       const rarityText: Record<string, string> = {
-                        legendary: "text-[#B7FF1A] font-black",
+                        legendary: "text-[#B7FF18] font-black",
                         epic: "text-slate-400 font-normal",
                         rare: "text-slate-400 font-normal",
                         common: "text-slate-400 font-normal",
@@ -6283,7 +6283,7 @@ export default function SettingsPage() {
                           }}
                           disabled={setNftProfileMutation.isPending}
                           className={`relative rounded-2xl overflow-hidden transition-all duration-200 hover:scale-[1.03] text-left ${cardBg[rarityLabel]} ${cardGlow[rarityLabel]} ${
-                            isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#0B1218]' : ''
+                            isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#0A0A10]' : ''
                           }`}
                         >
                           <div className="relative">
@@ -6818,9 +6818,9 @@ export default function SettingsPage() {
                     }}
                     className="flex-1 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2"
                     style={{
-                      background: isCurrentTheme ? `${accent}40` : isThemeLocked ? '#B7FF1A' : isSummer ? '#087EA4' : accent,
+                      background: isCurrentTheme ? `${accent}40` : isThemeLocked ? '#B7FF18' : isSummer ? '#087EA4' : accent,
                       color: isCurrentTheme ? (isLight ? '#333' : 'rgba(255,255,255,0.5)') : isThemeLocked ? '#1a1a1a' : isSummer ? '#FFFFFF' : (isLight && !isGothic ? '#1d1d1f' : bg),
-                      boxShadow: isCurrentTheme ? 'none' : isThemeLocked ? '0 8px 24px -8px #B7FF1A66' : isSummer ? '0 5px 0 #063B5C55, 0 8px 24px -8px #087EA4' : `0 8px 24px -8px ${accent}`,
+                      boxShadow: isCurrentTheme ? 'none' : isThemeLocked ? '0 8px 24px -8px #B7FF1866' : isSummer ? '0 5px 0 #063B5C55, 0 8px 24px -8px #087EA4' : `0 8px 24px -8px ${accent}`,
                       fontFamily: isThemeLocked ? undefined : themeFont,
                       fontSize: '0.875rem',
                       borderRadius: '12px',

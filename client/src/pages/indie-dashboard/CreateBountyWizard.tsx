@@ -131,7 +131,7 @@ function GamePicker({ value, onSelect }: { value: WizardState; onSelect: (id: nu
       {open && query.trim() && (
         <div
           className="absolute z-20 mt-1 w-full rounded-xl max-h-60 overflow-y-auto"
-          style={{ background: "#0B1218", border: "1px solid rgba(255,255,255,0.12)" }}
+          style={{ background: "#0A0A10", border: "1px solid rgba(255,255,255,0.12)" }}
         >
           {isFetching && (
             <div className="p-3 text-xs text-gray-500 flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Searching...</div>

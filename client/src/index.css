@@ -14,8 +14,8 @@
   --visual-viewport-height: 100dvh;
 
   /* Official shared Gamefolio colour system */
-  --gf-background: #090C11;
-  --gf-surface: #090C11;
+  --gf-background: #0A0A10;
+  --gf-surface: #0A0A10;
   --gf-surface-raised: #1A1D2B;
   --gf-border: #252938;
   --gf-accent: #B7FF18;
@@ -440,11 +440,11 @@ video:focus {
 
 :root {
   /* Global Gamefolio theme - solid competitive gaming surfaces */
-  --background: 217.5 30.77% 5.10%; /* #090C11 */
+  --background: 235 28.57% 8.24%; /* #0A0A10 */
   --foreground: 0 0% 100%;        /* #FFFFFF */
 
   /* Card */
-  --card: 217.5 30.77% 5.10%;      /* #090C11 */
+  --card: 235 28.57% 8.24%;         /* #0A0A10 */
   --card-foreground: 0 0% 100%;
 
   /* Popover */
@@ -473,7 +473,7 @@ video:focus {
 
   /* Border */
   --border: 227.37 20.43% 18.24%;  /* #252938 */
-  --input: 217.5 30.77% 5.10%;     /* #090C11 */
+  --input: 235 28.57% 8.24%;        /* #0A0A10 */
   --ring: 78 100% 54%;             /* #B7FF18 */
 
   /* Radius - premium rounded feel */
@@ -1131,7 +1131,7 @@ h1, h2, h3 {
   position: fixed;
   inset: 0;
   z-index: 100000;
-  background: #0B1319;
+  background: var(--gf-background);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -191,7 +191,7 @@
 
 .profile-theme-global-background {
   z-index: 0;
-  background-color: #0F101B !important;
+  background-color: #0A0A10 !important;
 }
 
 .profile-theme-global-overlay {
@@ -201,7 +201,7 @@
 .towerdog-pixel-background {
   z-index: 0;
   --pixel-cell: clamp(16px, 1.8vw, 24px);
-  background: #0F101B;
+  background: #0A0A10;
 }
 
 .towerdog-pixel-wave-overlay {
