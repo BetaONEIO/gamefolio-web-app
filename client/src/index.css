@@ -438,67 +438,8 @@ video:focus {
   backdrop-filter: blur(14px);
 }
 
-.studio-theme-background {
-  will-change: background-position, opacity, filter;
-}
-
-.studio-profile-theme[data-profile-animation="drift"] .studio-theme-background {
-  background-size: 120% 120% !important;
-  animation: studio-theme-drift 18s ease-in-out infinite alternate;
-}
-
-.studio-profile-theme[data-profile-animation="scan"] .studio-theme-background {
-  background-size: 140% 140% !important;
-  animation: studio-theme-scan 10s linear infinite;
-}
-
-.studio-profile-theme[data-profile-animation="pulse"] .studio-theme-background {
-  animation: studio-theme-pulse 5s ease-in-out infinite;
-}
-
-.studio-profile-theme[data-profile-animation="flicker"] .studio-theme-background {
-  animation: studio-theme-flicker 7s ease-in-out infinite;
-}
-
-.studio-profile-theme[data-profile-animation="rain"] .studio-theme-background {
-  background-size: 110% 150% !important;
-  animation: studio-theme-rain 12s linear infinite;
-}
-
-.studio-profile-theme[data-profile-animation="snow"] .studio-theme-background {
-  background-size: 120% 120% !important;
-  animation: studio-theme-snow 18s linear infinite;
-}
-
-@keyframes studio-theme-drift {
-  from { background-position: 0% 0%; }
-  to { background-position: 100% 100%; }
-}
-
-@keyframes studio-theme-scan {
-  from { background-position: 0% 0%; }
-  to { background-position: 100% 0%; }
-}
-
-@keyframes studio-theme-pulse {
-  0%, 100% { opacity: 1; filter: saturate(1); }
-  50% { opacity: .88; filter: saturate(1.18); }
-}
-
-@keyframes studio-theme-flicker {
-  0%, 92%, 100% { opacity: 1; }
-  94% { opacity: .78; }
-  96% { opacity: .94; }
-}
-
-@keyframes studio-theme-rain {
-  from { background-position: 0% 0%; }
-  to { background-position: 0% 100%; }
-}
-
-@keyframes studio-theme-snow {
-  from { background-position: 0% 0%; }
-  to { background-position: 100% 100%; }
+.studio-profile-theme > .profile-theme-atmosphere {
+  position: fixed;
 }
 
 :root {

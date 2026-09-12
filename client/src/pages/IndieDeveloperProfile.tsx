@@ -376,6 +376,19 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
     "--studio-border": borderColor,
     "--studio-primary": resolvedTheme.primaryColor,
     "--studio-button-text": themeTokens?.buttonText || "#071018",
+    "--profile-theme-background": backgroundColor,
+    "--profile-theme-surface": surfaceColor,
+    "--profile-theme-surface-secondary": themeTokens?.surfaceSecondary || resolvedTheme.primaryColor,
+    "--profile-theme-primary": themeDefinition?.primaryColor || resolvedTheme.primaryColor,
+    "--profile-theme-accent": accentColor,
+    "--profile-theme-accent-secondary": themeTokens?.accentSecondary || accentColor,
+    "--profile-theme-text": textColor,
+    "--profile-theme-muted": mutedColor,
+    "--profile-theme-border": borderColor,
+    "--profile-theme-button-bg": themeTokens?.buttonBg || accentColor,
+    "--profile-theme-button-text": themeTokens?.buttonText || "#071018",
+    "--profile-theme-pattern": backgroundPattern,
+    "--profile-theme-font": themeDefinition?.fontFamily || profileFont,
     fontFamily: profileFont,
   } as CSSProperties;
   const studioBackgroundStyle: CSSProperties = backgroundImage
@@ -404,7 +417,13 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
       style={studioThemeStyle}
     >
       <div className="studio-theme-background fixed inset-0" style={{ ...studioBackgroundStyle, backgroundAttachment: "fixed" }} aria-hidden="true" />
-      {backgroundPattern !== "none" && <div className="fixed inset-0 opacity-60" style={{ backgroundImage: backgroundPattern }} aria-hidden="true" />}
+      {!backgroundImage && !isDefaultStudioTheme && (
+        <div
+          className="profile-theme-atmosphere"
+          style={{ backgroundImage: backgroundPattern }}
+          aria-hidden="true"
+        />
+      )}
       <div className="relative z-[1] mx-auto max-w-[1200px]">
         <section className="relative px-4 pt-4 sm:px-6 lg:px-0 lg:pt-6">
           {!hideBanner && <div className="studio-border relative h-[180px] overflow-hidden rounded-2xl border sm:h-[235px] lg:h-[280px]" style={{ background: `linear-gradient(135deg, ${resolvedTheme.primaryColor}, ${backgroundColor})` }}>
