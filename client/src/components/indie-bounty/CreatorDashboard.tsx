@@ -244,7 +244,7 @@ export function CreatorDashboard({ bountyId, open, onClose }: CreatorDashboardPr
             </div>
             <div className="rounded-xl p-3 text-center" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
               <div className="text-lg font-black text-white">{(s.totalXpAvailable || 0).toLocaleString()}</div>
-              <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total XP</div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Bounty XP Reward</div>
             </div>
             <div className="rounded-xl p-3 text-center" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
               <div className="text-lg font-black text-white">{totalDone}/{totalRequired}</div>

@@ -1,6 +1,8 @@
 import express from 'express';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
+import { BOUNTY_REWARD_CONFIG } from '@shared/bounty-rewards';
+import { computeCampaignTotalXP, computeCompletionBonus, type XPTier } from '../bounty-xp-service';
 
 const router = express.Router();
 
@@ -32,6 +34,9 @@ async function ensureCampaignTables() {
         estimated_feedback INTEGER DEFAULT 0,
         estimated_views_min INTEGER DEFAULT 0,
         estimated_views_max INTEGER DEFAULT 0,
+        bounty_xp_reward INTEGER DEFAULT 0,
+        completion_bonus_xp INTEGER DEFAULT 0,
+        reward_config JSONB,
         status TEXT DEFAULT 'available',
         featured BOOLEAN DEFAULT false,
         recommended BOOLEAN DEFAULT false,
@@ -84,6 +89,49 @@ async function ensureCampaignTables() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
+    await db.execute(sql`ALTER TABLE campaign_templates ADD COLUMN IF NOT EXISTS bounty_xp_reward INTEGER DEFAULT 0`).catch(() => {});
+    await db.execute(sql`ALTER TABLE campaign_templates ADD COLUMN IF NOT EXISTS completion_bonus_xp INTEGER DEFAULT 0`).catch(() => {});
+    await db.execute(sql`ALTER TABLE campaign_templates ADD COLUMN IF NOT EXISTS reward_config JSONB`).catch(() => {});
+    await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS bounty_xp_reward INTEGER`).catch(() => {});
+    await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS completion_bonus_xp INTEGER`).catch(() => {});
+    await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS reward_config JSONB`).catch(() => {});
+    // Freeze the effective reward values for instances created before the
+    // snapshot columns existed. Template rows may be reseeded later, but
+    // launched/completed campaigns must continue to report their original
+    // tier-based or configured reward values.
+    const instancesNeedingSnapshots = toRows(await db.execute(sql`
+      SELECT ci.id, ci.xp_event_multiplier, COALESCE(t.xp_tier, 'standard') AS xp_tier,
+        t.bounty_xp_reward AS template_bounty_xp_reward,
+        t.completion_bonus_xp AS template_completion_bonus_xp,
+        t.reward_config AS template_reward_config
+      FROM campaign_instances ci
+      JOIN campaign_templates t ON t.id = ci.template_id
+      WHERE ci.bounty_xp_reward IS NULL OR ci.completion_bonus_xp IS NULL OR ci.reward_config IS NULL
+    `)) as any[];
+    for (const instance of instancesNeedingSnapshots) {
+      const config = instance.template_reward_config;
+      const multiplier = Number(instance.xp_event_multiplier ?? 1);
+      const rewardConfig = config && typeof config === 'object' ? config : null;
+      const tier = (instance.xp_tier || 'standard') as XPTier;
+      const bountyXpReward = Number(
+        rewardConfig?.totalReward ??
+        instance.template_bounty_xp_reward ??
+        computeCampaignTotalXP(tier, multiplier),
+      );
+      const completionBonusXp = Number(
+        rewardConfig?.completionBonus ??
+        instance.template_completion_bonus_xp ??
+        computeCompletionBonus(tier, multiplier),
+      );
+      await db.execute(sql`
+        UPDATE campaign_instances
+        SET bounty_xp_reward = COALESCE(bounty_xp_reward, ${bountyXpReward}),
+            completion_bonus_xp = COALESCE(completion_bonus_xp, ${completionBonusXp}),
+            reward_config = COALESCE(reward_config, ${rewardConfig ? JSON.stringify(rewardConfig) : null}::jsonb),
+            updated_at = NOW()
+        WHERE id = ${instance.id}
+      `);
+    }
     // Additive fields for campaigns created before the personalised setup flow.
     await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS campaign_title TEXT`).catch(() => {});
     await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS description TEXT`).catch(() => {});
@@ -236,15 +284,18 @@ const TEMPLATES = [
     estimatedFeedback: 20,
     estimatedViewsMin: 3000,
     estimatedViewsMax: 15000,
+    bountyXpReward: BOUNTY_REWARD_CONFIG["quick-creator"].totalReward,
+    completionBonusXp: BOUNTY_REWARD_CONFIG["quick-creator"].completionBonus,
+    rewardConfig: BOUNTY_REWARD_CONFIG["quick-creator"],
     status: "available",
     featured: false,
     recommended: false,
     displayOrder: 1,
     bounties: [
-      { title: "Play the Game", description: "Download and play the game", mandatory: true, quantity: 1, order: 1, xp: 500, validation: "session_tracking", contentType: "session" },
-      { title: "Upload 2 Gameplay Clips", description: "Upload 2 gameplay clips tagged with the game", mandatory: true, quantity: 2, order: 2, xp: 2000, validation: "manual_review", contentType: "clip" },
-      { title: "Upload 2 Screenshots", description: "Upload 2 screenshots from the game", mandatory: true, quantity: 2, order: 3, xp: 400, validation: "manual_review", contentType: "screenshot" },
-      { title: "Submit Feedback", description: "Submit your first impressions via the feedback form", mandatory: true, quantity: 1, order: 4, xp: 1000, validation: "form_submission", contentType: "feedback" },
+      { title: "Play the Game", description: "Download and play the game", mandatory: true, quantity: 1, order: 1, xp: 0, validation: "session_tracking", contentType: "session" },
+      { title: "Upload 2 Gameplay Clips", description: "Upload 2 gameplay clips tagged with the game", mandatory: true, quantity: 2, order: 2, xp: 500, validation: "manual_review", contentType: "clip" },
+      { title: "Upload 2 Screenshots", description: "Upload 2 screenshots from the game", mandatory: true, quantity: 2, order: 3, xp: 250, validation: "manual_review", contentType: "screenshot" },
+      { title: "Submit Creator Review", description: "Submit your first impressions via the feedback form", mandatory: true, quantity: 1, order: 4, xp: 500, validation: "form_submission", contentType: "feedback" },
     ],
   },
   {
@@ -265,16 +316,19 @@ const TEMPLATES = [
     estimatedFeedback: 35,
     estimatedViewsMin: 10000,
     estimatedViewsMax: 50000,
+    bountyXpReward: BOUNTY_REWARD_CONFIG["content-boost"].totalReward,
+    completionBonusXp: BOUNTY_REWARD_CONFIG["content-boost"].completionBonus,
+    rewardConfig: BOUNTY_REWARD_CONFIG["content-boost"],
     status: "available",
     featured: false,
     recommended: true,
     displayOrder: 2,
     bounties: [
-      { title: "Play the Game", description: "Download and play the game", mandatory: true, quantity: 1, order: 1, xp: 500, validation: "session_tracking", contentType: "session" },
-      { title: "Upload 2 Gameplay Clips", description: "Upload 2 gameplay clips tagged with the game", mandatory: true, quantity: 2, order: 2, xp: 2000, validation: "manual_review", contentType: "clip" },
-      { title: "Upload 1 Reel", description: "Create and upload 1 gameplay reel", mandatory: true, quantity: 1, order: 3, xp: 2500, validation: "manual_review", contentType: "reel" },
-      { title: "Upload 3 Screenshots", description: "Upload 3 screenshots from the game", mandatory: true, quantity: 3, order: 4, xp: 600, validation: "manual_review", contentType: "screenshot" },
-      { title: "Submit Feedback", description: "Submit your impressions via the feedback form", mandatory: true, quantity: 1, order: 5, xp: 1000, validation: "form_submission", contentType: "feedback" },
+      { title: "Play the Game", description: "Download and play the game", mandatory: true, quantity: 1, order: 1, xp: 0, validation: "session_tracking", contentType: "session" },
+      { title: "Upload 2 Gameplay Clips", description: "Upload 2 gameplay clips tagged with the game", mandatory: true, quantity: 2, order: 2, xp: 750, validation: "manual_review", contentType: "clip" },
+      { title: "Upload 3 Vertical Reels", description: "Create and upload 3 vertical gameplay reels", mandatory: true, quantity: 3, order: 3, xp: 1000, validation: "manual_review", contentType: "reel" },
+      { title: "Upload 2 Screenshots", description: "Upload 2 screenshots from the game", mandatory: true, quantity: 2, order: 4, xp: 250, validation: "manual_review", contentType: "screenshot" },
+      { title: "Submit Creator Review", description: "Submit your impressions via the feedback form", mandatory: true, quantity: 1, order: 5, xp: 1000, validation: "form_submission", contentType: "feedback" },
     ],
   },
   {
@@ -295,17 +349,20 @@ const TEMPLATES = [
     estimatedFeedback: 25,
     estimatedViewsMin: 15000,
     estimatedViewsMax: 80000,
+    bountyXpReward: BOUNTY_REWARD_CONFIG["creator-showcase"].totalReward,
+    completionBonusXp: BOUNTY_REWARD_CONFIG["creator-showcase"].completionBonus,
+    rewardConfig: BOUNTY_REWARD_CONFIG["creator-showcase"],
     status: "available",
     featured: false,
     recommended: false,
     displayOrder: 3,
     bounties: [
-      { title: "Play the Game", description: "Download and play the game", mandatory: true, quantity: 1, order: 1, xp: 500, validation: "session_tracking", contentType: "session" },
-      { title: "Upload 2 Gameplay Clips", description: "Upload 2 gameplay clips tagged with the game", mandatory: true, quantity: 2, order: 2, xp: 2000, validation: "manual_review", contentType: "clip" },
-      { title: "Upload 1 Reel", description: "Create and upload 1 gameplay reel", mandatory: true, quantity: 1, order: 3, xp: 2500, validation: "manual_review", contentType: "reel" },
-      { title: "Upload 3 Screenshots", description: "Upload 3 screenshots from the game", mandatory: true, quantity: 3, order: 4, xp: 600, validation: "manual_review", contentType: "screenshot" },
-      { title: "Stream the Game", description: "Stream the game live for at least 1 hour", mandatory: true, quantity: 1, order: 5, xp: 3000, validation: "stream_duration", contentType: "stream" },
-      { title: "Submit Review", description: "Submit a written or video review", mandatory: true, quantity: 1, order: 6, xp: 1500, validation: "form_submission", contentType: "feedback" },
+      { title: "Play the Game", description: "Download and play the game", mandatory: true, quantity: 1, order: 1, xp: 0, validation: "session_tracking", contentType: "session" },
+      { title: "Upload 3 Gameplay Clips", description: "Upload 3 gameplay clips tagged with the game", mandatory: true, quantity: 3, order: 2, xp: 750, validation: "manual_review", contentType: "clip" },
+      { title: "Upload 3 Vertical Reels", description: "Create and upload 3 vertical gameplay reels", mandatory: true, quantity: 3, order: 3, xp: 1250, validation: "manual_review", contentType: "reel" },
+      { title: "Upload 3 Screenshots", description: "Upload 3 screenshots from the game", mandatory: true, quantity: 3, order: 4, xp: 250, validation: "manual_review", contentType: "screenshot" },
+      { title: "Stream the Game", description: "Stream the game live for at least 30 minutes", mandatory: true, quantity: 1, order: 5, xp: 3500, validation: "stream_duration", contentType: "stream" },
+      { title: "Submit Creator Review", description: "Submit a written or video review", mandatory: true, quantity: 1, order: 6, xp: 1250, validation: "form_submission", contentType: "feedback" },
     ],
   },
   {
@@ -352,6 +409,27 @@ async function seedCampaignTemplates() {
     for (const t of TEMPLATES) {
       const existing = toRows(await db.execute(sql`SELECT id FROM campaign_templates WHERE slug = ${t.slug}`));
       let templateId: number;
+      let archivedTemplateId: number | null = null;
+
+      // Preserve objective rows for any campaign that has already launched.
+      // Those rows are referenced by submissions, so a new canonical template
+      // is created instead of rewriting the historical template in place.
+      if (existing.length > 0) {
+        const [usage] = toRows(await db.execute(sql`
+          SELECT COUNT(*)::int AS count FROM campaign_instances
+          WHERE template_id = ${(existing[0] as any).id}
+            AND status NOT IN ('draft', 'cancelled', 'rejected')
+        `)) as any[];
+        if (Number(usage?.count ?? 0) > 0) {
+          archivedTemplateId = Number((existing[0] as any).id);
+          await db.execute(sql`
+            UPDATE campaign_templates
+            SET slug = ${`${t.slug}-legacy-${(existing[0] as any).id}`}, status = 'archived'
+            WHERE id = ${(existing[0] as any).id}
+          `);
+          existing.length = 0;
+        }
+      }
 
       if (existing.length > 0) {
         templateId = (existing[0] as any).id;
@@ -373,6 +451,9 @@ async function seedCampaignTemplates() {
             estimated_feedback = ${t.estimatedFeedback},
             estimated_views_min = ${t.estimatedViewsMin},
             estimated_views_max = ${t.estimatedViewsMax},
+            bounty_xp_reward = ${t.bountyXpReward},
+            completion_bonus_xp = ${t.completionBonusXp},
+            reward_config = ${JSON.stringify(t.rewardConfig)}::jsonb,
             status = ${t.status},
             featured = ${t.featured},
             recommended = ${t.recommended},
@@ -388,6 +469,7 @@ async function seedCampaignTemplates() {
              demo_keys_required, full_keys_required, completion_reward, completion_reward_description,
              estimated_clips, estimated_reels, estimated_screenshots, estimated_feedback,
              estimated_views_min, estimated_views_max,
+              bounty_xp_reward, completion_bonus_xp, reward_config,
              status, featured, recommended, display_order)
           VALUES
             (${t.name}, ${t.slug}, ${t.category}, ${t.description}, ${t.bestUseCase},
@@ -395,10 +477,27 @@ async function seedCampaignTemplates() {
              ${t.completionReward}, ${t.completionRewardDescription},
              ${t.estimatedClips}, ${t.estimatedReels ?? 0}, ${t.estimatedScreenshots}, ${t.estimatedFeedback},
              ${t.estimatedViewsMin}, ${t.estimatedViewsMax},
+              ${t.bountyXpReward}, ${t.completionBonusXp}, ${JSON.stringify(t.rewardConfig)}::jsonb,
              ${t.status}, ${t.featured}, ${t.recommended}, ${t.displayOrder})
           RETURNING id
         `));
         templateId = (insertedRows[0] as any).id;
+      }
+
+      if (archivedTemplateId) {
+        // Drafts have not accepted the old reward terms yet, so point them at
+        // the new canonical template. Launched/completed instances remain on
+        // the archived template and keep their original objective rows.
+        await db.execute(sql`
+          UPDATE campaign_instances
+          SET template_id = ${templateId},
+              bounty_xp_reward = ${t.bountyXpReward},
+              completion_bonus_xp = ${t.completionBonusXp},
+              reward_config = ${JSON.stringify(t.rewardConfig)}::jsonb,
+              updated_at = NOW()
+          WHERE template_id = ${archivedTemplateId}
+            AND status IN ('draft', 'awaiting_review', 'changes_requested')
+        `);
       }
 
       for (const b of t.bounties) {
@@ -500,7 +599,8 @@ async function runAutoCampaignCheck(developerUserId: number): Promise<{ created:
 
   const [tmpl] = toRows(await db.execute(sql`
     SELECT id, name, duration, participant_capacity,
-           demo_keys_required, full_keys_required, estimated_clips, estimated_screenshots
+           demo_keys_required, full_keys_required, estimated_clips, estimated_screenshots,
+           bounty_xp_reward, completion_bonus_xp, reward_config
     FROM campaign_templates WHERE id = ${randomTemplateId}
   `)) as any[];
 
@@ -524,10 +624,13 @@ async function runAutoCampaignCheck(developerUserId: number): Promise<{ created:
   const [instance] = toRows(await db.execute(sql`
     INSERT INTO campaign_instances
       (template_id, developer_user_id, game_name, game_artwork_url,
-       status, auto_campaign, start_type, artwork_url, participant_capacity)
+       status, auto_campaign, start_type, artwork_url, participant_capacity,
+       bounty_xp_reward, completion_bonus_xp, reward_config)
     VALUES
       (${randomTemplateId}, ${developerUserId}, ${gameName ?? null}, ${gameArtworkUrl ?? null},
-       'approved', true, 'asap', ${gameArtworkUrl ?? null}, ${creators})
+       'approved', true, 'asap', ${gameArtworkUrl ?? null}, ${creators},
+       ${tmpl.bounty_xp_reward ?? null}, ${tmpl.completion_bonus_xp ?? null},
+       ${tmpl.reward_config ? JSON.stringify(tmpl.reward_config) : null}::jsonb)
     RETURNING *
   `) as any[]);
 
@@ -724,7 +827,10 @@ router.post('/instances', requireAuth, async (req, res) => {
 
     if (!templateId) return res.status(400).json({ error: 'templateId is required' });
 
-    const [tmpl] = toRows(await db.execute(sql`SELECT id FROM campaign_templates WHERE id = ${Number(templateId)}`));
+    const [tmpl] = toRows(await db.execute(sql`
+      SELECT id, bounty_xp_reward, completion_bonus_xp, reward_config
+      FROM campaign_templates WHERE id = ${Number(templateId)}
+    `));
     if (!tmpl) return res.status(404).json({ error: 'Campaign template not found' });
 
     // Active-campaign concurrency cap: free accounts get 1 active campaign at
@@ -754,13 +860,16 @@ router.post('/instances', requireAuth, async (req, res) => {
         (template_id, developer_user_id, campaign_title, description, regions, platforms,
          game_id, game_name, game_artwork_url,
          game_steam_app_id, game_itch_url, game_epic_slug,
-         artwork_url, start_type, scheduled_start, status)
+         artwork_url, start_type, scheduled_start, bounty_xp_reward,
+         completion_bonus_xp, reward_config, status)
       VALUES
         (${Number(templateId)}, ${userId}, ${campaignTitle?.trim() || null}, ${description?.trim() || null},
          ${regions ?? 'worldwide'}, ${platforms?.length ? platforms : null},
          ${gameId ?? null}, ${gameName ?? null}, ${gameArtworkUrl ?? null},
          ${gameSteamAppId ?? null}, ${gameItchUrl ?? null}, ${gameEpicSlug ?? null},
-         ${artworkUrl ?? null}, ${startType ?? 'asap'}, ${scheduledStart ?? null}, 'draft')
+         ${artworkUrl ?? null}, ${startType ?? 'asap'}, ${scheduledStart ?? null},
+         ${tmpl.bounty_xp_reward ?? null}, ${tmpl.completion_bonus_xp ?? null},
+         ${tmpl.reward_config ? JSON.stringify(tmpl.reward_config) : null}::jsonb, 'draft')
       RETURNING *
     `) as any[]);
 

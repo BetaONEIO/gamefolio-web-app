@@ -11,6 +11,7 @@ import {
   ChevronRight, ChevronDown, ClipboardList,
 } from "lucide-react";
 import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
+import { BOUNTY_REWARD_CONFIG } from "@shared/bounty-rewards";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const CARD_BG     = "#0e1520";
@@ -71,7 +72,7 @@ const CAMPAIGN_TYPES: CampaignType[] = [
     description: "A short campaign designed to generate first impressions, gameplay content and useful creator feedback.",
     bestFor: "🚀 New Launches",
     bestForList: ["New game launches", "Steam demos", "Early Access", "First wave of creator content"],
-    duration: 5, capacity: 20, demoKeys: 20, fullKeys: 20, xpReward: 750, recommended: true, icon: Zap,
+    duration: 5, capacity: 20, demoKeys: 20, fullKeys: 20, xpReward: BOUNTY_REWARD_CONFIG["quick-creator"].totalReward, recommended: true, icon: Zap,
     pills: [{ ct: "clip", qty: 2 }, { ct: "screenshot", qty: 2 }, { ct: "feedback", qty: 1 }],
   },
   {
@@ -82,7 +83,7 @@ const CAMPAIGN_TYPES: CampaignType[] = [
     description: "A multi-format campaign designed to generate gameplay clips, vertical content, screenshots and creator feedback for future marketing.",
     bestFor: "📈 Content Library",
     bestForList: ["Social media marketing", "Building a content library", "Steam page promotion", "Increasing game discovery"],
-    duration: 10, capacity: 35, demoKeys: 35, fullKeys: 35, xpReward: 1200, icon: Sparkles,
+    duration: 10, capacity: 35, demoKeys: 35, fullKeys: 35, xpReward: BOUNTY_REWARD_CONFIG["content-boost"].totalReward, icon: Sparkles,
     pills: [{ ct: "clip", qty: 2 }, { ct: "reel", qty: 3 }, { ct: "screenshot", qty: 2 }, { ct: "feedback", qty: 1 }],
   },
   {
@@ -93,7 +94,7 @@ const CAMPAIGN_TYPES: CampaignType[] = [
     description: "A longer campaign for creators who will spend more time playing, streaming and producing higher-value content.",
     bestFor: "⭐ Deep Engagement",
     bestForList: ["Full game launches", "Major updates", "DLC releases", "Seasonal events", "Deep creator engagement"],
-    duration: 21, capacity: 25, demoKeys: 25, fullKeys: 25, xpReward: 2500, icon: Rocket,
+    duration: 21, capacity: 25, demoKeys: 25, fullKeys: 25, xpReward: BOUNTY_REWARD_CONFIG["creator-showcase"].totalReward, icon: Rocket,
     pills: [{ ct: "clip", qty: 3 }, { ct: "reel", qty: 3 }, { ct: "screenshot", qty: 3 }, { ct: "stream", qty: 1 }, { ct: "feedback", qty: 1 }],
   },
 ];
@@ -138,7 +139,7 @@ function reqPillLabel(ct: string, qty: number) {
 }
 
 function campaignSummary(type: CampaignType) {
-  return `${type.shortName} · ${type.duration} days · ${type.capacity} creators · ${type.xpReward.toLocaleString()} XP`;
+  return `${type.shortName} · ${type.duration} days · ${type.capacity} creators · ${type.xpReward.toLocaleString()} Bounty XP Reward`;
 }
 
 const fieldStyle: React.CSSProperties = {
@@ -579,7 +580,8 @@ function TypeCard({
         </div>
 
         <div className="mt-auto pt-3 text-[11px] font-bold" style={{ borderTop: "1px solid rgba(255,255,255,0.10)", color: selected ? accent : "rgba(255,255,255,0.48)" }}>
-          {type.xpReward.toLocaleString()} XP potential
+          <span className="block text-[9px] uppercase tracking-widest opacity-60">Bounty XP</span>
+          <span className="block text-sm">{type.xpReward.toLocaleString()} XP</span>
         </div>
       </div>
     </button>
@@ -882,7 +884,7 @@ function CampaignAccordion({
                         { label: "Duration", value: `${type.duration} days`, Icon: Clock },
                         { label: "Creator slots", value: `${type.capacity}`, Icon: Users },
                         { label: "Keys required", value: campaignKeySummary(type), Icon: KeyRound },
-                        { label: "XP potential", value: `${type.xpReward.toLocaleString()} XP`, Icon: Zap },
+                        { label: "Bounty XP Reward", value: `${type.xpReward.toLocaleString()} XP`, Icon: Zap },
                       ].map(({ label, value, Icon }) => (
                         <div key={label} className="rounded-lg px-3 py-2.5"
                           style={{ background: "rgba(11,20,29,0.82)", border: "1px solid rgba(255,255,255,0.10)" }}>
@@ -1235,6 +1237,9 @@ function StepPersonalise({ type, settings, onChange }: {
           <div className="p-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.10)" }}>
             <p className="text-[10px] uppercase tracking-[0.16em] font-bold text-white/55">Campaign Summary</p>
             <p className="text-sm font-black text-white mt-2 leading-relaxed">{campaignSummary(type)}</p>
+           <p className="text-[11px] text-white/55 mt-2">
+             Each creator can earn up to <strong className="text-[#B9FF1A]">{type.xpReward.toLocaleString()} Bounty XP</strong> by completing all required objectives.
+           </p>
           </div>
           <div className="p-5 space-y-5">
             <div className="flex items-center gap-3">
@@ -1262,7 +1267,7 @@ function StepPersonalise({ type, settings, onChange }: {
                 { label: "Duration", value: `${type.duration} days` },
                 { label: "Creator slots", value: `${type.capacity}` },
                 { label: "Keys required", value: campaignKeySummary(type) },
-                { label: "XP potential", value: `${type.xpReward.toLocaleString()} XP`, accent: true },
+                { label: "Bounty XP Reward", value: `${type.xpReward.toLocaleString()} XP`, accent: true },
               ].map(item => (
                 <div key={item.label}>
                   <div className="text-[10px] uppercase tracking-wider font-bold text-white/50">{item.label}</div>

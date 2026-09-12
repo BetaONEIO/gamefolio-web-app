@@ -86,6 +86,15 @@ function TemplateDetailModal({ template, onClose, onRun }: { template: any; onCl
             <div className="text-[10px] font-bold uppercase tracking-wider text-[#B7FF18] mb-1">Best For</div>
             <div className="text-sm text-white">{template.best_use_case}</div>
           </div>
+          {Number(template.bounty_xp_reward ?? 0) > 0 && (
+            <div className="rounded-xl px-4 py-3 flex items-center justify-between" style={{ background: "rgba(183,255,24,0.08)", border: "1px solid rgba(183,255,24,0.20)" }}>
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[#B7FF18]">Bounty XP Reward</div>
+                <div className="text-[11px] text-white/50 mt-1">Per approved creator completing all required objectives</div>
+              </div>
+              <div className="text-xl font-black tabular-nums" style={{ color: NEON }}>{Number(template.bounty_xp_reward).toLocaleString()} XP</div>
+            </div>
+          )}
 
           {/* Bounties */}
           <div>
@@ -109,7 +118,7 @@ function TemplateDetailModal({ template, onClose, onRun }: { template: any; onCl
                     </div>
                     <div className="text-[11px] text-white/40 mt-0.5">{b.description}</div>
                   </div>
-                  <div className="shrink-0 text-[11px] font-bold" style={{ color: NEON }}>+{b.xp_reward?.toLocaleString()} XP</div>
+                   <div className="shrink-0 text-[11px] font-bold text-right" style={{ color: NEON }}>+{b.xp_reward?.toLocaleString()}<span className="block text-[9px] uppercase tracking-wider opacity-60">Bounty XP</span></div>
                 </div>
               ))}
             </div>

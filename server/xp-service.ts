@@ -2,7 +2,11 @@ import { storage } from "./storage";
 import { InsertUserXPHistory } from "@shared/schema";
 import { calculateLevel } from "./level-system";
 
-export type XPSource = "view" | "lootbox" | "like_received" | "fire_received" | "upload" | "daily_login" | "welcome_bonus" | "referral" | "referral_bonus" | "mac_bonus" | "other";
+export type XPSource =
+  | "view" | "lootbox" | "like_received" | "fire_received" | "upload"
+  | "daily_login" | "welcome_bonus" | "referral" | "referral_bonus"
+  | "mac_bonus" | "campaign_join" | "campaign_demo_claim"
+  | "bounty_objective" | "bounty_completion" | "bounty_reversal" | "other";
 
 export class XPService {
   // Award XP to clip owner based on views (1 XP per view)
@@ -10,7 +14,7 @@ export class XPService {
     clipId: number,
     userId: number,
     currentViews: number
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       // Award 1 XP for this view
       const xpAmount = 1;
@@ -78,9 +82,11 @@ export class XPService {
       
       // Update user's level based on new XP total
       await this.updateUserLevel(userId);
+      return true;
       
     } catch (error) {
       console.error(`Error awarding XP from ${source}:`, error);
+      return false;
     }
   }
 

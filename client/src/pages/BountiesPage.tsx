@@ -161,7 +161,7 @@ function CompactObjectiveRow({
       </div>
 
       <div className="flex flex-col items-end gap-1 flex-shrink-0">
-        {xp > 0 && <div className="text-xs font-black tabular-nums" style={{ color: NEON }}>+{xp.toLocaleString()} XP</div>}
+        {xp > 0 && <div className="text-xs font-black tabular-nums text-right" style={{ color: NEON }}>+{xp.toLocaleString()}<span className="block text-[8px] uppercase tracking-wider opacity-60">Bounty XP</span></div>}
         <div className="text-[11px] font-black tabular-nums" style={{ color: done ? "#4ade80" : "rgba(255,255,255,0.52)" }}>
           {interactive ? `${clampedProgress} / ${quantity}` : `${quantity} required`}
         </div>
@@ -284,7 +284,7 @@ function campaignRewardSummary(campaign: any) {
   const rewards: { icon: any; label: string; tone?: string }[] = [];
   const totalXp = objectiveXp + completionXp;
 
-  if (totalXp > 0) rewards.push({ icon: Zap, label: `+${totalXp.toLocaleString()} XP`, tone: NEON });
+  if (totalXp > 0) rewards.push({ icon: Zap, label: `+${totalXp.toLocaleString()} Bounty XP Reward`, tone: NEON });
   if (gft) rewards.push({ icon: Trophy, label: `${gft} GFT`, tone: "#fbbf24" });
   if (campaign.completion_reward === "full_game_key" || /full[- ]game/i.test(completionDescription)) {
     rewards.push({ icon: Gift, label: "Full game", tone: "#a78bfa" });
@@ -320,7 +320,7 @@ function missionRewardItems(campaign: any, bounties: any[], complete: boolean) {
   if (configuredXp > 0) {
     rewards.push({
       icon: Zap,
-      label: `${configuredXp.toLocaleString()} XP`,
+       label: `${configuredXp.toLocaleString()} Bounty XP Reward`,
       state: `${Math.min(awardedXp, configuredXp).toLocaleString()}/${configuredXp.toLocaleString()} earned`,
       tone: NEON,
     });
@@ -529,7 +529,7 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-bold text-white/70">
             {demoLeft > 0 && <span className="inline-flex items-center gap-1"><img src="/icons/demo-key-icon.png" alt="" className="w-4 h-4 object-contain" /> Demo Key</span>}
             {fullLeft > 0 && <span className="inline-flex items-center gap-1"><img src="/icons/full-game-icon.png" alt="" className="w-4 h-4 object-contain" /> Full Game</span>}
-            {totalXP > 0 && <span className="inline-flex items-center gap-1"><Zap size={13} color={NEON} /> {totalXP.toLocaleString()} XP</span>}
+            {totalXP > 0 && <span className="inline-flex items-center gap-1"><Zap size={13} color={NEON} /> {totalXP.toLocaleString()} Bounty XP Reward</span>}
             <span className="inline-flex items-center gap-1"><img src="/icons/token-icon.png" alt="" className="w-4 h-4 object-contain" /> GFT</span>
           </div>
         </div>
@@ -680,7 +680,7 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
               {totalXP > 0 && (
                 <div className="flex items-center gap-1.5">
                   <Zap size={16} color={NEON} />
-                  <span className="text-xs font-bold text-white/70">{totalXP.toLocaleString()} XP</span>
+                  <span className="text-xs font-bold text-white/70">{totalXP.toLocaleString()} Bounty XP Reward</span>
                 </div>
               )}
               <div className="flex items-center gap-1.5">
@@ -1145,7 +1145,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                     <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,255,27,0.18)" }}><NextIcon size={20} color={NEON} /></div>
                     <div className="flex-1 min-w-0">
                       <div className="text-lg font-black text-white">{objectiveLabel(nextObjective)}</div>
-                      <div className="text-xs text-white/45 mt-0.5">{nextProgress} of {nextQty} submitted · +{Number(nextObjective.xp_reward ?? 0)} XP</div>
+                 <div className="text-xs text-white/45 mt-0.5">{nextProgress} of {nextQty} submitted · +{Number(nextObjective.xp_reward ?? 0).toLocaleString()} Bounty XP</div>
                     </div>
                     <button onClick={() => setActivePanel({ bounty: nextObjective })} className="px-3 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 flex-shrink-0" style={{ background: NEON, color: "#070b10" }}>
                       <Upload size={13} /> Complete
@@ -1317,7 +1317,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                         </div>
                         {b.xp_reward > 0 && (
                           <div className="absolute top-2.5 right-2.5 text-[10px] font-black px-2 py-0.5 rounded-full" style={{ background: accentBg, color: accentColor, border: "1px solid rgba(255,255,255,0.10)" }}>
-                            +{b.xp_reward} XP
+                            +{Number(b.xp_reward).toLocaleString()} Bounty XP
                           </div>
                         )}
                       </div>
@@ -1419,7 +1419,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                           <div className="p-3 flex flex-col gap-1.5">
                             <div className="flex items-center justify-between gap-1">
                               <span className="text-xs font-black leading-tight" style={{ color: done ? "#22c55e" : "rgba(255,255,255,0.40)" }}>{objectiveLabel(b)}</span>
-                              {b.xp_reward > 0 && <span className="text-[10px] font-black text-white/22 flex-shrink-0">+{b.xp_reward}</span>}
+                              {b.xp_reward > 0 && <span className="text-[10px] font-black text-white/22 flex-shrink-0">+{Number(b.xp_reward).toLocaleString()} Bounty XP</span>}
                             </div>
                             <div className="flex items-center gap-1">
                               <Star size={9} className="text-white/20 flex-shrink-0" />
@@ -1462,6 +1462,8 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                 const earnedXp = mandatory.reduce((sum: number, b: any) => isObjectiveDone(b) ? sum + (Number(b.xp_reward) || 0) : sum, 0);
                 const allComplete = completedMandatoryCount >= mandatory.length && mandatory.length > 0;
                 const demoStatus = hasJoined ? "claimed" : canAccept ? "available" : "locked";
+                const completionBonus = Number(campaign.completion_bonus_xp ?? 0);
+                const remainingXp = Math.max(totalXp - earnedXp, 0);
 
                 return (<>
                   {/* Demo Key */}
@@ -1503,9 +1505,9 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                           <Zap size={20} color={NEON} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-black text-white">XP Reward</div>
+                          <div className="text-sm font-black text-white">Bounty XP Reward</div>
                           <div className="text-[11px] font-black tabular-nums" style={{ color: NEON }}>
-                            {earnedXp.toLocaleString()} / {totalXp.toLocaleString()} XP
+                            {earnedXp.toLocaleString()} earned · {remainingXp.toLocaleString()} remaining
                           </div>
                         </div>
                       </div>
@@ -1513,7 +1515,10 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                         <div className="h-full rounded-full transition-all duration-1000 ease-out"
                           style={{ width: `${totalXp > 0 ? Math.round(earnedXp / totalXp * 100) : 0}%`, background: `linear-gradient(90deg,${NEON},rgba(184,255,27,0.65))`, boxShadow: earnedXp > 0 ? "0 0 8px rgba(184,255,27,0.40)" : "none" }} />
                       </div>
-                      <div className="text-[10px] mt-1.5 text-right" style={{ color: "rgba(255,255,255,0.25)" }}>Across all objectives</div>
+                       <div className="grid grid-cols-2 gap-2 mt-2 text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                         <span>Completion bonus <strong className="text-white/65">{completionBonus.toLocaleString()} XP</strong></span>
+                         <span className="text-right">Total <strong style={{ color: NEON }}>{totalXp.toLocaleString()} XP</strong></span>
+                       </div>
                     </div>
                   )}
 
@@ -1647,7 +1652,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
               </div>
               {completedMandatoryCount < mandatory.length && mandatory[completedMandatoryCount]?.xp_reward > 0 && (
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs" style={{ background: "rgba(184,255,27,0.08)", border: "1px solid rgba(184,255,27,0.18)", color: NEON }}>
-                  <Zap size={11} /><span className="font-black">Next reward: +{mandatory[completedMandatoryCount].xp_reward} XP</span>
+                  <Zap size={11} /><span className="font-black">Next Bounty XP reward: +{Number(mandatory[completedMandatoryCount].xp_reward).toLocaleString()}</span>
                 </div>
               )}
               {completedMandatoryCount === mandatory.length && mandatory.length > 0 && (
@@ -1843,7 +1848,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
               {!isGF && demoLeft > 0 && <div className="text-xs font-bold mt-2" style={{ color: NEON }}>1 Demo Key will be reserved for you.</div>}
               {[
                 { icon: <img src="/icons/full-game-icon.png" alt="" className="w-5 h-5 object-contain" />, text: "Full Game after required objectives" },
-                { icon: <Zap size={16} color={NEON} />, text: totalXp > 0 ? `${totalXp.toLocaleString()} XP` : "XP Rewards" },
+                { icon: <Zap size={16} color={NEON} />, text: totalXp > 0 ? `${totalXp.toLocaleString()} Bounty XP Reward` : "Bounty XP Rewards" },
                 { icon: <img src="/icons/token-icon.png" alt="" className="w-5 h-5 object-contain" />, text: "GFT after verification" },
               ].map(({ icon, text }) => (
                 <div key={text} className="flex items-center gap-2.5 text-sm text-white/75">

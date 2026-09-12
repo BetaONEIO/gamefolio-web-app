@@ -63,3 +63,4 @@
 - [AI VOD clipper access tier](ai-vod-clipper-access-tier.md) — private Admin/Ambassador testers receive Pro limits; public launch is intended to be Pro-only.
 - [Indie studio appearance ownership](indie-studio-appearance-ownership.md) — `/profile/:username` is the themed studio identity; `/developer/:handle` stays a separate legacy game-oriented route.
 - [Bun override compatibility](bun-override-compatibility.md) — Bun ignores nested npm overrides; use a globally compatible patched version and verify with `bun audit`.
+- [Campaign reward versioning](campaign-reward-versioning.md) — archive launched template versions, move only drafts, and backfill immutable instance reward snapshots.

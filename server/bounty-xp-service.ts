@@ -4,6 +4,7 @@
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { XPService } from "./xp-service";
+import type { XPSource } from "./xp-service";
 
 export type XPTier = "quick" | "standard" | "premium" | "featured";
 
@@ -192,19 +193,23 @@ export function computeCompletionBonus(
 export async function awardCampaignXP(
   userId: number,
   xpAmount: number,
-  source: string,
+  source: XPSource,
   description: string,
   instanceId?: number,
-): Promise<void> {
-  await XPService.awardXP(userId, xpAmount, "other", description);
+  awardKey?: string,
+): Promise<boolean> {
+  const awarded = await XPService.awardXP(userId, xpAmount, source, description, undefined, {
+    dedupeKey: awardKey,
+  });
   // Track bounty-specific XP
-  if (instanceId) {
+  if (instanceId && awarded) {
     await db.execute(sql`
       UPDATE campaign_participants
       SET xp_earned = COALESCE(xp_earned, 0) + ${xpAmount}
       WHERE instance_id = ${instanceId} AND user_id = ${userId}
     `);
   }
+  return awarded;
 }
 
 // ── Admin: update a profile (persisted in memory only for now) ───────────
