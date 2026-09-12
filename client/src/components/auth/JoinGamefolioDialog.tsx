@@ -259,7 +259,7 @@ export function JoinGamefolioDialog({
               </div>
 
               <div className="mt-5 mb-5">
-                <p className="text-sm font-medium" style={{ color: '#B7FF1A' }}>Other Options</p>
+                <p className="text-sm font-medium" style={{ color: '#B7FF18' }}>Other Options</p>
               </div>
 
               <p className="text-sm" style={{ color: '#B8C0AE' }}>
@@ -268,7 +268,7 @@ export function JoinGamefolioDialog({
                   onClick={() => setShowLoginForm(true)}
                   data-testid="button-show-login"
                   className="font-semibold transition-colors"
-                  style={{ color: '#B7FF1A' }}
+                  style={{ color: '#B7FF18' }}
                 >
                   Log In here
                 </button>
@@ -285,9 +285,9 @@ export function JoinGamefolioDialog({
 
               <p className="text-xs mt-5" style={{ color: '#B8C0AE', opacity: 0.6 }}>
                 By registering, you agree to Gamefolio's{' '}
-                <span className="cursor-pointer hover:underline" style={{ color: '#B7FF1A' }}>Terms of Service</span>
+                <span className="cursor-pointer hover:underline" style={{ color: '#B7FF18' }}>Terms of Service</span>
                 {' '}and{' '}
-                <span className="cursor-pointer hover:underline" style={{ color: '#B7FF1A' }}>Privacy Policy</span>
+                <span className="cursor-pointer hover:underline" style={{ color: '#B7FF18' }}>Privacy Policy</span>
               </p>
             </>
           )}
@@ -365,7 +365,7 @@ export function JoinGamefolioDialog({
                 disabled={isLoading}
                 data-testid="button-create-account"
                 className="w-full mt-5 py-3 text-base font-medium"
-                style={{ background: '#B7FF1A', color: '#000' }}
+                style={{ background: '#B7FF18', color: '#000' }}
               >
                 {isLoading ? 'Creating Account...' : 'Create Account'}
               </Button>
@@ -436,7 +436,7 @@ export function JoinGamefolioDialog({
                 disabled={isLoading}
                 data-testid="button-sign-in"
                 className="w-full mt-5 py-3 text-base font-medium"
-                style={{ background: '#B7FF1A', color: '#000' }}
+                style={{ background: '#B7FF18', color: '#000' }}
               >
                 {isLoading ? 'Signing In...' : 'Sign In'}
               </Button>

@@ -166,7 +166,7 @@ export function NotificationPanel({
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'clip_mention':
-        return <Video className="h-4 w-4 text-[#B7FF1A]" />;
+        return <Video className="h-4 w-4 text-[#B7FF18]" />;
       case 'comment_mention':
         return <MessageCircle className="h-4 w-4 text-primary" />;
       case 'like':
@@ -178,11 +178,11 @@ export function NotificationPanel({
       case 'streak':
         return <Flame className="h-4 w-4 text-orange-500" />;
       case 'download':
-        return <Download className="h-4 w-4 text-[#B7FF1A]" />;
+        return <Download className="h-4 w-4 text-[#B7FF18]" />;
       case 'share':
-        return <Share2 className="h-4 w-4 text-[#B7FF1A]" />;
+        return <Share2 className="h-4 w-4 text-[#B7FF18]" />;
       case 'milestone':
-        return <Trophy className="h-4 w-4 text-[#B7FF1A]" />;
+        return <Trophy className="h-4 w-4 text-[#B7FF18]" />;
       default:
         return <Bell className="h-4 w-4 text-gray-500" />;
     }
@@ -289,7 +289,7 @@ export function NotificationPanel({
                       key={notification.id}
                       className={cn(
                         "p-4 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors",
-                        !notification.isRead && "bg-[#B7FF1A]/5 dark:bg-[#B7FF1A]/5"
+                        !notification.isRead && "bg-[#B7FF18]/5 dark:bg-[#B7FF18]/5"
                       )}
                       onClick={() => handleNotificationClick(notification)}
                       data-testid={`notification-${notification.id}`}
@@ -322,7 +322,7 @@ export function NotificationPanel({
                               {notification.title}
                             </p>
                             {!notification.isRead && (
-                              <Badge variant="secondary" className="ml-2 bg-[#B7FF1A] text-black">
+                              <Badge variant="secondary" className="ml-2 bg-[#B7FF18] text-black">
                                 New
                               </Badge>
                             )}

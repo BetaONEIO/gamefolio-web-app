@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect, useLocation, useParams } from "wouter";
+import { Switch, Route, Redirect, useLocation, useParams, useRoute } from "wouter";
 import { queryClient, getQueryFn } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -27,11 +27,13 @@ import { ProtectedRoute } from "@/components/auth/protected-route";
 import { PartnerProtectedRoute } from "@/components/auth/partner-protected-route";
 import { AdminProtectedRoute } from "@/components/auth/admin-protected-route";
 import { AmbassadorProtectedRoute } from "@/components/auth/ambassador-protected-route";
+import { AdminOrAmbassadorProtectedRoute } from "@/components/auth/admin-or-ambassador-protected-route";
 import { OnboardingGuard } from "@/components/auth/onboarding-guard";
 import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { PageTransition } from "@/components/ui/page-transition";
-import { BannerSettings } from "@shared/schema";
+import { BannerSettings, UserWithStats } from "@shared/schema";
+import { toGameSlug } from "@/lib/game-routes";
 import { WebPlatformRedirect } from "@/components/WebPlatformRedirect";
 
 // Layout components
@@ -120,6 +122,7 @@ const IndieDashboardPage = lazyWithRecovery(() => import("./pages/IndieDashboard
 const StreamerDashboardPage = lazyWithRecovery(() => import("./pages/StreamerDashboardPage"));
 const BulkUploadPage = lazyWithRecovery(() => import("./pages/BulkUploadPage"));
 const ScreenshotUploadPage = lazyWithRecovery(() => import("./pages/ScreenshotUploadPage"));
+const AiVodClipsPage = lazyWithRecovery(() => import("./pages/AiVodClipsPage"));
 const AccountSettingsPage = lazyWithRecovery(() => import("./pages/AccountSettingsPage"));
 const GameCategoriesPage = lazyWithRecovery(() => import("./pages/GameCategoriesPage"));
 const LeaderboardPage = lazyWithRecovery(() => import("./pages/LeaderboardPage"));
@@ -173,9 +176,82 @@ const TwoFactorVerifyPage = lazyWithRecovery(() => import("./pages/TwoFactorVeri
 const MintNFTPage = lazyWithRecovery(() => import("./pages/MintNFTPage"));
 const NFTDetailsPage = lazyWithRecovery(() => import("./pages/NFTDetailsPage"));
 const IndieGamePage = lazyWithRecovery(() => import("./pages/indie-game-page"));
+const IndieGameProfileLayout = lazyWithRecovery(() => import("./pages/profile-layouts/IndieGameProfileLayout"));
 const IndieGameProfilePage = lazyWithRecovery(() => import("./pages/IndieGameProfilePage"));
 const IndieGameDashboard = lazyWithRecovery(() => import("./pages/IndieGameDashboard"));
 const BountiesPage = lazyWithRecovery(() => import("./pages/BountiesPage"));
+
+// Legacy public URLs redirect to the canonical game/developer URLs. Keeping
+// these as small route components avoids maintaining duplicate page trees.
+function LegacyGamePageRedirect() {
+  const [, params] = useRoute("/indie-games/:slug");
+  return <Redirect to={`/games/${params?.slug ?? ""}${window.location.search}`} />;
+}
+
+function LegacyDeveloperPageRedirect() {
+  const [, params] = useRoute("/studio/:username");
+  return <Redirect to={`/developer/${params?.username ?? ""}${window.location.search}`} />;
+}
+
+function CanonicalGamePage() {
+  const [, params] = useRoute("/games/:gameSlug");
+  const gameSlug = params?.gameSlug;
+  const { data: game, isLoading: gameLoading } = useQuery<{ id: number }>({
+    queryKey: ["/api/games/slug", gameSlug],
+    queryFn: async () => {
+      const response = await fetch(`/api/games/slug/${encodeURIComponent(gameSlug || "")}`, { credentials: "include" });
+      if (!response.ok) throw new Error("Game not found");
+      return response.json();
+    },
+    enabled: !!gameSlug,
+    retry: false,
+  });
+  const { data: indieProfile, isLoading: indieLoading } = useQuery({
+    queryKey: ["/api/games", game?.id, "indie-profile", "route-dispatch"],
+    queryFn: async () => {
+      const response = await fetch(`/api/games/${game?.id}/indie-profile`, { credentials: "include" });
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error("Unable to resolve game profile");
+      return response.json();
+    },
+    enabled: !!game?.id,
+    retry: false,
+  });
+  const developerUsername = indieProfile?.user?.username;
+  const { data: developerProfile, isLoading: developerProfileLoading } = useQuery<UserWithStats>({
+    queryKey: [`/api/users/${developerUsername}`],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!developerUsername,
+    retry: false,
+  });
+
+  if (gameLoading || (game && (indieLoading || developerProfileLoading))) return <RouteLoader />;
+  if (indieProfile && developerProfile) {
+    return (
+      <IndieGameProfileLayout
+        profile={developerProfile}
+        isOwnProfile={false}
+        gameId={indieProfile.profile.id}
+      />
+    );
+  }
+  return indieProfile ? <IndieGamePage /> : <GamePage />;
+}
+
+function ManageGameRedirect() {
+  const [, params] = useRoute("/manage/games/:slug");
+  const slug = params?.slug;
+  const { data, isLoading } = useQuery<{ games: Array<{ id: number; gameName: string | null }> }>({
+    queryKey: ["/api/indie/games"],
+    queryFn: getQueryFn({ on401: "throw" }),
+  });
+  if (isLoading) return <RouteLoader />;
+  const game = data?.games?.find((item) => toGameSlug(item.gameName) === slug);
+  if (!game) {
+    return <div className="flex min-h-[60vh] items-center justify-center text-muted-foreground">Managed game not found.</div>;
+  }
+  return <Redirect to={`/game-dashboard?gameId=${game.id}`} />;
+}
 
 // Loading component for lazy-loaded routes
 function RouteLoader() {
@@ -409,14 +485,14 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
+    <div className="profile-theme-app-shell h-[100dvh] flex flex-col bg-background relative overflow-hidden">
       <Header />
 
       <ImpersonationBanner />
 
       {/* Email Verification Banner - shown app-wide until the user verifies */}
       {!isDeveloperSubdomain && user && !user.emailVerified && (
-        <div className={`px-4 mt-2 relative z-20 ${!isMobile ? 'ml-64' : ''}`}>
+        <div className={`profile-theme-verification px-4 mt-2 relative z-20 ${!isMobile ? 'ml-64' : ''}`}>
           <EmailVerificationBanner />
         </div>
       )}
@@ -468,7 +544,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
         <main
           ref={mainScrollRef}
-          className={`flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide bg-background ${!isDeveloperSubdomain && !isMobile ? 'ml-64' : ''}`}
+          className={`profile-theme-main flex-1 overflow-y-auto overflow-x-hidden w-full scrollbar-hide bg-background ${!isDeveloperSubdomain && !isMobile ? 'ml-64' : ''}`}
           style={{
             ...(isMobile && keyboardHeight > 0 ? { paddingBottom: `${keyboardHeight}px` } : {}),
             overflowAnchor: 'none',
@@ -548,9 +624,10 @@ function Router() {
 
           {/* Protected routes requiring authentication */}
           <Route path="/explore" component={ExplorePage} />
-          <Route path="/games/:gameSlug" component={GamePage} />
-          <Route path="/indie-games/:slug" component={IndieGamePage} />
-          <Route path="/studio/:username" component={IndieGameProfilePage} />
+          <Route path="/games/:gameSlug" component={CanonicalGamePage} />
+          <Route path="/indie-games/:slug" component={LegacyGamePageRedirect} />
+          <Route path="/studio/:username" component={LegacyDeveloperPageRedirect} />
+          <PartnerProtectedRoute path="/manage/games/:slug" partnerType="indie" component={ManageGameRedirect} />
           <PartnerProtectedRoute path="/studio-dashboard" partnerType="indie" component={IndieGameDashboard} />
           <Route path="/games/:gameId/clips" component={GameClipsPage} />
           <ProtectedRoute path="/hashtag/:hashtag" component={HashtagPage} />
@@ -566,6 +643,7 @@ function Router() {
           <Route path="/streamer/dashboard" component={StreamerDashboardPage} />
           <ProtectedRoute path="/upload/bulk" component={BulkUploadPage} />
           <ProtectedRoute path="/upload/screenshots" component={ScreenshotUploadPage} />
+          <AdminOrAmbassadorProtectedRoute path="/ai-clips" component={AiVodClipsPage} />
           <ProtectedRoute path="/upload-success" component={PostUploadSuccessPage} />
           <ProtectedRoute path="/upload-success/:contentType/:contentId" component={PostUploadSuccessPage} />
           <ProtectedRoute path="/account/settings" component={AccountSettingsPage} />
@@ -599,6 +677,8 @@ function Router() {
           <ProtectedRoute path="/developer/apps/new" component={CreateAppPage} />
           <ProtectedRoute path="/developer/apps/:id" component={AppDetailPage} />
           <ProtectedRoute path="/developer/apps" component={MyAppsPage} />
+          {/* Keep the username route after the reserved developer app paths. */}
+          <Route path="/developer/:username" component={IndieGameProfilePage} />
           <Route path="/settings/connected-apps" component={ConnectedAppsPage} />
           <Route path="/2fa-verify" component={TwoFactorVerifyPage} />
           <Route path="/terms" component={TermsPage} />

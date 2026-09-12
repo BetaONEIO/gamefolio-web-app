@@ -99,7 +99,7 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
   return (
     <div
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: "#0B1218" }}
+      style={{ background: "#0A0A10" }}
     >
       {/* Header */}
       <div
@@ -142,12 +142,12 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
                   fillRule="evenodd"
                   clipRule="evenodd"
                   d="M3.50016 6.70337V5.33337C3.50016 2.84809 5.51488 0.833374 8.00016 0.833374C10.4854 0.833374 12.5002 2.84809 12.5002 5.33337V6.70337C13.2435 6.75871 13.7268 6.89871 14.0808 7.25271C14.6668 7.83804 14.6668 8.78137 14.6668 10.6667C14.6668 12.552 14.6668 13.4954 14.0808 14.0807C13.4955 14.6667 12.5522 14.6667 10.6668 14.6667H5.3335C3.44816 14.6667 2.50483 14.6667 1.9195 14.0807C1.3335 13.4954 1.3335 12.552 1.3335 10.6667C1.3335 8.78137 1.3335 7.83804 1.9195 7.25271C2.27283 6.89871 2.75683 6.75871 3.50016 6.70337Z"
-                  fill="#B7FF1A"
+                  fill="#B7FF18"
                 />
               </svg>
               <span
                 className="text-[10px] font-bold uppercase"
-                style={{ color: "#B7FF1A", letterSpacing: "0.5px" }}
+                style={{ color: "#B7FF18", letterSpacing: "0.5px" }}
               >
                 Secure Payment
               </span>
@@ -162,7 +162,7 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
 
           {/* Payment Element */}
           <div className="space-y-6">
-            <div className="rounded-2xl overflow-hidden" style={{ background: "#0B1218" }}>
+            <div className="rounded-2xl overflow-hidden" style={{ background: "#0A0A10" }}>
               <PaymentElement
                 onReady={() => setIsReady(true)}
                 options={{
@@ -190,7 +190,7 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
         <div
           className="px-6 pb-24 pt-6"
           style={{
-            background: "#0B1218",
+            background: "#0A0A10",
             borderTop: "1px solid rgba(30, 41, 59, 0.3)",
           }}
         >
@@ -201,7 +201,7 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
                 <p className="text-sm font-medium" style={{ color: "#B8C0AE" }}>
                   Total to Pay
                 </p>
-                <p className="text-xs font-bold" style={{ color: "#B7FF1A" }}>
+                <p className="text-xs font-bold" style={{ color: "#B7FF18" }}>
                   Includes all taxes
                 </p>
               </div>
@@ -216,11 +216,11 @@ function PaymentForm({ onBack, onSuccess, amount, gftAmount }: CardEntryScreenPr
               disabled={isProcessing || !stripe || !isReady}
               className="w-full flex items-center justify-center gap-2 py-5 rounded-2xl font-bold text-lg transition-all hover:opacity-90 disabled:opacity-50"
               style={{
-                background: "#B7FF1A",
-                boxShadow: "0 0 30px -10px #B7FF1A",
+                background: "#B7FF18",
+                boxShadow: "0 0 30px -10px #B7FF18",
               }}
             >
-              <span style={{ color: "#071013" }}>
+              <span style={{ color: "#0A0A10" }}>
                 {isProcessing ? "Processing..." : "Confirm & Pay"}
               </span>
               {!isProcessing && (
@@ -287,7 +287,7 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
     return (
       <div
         className="w-full min-h-screen flex items-center justify-center"
-        style={{ background: "#0B1218" }}
+        style={{ background: "#0A0A10" }}
       >
         <div className="flex flex-col items-center gap-4 px-6 text-center">
           <p className="text-sm text-red-400">{loadError}</p>
@@ -306,7 +306,7 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
     return (
       <div
         className="w-full min-h-screen flex items-center justify-center"
-        style={{ background: "#0B1218" }}
+        style={{ background: "#0A0A10" }}
       >
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -324,7 +324,7 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
         appearance: {
           theme: "night",
           variables: {
-            colorPrimary: "#B7FF1A",
+            colorPrimary: "#B7FF18",
             colorBackground: "#1B2A33",
             colorText: "#F5F7F2",
             colorDanger: "#ef4444",
@@ -339,8 +339,8 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
               padding: "16px",
             },
             ".Input:focus": {
-              border: "1px solid #B7FF1A",
-              boxShadow: "0 0 0 1px #B7FF1A",
+              border: "1px solid #B7FF18",
+              boxShadow: "0 0 0 1px #B7FF18",
             },
             ".Label": {
               color: "#B8C0AE",
@@ -361,7 +361,7 @@ export default function CardEntryScreen(props: CardEntryScreenProps) {
             },
             ".Tab--selected": {
               backgroundColor: "#22313A",
-              border: "1px solid #B7FF1A",
+              border: "1px solid #B7FF18",
               color: "#F5F7F2",
             },
           },

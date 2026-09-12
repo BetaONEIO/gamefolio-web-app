@@ -50,9 +50,9 @@ const STATUS_META: Record<
   },
   consumed: {
     label: "Minted",
-    color: "text-[#B7FF1A]",
-    bg: "bg-[#B7FF1A]/10",
-    border: "border-[#B7FF1A]/30",
+    color: "text-[#B7FF18]",
+    bg: "bg-[#B7FF18]/10",
+    border: "border-[#B7FF18]/30",
     icon: Check,
   },
   refunded: {
@@ -96,7 +96,7 @@ function ExplorerLink({ hash, label }: { hash: string; label: string }) {
       href={`${SKALE_EXPLORER_BASE_URL}/tx/${hash}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-1 text-[10px] font-mono text-[#B8C0AE] hover:text-[#B7FF1A] transition-colors"
+      className="flex items-center gap-1 text-[10px] font-mono text-[#B8C0AE] hover:text-[#B7FF18] transition-colors"
       data-testid={`link-explorer-${hash.slice(0, 10)}`}
     >
       <span className="uppercase tracking-wider font-bold not-italic">{label}:</span>
@@ -124,7 +124,7 @@ function PaymentRow({
 
   return (
     <div
-      className={`bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col gap-3 ${
+      className={`bg-[#0A0A10] border border-[#1B2A33]/50 rounded-2xl p-4 flex flex-col gap-3 ${
         isDismissed ? "opacity-60" : ""
       }`}
       data-testid={`payment-row-${payment.id}`}
@@ -287,7 +287,7 @@ export default function RecentMintActivity() {
 
   if (isLoading) {
     return (
-      <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-3xl p-5 flex items-center gap-3">
+      <div className="bg-[#0A0A10] border border-[#1B2A33]/50 rounded-3xl p-5 flex items-center gap-3">
         <Loader2 className="h-4 w-4 text-[#B8C0AE] animate-spin" />
         <span className="text-xs text-[#B8C0AE]">Loading recent mint activity…</span>
       </div>
@@ -341,7 +341,7 @@ export default function RecentMintActivity() {
         </div>
       </div>
       {payments.length === 0 ? (
-        <div className="bg-[#0B1218] border border-[#1B2A33]/50 rounded-2xl p-4 text-[11px] text-[#B8C0AE]">
+        <div className="bg-[#0A0A10] border border-[#1B2A33]/50 rounded-2xl p-4 text-[11px] text-[#B8C0AE]">
           {showDismissed
             ? "No entries to show."
             : "All entries are dismissed. Use \"Show dismissed\" to view them."}

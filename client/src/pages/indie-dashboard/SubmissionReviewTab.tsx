@@ -38,7 +38,7 @@ function RejectDialog({ onConfirm, onCancel }: { onConfirm: (reason: string) => 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onCancel}>
       <div
         className="rounded-2xl p-5 w-full max-w-sm"
-        style={{ background: "#0B1218", border: "1px solid rgba(255,255,255,0.12)" }}
+        style={{ background: "#0A0A10", border: "1px solid rgba(255,255,255,0.12)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-sm font-bold text-white mb-3">Reject Submission</h3>

@@ -47,7 +47,7 @@ export function LootboxIcon({
   onClick,
   className = "",
 }: LootboxIconProps) {
-  const iconColor = isClaimable ? "#B7FF1A" : "currentColor";
+  const iconColor = isClaimable ? "#B7FF18" : "currentColor";
 
   const prefersReduced =
     typeof window !== "undefined"
@@ -87,7 +87,7 @@ export function LootboxIcon({
             ? {
                 animation: "lootbox-float 2.8s ease-in-out infinite",
                 filter: "drop-shadow(0 0 6px rgba(183,255,26,0.7))",
-                color: "#B7FF1A",
+                color: "#B7FF18",
               }
             : { color: "currentColor" }
         }
@@ -106,14 +106,14 @@ export function LootboxIcon({
             style={{
               width: "100%",
               height: "100%",
-              background: "#B7FF1A",
+              background: "#B7FF18",
               opacity: 0.6,
               animation: prefersReduced ? "none" : "lootbox-ping 1.8s cubic-bezier(0,0,0.2,1) infinite",
             }}
           />
           <span
             className="relative inline-flex rounded-full"
-            style={{ width: 7, height: 7, background: "#B7FF1A" }}
+            style={{ width: 7, height: 7, background: "#B7FF18" }}
           />
         </span>
       )}
@@ -129,7 +129,7 @@ export function LootboxIcon({
               width: 3,
               height: 3,
               borderRadius: "50%",
-              background: "#B7FF1A",
+              background: "#B7FF18",
               opacity: 0,
               animation: "lootbox-sparkle 2.4s ease-in-out 0.3s infinite",
             }}
@@ -142,7 +142,7 @@ export function LootboxIcon({
               width: 2,
               height: 2,
               borderRadius: "50%",
-              background: "#B7FF1A",
+              background: "#B7FF18",
               opacity: 0,
               animation: "lootbox-sparkle 2.4s ease-in-out 1.1s infinite",
             }}
@@ -155,7 +155,7 @@ export function LootboxIcon({
               width: 2,
               height: 2,
               borderRadius: "50%",
-              background: "#B7FF1A",
+              background: "#B7FF18",
               opacity: 0,
               animation: "lootbox-sparkle 2.4s ease-in-out 1.8s infinite",
             }}

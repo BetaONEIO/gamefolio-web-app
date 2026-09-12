@@ -274,7 +274,7 @@ const CommentSection = ({ clipId, screenshotId, currentUserId = 1, onUsernameCli
                   <img
                     src={comment.user.nftProfileImageUrl}
                     alt={comment.user.username || "User"}
-                    className="h-8 w-8 rounded-lg border border-[#B7FF1A]/40 object-cover flex-shrink-0"
+                    className="h-8 w-8 rounded-lg border border-[#B7FF18]/40 object-cover flex-shrink-0"
                   />
                 ) : (
                   <CommentAvatar 
@@ -386,7 +386,7 @@ const CommentSection = ({ clipId, screenshotId, currentUserId = 1, onUsernameCli
             className="w-full"
             data-testid="button-join-to-comment"
           >
-            <span style={{ color: '#B7FF1A' }}>Sign in</span>&nbsp;to add a comment
+            <span style={{ color: '#B7FF18' }}>Sign in</span>&nbsp;to add a comment
           </Button>
         </div>
       ))}

@@ -337,7 +337,7 @@ const FeaturedUsersSection = () => {
                       width: i === mobileActiveIdx ? 20 : 5,
                       height: 4,
                       borderRadius: 2,
-                      background: i === mobileActiveIdx ? '#B7FF1A' : 'rgba(255,255,255,0.22)',
+                      background: i === mobileActiveIdx ? '#B7FF18' : 'rgba(255,255,255,0.22)',
                       border: 'none',
                       padding: 0,
                       cursor: 'pointer',
@@ -371,9 +371,9 @@ const FeaturedUsersSection = () => {
 
         {/* Edge fade overlays */}
         <div className="absolute left-0 top-0 bottom-0 w-16 pointer-events-none"
-          style={{ background: 'linear-gradient(to right, #0B1319, transparent)', zIndex: 10 }} />
+          style={{ background: 'linear-gradient(to right, #0A0A10, transparent)', zIndex: 10 }} />
         <div className="absolute right-0 top-0 bottom-0 w-16 pointer-events-none"
-          style={{ background: 'linear-gradient(to left, #0B1319, transparent)', zIndex: 10 }} />
+          style={{ background: 'linear-gradient(to left, #0A0A10, transparent)', zIndex: 10 }} />
 
         {isLoading ? (
           <div className="flex gap-4 px-5" style={{ zIndex: 11, position: 'relative' }}>

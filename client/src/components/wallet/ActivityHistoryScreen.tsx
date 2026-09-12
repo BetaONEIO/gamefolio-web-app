@@ -129,7 +129,7 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
       completed: {
         bg: 'rgba(20, 83, 45, 0.2)',
         border: 'rgba(183, 255, 26, 0.2)',
-        color: '#B7FF1A',
+        color: '#B7FF18',
         text: 'COMPLETED',
       },
       pending: {
@@ -171,13 +171,13 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
   return (
     <div
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: '#0B1218' }}
+      style={{ background: '#0A0A10' }}
     >
       {/* Header with gradient */}
       <div
         className="flex flex-col gap-4 px-6 pt-12 pb-6"
         style={{
-          background: 'linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #0B1218 100%)',
+          background: 'linear-gradient(180deg, rgba(20, 83, 45, 0.2) 0%, #0A0A10 100%)',
           borderBottom: '1px solid rgba(30, 41, 59, 0.3)',
         }}
       >
@@ -211,9 +211,9 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
               onClick={() => setActiveFilter(filter.id)}
               className="flex-shrink-0 px-4 py-3 rounded-full text-sm font-bold transition-all"
               style={{
-                background: activeFilter === filter.id ? '#B7FF1A' : '#1B2A33',
-                border: `1px solid ${activeFilter === filter.id ? '#B7FF1A' : '#1B2A33'}`,
-                color: activeFilter === filter.id ? '#071013' : '#B8C0AE',
+                background: activeFilter === filter.id ? '#B7FF18' : '#1B2A33',
+                border: `1px solid ${activeFilter === filter.id ? '#B7FF18' : '#1B2A33'}`,
+                color: activeFilter === filter.id ? '#0A0A10' : '#B8C0AE',
               }}
             >
               {filter.label}
@@ -226,7 +226,7 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
       <div className="flex-1 px-6 py-6 max-w-[430px] mx-auto w-full">
         {isLoading && (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#B7FF1A' }} />
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: '#B7FF18' }} />
           </div>
         )}
         {!isLoading && <div className="flex flex-col gap-8">
@@ -283,7 +283,7 @@ export default function ActivityHistoryScreen({ onBack }: ActivityHistoryScreenP
                     <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                       <span
                         className="text-base font-bold"
-                        style={{ color: activity.isPositive ? '#B7FF1A' : '#F5F7F2' }}
+                        style={{ color: activity.isPositive ? '#B7FF18' : '#F5F7F2' }}
                       >
                         {activity.isPositive ? '+' : '-'}{activity.amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                       </span>

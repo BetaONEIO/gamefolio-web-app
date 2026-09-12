@@ -33,7 +33,7 @@ interface FeaturedGamefolioData {
   clipCount: number;
 }
 
-const NEON = "#B7FF1A";
+const NEON = "#B7FF18";
 const CARD_BG = "rgba(255,255,255,0.04)";
 const CARD_BORDER = "rgba(255,255,255,0.08)";
 
@@ -116,10 +116,10 @@ export default function FeaturedGamefolioBanner() {
               {/* Verified badge */}
               <div
                 className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
-                style={{ background: accent, border: "2px solid #0B1319" }}
+                style={{ background: accent, border: "2px solid #0A0A10" }}
               >
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                  <path d="M2 5L4 7L8 3" stroke="#0B1319" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M2 5L4 7L8 3" stroke="#0A0A10" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
             </div>
@@ -193,7 +193,7 @@ export default function FeaturedGamefolioBanner() {
                         style={{ background: "rgba(0,0,0,0.4)", opacity: clipHover ? 1 : 0 }}
                       >
                         <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: accent }}>
-                          <Play className="w-3.5 h-3.5 text-[#0B1319] fill-current" />
+                          <Play className="w-3.5 h-3.5 text-[#0A0A10] fill-current" />
                         </div>
                       </div>
                     </div>

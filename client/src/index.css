@@ -14,8 +14,8 @@
   --visual-viewport-height: 100dvh;
 
   /* Official shared Gamefolio colour system */
-  --gf-background: #090C11;
-  --gf-surface: #090C11;
+  --gf-background: #0A0A10;
+  --gf-surface: #0A0A10;
   --gf-surface-raised: #1A1D2B;
   --gf-border: #252938;
   --gf-accent: #B7FF18;
@@ -370,13 +370,85 @@ video:focus {
   background-color: var(--profile-accent-color) !important;
 }
 
+/* Indie Developer studio profiles use the same Profile & Appearance tokens as
+   standard user profiles while retaining their studio-specific layout. */
+.studio-profile-theme {
+  background: var(--studio-background);
+  color: var(--studio-text);
+}
+
+.studio-profile-theme .studio-avatar-border {
+  border-color: var(--studio-avatar-border) !important;
+}
+
+.studio-profile-theme .studio-surface {
+  background-color: var(--studio-surface) !important;
+}
+
+.studio-profile-theme .studio-text,
+.studio-profile-theme h1,
+.studio-profile-theme h2,
+.studio-profile-theme h3 {
+  color: var(--studio-text) !important;
+}
+
+.studio-profile-theme .studio-muted {
+  color: var(--studio-muted) !important;
+}
+
+.studio-profile-theme .studio-accent-text {
+  color: var(--studio-accent) !important;
+}
+
+.studio-profile-theme .studio-accent-bg {
+  background-color: var(--studio-accent) !important;
+}
+
+.studio-profile-theme .studio-button-text {
+  color: var(--studio-button-text) !important;
+}
+
+.studio-profile-theme .studio-border {
+  border-color: var(--studio-border) !important;
+}
+
+.studio-profile-theme .studio-accent-border {
+  border-color: var(--studio-accent) !important;
+}
+
+.studio-profile-theme .studio-hover-accent:hover {
+  color: var(--studio-accent) !important;
+  border-color: var(--studio-accent) !important;
+}
+
+.studio-profile-theme .studio-hover-accent-border:hover {
+  border-color: var(--studio-accent) !important;
+}
+
+.studio-profile-theme .studio-hover-accent-bg:hover {
+  background: color-mix(in srgb, var(--studio-accent) 12%, transparent) !important;
+}
+
+.studio-profile-theme .studio-focus-accent:focus-visible {
+  --tw-ring-color: var(--studio-accent) !important;
+}
+
+.studio-profile-theme.studio-stats-glass .studio-stat-card {
+  background: color-mix(in srgb, var(--studio-surface) 65%, transparent) !important;
+  backdrop-filter: blur(14px);
+}
+
+.studio-profile-theme > .profile-theme-atmosphere {
+  position: fixed;
+}
+
 :root {
   /* Global Gamefolio theme - solid competitive gaming surfaces */
-  --background: 217.5 30.77% 5.10%; /* #090C11 */
+  --background: 240 23.08% 5.10%; /* #0A0A10 */
   --foreground: 0 0% 100%;        /* #FFFFFF */
 
   /* Card */
-  --card: 217.5 30.77% 5.10%;      /* #090C11 */
+  --card: 240 23.08% 5.10%;         /* #0A0A10 */
   --card-foreground: 0 0% 100%;
 
   /* Popover */
@@ -405,7 +477,7 @@ video:focus {
 
   /* Border */
   --border: 227.37 20.43% 18.24%;  /* #252938 */
-  --input: 217.5 30.77% 5.10%;     /* #090C11 */
+  --input: 240 23.08% 5.10%;        /* #0A0A10 */
   --ring: 78 100% 54%;             /* #B7FF18 */
 
   /* Radius - premium rounded feel */
@@ -1063,7 +1135,7 @@ h1, h2, h3 {
   position: fixed;
   inset: 0;
   z-index: 100000;
-  background: #0B1319;
+  background: var(--gf-background);
   display: flex;
   align-items: center;
   justify-content: center;

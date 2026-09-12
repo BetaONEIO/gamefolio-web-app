@@ -30,6 +30,7 @@ import {
   BannedWord, InsertBannedWord,
   BannerSettings, InsertBannerSettings,
   UploadedBanner, InsertUploadedBanner,
+  AiClipSettings, InsertAiClipSettings,
   HeroTextSettings, InsertHeroTextSettings,
   ClipMention, InsertClipMention,
   CommentMention, InsertCommentMention,
@@ -91,6 +92,8 @@ import {
   bannerSettings,
   adminAlertSettings,
   uploadedBanners,
+  aiClipSettings,
+  aiClipJobs,
   clipMentions,
   nftWatchlist,
   bookmarks,
@@ -368,7 +371,11 @@ export class DatabaseStorage implements IStorage {
   async createUser(userData: InsertUser): Promise<User> {
     try {
       // CRITICAL SECURITY: Hash password before storing
-      const safeUserData = { ...userData };
+      // The original signup referral is an entitlement source of truth. It
+      // may be written by registration, but never changed by generic profile
+      // updates or the post-registration referral flow.
+      const { originalSignupReferralCode: _originalSignupReferralCode, ...mutableUserData } = userData;
+      const safeUserData = { ...mutableUserData };
       if (safeUserData.password) {
         console.log(`🔐 SECURITY: Hashing password for new user`);
         safeUserData.password = await hashPassword(safeUserData.password);
@@ -5357,6 +5364,71 @@ export class DatabaseStorage implements IStorage {
       console.error('Error updating banner settings:', error);
       return null;
     }
+  }
+
+  // AI VOD-clip generation on/off control
+  async getAiClipSettings(): Promise<AiClipSettings | null> {
+    try {
+      const [settings] = await db.select().from(aiClipSettings).limit(1);
+      return settings || null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async updateAiClipSettings(settings: Partial<InsertAiClipSettings>): Promise<AiClipSettings> {
+    const existing = await this.getAiClipSettings();
+    if (existing) {
+      const [updated] = await db
+        .update(aiClipSettings)
+        .set({ ...settings, updatedAt: new Date() })
+        .where(eq(aiClipSettings.id, existing.id))
+        .returning();
+      return updated;
+    }
+    const [created] = await db
+      .insert(aiClipSettings)
+      .values({ isEnabled: true, ...settings })
+      .returning();
+    return created;
+  }
+
+  async getAiClipJobStats() {
+    const rows = await db.select({ status: aiClipJobs.status, count: sql<number>`count(*)::int` })
+      .from(aiClipJobs)
+      .groupBy(aiClipJobs.status);
+    const statusCounts: Record<string, number> = {};
+    for (const row of rows) statusCounts[row.status] = row.count;
+
+    const recent = await db.select({
+      id: aiClipJobs.id,
+      userId: aiClipJobs.userId,
+      username: users.username,
+      vodTitle: aiClipJobs.vodTitle,
+      status: aiClipJobs.status,
+      candidateCount: aiClipJobs.candidateCount,
+      createdAt: aiClipJobs.createdAt,
+    })
+      .from(aiClipJobs)
+      .innerJoin(users, eq(aiClipJobs.userId, users.id))
+      .orderBy(desc(aiClipJobs.createdAt))
+      .limit(10);
+
+    const queue = await db.select({
+      id: aiClipJobs.id,
+      userId: aiClipJobs.userId,
+      username: users.username,
+      vodTitle: aiClipJobs.vodTitle,
+      status: aiClipJobs.status,
+      stageProgress: aiClipJobs.stageProgress,
+      createdAt: aiClipJobs.createdAt,
+    })
+      .from(aiClipJobs)
+      .innerJoin(users, eq(aiClipJobs.userId, users.id))
+      .where(notInArray(aiClipJobs.status, ['completed', 'failed', 'cancelled']))
+      .orderBy(asc(aiClipJobs.createdAt));
+
+    return { statusCounts, recentJobs: recent, queue };
   }
 
   // Admin alert destination settings

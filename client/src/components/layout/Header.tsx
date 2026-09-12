@@ -169,10 +169,6 @@ const Header = () => {
   }, [user?.id, (user as any)?.userType]);
   const { isPro } = useRevenueCat();
   const { isIndieMode } = useIndieMode();
-  const isIndieDeveloperPersona = user?.userType
-    ?.split(",")
-    .map((type) => type.trim())
-    .includes("indie_developer") ?? false;
   const hasStandardPro = !!(
     isPro ||
     user?.isPro ||
@@ -303,7 +299,7 @@ const Header = () => {
   if (isMobile && location === '/trending') return null;
 
   return (
-    <header className="bg-background border-b border-border shadow-md sticky top-0 z-50 w-full safe-area-top">
+    <header className="profile-theme-header bg-background border-b border-border shadow-md sticky top-0 z-50 w-full safe-area-top">
       <div className="w-full px-3 sm:px-4 lg:px-8 py-3 sm:py-4 md:py-6 flex items-center justify-between">
         {/* Header left section */}
         <div className="flex items-center flex-shrink-0">
@@ -664,21 +660,21 @@ const Header = () => {
 
                     <DropdownMenuItem
                       className="cursor-pointer"
-                      onClick={() => setLocation(`/profile/${user.username}`)}
+                       onClick={() => setLocation(`/profile/${user.username}`)}
                     >
                       <span className="mr-2 inline-flex items-center justify-center h-4 w-4 overflow-visible flex-shrink-0">
-                        <GamefolioIcon glow={location === `/profile/${user.username}`} className="h-4 w-4 scale-[1.85]" />
+                         <GamefolioIcon glow={location === `/profile/${user.username}`} className="h-4 w-4 scale-[1.85]" />
                       </span>
                       <span>My Gamefolio</span>
                     </DropdownMenuItem>
                     {isIndieMode && (
                       <DropdownMenuItem
                         className="cursor-pointer"
-                        onClick={() => setLocation("/game-dashboard")}
+                        onClick={() => setLocation("/game-dashboard?tab=game-profile")}
                         data-testid="button-game-dashboard"
                       >
                         <Gamepad2 className="mr-2 h-4 w-4" />
-                        <span>Game Dashboard</span>
+                        <span>My Game</span>
                       </DropdownMenuItem>
                     )}
                     {!isIndieMode && (
@@ -716,7 +712,7 @@ const Header = () => {
                     {!(isIndieMode ? hasDeveloperPro : hasStandardPro) && (
                       <DropdownMenuItem
                         className="cursor-pointer text-white"
-                        style={{ background: 'linear-gradient(to right, #B7FF1A 0%, rgba(30, 41, 59, 0) 70%)' }}
+                        style={{ background: 'linear-gradient(to right, #B7FF18 0%, rgba(30, 41, 59, 0) 70%)' }}
                         onClick={() => setProUpgradeOpen(true)}
                         data-testid="button-go-pro"
                       >
@@ -748,16 +744,14 @@ const Header = () => {
                         <AccountSettingsIcon className="mr-2 h-4 w-4" />
                         <span>Account Settings</span>
                       </DropdownMenuItem>
-                      {!isIndieDeveloperPersona && (
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          onClick={() => setLocation("/settings/profile")}
-                          data-testid="button-profile-settings"
-                        >
-                          <GamefolioProfileIcon className="mr-2 h-4 w-4" />
-                          <span>Profile &amp; Appearance</span>
-                        </DropdownMenuItem>
-                      )}
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => setLocation("/settings/profile")}
+                        data-testid="button-profile-settings"
+                      >
+                        <GamefolioProfileIcon className="mr-2 h-4 w-4" />
+                        <span>Profile &amp; Appearance</span>
+                      </DropdownMenuItem>
                     </DropdownMenuGroup>
 
                     <DropdownMenuSeparator />

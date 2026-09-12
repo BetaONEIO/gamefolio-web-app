@@ -506,6 +506,31 @@ app.use((req, res, next) => {
         setInterval(tick, SYNC_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule platform sync:', err));
 
+      // AI VOD-clip generation (POC): single sequential in-process worker,
+      // picks up one queued job per tick. No queue system — matches the
+      // app's existing "one long-lived Node process + polling timers"
+      // pattern, since job volume is expected to be low at POC scale.
+      import('./services/ai-vod-clip-jobs').then(({ processNextQueuedJob, expireStaleCandidates }) => {
+        const POLL_INTERVAL_MS = 20 * 1000;
+        const tick = () => {
+          processNextQueuedJob().catch((err) => console.error('ai-vod-clip-jobs poll failed:', err));
+        };
+        setTimeout(tick, 30 * 1000);
+        setInterval(tick, POLL_INTERVAL_MS);
+
+        // Draft clip storage is temporary, not permanent — sweep expired
+        // (unpublished, past-TTL) candidates every 6h so abandoned
+        // generations don't accumulate in Supabase storage indefinitely.
+        const EXPIRY_SWEEP_INTERVAL_MS = 6 * 60 * 60 * 1000;
+        const expiryTick = () => {
+          expireStaleCandidates()
+            .then((r) => { if (r.expired > 0) log(`ai-vod-clips expiry sweep: expired=${r.expired}`); })
+            .catch((err) => console.error('ai-vod-clips expiry sweep failed:', err));
+        };
+        setTimeout(expiryTick, 3 * 60 * 1000);
+        setInterval(expiryTick, EXPIRY_SWEEP_INTERVAL_MS);
+      }).catch((err) => console.error('Failed to schedule AI VOD clip job poller:', err));
+
       // Publish scheduled posts whose time has come. Posts are processed up
       // front (thumbnails/transcode/upload), so this tick just inserts the real
       // clip/screenshot record and runs the upload XP side-effects. 60s cadence

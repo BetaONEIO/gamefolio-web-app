@@ -20,9 +20,16 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
+  // Replit terminates TLS and reverse-proxies everything through 443, so the
+  // browser's HMR client needs to be told to reconnect via wss on 443
+  // rather than the app's actual internal port. Plain local dev (no proxy,
+  // no TLS) has no such indirection — forcing the same wss/443 override
+  // there makes the browser try to open a secure WebSocket to a port
+  // nothing is listening on, which fails immediately and breaks HMR.
+  const isReplit = !!process.env.REPL_ID;
   const serverOptions = {
     middlewareMode: true,
-    hmr: { server, clientPort: 443, protocol: 'wss' as const },
+    hmr: isReplit ? { server, clientPort: 443, protocol: 'wss' as const } : { server },
     allowedHosts: true,
   };
 

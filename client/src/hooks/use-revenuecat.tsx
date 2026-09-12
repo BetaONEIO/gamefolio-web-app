@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode,
 import { Purchases as WebPurchases } from "@revenuecat/purchases-js";
 import type { Package as WebPackage } from "@revenuecat/purchases-js";
 import type { PurchasesPackage as NativePackage } from "@revenuecat/purchases-capacitor";
-import { isNative, platform } from "@/lib/platform";
+import { isNative, isAndroid, platform } from "@/lib/platform";
 import { AuthContext } from "./use-auth";
 import { useToast } from "./use-toast";
 import { queryClient } from "@/lib/queryClient";
@@ -32,11 +32,13 @@ type RevenueCatContextType = {
   isInitialized: boolean;
   isLoading: boolean;
   isPro: boolean;
+  isPartner: boolean;
   isIndieDevSubscriber: boolean;
   customerInfo: RcCustomerInfo | null;
   refreshCustomerInfo: () => Promise<void>;
-  purchasePackage: (pkg: RcPackage) => Promise<boolean>;
+  purchasePackage: (pkg: RcPackage, opts?: { ambassadorCode?: string }) => Promise<boolean>;
   getCurrentOffering: () => RcPackage[] | null;
+  getPartnerOffering: () => RcPackage[] | null;
   getIndieDevOffering: () => RcPackage[] | null;
   purchaseIndieDevPackage: (pkg: RcPackage) => Promise<boolean>;
 };
@@ -44,8 +46,35 @@ type RevenueCatContextType = {
 const RevenueCatContext = createContext<RevenueCatContextType | null>(null);
 
 const PRO_ENTITLEMENT_ID = "pro";
+// Prefer the current display name, but retain the legacy lookup key while
+// existing RevenueCat projects finish migrating their offering metadata.
+const PARTNER_ENTITLEMENT_ID = "streamer_partner";
+const PARTNER_OFFERING_IDS = ["Gamefolio Streamer Pro", "Gamefolio Streamer Partner"];
 const INDIE_DEV_ENTITLEMENT_ID = "indie_dev";
 const INDIE_DEV_OFFERING_ID = "Gamefolio Indie Developer";
+
+// Google Play tag identifying the discounted ambassador-referral offer on the
+// Pro base plans. The offer must be created in Play Console with eligibility
+// "Developer determined" and this exact tag — Play then only ever sells it when
+// the app explicitly asks for it by SubscriptionOption, which is what
+// `purchaseSubscriptionOption` below does once a code has been validated.
+//
+// Android only: `purchaseSubscriptionOption` is a no-op on iOS, and Apple has
+// no equivalent developer-gated offer for first-time subscribers (iOS buyers
+// are compensated with XP server-side instead — see /api/pro/activate).
+const AMBASSADOR_OFFER_TAG = "ambassador";
+
+// Find the discounted ambassador offer on a package, if Play is serving one.
+// Returns null on iOS/web, or when the offer hasn't been configured yet — the
+// caller then falls back to an undiscounted purchase.
+export function getAmbassadorOffer(pkg: RcPackage | null | undefined) {
+  if (!isAndroid || !pkg?._native) return null;
+  const options = (pkg._native.product as any)?.subscriptionOptions as
+    | Array<{ isBasePlan: boolean; tags?: string[] }>
+    | null
+    | undefined;
+  return options?.find((o) => !o.isBasePlan && o.tags?.includes(AMBASSADOR_OFFER_TAG)) ?? null;
+}
 
 function pickKey(v: unknown): string | null {
   return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
@@ -106,20 +135,26 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [customerInfo, setCustomerInfo] = useState<RcCustomerInfo | null>(null);
   const [hasProEntitlement, setHasProEntitlement] = useState(false);
+  const [hasPartnerEntitlement, setHasPartnerEntitlement] = useState(false);
   const [hasIndieDevEntitlement, setHasIndieDevEntitlement] = useState(false);
   const [packages, setPackages] = useState<RcPackage[] | null>(null);
+  const [partnerPackages, setPartnerPackages] = useState<RcPackage[] | null>(null);
   const [indieDevPackages, setIndieDevPackages] = useState<RcPackage[] | null>(null);
 
-  const isPro = hasProEntitlement || user?.isPro === true;
+  const isPartner = hasPartnerEntitlement || user?.isPartner === true;
+  const isPro = hasProEntitlement || user?.isPro === true || isPartner;
   const isIndieDevSubscriber = hasIndieDevEntitlement || user?.isIndieDevSubscriber === true;
 
-  const syncProStatusWithBackend = useCallback(async (proStatus: boolean) => {
+  const syncProStatusWithBackend = useCallback(async (proStatus: boolean, partnerStatus?: boolean) => {
     try {
       await fetch("/api/subscription/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ isPro: proStatus }),
+        body: JSON.stringify({
+          isPro: proStatus,
+          ...(partnerStatus !== undefined ? { isPartner: partnerStatus } : {}),
+        }),
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/upload/limits"] });
@@ -132,13 +167,25 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
   // activate endpoint. Unlike the trust-client /api/subscription/sync path, this
   // re-checks the entitlement with RevenueCat and persists revenuecatUserId +
   // the subscription end date. The webhook is the backstop if this call fails.
-  const activateProOnBackend = useCallback(async (appUserId: string) => {
+  const activateProOnBackend = useCallback(async (
+    appUserId: string,
+    ambassador?: { code: string; discountApplied: boolean },
+  ) => {
     try {
       await fetch("/api/pro/activate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ appUserId, platform }),
+        body: JSON.stringify({
+          appUserId,
+          platform,
+          // `ambassadorDiscountApplied` tells the server whether the store
+          // actually took money off, so it knows whether to grant the bonus-XP
+          // consolation instead.
+          ...(ambassador
+            ? { ambassadorCode: ambassador.code, ambassadorDiscountApplied: ambassador.discountApplied }
+            : {}),
+        }),
       });
       await queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/upload/limits"] });
@@ -170,8 +217,10 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       setIsInitialized(false);
       setCustomerInfo(null);
       setHasProEntitlement(false);
+      setHasPartnerEntitlement(false);
       setHasIndieDevEntitlement(false);
       setPackages(null);
+      setPartnerPackages(null);
       setIndieDevPackages(null);
       offeringsRef.current = null;
       return;
@@ -196,15 +245,23 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       setCustomerInfo(info);
       const pro = info.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined;
+      const partner = info.entitlements?.active?.[PARTNER_ENTITLEMENT_ID] !== undefined;
       const indieDev = info.entitlements?.active?.[INDIE_DEV_ENTITLEMENT_ID] !== undefined;
       setHasProEntitlement(pro);
+      setHasPartnerEntitlement(partner);
       setHasIndieDevEntitlement(indieDev);
       setPackages(pkgs);
       offeringsRef.current = rawOfferings;
+      const partnerOffering = PARTNER_OFFERING_IDS
+        .map((offeringId) => rawOfferings?.all?.[offeringId])
+        .find(Boolean);
+      setPartnerPackages(partnerOffering ? partnerOffering.availablePackages.map(normalize) : null);
       const indieDevOffering = rawOfferings?.all?.[INDIE_DEV_OFFERING_ID];
       setIndieDevPackages(indieDevOffering ? indieDevOffering.availablePackages.map(normalize) : null);
       setIsInitialized(true);
-      if (pro && !user.isPro) void syncProStatusWithBackend(true);
+      if ((pro || partner) && (!user.isPro || !user.isPartner)) {
+        void syncProStatusWithBackend(pro || partner, partner);
+      }
     };
 
     // Native (iOS/Android): real StoreKit / Play Billing via the Capacitor
@@ -270,22 +327,29 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
       }
       setCustomerInfo(info);
       const pro = info.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined;
+      const partner = info.entitlements?.active?.[PARTNER_ENTITLEMENT_ID] !== undefined;
       const indieDev = info.entitlements?.active?.[INDIE_DEV_ENTITLEMENT_ID] !== undefined;
       setHasProEntitlement(pro);
+      setHasPartnerEntitlement(partner);
       setHasIndieDevEntitlement(indieDev);
       // Only sync upward (RC grants Pro that DB doesn't know about).
       // Never revoke via this hook — Stripe/RC webhooks handle downgrades so
       // Stripe-managed subscribers aren't accidentally stripped of Pro every
       // time RevenueCat returns no entitlement.
-      if (pro && !user?.isPro) await syncProStatusWithBackend(true);
+      if ((pro || partner) && (!user?.isPro || !user?.isPartner)) {
+        await syncProStatusWithBackend(pro || partner, partner);
+      }
     } catch (error) {
       console.error("Failed to refresh customer info:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [user?.isPro, syncProStatusWithBackend]);
+  }, [user?.isPro, user?.isPartner, syncProStatusWithBackend]);
 
-  const purchasePackage = useCallback(async (pkg: RcPackage): Promise<boolean> => {
+  const purchasePackage = useCallback(async (
+    pkg: RcPackage,
+    opts?: { ambassadorCode?: string },
+  ): Promise<boolean> => {
     const notReady = () =>
       toast({
         title: "Not ready",
@@ -296,13 +360,21 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       let info: RcCustomerInfo;
+      // Set when Play actually sold the discounted ambassador offer.
+      let ambassadorOffer: ReturnType<typeof getAmbassadorOffer> = null;
       if (isNative) {
         if (!nativeConfiguredRef.current || !pkg._native) {
           notReady();
           return false;
         }
         const { Purchases } = await import("@revenuecat/purchases-capacitor");
-        const result = await Purchases.purchasePackage({ aPackage: pkg._native });
+        // With a validated ambassador code, buy the discounted Play offer
+        // rather than the base plan. Falls through to the normal purchase on
+        // iOS, or on Android if the offer isn't configured in Play Console.
+        ambassadorOffer = opts?.ambassadorCode ? getAmbassadorOffer(pkg) : null;
+        const result = ambassadorOffer
+          ? await Purchases.purchaseSubscriptionOption({ subscriptionOption: ambassadorOffer as any })
+          : await Purchases.purchasePackage({ aPackage: pkg._native });
         info = result.customerInfo as unknown as RcCustomerInfo;
       } else {
         const instance = webInstanceRef.current;
@@ -316,18 +388,27 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
 
       setCustomerInfo(info);
       const pro = info.entitlements?.active?.[PRO_ENTITLEMENT_ID] !== undefined;
-      if (pro) {
+      const partner = info.entitlements?.active?.[PARTNER_ENTITLEMENT_ID] !== undefined;
+      if (pro || partner) {
         setHasProEntitlement(true);
+        setHasPartnerEntitlement(partner);
         // Native purchases are server-verified via /api/pro/activate; web
         // (non-Stripe) purchases fall back to the sync endpoint.
         if (isNative && user?.id) {
-          await activateProOnBackend(`gamefolio_${user.id}`);
+          await activateProOnBackend(
+            `gamefolio_${user.id}`,
+            opts?.ambassadorCode
+              ? { code: opts.ambassadorCode, discountApplied: ambassadorOffer !== null }
+              : undefined,
+          );
         } else {
-          await syncProStatusWithBackend(true);
+          await syncProStatusWithBackend(true, partner);
         }
         toast({
-          title: "Welcome to Gamefolio Pro!",
-          description: "You now have access to all premium features.",
+          title: partner ? "Welcome, Streamer Partner!" : "Welcome to Gamefolio Pro!",
+          description: partner
+            ? "You now have all Pro perks plus Streamer Partner features."
+            : "You now have access to all premium features.",
           variant: "gamefolioSuccess",
         });
         return true;
@@ -425,6 +506,7 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
   }, [user?.id, user?.email, toast, activateIndieDevOnBackend]);
 
   const getCurrentOffering = useCallback((): RcPackage[] | null => packages, [packages]);
+  const getPartnerOffering = useCallback((): RcPackage[] | null => partnerPackages, [partnerPackages]);
   const getIndieDevOffering = useCallback((): RcPackage[] | null => indieDevPackages, [indieDevPackages]);
 
   return (
@@ -433,11 +515,13 @@ export function RevenueCatProvider({ children }: { children: ReactNode }) {
         isInitialized,
         isLoading,
         isPro,
+        isPartner,
         isIndieDevSubscriber,
         customerInfo,
         refreshCustomerInfo,
         purchasePackage,
         getCurrentOffering,
+        getPartnerOffering,
         getIndieDevOffering,
         purchaseIndieDevPackage,
       }}

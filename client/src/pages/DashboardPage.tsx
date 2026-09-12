@@ -198,12 +198,12 @@ interface DashboardData {
 
 /* ─── Design Tokens ─── */
 
-const DARK_BG = "#0B1218";
+const DARK_BG = "#0A0A10";
 const BORDER = "#1B2A33";
 const TEXT_PRIMARY = "#F5F7F2";
 const TEXT_MUTED = "#B8C0AE";
-const ACCENT = "#B7FF1A";
-const ACCENT_DARK = "#071013";
+const ACCENT = "#B7FF18";
+const ACCENT_DARK = "#0A0A10";
 
 function formatRank(rank: number | null | undefined): string {
   return typeof rank === "number" && Number.isFinite(rank) && rank > 0
@@ -474,8 +474,8 @@ function getLeagueGradient(league: string) {
     case "Platinum": return "linear-gradient(90deg, #0288D1, #4FC3F7, #E1F5FE)";
     case "Onyx":     return "linear-gradient(90deg, #2E1065, #8B5CF6, #C4B5FD)";
     case "Diamond":  return "linear-gradient(90deg, #6366F1, #E0E7FF, #FFFFFF)";
-    case "Champion": return "linear-gradient(90deg, #3F6212, #B7FF1A, #FEF08A)";
-    default:         return "linear-gradient(90deg, #B7FF1A, #D9FF80)";
+    case "Champion": return "linear-gradient(90deg, #3F6212, #B7FF18, #FEF08A)";
+    default:         return "linear-gradient(90deg, #B7FF18, #D9FF80)";
   }
 }
 
@@ -486,7 +486,7 @@ const LEAGUE_MESH_COLORS: Record<string, [string, string, string]> = {
   Platinum: ["#4FC3F7", "#0288D1", "#E1F5FE"],
   Onyx:     ["#8B5CF6", "#2E1065", "#C4B5FD"],
   Diamond:  ["#E0E7FF", "#6366F1", "#FFFFFF"],
-  Champion: ["#B7FF1A", "#3F6212", "#FEF08A"],
+  Champion: ["#B7FF18", "#3F6212", "#FEF08A"],
 };
 
 function getLeagueMeshBackground(league: string): React.CSSProperties {

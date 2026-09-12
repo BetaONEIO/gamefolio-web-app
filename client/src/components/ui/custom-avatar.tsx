@@ -390,6 +390,7 @@ interface CustomAvatarProps {
   showLiveOverlay?: boolean;
   isLive?: boolean;
   themeColor?: string;
+  borderImageOverride?: string;
   onNftClick?: (userId: number, tokenId: number, imageUrl: string, event: React.MouseEvent) => void;
   onClick?: (event: React.MouseEvent) => void;
 }
@@ -449,6 +450,7 @@ export const CustomAvatar = ({
   showLiveOverlay = false,
   isLive: isLiveProp,
   themeColor,
+  borderImageOverride,
   onNftClick,
   onClick
 }: CustomAvatarProps) => {
@@ -487,12 +489,13 @@ export const CustomAvatar = ({
   });
 
   const avatarBorder = borderData?.avatarBorder;
-  const hasTowerdogBorder = avatarBorder?.sourcePath === "red_blue_pixel_waves";
-  const activeBorderImageUrl = hasTowerdogBorder
-    ? TOWERDOG_PROFILE_BORDER_URL
-    : avatarBorder?.imageUrl;
+  const hasTowerdogBorder = !!borderImageOverride || avatarBorder?.sourcePath === "red_blue_pixel_waves";
+  const activeBorderImageUrl = borderImageOverride
+    || (hasTowerdogBorder ? TOWERDOG_PROFILE_BORDER_URL : avatarBorder?.imageUrl);
   const hasAvatarBorderOverlay = showAvatarBorderOverlay && !!activeBorderImageUrl;
-  const hasSolidBorder = showAvatarBorderOverlay && (avatarBorder?.id === -1 || effectiveBorderId === -1);
+  const hasSolidBorder = !borderImageOverride
+    && showAvatarBorderOverlay
+    && (avatarBorder?.id === -1 || effectiveBorderId === -1);
   const rasterBorderCalibration = avatarBorder
     ? getRasterBorderCalibration(avatarBorder)
     : undefined;

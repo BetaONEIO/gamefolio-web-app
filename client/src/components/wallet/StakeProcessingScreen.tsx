@@ -61,9 +61,9 @@ export default function StakeProcessingScreen({
       return (
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center"
-          style={{ background: "#B7FF1A" }}
+          style={{ background: "#B7FF18" }}
         >
-          <Check className="w-5 h-5" style={{ color: "#071013" }} />
+          <Check className="w-5 h-5" style={{ color: "#0A0A10" }} />
         </div>
       );
     }
@@ -71,9 +71,9 @@ export default function StakeProcessingScreen({
       return (
         <div
           className="w-8 h-8 rounded-full flex items-center justify-center"
-          style={{ background: "rgba(183, 255, 26, 0.2)", border: "2px solid #B7FF1A" }}
+          style={{ background: "rgba(183, 255, 26, 0.2)", border: "2px solid #B7FF18" }}
         >
-          <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#B7FF1A" }} />
+          <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#B7FF18" }} />
         </div>
       );
     }
@@ -88,7 +88,7 @@ export default function StakeProcessingScreen({
   };
 
   const getConnectorColor = (currentStatus: StepStatus, nextStatus: StepStatus) => {
-    if (currentStatus === "completed" && nextStatus === "completed") return "#B7FF1A";
+    if (currentStatus === "completed" && nextStatus === "completed") return "#B7FF18";
     if (currentStatus === "completed") return "rgba(183, 255, 26, 0.3)";
     return "rgba(30, 41, 59, 0.5)";
   };
@@ -96,7 +96,7 @@ export default function StakeProcessingScreen({
   return (
     <div
       className="flex flex-col w-full"
-      style={{ background: "#0B1218", fontFamily: "Plus Jakarta Sans, sans-serif", height: "100dvh" }}
+      style={{ background: "#0A0A10", fontFamily: "Plus Jakarta Sans, sans-serif", height: "100dvh" }}
     >
       {/* Header */}
       <div
@@ -121,7 +121,7 @@ export default function StakeProcessingScreen({
             className="w-10 h-10 rounded-full flex items-center justify-center"
             style={{ background: "#1B2A33", border: "1px solid #1B2A33" }}
           >
-            <Info className="w-6 h-6" style={{ color: "#B7FF1A" }} />
+            <Info className="w-6 h-6" style={{ color: "#B7FF18" }} />
           </button>
         </div>
       </div>
@@ -153,14 +153,14 @@ export default function StakeProcessingScreen({
           <div
             className="relative w-32 h-32 rounded-full flex items-center justify-center"
             style={{
-              background: "#0B1218",
-              border: "4px solid #B7FF1A",
+              background: "#0A0A10",
+              border: "4px solid #B7FF18",
               boxShadow: "0 8px 25px -5px rgba(0, 0, 0, 0.1)",
             }}
           >
             <span
               className="text-4xl font-black tracking-tight"
-              style={{ color: "#B7FF1A", letterSpacing: "-1.8px" }}
+              style={{ color: "#B7FF18", letterSpacing: "-1.8px" }}
             >
               GFT
             </span>
@@ -189,7 +189,7 @@ export default function StakeProcessingScreen({
                 <span
                   className="text-sm font-bold transition-colors duration-300"
                   style={{
-                    color: step.status === "active" ? "#B7FF1A" : step.status === "completed" ? "#F5F7F2" : "#B8C0AE",
+                    color: step.status === "active" ? "#B7FF18" : step.status === "completed" ? "#F5F7F2" : "#B8C0AE",
                   }}
                 >
                   {step.title}
@@ -207,7 +207,7 @@ export default function StakeProcessingScreen({
         {/* Transaction Info Card */}
         <div
           className="flex flex-col gap-3 p-5 rounded-2xl w-full max-w-[382px]"
-          style={{ background: "#0B1218", border: "1px solid rgba(30, 41, 59, 0.5)" }}
+          style={{ background: "#0A0A10", border: "1px solid rgba(30, 41, 59, 0.5)" }}
         >
           <div className="flex items-center justify-between">
             <span
@@ -216,7 +216,7 @@ export default function StakeProcessingScreen({
             >
               Transaction Type
             </span>
-            <span className="text-sm font-bold" style={{ color: "#B7FF1A" }}>
+            <span className="text-sm font-bold" style={{ color: "#B7FF18" }}>
               Staking GFT
             </span>
           </div>

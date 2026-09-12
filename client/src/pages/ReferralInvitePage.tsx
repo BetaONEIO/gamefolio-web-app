@@ -97,7 +97,7 @@ export default function ReferralInvitePage() {
               style={{ filter: "drop-shadow(0 0 20px rgba(183,255,26,0.35))" }}
             >
               <div className="w-24 h-24 rounded-full overflow-hidden border-2 flex items-center justify-center"
-                style={{ borderColor: "#B7FF1A" }}>
+                style={{ borderColor: "#B7FF18" }}>
                 {inviter?.avatarUrl ? (
                   <img
                     src={inviter.avatarUrl}
@@ -110,7 +110,7 @@ export default function ReferralInvitePage() {
                 ) : (
                   <div
                     className="w-full h-full flex items-center justify-center text-3xl font-bold"
-                    style={{ background: "rgba(183,255,26,0.15)", color: "#B7FF1A" }}
+                    style={{ background: "rgba(183,255,26,0.15)", color: "#B7FF18" }}
                   >
                     {initial}
                   </div>
@@ -122,7 +122,7 @@ export default function ReferralInvitePage() {
             <h1 className="text-white text-2xl font-bold mb-1 leading-tight">
               {displayName}
             </h1>
-            <p className="text-sm mb-1" style={{ color: "#B7FF1A" }}>
+            <p className="text-sm mb-1" style={{ color: "#B7FF18" }}>
               @{inviter?.username}
             </p>
             <p className="text-muted-foreground text-sm mb-6">
@@ -134,7 +134,7 @@ export default function ReferralInvitePage() {
               onClick={handleJoin}
               size="lg"
               className="w-full rounded-full font-bold text-base py-6 text-black"
-              style={{ background: "#B7FF1A" }}
+              style={{ background: "#B7FF18" }}
             >
               Accept Invite &amp; Join Free
             </Button>
@@ -160,7 +160,7 @@ export default function ReferralInvitePage() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-white/70"
               style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
             >
-              <Icon className="h-3.5 w-3.5" style={{ color: "#B7FF1A" }} />
+              <Icon className="h-3.5 w-3.5" style={{ color: "#B7FF18" }} />
               {label}
             </div>
           ))}

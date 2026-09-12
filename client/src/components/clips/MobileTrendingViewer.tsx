@@ -95,7 +95,7 @@ function ScreenshotScrollItem({ item }: { item: ScreenshotWithUser }) {
         />
       ) : (
         <div className="w-full h-full bg-black flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-[#B7FF1A] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-[#B7FF18] border-t-transparent rounded-full animate-spin" />
         </div>
       )}
     </div>
@@ -341,7 +341,7 @@ export function MobileTrendingViewer({ content: rawContent, initialIndex = 0, on
     <div
       ref={containerRef}
       className={embedded ? "relative w-full h-full overflow-hidden" : "fixed top-0 left-0 right-0 z-[9999] overflow-hidden"}
-      style={{ background: '#0B1218', bottom: embedded ? undefined : 'var(--mobile-nav-height, 4rem)' }}
+      style={{ background: '#0A0A10', bottom: embedded ? undefined : 'var(--mobile-nav-height, 4rem)' }}
       data-testid="mobile-trending-viewer"
     >
       {/* ── Scroll-snap content stack ─────────────────────────────────────── */}
@@ -412,7 +412,7 @@ export function MobileTrendingViewer({ content: rawContent, initialIndex = 0, on
                       className="flex-shrink-0 no-underline"
                       data-testid={`link-user-${item.user.username}`}
                     >
-                      <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid #B7FF1A' }}>
+                      <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0" style={{ border: '2px solid #B7FF18' }}>
                         <AuthorAvatar
                           avatarUrl={item.user.avatarUrl}
                           displayName={item.user.displayName}
@@ -434,7 +434,7 @@ export function MobileTrendingViewer({ content: rawContent, initialIndex = 0, on
                         onClick={handleFollowPress}
                         disabled={followMutation.isPending}
                         className="text-[12px] font-bold px-3 py-1 rounded-full flex-shrink-0 transition-all"
-                        style={{ background: '#B7FF1A', color: '#071013' }}
+                        style={{ background: '#B7FF18', color: '#0A0A10' }}
                       >
                         {followMutation.isPending ? '…' : 'Follow'}
                       </button>
@@ -479,8 +479,8 @@ export function MobileTrendingViewer({ content: rawContent, initialIndex = 0, on
                       data-testid={`link-game-${item.game.id ?? item.game.name}`}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
-                      <span className="text-[11px] font-semibold underline-offset-2 hover:underline" style={{ color: '#B7FF1A' }}>
+                      <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF18' }} />
+                      <span className="text-[11px] font-semibold underline-offset-2 hover:underline" style={{ color: '#B7FF18' }}>
                         {item.game.name}
                       </span>
                     </Link>
@@ -630,7 +630,7 @@ export function MobileTrendingViewer({ content: rawContent, initialIndex = 0, on
             style={{
               bottom: keyboardHeight,
               height: '70%',
-              background: '#0B1218',
+              background: '#0A0A10',
               borderRadius: '20px 20px 0 0',
               display: 'flex',
               flexDirection: 'column',

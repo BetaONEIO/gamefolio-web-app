@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
   // Without this the native WebView background defaults to black, which flashed
   // through as a "random black area" at the top whenever iOS rubber-band
   // overscrolled or applied its content inset.
-  backgroundColor: '#0B1218',
+  backgroundColor: '#0A0A10',
   ios: {
     // The overlaid status bar + CSS env(safe-area-inset-*) own the top spacing
     // (Header.tsx applies .safe-area-top, full-screen viewers use env() too).
@@ -17,11 +17,11 @@ const config: CapacitorConfig = {
     // bar. 'never' lets the CSS safe-area handle it once, so bg-card paints
     // right up to the status bar with no band.
     contentInset: 'never',
-    backgroundColor: '#0B1218',
+    backgroundColor: '#0A0A10',
   },
   android: {
     allowMixedContent: false,
-    backgroundColor: '#0B1218',
+    backgroundColor: '#0A0A10',
   },
   server: {
     androidScheme: 'https',
@@ -39,7 +39,7 @@ const config: CapacitorConfig = {
     },
     SplashScreen: {
       launchShowDuration: 1500,
-      backgroundColor: '#101D27',
+      backgroundColor: '#0A0A10',
       showSpinner: false,
       splashFullScreen: true,
       splashImmersive: true,

@@ -1,11 +1,13 @@
 export const DEFAULT_PROFILE_THEME = {
-  backgroundColor: "#0F101B",
-  primaryColor: "#0F101B",
+  backgroundColor: "#0A0A10",
+  primaryColor: "#0A0A10",
   bannerColor: "#171A27",
   cardColor: "#1A1D2B",
   accentColor: "#B7FF18",
   avatarBorderColor: "#B7FF18",
 } as const;
+
+export const TOWERDOG_REFERRAL_CODE = "TOWER";
 
 export type ProfileThemeRarity = "starter" | "rare" | "epic" | "legendary";
 export type ProfileThemeAnimation =
@@ -62,6 +64,8 @@ export interface ProfileThemeDefinition {
   };
   proOnly?: boolean;
   unlockRewardName?: string;
+  unlockRewardSourcePath?: string;
+  unlockReferralCode?: string;
   light?: boolean;
   fontFamily?: string;
 }
@@ -133,6 +137,23 @@ const starterTheme = makeTheme({
 const THEME_SPECS: ThemeSpec[] = [
   // Existing themes, retained for backwards compatibility.
   starterTheme,
+  {
+    slug: "towerdog_pixel_surge",
+    name: "Towerdog Pixel Surge",
+    description: "A dark pixel arena with an animated red-and-blue surge.",
+    rarity: "legendary",
+    backgroundColor: "#060A1C",
+    primaryColor: "#0B1230",
+    accentColor: "#FF315C",
+    avatarBorderColor: "#2176FF",
+    patternCss: "none",
+    animation: "drift",
+    previewGlyph: "▰",
+    fontFamily: "'JetBrains Mono', monospace",
+    unlockRewardName: "Towerdog Pixel Surge",
+    unlockRewardSourcePath: "towerdog_pixel_surge",
+    unlockReferralCode: TOWERDOG_REFERRAL_CODE,
+  },
   { slug: "cutesy-pink", name: "Cutesy Pink", description: "Soft candy tones with an arcade-heart glow.", rarity: "epic", backgroundColor: "#fce7f3", primaryColor: "#4a0022", accentColor: "#ff2056", avatarBorderColor: "#ff2056", patternCss: "radial-gradient(circle at 20% 20%, #fff 0 2px, transparent 3px), radial-gradient(circle at 80% 70%, #ff78a022 0 18%, transparent 19%)", animation: "drift", previewGlyph: "♡", proOnly: true, light: true },
   { slug: "zombie", name: "Zombie", description: "Toxic green over a midnight survival bunker.", rarity: "epic", backgroundColor: "#0a0c0a", primaryColor: "#0d1a00", accentColor: "#9ae600", avatarBorderColor: "#9ae600", patternCss: "repeating-linear-gradient(105deg, transparent 0 12px, #9ae60012 13px 14px)", animation: "flicker", previewGlyph: "☣", proOnly: true },
   { slug: "cyberpunk", name: "Cyberpunk", description: "Neon city light, cyan edges, and magenta signal noise.", rarity: "epic", backgroundColor: "#020617", primaryColor: "#0a0e1a", accentColor: "#00d3f2", avatarBorderColor: "#00d3f2", patternCss: "linear-gradient(90deg, transparent 49%, #00d3f220 50%, transparent 51%), linear-gradient(0deg, transparent 49%, #e12afb18 50%, transparent 51%)", animation: "pulse", previewGlyph: "⌁", proOnly: true, fontFamily: "'Orbitron', sans-serif" },
@@ -169,7 +190,7 @@ const THEME_SPECS: ThemeSpec[] = [
   { slug: "pirate", name: "Pirate", description: "Salt air, treasure maps, and a gold doubloon shine.", rarity: "rare", backgroundColor: "#101d2a", primaryColor: "#20354a", accentColor: "#f5c451", avatarBorderColor: "#f5c451", patternCss: "repeating-linear-gradient(25deg, transparent 0 18px, #f5c45112 19px 21px), radial-gradient(circle at 80% 20%, #f5c45120 0 12%, transparent 13%)", animation: "drift", previewGlyph: "⚓" },
   { slug: "apocalypse", name: "Apocalypse", description: "Dusty skies, rusted metal, and a last-player-standing mood.", rarity: "epic", backgroundColor: "#1d1512", primaryColor: "#38241b", accentColor: "#e06b3c", avatarBorderColor: "#e06b3c", patternCss: "linear-gradient(155deg, transparent 0 40%, #e06b3c18 41% 42%, transparent 43%), radial-gradient(ellipse at 50% 100%, #e06b3c1a, transparent 55%)", animation: "flicker", previewGlyph: "☢" },
   { slug: "western", name: "Western", description: "Sunset dust and a frontier badge for lone wolves.", rarity: "rare", backgroundColor: "#2a1710", primaryColor: "#4b2918", accentColor: "#f4b860", avatarBorderColor: "#f4b860", patternCss: "linear-gradient(180deg, #f4b86033, transparent 40%), repeating-linear-gradient(90deg, transparent 0 22px, #f4b8600c 23px 24px)", animation: "drift", previewGlyph: "★" },
-  { slug: "samurai", name: "Samurai", description: "Ink-black calm crossed by a single crimson slash.", rarity: "epic", backgroundColor: "#100b10", primaryColor: "#21131b", accentColor: "#e7354b", avatarBorderColor: "#e7354b", patternCss: "linear-gradient(155deg, transparent 0 47%, #e7354b44 48% 50%, transparent 51%), radial-gradient(circle at 10% 10%, #ffffff12, transparent 20%)", animation: "none", previewGlyph: "刀" },
+  { slug: "samurai", name: "Samurai", description: "Ink-black calm crossed by a single crimson slash.", rarity: "epic", backgroundColor: "#100b10", primaryColor: "#21131b", accentColor: "#e7354b", avatarBorderColor: "#e7354b", patternCss: "linear-gradient(155deg, transparent 0 47%, #e7354b44 48% 50%, transparent 51%)", animation: "none", previewGlyph: "刀" },
   { slug: "viking", name: "Viking", description: "Cold iron, northern water, and a storm-ready shield.", rarity: "epic", backgroundColor: "#0e1b22", primaryColor: "#183744", accentColor: "#83d0c4", avatarBorderColor: "#d5a74a", patternCss: "linear-gradient(60deg, transparent 42%, #83d0c422 43% 45%, transparent 46%), radial-gradient(circle at 80% 20%, #d5a74a22, transparent 24%)", animation: "drift", previewGlyph: "ᛟ" },
   { slug: "mythic", name: "Mythic", description: "A gilded fantasy aura for stories worth retelling.", rarity: "legendary", backgroundColor: "#170f2b", primaryColor: "#302052", accentColor: "#f4d35e", avatarBorderColor: "#d59cff", patternCss: "radial-gradient(circle at 50% 50%, #f4d35e22 0 3%, transparent 4% 22%, #d59cff18 23% 24%, transparent 25%)", animation: "pulse", previewGlyph: "✦" },
   { slug: "underworld", name: "Underworld", description: "Deep crimson, smoke, and a portal below.", rarity: "legendary", backgroundColor: "#160609", primaryColor: "#320b13", accentColor: "#ff496b", avatarBorderColor: "#a855f7", patternCss: "radial-gradient(ellipse at 50% 100%, #ff496b33, transparent 50%), radial-gradient(circle at 50% 100%, transparent 0 18%, #a855f722 19% 20%, transparent 21%)", animation: "pulse", previewGlyph: "◉" },
@@ -197,7 +218,7 @@ export const PROFILE_THEMES: ProfileThemeDefinition[] = THEME_SPECS.map((spec) =
 export const PROFILE_THEME_BY_SLUG = new Map(PROFILE_THEMES.map((theme) => [theme.slug, theme]));
 
 const LEGACY_DEFAULT_BACKGROUNDS = new Set(["#0b2232", "#121f2b", "#071013"]);
-const LEGACY_DEFAULT_ACCENTS = new Set(["#b7ff1a", "#4ade80"]);
+const LEGACY_DEFAULT_ACCENTS = new Set(["#b7ff1a", "#4ade80", "#4c8"]);
 const LEGACY_DEFAULT_PRIMARY_COLORS = new Set(["#02172c", "#071013", "#0b1218"]);
 const LEGACY_DEFAULT_CARD_COLORS = new Set(["#1e3a8a"]);
 const LEGACY_DEFAULT_AVATAR_BORDERS = new Set(["#4ade80", "#b7ff1a"]);

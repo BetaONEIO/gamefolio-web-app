@@ -33,6 +33,9 @@ import { users, nameTags, profileBorders, verificationBadges, storeItems, heroSl
 import { hasIndieDeveloperAccess } from "@shared/partner-access";
 import { getPublicSeasonNumber, SEASON_DEFS } from "@shared/season-definitions";
 import { getLeaderboardRewardsForSeason } from "@shared/leaderboard-rewards";
+import { alwaysRequiresOnboarding } from "@shared/onboarding";
+import { TOWERDOG_REFERRAL_CODE } from "@shared/profile-theme";
+import { reconcileExpiredOrphanedPro } from "./services/pro-entitlement-reconciliation";
 
 const SEASONAL_ANNOUNCEMENT_ID = "summer_2026_end_autumn_2026_launch";
 const SUMMER_SEASON_NUMBER = 8;
@@ -222,6 +225,7 @@ import authRouter from "./routes/auth-routes";
 import tokenAuthRouter from "./routes/token-auth";
 import { JWTService } from "./services/jwt-service";
 import uploadRouter, { parseScheduledAt } from "./routes/upload";
+import aiVodClipsRouter from "./routes/ai-vod-clips";
 import scheduledPostsRouter from "./routes/scheduled-posts";
 import migrationRouter from "./routes/migration";
 import viewRouter from "./routes/view";
@@ -2470,7 +2474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate referral code if provided
       let referringUser: { id: number } | null = null;
-      if (usedReferralCode) {
+      if (usedReferralCode === TOWERDOG_REFERRAL_CODE) {
         const foundReferrer = await storage.getUserByReferralCode(usedReferralCode);
         if (!foundReferrer) {
           return res.status(400).json({ message: "Invalid referral code" });
@@ -2487,7 +2491,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         referringUser = { id: foundReferrer.id };
       }
 
-      // Create user — referralCode is always server-generated; referredBy records which code was used at signup
+      // Create user — referralCode is always server-generated. Keep an
+      // immutable signup copy for referral-gated collection items; referredBy
+      // remains the mutable compatibility field used by referral stats.
       // storage.createUser() hashes the password itself (like every other
       // caller here - OAuth/admin paths), so pass it through in plain text.
       // signupIp/signupDeviceId are server-derived (never from parsed client
@@ -2499,9 +2505,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: userData.email.toLowerCase(),
         emailVerified: false,
         ...(usedReferralCode && { referredBy: usedReferralCode }),
+        ...(usedReferralCode && { originalSignupReferralCode: usedReferralCode }),
         signupIp,
         signupDeviceId,
       });
+
+      // Referral-gated collection items are granted once, at signup. This
+      // never equips the theme and deliberately does not run in
+      // /api/user/apply-referral.
+      if (usedReferralCode) {
+        try {
+          const towerdogReward = (await storage.getAllAssetRewards())
+            .find((reward) => reward.sourcePath === "towerdog_pixel_surge");
+          if (towerdogReward) {
+            await storage.createAssetRewardClaim({
+              rewardId: towerdogReward.id,
+              userId: user.id,
+            });
+          }
+        } catch (entitlementError) {
+          console.error("Failed to grant Towerdog referral collection item:", entitlementError);
+        }
+      }
 
       // Generate verification code and store it in the database
       const verificationCode = await createVerificationCode(user.id);
@@ -2998,7 +3023,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const freshUser = await storage.getUserById(authenticatedUserId);
       if (freshUser) {
         const { password, ...u } = freshUser as any;
-        if (u.username === 'busyguy') {
+        if (u.username === 'busyguy' || alwaysRequiresOnboarding(u.username)) {
           u.userType = null;
           u.ageRange = null;
         }
@@ -3063,7 +3088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           profileFontAnimation: u.profileFontAnimation || 'none',
           profileFontColor: u.profileFontColor || '#FFFFFF',
           cardColor: u.cardColor || '#1A1D2B',
-          primaryColor: u.primaryColor || '#0F101B',
+          primaryColor: u.primaryColor || '#0A0A10',
           avatarBorderColor: u.avatarBorderColor || '#B7FF18',
           hideBanner: u.hideBanner || false,
           statsGlassEffect: u.statsGlassEffect || false,
@@ -7679,6 +7704,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      if (finalThemeName === "towerdog_pixel_surge") {
+        const towerdogReward = (await storage.getAllAssetRewards())
+          .find((reward) => reward.sourcePath === "towerdog_pixel_surge");
+        const currentUser = await storage.getUser(userId);
+        const originalSignupReferralCode = currentUser?.originalSignupReferralCode
+          ?.trim()
+          .toUpperCase();
+        const hasTowerdogSignupReferral = originalSignupReferralCode === TOWERDOG_REFERRAL_CODE;
+        const hasTowerdogReward = !!towerdogReward &&
+          await storage.userHasUnlockedReward(userId, towerdogReward.id);
+        if (!hasTowerdogSignupReferral && !hasTowerdogReward) {
+          return res.status(403).json({
+            message: "The Towerdog Pixel Surge theme is unlocked only by using a referral code during signup."
+          });
+        }
+      }
+
       // Guard against stale banner overwrites: uploaded-banner activation goes
       // through PUT /api/user/banners/:id/activate. If the PATCH carries a
       // bannerUrl that matches one of the user's *inactive* uploaded banners,
@@ -8780,7 +8822,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       type FeedItem = {
         id: string;
-        kind: 'xp' | 'streak' | 'trending' | 'levelup';
+        kind: 'xp' | 'bolt' | 'streak' | 'trending' | 'levelup';
         username: string;
         text: string;
         timestamp?: string | null;
@@ -8797,12 +8839,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (source === 'upload')         text = `${name} earned +${xp} XP from uploading`;
         else if (source === 'daily_login') text = `${name} earned +${xp} XP daily login bonus`;
         else if (source === 'like_received') text = `${name} earned +${xp} XP from likes`;
-        else if (source === 'fire_received') text = `${name} earned +${xp} XP from fire reactions`;
+        else if (source === 'fire_received') text = `${name} earned +${xp} XP from Bolt`;
         else if (source === 'welcome_bonus') text = `${name} earned +${xp} XP welcome bonus`;
         else text = `${name} earned +${xp} XP`;
         activities.push({
           id: `xp-${row.id}`,
-          kind: 'xp',
+          kind: source === 'fire_received' ? 'bolt' : 'xp',
           username: row.username,
           text,
           timestamp: row.created_at ? new Date(row.created_at).toISOString() : null,
@@ -11324,7 +11366,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Let the frontend handle demo user follow state via localStorage
       if (followerId === 999 || followingUser.id === 999) {
         // Return false to let frontend handle demo state via localStorage  
-        return res.json({ following: false, requested: false });
+        return res.json({
+          status: "not_following",
+          following: false,
+          requested: false,
+        });
       }
 
       // Check if following
@@ -11337,7 +11383,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         hasRequest = requestStatus === 'pending';
       }
 
-      res.json({ following: isFollowing, requested: hasRequest });
+      res.json({
+        status: isFollowing ? "following" : hasRequest ? "requested" : "not_following",
+        following: isFollowing,
+        requested: hasRequest,
+      });
     } catch (err) {
       captureRouteError(err);
       console.error("Error checking follow status:", err);
@@ -13746,15 +13796,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const result = await storage.getIndieGameProfilesByUsername(req.params.username);
       if (!result) return res.status(404).json({ error: "Indie game profile not found" });
-      res.json({
-        games: result.profiles.map(p => ({
+      const games = await Promise.all(result.profiles.map(async (p) => {
+        const catalogGame = p.catalogGameId ? await storage.getGame(p.catalogGameId) : null;
+        const catalogueId = p.catalogGameId;
+        const rowsOf = (queryResult: any): any[] => queryResult.rows ?? queryResult ?? [];
+        const [contentResult, analyticsResult] = catalogueId
+          ? await Promise.all([
+            db.execute(sql`
+              SELECT
+                (
+                  SELECT COUNT(*) FROM clips
+                  WHERE game_id = ${catalogueId} AND user_id <> ${result.user.id}
+                ) + (
+                  SELECT COUNT(*) FROM screenshots
+                  WHERE game_id = ${catalogueId} AND user_id <> ${result.user.id}
+                ) AS uploads,
+                (
+                  SELECT COALESCE(SUM(views), 0) FROM clips
+                  WHERE game_id = ${catalogueId} AND user_id <> ${result.user.id}
+                ) + (
+                  SELECT COALESCE(SUM(views), 0) FROM screenshots
+                  WHERE game_id = ${catalogueId} AND user_id <> ${result.user.id}
+                ) AS views
+            `),
+            db.execute(sql`
+              SELECT
+                COUNT(*) FILTER (
+                  WHERE event_type = 'game_page_view'
+                    AND created_at >= NOW() - INTERVAL '30 days'
+                )::int AS "pageViews",
+                COUNT(*) FILTER (
+                  WHERE event_type = 'game_store_click'
+                    AND created_at >= NOW() - INTERVAL '30 days'
+                )::int AS "storeClicks"
+              FROM indie_game_analytics_events
+              WHERE profile_id = ${p.id}
+            `),
+          ])
+          : [null, null];
+        const contentRow = contentResult ? rowsOf(contentResult)[0] : null;
+        const analyticsRow = analyticsResult ? rowsOf(analyticsResult)[0] : null;
+        const title = catalogGame?.name ?? p.gameName ?? "untitled-game";
+        const gameSlug = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "untitled-game";
+        return {
           id: p.id,
           catalogGameId: p.catalogGameId,
+          gameSlug,
           gameName: p.gameName,
           headerImageUrl: p.headerImageUrl,
           capsuleImageUrl: p.capsuleImageUrl,
           isPrimary: p.isPrimary,
-        })),
+          isFeatured: p.isPrimary,
+          releaseStatus: p.releaseStatus,
+          releaseDate: p.releaseDate,
+          shortDescription: p.shortDescription,
+          fullDescription: p.fullDescription,
+          genres: p.genres,
+          platforms: p.platforms,
+          steamUrl: p.steamUrl,
+          epicUrl: p.epicUrl,
+          itchUrl: p.itchUrl,
+          pageViews: Number(analyticsRow?.pageViews ?? 0),
+          contentViews: Number(contentRow?.views ?? 0),
+          storeClicks: Number(analyticsRow?.storeClicks ?? 0),
+          communityPosts: Number(contentRow?.uploads ?? 0),
+          catalogGameName: catalogGame?.name ?? null,
+          catalogImageUrl: catalogGame?.imageUrl ?? null,
+        };
+      }));
+      const primaryProfile = result.profiles.find((profile) => profile.isPrimary) ?? result.profiles[0];
+      res.json({
+        games,
+        studio: {
+          studioWebsite: primaryProfile?.studioWebsite ?? null,
+          websiteUrl: primaryProfile?.websiteUrl ?? null,
+          discordUrl: primaryProfile?.discordUrl ?? null,
+          twitterUrl: primaryProfile?.twitterUrl ?? null,
+          youtubeUrl: primaryProfile?.youtubeUrl ?? null,
+          steamUrl: primaryProfile?.steamUrl ?? null,
+        },
       });
     } catch (err) {
       console.error("GET /api/games/indie/:username/list error:", err);
@@ -16406,6 +16526,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount upload routes
   app.use('/api/upload', uploadRouter);
 
+  // Mount AI VOD-clip generation routes (POC)
+  app.use('/api/ai-vod-clips', aiVodClipsRouter);
+
   // Mount scheduled posts routes
   app.use('/api/scheduled-posts', scheduledPostsRouter);
 
@@ -18897,7 +19020,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/subscription/sync", authMiddleware, async (req, res) => {
     try {
       const userId = (req.user as any).id;
-      const { isPro } = req.body;
+      const { isPro, isPartner } = req.body;
 
       if (typeof isPro !== "boolean") {
         return res.status(400).json({ message: "Invalid isPro value" });
@@ -18915,35 +19038,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // client so a misconfigured server never blocks a legitimate purchase.
       let verifiedPlan: 'monthly' | 'yearly' | undefined;
       let verifiedEndDate: Date | undefined;
-      if (isPro && process.env.REVENUECAT_API_KEY) {
+      const partnerFlag = typeof isPartner === "boolean" ? isPartner : undefined;
+      if ((isPro || partnerFlag === true) && process.env.REVENUECAT_API_KEY) {
         try {
           const rcData = await fetchRevenueCatSubscriber(`gamefolio_${userId}`);
           const entitlement = rcData?.subscriber?.entitlements?.[PRO_ENTITLEMENT_ID];
-          if (!isEntitlementActive(entitlement)) {
+          const partnerEntitlement = rcData?.subscriber?.entitlements?.streamer_partner;
+          if (!isEntitlementActive(entitlement) && !isEntitlementActive(partnerEntitlement)) {
             return res.status(403).json({ message: "No active Pro entitlement found" });
           }
-          verifiedPlan = parsePlanFromEntitlement(entitlement);
-          verifiedEndDate = getEndDateFromEntitlement(entitlement);
+          const activeEntitlement = isEntitlementActive(partnerEntitlement) ? partnerEntitlement : entitlement;
+          verifiedPlan = parsePlanFromEntitlement(activeEntitlement);
+          verifiedEndDate = getEndDateFromEntitlement(activeEntitlement);
         } catch (err: any) {
           console.warn(`[subscription/sync] RevenueCat verification unavailable, trusting client: ${err?.message}`);
         }
       }
 
       // Update user's Pro status in database
+      const effectiveIsPro = isPro || partnerFlag === true;
       await db.update(users).set({
-        isPro,
-        ...(isPro ? { revenuecatUserId: `gamefolio_${userId}` } : {}),
-        ...(verifiedPlan ? { proSubscriptionType: verifiedPlan } : {}),
-        ...(verifiedEndDate ? { proSubscriptionEndDate: verifiedEndDate } : {}),
+        isPro: effectiveIsPro,
+        ...(partnerFlag !== undefined ? { isPartner: partnerFlag } : {}),
+        ...(effectiveIsPro ? { revenuecatUserId: `gamefolio_${userId}` } : {}),
+        ...(effectiveIsPro && verifiedPlan ? { proSubscriptionType: verifiedPlan } : {}),
+        ...(effectiveIsPro && verifiedEndDate ? { proSubscriptionEndDate: verifiedEndDate } : {}),
         updatedAt: new Date()
       }).where(eq(users.id, userId));
 
-      console.log(`✅ Updated Pro status for user ${userId}: ${isPro}`);
+      console.log(`✅ Updated subscription for user ${userId}: isPro=${effectiveIsPro}${partnerFlag !== undefined ? `, isPartner=${partnerFlag}` : ""}`);
 
       let lootboxReward = null;
 
       // If user is becoming Pro for the first time, grant initial lootbox
-      if (isPro && wasNotPro) {
+      if (effectiveIsPro && wasNotPro) {
         console.log(`🎁 User ${userId} just became Pro! Granting initial Pro lootbox...`);
         const initialGrant = await storage.grantProLootbox(userId, 'initial');
         if (initialGrant) {
@@ -18957,7 +19085,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Also check for monthly lootbox grant
-      if (isPro) {
+      if (effectiveIsPro) {
         const monthlyGrant = await storage.grantProLootbox(userId, 'monthly');
         if (monthlyGrant && !lootboxReward) {
           lootboxReward = {
@@ -18969,7 +19097,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json({ success: true, isPro, lootboxReward });
+      res.json({ success: true, isPro: effectiveIsPro, isPartner: partnerFlag, lootboxReward });
     } catch (error) {
       captureRouteError(error);
       console.error("Error syncing subscription:", error);
@@ -19027,41 +19155,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let subscriptionCurrency: string | null = null;
       let subscriptionAmount: number | null = null;
       const hasActiveEndDate = user.proSubscriptionEndDate && new Date(user.proSubscriptionEndDate) > new Date();
-      const hasExpiredOrphanedPro =
-        user.isPro &&
-        !user.isPartner &&
-        !!user.proSubscriptionEndDate &&
-        !hasActiveEndDate &&
-        !user.stripeSubscriptionId &&
-        !user.revenuecatUserId;
       let effectiveIsPro = user.isPro;
       let effectiveSubscriptionType = user.proSubscriptionType;
 
       // Legacy/manual Pro records may have no provider identifier for a
       // cancellation webhook to match. Once their recorded paid period has
       // expired, reconcile the stale flag when the user checks their status.
-      if (hasExpiredOrphanedPro) {
-        await db.update(users).set({
-          isPro: false,
-          proSubscriptionType: null,
-          updatedAt: new Date(),
-        }).where(and(
-          eq(users.id, user.id),
-          eq(users.isPro, true),
-          eq(users.isPartner, false),
-          lte(users.proSubscriptionEndDate, new Date()),
-          isNull(users.stripeSubscriptionId),
-          isNull(users.revenuecatUserId),
-        ));
-
-        // Re-read after the conditional write. If a provider activated between
-        // the first read and this update, the WHERE clause leaves it untouched.
-        const reconciledUser = await storage.getUserById(user.id);
-        effectiveIsPro = reconciledUser?.isPro || false;
-        effectiveSubscriptionType = reconciledUser?.proSubscriptionType ?? null;
-        if (!effectiveIsPro) {
-          console.log(`Reconciled expired orphaned Pro entitlement for user ${user.id}`);
-        }
+      const reconciledUser = await reconcileExpiredOrphanedPro(user, new Date(), {
+        expireIfStillOrphaned: async (targetUserId, now) => {
+          await db.update(users).set({
+            isPro: false,
+            proSubscriptionType: null,
+            updatedAt: now,
+          }).where(and(
+            eq(users.id, targetUserId),
+            eq(users.isPro, true),
+            eq(users.isPartner, false),
+            lte(users.proSubscriptionEndDate, now),
+            isNull(users.stripeSubscriptionId),
+            isNull(users.revenuecatUserId),
+          ));
+        },
+        getCurrent: targetUserId => storage.getUserById(targetUserId),
+      });
+      effectiveIsPro = reconciledUser.isPro;
+      effectiveSubscriptionType = reconciledUser.proSubscriptionType;
+      if (user.isPro && !effectiveIsPro) {
+        console.log(`Reconciled expired orphaned Pro entitlement for user ${user.id}`);
       }
 
       if (!effectiveIsPro && hasActiveEndDate) {

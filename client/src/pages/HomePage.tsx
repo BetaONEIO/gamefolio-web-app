@@ -832,7 +832,7 @@ const HomePage = () => {
 
                             {/* Game badge */}
                             {reel.game && (
-                              <div className="bg-primary text-[#071013] text-xs px-2 py-1 rounded-full">
+                              <div className="bg-primary text-[#0A0A10] text-xs px-2 py-1 rounded-full">
                                 {reel.game.name}
                               </div>
                             )}

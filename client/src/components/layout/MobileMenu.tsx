@@ -230,7 +230,7 @@ const MobileMenu = () => {
                 <div 
                   className="cursor-pointer"
                   onClick={() => {
-                    setLocation(`/profile/${user.username}`);
+                    setLocation(canAccessIndieGame ? `/developer/${user.username}` : `/profile/${user.username}`);
                     handleClose();
                   }}
                 >
@@ -287,7 +287,7 @@ const MobileMenu = () => {
                   onClick={handleClose}
                   className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                 >
-                  <GamefolioHomeIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                  <GamefolioHomeIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#0A0A10]" />
                   <span className="font-medium">Home</span>
                 </Link>
               </li>
@@ -298,7 +298,7 @@ const MobileMenu = () => {
                     onClick={handleClose}
                     className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                   >
-                    <GamefolioDashboardIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                    <GamefolioDashboardIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#0A0A10]" />
                     <span className="font-medium">Dashboard</span>
                   </Link>
                 </li>
@@ -311,7 +311,7 @@ const MobileMenu = () => {
                     className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                     data-testid="mobile-game-dashboard-link"
                   >
-                    <Rocket className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                    <Rocket className="mr-3 h-5 w-5 text-primary group-hover:text-[#0A0A10]" />
                     <span className="font-medium">Game Dashboard</span>
                   </Link>
                 </li>
@@ -324,7 +324,7 @@ const MobileMenu = () => {
                     className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                     data-testid="mobile-bounty-hub-link"
                   >
-                    <Trophy className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                    <Trophy className="mr-3 h-5 w-5 text-primary group-hover:text-[#0A0A10]" />
                     <span className="font-medium">Bounty Hub</span>
                   </Link>
                 </li>
@@ -336,7 +336,7 @@ const MobileMenu = () => {
                     onClick={handleClose}
                     className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                   >
-                    <Radio className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                    <Radio className="mr-3 h-5 w-5 text-primary group-hover:text-[#0A0A10]" />
                     <span className="font-medium">Streamer Dashboard</span>
                   </Link>
                 </li>
@@ -347,7 +347,7 @@ const MobileMenu = () => {
                   onClick={handleClose}
                   className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                 >
-                  <GamefolioExploreIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                  <GamefolioExploreIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#0A0A10]" />
                   <span className="font-medium">Explore</span>
                 </Link>
               </li>
@@ -367,7 +367,7 @@ const MobileMenu = () => {
                   onClick={handleClose}
                   className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                 >
-                  <GamefolioLeaderboardIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                  <GamefolioLeaderboardIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#0A0A10]" />
                   <span className="font-medium">Leaderboard</span>
                 </Link>
               </li>
@@ -378,7 +378,7 @@ const MobileMenu = () => {
                   onClick={handleClose}
                   className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                 >
-                  <GamefolioStoreIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                  <GamefolioStoreIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#0A0A10]" />
                   <span className="font-medium">Store</span>
                 </Link>
               </li>
@@ -391,7 +391,7 @@ const MobileMenu = () => {
                   onClick={handleClose}
                   className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                 >
-                  <GamefolioWalletIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                  <GamefolioWalletIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#0A0A10]" />
                   <span className="font-medium">Wallet</span>
                 </Link>
               </li>
@@ -403,7 +403,7 @@ const MobileMenu = () => {
                   onClick={handleClose}
                   className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                 >
-                  <GamefolioCollectionIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                  <GamefolioCollectionIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#0A0A10]" />
                   <span className="font-medium">Collection</span>
                 </Link>
               </li>
@@ -414,7 +414,7 @@ const MobileMenu = () => {
                     onClick={handleClose}
                     className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                   >
-                    <GamefolioMessagesIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#071013]" />
+                    <GamefolioMessagesIcon className="mr-3 h-5 w-5 text-primary group-hover:text-[#0A0A10]" />
                     <span className="font-medium">Messages</span>
                   </Link>
                 </li>
@@ -432,12 +432,30 @@ const MobileMenu = () => {
                   {myGamefolioExpanded && (
                     <div className="ml-3 mt-0.5 space-y-0.5 pl-5 border-l border-border">
                       <Link
-                        href={`/profile/${user.username}`}
+                         href={`/profile/${user.username}`}
                         onClick={handleClose}
                         className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors no-underline"
                       >
                         View Profile
                       </Link>
+                      <Link
+                        href="/settings/profile"
+                        onClick={handleClose}
+                        className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors no-underline"
+                      >
+                        <GamefolioProfileSettingsIcon className="h-3.5 w-3.5 shrink-0" />
+                        <span>Profile &amp; Appearance</span>
+                      </Link>
+                       {canAccessIndieGame && (
+                         <Link
+                           href="/game-dashboard?tab=game-profile"
+                           onClick={handleClose}
+                           className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors no-underline"
+                         >
+                           <Rocket className="h-3.5 w-3.5 shrink-0" />
+                           <span>My Game</span>
+                         </Link>
+                       )}
                       <Link
                         href="/bookmarks"
                         onClick={handleClose}
@@ -481,22 +499,20 @@ const MobileMenu = () => {
                       onClick={handleClose}
                       className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
                     >
-                      <GamefolioSettingsIcon className="mr-3 h-5 w-5 text-muted-foreground group-hover:text-[#071013]" />
+                      <GamefolioSettingsIcon className="mr-3 h-5 w-5 text-muted-foreground group-hover:text-[#0A0A10]" />
                       <span>Account Settings</span>
                     </Link>
                   </li>
-                  {!isIndieDeveloperPersona && (
-                    <li>
-                      <Link
-                        href="/settings/profile"
-                        onClick={handleClose}
-                        className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
-                      >
-                        <GamefolioProfileSettingsIcon className="mr-3 h-5 w-5 opacity-70 group-hover:opacity-100 group-hover:text-[#071013]" />
-                        <span>Profile &amp; Appearance</span>
-                      </Link>
-                    </li>
-                  )}
+                  <li>
+                    <Link
+                      href="/settings/profile"
+                      onClick={handleClose}
+                      className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
+                    >
+                      <GamefolioProfileSettingsIcon className="mr-3 h-5 w-5 opacity-70 group-hover:opacity-100 group-hover:text-[#0A0A10]" />
+                      <span>Profile &amp; Appearance</span>
+                    </Link>
+                  </li>
                 </ul>
               </>
             )}

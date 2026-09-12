@@ -83,7 +83,7 @@ export default function ImageCropModal({ file, onConfirm, onSkip, onCancel }: Im
     ctx.drawImage(img, drawX, drawY, scaledW, scaledH);
 
     // Neon green border + rule-of-thirds grid
-    ctx.strokeStyle = "#B7FF1A";
+    ctx.strokeStyle = "#B7FF18";
     ctx.lineWidth = 2;
     ctx.strokeRect(1, 1, cropW - 2, cropH - 2);
 

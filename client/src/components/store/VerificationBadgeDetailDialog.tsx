@@ -160,7 +160,7 @@ export function VerificationBadgeDetailDialog({
             <div className="sticky bottom-0 bg-gradient-to-t from-popover via-popover to-transparent px-6 pt-4 pb-6 flex flex-col gap-4 items-center">
               {badge.owned ? (
                 <Button
-                  className="w-full h-[68px] rounded-2xl text-[#071013] text-lg font-black uppercase bg-gradient-to-r from-[#B7FF1A] to-[#6FA800] cursor-default"
+                  className="w-full h-[68px] rounded-2xl text-[#0A0A10] text-lg font-black uppercase bg-gradient-to-r from-[#B7FF18] to-[#6FA800] cursor-default"
                   disabled
                 >
                   <CheckCircle className="h-6 w-6 mr-2" />

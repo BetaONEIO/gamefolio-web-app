@@ -47,7 +47,7 @@ const LeaderboardEmbedPage = () => {
     if (rank === 1) return "bg-gradient-to-r from-yellow-400 to-yellow-600";
     if (rank === 2) return "bg-gradient-to-r from-gray-300 to-gray-500";
     if (rank === 3) return "bg-gradient-to-r from-amber-400 to-amber-600";
-    return "bg-gradient-to-r from-[#B7FF1A] to-[#6FA800]";
+    return "bg-gradient-to-r from-[#B7FF18] to-[#6FA800]";
   };
 
   const getRankRowColor = (rank: number) => {
@@ -112,7 +112,7 @@ const LeaderboardEmbedPage = () => {
                   </div>
                   
                   {entry.user.nftProfileTokenId && entry.user.nftProfileImageUrl && (entry.user as any).activeProfilePicType === 'nft' ? (
-                    <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#B7FF1A]/40">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden border border-[#B7FF18]/40">
                       <img src={entry.user.nftProfileImageUrl} alt={entry.user.displayName} className="w-full h-full object-cover" loading="lazy" />
                     </div>
                   ) : (

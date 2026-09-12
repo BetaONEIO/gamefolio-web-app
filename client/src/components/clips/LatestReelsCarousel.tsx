@@ -199,7 +199,7 @@ export function LatestReelsCarousel({ reels, isLoading, userId }: LatestReelsCar
                   >
                     <span
                       className="inline-block mt-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded hover:opacity-90 transition-opacity"
-                      style={{ background: '#B7FF1A', color: '#071013' }}
+                      style={{ background: '#B7FF18', color: '#0A0A10' }}
                     >
                       {reel.game.name}
                     </span>

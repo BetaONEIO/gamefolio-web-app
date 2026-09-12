@@ -69,14 +69,14 @@ export function SuccessVerificationBadge({
               />
               
               {/* Checkmark Floating Badge */}
-              <div className="absolute bottom-[-10px] right-[-10px] w-[62px] h-[62px] bg-[#00c950] border-[4px] border-[#0B1218] rounded-full flex items-center justify-center shadow-[0_8px_10px_-6px_rgba(0,0,0,0.1),0_20px_25px_-5px_rgba(0,0,0,0.1)]">
-                <Check className="w-[31px] h-[31px] text-[#0B1218] stroke-[4px]" />
+              <div className="absolute bottom-[-10px] right-[-10px] w-[62px] h-[62px] bg-[#00c950] border-[4px] border-[#0A0A10] rounded-full flex items-center justify-center shadow-[0_8px_10px_-6px_rgba(0,0,0,0.1),0_20px_25px_-5px_rgba(0,0,0,0.1)]">
+                <Check className="w-[31px] h-[31px] text-[#0A0A10] stroke-[4px]" />
               </div>
             </div>
           </div>
 
           {/* Transaction Info - Optional addition for utility */}
-          <div className="relative z-10 w-full bg-[#0B1218]/50 backdrop-blur-sm border border-[#1B2A3380] rounded-2xl p-4 mb-8">
+          <div className="relative z-10 w-full bg-[#0A0A10]/50 backdrop-blur-sm border border-[#1B2A3380] rounded-2xl p-4 mb-8">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-black text-[#B8C0AE] uppercase tracking-[1px]">
                 Verification Hash
@@ -100,7 +100,7 @@ export function SuccessVerificationBadge({
           <div className="relative z-10 w-full space-y-3">
             <Button
               onClick={() => onOpenChange(false)}
-              className="w-full h-[68px] rounded-2xl text-[#0B1218] text-lg font-black uppercase bg-[#F5F7F2] hover:bg-white transition-all active:scale-[0.98] shadow-[0_8px_10px_-6px_rgba(0,0,0,0.1),0_20px_25px_-5px_rgba(0,0,0,0.1)]"
+              className="w-full h-[68px] rounded-2xl text-[#0A0A10] text-lg font-black uppercase bg-[#F5F7F2] hover:bg-white transition-all active:scale-[0.98] shadow-[0_8px_10px_-6px_rgba(0,0,0,0.1),0_20px_25px_-5px_rgba(0,0,0,0.1)]"
               style={{ letterSpacing: '-0.9px' }}
             >
               Equip Badge

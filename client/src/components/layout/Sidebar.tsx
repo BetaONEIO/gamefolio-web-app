@@ -28,6 +28,7 @@ import { GamefolioLeaderboardIcon } from "@/components/icons/GamefolioLeaderboar
 import { GamefolioDashboardIcon } from "@/components/icons/GamefolioDashboardIcon";
 import { GamefolioMessagesIcon } from "@/components/icons/GamefolioMessagesIcon";
 import { GamefolioProfileIcon } from "@/components/icons/GamefolioProfileIcon";
+import { GamefolioProfileSettingsIcon } from "@/components/icons/GamefolioProfileSettingsIcon";
 import { GamefolioWalletIcon } from "@/components/icons/GamefolioWalletIcon";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Game } from "@shared/schema";
@@ -305,7 +306,7 @@ const Sidebar = () => {
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex w-64 bg-background fixed top-0 left-0 bottom-0 flex-col border-r border-border z-40">
+      <div className="profile-theme-sidebar hidden lg:flex w-64 bg-background fixed top-0 left-0 bottom-0 flex-col border-r border-border z-40">
         <nav className="px-4 pt-40 pb-4 space-y-1 flex-1 overflow-y-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {menuItems.map((item) => {
             const isActive = location === item.href;
@@ -318,8 +319,8 @@ const Sidebar = () => {
                     className={cn(
                       "flex items-center p-3 rounded-lg transition-all cursor-pointer group",
                       isActive
-                        ? "text-[#071013] bg-primary"
-                        : "text-muted-foreground hover:bg-primary hover:text-[#071013]"
+                        ? "text-[#0A0A10] bg-primary"
+                        : "text-muted-foreground hover:bg-primary hover:text-[#0A0A10]"
                     )}
                     onClick={() => { closeClipDialog(); setMyGamefolioExpanded(prev => !prev); }}
                   >
@@ -336,6 +337,20 @@ const Sidebar = () => {
                           View Profile
                         </div>
                       </Link>
+                      <Link href="/settings/profile" onClick={() => { closeClipDialog(); setMyGamefolioExpanded(false); }}>
+                        <div className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors cursor-pointer">
+                          <GamefolioProfileSettingsIcon className="h-3.5 w-3.5 shrink-0" />
+                          <span>Profile &amp; Appearance</span>
+                        </div>
+                      </Link>
+                      {canAccessIndieGame && (
+                        <Link href="/game-dashboard?tab=game-profile" onClick={() => { closeClipDialog(); setMyGamefolioExpanded(false); }}>
+                          <div className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors cursor-pointer">
+                            <Rocket className="h-3.5 w-3.5 shrink-0" />
+                            <span>My Game</span>
+                          </div>
+                        </Link>
+                      )}
                       <Link href="/bookmarks" onClick={() => { closeClipDialog(); setMyGamefolioExpanded(false); }}>
                         <div className="flex items-center gap-2 px-3 py-2 text-sm rounded-md text-muted-foreground hover:bg-secondary transition-colors cursor-pointer">
                           <Bookmark className="h-3.5 w-3.5 shrink-0" />
@@ -379,8 +394,8 @@ const Sidebar = () => {
                   className={cn(
                     "flex items-center p-3 rounded-lg transition-all cursor-pointer group",
                     isActive
-                      ? "text-[#071013] bg-primary"
-                      : "text-muted-foreground hover:bg-primary hover:text-[#071013]"
+                      ? "text-[#0A0A10] bg-primary"
+                      : "text-muted-foreground hover:bg-primary hover:text-[#0A0A10]"
                   )}
                 >
                   {isGamefolioItem ? (
@@ -391,7 +406,7 @@ const Sidebar = () => {
                     <span
                       className={cn(
                         "transition-all duration-300 inline-flex",
-                        !isActive && "group-hover:[filter:drop-shadow(0_0_7px_#B7FF1A)]"
+                        !isActive && "group-hover:[filter:drop-shadow(0_0_7px_#B7FF18)]"
                       )}
                     >
                       <item.icon

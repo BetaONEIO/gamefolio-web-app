@@ -61,7 +61,7 @@ export default function BuyGFTResultScreen({
   return (
     <div 
       className="w-full min-h-screen flex flex-col font-['Plus_Jakarta_Sans']"
-      style={{ background: '#0B1218' }}
+      style={{ background: '#0A0A10' }}
     >
       {/* Header */}
       <div 
@@ -103,9 +103,9 @@ export default function BuyGFTResultScreen({
             >
               <div 
                 className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-500 ${showSuccess ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}
-                style={{ background: '#B7FF1A' }}
+                style={{ background: '#B7FF18' }}
               >
-                <Check className="w-8 h-8" style={{ color: '#071013' }} strokeWidth={3} />
+                <Check className="w-8 h-8" style={{ color: '#0A0A10' }} strokeWidth={3} />
               </div>
             </div>
           </div>
@@ -130,7 +130,7 @@ export default function BuyGFTResultScreen({
           <div 
             className="w-full rounded-2xl p-5 flex flex-col gap-4"
             style={{ 
-              background: '#0B1218',
+              background: '#0A0A10',
               border: '1px solid rgba(30, 41, 59, 0.5)'
             }}
           >
@@ -148,14 +148,14 @@ export default function BuyGFTResultScreen({
               >
                 <span 
                   className="text-sm font-bold"
-                  style={{ color: '#B7FF1A' }}
+                  style={{ color: '#B7FF18' }}
                 >
                   {transactionHash}
                 </span>
                 {copied ? (
-                  <Check className="w-4 h-4" style={{ color: '#B7FF1A' }} />
+                  <Check className="w-4 h-4" style={{ color: '#B7FF18' }} />
                 ) : (
-                  <Copy className="w-4 h-4" style={{ color: '#B7FF1A' }} />
+                  <Copy className="w-4 h-4" style={{ color: '#B7FF18' }} />
                 )}
               </button>
             </div>
@@ -186,9 +186,9 @@ export default function BuyGFTResultScreen({
               onClick={() => setShowSpendScreen(true)}
               className="w-full py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all hover:opacity-90 active:scale-[0.98]"
               style={{ 
-                background: '#B7FF1A',
-                color: '#071013',
-                boxShadow: '0 0 30px -10px #B7FF1A'
+                background: '#B7FF18',
+                color: '#0A0A10',
+                boxShadow: '0 0 30px -10px #B7FF18'
               }}
             >
               <ShoppingBag className="w-5 h-5" />

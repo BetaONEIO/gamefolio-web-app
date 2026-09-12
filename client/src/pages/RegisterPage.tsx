@@ -4,9 +4,9 @@ import { useAuth } from "@/hooks/use-auth";
 import RegisterForm from "@/components/auth/register-form";
 import proHeroImage from "@assets/gamefoliopromo_1771795835901.png";
 
-const PRIMARY = "#B7FF1A";
+const PRIMARY = "#B7FF18";
 const BG = "#081017";
-const CARD_BG = "#0B1218";
+const CARD_BG = "#0A0A10";
 const CARD_BORDER = "#1B2A33";
 
 const isDeveloperSubdomain = window.location.hostname === 'developer.gamefolio.com';

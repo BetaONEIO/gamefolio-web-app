@@ -510,7 +510,7 @@ export default function CommunityCarousel() {
     return (
       <section className="relative overflow-hidden -mx-2 md:-mx-6 -mt-2 md:-mt-4">
         <div className="relative h-[300px] sm:h-[350px] md:h-[500px]">
-          <Skeleton className="absolute inset-0 bg-[#0B1319]" />
+          <Skeleton className="absolute inset-0 bg-[#0A0A10]" />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="space-y-4 text-center w-full max-w-lg px-6">
               <Skeleton className="h-10 sm:h-14 md:h-16 w-3/4 mx-auto bg-white/10" />
@@ -567,7 +567,7 @@ export default function CommunityCarousel() {
               ) : (
                 /* All other slides */
                 <>
-                  <div className="absolute inset-0 bg-[#0B1319]" />
+                  <div className="absolute inset-0 bg-[#0A0A10]" />
                   <div
                     className="absolute inset-0 opacity-[0.03]"
                     style={{
@@ -664,7 +664,7 @@ function TopGamefoliosSlide({ entries, onNavigate }: { entries: TopGamefolioEntr
                 <AvatarFallback className="bg-[#B7FF18]/10 text-[#B7FF18] font-bold text-lg">{entry.displayName?.charAt(0) || entry.username.charAt(0)}</AvatarFallback>
               </Avatar>
               <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                i === 0 ? "bg-[#B7FF18] text-[#071013]" : i === 1 ? "bg-yellow-400 text-black" : "bg-orange-400 text-black"
+                i === 0 ? "bg-[#B7FF18] text-[#0A0A10]" : i === 1 ? "bg-yellow-400 text-black" : "bg-orange-400 text-black"
               }`}>
                 #{entry.rank}
               </div>
@@ -725,7 +725,7 @@ function TrendingGameSlide({ game, onNavigate }: { game: TrendingGame; onNavigat
           </div>
         </div>
         <Button
-          className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#071013] font-semibold px-6 py-2 h-auto rounded-lg"
+          className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#0A0A10] font-semibold px-6 py-2 h-auto rounded-lg"
           onClick={() => onNavigate(`/game/${game.slug}`)}
         >
           Explore Game <ArrowRight className="w-4 h-4 ml-1.5" />
@@ -778,7 +778,7 @@ function CreatorSpotlightSlide({ creator, onNavigate }: { creator: CreatorSpotli
             <AvatarFallback className="bg-[#B7FF18]/10 text-[#B7FF18] font-bold text-3xl">{creator.displayName?.charAt(0) || creator.username.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-[#B7FF18] flex items-center justify-center">
-            <Star className="w-4 h-4 text-[#071013]" />
+            <Star className="w-4 h-4 text-[#0A0A10]" />
           </div>
         </div>
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#B7FF18]/10 text-[#B7FF18] text-xs font-semibold mb-1">
@@ -805,7 +805,7 @@ function CreatorSpotlightSlide({ creator, onNavigate }: { creator: CreatorSpotli
           </div>
         </div>
         <Button
-          className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#071013] font-semibold px-6 py-2 h-auto rounded-lg"
+          className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#0A0A10] font-semibold px-6 py-2 h-auto rounded-lg"
           onClick={() => onNavigate(`/profile/${creator.username}`)}
         >
           View Profile <ArrowRight className="w-4 h-4 ml-1.5" />
@@ -881,7 +881,7 @@ function DiscoverSlide({ item, onNavigate }: { item: DiscoverItem; onNavigate: (
           Fresh content picked from the community. Watch, engage, and share your thoughts.
         </p>
         <Button
-          className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#071013] font-semibold px-6 py-2 h-auto rounded-lg"
+          className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#0A0A10] font-semibold px-6 py-2 h-auto rounded-lg"
           onClick={() => onNavigate(`/clip/${item.id}`)}
         >
           Discover More <ArrowRight className="w-4 h-4 ml-1.5" />

@@ -72,6 +72,7 @@ type PublicGameScreenshot = {
 interface Props {
   profile: UserWithStats;
   isOwnProfile: boolean;
+  gameId?: number;
 }
 
 const accent = '#B7FF18';
@@ -167,7 +168,7 @@ function ScreenshotCarousel({
             key={screenshot.id}
             type="button"
             onClick={(event) => onSelect(screenshot, event.currentTarget)}
-            className="group/shot relative min-w-[min(78vw,360px)] snap-start overflow-hidden rounded-xl border border-white/10 bg-[#0B1218] text-left outline-none transition hover:border-white/25 focus-visible:ring-2 focus-visible:ring-[#B7FF1A] sm:min-w-[360px] lg:min-w-[410px]"
+            className="group/shot relative min-w-[min(78vw,360px)] snap-start overflow-hidden rounded-xl border border-white/10 bg-[#0A0A10] text-left outline-none transition hover:border-white/25 focus-visible:ring-2 focus-visible:ring-[#B7FF18] sm:min-w-[360px] lg:min-w-[410px]"
             aria-label={`View ${screenshot.title || `screenshot ${index + 1}`} full screen`}
           >
             <div className="aspect-video">
@@ -276,12 +277,13 @@ function PublicMediaSection({
   );
 }
 
-export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props) {
+export default function IndieGameProfileLayout({ profile, isOwnProfile, gameId }: Props) {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>('OVERVIEW');
   const [selectedGameId, setSelectedGameId] = useState<number | null>(() => {
+    if (typeof gameId === 'number' && Number.isFinite(gameId)) return gameId;
     const rawGameId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('gameId') : null;
     const parsedGameId = rawGameId ? Number(rawGameId) : NaN;
     return Number.isFinite(parsedGameId) ? parsedGameId : null;
@@ -306,7 +308,7 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const { getSignedUrl: getGameImageUrl } = useSignedUrls(gameListImageSources);
 
   const gameProfileQueryKey = selectedGameId
-    ? [`/api/games/indie/${profile.username}`, { gameId: selectedGameId }]
+    ? [`/api/games/indie/${profile.username}?gameId=${selectedGameId}`]
     : [`/api/games/indie/${profile.username}`];
   const { data: indieData } = useQuery<IndieResponse | null>({
     queryKey: gameProfileQueryKey,
@@ -365,7 +367,11 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
     }),
     enabled: !!canonicalGameId,
   });
-  const { data: followStatus } = useQuery<{ status: 'following' | 'requested' | 'not_following' }>({
+  const { data: followStatus } = useQuery<{
+    status?: 'following' | 'requested' | 'not_following';
+    following?: boolean;
+    requested?: boolean;
+  }>({
     queryKey: [`/api/users/${profile.username}/follow-status`],
     queryFn: getQueryFn({ on401: 'returnNull' }),
     enabled: !!currentUser && !isOwnProfile,
@@ -377,8 +383,8 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
   const communityClips = useMemo(() => clips.filter((clip) => clip.uploadSource === 'community'), [clips]);
   const officialReels = useMemo(() => reels.filter((reel) => reel.uploadSource === 'publisher'), [reels]);
   const communityReels = useMemo(() => reels.filter((reel) => reel.uploadSource === 'community'), [reels]);
-  const isFollowing = followStatus?.status === 'following';
-  const isRequested = followStatus?.status === 'requested';
+  const isFollowing = followStatus?.status === 'following' || followStatus?.following === true;
+  const isRequested = followStatus?.status === 'requested' || followStatus?.requested === true;
   const gameName = gameProfile?.gameName?.trim() || canonicalGame?.name || profile.displayName;
   const description = gameProfile?.fullDescription || gameProfile?.shortDescription || null;
   const profileScreenshots: PublicGameScreenshot[] = profileScreenshotSources
@@ -538,7 +544,14 @@ export default function IndieGameProfileLayout({ profile, isOwnProfile }: Props)
         method: isFollowing || isRequested ? 'DELETE' : 'POST',
         credentials: 'include',
       });
-      if (!response.ok) throw new Error('Failed to update follow status');
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => null);
+        throw new Error(
+          typeof errorBody?.message === 'string'
+            ? errorBody.message
+            : 'Failed to update follow status',
+        );
+      }
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [`/api/users/${profile.username}/follow-status`] }),
     onError: (error: Error) => toast({ description: error.message, variant: 'gamefolioError' }),

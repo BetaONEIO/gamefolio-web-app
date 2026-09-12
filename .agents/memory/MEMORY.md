@@ -1,12 +1,11 @@
 - [FFmpeg remote URL scale2ref](ffmpeg-remote-url-filtergraph.md) — scale2ref gives 0kB when inputs are remote URLs; probe dims with ffprobe and use explicit scale filter instead.
 - [Trending cache startup race](trending-cache-startup-race.md) — first DB query after server start returns [] due to pool warming; fix is to not cache empty arrays and add a fallback query.
-- [@assets alias requires public copy](assets-alias-public-copy.md) — `@assets` resolves to `client/public/attached_assets`; files attached to chat may land only in root `attached_assets/` and need manual copy before imports work.
-- [Gamefolio dev DB schema drift](gamefolio-dev-db-schema-drift.md) — dev Supabase DB can silently lag `shared/schema.ts` (missing columns); diagnose with an information_schema diff before assuming a feature bug.
-- [Profile layoutStyle branch pattern](gamefolio-profile-layout-style.md) — alternate profile designs are graduated as early-return components keyed on `users.layoutStyle`, inserted in ProfilePage.tsx right before the main return (after all hooks).
+- [@assets alias requires public copy](assets-alias-public-copy.md) — `@assets` resolves to client/public/attached_assets; files attached to chat may land only in root attached_assets/ and need manual copy before imports work.
+- [Gamefolio dev DB schema drift](gamefolio-dev-db-schema-drift.md) — dev Supabase DB can silently lag shared/schema.ts (missing columns); diagnose with an information_schema diff before assuming a feature bug.
 - [HomeCarousel.tsx is dead code](homecarousel-dead-file.md) — HomeCarousel.tsx exports a component that is never imported anywhere; the actual home hero slider is LatestContentSlider.tsx rendered inside HomePageSimple.tsx.
 - [Fullscreen mobile overlays need body portal](mobile-overlay-stacking-context.md) — page wrapper divs with position+zIndex trap high z-index overlays below the sticky Header; portal to document.body to escape.
 - [Points/XP drift & stale banners](points-xp-drift.md) — total_xp must equal points-history sum; banner_url must match active uploaded banner; admin repair endpoint fixes both + the id sequence.
-- [returnNull query data bypasses destructure defaults](react-query-null-vs-undefined-default.md) — `getQueryFn({on401:"returnNull"})` can set query `data` to `null`; a `const {data: x = []} = useQuery(...)` default only fires on `undefined`, not `null`, so `.length`/`.map` calls on `x` can throw.
+- [returnNull query data bypasses destructure defaults](react-query-null-vs-undefined-default.md) — getQueryFn({on401:"returnNull"}) can set query data to null; a const {data: x = []} default only fires on undefined, not null, so .length/.map calls can throw.
 - [Leaderboard cache rebuild](leaderboard-cache-rebuild.md) — weekly/monthly leaderboards are incremental cache tables; bulk history imports need the admin rebuild endpoint.
 - [Legacy import advisory lock](legacy-import-advisory-lock.md) — session locks must acquire, run, and release through one reserved postgres-js connection.
 - [Publish schema diff safety](publish-schema-diff-safety.md) — missing dev-side tables can appear as destructive production drops; align dev compatibility tables before publishing.
@@ -38,3 +37,29 @@
 - [Seasonal reward claims](seasonal-reward-claims.md) — bulk grants must be distinct-user and existence-checked because legacy claim history is not globally unique.
 - [Pro-gated catalog cache](pro-gated-catalog-cache.md) — entitlement-dependent catalogs need the entitlement in the client query key or an explicit invalidation after upgrade.
 - [Campaign personalization persistence](campaign-personalization-persistence.md) — campaign_instances is provisioned at runtime; new creator-facing setup fields need additive columns and Bounty Hub selects.
+- [RevenueCat Web Billing catalog limits](revenuecat-web-billing-catalog-limits.md) — Developer API can rename Web Billing entities but rejects product creation and repricing; use the dashboard.
+- [Upload attempt idempotency](upload-attempt-idempotency.md) — direct video uploads reconcile creator-scoped attempt IDs to recover lost responses without duplicates.
+- [Indie dashboard access](indie-dashboard-access.md) — Indie Developer personas have the free game quota; paid Indie partners receive the higher subscriber quota.
+- [Private indie media URLs](private-indie-media-urls.md) — game profile media is stored in a private bucket; render it through the signed-URL hook, not its canonical storage URL.
+- [Expired signed media URLs](expired-signed-media-urls.md) — legacy asset records may persist expired signed Supabase URLs; refresh them by token expiry instead of treating every signed URL as current.
+- [Developer upload ownership](developer-upload-ownership.md) — Game Developers may publish only to catalogue games explicitly linked to their Indie profiles.
+- [Developer Pro purchase pauses](developer-pro-purchase-pauses.md) — pause every acquisition channel, but keep existing subscriber renewal and expiry synchronization active.
+- [Developer renewal timestamps](developer-renewal-timestamps.md) — validate persisted lifecycle dates before reusing them in renewal writes.
+- [Async signed-media selection](async-signed-media-selection.md) — select mixed signed/public media by stable identity, never array index, because signed items appear asynchronously.
+- [Indie analytics event privacy](indie-analytics-event-privacy.md) — public game analytics store only hashed visitor identity; owner views are excluded and page views dedupe hourly.
+- [Indie analytics metric scope](indie-analytics-metric-scope.md) — discovery events support date ranges, but legacy content view counters are honest all-time totals.
+- [Raw analytics timestamp binding](raw-analytics-timestamp-binding.md) — raw Drizzle db.execute queries in this project must bind ISO timestamp strings, not JavaScript Date objects.
+- [Public indie game identity](public-indie-game-identity.md) — public game slugs resolve developer profiles through catalogue game IDs, never by treating the slug as a username.
+- [Daily reward session hydration](daily-reward-session-hydration.md) — guarded daily claims must run on authenticated session hydration, not only explicit login, including apps left open overnight.
+- [Season GFT payouts](season-gft-payouts.md) — production-only rank payouts use an idempotent ledger; submitted transactions require manual reconciliation before retry.
+- [Default profile palette migration](default-profile-palette-migration.md) — remap only known legacy default palettes at render time; never overwrite arbitrary or named custom themes.
+- [Seasonal reward claims](seasonal-reward-claims.md) — bulk grants must be distinct-user and existence-checked because legacy claim history is not globally unique.
+- [Pro-gated catalog cache](pro-gated-catalog-cache.md) — entitlement-dependent catalogs need the entitlement in the client query key or an explicit invalidation after upgrade.
+- [RevenueCat Play Store state](revenuecat-play-store-state.md) — Play create-if-missing needs localization and explicit base-plan billing metadata; poll the async operation.
+- [Towerdog theme entitlement](towerdog-theme-entitlement.md) — Towerdog Pixel Surge uses the immutable original signup referral, never mutable post-registration referral history.
+- [Full-page profile theme shell](full-page-profile-theme-shell.md) — fixed themed layers must escape app scrolling/stacking contexts and neutralize opaque template surfaces.
+- [Towerdog pixel-art language](towerdog-pixel-art-language.md) — use sparse hard-edged square blocks, not gradients, stripes, diamonds, or diagonal effects.
+- [Pro entitlement expiry CAS](pro-entitlement-expiry-cas.md) — expiry writes must repeat eligibility guards and re-read state so concurrent provider activation wins.
+- [AI VOD clipper access tier](ai-vod-clipper-access-tier.md) — private Admin/Ambassador testers receive Pro limits; public launch is intended to be Pro-only.
+- [Indie studio appearance ownership](indie-studio-appearance-ownership.md) — `/profile/:username` is the themed studio identity; `/developer/:handle` stays a separate legacy game-oriented route.
+- [Bun override compatibility](bun-override-compatibility.md) — Bun ignores nested npm overrides; use a globally compatible patched version and verify with `bun audit`.

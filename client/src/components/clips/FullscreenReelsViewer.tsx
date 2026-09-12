@@ -438,7 +438,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     contentId={currentReel.id}
                     contentType="clip"
                     size={24}
-                    activeColor="#B7FF1A"
+                    activeColor="#B7FF18"
                     inactiveColor="#ffffff"
                     iconClassName="drop-shadow"
                   />
@@ -479,7 +479,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                           onClick={(e) => { e.stopPropagation(); handleFollow(); }}
                           disabled={followMutation.isPending}
                           className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 transition-all pointer-events-auto"
-                          style={{ background: '#B7FF1A', color: '#000', border: '1px solid transparent' }}
+                          style={{ background: '#B7FF18', color: '#000', border: '1px solid transparent' }}
                         >
                           {followMutation.isPending ? '…' : 'Follow'}
                         </button>
@@ -502,7 +502,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                   {/* Game */}
                   {currentReel.game?.name && (
                     <div className="flex items-center gap-1 mb-0.5">
-                      <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF1A' }} />
+                      <Gamepad2 className="h-3 w-3 flex-shrink-0" style={{ color: '#B7FF18' }} />
                       <button
                         className="pointer-events-auto"
                         onClick={(e) => {
@@ -512,7 +512,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                           navigate(`/games/${slug}`);
                         }}
                       >
-                        <span className="text-[11px] font-semibold" style={{ color: '#B7FF1A' }}>
+                        <span className="text-[11px] font-semibold" style={{ color: '#B7FF18' }}>
                           {currentReel.game.name}
                         </span>
                       </button>
@@ -570,7 +570,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                   onClick={handleFollow}
                   disabled={followMutation.isPending}
                   className="text-xs font-bold px-3 py-1.5 rounded-full flex-shrink-0 transition-all"
-                  style={{ background: '#B7FF1A', color: '#000' }}
+                  style={{ background: '#B7FF18', color: '#000' }}
                 >
                   {followMutation.isPending ? '…' : 'Follow'}
                 </button>
@@ -595,7 +595,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
             {/* Game */}
             {currentReel.game?.name && (
               <div className="flex items-center gap-1.5">
-                <Gamepad2 className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#B7FF1A' }} />
+                <Gamepad2 className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#B7FF18' }} />
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -604,7 +604,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                     navigate(`/games/${slug}`);
                   }}
                 >
-                  <span className="text-sm font-semibold" style={{ color: '#B7FF1A' }}>
+                  <span className="text-sm font-semibold" style={{ color: '#B7FF18' }}>
                     {currentReel.game.name}
                   </span>
                 </button>
@@ -683,7 +683,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
                 contentId={currentReel.id}
                 contentType="clip"
                 size={24}
-                activeColor="#B7FF1A"
+                activeColor="#B7FF18"
                 inactiveColor="#ffffff99"
               />
               <span className="text-white/60 text-xs font-semibold">Bookmark</span>
@@ -697,7 +697,7 @@ export function FullscreenReelsViewer({ reels, initialIndex, onClose }: Fullscre
         <div
           className="flex-1 flex flex-col overflow-hidden"
           style={{
-            background: '#0B1218',
+            background: '#0A0A10',
             borderRadius: '20px 20px 0 0',
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
             transform: isClosingComments ? 'translateY(100%)' : 'translateY(0)',

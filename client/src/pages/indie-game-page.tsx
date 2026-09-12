@@ -20,6 +20,7 @@ import { BOUNTIES_ENABLED } from "@/lib/feature-flags";
 import { CreatorDashboard } from "@/components/indie-bounty/CreatorDashboard";
 import { DeveloperDashboard } from "@/components/indie-bounty/DeveloperDashboard";
 import { GamePlatformBadges, GameSocialBadges } from "@/components/indie/GameProfileBadges";
+import { GAME_SOCIAL_LINKS } from "@/lib/indie-game-links";
 import {
   ArrowLeft, Play, Camera, Users, Clock, Eye,
   Trophy, Zap, Key, Star, Gift, Sword, Plus, Upload, X,
@@ -27,6 +28,7 @@ import {
   BarChart3, Video, Globe, Heart, Gamepad2, Check,
   Gamepad, Monitor, Smartphone,
   Film, MessageSquare, AlertCircle, ShieldCheck, Unlock, Rocket,
+  Share2,
 } from "lucide-react";
 
 const UploadPage = lazy(() => import("./UploadPage"));
@@ -1204,8 +1206,12 @@ interface IndieGameMeta {
 
 const IndieGamePage = () => {
   const [, navigate] = useLocation();
-  const [match, params] = useRoute("/indie-games/:slug");
-  const gameSlug = params?.slug;
+  // The canonical public URL is /games/:gameSlug. Read the legacy shape as
+  // well so this page remains safe if mounted directly by an older caller.
+  const [canonicalMatch, canonicalParams] = useRoute("/games/:gameSlug");
+  const [legacyMatch, legacyParams] = useRoute("/indie-games/:slug");
+  const match = canonicalMatch || legacyMatch;
+  const gameSlug = canonicalParams?.gameSlug ?? legacyParams?.slug;
   const isMobile = useMobile();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -1433,6 +1439,20 @@ const IndieGamePage = () => {
     followers: game?.indieMeta?.followers ?? 0,
     publisher: game?.indieMeta?.publisher ?? "Indie",
   };
+  const canManageGame = !!user && user.id === indieProfileData?.user?.id;
+
+  useEffect(() => {
+    if (!game || !gameSlug) return;
+    const canonicalUrl = `${window.location.origin}/games/${encodeURIComponent(gameSlug)}`;
+    document.title = `${game.name} | Gamefolio`;
+    let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      document.head.appendChild(canonical);
+    }
+    canonical.href = canonicalUrl;
+  }, [game, gameSlug]);
 
   // Tracking is deliberately non-blocking: the public game page and outbound
   // links must continue to work if analytics is unavailable.
@@ -1465,8 +1485,8 @@ const IndieGamePage = () => {
 
   if (gameLoading) {
     return (
-      <div className="min-h-screen" style={{ background: "#0B1319" }}>
-        <div className="h-72 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0B1319 0%, #1a0b30 50%, #0d1f2d 100%)" }}>
+      <div className="min-h-screen" style={{ background: "#0A0A10" }}>
+        <div className="h-72 relative overflow-hidden" style={{ background: "linear-gradient(135deg, #0A0A10 0%, #1a0b30 50%, #0d1f2d 100%)" }}>
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
             <Skeleton className="h-20 w-20 rounded-2xl" />
             <Skeleton className="h-10 w-64" />
@@ -1558,7 +1578,7 @@ const IndieGamePage = () => {
       {/* ── CINEMATIC HERO ── */}
       <section
         className="igp-scan-container relative w-full border-b border-white/5"
-        style={{ background: "linear-gradient(135deg, #0B1319 0%, #1a0b30 55%, #0d1f2d 100%)", minHeight: isMobile ? "420px" : "480px" }}
+        style={{ background: "linear-gradient(135deg, #0A0A10 0%, #1a0b30 55%, #0d1f2d 100%)", minHeight: isMobile ? "420px" : "480px" }}
       >
         <div className="igp-scanline" />
 
@@ -1601,7 +1621,7 @@ const IndieGamePage = () => {
               overflow: "hidden",
             }}>
             <img
-              src={game.imageUrl || `https://placehold.co/200x200/0B1218/333?text=${encodeURIComponent(game.name.charAt(0))}`}
+              src={game.imageUrl || `https://placehold.co/200x200/0F101B/333?text=${encodeURIComponent(game.name.charAt(0))}`}
               alt={game.name}
               className="w-full h-full object-cover"
             />
@@ -1619,7 +1639,7 @@ const IndieGamePage = () => {
           <div className="flex items-center gap-3 mb-8 flex-wrap justify-center">
             {indieProfileData?.user?.username ? (
               <a
-                href={`/studio/${indieProfileData.user.username}`}
+                href={`/developer/${indieProfileData.user.username}`}
                 className="text-sm font-semibold text-white/60 hover:text-white transition-colors underline-offset-2 hover:underline"
               >
                 {meta.developerName}
@@ -1656,10 +1676,6 @@ const IndieGamePage = () => {
               <Eye className="w-3.5 h-3.5" style={{ color: NEON }} />
               {totalViews.toLocaleString()} views
             </span>
-            <span className="flex items-center gap-1.5 text-xs font-bold text-white/60">
-              <Radio className="w-3.5 h-3.5" style={{ color: NEON }} />
-              {0} streams
-            </span>
             {meta.website && (
               <button
                 onClick={() => openExternal(meta.website)}
@@ -1669,6 +1685,27 @@ const IndieGamePage = () => {
               </button>
             )}
             <GameSocialBadges links={meta} onOpen={openExternal} />
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/games/${encodeURIComponent(gameSlug)}`;
+                if (navigator.share) {
+                  void navigator.share({ title: game.name, url }).catch(() => undefined);
+                } else {
+                  void navigator.clipboard?.writeText(url);
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white/70 transition-all hover:bg-white/5 border border-white/10">
+              <Share2 className="w-3.5 h-3.5" />
+              Share
+            </button>
+            {canManageGame && (
+              <Link
+                href={`/manage/games/${encodeURIComponent(gameSlug)}`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-[#C1FF00] transition-all hover:bg-[#C1FF00]/10 border border-[#C1FF00]/30">
+                <Gamepad2 className="w-3.5 h-3.5" />
+                Game Dashboard
+              </Link>
+            )}
             <button
               onClick={handleOpenUpload}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-white/5"
@@ -1728,7 +1765,7 @@ const IndieGamePage = () => {
                   {/* Main trailer or game art */}
                   <div className="rounded-2xl overflow-hidden aspect-video mb-4 relative group cursor-pointer"
                     style={{ border: `1px solid ${CARD_BORDER}`, boxShadow: "0 0 40px rgba(0,0,0,0.3)" }}
-                    onClick={() => setSelectedScreenshot({ id: 0, imageUrl: game.imageUrl || "https://placehold.co/1280x720/0B1218/333?text=Game+Artwork", title: `${game.name} Artwork` })}>
+                    onClick={() => setSelectedScreenshot({ id: 0, imageUrl: game.imageUrl || "https://placehold.co/1280x720/0F101B/333?text=Game+Artwork", title: `${game.name} Artwork` })}>
                     {meta.trailerUrl ? (
                       getVideoEmbedUrl(meta.trailerUrl) ? (
                         <iframe src={getVideoEmbedUrl(meta.trailerUrl)!} className="w-full h-full" allowFullScreen title={`${game.name} Trailer`} />
@@ -1743,7 +1780,7 @@ const IndieGamePage = () => {
                     ) : (
                       <>
                         <img
-                          src={game.imageUrl || "https://placehold.co/1280x720/0B1218/333?text=Game+Artwork"}
+                          src={game.imageUrl || "https://placehold.co/1280x720/0F101B/333?text=Game+Artwork"}
                           alt="Game artwork"
                           className="w-full h-full object-cover"
                         />
@@ -1762,24 +1799,24 @@ const IndieGamePage = () => {
                     {/* Artwork 1 */}
                     <div className="aspect-video rounded-xl overflow-hidden cursor-pointer group relative"
                       style={{ border: `1px solid ${CARD_BORDER}` }}
-                      onClick={() => setSelectedScreenshot({ id: 1, imageUrl: game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Artwork+1", title: `Artwork 1` })}>
-                      <img src={game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Artwork+1"}
+                      onClick={() => setSelectedScreenshot({ id: 1, imageUrl: game.imageUrl || "https://placehold.co/400x225/0F101B/333?text=Artwork+1", title: `Artwork 1` })}>
+                      <img src={game.imageUrl || "https://placehold.co/400x225/0F101B/333?text=Artwork+1"}
                         alt="Artwork 1" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                       <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
                     </div>
                     {/* Artwork 2 */}
                     <div className="aspect-video rounded-xl overflow-hidden cursor-pointer group relative"
                       style={{ border: `1px solid ${CARD_BORDER}` }}
-                      onClick={() => setSelectedScreenshot({ id: 2, imageUrl: game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Artwork+2", title: `Artwork 2` })}>
-                      <img src={game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Artwork+2"}
+                      onClick={() => setSelectedScreenshot({ id: 2, imageUrl: game.imageUrl || "https://placehold.co/400x225/0F101B/333?text=Artwork+2", title: `Artwork 2` })}>
+                      <img src={game.imageUrl || "https://placehold.co/400x225/0F101B/333?text=Artwork+2"}
                         alt="Artwork 2" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                       <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
                     </div>
                     {/* Artwork 3 */}
                     <div className="aspect-video rounded-xl overflow-hidden cursor-pointer group relative"
                       style={{ border: `1px solid ${CARD_BORDER}` }}
-                      onClick={() => setSelectedScreenshot({ id: 3, imageUrl: game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Artwork+3", title: `Artwork 3` })}>
-                      <img src={game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Artwork+3"}
+                      onClick={() => setSelectedScreenshot({ id: 3, imageUrl: game.imageUrl || "https://placehold.co/400x225/0F101B/333?text=Artwork+3", title: `Artwork 3` })}>
+                      <img src={game.imageUrl || "https://placehold.co/400x225/0F101B/333?text=Artwork+3"}
                         alt="Artwork 3" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
                       <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
                     </div>
@@ -2162,8 +2199,8 @@ const IndieGamePage = () => {
                 {Array(3).fill(0).map((_, i) => (
                   <div key={i} className="aspect-video rounded-xl overflow-hidden cursor-pointer"
                     style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${CARD_BORDER}` }}
-                    onClick={() => setSelectedScreenshot({ id: i, imageUrl: game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Screenshot", title: `Official Screenshot ${i + 1}` })}>
-                    <img src={game.imageUrl || "https://placehold.co/400x225/0B1218/333?text=Screenshot"}
+                    onClick={() => setSelectedScreenshot({ id: i, imageUrl: game.imageUrl || "https://placehold.co/400x225/0F101B/333?text=Screenshot", title: `Official Screenshot ${i + 1}` })}>
+                    <img src={game.imageUrl || "https://placehold.co/400x225/0F101B/333?text=Screenshot"}
                       alt={`Official ${i + 1}`} className="w-full h-full object-cover opacity-60 hover:opacity-100 transition-opacity" />
                   </div>
                 ))}
@@ -2336,7 +2373,7 @@ const IndieGamePage = () => {
 
       {/* Dialogs */}
       <Dialog open={showUploadDialog} onOpenChange={(v) => !v && handleUploadClose()}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0" style={{ background: "#0B1218", border: "1px solid rgba(193,255,0,0.2)" }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0" style={{ background: "#0A0A10", border: "1px solid rgba(193,255,0,0.2)" }}>
           <Suspense fallback={<div className="p-8 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></div>}>
             <UploadPage />
           </Suspense>

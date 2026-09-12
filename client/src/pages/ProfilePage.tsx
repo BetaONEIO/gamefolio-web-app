@@ -76,8 +76,9 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
-import IndieGameProfileLayout from "@/pages/profile-layouts/IndieGameProfileLayout";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
+import IndieGameProfileLayout from "@/pages/profile-layouts/IndieGameProfileLayout";
+import IndieDeveloperProfile from "@/pages/IndieDeveloperProfile";
 import { ScreenshotLightbox } from "@/components/screenshots/ScreenshotLightbox";
 import { MobileScreenshotsViewer } from "@/components/screenshots/MobileScreenshotsViewer";
 import { LikeButton } from "@/components/engagement/LikeButton";
@@ -93,6 +94,7 @@ import { useProfilePictureLightbox } from "@/components/ui/profile-picture-light
 import { BannerLightbox, useBannerLightbox } from "@/components/ui/banner-lightbox";
 import { ProfileMetricTooltip, type ProfileMetricLabel } from "@/components/profile/ProfileMetricTooltip";
 import { GamefolioCollectionButton } from "@/components/profile/GamefolioCollectionButton";
+import { TowerdogPixelField } from "@/components/profile/TowerdogPixelField";
 import "@/styles/profile-themes.css";
 
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
@@ -128,6 +130,19 @@ interface OwnedNft {
   soldAt?: string | null;
   listedPrice?: number | null;
   listingActive?: boolean;
+}
+
+interface DeveloperGameShowcase {
+  id: number;
+  catalogGameId: number | null;
+  gameName: string | null;
+  headerImageUrl: string | null;
+  capsuleImageUrl: string | null;
+  isPrimary: boolean;
+  releaseStatus: string | null;
+  shortDescription: string | null;
+  catalogGameName: string | null;
+  catalogImageUrl: string | null;
 }
 
 interface OwnedNftsData {
@@ -207,8 +222,8 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
   legendary: {
     bg: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
     glow: "shadow-[0_0_25px_rgba(236,72,153,0.4)]",
-    dotColor: "bg-primary shadow-[0_0_8px_#B7FF1A]",
-    textStyle: "bg-gradient-to-r from-[#B7FF1A] to-[#B7FF1A] bg-clip-text text-transparent font-black",
+    dotColor: "bg-primary shadow-[0_0_8px_#B7FF18]",
+    textStyle: "bg-gradient-to-r from-[#B7FF18] to-[#B7FF18] bg-clip-text text-transparent font-black",
     nameColor: "text-slate-800",
   },
   epic: {
@@ -219,9 +234,9 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
     nameColor: "text-slate-50",
   },
   rare: {
-    bg: "bg-gradient-to-b from-[#B7FF1A33] via-[#14532d4d] to-[#B7FF1A33]",
+    bg: "bg-gradient-to-b from-[#B7FF1833] via-[#14532d4d] to-[#B7FF1833]",
     glow: "",
-    dotColor: "bg-primary shadow-[0_0_8px_#B7FF1A]",
+    dotColor: "bg-primary shadow-[0_0_8px_#B7FF18]",
     textStyle: "text-slate-400 font-normal",
     nameColor: "text-slate-50",
   },
@@ -235,10 +250,10 @@ const rarityCardStyles: Record<string, { bg: string; glow: string; dotColor: str
 };
 
 const userTypeConfig: Record<string, { label: string; icon: any; color: string }> = {
-  streamer: { label: "Streamer", icon: Video, color: "bg-[#B7FF1A]/20 text-[#B7FF1A] border-[#B7FF1A]/30" },
-  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-[#B7FF1A]/20 text-[#B7FF1A] border-[#B7FF1A]/30" },
+  streamer: { label: "Streamer", icon: Video, color: "bg-[#B7FF18]/20 text-[#B7FF18] border-[#B7FF18]/30" },
+  gamer: { label: "Gamer", icon: Gamepad2, color: "bg-[#B7FF18]/20 text-[#B7FF18] border-[#B7FF18]/30" },
   professional_gamer: { label: "Professional Gamer", icon: Trophy, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
-  content_creator: { label: "Content Creator", icon: Upload, color: "bg-[#B7FF1A]/20 text-[#B7FF1A] border-[#B7FF1A]/30" },
+  content_creator: { label: "Content Creator", icon: Upload, color: "bg-[#B7FF18]/20 text-[#B7FF18] border-[#B7FF18]/30" },
   viewer: { label: "Viewer", icon: Eye, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
   filthy_casual: { label: "Filthy Casual", icon: Coffee, color: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
   doom_scroller: { label: "Doom Scroller", icon: Scroll, color: "bg-red-500/20 text-red-400 border-red-500/30" },
@@ -556,6 +571,11 @@ const ProfilePage = () => {
   // Determine if content should be hidden due to privacy settings
   const isPrivateProfile = profile?.isPrivate && !isOwnProfile;
   const canViewContent = !isPrivateProfile || isFollowing;
+  const isIndieDeveloperProfile = !!profile?.userType
+    ?.split(",")
+    .map((type) => type.trim())
+    .includes("indie_developer");
+  const usesIndieGameLayout = profile?.layoutStyle === "indie-game";
 
   // Fetch user clips (only if allowed to view content). While any clip/reel
   // is still background-processing, poll so the "processing" badge clears
@@ -563,7 +583,7 @@ const ProfilePage = () => {
   const { data: clips, isLoading: isLoadingClips } = useQuery<ClipWithUser[]>({
     queryKey: [`/api/users/${username}/clips`],
     queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!username && canViewContent,
+    enabled: !!username && !!profile && canViewContent && !isIndieDeveloperProfile,
     refetchInterval: (query) => {
       const data = query.state.data as ClipWithUser[] | undefined;
       return data?.some((c) => c.status === "processing") ? 5000 : false;
@@ -574,8 +594,15 @@ const ProfilePage = () => {
   const { data: favoriteGames, isLoading: isLoadingFavorites } = useQuery<Game[]>({
     queryKey: [`/api/users/${username}/games/favorites`],
     queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!username && canViewContent,
+    enabled: !!username && !!profile && canViewContent && !isIndieDeveloperProfile,
   });
+
+  const { data: developerGamesData, isLoading: isLoadingDeveloperGames } = useQuery<{ games: DeveloperGameShowcase[] }>({
+    queryKey: [`/api/games/indie/${username}/list`],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!username && !!profile && isIndieDeveloperProfile && canViewContent,
+  });
+  const developerGames = developerGamesData?.games ?? [];
 
   // Fetch all games for screenshot lightbox
   const { data: games = [] } = useQuery<Game[]>({
@@ -588,7 +615,7 @@ const ProfilePage = () => {
   const { data: screenshots, isLoading: isLoadingScreenshots } = useQuery<Screenshot[]>({
     queryKey: [`/api/users/${profile?.id}/screenshots`],
     queryFn: getQueryFn({ on401: "throw" }),
-    enabled: !!profile?.id && canViewContent,
+    enabled: !!profile?.id && canViewContent && !isIndieDeveloperProfile,
   });
 
   // Fetch user's selected name tag
@@ -752,6 +779,12 @@ const ProfilePage = () => {
     return "clips";
   };
   const [activeTab, setActiveTab] = useState(getInitialTab);
+
+  useEffect(() => {
+    if (isIndieDeveloperProfile && ["clips", "reels", "screenshots"].includes(activeTab)) {
+      setActiveTab("favorites");
+    }
+  }, [isIndieDeveloperProfile, activeTab]);
 
   // Sync tab state with URL for browser back/forward navigation
   const isInitialMount = useRef(true);
@@ -1257,6 +1290,28 @@ const ProfilePage = () => {
   // Memoize banner style to prevent unnecessary re-renders
   const resolvedBannerUrl = bannerSignedUrl || profile?.bannerUrl;
   const resolvedProfileTheme = resolveProfileTheme(profile || {});
+  const shouldApplyTowerdogPageTheme =
+    !usesIndieGameLayout && resolvedProfileTheme.theme?.slug === "towerdog_pixel_surge";
+
+  useEffect(() => {
+    const syncTowerdogPageState = () => {
+      document.body.classList.toggle("profile-theme-towerdog-page", shouldApplyTowerdogPageTheme);
+      document.body.classList.toggle(
+        "profile-theme-page-hidden",
+        shouldApplyTowerdogPageTheme && document.hidden
+      );
+    };
+
+    syncTowerdogPageState();
+    document.addEventListener("visibilitychange", syncTowerdogPageState);
+
+    return () => {
+      document.body.classList.remove("profile-theme-towerdog-page");
+      document.body.classList.remove("profile-theme-page-hidden");
+      document.removeEventListener("visibilitychange", syncTowerdogPageState);
+    };
+  }, [shouldApplyTowerdogPageTheme]);
+
   const bannerStyle = useMemo(() => ({
     backgroundImage: resolvedBannerUrl ? `url(${resolvedBannerUrl})` : 'none',
     backgroundColor: resolvedProfileTheme.bannerColor,
@@ -1276,12 +1331,12 @@ const ProfilePage = () => {
   //     // Use requestAnimationFrame to batch updates and prevent visual flashing
   //     requestAnimationFrame(() => {
   //       // Ensure complete isolation - set CSS custom properties only on this element
-  //       scope.style.setProperty('--user-accent-color', profile.accentColor || '#B7FF1A');
-  //       scope.style.setProperty('--user-primary-color', profile.primaryColor || '#071013');
-  //       scope.style.setProperty('--user-avatar-border-color', profile.avatarBorderColor || '#B7FF1A');
+  //       scope.style.setProperty('--user-accent-color', profile.accentColor || '#B7FF18');
+  //       scope.style.setProperty('--user-primary-color', profile.primaryColor || '#0A0A10');
+  //       scope.style.setProperty('--user-avatar-border-color', profile.avatarBorderColor || '#B7FF18');
 
   //       // Calculate alpha version of accent color for subtle effects
-  //       const accentColor = profile.accentColor || '#B7FF1A';
+  //       const accentColor = profile.accentColor || '#B7FF18';
   //       const alpha = `${accentColor}33`;
   //       scope.style.setProperty('--user-accent-color-alpha', alpha);
   //     });
@@ -1559,6 +1614,7 @@ const ProfilePage = () => {
   const cardColor = resolvedProfileTheme.cardColor;
   const profileThemeDefinition = resolvedProfileTheme.theme;
   const profileThemeSlug = profileThemeDefinition?.slug || "default";
+  const isTowerdogTheme = profileThemeSlug === "towerdog_pixel_surge";
   const profileThemeTokens = profileThemeDefinition?.tokens;
   const profileThemeStyle = {
     "--profile-theme-background": profileThemeTokens?.background || backgroundColor,
@@ -2195,14 +2251,19 @@ const ProfilePage = () => {
     );
   })() : null;
 
-  const isIndieDeveloperProfile = !!(profile.userType?.split(',').map((t: string) => t.trim()).includes('indie_developer'));
-  if (profile.layoutStyle === 'indie-game' || isIndieDeveloperProfile) {
-    return <IndieGameProfileLayout profile={profile} isOwnProfile={isOwnProfile} />;
+  // Keep layout dispatch after all hooks so changing profile types preserves hook order.
+  if (isIndieDeveloperProfile) {
+    return <IndieDeveloperProfile key={profile.username} profile={profile} isOwnProfile={isOwnProfile} />;
+  }
+
+  if (usesIndieGameLayout) {
+    return <IndieGameProfileLayout key={profile.username} profile={profile} isOwnProfile={isOwnProfile} />;
   }
 
   return (
     <>
     {selectedProfileNftDetail}
+    {isTowerdogTheme && typeof document !== "undefined" && createPortal(<TowerdogPixelField />, document.body)}
     {isSummerTheme && (
       <style>{`
         .summer-profile {
@@ -2415,7 +2476,7 @@ const ProfilePage = () => {
       </div>
     )}
     <div 
-      className={`min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope${isBlocksTheme && !profileBackgroundImageUrl ? ' blocks-bg' : ''}${isSummerTheme ? ' summer-profile' : ''}${isCatalogTheme ? ' profile-theme-catalog' : ''}`}
+      className={`min-h-screen pb-12 px-1 md:px-6 relative profile-theme-scope${isBlocksTheme && !profileBackgroundImageUrl ? ' blocks-bg' : ''}${isSummerTheme ? ' summer-profile' : ''}${isCatalogTheme ? ' profile-theme-catalog' : ''}${isTowerdogTheme ? ' profile-theme-towerdog' : ''}`}
       ref={profileThemeScopeRef}
       data-default-profile-theme={backgroundColor === DEFAULT_PROFILE_THEME.backgroundColor && accentColor === DEFAULT_PROFILE_THEME.accentColor ? "true" : undefined}
       data-profile-theme={isCatalogTheme ? profileThemeSlug : undefined}
@@ -2453,6 +2514,11 @@ const ProfilePage = () => {
         ...profileThemeStyle,
         background: 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)',
         backgroundAttachment: 'fixed',
+        position: 'relative',
+        zIndex: 1
+      } : isTowerdogTheme ? {
+        ...profileThemeStyle,
+        background: 'transparent',
         position: 'relative',
         zIndex: 1
       } : isCatalogTheme ? {
@@ -2494,7 +2560,6 @@ const ProfilePage = () => {
           style={{ backgroundImage: profileThemeDefinition?.assets.decorativeOverlay || "none" }}
         />
       )}
-
       {/* Bat theme animated overlay */}
       {isBatTheme && (
         <>
@@ -2624,7 +2689,7 @@ const ProfilePage = () => {
         if (profile.birthday !== todayMMDD) return null;
         return (
           <div className="relative overflow-hidden rounded-xl mx-1 md:mx-0 mb-3" style={{
-            background: 'linear-gradient(135deg, #B7FF1A 0%, #B7FF1A 50%, #EAB308 100%)',
+            background: 'linear-gradient(135deg, #B7FF18 0%, #B7FF18 50%, #EAB308 100%)',
             padding: '1px',
           }}>
             <div className="relative rounded-xl px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-center gap-3 text-center" style={{
@@ -2648,7 +2713,7 @@ const ProfilePage = () => {
 
       {/* Enhanced Banner with global theme colors */}
       <div 
-        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 ${resolvedBannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}`}
+        className={`h-44 sm:h-52 md:h-72 bg-cover bg-center overflow-hidden profile-banner relative -mx-1 md:-mx-8 ${resolvedBannerUrl ? 'cursor-pointer hover:brightness-110 transition-all duration-200' : ''}${isTowerdogTheme ? ' towerdog-theme-banner' : ''}`}
         style={{
           ...bannerStyle,
           opacity: hideBanner ? 0 : 1,
@@ -3522,6 +3587,7 @@ const ProfilePage = () => {
                   showLiveOverlay={!!(isStreamer && (profile?.twitchVerified || profile?.kickVerified || (profile as any)?.vpzoneVerified))}
                   isLive={profileLiveStatus?.isLive ?? false}
                   themeColor={avatarThemeColor}
+                  borderImageOverride={isTowerdogTheme ? "/attached_assets/Profile-border-v2.png" : undefined}
                   className="h-full w-full"
                 />
               </div>
@@ -3749,7 +3815,7 @@ const ProfilePage = () => {
             )}
 
             <div 
-              className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''} ${isMayhemTheme ? 'mayhem-stats-card' : ''} ${isSummerTheme ? 'summer-stats-card' : ''}`}
+               className={`rounded-2xl ${isTowerdogTheme ? 'towerdog-stats-card' : ''} ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''} ${isMayhemTheme ? 'mayhem-stats-card' : ''} ${isSummerTheme ? 'summer-stats-card' : ''}`}
               style={isWatermelonTheme ? {
                 background: '#ffb3c1',
               } : isCartoonTheme ? {
@@ -4062,6 +4128,7 @@ const ProfilePage = () => {
                   showLiveOverlay={!!(isStreamer && (profile?.twitchVerified || profile?.kickVerified || (profile as any)?.vpzoneVerified))}
                   isLive={profileLiveStatus?.isLive ?? false}
                   themeColor={avatarThemeColor}
+                   borderImageOverride={isTowerdogTheme ? "/attached_assets/Profile-border-v2.png" : undefined}
                 />
               </div>
               {/* Level Badge with Progress - bottom-right of avatar */}
@@ -4146,7 +4213,7 @@ const ProfilePage = () => {
               )}
 
               <div 
-                className={`rounded-2xl ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''} ${isMayhemTheme ? 'mayhem-stats-card' : ''} ${isSummerTheme ? 'summer-stats-card' : ''}`}
+                 className={`rounded-2xl ${isTowerdogTheme ? 'towerdog-stats-card' : ''} ${isZombieTheme ? 'zombie-stats-card' : ''} ${isCyberpunkTheme ? 'cyber-stats-card' : ''} ${isNeoTheme ? 'neo-stats-card' : ''} ${isBlocksTheme ? 'blocks-stats-card' : ''} ${isWatermelonTheme ? 'watermelon-stats-card' : ''} ${isElectricTheme ? 'electric-stats-card' : ''} ${isMayhemTheme ? 'mayhem-stats-card' : ''} ${isSummerTheme ? 'summer-stats-card' : ''}`}
                 style={isWatermelonTheme ? {
                   background: '#ffb3c1',
                   minWidth: '384px',
@@ -4741,8 +4808,8 @@ const ProfilePage = () => {
         {profileSectionTab === 'collection' ? (
           <div className="w-full">
             <div 
-              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-nft-header' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : isMacTheme ? 'rounded-full' : isGothicTheme ? 'rounded-2xl' : isCartoonTheme ? 'rounded-xl' : isDefaultTheme ? 'rounded-full bg-[#0F101B] border border-[#2B3042]' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
-              style={isBlocksTheme ? undefined : isWatermelonTheme ? { background: '#ffb3c1', border: '5px solid #1d3932', borderRadius: '9999px' } : isZombieTheme ? { background: '#1a1d1a' } : isMacTheme ? { background: 'linear-gradient(180deg, #ebebeb 0%, #d6d6d6 100%)', border: '1px solid #bdbdbd', borderRadius: '9999px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)', position: 'relative' } : isGothicTheme ? { background: 'rgba(15,2,38,0.92)', border: '1px solid #c27aff33', borderRadius: '16px', boxShadow: '0 0 18px #c27aff15' } : isCartoonTheme ? { background: '#ffffff', border: '3px solid #1d1d1f', borderRadius: '12px', boxShadow: '4px 4px 0 #1d1d1f' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : isDefaultTheme ? { background: '#0F101B', border: '1px solid #2B3042' } : undefined}
+              className={`w-full max-w-lg lg:max-w-full mx-auto justify-center h-11 md:h-12 p-1 relative flex gap-0.5 ${isCyberpunkTheme ? 'cyber-tab-list' : isNeoTheme ? 'neo-tab-list' : isBlocksTheme ? 'blocks-nft-header' : isZombieTheme ? 'rounded-full border border-[#7ccf0066]' : isMacTheme ? 'rounded-full' : isGothicTheme ? 'rounded-2xl' : isCartoonTheme ? 'rounded-xl' : isDefaultTheme ? 'rounded-full bg-[#0A0A10] border border-[#2B3042]' : 'rounded-full bg-[hsl(220,20%,12%)] border border-[hsl(220,15%,25%)]'} shadow-lg`}
+              style={isBlocksTheme ? undefined : isWatermelonTheme ? { background: '#ffb3c1', border: '5px solid #1d3932', borderRadius: '9999px' } : isZombieTheme ? { background: '#1a1d1a' } : isMacTheme ? { background: 'linear-gradient(180deg, #ebebeb 0%, #d6d6d6 100%)', border: '1px solid #bdbdbd', borderRadius: '9999px', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)', position: 'relative' } : isGothicTheme ? { background: 'rgba(15,2,38,0.92)', border: '1px solid #c27aff33', borderRadius: '16px', boxShadow: '0 0 18px #c27aff15' } : isCartoonTheme ? { background: '#ffffff', border: '3px solid #1d1d1f', borderRadius: '12px', boxShadow: '4px 4px 0 #1d1d1f' } : isLightBackground ? { background: 'rgba(255,255,255,0.37)', border: '0.556px solid rgba(255,255,255,0.8)' } : isDefaultTheme ? { background: '#0A0A10', border: '1px solid #2B3042' } : undefined}
             >
               {isMacTheme && (
                 <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 6, alignItems: 'center', zIndex: 2 }}>
@@ -4815,9 +4882,9 @@ const ProfilePage = () => {
                   background: 'linear-gradient(270deg, #ff637e 0%, #f6339a 100%)',
                   color: '#ffffff',
                  } : isDefaultTheme ? {
-                    background: '#0F101B',
+                    background: '#0A0A10',
                     color: '#ffffff',
-                    border: '1px solid #B7FF1A',
+                    border: '1px solid #B7FF18',
                 } : {
                   background: `hsl(var(--primary))`,
                   color: '#ffffff',
@@ -4913,7 +4980,7 @@ const ProfilePage = () => {
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#28c840', border: '0.5px solid rgba(0,0,0,0.15)', flexShrink: 0 }} />
               </div>
             )}
-            <TabsTrigger 
+            {!isIndieDeveloperProfile && <TabsTrigger
               ref={clipsTabRef}
               value="clips" 
               className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
@@ -4926,9 +4993,9 @@ const ProfilePage = () => {
                   <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'clips' ? '#1a1a1a' : '#ef4444' } : undefined}>Clips</span>
                 </span>
               )}
-            </TabsTrigger>
+            </TabsTrigger>}
 
-            <TabsTrigger 
+            {!isIndieDeveloperProfile && <TabsTrigger
               ref={reelsTabRef}
               value="reels" 
               className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
@@ -4941,7 +5008,7 @@ const ProfilePage = () => {
                   <span className={`font-black ${isCyberpunkTheme || isNeoTheme || isBlocksTheme ? 'uppercase tracking-[0.5px]' : ''} ${isCyberpunkTheme ? 'cyber-gradient-text' : isNeoTheme ? 'neo-gradient-text' : ''}`} style={isBlocksTheme ? { color: activeTab === 'reels' ? '#1a1a1a' : '#3b82f6' } : undefined}>Reels</span>
                 </span>
               )}
-            </TabsTrigger>
+            </TabsTrigger>}
 
             <TabsTrigger 
               ref={favoritesTabRef}
@@ -4958,7 +5025,7 @@ const ProfilePage = () => {
               )}
             </TabsTrigger>
 
-            <TabsTrigger 
+            {!isIndieDeveloperProfile && <TabsTrigger
               ref={screenshotsTabRef}
               value="screenshots" 
               className={`relative transition-all duration-200 flex-1 px-2 md:px-5 text-xs md:text-sm font-semibold !shadow-none ${isCyberpunkTheme || isNeoTheme || isBlocksTheme || isCartoonTheme ? 'rounded-none' : isGothicTheme ? 'rounded-xl' : 'rounded-full'} ${showLimits ? 'h-12 md:h-14' : 'h-9 md:h-10'}`}
@@ -4994,7 +5061,7 @@ const ProfilePage = () => {
                   />
                 </span>
               )}
-            </TabsTrigger>
+            </TabsTrigger>}
 
             {profile?.showXboxAchievements && Array.isArray(profile?.xboxAchievements) && profile.xboxAchievements.length > 0 && (
               <TabsTrigger
@@ -5027,7 +5094,7 @@ const ProfilePage = () => {
           })()}
 
           {/* Clips Tab */}
-          <TabsContent value="clips" className="pt-4 px-1 md:px-4 pb-24">
+          {!isIndieDeveloperProfile && <TabsContent value="clips" className="pt-4 px-1 md:px-4 pb-24">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -5168,16 +5235,16 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(15 clip limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-[#B7FF1A] hover:bg-[#B7FF1A]/90 text-[#071013] font-semibold px-8"
+                  className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#0A0A10] font-semibold px-8"
                 >
                   Go PRO
                 </Button>
               </div>
             )}
-          </TabsContent>
+          </TabsContent>}
 
           {/* Reels Tab */}
-          <TabsContent value="reels" className="pt-4 px-1 md:px-4">
+          {!isIndieDeveloperProfile && <TabsContent value="reels" className="pt-4 px-1 md:px-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -5319,16 +5386,16 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(15 reel limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-[#B7FF1A] hover:bg-[#B7FF1A]/90 text-[#071013] font-semibold px-8"
+                  className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#0A0A10] font-semibold px-8"
                 >
                   Go PRO
                 </Button>
               </div>
             )}
-          </TabsContent>
+          </TabsContent>}
 
           {/* Screenshots Tab */}
-          <TabsContent value="screenshots" className="pt-4 px-1 md:px-4">
+          {!isIndieDeveloperProfile && <TabsContent value="screenshots" className="pt-4 px-1 md:px-4">
             {!canViewContent ? (
               <div className="py-12 text-center">
                 <div className="max-w-md mx-auto">
@@ -5477,13 +5544,13 @@ const ProfilePage = () => {
                 <p className="text-sm text-muted-foreground">Want unlimited uploads? <span className="font-medium text-foreground">(10 screenshot limit on free)</span></p>
                 <Button
                   onClick={() => setProUpgradeOpen(true)}
-                  className="bg-[#B7FF1A] hover:bg-[#B7FF1A]/90 text-[#071013] font-semibold px-8"
+                  className="bg-[#B7FF18] hover:bg-[#B7FF18]/90 text-[#0A0A10] font-semibold px-8"
                 >
                   Go PRO
                 </Button>
               </div>
             )}
-          </TabsContent>
+          </TabsContent>}
 
           {/* Favorite Games Tab */}
           <TabsContent value="favorites" className="pt-6 px-1 md:px-4 pb-24">
@@ -5542,6 +5609,101 @@ const ProfilePage = () => {
                   )}
                 </div>
               </div>
+            ) : isIndieDeveloperProfile && isLoadingDeveloperGames ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="aspect-video w-full rounded-xl" />
+                ))}
+              </div>
+            ) : isIndieDeveloperProfile ? (
+              developerGames.length > 0 ? (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-lg font-semibold">Games by {profile.displayName || profile.username}</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Games published and managed by this developer.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {developerGames.map((game) => {
+                      const gameName = game.catalogGameName || game.gameName || "Untitled game";
+                      const gameSlug = gameName.toLowerCase().replace(/[^a-z0-9]/g, "");
+                      const imageUrl = game.catalogImageUrl || game.capsuleImageUrl || game.headerImageUrl || "/placeholder-game.png";
+                      const card = (
+                        <div
+                          key={game.id}
+                          className="group overflow-hidden rounded-xl border transition-transform hover:-translate-y-1"
+                          style={{ backgroundColor: cardColor, borderColor: `${accentColor}35` }}
+                        >
+                          <div className="relative aspect-video overflow-hidden bg-muted">
+                            <img
+                              src={imageUrl}
+                              alt={gameName}
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              onError={(event) => {
+                                event.currentTarget.src = "/placeholder-game.png";
+                              }}
+                            />
+                            {game.isPrimary && (
+                              <Badge className="absolute left-3 top-3 border-0 bg-black/75 text-white">
+                                Featured
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="p-4">
+                            <h3 className="font-semibold">{gameName}</h3>
+                            {game.releaseStatus && (
+                              <p className="mt-1 text-xs capitalize text-muted-foreground">
+                                {game.releaseStatus.replace(/_/g, " ")}
+                              </p>
+                            )}
+                            {game.shortDescription && (
+                              <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                                {game.shortDescription}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                      return game.catalogGameId
+                        ? <Link key={game.id} href={`/games/${gameSlug}`}>{card}</Link>
+                        : card;
+                    })}
+                  </div>
+                  {isOwnProfile && (
+                    <div className="flex justify-center pt-2">
+                      <Button
+                        variant="outline"
+                        style={{ borderColor: accentColor, color: accentColor }}
+                        onClick={() => setLocation("/game-dashboard")}
+                      >
+                        <Gamepad2 className="mr-2 h-4 w-4" />
+                        Manage Games
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <Gamepad2 className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
+                  <h3 className="text-lg font-medium mb-2">No games published yet</h3>
+                  <p className="text-muted-foreground">
+                    {isOwnProfile
+                      ? "Add your first game from the Game Developer Dashboard."
+                      : `${profile.displayName || profile.username} hasn't added any games yet.`}
+                  </p>
+                  {isOwnProfile && (
+                    <Button
+                      className="mt-5"
+                      variant="outline"
+                      style={{ borderColor: accentColor, color: accentColor }}
+                      onClick={() => setLocation("/game-dashboard")}
+                    >
+                      Open Game Developer Dashboard
+                    </Button>
+                  )}
+                </div>
+              )
             ) : isLoadingFavorites ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {[1, 2, 3, 4, 5].map((i) => (

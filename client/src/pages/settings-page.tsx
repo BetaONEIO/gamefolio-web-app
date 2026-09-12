@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useAiClipsStatus } from "@/hooks/use-ai-vod-clips";
 import { useMobile } from "@/hooks/use-mobile";
 import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video, Eye, Coffee, Scroll } from "lucide-react";
+import { ArrowLeft, Palette, User, Save, Upload, Move, Shield, Camera, Sparkles, Loader2, X, ZoomIn, Crop, Lock, Crown, Check, Calendar, ExternalLink, AlertTriangle, Gamepad2, Plus, Trash2, Hexagon, Smile, RefreshCw, ChevronDown, ChevronUp, Trophy, Settings, Unlink, Video, Eye, Coffee, Scroll, Star } from "lucide-react";
 import { useRevenueCat } from "@/hooks/use-revenuecat";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -45,8 +46,8 @@ import { KeyboardAvoidingWrapper } from "@/components/shared/KeyboardAvoidingWra
 import MintedNftDetailScreen from "@/components/mint/MintedNftDetailScreen";
 import { SKALE_NEBULA_TESTNET } from "@shared/contracts";
 import ProUpgradeDialog from "@/components/ProUpgradeDialog";
-import ManageGameSettings from "@/components/indie/ManageGameSettings";
 import { DEFAULT_PROFILE_THEME, PROFILE_THEMES, resolveProfileTheme } from "@shared/profile-theme";
+import { STREAMER_PARTNER_PURCHASES_ENABLED } from "@/lib/feature-flags";
 
 const EMOJI_CATEGORIES = [
   {
@@ -148,7 +149,12 @@ const FONT_EFFECTS = [
   { value: 'rainbow', label: 'Rainbow Glow', textShadow: '0 0 5px #ff0000, 0 0 10px #ff7700, 0 0 15px #ffff00, 0 0 20px #00ff00, 0 0 25px #0000ff, 0 0 30px #8b00ff' },
 ];
 
-// Component to fetch SVG and render it inline with color replacement
+const STREAMER_PARTNER_PERKS = [
+  "Everything in Gamefolio Pro",
+  "Your live stream featured on your profile",
+  "Showcased across Gamefolio (Trending & more)",
+  "Official Streamer Partner badge",
+];
 const InlineSvgBorder: React.FC<{
   svgUrl: string;
   color: string;
@@ -622,8 +628,265 @@ function validatePlatformInput(key: PlatformKey, username: string): string | nul
   }
 }
 
+// How recently a user must NOT have applied before the application form
+// reappears. Mirrors REAPPLY_COOLDOWN_MS in server/routes/partner.ts.
+const PARTNER_REAPPLY_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
+
+// apiRequest throws `Error("<status>: <body>")`; pull a friendly message out.
+function extractErrorMessage(error: unknown, fallback: string): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  const jsonStart = raw.indexOf("{");
+  if (jsonStart !== -1) {
+    try {
+      const parsed = JSON.parse(raw.slice(jsonStart));
+      if (parsed && typeof parsed.message === "string") return parsed.message;
+    } catch {
+      /* fall through */
+    }
+  }
+  return fallback;
+}
+
+function PartnerSettings() {
+  const { user, refreshUser } = useAuth();
+  const { toast } = useToast();
+  const [message, setMessage] = useState("");
+  const [featuredUrl, setFeaturedUrl] = useState((user as any)?.partnerFeaturedStreamUrl ?? "");
+  const [visible, setVisible] = useState<boolean>((user as any)?.partnerStreamerVisible ?? true);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+
+  const isPro = !!(user as any)?.isPro;
+  const isPartner = !!(user as any)?.isPartner;
+  const partnerAppliedAt = (user as any)?.partnerAppliedAt ?? null;
+  const appliedRecently =
+    !!partnerAppliedAt &&
+    Date.now() - new Date(partnerAppliedAt).getTime() < PARTNER_REAPPLY_COOLDOWN_MS;
+
+  // Keep local partner-settings state in sync if the user object refreshes.
+  useEffect(() => {
+    setFeaturedUrl((user as any)?.partnerFeaturedStreamUrl ?? "");
+    setVisible((user as any)?.partnerStreamerVisible ?? true);
+  }, [(user as any)?.partnerFeaturedStreamUrl, (user as any)?.partnerStreamerVisible]);
+
+  const applyMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/partner/apply", { message });
+      return res.json();
+    },
+    onSuccess: async () => {
+      toast({
+        title: "Application submitted",
+        description: "Thanks! Our team will review your application and be in touch.",
+      });
+      setMessage("");
+      await refreshUser?.();
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Could not submit application",
+        description: extractErrorMessage(error, "Please try again later."),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("PATCH", "/api/partner/settings", {
+        featuredStreamUrl: featuredUrl.trim() === "" ? null : featuredUrl.trim(),
+        streamerVisible: visible,
+      });
+      return res.json();
+    },
+    onSuccess: async () => {
+      toast({ title: "Partner settings saved" });
+      await refreshUser?.();
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Could not save settings",
+        description: extractErrorMessage(error, "Please try again later."),
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Not Pro — show the gated state with an upgrade prompt.
+  if (!isPro) {
+    return (
+      <>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-[#B7FF18]" />
+              Streamer Partner
+            </CardTitle>
+            <CardDescription>
+              Become an official Gamefolio Streamer Partner — earn a Partner badge on your
+              profile and a featured spot on the Gamefolio streamers page.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-start gap-3 rounded-lg border border-primary/40 bg-primary/10 p-4">
+              <Lock className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <div className="space-y-3">
+                <div>
+                  <p className="font-medium">Gamefolio Pro required</p>
+                  <p className="text-sm text-muted-foreground">
+                    The Streamer Partner programme is exclusive to Gamefolio Pro members.
+                    Upgrade to Pro to apply.
+                  </p>
+                </div>
+                <Button onClick={() => setUpgradeOpen(true)}>
+                  <Crown className="h-4 w-4 mr-2" />
+                  Upgrade to Pro
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <ProUpgradeDialog
+          open={upgradeOpen}
+          onOpenChange={setUpgradeOpen}
+          subtitle="Unlock the Streamer Partner programme and more"
+        />
+      </>
+    );
+  }
+
+  // Pro and an approved Partner — show the management panel.
+  if (isPartner) {
+    const dirty =
+      (featuredUrl.trim() || "") !== ((user as any)?.partnerFeaturedStreamUrl || "") ||
+      visible !== ((user as any)?.partnerStreamerVisible ?? true);
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Star className="h-5 w-5 text-[#B7FF18] fill-current" />
+            Streamer Partner
+          </CardTitle>
+          <CardDescription>
+            You're an official Gamefolio Streamer Partner. Manage your partner settings below.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="partner-featured-url">Featured stream link</Label>
+            <Input
+              id="partner-featured-url"
+              type="url"
+              inputMode="url"
+              placeholder="https://twitch.tv/yourchannel"
+              value={featuredUrl}
+              onChange={(e) => setFeaturedUrl(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              The primary stream link shown on your profile and the Gamefolio streamers page.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+            <div>
+              <p className="text-sm font-medium">Show me on the Gamefolio streamers page</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                When off, you keep your Partner badge but won't be listed publicly on
+                gamefolio.com/streamer.
+              </p>
+            </div>
+            <Switch checked={visible} onCheckedChange={setVisible} />
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={() => saveMutation.mutate()} disabled={!dirty || saveMutation.isPending}>
+              {saveMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Save partner settings
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Pro, not a partner, applied within the cooldown window — show pending state.
+  if (appliedRecently) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Star className="h-5 w-5 text-[#B7FF18]" />
+            Streamer Partner
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-start gap-3 rounded-lg border border-primary/40 bg-primary/10 p-4">
+            <Check className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="font-medium">Application under review</p>
+              <p className="text-sm text-muted-foreground">
+                Thanks for applying to the Streamer Partner programme. Our team is reviewing
+                your application and will be in touch by email.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Pro, not a partner — show the application form.
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Star className="h-5 w-5 text-[#B7FF18]" />
+          Apply to be a Streamer Partner
+        </CardTitle>
+        <CardDescription>
+          Official Streamer Partners earn a Partner badge on their profile and a featured
+          spot on the Gamefolio streamers page. Tell us about yourself and your channel.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="partner-application-message">Your application</Label>
+          <Textarea
+            id="partner-application-message"
+            placeholder="Tell us about your streaming — which platforms, your audience, why you'd like to be a Gamefolio Streamer Partner, and a link to your channel."
+            rows={6}
+            maxLength={2000}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">{message.length}/2000</p>
+        </div>
+        <div className="flex justify-end">
+          <Button
+            onClick={() => applyMutation.mutate()}
+            disabled={message.trim().length < 10 || applyMutation.isPending}
+          >
+            {applyMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Star className="h-4 w-4 mr-2" />
+            )}
+            Submit application
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth();
+  const canAccessAiClips = user?.role === "admin" || !!user?.isAmbassador;
+  const { data: aiClipsStatus } = useAiClipsStatus(canAccessAiClips);
   const resolvedUserTheme = resolveProfileTheme(user || {});
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -632,13 +895,23 @@ export default function SettingsPage() {
   const { customerInfo, refreshCustomerInfo } = useRevenueCat();
 
   const { data: claimedRewards } = useQuery<AssetReward[] | null>({
-    queryKey: ["/api/lootbox/rewards"],
+    queryKey: ["/api/lootbox/rewards", user?.id],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!user,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
   const hasSummerReward = !!claimedRewards?.some(
     (reward) => reward.name === "Summer Showdown 2026 Border"
   );
+  const hasTowerdogReward = !!claimedRewards?.some(
+    (reward) => reward.sourcePath === "towerdog_pixel_surge"
+  );
+  const hasThemeEntitlement = (theme: { unlockRewardName?: string; unlockRewardSourcePath?: string }) => {
+    if (theme.unlockRewardSourcePath === "towerdog_pixel_surge") return hasTowerdogReward;
+    if (theme.unlockRewardName) return hasSummerReward;
+    return true;
+  };
   
   const updateProfile = useUpdateProfile();
 
@@ -1084,6 +1357,7 @@ export default function SettingsPage() {
   // Theme preview dialog state
   const [themePreviewData, setThemePreviewData] = useState<typeof PRESET_THEMES[0] | null>(null);
   const [showProUpgradeDialog, setShowProUpgradeDialog] = useState(false);
+  const [showPartnerDialog, setShowPartnerDialog] = useState(false);
 
   // Font preview dialog state
   const [fontPreviewOpen, setFontPreviewOpen] = useState(false);
@@ -1815,7 +2089,6 @@ export default function SettingsPage() {
   }, [(user as any)?.selectedVerificationBadgeId, pendingVerificationBadgeId]);
   
 
-
   // Listen for OAuth results posted back from a popup tab
   useEffect(() => {
     const twitchErrMap: Record<string, string> = {
@@ -2106,12 +2379,6 @@ export default function SettingsPage() {
     return <div>Please log in to access settings.</div>;
   }
 
-  // Indie Game accounts get a completely separate management experience
-  const isIndieGame = user.isPartner && user.partnerType === "indie";
-  if (isIndieGame) {
-    return <ManageGameSettings />;
-  }
-
   // Convert hex colors to RGB for opacity support
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -2152,7 +2419,7 @@ export default function SettingsPage() {
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className={`grid w-full gap-1 ${user.isPartner ? "grid-cols-3" : "grid-cols-3 sm:grid-cols-5"}`}>
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 gap-1">
             <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
               <User className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Profile</span>
@@ -2178,6 +2445,12 @@ export default function SettingsPage() {
                 <Video className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">Streamer</span>
                 <span className="sm:hidden">Stream</span>
+              </TabsTrigger>
+            )}
+            {(STREAMER_PARTNER_PURCHASES_ENABLED || user.isPartner) && (
+              <TabsTrigger value="partner" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Star className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span>Partner</span>
               </TabsTrigger>
             )}
           </TabsList>
@@ -3355,9 +3628,17 @@ export default function SettingsPage() {
                                 profileData.accentColor === theme.accentColor &&
                                 profileData.backgroundColor === theme.backgroundColor);
                             const unlockRewardName = (theme as any).unlockRewardName as string | undefined;
+                            const unlockRewardSourcePath = (theme as any).unlockRewardSourcePath as string | undefined;
+                            const hasThemeReward = hasThemeEntitlement({
+                              unlockRewardName,
+                              unlockRewardSourcePath,
+                            });
+                            if (unlockRewardSourcePath === "towerdog_pixel_surge" && !hasThemeReward) {
+                              return null;
+                            }
                             const isLocked = (
                               ((theme as any).proOnly && !user?.isPro) ||
-                              (!!unlockRewardName && !hasSummerReward)
+                              (!!unlockRewardName && !hasThemeReward)
                             ) && theme.name !== "None";
                             return (
                               <div
@@ -3395,8 +3676,8 @@ export default function SettingsPage() {
                                   )}
                                   {/* ── Theme-specific visual overlays ── */}
                                   {theme.name === 'None' && <>
-                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #B7FF1A06 1px, transparent 1px), linear-gradient(90deg, #B7FF1A06 1px, transparent 1px)', backgroundSize:'14px 14px' }} />
-                                    <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'2px', background:'linear-gradient(90deg, transparent, #B7FF1Acc, transparent)', pointerEvents:'none' }} />
+                                    <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #B7FF1806 1px, transparent 1px), linear-gradient(90deg, #B7FF1806 1px, transparent 1px)', backgroundSize:'14px 14px' }} />
+                                    <div style={{ position:'absolute', bottom:0, left:0, right:0, height:'2px', background:'linear-gradient(90deg, transparent, #B7FF18cc, transparent)', pointerEvents:'none' }} />
                                   </>}
                                   {theme.name === 'Zombie' && <>
                                     <div style={{ position:'absolute', inset:0, pointerEvents:'none', backgroundImage:'linear-gradient(0deg, #9ae60028 1px, transparent 1px), linear-gradient(90deg, #9ae60028 1px, transparent 1px)', backgroundSize:'18px 18px' }} />
@@ -3519,7 +3800,11 @@ export default function SettingsPage() {
                                  </p>
                                 {isLocked && theme.name !== "None" && (
                                   <p className="text-center text-xs text-muted-foreground">
-                                    {(theme as any).unlockRewardName ? "Summer Showdown reward" : "Pro only"}
+                                    {unlockRewardSourcePath
+                                      ? "Signup referral reward"
+                                      : unlockRewardName
+                                        ? "Summer Showdown reward"
+                                        : "Pro only"}
                                   </p>
                                 )}
                                 <div className="flex justify-center p-2">
@@ -3968,7 +4253,7 @@ export default function SettingsPage() {
                                   </button>
                                 </div>
                                 <div className="flex flex-wrap gap-2 justify-center">
-                                  {['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0099FF', '#FF00FF', '#FFFF00', '#FF8800', '#00FFFF', '#FF69B4', '#7B68EE', '#B7FF1A'].map(preset => (
+                                  {['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0099FF', '#FF00FF', '#FFFF00', '#FF8800', '#00FFFF', '#FF69B4', '#7B68EE', '#B7FF18'].map(preset => (
                                     <button
                                       key={preset}
                                       type="button"
@@ -4498,7 +4783,7 @@ export default function SettingsPage() {
                             <div className="flex items-center gap-2">
                               <div className="text-sm font-medium text-slate-200">{platform.label}</div>
                               {isConnected && isXboxVerified && (
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#107C10]/20 text-[#B7FF1A] border border-[#107C10]/30">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium bg-[#107C10]/20 text-[#B7FF18] border border-[#107C10]/30">
                                   <Check className="w-2.5 h-2.5" />
                                   Verified
                                 </span>
@@ -4661,7 +4946,7 @@ export default function SettingsPage() {
                                 {/* For platforms without a URL, show a simple username preview */}
                                 {platformHandle.trim() && !getPlatformUrl(platform.key, platformHandle) && !validatePlatformInput(platform.key, platformHandle) && (
                                   <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-900/60 border border-slate-700/50 rounded-lg px-3 py-2">
-                                    <Check className="w-3 h-3 flex-shrink-0 text-[#B7FF1A]" />
+                                    <Check className="w-3 h-3 flex-shrink-0 text-[#B7FF18]" />
                                     <span>Will show as <span className="text-white font-medium">{platformHandle}</span> on your profile</span>
                                   </div>
                                 )}
@@ -5013,6 +5298,68 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
 
+                {/* Streamer Partner — informational panel + sign-up */}
+                {user?.isPartner ? (
+                  <div className="rounded-xl border border-primary/40 bg-primary/10 px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
+                        <Crown className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-primary">You're a Streamer Partner</div>
+                        <div className="text-xs text-slate-400 mt-0.5">
+                          Thanks for being an official Gamefolio Streamer Partner — your perks are active below.
+                        </div>
+                      </div>
+                    </div>
+                    <ul className="space-y-1.5 mt-3">
+                      {STREAMER_PARTNER_PERKS.map((perk) => (
+                        <li key={perk} className="flex items-start gap-2 text-xs text-slate-300">
+                          <Check className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
+                          <span>{perk}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : STREAMER_PARTNER_PURCHASES_ENABLED ? (
+                  <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
+                        <Crown className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-slate-100">Become a Streamer Partner</div>
+                        <div className="text-xs text-slate-400 mt-0.5">
+                          Our top tier for streamers — everything in Gamefolio Pro, plus your live stream front and centre across Gamefolio.
+                        </div>
+                      </div>
+                    </div>
+
+                    <ul className="space-y-1.5 mt-3">
+                      {STREAMER_PARTNER_PERKS.map((perk) => (
+                        <li key={perk} className="flex items-start gap-2 text-xs text-slate-300">
+                          <Check className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
+                          <span>{perk}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-primary/15">
+                      <div className="text-xs text-slate-400">
+                        {user?.isPro ? "Upgrade from Pro · " : "From "}
+                        <span className="text-slate-200 font-semibold">£4.99</span>/mo or{" "}
+                        <span className="text-slate-200 font-semibold">£44.99</span>/yr
+                      </div>
+                      <Button size="sm" className="flex-shrink-0" onClick={() => setShowPartnerDialog(true)}>
+                        {user?.isPro ? "Upgrade to Partner" : "Become a Partner"}
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-2">
+                      Sign up here — pick a monthly or yearly plan and your partner status activates instantly.
+                    </p>
+                  </div>
+                ) : null}
+
                 {/* Is Streamer Toggle */}
                 <div className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-800/30 px-4 py-3">
                   <div>
@@ -5066,6 +5413,22 @@ export default function SettingsPage() {
                             onCheckedChange={(val) => handleStreamerSettingsSave({ twitchShowOnProfile: val })}
                           />
                         </div>
+                        {canAccessAiClips && (
+                        <div className="border-t border-[#9146FF]/15 pt-3">
+                          {aiClipsStatus?.enabled === false ? (
+                            <div className="text-xs text-slate-400 text-center py-1.5">
+                              AI clip generation is temporarily unavailable{aiClipsStatus.disabledMessage ? ` — ${aiClipsStatus.disabledMessage}` : ""}
+                            </div>
+                          ) : (
+                            <Link href="/ai-clips">
+                              <Button variant="outline" size="sm" className="w-full gap-1.5 border-[#9146FF]/30 text-[#9146FF] hover:bg-[#9146FF]/10">
+                                <Sparkles className="w-4 h-4" />
+                                Generate AI clips from a past stream
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
+                        )}
                       </div>
                     ) : oauthConfig?.twitch === false ? (
                       <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
@@ -5685,6 +6048,13 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Partner Tab */}
+          {(STREAMER_PARTNER_PURCHASES_ENABLED || user.isPartner) && (
+            <TabsContent value="partner">
+              <PartnerSettings />
+            </TabsContent>
+          )}
         </Tabs>
 
         {/* Save Button */}
@@ -5826,7 +6196,7 @@ export default function SettingsPage() {
       {showNftSelector && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/70" onClick={() => setShowNftSelector(false)} />
-          <div className="relative bg-[#0B1218] border border-slate-700 rounded-xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl mx-4">
+          <div className="relative bg-[#0A0A10] border border-slate-700 rounded-xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl mx-4">
             <div className="flex items-center justify-between p-4 border-b border-slate-700">
               <h3 className="text-lg font-semibold text-white">Select NFT as Profile Picture</h3>
               <button
@@ -5873,7 +6243,7 @@ export default function SettingsPage() {
                       const cardBg: Record<string, string> = {
                         legendary: "bg-gradient-to-b from-[#f6cfff] via-[#cefafe] to-[#fff085]",
                         epic: "bg-slate-900",
-                        rare: "bg-gradient-to-b from-[#B7FF1A33] via-[#14532d4d] to-[#B7FF1A33]",
+                        rare: "bg-gradient-to-b from-[#B7FF1833] via-[#14532d4d] to-[#B7FF1833]",
                         common: "bg-slate-900",
                       };
                       const cardGlow: Record<string, string> = {
@@ -5883,13 +6253,13 @@ export default function SettingsPage() {
                         common: "",
                       };
                       const dotColor: Record<string, string> = {
-                        legendary: "bg-primary shadow-[0_0_8px_#B7FF1A]",
+                        legendary: "bg-primary shadow-[0_0_8px_#B7FF18]",
                         epic: "bg-primary shadow-[0_0_8px_#6FA800]",
-                        rare: "bg-primary shadow-[0_0_8px_#B7FF1A]",
+                        rare: "bg-primary shadow-[0_0_8px_#B7FF18]",
                         common: "bg-slate-400/50 shadow-[0_0_8px_#1B2A33]",
                       };
                       const rarityText: Record<string, string> = {
-                        legendary: "text-[#B7FF1A] font-black",
+                        legendary: "text-[#B7FF18] font-black",
                         epic: "text-slate-400 font-normal",
                         rare: "text-slate-400 font-normal",
                         common: "text-slate-400 font-normal",
@@ -5913,7 +6283,7 @@ export default function SettingsPage() {
                           }}
                           disabled={setNftProfileMutation.isPending}
                           className={`relative rounded-2xl overflow-hidden transition-all duration-200 hover:scale-[1.03] text-left ${cardBg[rarityLabel]} ${cardGlow[rarityLabel]} ${
-                            isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#0B1218]' : ''
+                            isSelected ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#0A0A10]' : ''
                           }`}
                         >
                           <div className="relative">
@@ -5988,7 +6358,9 @@ export default function SettingsPage() {
         const isCutesyPink  = tn === 'Cutesy Pink';
         const isMayhem      = tn === 'Mayhem';
         const isBat         = tn === 'Bat';
-         const isRewardLocked = !!(themePreviewData as any).unlockRewardName && !hasSummerReward;
+        const isTowerdog    = tn === 'Towerdog Pixel Surge';
+         const isRewardLocked = !!(themePreviewData as any).unlockRewardName &&
+           !hasThemeEntitlement(themePreviewData as any);
         const isLight       = isMac || isCartoon || isIce || isBubbleTea || isWatermelon;
         const catalogPattern = (themePreviewData as any).assets?.decorativeOverlay || (themePreviewData as any).patternCss;
         const catalogAnimation = (themePreviewData as any).assets?.backgroundAnimation || (themePreviewData as any).animation;
@@ -6166,7 +6538,7 @@ export default function SettingsPage() {
 
          const isThemeLocked = (
            ((themePreviewData as any).proOnly && !user?.isPro) ||
-           ((themePreviewData as any).unlockRewardName && !hasSummerReward)
+           ((themePreviewData as any).unlockRewardName && !hasThemeEntitlement(themePreviewData as any))
          ) && tn !== "None";
         const isCurrentTheme = !isThemeLocked && themePreviewData.accentColor === profileData.accentColor && themePreviewData.backgroundColor === profileData.backgroundColor;
         const displayName = tn === 'None' ? 'Gamefolio Default' : tn;
@@ -6243,11 +6615,15 @@ export default function SettingsPage() {
                 @keyframes mayhemRippleCard { 0%{transform:translate(-50%,-50%) scale(0.05);opacity:0.7} 100%{transform:translate(-50%,-50%) scale(5);opacity:0} }
               `}</style>
               <div
-                className="rounded-2xl overflow-hidden relative"
+                className={`rounded-2xl overflow-hidden relative${isTowerdog ? ' profile-theme-towerdog' : ''}`}
                  style={{
-                   background: isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' : isSummer ? 'repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px), linear-gradient(180deg, #28A9E8 0%, #087EA4 37%, #12B8C4 62%, #E9C47A 92%, #C99B50 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)`
+                   background: isTowerdog ? '#060A1C' : isMayhem ? 'linear-gradient(135deg, #00DFFF 0%, #9B30FF 50%, #FF0080 100%)' : isBat ? 'linear-gradient(180deg, #2a2a2a 0%, #111111 100%)' : isSummer ? 'repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px), linear-gradient(180deg, #28A9E8 0%, #087EA4 37%, #12B8C4 62%, #E9C47A 92%, #C99B50 100%)' : `linear-gradient(180deg, ${topColor} 0%, ${bg} 55%, ${bg} 100%)`
                  }}
               >
+                {isTowerdog && <>
+                  <div className="towerdog-pixel-background" aria-hidden="true" />
+                  <div className="towerdog-pixel-wave-overlay" aria-hidden="true" />
+                </>}
                  {isCatalogPreview && catalogPattern && (
                    <div
                      className="catalog-preview-motion"
@@ -6427,8 +6803,10 @@ export default function SettingsPage() {
                         setThemePreviewData(null);
                         if (isRewardLocked) {
                           toast({
-                            title: "Summer theme locked",
-                            description: "Finish in the Summer Showdown top 10 to unlock this seasonal theme.",
+                            title: `${tn} locked`,
+                            description: isTowerdog
+                              ? "Use a referral code during signup to unlock this permanent collection theme."
+                              : "Finish in the Summer Showdown top 10 to unlock this seasonal theme.",
                           });
                         } else {
                           setShowProUpgradeDialog(true);
@@ -6440,9 +6818,9 @@ export default function SettingsPage() {
                     }}
                     className="flex-1 py-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2"
                     style={{
-                      background: isCurrentTheme ? `${accent}40` : isThemeLocked ? '#B7FF1A' : isSummer ? '#087EA4' : accent,
+                      background: isCurrentTheme ? `${accent}40` : isThemeLocked ? '#B7FF18' : isSummer ? '#087EA4' : accent,
                       color: isCurrentTheme ? (isLight ? '#333' : 'rgba(255,255,255,0.5)') : isThemeLocked ? '#1a1a1a' : isSummer ? '#FFFFFF' : (isLight && !isGothic ? '#1d1d1f' : bg),
-                      boxShadow: isCurrentTheme ? 'none' : isThemeLocked ? '0 8px 24px -8px #B7FF1A66' : isSummer ? '0 5px 0 #063B5C55, 0 8px 24px -8px #087EA4' : `0 8px 24px -8px ${accent}`,
+                      boxShadow: isCurrentTheme ? 'none' : isThemeLocked ? '0 8px 24px -8px #B7FF1866' : isSummer ? '0 5px 0 #063B5C55, 0 8px 24px -8px #087EA4' : `0 8px 24px -8px ${accent}`,
                       fontFamily: isThemeLocked ? undefined : themeFont,
                       fontSize: '0.875rem',
                       borderRadius: '12px',
@@ -6451,7 +6829,11 @@ export default function SettingsPage() {
                     }}
                   >
                      {isThemeLocked && !isRewardLocked && <img src={gamefolioLogo} alt="Gamefolio" className="w-5 h-5 rounded-full flex-shrink-0" />}
-                     {isCurrentTheme ? 'Current Theme' : isRewardLocked ? 'Place in Summer top 10' : isThemeLocked ? 'Go Pro' : 'Apply Theme'}
+                     {isCurrentTheme
+                       ? 'Current Theme'
+                       : isRewardLocked
+                         ? isTowerdog ? 'Signup referral reward' : 'Place in Summer top 10'
+                         : isThemeLocked ? 'Go Pro' : 'Apply Theme'}
                   </button>
                 </div>
               </div>
@@ -6466,6 +6848,16 @@ export default function SettingsPage() {
         onOpenChange={setShowProUpgradeDialog}
         subtitle="Unlock premium themes and elevate your gaming profile"
       />
+
+      {/* Streamer Partner Upgrade Dialog */}
+      {STREAMER_PARTNER_PURCHASES_ENABLED && (
+        <ProUpgradeDialog
+          open={showPartnerDialog}
+          onOpenChange={setShowPartnerDialog}
+          tier="partner"
+          subtitle="Feature your live stream on your profile and across Gamefolio"
+        />
+      )}
 
     </KeyboardAvoidingWrapper>
   );

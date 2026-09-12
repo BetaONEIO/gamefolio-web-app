@@ -488,7 +488,7 @@ const VideoPlayer = ({
             <Button 
               variant="ghost" 
               size="sm" 
-              className="p-0 h-7 w-7 md:h-8 md:w-8 rounded-full flex items-center justify-center bg-[#B7FF1A] hover:bg-[#c8ff4d] text-[#071013]"
+              className="p-0 h-7 w-7 md:h-8 md:w-8 rounded-full flex items-center justify-center bg-[#B7FF18] hover:bg-[#c8ff4d] text-[#0A0A10]"
               onClick={togglePlay}
               aria-label={isPlaying ? "Pause video" : "Play video"}
             >
@@ -499,7 +499,7 @@ const VideoPlayer = ({
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="text-[#B7FF1A] p-1 md:p-2 h-6 md:h-8 w-6 md:w-8 hover:bg-white/10"
+                className="text-[#B7FF18] p-1 md:p-2 h-6 md:h-8 w-6 md:w-8 hover:bg-white/10"
                 onClick={toggleMute}
                 aria-label={isMuted ? "Unmute video" : "Mute video"}
               >
@@ -519,7 +519,7 @@ const VideoPlayer = ({
           <Button 
             variant="ghost" 
             size="sm" 
-            className="text-[#B7FF1A] p-1 md:p-2 h-6 md:h-8 w-6 md:w-8 hover:bg-white/10"
+            className="text-[#B7FF18] p-1 md:p-2 h-6 md:h-8 w-6 md:w-8 hover:bg-white/10"
             onClick={toggleFullscreen}
             aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
           >
