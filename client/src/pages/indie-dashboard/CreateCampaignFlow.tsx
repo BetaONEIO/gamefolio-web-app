@@ -8,10 +8,9 @@ import {
   MessageSquare, Target, AlertCircle, Gamepad2,
   Sparkles, Cog, Upload, FileText, X, ArrowRight,
   CheckCircle2, Calendar, Bot, Sliders,
-  ChevronRight, ChevronDown, ClipboardList,
+  ChevronRight, ChevronDown, ClipboardList, Globe2,
 } from "lucide-react";
 import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
-import { BOUNTY_REWARD_CONFIG } from "@shared/bounty-rewards";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const CARD_BG     = "#0e1520";
@@ -58,7 +57,8 @@ const ANIM_CSS = `
 interface CampaignType {
   slug: string; name: string; shortName: string; tagline: string; description: string;
   shortDesc: string; subtitle: string; bestFor: string; bestForList: string[];
-  duration: number; capacity: number; demoKeys: number; fullKeys: number;
+  duration: number;
+  deliverables: number;
   xpReward: number; recommended?: boolean; custom?: boolean; icon: any;
   pills: { ct: string; qty: number }[];
 }
@@ -72,7 +72,7 @@ const CAMPAIGN_TYPES: CampaignType[] = [
     description: "A short campaign designed to generate first impressions, gameplay content and useful creator feedback.",
     bestFor: "🚀 New Launches",
     bestForList: ["New game launches", "Steam demos", "Early Access", "First wave of creator content"],
-    duration: 5, capacity: 20, demoKeys: 20, fullKeys: 20, xpReward: BOUNTY_REWARD_CONFIG["quick-creator"].totalReward, recommended: true, icon: Zap,
+    duration: 7, deliverables: 5, xpReward: 3000, recommended: true, icon: Zap,
     pills: [{ ct: "clip", qty: 2 }, { ct: "screenshot", qty: 2 }, { ct: "feedback", qty: 1 }],
   },
   {
@@ -83,7 +83,7 @@ const CAMPAIGN_TYPES: CampaignType[] = [
     description: "A multi-format campaign designed to generate gameplay clips, vertical content, screenshots and creator feedback for future marketing.",
     bestFor: "📈 Content Library",
     bestForList: ["Social media marketing", "Building a content library", "Steam page promotion", "Increasing game discovery"],
-    duration: 10, capacity: 35, demoKeys: 35, fullKeys: 35, xpReward: BOUNTY_REWARD_CONFIG["content-boost"].totalReward, icon: Sparkles,
+    duration: 14, deliverables: 8, xpReward: 7500, icon: Sparkles,
     pills: [{ ct: "clip", qty: 2 }, { ct: "reel", qty: 3 }, { ct: "screenshot", qty: 2 }, { ct: "feedback", qty: 1 }],
   },
   {
@@ -94,8 +94,19 @@ const CAMPAIGN_TYPES: CampaignType[] = [
     description: "A longer campaign for creators who will spend more time playing, streaming and producing higher-value content.",
     bestFor: "⭐ Deep Engagement",
     bestForList: ["Full game launches", "Major updates", "DLC releases", "Seasonal events", "Deep creator engagement"],
-    duration: 21, capacity: 25, demoKeys: 25, fullKeys: 25, xpReward: BOUNTY_REWARD_CONFIG["creator-showcase"].totalReward, icon: Rocket,
+    duration: 21, deliverables: 11, xpReward: 15000, icon: Rocket,
     pills: [{ ct: "clip", qty: 3 }, { ct: "reel", qty: 3 }, { ct: "screenshot", qty: 3 }, { ct: "stream", qty: 1 }, { ct: "feedback", qty: 1 }],
+  },
+  {
+    slug: "custom-campaign", name: "Build Your Own Campaign", shortName: "Build Your Own",
+    tagline: "Choose your own content objectives, access method and completion timeframe.",
+    subtitle: "Configure a campaign around your goals.",
+    shortDesc: "Choose your own content objectives, access method and completion timeframe.",
+    description: "Build a campaign around your own goals with Gamefolio-calculated XP and deadlines.",
+    bestFor: "⚙ Flexible Goals",
+    bestForList: ["Specific content goals", "Product testing", "Flexible launches"],
+    duration: 14, deliverables: 0, xpReward: 0, custom: true, icon: Sliders,
+    pills: [],
   },
 ];
 
@@ -104,6 +115,48 @@ interface CampaignSettings {
   startType: "asap" | "scheduled"; scheduledDate: string; scheduledTime: string; timeZone: string;
   regions: string; platforms: string[];
   customDuration?: number; customCapacity?: number;
+  applicationPeriod: number; accessMethod: AccessMethod;
+  completionFullGameKey: boolean; customObjectives: CustomObjective[];
+  maxPlaces: number; manualApproval: boolean; customAccessInstructions: string; customAccessNeedsKey: boolean;
+}
+
+type AccessMethod = "demo_to_full" | "full_game_upfront" | "public_demo" | "free_to_play" | "private_playtest" | "custom_access";
+type CustomObjective = { type: "clip" | "reel" | "screenshot" | "stream" | "review" | "feedback" | "bug"; quantity: number };
+
+const ACCESS_METHODS: { id: AccessMethod; title: string; description: string; Icon: any }[] = [
+  { id: "demo_to_full", title: "Demo to Full Game", description: "Creators receive demo or playtest access when they join and unlock the full game after completing the campaign.", Icon: KeyRound },
+  { id: "full_game_upfront", title: "Full Game Upfront", description: "Creators receive the full game when they join. Bounty XP is their completion reward.", Icon: Gamepad2 },
+  { id: "public_demo", title: "Public Demo", description: "Creators use your publicly available demo without an access key.", Icon: Globe2 },
+  { id: "free_to_play", title: "Free-to-Play", description: "No game key is required. Creators earn Bounty XP for completing the campaign.", Icon: Zap },
+  { id: "private_playtest", title: "Private Playtest", description: "Creators receive a private playtest key or access code.", Icon: Lock },
+  { id: "custom_access", title: "Custom Access", description: "Provide creators with your own access instructions.", Icon: FileText },
+];
+
+const DEFAULT_OBJECTIVES: CustomObjective[] = [
+  { type: "clip", quantity: 1 }, { type: "reel", quantity: 0 }, { type: "screenshot", quantity: 1 },
+  { type: "stream", quantity: 0 }, { type: "review", quantity: 1 }, { type: "feedback", quantity: 0 },
+  { type: "bug", quantity: 0 },
+];
+
+const OBJECTIVE_LABELS: Record<CustomObjective["type"], string> = {
+  clip: "Gameplay Clips", reel: "Vertical Reels", screenshot: "Screenshots",
+  stream: "Livestreams", review: "Creator Review", feedback: "Feedback Submission", bug: "Bug Reports",
+};
+
+const OBJECTIVE_XP: Record<CustomObjective["type"], number> = {
+  clip: 500, reel: 750, screenshot: 200, stream: 2000, review: 750, feedback: 500, bug: 600,
+};
+function calculatedCustomXp(objectives: CustomObjective[]) {
+  const subtotal = objectives.reduce((sum, objective) => sum + objective.quantity * OBJECTIVE_XP[objective.type], 0);
+  return subtotal > 0 ? subtotal + 500 : 0;
+}
+function recommendedCustomDeadline(objectives: CustomObjective[]) {
+  const days: Record<CustomObjective["type"], number> = { clip: 1, reel: 2, screenshot: 1, stream: 3, review: 2, feedback: 1, bug: 2 };
+  const estimate = objectives.reduce((sum, objective) => sum + objective.quantity * days[objective.type], 0);
+  return Math.max(1, Math.min(90, Math.ceil(estimate * 0.6)));
+}
+function objectiveSnapshot(objectives: CustomObjective[]): Record<string, number> {
+  return Object.fromEntries(objectives.map(objective => [objective.type, objective.quantity]));
 }
 
 const REGION_OPTIONS = [
@@ -141,7 +194,7 @@ function reqPillLabel(ct: string, qty: number) {
 }
 
 function campaignSummary(type: CampaignType) {
-  return `${type.shortName} · ${type.duration} days · ${type.capacity} creators · ${type.xpReward.toLocaleString()} Bounty XP Reward`;
+  return `${type.shortName} · ${type.duration} days · ${type.deliverables || "Custom"} deliverables · ${type.xpReward.toLocaleString()} Bounty XP Reward`;
 }
 
 const fieldStyle: React.CSSProperties = {
@@ -535,9 +588,8 @@ function TypeCard({
         <div className="grid grid-cols-2 gap-2">
           {[
             { Icon: Clock, label: "Duration", value: `${type.duration} days` },
-            { Icon: Users, label: "Creator slots", value: `${type.capacity}` },
-            { Icon: KeyRound, label: "Demo keys", value: `${type.demoKeys}` },
-            { Icon: KeyRound, label: "Full keys", value: `${type.fullKeys}` },
+            { Icon: ClipboardList, label: "Deliverables", value: `${type.deliverables || "Custom"}` },
+            { Icon: KeyRound, label: "Access", value: "Flexible" },
           ].map(({ Icon, label, value }) => (
             <div key={label} className="rounded-xl px-3 py-2.5" style={{ background: "#18232d", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-wider font-bold text-white/40">
@@ -675,9 +727,8 @@ function ThinTypeCard({
           <div className="space-y-1.5">
             {[
               `${type.duration}-day campaign`,
-              `${type.capacity} creator slots`,
-              `${type.demoKeys} demo keys required`,
-              `${type.fullKeys} full game keys required`,
+              `${type.deliverables || "Custom"} deliverables per creator`,
+              "Access requirements depend on your access method",
             ].map((label, i) => (
               <div key={i} className="flex items-center gap-2">
                 <div className="w-1 h-1 rounded-full shrink-0"
@@ -766,13 +817,11 @@ const CAMPAIGN_ARTWORK: Record<string, string> = {
   "quick-creator": "/attached_assets/generated_images/campaign-quick-creator.png",
   "content-boost": "/attached_assets/generated_images/campaign-content-boost.png",
   "creator-showcase": "/attached_assets/generated_images/campaign-creator-showcase.png",
+  "custom-campaign": "/attached_assets/generated_images/campaign-creator-showcase.png",
 };
 
 function campaignKeySummary(type: CampaignType) {
-  if (type.demoKeys > 0 && type.fullKeys > 0) {
-    return `${type.demoKeys} demo keys + ${type.fullKeys} full-game keys`;
-  }
-  return `Keys required: ${type.demoKeys + type.fullKeys}`;
+  return "Key requirements depend on your chosen access method and campaign capacity.";
 }
 
 // Campaign type selection — full-width accessible accordion
@@ -845,8 +894,8 @@ function CampaignAccordion({
                   <span className="block mt-1.5 text-[11px] sm:text-xs leading-[1.2] font-bold uppercase tracking-[0.05em] text-white/85">DURATION</span>
                 </span>
                 <span className="min-w-[90px] sm:min-w-[100px] flex flex-col items-center justify-center text-center whitespace-nowrap">
-                  <strong className="block text-[23px] sm:text-[27px] leading-[1.1] font-bold text-white">{type.capacity}</strong>
-                  <span className="block mt-1.5 text-[11px] sm:text-xs leading-[1.2] font-bold uppercase tracking-[0.05em] text-white/85">CREATORS</span>
+                   <strong className="block text-[23px] sm:text-[27px] leading-[1.1] font-bold text-white">{type.deliverables || "Custom"}</strong>
+                   <span className="block mt-1.5 text-[11px] sm:text-xs leading-[1.2] font-bold uppercase tracking-[0.05em] text-white/85">DELIVERABLES</span>
                 </span>
                 <span className="min-w-[120px] sm:min-w-[132px] flex flex-col items-center justify-center text-center whitespace-nowrap">
                   <strong className="block text-[23px] sm:text-[27px] leading-[1.1] font-bold" style={{ color: "#B9FF1A" }}>{type.xpReward.toLocaleString()}</strong>
@@ -885,8 +934,8 @@ function CampaignAccordion({
                       style={{ background: "#0b141d", border: "1px solid rgba(255,255,255,0.14)" }}>
                       <KeyRound size={22} className="shrink-0" style={{ color: accent }} aria-hidden="true" />
                       <div className="min-w-0">
-                        <div className="text-xs uppercase tracking-[0.08em] font-bold text-white/75">KEYS REQUIRED</div>
-                        <div className="text-lg sm:text-xl font-bold text-white mt-1 leading-snug">{campaignKeySummary(type)}</div>
+                         <div className="text-xs uppercase tracking-[0.08em] font-bold text-white/75">ACCESS MODEL</div>
+                         <div className="text-sm sm:text-base font-bold text-white mt-1 leading-snug">{campaignKeySummary(type)}</div>
                       </div>
                     </div>
 
@@ -968,6 +1017,94 @@ function CampaignAccordion({
 // ─────────────────────────────────────────────
 // Step 2: Personalise
 // ─────────────────────────────────────────────
+
+function CustomObjectiveBuilder({ objectives, onChange }: { objectives: CustomObjective[]; onChange: (objectives: CustomObjective[]) => void }) {
+  const update = (type: CustomObjective["type"], quantity: number) =>
+    onChange(objectives.map(o => o.type === type ? { ...o, quantity } : o));
+  const total = objectives.reduce((sum, objective) => sum + objective.quantity, 0);
+  return (
+    <div className="rounded-2xl p-4 sm:p-5 space-y-3" style={{ background: "#111923", border: "1px solid rgba(185,255,26,0.18)" }}>
+      <div>
+        <div className="text-xs font-black text-white">Custom objectives</div>
+        <p className="text-[11px] text-white/50 mt-1">Choose supported objectives and sensible quantities. XP and the recommended deadline are calculated automatically.</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {objectives.map(objective => (
+          <div key={objective.type} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5" style={{ background: "rgba(255,255,255,0.04)" }}>
+            <span className="text-xs font-bold text-white/80">{OBJECTIVE_LABELS[objective.type]}</span>
+            <select aria-label={`${OBJECTIVE_LABELS[objective.type]} quantity`} value={objective.quantity}
+              onChange={e => update(objective.type, Number(e.target.value))}
+              style={{ ...fieldStyle, width: "76px", padding: "7px 8px" } as any}>
+              {Array.from({ length: objective.type === "stream" ? 3 : objective.type === "review" || objective.type === "feedback" ? 2 : 6 }, (_, i) => (
+                <option key={i} value={i}>{i}</option>
+              ))}
+            </select>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-3 text-[11px] font-bold" style={{ color: NEON }}>
+        <span>{total} deliverables per creator</span>
+        <span>Calculated XP: {calculatedCustomXp(objectives).toLocaleString()}</span>
+        <span>Recommended deadline: {recommendedCustomDeadline(objectives)} days</span>
+      </div>
+      {objectives.some(o => o.type === "stream" && o.quantity > 0) && (
+        <p className="text-[11px] text-amber-300">Livestream objectives require supported streaming platforms and a connected streaming account.</p>
+      )}
+    </div>
+  );
+}
+
+function AccessMethodSelector({ settings, onChange }: { settings: CampaignSettings; onChange: (s: Partial<CampaignSettings>) => void }) {
+  const method = ACCESS_METHODS.find(item => item.id === settings.accessMethod) ?? ACCESS_METHODS[0];
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="text-[11px] font-bold text-white/75 uppercase tracking-[0.08em] block">How will creators access your game?</label>
+        <p className="text-[11px] text-white/50 mt-1">Campaign access and completion rewards are separate.</p>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        {ACCESS_METHODS.map(option => {
+          const selected = option.id === settings.accessMethod;
+          const Icon = option.Icon;
+          return (
+            <button key={option.id} type="button" aria-pressed={selected} onClick={() => onChange({
+              accessMethod: option.id,
+              completionFullGameKey: ["demo_to_full", "public_demo", "private_playtest"].includes(option.id),
+            })}
+              className="text-left rounded-xl p-3.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9FF1A]"
+              style={{ background: selected ? "#182817" : "#111923", border: `1.5px solid ${selected ? NEON : "rgba(255,255,255,0.12)"}` }}>
+              <div className="flex items-start gap-3">
+                <Icon size={17} style={{ color: selected ? NEON : "rgba(255,255,255,0.55)" }} />
+                <div><div className="text-xs font-black text-white">{option.title}</div><div className="text-[11px] leading-relaxed text-white/50 mt-1">{option.description}</div></div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      {["public_demo", "private_playtest"].includes(settings.accessMethod) && (
+        <label className="flex items-center gap-2 text-xs text-white/70">
+          <input type="checkbox" checked={settings.completionFullGameKey} onChange={e => onChange({ completionFullGameKey: e.target.checked })} />
+          Full-game key unlocked after completion
+        </label>
+      )}
+      {settings.accessMethod === "custom_access" && (
+        <div className="space-y-2">
+          <textarea value={settings.customAccessInstructions} onChange={e => onChange({ customAccessInstructions: e.target.value })}
+            placeholder="Describe how creators access your game…" rows={3} style={{ ...fieldStyle, resize: "vertical" } as any} />
+          <label className="flex items-center gap-2 text-xs text-white/70">
+            <input type="checkbox" checked={settings.customAccessNeedsKey} onChange={e => onChange({ customAccessNeedsKey: e.target.checked })} />
+            A key or access code is required
+          </label>
+        </div>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-xl p-3.5" style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        <div><div className="text-[10px] uppercase font-bold tracking-wider text-white/45">Campaign access</div><div className="text-xs font-bold text-white mt-1">{method.id === "free_to_play" || method.id === "public_demo" || (method.id === "custom_access" && !settings.customAccessNeedsKey) ? "No access key required" : method.title}</div></div>
+        <div><div className="text-[10px] uppercase font-bold tracking-wider text-white/45">Completion reward</div><div className="text-xs font-bold text-white mt-1">{settings.completionFullGameKey ? "Bounty XP + full-game key" : "Bounty XP"}</div></div>
+      </div>
+      {settings.completionFullGameKey && <p className="text-[11px] text-white/55">Full-game keys are released only after every campaign objective has been completed and validated.</p>}
+    </div>
+  );
+}
 
 function StepPersonalise({ type, settings, onChange }: {
   type: CampaignType; settings: CampaignSettings; onChange: (s: Partial<CampaignSettings>) => void;
@@ -1208,20 +1345,40 @@ function StepPersonalise({ type, settings, onChange }: {
             </select>
           </div>
 
+          <div className="pt-2">
+            <AccessMethodSelector settings={settings} onChange={onChange} />
+          </div>
+
+          <div>
+            <label htmlFor="application-period" className={labelStyle}>Campaign Application Period</label>
+            <p className="text-[11px] text-white/55 mb-2.5">How long new creators can join. Their individual completion deadline starts when access is accepted or revealed.</p>
+            <select id="application-period" style={{ ...fieldStyle, paddingRight: "32px" } as any} value={settings.applicationPeriod}
+              onChange={e => onChange({ applicationPeriod: Number(e.target.value) })}>
+              {[7, 14, 30, 60].map(days => <option key={days} value={days}>{days} days</option>)}
+              <option value={90}>Custom (up to 90 days)</option>
+            </select>
+          </div>
+
           {type.custom && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-5" style={{ borderTop: "1px solid rgba(255,255,255,0.10)" }}>
+            <div className="space-y-4 pt-5" style={{ borderTop: "1px solid rgba(255,255,255,0.10)" }}>
+              <CustomObjectiveBuilder objectives={settings.customObjectives} onChange={customObjectives => onChange({ customObjectives })} />
               <div>
-                <label className={labelStyle}>Duration (days)</label>
-                <input type="number" min={3} max={60} style={fieldStyle}
+                <label className={labelStyle}>Recommended completion deadline (days)</label>
+                <input type="number" min={1} max={90} style={fieldStyle}
                   value={settings.customDuration ?? type.duration}
-                  onChange={e => onChange({ customDuration: Math.max(3, Math.min(60, Number(e.target.value))) })} />
+                  onChange={e => onChange({ customDuration: Math.max(1, Math.min(90, Number(e.target.value))) })} />
+                <p className={helperStyle}>Gamefolio calculates XP centrally from your selected objectives. Rewards are not arbitrary.</p>
               </div>
-              <div>
-                <label className={labelStyle}>Creator Capacity</label>
-                <input type="number" min={5} max={100} style={fieldStyle}
-                  value={settings.customCapacity ?? type.capacity}
-                  onChange={e => onChange({ customCapacity: Math.max(5, Math.min(100, Number(e.target.value))) })} />
-              </div>
+            </div>
+          )}
+          {type.custom && settings.customObjectives.some(o => o.type === "stream" && o.quantity > 0) && settings.platforms.length === 0 && (
+            <p className="text-[11px] text-amber-300">Select a supported streaming platform before launching livestream objectives.</p>
+          )}
+          {!type.custom && (
+            <div className="rounded-xl px-4 py-3" style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-white/50">Creator completion deadline</div>
+              <div className="text-sm font-black text-white mt-1">{type.duration} days after access is claimed</div>
+              {type.slug === "creator-showcase" && <p className="text-[11px] text-amber-300 mt-1">Creator Showcase requires livestream-capable creators with a connected streaming account.</p>}
             </div>
           )}
         </div>
@@ -1232,7 +1389,7 @@ function StepPersonalise({ type, settings, onChange }: {
             <p className="text-[10px] uppercase tracking-[0.16em] font-bold text-white/55">Campaign Summary</p>
             <p className="text-sm font-black text-white mt-2 leading-relaxed">{campaignSummary(type)}</p>
            <p className="text-[11px] text-white/55 mt-2">
-             Each creator can earn up to <strong className="text-[#B9FF1A]">{type.xpReward.toLocaleString()} Bounty XP</strong> by completing all required objectives.
+             Each creator can earn up to <strong className="text-[#B9FF1A]">{(type.custom ? calculatedCustomXp(settings.customObjectives) : type.xpReward).toLocaleString()} Bounty XP</strong> by completing all required objectives.
            </p>
           </div>
           <div className="p-5 space-y-5">
@@ -1259,8 +1416,8 @@ function StepPersonalise({ type, settings, onChange }: {
             <div className="grid grid-cols-2 gap-x-4 gap-y-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.10)" }}>
               {[
                 { label: "Duration", value: `${type.duration} days` },
-                { label: "Creator slots", value: `${type.capacity}` },
-                { label: "Keys required", value: campaignKeySummary(type) },
+                { label: "Deliverables", value: `${type.deliverables || "Custom"} per creator` },
+                { label: "Access", value: "Selected in personalisation" },
                 { label: "Bounty XP Reward", value: `${type.xpReward.toLocaleString()} XP`, accent: true },
               ].map(item => (
                 <div key={item.label}>
@@ -1454,16 +1611,26 @@ function KeyUploadArea({
 
 function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
   useVaultDemo, useVaultFull, onUseVaultDemoChange, onUseVaultFullChange,
-  onDemoChange, onFullChange }: {
+  onDemoChange, onFullChange, accessMethod, completionFullGameKey, maxPlaces, onMaxPlacesChange }: {
   type: CampaignType;
   demoKeys: string; fullKeys: string; vaultDemo: number; vaultFull: number;
   useVaultDemo: boolean; useVaultFull: boolean;
   onUseVaultDemoChange: (v: boolean) => void; onUseVaultFullChange: (v: boolean) => void;
   onDemoChange: (v: string) => void; onFullChange: (v: string) => void;
+  accessMethod: AccessMethod; completionFullGameKey: boolean; maxPlaces: number; onMaxPlacesChange: (v: number) => void;
 }) {
   const effectiveDemo = (useVaultDemo ? vaultDemo : 0) + parseKeyLines(demoKeys).length;
   const effectiveFull = (useVaultFull ? vaultFull : 0) + parseKeyLines(fullKeys).length;
-  const allReady = effectiveDemo >= type.demoKeys && effectiveFull >= type.fullKeys;
+  const needsDemo = accessMethod === "demo_to_full" || accessMethod === "private_playtest";
+  const needsAccessFull = accessMethod === "full_game_upfront";
+  const needsRewardFull = completionFullGameKey && ["demo_to_full", "public_demo", "private_playtest"].includes(accessMethod);
+  const needsCustomKey = accessMethod === "custom_access" && customAccessNeedsKey;
+  const allReady = (!(needsDemo || needsCustomKey) || effectiveDemo > 0) && (!needsAccessFull || effectiveFull > 0) && (!needsRewardFull || effectiveFull > 0);
+  const capacity = needsDemo && needsRewardFull ? Math.min(effectiveDemo, effectiveFull)
+    : needsAccessFull ? effectiveFull
+    : needsDemo ? effectiveDemo
+    : needsRewardFull ? effectiveFull : needsCustomKey ? effectiveDemo : maxPlaces;
+  const showFull = needsAccessFull || needsRewardFull;
 
   return (
     <div className="space-y-6 gf-fade-up">
@@ -1474,27 +1641,59 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
         Keys lock when the campaign goes live — they cannot be withdrawn once creators join.
       </p>
 
-      {/* Two upload areas */}
+      {/* Separate pools are shown only when relevant to the selected access model. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-        <KeyUploadArea
-          label="Demo Keys" accent="#60a5fa" accentRgb="96,165,250"
-          description="Issued to creators when they join."
-          keys={demoKeys} needed={type.demoKeys} vaultAvail={vaultDemo}
+        {(needsDemo || needsCustomKey) && <KeyUploadArea
+          label={accessMethod === "private_playtest" ? "Demo or Playtest Access Keys" : "Demo or Playtest Access Keys"} accent="#60a5fa" accentRgb="96,165,250"
+          description="Released when eligible creators join."
+          keys={demoKeys} needed={1} vaultAvail={vaultDemo}
           useVault={useVaultDemo} onUseVaultChange={onUseVaultDemoChange}
-          onChange={onDemoChange} />
-        <KeyUploadArea
-          label="Full Game Keys" accent="#fb923c" accentRgb="251,146,60"
-          description="Rewarded on completion."
-          keys={fullKeys} needed={type.fullKeys} vaultAvail={vaultFull}
+          onChange={onDemoChange} />}
+        {showFull && <KeyUploadArea
+          label={needsAccessFull ? "Full-Game Access Keys" : "Full-Game Completion Reward Keys"} accent="#fb923c" accentRgb="251,146,60"
+          description={needsAccessFull ? "Creators receive the full game when they join." : "Released only after every objective is completed and validated."}
+          keys={fullKeys} needed={1} vaultAvail={vaultFull}
           useVault={useVaultFull} onUseVaultChange={onUseVaultFullChange}
-          onChange={onFullChange} />
+          onChange={onFullChange} />}
+      </div>
+      {!needsDemo && !needsAccessFull && !needsRewardFull && !needsCustomKey && (
+        <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
+          <label className="text-xs font-black text-white block">How many campaign places would you like to make available?</label>
+          <select value={maxPlaces} onChange={e => onMaxPlacesChange(Number(e.target.value))} style={{ ...fieldStyle, marginTop: "10px" } as any}>
+            <option value={3}>3</option><option value={5}>5</option><option value={10}>10</option><option value={25}>Custom (25)</option>
+          </select>
+        </div>
+      )}
+      <div className="rounded-xl p-4" style={{ background: "rgba(185,255,26,0.05)", border: "1px solid rgba(185,255,26,0.16)" }}>
+        <div className="text-[10px] uppercase tracking-wider font-bold" style={{ color: NEON }}>Campaign capacity: {Math.max(0, capacity)} places</div>
+        <p className="text-[11px] text-white/55 mt-1">
+          {needsDemo && needsRewardFull
+            ? `Calculated from the smaller valid key pool (${effectiveDemo} access keys and ${effectiveFull} full-game reward keys).`
+            : needsDemo || needsAccessFull || needsRewardFull
+              ? "Calculated from your valid key inventory."
+            : needsCustomKey ? "Calculated from your custom access key inventory." : "No key inventory limits participation; your maximum places setting applies."}
+        </p>
+        {needsDemo && needsRewardFull && effectiveDemo !== effectiveFull && <p className="text-[11px] text-amber-300 mt-1">Your key pools are mismatched. Add keys to expand campaign capacity.</p>}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
+          <div className="text-[10px] uppercase tracking-wider font-bold text-white/45">Maximum potential output</div>
+          {type.pills.length > 0
+            ? type.pills.map(({ ct, qty }) => <div key={ct} className="text-xs text-white/75 mt-2">{qty * Math.max(0, capacity)} {reqPillLabel(ct, 1).replace(/^×1 /, "")}</div>)
+            : <div className="text-xs text-white/55 mt-2">Calculated from your selected objectives and campaign places.</div>}
+        </div>
+        <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
+          <div className="text-[10px] uppercase tracking-wider font-bold text-white/45">Estimated output &amp; campaign performance</div>
+          {capacity > 0 ? <><div className="text-xs text-white/75 mt-2">Expected participation: approximately {Math.max(1, Math.floor(capacity * 0.6))}–{Math.max(1, capacity)} creators</div><div className="text-xs text-white/75 mt-1">Expected completions: approximately {Math.max(1, Math.floor(capacity * 0.4))}–{Math.max(1, Math.floor(capacity * 0.8))} creators</div></> : <div className="text-xs text-white/55 mt-2">Participation estimate unavailable. Starting with a small campaign is recommended.</div>}
+          <p className="text-[10px] text-white/40 mt-2">Estimates are based on eligible active creators, selected platforms and previous campaign performance. Results are not guaranteed.</p>
+        </div>
       </div>
 
       {/* All ready */}
       {allReady && (
         <div className="flex items-center gap-2 text-sm font-bold gf-scale-in" style={{ color: NEON }}>
           <CheckCircle2 className="w-4 h-4" />
-          All keys ready — {type.demoKeys} demo · {type.fullKeys} full game
+          Access and completion reward pools are ready
         </div>
       )}
     </div>
@@ -1505,12 +1704,15 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
 // Step 4: Launch
 // ─────────────────────────────────────────────
 
-function StepLaunch({ type, settings, confirmed, onConfirm, submitting, onLaunch }: {
+function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting, onLaunch }: {
   type: CampaignType; settings: CampaignSettings; confirmed: boolean;
+  capacity: number;
   onConfirm: (v: boolean) => void; submitting: boolean; onLaunch: () => void;
 }) {
   const duration = type.custom && settings.customDuration ? settings.customDuration : type.duration;
-  const capacity = type.custom && settings.customCapacity ? settings.customCapacity : type.capacity;
+  const bountyXp = type.custom ? calculatedCustomXp(settings.customObjectives) : type.xpReward;
+  const requiresDemo = settings.accessMethod === "demo_to_full" || settings.accessMethod === "private_playtest"
+    || (settings.accessMethod === "custom_access" && settings.customAccessNeedsKey);
   const regionLabel = REGION_OPTIONS.find(r => r.id === settings.regions)?.label ?? "Worldwide";
   const accent = TYPE_ACCENT[type.slug] ?? NEON;
   const rgb    = ACCENT_RGB[accent] ?? "183,255,27";
@@ -1541,12 +1743,11 @@ function StepLaunch({ type, settings, confirmed, onConfirm, submitting, onLaunch
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-4">
+        <div className="grid grid-cols-3">
           {[
             { label: "Duration",  value: `${duration}d` },
-            { label: "Creators",  value: capacity },
-            { label: "Demo Keys", value: type.demoKeys },
-            { label: "Full Keys", value: type.fullKeys },
+            { label: "Deliverables", value: type.deliverables || "Custom" },
+            { label: "Bounty XP", value: `${bountyXp.toLocaleString()} XP` },
           ].map((s, i) => (
             <div key={s.label} className="flex flex-col items-center py-3.5"
               style={{ borderRight: i < 3 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
@@ -1562,10 +1763,26 @@ function StepLaunch({ type, settings, confirmed, onConfirm, submitting, onLaunch
           <span>{settings.startType === "asap" ? "🚀 Launches immediately" : `📅 Launches ${settings.scheduledDate}`}</span>
           <span>· {regionLabel}</span>
           {settings.platforms.length > 0 && <span>· {settings.platforms.join(", ")}</span>}
+           <span>· Application period: {settings.applicationPeriod}d</span>
+           <span>· Capacity: {capacity} places</span>
         </div>
       </div>
 
-      {/* Confirmation checkbox */}
+       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+         <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
+           <div className="text-[10px] uppercase tracking-wider font-bold text-white/45">Campaign access</div>
+           <div className="text-sm font-bold text-white mt-1">{ACCESS_METHODS.find(m => m.id === settings.accessMethod)?.title}</div>
+           <div className="text-[11px] text-white/50 mt-1">{requiresDemo ? "Access keys released when eligible creators join." : "No access key required unless configured."}</div>
+         </div>
+         <div className="rounded-xl p-4" style={{ background: "rgba(185,255,26,0.05)", border: "1px solid rgba(185,255,26,0.16)" }}>
+           <div className="text-[10px] uppercase tracking-wider font-bold" style={{ color: NEON }}>Completion reward</div>
+           <div className="text-sm font-bold text-white mt-1">Up to {bountyXp.toLocaleString()} Bounty XP</div>
+           {settings.completionFullGameKey && <div className="text-[11px] text-white/60 mt-1">Full-game key unlocked after completion</div>}
+         </div>
+       </div>
+       <p className="text-[11px] text-white/50">Estimates are based on eligible active creators, selected platforms and previous campaign performance. Results are not guaranteed.</p>
+
+       {/* Confirmation checkbox */}
       <button onClick={() => onConfirm(!confirmed)}
         className="w-full flex items-start gap-3 text-left p-4 rounded-2xl transition-all"
         style={{
@@ -1577,7 +1794,7 @@ function StepLaunch({ type, settings, confirmed, onConfirm, submitting, onLaunch
           {confirmed && <Check className="w-3 h-3" style={{ color: "#070b10" }} />}
         </div>
         <span className="text-sm text-white/60 leading-snug">
-          I confirm I am ready to launch this campaign. Keys will be committed to the vault and cannot be withdrawn once creators join.
+           I understand that creator participation and content-output figures are estimates and are not guaranteed.
         </span>
       </button>
 
@@ -1881,7 +2098,7 @@ function AutoStepLimits({ limits, onChange }: { limits: AutoLimits; onChange: (l
 
       {/* Max creators */}
       <div>
-        <label className={labelStyle}>Maximum Creators per Campaign</label>
+        <label className={labelStyle}>Maximum campaign places</label>
         <div className="flex items-center justify-between">
           <p className="text-sm text-white/50">How many creators can join each campaign</p>
           <div className="flex items-center gap-3 shrink-0">
@@ -2001,7 +2218,7 @@ function AutoStepConfirm({ limits, poolDemo, poolFull, indieProfile, confirmed, 
           {[
             { label: "Demo Keys",        value: poolDemo,              color: "#60a5fa" },
             { label: "Full Keys",        value: poolFull,              color: "#fb923c" },
-            { label: "Max Creators",     value: limits.maxCreators,    color: "rgba(255,255,255,0.8)" },
+            { label: "Max places",       value: limits.maxCreators,    color: "rgba(255,255,255,0.8)" },
             { label: "Frequency",        value: freqLabel,             color: "rgba(255,255,255,0.8)" },
             { label: "Min Demo Reserve", value: limits.minDemoReserve, color: "#60a5fa" },
             { label: "Min Full Reserve", value: limits.minFullReserve, color: "#fb923c" },
@@ -2136,7 +2353,10 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
     scheduledTime: "12:00",
     timeZone: typeof Intl !== "undefined" ? (Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC") : "UTC",
     gameName: "", gameId: null, gameImageUrl: null,
-    regions: "worldwide", platforms: [],
+    regions: "worldwide", platforms: [], applicationPeriod: 30,
+    accessMethod: "demo_to_full", completionFullGameKey: true,
+    customObjectives: DEFAULT_OBJECTIVES, maxPlaces: 5, manualApproval: false,
+    customAccessInstructions: "", customAccessNeedsKey: false,
   });
 
   // ── Auto mode state ────────────────────────
@@ -2176,13 +2396,26 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
   const pendFull  = parseKeyLines(pendingFullKeys).length;
   const effectiveVaultDemo = useVaultDemo ? vaultDemo : 0;
   const effectiveVaultFull = useVaultFull ? vaultFull : 0;
+  const accessDemoCount = effectiveVaultDemo + pendDemo;
+  const accessFullCount = effectiveVaultFull + pendFull;
+  const requiresDemoAccess = settings.accessMethod === "demo_to_full" || settings.accessMethod === "private_playtest" || (settings.accessMethod === "custom_access" && settings.customAccessNeedsKey);
+  const requiresFullAccess = settings.accessMethod === "full_game_upfront";
+  const requiresFullReward = settings.completionFullGameKey && ["demo_to_full", "public_demo", "private_playtest"].includes(settings.accessMethod);
   const keysReady = !!selectedType &&
-    (effectiveVaultDemo + pendDemo >= selectedType.demoKeys) &&
-    (effectiveVaultFull + pendFull >= selectedType.fullKeys);
+    (!requiresDemoAccess || accessDemoCount > 0) &&
+    (!requiresFullAccess || accessFullCount > 0) &&
+    (!requiresFullReward || accessFullCount > 0);
+  const campaignCapacity = requiresDemoAccess && requiresFullReward ? Math.min(accessDemoCount, accessFullCount)
+    : requiresFullAccess ? accessFullCount
+    : requiresDemoAccess ? accessDemoCount
+    : requiresFullReward ? accessFullCount : settings.maxPlaces;
   const personaliseReady = !!selectedType &&
     settings.campaignTitle.trim().length > 0 &&
     settings.description.trim().length > 0 &&
-    (settings.startType === "asap" || (settings.scheduledDate.length > 0 && settings.scheduledTime.length > 0));
+    settings.platforms.length > 0 &&
+    (settings.startType === "asap" || (settings.scheduledDate.length > 0 && settings.scheduledTime.length > 0)) &&
+    (settings.accessMethod !== "custom_access" || settings.customAccessInstructions.trim().length > 0) &&
+    (!selectedType.custom || settings.customObjectives.some(objective => objective.quantity > 0));
 
   // Auto pool counts (adds pasted keys to pool live count)
   const poolDemo    = (poolStatus?.demoKeys ?? 0) + parseKeyLines(autoDemoKeys).length;
@@ -2204,6 +2437,16 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
     if (!templateId || !selectedType) return;
     setSubmitting(true);
     try {
+      const customObjectives = selectedType.custom ? objectiveSnapshot(settings.customObjectives) : undefined;
+      const completionDeadlineDays = selectedType.custom
+        ? (settings.customDuration ?? recommendedCustomDeadline(settings.customObjectives))
+        : selectedType.duration;
+      const estimateSnapshot = {
+        estimatedCreatorReach: settings.platforms.length > 0 && settings.regions ? { min: Math.max(1, Math.floor(campaignCapacity * 2.5)), max: Math.max(2, campaignCapacity * 4) } : null,
+        expectedParticipation: settings.platforms.length > 0 && settings.regions ? { min: Math.max(1, Math.floor(campaignCapacity * 0.6)), max: Math.max(1, campaignCapacity) } : null,
+        expectedCompletions: settings.platforms.length > 0 && settings.regions ? { min: Math.max(1, Math.floor(campaignCapacity * 0.4)), max: Math.max(1, Math.floor(campaignCapacity * 0.8)) } : null,
+        estimatesGuaranteed: false,
+      };
       const inst = await apiRequest("POST", "/api/campaigns/instances", {
         templateId, campaignTitle: settings.campaignTitle, gameName: settings.gameName, gameId: settings.gameId,
         gameArtworkUrl: settings.gameImageUrl, startType: settings.startType,
@@ -2213,18 +2456,36 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
         artworkUrl: settings.gameImageUrl || null,
         description: settings.description || undefined,
         regions: settings.regions,
-        platforms: settings.platforms.length > 0 ? settings.platforms : undefined,
+         platforms: settings.platforms.length > 0 ? settings.platforms : undefined,
+         accessMethod: settings.accessMethod,
+         accessInstructions: settings.customAccessInstructions || undefined,
+         applicationPeriodDays: settings.applicationPeriod,
+         creatorDeadlineDays: completionDeadlineDays,
+         maxPlaces: campaignCapacity,
+         completionRewardType: settings.completionFullGameKey ? "full_game_key" : "bounty_xp",
+         completionRewardKeyRequired: settings.completionFullGameKey,
+         manualApprovalRequired: settings.manualApproval,
+         objectiveSnapshot: customObjectives,
+         estimateSnapshot,
+         customAccessNeedsKey: settings.accessMethod === "custom_access" ? settings.customAccessNeedsKey : undefined,
+         // Persist the canonical API field as well for deployments that
+         // serialize campaign access settings in snake_case.
+         custom_access_needs_key: settings.accessMethod === "custom_access" ? settings.customAccessNeedsKey : undefined,
       });
       const instData = await inst.json();
       if (!inst.ok) throw new Error(instData.message || "Failed to create campaign");
+      // Estimates are draft metadata accepted by the draft PATCH endpoint.
+      const estimatePatch = await apiRequest("PATCH", `/api/campaigns/instances/${instData.id}`, { estimateSnapshot });
+      if (!estimatePatch.ok) throw new Error("Failed to save campaign estimates");
 
       const demoKeyList = parseKeyLines(pendingDemoKeys);
       const fullKeyList = parseKeyLines(pendingFullKeys);
-      if (demoKeyList.length > 0) {
-        await apiRequest("POST", `/api/campaigns/instances/${instData.id}/keys`, { keyType: "demo", keys: demoKeyList });
+       if (demoKeyList.length > 0) {
+         await apiRequest("POST", `/api/campaigns/instances/${instData.id}/keys`, { keyType: "demo", keyPool: "access", keys: demoKeyList });
       }
       if (fullKeyList.length > 0) {
-        await apiRequest("POST", `/api/campaigns/instances/${instData.id}/keys`, { keyType: "full", keys: fullKeyList });
+         const keyPool = settings.accessMethod === "full_game_upfront" ? "access" : "reward";
+         await apiRequest("POST", `/api/campaigns/instances/${instData.id}/keys`, { keyType: "full", keyPool, keys: fullKeyList });
       }
 
       const submitRes = await apiRequest("POST", `/api/campaigns/instances/${instData.id}/submit`, {});
@@ -2252,7 +2513,7 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
         await apiRequest("POST", "/api/campaigns/auto/keys", { keyType: "demo", keys: demoKeyList });
       }
       if (fullKeyList.length > 0) {
-        await apiRequest("POST", "/api/campaigns/auto/keys", { keyType: "full", keys: fullKeyList });
+        await apiRequest("POST", "/api/campaigns/auto/keys", { keyType: "full", keyPool: "reward", keys: fullKeyList });
       }
 
       // Get curated template IDs (all 3 non-custom)
@@ -2310,7 +2571,7 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
 
   const autoStep1Summary = mode === "auto" ? "Automatic Campaigns" : "";
   const autoStep2Summary = `${poolDemo} demo · ${poolFull} full keys in pool`;
-  const autoStep3Summary = `${autoLimits.maxCreators} creators · ${FREQUENCY_OPTS.find(f => f.id === autoLimits.frequency)?.label}`;
+  const autoStep3Summary = `${autoLimits.maxCreators} campaign places · ${FREQUENCY_OPTS.find(f => f.id === autoLimits.frequency)?.label}`;
   const SelectedTypeIcon = selectedType?.icon ?? Gamepad2;
   const selectedTypeSummary = selectedType ? campaignSummary(selectedType) : "";
 
@@ -2340,7 +2601,7 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
             <span className="text-white/25">→</span>
             <span className={currentStep === 2 ? "text-[#B9FF1A]" : "text-white/45"}><span>2</span> Personalise</span>
             <span className="text-white/25">→</span>
-            <span className={currentStep === 3 ? "text-[#B9FF1A]" : "text-white/45"}><span>3</span> Upload Keys</span>
+             <span className={currentStep === 3 ? "text-[#B9FF1A]" : "text-white/45"}><span>3</span> Add Access</span>
             <span className="text-white/25">→</span>
             <span className={currentStep === 4 ? "text-[#B9FF1A]" : "text-white/45"}><span>4</span> Review &amp; Launch</span>
           </div>
@@ -2387,13 +2648,14 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
               <div>
                 <p className="text-[10px] uppercase tracking-widest mb-1.5 font-bold" style={{ color: "rgba(255,255,255,0.25)" }}>Step 1</p>
                 <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">Choose Your Campaign Type</h2>
-                <p className="text-sm text-white/55 mt-2 max-w-xl">Select the campaign that best matches what you want creators to produce.</p>
+                 <p className="text-sm text-white/70 mt-2 max-w-2xl">Start with a ready-made campaign or build one around your own goals.</p>
+                 <p className="text-[12px] text-white/45 mt-1 max-w-2xl">Predefined campaigns provide an easy recommended starting point. Build Your Own allows developers to select their own objectives, access method and timeframe.</p>
                 <div className="mt-4 text-[11px] font-bold tracking-wide text-white/45" aria-label="Campaign creation steps">
                   <span style={{ color: NEON }}>1 Choose Type</span>
                   <span className="mx-2 text-white/25">→</span>
                   <span>2 Personalise</span>
                   <span className="mx-2 text-white/25">→</span>
-                  <span>3 Upload Keys</span>
+                   <span>3 Add Access</span>
                   <span className="mx-2 text-white/25">→</span>
                   <span>4 Review &amp; Launch</span>
                 </div>
@@ -2541,7 +2803,7 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
               )}
             </StepCard>
 
-            <StepCard number={3} title="Upload Game Keys" icon={KeyRound}
+             <StepCard number={3} title="Add Access" icon={KeyRound}
               state={manualStepState(3)} completedLine={step3ManualSummary}
               onEdit={() => setCurrentStep(3)}>
               {selectedType && (
@@ -2551,7 +2813,9 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
                     vaultDemo={vaultDemo} vaultFull={vaultFull}
                     useVaultDemo={useVaultDemo} useVaultFull={useVaultFull}
                     onUseVaultDemoChange={setUseVaultDemo} onUseVaultFullChange={setUseVaultFull}
-                    onDemoChange={setPendingDemoKeys} onFullChange={setPendingFullKeys} />
+                     onDemoChange={setPendingDemoKeys} onFullChange={setPendingFullKeys}
+                     accessMethod={settings.accessMethod} completionFullGameKey={settings.completionFullGameKey}
+                     maxPlaces={settings.maxPlaces} onMaxPlacesChange={value => updateSettings({ maxPlaces: value })} />
                   <button
                     onClick={() => keysReady && setCurrentStep(4)}
                     disabled={!keysReady}
@@ -2563,10 +2827,10 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
               )}
             </StepCard>
 
-            <StepCard number={4} title="Launch Campaign" icon={Rocket}
+             <StepCard number={4} title="Review & Launch" icon={Rocket}
               state={manualStepState(4)}>
               {selectedType && (
-                <StepLaunch type={selectedType} settings={settings}
+                <StepLaunch type={selectedType} settings={settings} capacity={campaignCapacity}
                   confirmed={confirmed} onConfirm={setConfirmed}
                   submitting={submitting} onLaunch={handleLaunch} />
               )}

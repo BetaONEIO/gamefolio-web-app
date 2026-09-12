@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
 import {
-  Target, ShieldCheck, Clock, Users, Key, ChevronRight, ChevronLeft,
+  Target, ShieldCheck, Clock, Users, Key, KeyRound, ChevronRight, ChevronLeft,
   Zap, Copy, Check, Loader2, Lock,
   Film, Camera, MessageSquare, Star, AlertCircle, Upload, Plus,
   Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown, Store, Flame,
@@ -40,6 +40,10 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   under_review:            { label: "Under Review",             color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
   pending:                 { label: "Submitted for Review",     color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
   enrolled:               { label: "Joined",                  color: "#94a3b8", bg: "rgba(148,163,184,0.12)" },
+  pending_application:    { label: "Application Pending",     color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
+  application_pending:    { label: "Application Pending",     color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
+  application_approved:   { label: "Application Approved",    color: "#4ade80", bg: "rgba(74,222,128,0.12)" },
+  approved:               { label: "Application Approved",    color: "#4ade80", bg: "rgba(74,222,128,0.12)" },
   demo_key_claimed:       { label: "Demo Key Claimed",        color: NEON,      bg: "rgba(183,255,24,0.12)" },
   in_progress:            { label: "In Progress",             color: "#60a5fa", bg: "rgba(96,165,250,0.12)" },
   submitted_for_review:   { label: "Submitted for Review",    color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
@@ -59,6 +63,19 @@ function timeRemaining(endDate: string | null) {
   const hours = Math.floor((diff % 86400000) / 3600000);
   if (days > 0) return `${days}d ${hours}h left`;
   return `${hours}h left`;
+}
+
+function accessMethodLabel(campaign: any) {
+  const method = campaign.access_method ?? campaign.accessMethod;
+  if (method === "demo_to_full") return "Demo access · full game after completion";
+  if (method === "full_game_upfront" || method === "full_upfront") return "Full game access on joining";
+  const hasFullReward = Boolean(campaign.completion_full_game_key ?? campaign.completion_reward_key_required);
+  if (method === "public_demo") return hasFullReward ? "Public demo · full game after completion" : "Public demo access";
+  if (method === "free_to_play") return "Free-to-play access";
+  if (method === "private_playtest") return hasFullReward ? "Private playtest · full game after completion" : "Private playtest access";
+  if (method === "custom_access" || method === "custom") return "Custom access instructions";
+  if (campaign.demo_keys_remaining > 0) return "Demo access";
+  return "Access details available in mission";
 }
 
 // ── Build requirement checklist from bounties ────────────────────────────────────────────────────
@@ -193,6 +210,17 @@ function objectiveLabel(b: any) {
   if (ct === "session")    return "Complete a Play Session";
   if (ct === "bug")        return `File ${qty} Bug Report${qty !== 1 ? "s" : ""}`;
   return b.title ?? ct;
+}
+
+function objectiveWorkflowStatus(b: any, progress: number, quantity: number, joined: boolean) {
+  if (!joined) return undefined;
+  const state = String(b.validation_state ?? b.status ?? "").toLowerCase();
+  if (["validating", "under_review"].includes(state)) return "Validating";
+  if (["needs_attention", "changes_requested"].includes(state)) return "Needs Attention";
+  if (["rejected"].includes(state)) return "Rejected";
+  if (progress >= quantity) return "Complete";
+  if (progress > 0 || ["submitted", "submitted_for_review"].includes(state)) return "Submitted";
+  return "Not Started";
 }
 
 function campaignProgressUnits(campaign: any) {
@@ -516,6 +544,10 @@ function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => voi
           {Number(campaign.participant_count ?? 0) > 0 && (
             <span className="text-white/35 flex items-center gap-1"><Users size={10} /> {campaign.participant_count}</span>
           )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold text-white/45">
+          <span className="rounded-full px-2 py-1" style={{ background: "rgba(255,255,255,0.05)" }}>{accessMethodLabel(campaign)}</span>
+          {campaign.application_period_days && <span>Applications open {campaign.application_period_days}d</span>}
         </div>
 
         {/* Compact reward summary: discovery, not a reward wall */}
@@ -894,6 +926,11 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const { toast } = useToast();
   const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
+  const [, setClock] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(value => value + 1), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const isGF = !!campaign.gamefolio_managed;
   const bounties: any[] = campaign.bounties ?? [];
@@ -903,21 +940,35 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const demoLeft = Number(campaign.demo_keys_remaining ?? 0);
   const fullLeft = Number(campaign.full_keys_remaining ?? 0);
   const timeLeft = timeRemaining(campaign.end_date ?? null);
-  const canAccept = isGF ? true : demoLeft > 0;
+  const accessMethod = campaign.access_method ?? campaign.accessMethod;
+  const customAccessNeedsKey = campaign.custom_access_needs_key ?? campaign.customAccessNeedsKey;
+  const keylessAccess = ["public_demo", "free_to_play"].includes(accessMethod)
+    || (accessMethod === "custom_access" || accessMethod === "custom")
+      && (customAccessNeedsKey === false
+        || (customAccessNeedsKey == null && demoLeft === 0 && fullLeft === 0));
+  const canAccept = isGF || keylessAccess || demoLeft > 0 || fullLeft > 0;
 
   const joinMutation = useMutation({
     mutationFn: () => apiRequest("POST", `/api/bounties/${campaign.id}/join`, {}),
     onSuccess: async (res) => {
       const data = await res.json();
       qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
-      toast({ title: "Mission Accepted!", description: data.message });
+      const applicationPending = ["pending", "awaiting_approval", "application_pending"].includes(String(data.applicationStatus ?? data.application_status ?? "").toLowerCase());
+      toast({
+        title: applicationPending ? "Application submitted" : "Mission Accepted!",
+        description: data.message,
+      });
       setShowModal(false);
       onJoined({
         ...campaign,
         instance_id: campaign.id,
-        participant_status: "demo_key_claimed",
-        deadline: data.deadline,
-        demo_key_value: data.demoKey,
+        participant_status: data.status ?? (data.accessKeyAvailable ? "access_reserved" : "joined"),
+        application_status: data.applicationStatus ?? data.application_status,
+        access_key_reserved: Boolean(data.accessKeyAvailable),
+        access_key_revealed: false,
+        // Joining reserves access only. The key and countdown arrive after
+        // the creator explicitly reveals/accepts access in the workspace.
+        deadline: data.deadline ?? null,
       });
     },
     onError: async (err: any) => {
@@ -979,6 +1030,10 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
         }
         setHasJoined(true);
         qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
+        setActivePanel(null);
+        toast({ title: "Mission accepted", description: "Reveal access in your mission workspace before submitting objectives." });
+        setPanelSubmitting(false);
+        return;
       }
       const ct = bounty.content_type;
       for (const item of items) {
@@ -1053,6 +1108,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                   {timeLeft !== "Ended" && timeLeft !== "Ongoing" && (
                     <div className="flex items-center gap-1.5"><Clock size={13} /> <span style={{ color: "rgba(255,255,255,0.78)" }}>{timeLeft}</span></div>
                   )}
+                   <div className="flex items-center gap-1.5"><Key size={13} /> <span style={{ color: "rgba(255,255,255,0.78)" }}>{accessMethodLabel(campaign)}</span></div>
                   {!isGF && demoLeft > 0 && (
                     <div className="flex items-center gap-1.5 text-xs font-black" style={{ color: NEON }}>
                       <img src="/icons/demo-key-icon.png" alt="" className="w-3.5 h-3.5 object-contain" />
@@ -1103,6 +1159,18 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
 
       {/* ── MAIN CONTENT ── */}
       <div className="px-4 sm:px-6 lg:px-8 pt-8 max-w-[1400px] mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="text-[10px] uppercase tracking-widest font-black text-white/45">Campaign access</div>
+            <div className="text-sm font-bold text-white mt-1">{accessMethodLabel(campaign)}</div>
+            <div className="text-[11px] text-white/45 mt-1">Access is assigned only after server-side eligibility checks.</div>
+          </div>
+          <div className="rounded-xl p-4" style={{ background: "rgba(184,255,27,0.045)", border: "1px solid rgba(184,255,27,0.14)" }}>
+            <div className="text-[10px] uppercase tracking-widest font-black" style={{ color: NEON }}>Completion reward</div>
+            <div className="text-sm font-bold text-white mt-1">Bounty XP{campaign.completion_full_game_key ? " · Full-game key unlocked after completion" : ""}</div>
+            <div className="text-[11px] text-white/45 mt-1">Complete and validate every required objective before the individual deadline.</div>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6 mb-8 items-start">
 
@@ -1166,7 +1234,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                     progress={progress}
                     interactive={hasJoined && !!user}
                     done={done}
-                    status={hasJoined ? (done ? "Completed" : progress > 0 ? "In Progress" : "Not Started") : undefined}
+                     status={objectiveWorkflowStatus(b, progress, quantity, hasJoined)}
                     onClick={() => setActivePanel({ bounty: b })}
                   />
                 );
@@ -1189,7 +1257,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                         isBonus
                         interactive={hasJoined && !!user}
                         done={progress >= quantity}
-                        status={hasJoined ? (progress >= quantity ? "Completed" : progress > 0 ? "In Progress" : "Not Started") : undefined}
+                         status={objectiveWorkflowStatus(b, progress, quantity, hasJoined)}
                         onClick={() => setActivePanel({ bounty: b })}
                       />
                     );
@@ -1460,14 +1528,14 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                 const remainingXp = Math.max(totalXp - earnedXp, 0);
 
                 return (<>
-                  {/* Demo Key */}
-                  {(demoLeft > 0 || isGF) && (
+                  {/* Campaign access */}
+                  {(demoLeft > 0 || fullLeft > 0 || isGF || keylessAccess) && (
                     <div className="flex items-center gap-3 rounded-2xl p-3.5 transition-all duration-500"
                       style={{ background: demoStatus === "claimed" ? "rgba(34,197,94,0.07)" : "rgba(184,255,27,0.07)", border: demoStatus === "claimed" ? "1px solid rgba(34,197,94,0.25)" : "1px solid rgba(184,255,27,0.18)" }}>
-                      <img src="/icons/demo-key-icon.png" alt="Demo Key" className="w-11 h-11 object-contain flex-shrink-0" style={{ filter: demoStatus === "claimed" ? "drop-shadow(0 0 6px rgba(34,197,94,0.55))" : "drop-shadow(0 0 6px rgba(184,255,27,0.45))" }} />
+                      <Key size={28} className="ml-2 mr-1" color={demoStatus === "claimed" ? "#22c55e" : NEON} />
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-black" style={{ color: demoStatus === "claimed" ? "#22c55e" : NEON }}>Demo Key</div>
-                        <div className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>Instant on joining</div>
+                        <div className="text-sm font-black" style={{ color: demoStatus === "claimed" ? "#22c55e" : NEON }}>Campaign Access</div>
+                        <div className="text-[11px] mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>{accessMethodLabel(campaign)}</div>
                       </div>
                       <div className="text-[10px] font-black px-2.5 py-1 rounded-full flex-shrink-0 flex items-center gap-1"
                         style={{ background: demoStatus === "claimed" ? "rgba(34,197,94,0.15)" : "rgba(184,255,27,0.15)", color: demoStatus === "claimed" ? "#22c55e" : NEON }}>
@@ -1477,7 +1545,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                   )}
 
                   {/* Full Game */}
-                  <div className="flex items-center gap-3 rounded-2xl p-3.5 transition-all duration-500"
+                  {(campaign.completion_full_game_key || fullLeft > 0 || /full[- ]game/i.test(String(campaign.completion_reward_description ?? ""))) && <div className="flex items-center gap-3 rounded-2xl p-3.5 transition-all duration-500"
                     style={{ background: allComplete ? "rgba(34,197,94,0.06)" : "rgba(255,255,255,0.03)", border: allComplete ? "1px solid rgba(34,197,94,0.22)" : "1px solid rgba(255,255,255,0.07)", opacity: allComplete ? 1 : 0.68 }}>
                     <img src="/icons/full-game-icon.png" alt="Full Game" className="w-11 h-11 object-contain flex-shrink-0" style={{ filter: allComplete ? "drop-shadow(0 0 6px rgba(34,197,94,0.40))" : "grayscale(0.5)", opacity: allComplete ? 1 : 0.70 }} />
                     <div className="flex-1 min-w-0">
@@ -1488,7 +1556,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
                       style={{ background: allComplete ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.07)", color: allComplete ? "#22c55e" : "rgba(255,255,255,0.32)" }}>
                       {allComplete ? <><Check size={9} strokeWidth={3} /> UNLOCKED</> : <><Lock size={9} /> LOCKED</>}
                     </div>
-                  </div>
+                  </div>}
 
                   {/* XP with progress bar */}
                   {totalXp > 0 && (
@@ -1839,9 +1907,10 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
             <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(184,255,27,0.05)", border: "1px solid rgba(184,255,27,0.12)" }}>
               <div className="text-[10px] font-black uppercase tracking-widest text-white/35 mb-1">Mission briefing</div>
               <div className="text-xs text-white/60">{mandatory.length} required objectives · {optional.length} bonus objective{optional.length === 1 ? "" : "s"} · {timeLeft === "Ongoing" ? "Ongoing campaign" : timeLeft}</div>
-              {!isGF && demoLeft > 0 && <div className="text-xs font-bold mt-2" style={{ color: NEON }}>1 Demo Key will be reserved for you.</div>}
+              {!isGF && demoLeft > 0 && <div className="text-xs font-bold mt-2" style={{ color: NEON }}>1 access key will be reserved for you.</div>}
+              {keylessAccess && <div className="text-xs font-bold mt-2" style={{ color: NEON }}>No access key is required. Access is available when you accept.</div>}
               {[
-                { icon: <img src="/icons/full-game-icon.png" alt="" className="w-5 h-5 object-contain" />, text: "Full Game after required objectives" },
+                ...(campaign.completion_full_game_key || fullLeft > 0 ? [{ icon: <img src="/icons/full-game-icon.png" alt="" className="w-5 h-5 object-contain" />, text: "Full Game after required objectives" }] : []),
                 { icon: <Zap size={16} color={NEON} />, text: totalXp > 0 ? `${totalXp.toLocaleString()} Bounty XP Reward` : "Bounty XP Rewards" },
                 { icon: <img src="/icons/token-icon.png" alt="" className="w-5 h-5 object-contain" />, text: "GFT after verification" },
               ].map(({ icon, text }) => (
@@ -1886,6 +1955,15 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const [submitUrl, setSubmitUrl] = useState("");
   const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [revealedAccessKey, setRevealedAccessKey] = useState<string | null>(null);
+  const [revealedDeadline, setRevealedDeadline] = useState<string | null>(null);
+  const [claimedFullKey, setClaimedFullKey] = useState<string | null>(null);
+  const [, setClock] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(value => value + 1), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const { data: progress, isLoading } = useQuery<any>({
     queryKey: ["/api/bounties/my", cp.instance_id],
@@ -1910,12 +1988,43 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     mutationFn: () => apiRequest("POST", `/api/bounties/my/${cp.instance_id}/claim-full-key`, {}),
     onSuccess: async (res) => {
       const data = await res.json();
+      if (typeof data.fullKey === "string" && data.fullKey.length > 0) {
+        // Keep completion keys ephemeral to this mounted mission view. Do not
+        // put the returned plaintext in React Query, storage, URLs, or logs.
+        setClaimedFullKey(data.fullKey);
+      }
       qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
       qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] });
-      toast({ title: "Full-game key claimed", description: `Your key: ${data.fullKey}` });
+      // The key is returned only by the explicit claim action. Keep it out of
+      // logs/toasts; the server-backed campaign query remains key-free.
+      toast({ title: "Full-game key claimed", description: "Your key is ready in the reward panel." });
     },
     onError: async (err: any) => {
       toast({ title: "Could not claim key", description: err?.message ?? "Error", variant: "destructive" });
+    },
+  });
+
+  const revealAccessMutation = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/bounties/${cp.instance_id}/reveal-access-key`, {}),
+    onSuccess: async (res) => {
+      const payload = await res.json();
+      // Keep the returned access key ephemeral in component state only. Never
+      // put it in query cache, campaign props, URLs, telemetry, or toasts.
+      setRevealedAccessKey(typeof payload.key === "string" && payload.key.length > 0 ? payload.key : null);
+      if (typeof payload.deadline === "string" && payload.deadline.length > 0) {
+        setRevealedDeadline(payload.deadline);
+      }
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] }),
+        qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] }),
+      ]);
+      toast({
+        title: payload.key ? "Access key revealed" : "Access accepted",
+        description: "Your completion countdown is now active.",
+      });
+    },
+    onError: async (err: any) => {
+      toast({ title: "Could not reveal access", description: err?.message ?? "Please try again.", variant: "destructive" });
     },
   });
 
@@ -1951,6 +2060,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   }
 
   const data = progress ?? cp;
+  const displayData = revealedDeadline ? { ...data, deadline: revealedDeadline } : data;
   const bounties: any[] = data.bounties ?? [];
   const mandatory = bounties.filter((b: any) => b.mandatory);
   const optional = bounties.filter((b: any) => !b.mandatory);
@@ -1961,12 +2071,25 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const approvedCount = mandatory.filter((b: any) => Number(b.approved_count ?? 0) >= Number(b.quantity ?? 1)).length;
   const pct = requiredUnits > 0 ? Math.min(100, Math.round((progressUnits / requiredUnits) * 100)) : 0;
   const nextObjectiveTitle = data.next_objective?.title ?? data.next_objective_title ?? mandatory.find((b: any) => Number(b.approved_count ?? 0) < Number(b.quantity ?? 1))?.title ?? mandatory.find((b: any) => Number(b.approved_count ?? 0) < Number(b.quantity ?? 1))?.description;
-  const statusCfg = STATUS_CONFIG[data.journey_status ?? data.participant_status] ?? STATUS_CONFIG.enrolled;
+  const applicationStatus = String(data.application_status ?? data.applicationStatus ?? data.participant_status ?? "").toLowerCase();
+  const applicationPending = ["pending", "pending_application", "application_pending", "awaiting_approval"].includes(applicationStatus);
+  const applicationApproved = ["approved", "application_approved"].includes(applicationStatus);
+  const statusCfg = applicationPending
+    ? STATUS_CONFIG.pending_application
+    : applicationApproved && !data.journey_status
+    ? STATUS_CONFIG.application_approved
+    : STATUS_CONFIG[data.journey_status ?? data.participant_status] ?? STATUS_CONFIG.enrolled;
+  const accessReserved = Boolean(data.access_key_reserved ?? data.accessKeyAvailable);
+  const accessRevealed = Boolean(data.access_key_revealed || revealedAccessKey || data.participant_status === "access_accepted");
+  const accessNeedsReveal = !applicationPending && !accessRevealed
+    && (accessReserved || applicationApproved || data.participant_status === "joined" || data.participant_status === "enrolled");
+  const canShowReservedKey = accessReserved && !revealedAccessKey;
+  const showAccessAction = accessNeedsReveal || (canShowReservedKey && accessRevealed);
   const allApproved = requiredUnits > 0 && approvedUnits >= requiredUnits;
   const canClaimFull = allApproved && !data.full_key_value;
-  const deadlineLabel = campaignDeadlineLabel(data);
-  const deadlineUrgency = campaignDeadlineUrgency(data);
-  const missionRewards = missionRewardItems(data, bounties, allApproved);
+  const deadlineLabel = campaignDeadlineLabel(displayData);
+  const deadlineUrgency = campaignDeadlineUrgency(displayData);
+  const missionRewards = missionRewardItems(displayData, bounties, allApproved);
   const completedOptional = optional.filter((b: any) => Number(b.approved_count ?? 0) >= Number(b.quantity ?? 1)).length;
   const contentRequirements = bountyRequirements(bounties);
 
@@ -2021,7 +2144,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               </div>
             )}
 
-            {!done && (
+            {!done && !applicationPending && (
               isSubmitting ? (
                 <div className="space-y-2">
                   {["clip", "reel", "screenshot"].includes(b.content_type) ? (
@@ -2152,7 +2275,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-4 text-[11px] font-bold text-white/55">
               <span>Joined</span>
               <span aria-hidden="true">·</span>
-              <span className={deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : ""}>{deadlineLabel}</span>
+              <span aria-live="polite" className={deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : ""}>{deadlineLabel}</span>
             </div>
 
             {missionRewards.length > 0 && (
@@ -2172,6 +2295,30 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             )}
           </div>
         </section>
+
+        {(applicationPending || applicationApproved) && (
+          <div
+            className="mt-5 rounded-xl px-4 py-3 flex items-start gap-3"
+            role="status"
+            aria-live="polite"
+            style={{
+              background: applicationPending ? "rgba(245,158,11,0.08)" : "rgba(74,222,128,0.08)",
+              border: `1px solid ${applicationPending ? "rgba(245,158,11,0.22)" : "rgba(74,222,128,0.22)"}`,
+            }}
+          >
+            {applicationPending ? <Clock size={16} className="text-amber-300 mt-0.5 flex-shrink-0" /> : <Check size={16} className="text-green-400 mt-0.5 flex-shrink-0" />}
+            <div>
+              <div className={`text-xs font-black ${applicationPending ? "text-amber-200" : "text-green-300"}`}>
+                {applicationPending ? "Application pending approval" : "Application approved"}
+              </div>
+              <div className="text-[11px] text-white/50 mt-1">
+                {applicationPending
+                  ? "The developer needs to approve your application before access and objectives become available."
+                  : "Your application is approved. Accept access below when you are ready to start your countdown."}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Mission progress and next action */}
         <section className="mt-7 pb-7 border-b border-white/[0.08]">
@@ -2262,7 +2409,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                       )}
 
                       {/* Submit button/form */}
-                      {!done && (
+                      {!done && !applicationPending && (
                         isSubmitting ? (
                           <div className="space-y-2">
                             {["clip", "reel", "screenshot"].includes(b.content_type) ? (
@@ -2383,8 +2530,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                   </div>
                   <div>
                     <div className="text-[9px] font-black uppercase tracking-wider text-white/30 mb-1">Deadline</div>
-                    <div className={`text-xs font-bold ${deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : "text-white/70"}`}>
-                      {deadlineLabel}{campaignDeadline(data) ? ` · ${new Date(campaignDeadline(data)).toLocaleDateString()}` : ""}
+                    <div aria-live="polite" className={`text-xs font-bold ${deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : "text-white/70"}`}>
+                      {deadlineLabel}{campaignDeadline(displayData) ? ` · ${new Date(campaignDeadline(displayData)).toLocaleDateString()}` : ""}
                     </div>
                   </div>
                   {contentRequirements.length > 0 && (
@@ -2457,7 +2604,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               <div className="grid grid-cols-2 gap-3 pt-3 border-t border-white/5">
                 <div>
                   <div className="text-[9px] font-black uppercase tracking-wider text-white/30">Deadline</div>
-                  <div className={`text-[11px] font-bold mt-1 ${deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : "text-white/65"}`}>{deadlineLabel}</div>
+                  <div aria-live="polite" className={`text-[11px] font-bold mt-1 ${deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : "text-white/65"}`}>{deadlineLabel}</div>
                 </div>
                 <div>
                   <div className="text-[9px] font-black uppercase tracking-wider text-white/30">Status</div>
@@ -2465,12 +2612,38 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 </div>
               </div>
 
-              {data.demo_key_value && (
+              {showAccessAction && (
+                <div className="pt-3 border-t border-white/5" aria-live="polite">
+                  <div className="text-[9px] font-black uppercase tracking-wider mb-2" style={{ color: NEON }}>
+                    {accessReserved ? (accessRevealed ? "Access key available" : "Access key reserved") : "Access acceptance required"}
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-white/50 mb-3">
+                    {accessReserved && accessRevealed
+                      ? "Show your assigned access key again. Your completion countdown is already active."
+                      : accessReserved
+                      ? "Reveal your assigned access key when you are ready. This starts your individual completion countdown."
+                      : "Accept access when you are ready. This starts your individual completion countdown."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => revealAccessMutation.mutate()}
+                    disabled={revealAccessMutation.isPending}
+                    className="w-full py-2.5 rounded-lg text-xs font-black flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-50"
+                    style={{ background: NEON, color: "#070b10" }}
+                  >
+                    {revealAccessMutation.isPending
+                      ? <><Loader2 size={14} className="animate-spin" /> Revealing access…</>
+                      : accessReserved ? <><KeyRound size={14} /> {accessRevealed ? "Show access key" : "Reveal access key & start mission"}</> : <><ShieldCheck size={14} /> Accept access & start mission</>}
+                  </button>
+                </div>
+              )}
+
+              {revealedAccessKey && (
                 <div className="pt-3 border-t border-white/5">
-                  <div className="text-[9px] font-black uppercase tracking-wider mb-2" style={{ color: NEON }}>Demo Key · Claimed</div>
+                  <div className="text-[9px] font-black uppercase tracking-wider mb-2" style={{ color: NEON }}>Access Key · Revealed</div>
                   <div className="flex items-center gap-1.5">
-                    <div className="min-w-0 flex-1 font-mono text-[10px] text-white/70 bg-black/25 rounded-md px-2 py-2 truncate">{data.demo_key_value}</div>
-                    <button onClick={() => copyKey(data.demo_key_value, setCopiedDemo)} className="p-2 rounded-md hover:bg-white/5" aria-label="Copy demo key">
+                    <div className="min-w-0 flex-1 font-mono text-[10px] text-white/70 bg-black/25 rounded-md px-2 py-2 truncate" aria-label="Revealed access key">{revealedAccessKey}</div>
+                    <button onClick={() => copyKey(revealedAccessKey, setCopiedDemo)} className="p-2 rounded-md hover:bg-white/5" aria-label="Copy revealed access key">
                       {copiedDemo ? <Check size={14} color={NEON} /> : <Copy size={14} className="text-white/45" />}
                     </button>
                     {data.game_steam_app_id && (
@@ -2483,12 +2656,12 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 </div>
               )}
 
-              {data.full_key_value ? (
+              {claimedFullKey ? (
                 <div className="pt-3 border-t border-white/5">
                   <div className="text-[9px] font-black uppercase tracking-wider text-green-400 mb-2">Full Game · Claimed</div>
                   <div className="flex items-center gap-1.5">
-                    <div className="min-w-0 flex-1 font-mono text-[10px] text-white/70 bg-black/25 rounded-md px-2 py-2 truncate">{data.full_key_value}</div>
-                    <button onClick={() => copyKey(data.full_key_value, setCopiedFull)} className="p-2 rounded-md hover:bg-white/5" aria-label="Copy full-game key">
+                    <div className="min-w-0 flex-1 font-mono text-[10px] text-white/70 bg-black/25 rounded-md px-2 py-2 truncate" aria-label="Claimed full-game key">{claimedFullKey}</div>
+                    <button onClick={() => copyKey(claimedFullKey, setCopiedFull)} className="p-2 rounded-md hover:bg-white/5" aria-label="Copy claimed full-game key">
                       {copiedFull ? <Check size={14} className="text-green-400" /> : <Copy size={14} className="text-white/45" />}
                     </button>
                   </div>

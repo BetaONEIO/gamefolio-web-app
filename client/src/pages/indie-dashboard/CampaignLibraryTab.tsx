@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import {
-  Loader2, ShieldCheck, Star, TrendingUp, Clock, Users, Key,
+  Loader2, ShieldCheck, Star, TrendingUp, Clock, Key,
   Target, Film, Camera, MessageSquare, Zap, ChevronRight, X,
 } from "lucide-react";
 import { SiSteam } from "react-icons/si";
@@ -69,9 +69,9 @@ function TemplateDetailModal({ template, onClose, onRun }: { template: any; onCl
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               { label: "Duration", value: `${template.duration} Days`, icon: Clock },
-              { label: "Participants", value: template.participant_capacity, icon: Users },
-              { label: "Demo Keys", value: template.demo_keys_required > 0 ? template.demo_keys_required : "None", icon: Key },
-              { label: "Full Keys", value: template.full_keys_required > 0 ? template.full_keys_required : "None", icon: Key },
+              { label: "Deliverables", value: template.deliverables_per_creator ?? template.bounties?.reduce((n: number, b: any) => n + Number(b.quantity ?? 1), 0) ?? "Custom", icon: Target },
+              { label: "Access", value: template.access_method_label ?? "Choose during setup", icon: Key },
+              { label: "Bounty XP", value: template.bounty_xp_reward ? `${Number(template.bounty_xp_reward).toLocaleString()} XP` : "Calculated", icon: Zap },
             ].map(({ label, value, icon: Icon }) => (
               <div key={label} className="rounded-xl p-3 text-center" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
                 <Icon size={14} className="mx-auto mb-1.5 text-white/30" />
@@ -90,7 +90,7 @@ function TemplateDetailModal({ template, onClose, onRun }: { template: any; onCl
             <div className="rounded-xl px-4 py-3 flex items-center justify-between" style={{ background: "rgba(183,255,24,0.08)", border: "1px solid rgba(183,255,24,0.20)" }}>
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-wider text-[#B7FF18]">Bounty XP Reward</div>
-                <div className="text-[11px] text-white/50 mt-1">Per approved creator completing all required objectives</div>
+                <div className="text-[11px] text-white/50 mt-1">Maximum reward available to each creator who completes all required objectives</div>
               </div>
               <div className="text-xl font-black tabular-nums" style={{ color: NEON }}>{Number(template.bounty_xp_reward).toLocaleString()} XP</div>
             </div>
@@ -160,7 +160,8 @@ function TemplateDetailModal({ template, onClose, onRun }: { template: any; onCl
           {/* Completion reward */}
           <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
             <div className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">Completion Reward</div>
-            <div className="text-sm text-white">{template.completion_reward_description ?? "Reward on verified completion"}</div>
+             <div className="text-sm text-white">Bounty XP{template.completion_reward_description ? ` · ${template.completion_reward_description}` : ""}</div>
+             <div className="text-[11px] text-white/45 mt-2">Campaign access and completion rewards are separate. Key requirements depend on your chosen access method and campaign capacity.</div>
           </div>
 
           {/* What devs can't change */}
@@ -223,9 +224,9 @@ function CampaignCard({ template, onDetails, onRun }: { template: any; onDetails
             <div className="text-[9px] text-white/30 uppercase">Duration</div>
           </div>
           <div className="rounded-lg p-2 text-center" style={{ background: "rgba(255,255,255,0.04)" }}>
-            <Users size={11} className="mx-auto mb-0.5 text-white/30" />
-            <div className="text-xs font-black text-white">{template.participant_capacity}</div>
-            <div className="text-[9px] text-white/30 uppercase">Players</div>
+            <Target size={11} className="mx-auto mb-0.5 text-white/30" />
+             <div className="text-xs font-black text-white">{template.deliverables_per_creator ?? (bounties.reduce((n: number, b: any) => n + Number(b.quantity ?? 1), 0) || "Custom")}</div>
+             <div className="text-[9px] text-white/30 uppercase">Deliverables</div>
           </div>
           <div className="rounded-lg p-2 text-center" style={{ background: "rgba(255,255,255,0.04)" }}>
             <Target size={11} className="mx-auto mb-0.5 text-white/30" />
@@ -234,23 +235,13 @@ function CampaignCard({ template, onDetails, onRun }: { template: any; onDetails
           </div>
         </div>
 
-        {/* Keys required */}
-        {(template.demo_keys_required > 0 || template.full_keys_required > 0) && (
-          <div className="flex gap-2">
-            {template.demo_keys_required > 0 && (
-              <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] text-white/60"
-                style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${CARD_BORDER}` }}>
-                <Key size={10} /> {template.demo_keys_required} Demo Keys
-              </div>
-            )}
-            {template.full_keys_required > 0 && (
-              <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] text-white/60"
-                style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${CARD_BORDER}` }}>
-                <Key size={10} /> {template.full_keys_required} Full Keys
-              </div>
-            )}
-          </div>
-        )}
+         {/* Access requirements are selected per campaign, not fixed on a template. */}
+         <div className="flex gap-2">
+            <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] text-white/60"
+              style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${CARD_BORDER}` }}>
+              <Key size={10} /> {template.access_method_label ?? "Access selected during setup"}
+            </div>
+         </div>
 
         {/* Bounty pills */}
         <div className="flex flex-wrap gap-1.5">
@@ -276,6 +267,7 @@ function CampaignCard({ template, onDetails, onRun }: { template: any; onDetails
             {template.estimated_feedback > 0 ? ` · ${template.estimated_feedback} feedback` : ""}
           </div>
         )}
+         <p className="text-[10px] text-white/30">Estimates are not guaranteed and depend on eligible active creators, selected platforms and previous campaign performance.</p>
 
         <div className="flex-1" />
 

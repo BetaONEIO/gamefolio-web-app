@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Clock, Users, KeyRound, Target, ChevronRight,
   ShieldCheck, AlertCircle, CheckCircle, Pause, XCircle,
   Calendar, BarChart3, Gamepad2, FileText, Play, Eye,
   Edit3, Film, Flag, Plus,
+  UserCheck, UserX, RefreshCw,
 } from "lucide-react";
 import { NEON, CARD_BG, CARD_BORDER, DASHBOARD_THEME, rgbaAccent } from "./constants";
 
@@ -24,6 +26,71 @@ const STATUS_CONFIG: Record<string, {
 };
 
 type FilterTab = "all" | "active" | "scheduled" | "draft" | "completed";
+
+type ApplicationDecision = "approve" | "reject";
+
+function applicationRows(payload: any): { applications: any[]; supported: boolean } {
+  const rows = Array.isArray(payload) ? payload : Array.isArray(payload?.applications) ? payload.applications : null;
+  if (!rows) return { applications: [], supported: false };
+  // Never retain or render key material returned by an over-broad owner
+  // endpoint. The application panel only needs identity and review state.
+  return {
+    supported: true,
+    applications: rows.map((row: any) => ({
+      id: row.id,
+      userId: row.user_id ?? row.userId ?? row.creator_id ?? row.creatorId,
+      displayName: row.display_name ?? row.displayName ?? row.username ?? "Creator",
+      username: row.username,
+      avatarUrl: row.avatar_url ?? row.avatarUrl,
+      status: row.status ?? "pending",
+      createdAt: row.created_at ?? row.createdAt,
+      reviewedAt: row.reviewed_at ?? row.reviewedAt,
+      notes: row.notes,
+    })),
+  };
+}
+
+async function fetchApplications(instanceId: number) {
+  const paths = [
+    `/api/bounties/${instanceId}/applications`,
+    `/api/campaigns/instances/${instanceId}/applications`,
+  ];
+  for (const path of paths) {
+    const response = await fetch(path, { credentials: "include" });
+    if (response.status === 404 || response.status === 405) continue;
+    if (!response.ok) throw new Error("Could not load campaign applications");
+    return applicationRows(await response.json());
+  }
+  return { applications: [], supported: false };
+}
+
+async function decideApplication(instanceId: number, userId: number | string, decision: ApplicationDecision) {
+  const paths = [
+    `/api/bounties/${instanceId}/applications/${userId}/${decision}`,
+    `/api/campaigns/instances/${instanceId}/applications/${userId}/${decision}`,
+    `/api/bounties/${instanceId}/applications/${userId}`,
+    `/api/campaigns/instances/${instanceId}/applications/${userId}`,
+  ];
+  let lastError = "Could not update application";
+  for (const path of paths) {
+    const response = await fetch(path, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: decision,
+        status: decision === "approve" ? "approved" : "rejected",
+      }),
+    });
+    if (response.ok) return response.json().catch(() => ({}));
+    if (response.status !== 404 && response.status !== 405) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.error ?? payload.message ?? lastError);
+    }
+    lastError = `Application ${decision} endpoint is unavailable`;
+  }
+  throw new Error(lastError);
+}
 
 const FILTER_TABS: { id: FilterTab; label: string }[] = [
   { id: "all",       label: "All" },
@@ -60,9 +127,33 @@ function Btn({
 }
 
 function CampaignCard({ campaign }: { campaign: any }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const cfg = STATUS_CONFIG[campaign.status] ?? STATUS_CONFIG.draft;
   const StatusIcon = cfg.icon;
   const remaining = daysRemaining(campaign.end_date);
+  const instanceId = Number(campaign.id ?? campaign.instance_id);
+  const manualApproval = Boolean(campaign.manual_approval_required ?? campaign.manualApprovalRequired);
+  const applicationsQuery = useQuery<{ applications: any[]; supported: boolean }>({
+    queryKey: ["/api/bounties/applications", instanceId],
+    queryFn: () => fetchApplications(instanceId),
+    enabled: manualApproval && Number.isFinite(instanceId) && instanceId > 0,
+    staleTime: 15_000,
+  });
+  const applicationMutation = useMutation({
+    mutationFn: ({ userId, decision }: { userId: number | string; decision: ApplicationDecision }) =>
+      decideApplication(instanceId, userId, decision),
+    onSuccess: async () => {
+      await applicationsQuery.refetch();
+      await queryClient.invalidateQueries({ queryKey: ["/api/campaigns/instances"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/bounties"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
+      toast({ title: "Application updated", description: "The creator application status is now updated." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Could not update application", description: error?.message ?? "Please try again.", variant: "destructive" });
+    },
+  });
 
   const name = campaign.name || campaign.template_name || "Unnamed Campaign";
   const completionRate = Number(campaign.participant_count ?? 0) > 0
@@ -70,6 +161,8 @@ function CampaignCard({ campaign }: { campaign: any }) {
     : 0;
   const bountyCount = campaign.bounty_count ?? (campaign.bounties?.length ?? 0);
   const contentCount = campaign.content_count ?? 0;
+  const applications = applicationsQuery.data?.applications ?? [];
+  const pendingApplications = applications.filter(application => ["pending", "awaiting_review", "submitted"].includes(String(application.status).toLowerCase()));
 
   const actions = (() => {
     switch (campaign.status) {
@@ -225,6 +318,71 @@ function CampaignCard({ campaign }: { campaign: any }) {
             </div>
             <div className="text-white/48">{campaign.rejection_reason}</div>
           </div>
+        )}
+
+        {manualApproval && applicationsQuery.data?.supported && (
+          <section className="rounded-xl p-3.5 space-y-3" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.18)" }}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-wider text-amber-300">Creator Applications</div>
+                <div className="text-[11px] text-white/45 mt-1">
+                  {pendingApplications.length > 0
+                    ? `${pendingApplications.length} application${pendingApplications.length === 1 ? "" : "s"} awaiting your review`
+                    : "No applications awaiting review"}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => applicationsQuery.refetch()}
+                disabled={applicationsQuery.isFetching}
+                className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/10 disabled:opacity-50"
+                aria-label="Refresh creator applications"
+              >
+                <RefreshCw size={13} className={applicationsQuery.isFetching ? "animate-spin" : ""} />
+              </button>
+            </div>
+            {pendingApplications.length > 0 && (
+              <div className="space-y-2">
+                {pendingApplications.map((application: any) => {
+                  const busy = applicationMutation.isPending && applicationMutation.variables?.userId === application.userId;
+                  return (
+                    <div key={application.id ?? application.userId} className="flex flex-col sm:flex-row sm:items-center gap-2.5 rounded-lg px-3 py-2.5" style={{ background: "rgba(0,0,0,0.18)" }}>
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        {application.avatarUrl
+                          ? <img src={application.avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+                          : <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.08)" }}><Users size={13} className="text-white/40" /></div>}
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-white truncate">{application.displayName}</div>
+                          {application.username && <div className="text-[10px] text-white/35 truncate">@{application.username}</div>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 sm:shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => applicationMutation.mutate({ userId: application.userId, decision: "approve" })}
+                          disabled={busy || !application.userId}
+                          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-black disabled:opacity-50"
+                          style={{ color: "#86efac", background: "rgba(74,222,128,0.10)", border: "1px solid rgba(74,222,128,0.22)" }}
+                        >
+                          <UserCheck size={11} /> {busy ? "Saving…" : "Approve"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applicationMutation.mutate({ userId: application.userId, decision: "reject" })}
+                          disabled={busy || !application.userId}
+                          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-black disabled:opacity-50"
+                          style={{ color: "#fca5a5", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.20)" }}
+                        >
+                          <UserX size={11} /> Reject
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {applicationsQuery.isError && <div className="text-[10px] text-red-300">Applications could not be loaded. Refresh to try again.</div>}
+          </section>
         )}
 
         {/* Action buttons */}

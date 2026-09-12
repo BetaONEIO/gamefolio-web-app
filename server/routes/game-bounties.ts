@@ -5,8 +5,15 @@ import { sql } from 'drizzle-orm';
 import { XPService } from '../xp-service';
 import { NotificationService } from '../notification-service';
 import { supabaseStorage } from '../supabase-storage';
+import { decryptCampaignKey, encryptCampaignKey } from '../campaign-key-security';
 
 const router = express.Router();
+
+function toRows(result: any): any[] {
+  if (!result) return [];
+  if (Array.isArray(result)) return result;
+  return Array.isArray(result.rows) ? result.rows : [];
+}
 
 const bountyMediaUpload = multer({
   storage: multer.memoryStorage(),
@@ -85,7 +92,94 @@ async function ensureBountyTables() {
       ADD COLUMN IF NOT EXISTS joined_at TIMESTAMP DEFAULT NOW(),
       ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP,
       ADD COLUMN IF NOT EXISTS completed_badge_awarded BOOLEAN DEFAULT FALSE
+      ,ADD COLUMN IF NOT EXISTS demo_key_ciphertext TEXT
+      ,ADD COLUMN IF NOT EXISTS demo_key_iv TEXT
+      ,ADD COLUMN IF NOT EXISTS demo_key_auth_tag TEXT
+      ,ADD COLUMN IF NOT EXISTS demo_key_version TEXT
+      ,ADD COLUMN IF NOT EXISTS demo_keyring_id TEXT
+      ,ADD COLUMN IF NOT EXISTS full_key_ciphertext TEXT
+      ,ADD COLUMN IF NOT EXISTS full_key_iv TEXT
+      ,ADD COLUMN IF NOT EXISTS full_key_auth_tag TEXT
+      ,ADD COLUMN IF NOT EXISTS full_key_version TEXT
+      ,ADD COLUMN IF NOT EXISTS full_keyring_id TEXT
     `);
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS legacy_bounty_reward_events (
+        id SERIAL PRIMARY KEY, bounty_id INTEGER NOT NULL, user_id INTEGER NOT NULL,
+        reward_type TEXT NOT NULL, reward_key TEXT NOT NULL, amount INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending', last_error TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(), updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        UNIQUE (bounty_id, user_id, reward_type, reward_key)
+      )
+    `);
+    if (process.env.WALLET_ENCRYPTION_KEY) {
+      await db.execute(sql`
+        UPDATE game_bounty_acceptances
+        SET demo_key_version = 'wallet-v1', demo_keyring_id = 'wallet'
+        WHERE demo_key_ciphertext IS NOT NULL AND demo_key_version IS NULL
+      `);
+      await db.execute(sql`
+        UPDATE game_bounty_acceptances
+        SET full_key_version = 'wallet-v1', full_keyring_id = 'wallet'
+        WHERE full_key_ciphertext IS NOT NULL AND full_key_version IS NULL
+      `);
+    }
+    // Encrypt legacy pool/acceptance values in place. Plaintext is never
+    // returned. A missing active campaign key is an explicit backfill
+    // prerequisite rather than an implicit session/wallet fallback.
+    const legacyPoolResult: any = await db.execute(sql`
+      SELECT id, demo_key_pool, full_key_pool FROM game_bounties
+      WHERE demo_key_pool IS NOT NULL OR full_key_pool IS NOT NULL
+    `);
+    const legacyPools = legacyPoolResult.rows ?? legacyPoolResult;
+    for (const poolRow of legacyPools as any[]) {
+      let changed = false;
+      const encodePool = (raw: any) => {
+        if (!raw) return raw;
+        try {
+          const values = JSON.parse(raw);
+          if (!Array.isArray(values)) return raw;
+          const encoded = values.map((value: any) => {
+            if (typeof value !== 'string') return value;
+            changed = true;
+            return encryptCampaignKey(value);
+          });
+          return JSON.stringify(encoded);
+        } catch { return raw; }
+      };
+      const demoPool = encodePool(poolRow.demo_key_pool);
+      const fullPool = encodePool(poolRow.full_key_pool);
+      if (changed) {
+        await db.execute(sql`
+          UPDATE game_bounties SET demo_key_pool = ${demoPool}, full_key_pool = ${fullPool}
+          WHERE id = ${poolRow.id}
+        `);
+      }
+    }
+    const legacyAcceptanceResult: any = await db.execute(sql`
+      SELECT id, demo_key, full_key FROM game_bounty_acceptances
+      WHERE demo_key IS NOT NULL OR full_key IS NOT NULL
+    `);
+    const legacyAcceptances = legacyAcceptanceResult.rows ?? legacyAcceptanceResult;
+    for (const acceptance of legacyAcceptances as any[]) {
+      const demo = acceptance.demo_key ? encryptCampaignKey(acceptance.demo_key) : null;
+      const full = acceptance.full_key ? encryptCampaignKey(acceptance.full_key) : null;
+      await db.execute(sql`
+        UPDATE game_bounty_acceptances
+        SET demo_key = NULL, full_key = NULL,
+            demo_key_ciphertext = COALESCE(demo_key_ciphertext, ${demo?.ciphertext ?? null}),
+            demo_key_iv = COALESCE(demo_key_iv, ${demo?.iv ?? null}),
+            demo_key_auth_tag = COALESCE(demo_key_auth_tag, ${demo?.authTag ?? null}),
+            demo_key_version = COALESCE(demo_key_version, ${demo?.keyVersion ?? null}),
+            demo_keyring_id = COALESCE(demo_keyring_id, ${demo?.keyringId ?? null}),
+            full_key_ciphertext = COALESCE(full_key_ciphertext, ${full?.ciphertext ?? null}),
+            full_key_iv = COALESCE(full_key_iv, ${full?.iv ?? null}),
+            full_key_auth_tag = COALESCE(full_key_auth_tag, ${full?.authTag ?? null}),
+            full_key_version = COALESCE(full_key_version, ${full?.keyVersion ?? null}),
+            full_keyring_id = COALESCE(full_keyring_id, ${full?.keyringId ?? null})
+        WHERE id = ${acceptance.id}
+      `);
+    }
     // Create unique constraint on join
     await db.execute(sql`
       DO $$ BEGIN
@@ -271,7 +365,7 @@ router.post('/:gameId/bounties', async (req, res) => {
          trailer_url, screenshot_urls)
       VALUES
         (${gameId}, ${userId}, ${title.trim()}, ${campaignTitle || null}, ${description || null},
-         'game_key', ${fullKeys.length > 0 ? fullKeys[0] : null}, ${fullKeys.length}, ${maxParticipants || 10},
+         'game_key', NULL, ${fullKeys.length}, ${maxParticipants || 10},
          'medium', ${endDate ? new Date(endDate) : null},
          ${maxParticipants || 10}, ${requiredClips || 0}, ${requiredReels || 0}, ${requiredScreenshots || 0}, ${requiredViews || 0},
          ${xpJoin || 500}, ${xpPerClip || 1000}, ${xpPerReel || 2500}, ${xpPerScreenshot || 200}, ${xpViewMilestone || 2500}, ${xpCompletionBonus || 5000},
@@ -301,13 +395,15 @@ router.post('/:gameId/bounties', async (req, res) => {
     const row = ((result as any).rows ?? result)[0];
     // Store demo keys in a separate key pool (serialized in description or as JSON)
     if (demoKeys.length > 0) {
+      const encryptedDemoKeys = demoKeys.map((key: string) => encryptCampaignKey(key));
       await db.execute(sql`
-        UPDATE game_bounties SET demo_key_pool = ${JSON.stringify(demoKeys)} WHERE id = ${row.id}
+        UPDATE game_bounties SET demo_key_pool = ${JSON.stringify(encryptedDemoKeys)} WHERE id = ${row.id}
       `);
     }
     if (fullKeys.length > 0) {
+      const encryptedFullKeys = fullKeys.map((key: string) => encryptCampaignKey(key));
       await db.execute(sql`
-        UPDATE game_bounties SET full_key_pool = ${JSON.stringify(fullKeys)} WHERE id = ${row.id}
+        UPDATE game_bounties SET full_key_pool = ${JSON.stringify(encryptedFullKeys)} WHERE id = ${row.id}
       `);
     }
     res.status(201).json({ ...row, demoKeys: demoKeys.length, fullKeys: fullKeys.length });
@@ -326,60 +422,98 @@ router.post('/bounties/:bountyId/join', async (req, res) => {
     const userId = (req.user as any).id;
 
     const bounty = await db.execute(sql`
-      SELECT demo_key_pool, full_key_pool, demo_keys_remaining, max_participants, xp_join, status
+      SELECT demo_key_pool, full_key_pool, demo_keys_remaining, max_participants, xp_join, title, status
       FROM game_bounties WHERE id = ${bountyId}
     `);
     const bountyRows = (bounty as any).rows ?? bounty;
     if (bountyRows.length === 0) return res.status(404).json({ message: 'Bounty not found' });
     const b = bountyRows[0];
     if (b.status !== 'active') return res.status(400).json({ message: 'Campaign is not active' });
-    if (b.demo_keys_remaining <= 0) return res.status(400).json({ message: 'No demo keys remaining' });
 
-    const participantCount = await db.execute(sql`
-      SELECT COUNT(*)::int as count FROM game_bounty_acceptances WHERE bounty_id = ${bountyId} AND status = 'active'
-    `);
-    const pc = ((participantCount as any).rows ?? participantCount)[0];
-    if (pc.count >= b.max_participants) return res.status(400).json({ message: 'Campaign is full' });
-
-    const existing = await db.execute(sql`
-      SELECT id FROM game_bounty_acceptances WHERE bounty_id = ${bountyId} AND user_id = ${userId}
-    `);
-    const existingRows = (existing as any).rows ?? existing;
-    if (existingRows.length > 0) {
-      return res.status(400).json({ message: 'Already joined this campaign' });
-    }
-
-    // Assign a demo key
-    let demoKey: string | null = null;
-    if (b.demo_key_pool) {
-      try {
-        const pool = JSON.parse(b.demo_key_pool);
-        if (Array.isArray(pool) && pool.length > 0) {
-          demoKey = pool[0];
-          const remaining = pool.slice(1);
-          await db.execute(sql`
-            UPDATE game_bounties
-            SET demo_key_pool = ${JSON.stringify(remaining)}, demo_keys_remaining = ${remaining.length}
-            WHERE id = ${bountyId}
-          `);
-        }
-      } catch (e) {
-        console.error('Failed to parse demo key pool:', e);
+    const demoKeyEnvelope = await db.transaction(async (tx) => {
+      const lockedResult: any = await tx.execute(sql`
+        SELECT demo_key_pool, demo_keys_remaining, max_participants, status
+        FROM game_bounties WHERE id = ${bountyId} FOR UPDATE
+      `);
+      const lockedBounty = (lockedResult.rows ?? lockedResult)[0];
+      if (!lockedBounty || lockedBounty.status !== 'active') {
+        throw Object.assign(new Error('Campaign is not active'), { statusCode: 400 });
       }
-    }
-
-    await db.execute(sql`
-      INSERT INTO game_bounty_acceptances (bounty_id, user_id, demo_key, status)
-      VALUES (${bountyId}, ${userId}, ${demoKey}, 'active')
-    `);
+      const existingResult: any = await tx.execute(sql`
+        SELECT id FROM game_bounty_acceptances WHERE bounty_id = ${bountyId} AND user_id = ${userId}
+      `);
+      const [existing] = existingResult.rows ?? existingResult;
+      if (existing) return { existing: true };
+      const countResult: any = await tx.execute(sql`
+        SELECT COUNT(*)::int AS count FROM game_bounty_acceptances
+        WHERE bounty_id = ${bountyId} AND status = 'active'
+      `);
+      const [pc] = countResult.rows ?? countResult;
+      if (Number(pc?.count ?? 0) >= Number(lockedBounty.max_participants ?? 0)) {
+        throw Object.assign(new Error('Campaign is full'), { statusCode: 400 });
+      }
+      if (Number(lockedBounty.demo_keys_remaining ?? 0) <= 0) {
+        throw Object.assign(new Error('No demo keys remaining'), { statusCode: 400 });
+      }
+      let envelope: any = null;
+      const pool = lockedBounty.demo_key_pool ? JSON.parse(lockedBounty.demo_key_pool) : [];
+      if (Array.isArray(pool) && pool.length > 0) {
+        envelope = typeof pool[0] === 'string' ? encryptCampaignKey(pool[0]) : pool[0];
+        await tx.execute(sql`
+          UPDATE game_bounties SET demo_key_pool = ${JSON.stringify(pool.slice(1))},
+            demo_keys_remaining = ${pool.length - 1} WHERE id = ${bountyId}
+        `);
+      }
+      await tx.execute(sql`
+        INSERT INTO game_bounty_acceptances
+          (bounty_id, user_id, demo_key_ciphertext, demo_key_iv, demo_key_auth_tag,
+           demo_key_version, demo_keyring_id, status)
+        VALUES (${bountyId}, ${userId}, ${envelope?.ciphertext ?? null},
+          ${envelope?.iv ?? null}, ${envelope?.authTag ?? null},
+          ${envelope?.keyVersion ?? null}, ${envelope?.keyringId ?? null}, 'active')
+      `);
+      return { existing: false, envelope };
+    });
 
     // Award join XP
     if (b.xp_join && b.xp_join > 0) {
-      await XPService.awardXP(userId, b.xp_join, 'other', `Joined "${b.title || 'Campaign'}" and claimed demo key`);
+      const joinRewardKey = `legacy-bounty:${bountyId}:user:${userId}:join`;
+      await db.execute(sql`
+        INSERT INTO legacy_bounty_reward_events
+          (bounty_id, user_id, reward_type, reward_key, amount, status)
+        VALUES (${bountyId}, ${userId}, 'join', ${joinRewardKey}, ${b.xp_join}, 'pending')
+        ON CONFLICT (bounty_id, user_id, reward_type, reward_key) DO NOTHING
+      `);
+      const [joinEvent] = toRows(await db.execute(sql`
+        SELECT status FROM legacy_bounty_reward_events
+        WHERE bounty_id = ${bountyId} AND user_id = ${userId}
+          AND reward_type = 'join' AND reward_key = ${joinRewardKey}
+      `)) as any[];
+      if (joinEvent?.status !== 'awarded') {
+        await XPService.awardXP(userId, b.xp_join, 'other',
+          `Joined "${b.title || 'Campaign'}" and claimed demo key`, undefined, { dedupeKey: joinRewardKey });
+        const [history] = toRows(await db.execute(sql`
+          SELECT 1 FROM user_xp_history WHERE dedupe_key = ${joinRewardKey} LIMIT 1
+        `)) as any[];
+        if (!history) {
+          await db.execute(sql`
+            UPDATE legacy_bounty_reward_events SET last_error = 'XP ledger write failed', updated_at = NOW()
+            WHERE bounty_id = ${bountyId} AND user_id = ${userId}
+              AND reward_type = 'join' AND reward_key = ${joinRewardKey}
+          `);
+          throw new Error('Join XP remains pending and is safe to retry');
+        }
+        await db.execute(sql`
+          UPDATE legacy_bounty_reward_events SET status = 'awarded', last_error = NULL, updated_at = NOW()
+          WHERE bounty_id = ${bountyId} AND user_id = ${userId}
+            AND reward_type = 'join' AND reward_key = ${joinRewardKey}
+        `);
+      }
     }
 
-    res.json({ success: true, demoKey });
+    res.json({ success: true, demoKey: null, accessKeyAvailable: Boolean(demoKeyEnvelope?.envelope) });
   } catch (err) {
+    if ((err as any)?.statusCode) return res.status((err as any).statusCode).json({ message: (err as any).message });
     console.error('Error joining bounty:', err);
     res.status(500).json({ message: 'Failed to join campaign' });
   }
@@ -395,7 +529,8 @@ router.get('/bounties/:bountyId/me', async (req, res) => {
     const result = await db.execute(sql`
       SELECT
         gba.id, gba.bounty_id AS "bountyId", gba.user_id AS "userId",
-        gba.demo_key AS "demoKey", gba.full_key AS "fullKey",
+        (gba.demo_key_ciphertext IS NOT NULL OR gba.demo_key IS NOT NULL) AS "accessKeyReserved",
+        (gba.full_key_ciphertext IS NOT NULL OR gba.full_key IS NOT NULL) AS "completionKeyAvailable",
         gba.clips_uploaded AS "clipsUploaded", gba.reels_uploaded AS "reelsUploaded",
         gba.screenshots_uploaded AS "screenshotsUploaded", gba.total_views AS "totalViews",
         gba.xp_earned AS "xpEarned", gba.progress_percent AS "progressPercent",
@@ -475,6 +610,8 @@ router.post('/bounties/:bountyId/check-progress', async (req, res) => {
     // Calculate XP delta
     let xpDelta = 0;
     let xpDesc = [];
+    let completionBonusAmount = 0;
+    let completionAwardedByThisRequest = false;
 
     const oldClips = a.clips_uploaded || 0;
     const newClipXp = Math.min(clipCount, b.required_clips || 0) * (b.xp_per_clip || 1000);
@@ -506,7 +643,10 @@ router.post('/bounties/:bountyId/check-progress', async (req, res) => {
 
     // Check completion
     let completed = false;
-    let fullKey = null;
+    let alreadyCompleted = false;
+    let fullKey: string | null = null;
+    let fullKeyEnvelope: any = null;
+    let completionCommittedByThisRequest = false;
     if (a.status !== 'completed') {
       const clipsDone = clipCount >= (b.required_clips || 0);
       const reelsDone = reelCount >= (b.required_reels || 0);
@@ -516,32 +656,114 @@ router.post('/bounties/:bountyId/check-progress', async (req, res) => {
         completed = true;
         // Award completion XP
         if ((b.xp_completion_bonus || 0) > 0) {
-          xpDelta += b.xp_completion_bonus;
+          completionBonusAmount = b.xp_completion_bonus;
           xpDesc.push(`${b.xp_completion_bonus} XP completion bonus`);
         }
         // Assign full key
-        if (b.full_keys_remaining > 0 && b.full_key_pool) {
-          try {
-            const pool = JSON.parse(b.full_key_pool);
-            if (Array.isArray(pool) && pool.length > 0) {
-              fullKey = pool[0];
-              const remaining = pool.slice(1);
-              await db.execute(sql`
-                UPDATE game_bounties
-                SET full_key_pool = ${JSON.stringify(remaining)}, full_keys_remaining = ${remaining.length}
-                WHERE id = ${bountyId}
-              `);
-            }
-          } catch (e) {
-            console.error('Failed to parse full key pool:', e);
-          }
+        const assignment = await db.transaction(async (tx) => {
+          const acceptanceResult: any = await tx.execute(sql`
+            SELECT status FROM game_bounty_acceptances
+            WHERE bounty_id = ${bountyId} AND user_id = ${userId} FOR UPDATE
+          `);
+          const acceptance = (acceptanceResult.rows ?? acceptanceResult)[0];
+          if (!acceptance || acceptance.status === 'completed') return null;
+          const bountyResult: any = await tx.execute(sql`
+            SELECT full_key_pool, full_keys_remaining FROM game_bounties
+            WHERE id = ${bountyId} FOR UPDATE
+          `);
+          const lockedBounty = (bountyResult.rows ?? bountyResult)[0];
+          if (!lockedBounty?.full_keys_remaining || !lockedBounty.full_key_pool) return null;
+          const pool = JSON.parse(lockedBounty.full_key_pool);
+          if (!Array.isArray(pool) || pool.length === 0) return null;
+          const envelope = typeof pool[0] === 'string' ? encryptCampaignKey(pool[0]) : pool[0];
+          await tx.execute(sql`
+            UPDATE game_bounties SET full_key_pool = ${JSON.stringify(pool.slice(1))},
+              full_keys_remaining = ${pool.length - 1} WHERE id = ${bountyId}
+          `);
+          await tx.execute(sql`
+            UPDATE game_bounty_acceptances
+            SET full_key = NULL, full_key_ciphertext = ${envelope?.ciphertext ?? null},
+                full_key_iv = ${envelope?.iv ?? null}, full_key_auth_tag = ${envelope?.authTag ?? null},
+                full_key_version = ${envelope?.keyVersion ?? null}, full_keyring_id = ${envelope?.keyringId ?? null},
+                status = 'completed', completed_at = COALESCE(completed_at, NOW())
+            WHERE bounty_id = ${bountyId} AND user_id = ${userId}
+          `);
+          return envelope;
+        });
+        if (assignment) {
+          completionCommittedByThisRequest = true;
+          fullKeyEnvelope = assignment;
+          fullKey = decryptCampaignKey({
+            key_ciphertext: assignment.ciphertext,
+            key_iv: assignment.iv,
+            key_auth_tag: assignment.authTag,
+          });
         }
+      }
+    }
+    // Re-read under the acceptance lock before committing progress. A
+    // concurrent request may have completed this acceptance while content
+    // counts were being calculated; never award its completion XP/key twice.
+    const lockedProgress = await db.transaction(async (tx) => {
+      const result: any = await tx.execute(sql`
+        SELECT status FROM game_bounty_acceptances
+        WHERE bounty_id = ${bountyId} AND user_id = ${userId} FOR UPDATE
+      `);
+      return (result.rows ?? result)[0];
+    });
+    if (lockedProgress?.status === 'completed' && a.status !== 'completed' && !completionCommittedByThisRequest) {
+      alreadyCompleted = true;
+      completed = false;
+      xpDelta = 0;
+      xpDesc = [];
+      fullKey = null;
+      fullKeyEnvelope = null;
+    }
+    if (lockedProgress?.status === 'completed' && a.status === 'completed' && (b.xp_completion_bonus || 0) > 0) {
+      completionBonusAmount = b.xp_completion_bonus;
+    }
+
+    if (completionBonusAmount > 0 && (completionCommittedByThisRequest || a.status === 'completed')) {
+      const completionRewardKey = `legacy-bounty:${bountyId}:user:${userId}:completion`;
+      await db.execute(sql`
+        INSERT INTO legacy_bounty_reward_events
+          (bounty_id, user_id, reward_type, reward_key, amount, status)
+        VALUES (${bountyId}, ${userId}, 'completion', ${completionRewardKey}, ${completionBonusAmount}, 'pending')
+        ON CONFLICT (bounty_id, user_id, reward_type, reward_key) DO NOTHING
+      `);
+      const [event] = toRows(await db.execute(sql`
+        SELECT status FROM legacy_bounty_reward_events
+        WHERE bounty_id = ${bountyId} AND user_id = ${userId}
+          AND reward_type = 'completion' AND reward_key = ${completionRewardKey}
+      `)) as any[];
+      if (event?.status !== 'awarded') {
+        await XPService.awardXP(userId, completionBonusAmount, 'other',
+          `Completed "${b.title || 'Campaign'}"`, undefined, { dedupeKey: completionRewardKey });
+        const [history] = toRows(await db.execute(sql`
+          SELECT 1 FROM user_xp_history WHERE dedupe_key = ${completionRewardKey} LIMIT 1
+        `)) as any[];
+        if (!history) {
+          await db.execute(sql`
+            UPDATE legacy_bounty_reward_events SET last_error = 'XP ledger write failed', updated_at = NOW()
+            WHERE bounty_id = ${bountyId} AND user_id = ${userId}
+              AND reward_type = 'completion' AND reward_key = ${completionRewardKey}
+          `);
+          throw new Error('Completion XP remains pending and is safe to retry');
+        }
+        await db.execute(sql`
+          UPDATE legacy_bounty_reward_events SET status = 'awarded', last_error = NULL, updated_at = NOW()
+          WHERE bounty_id = ${bountyId} AND user_id = ${userId}
+            AND reward_type = 'completion' AND reward_key = ${completionRewardKey}
+        `);
+        completionAwardedByThisRequest = true;
       }
     }
 
     // Award XP
     if (xpDelta > 0) {
-      await XPService.awardXP(userId, xpDelta, 'other', xpDesc.join(', '));
+      await XPService.awardXP(userId, xpDelta, 'other', xpDesc.join(', '), undefined, {
+        dedupeKey: `legacy-bounty:${bountyId}:user:${userId}:progress:${clipCount}:${reelCount}:${ssCount}:${clipViews}:${completed ? 1 : 0}`,
+      });
     }
 
     // Calculate progress
@@ -549,16 +771,16 @@ router.post('/bounties/:bountyId/check-progress', async (req, res) => {
     const totalDone = Math.min(clipCount, b.required_clips || 0) + Math.min(reelCount, b.required_reels || 0) + Math.min(ssCount, b.required_screenshots || 0) + (clipViews >= (b.required_views || 0) ? 1 : 0);
     const progressPercent = totalRequired > 0 ? Math.round((totalDone / totalRequired) * 100) : 0;
 
-    const newXpEarned = (a.xp_earned || 0) + xpDelta;
+    const newXpEarned = (a.xp_earned || 0) + xpDelta + (completionAwardedByThisRequest ? completionBonusAmount : 0);
 
     await db.execute(sql`
       UPDATE game_bounty_acceptances
       SET clips_uploaded = ${clipCount}, reels_uploaded = ${reelCount},
           screenshots_uploaded = ${ssCount}, total_views = ${clipViews},
-          xp_earned = ${newXpEarned}, progress_percent = ${progressPercent},
-          status = ${completed ? 'completed' : 'active'},
-          completed_at = ${completed ? new Date() : null},
-          full_key = ${fullKey}
+           xp_earned = ${alreadyCompleted ? sql`xp_earned` : sql`GREATEST(xp_earned, ${newXpEarned})`},
+           progress_percent = ${progressPercent},
+           status = ${(completed || alreadyCompleted) ? 'completed' : 'active'},
+           completed_at = ${completed ? new Date() : null}
       WHERE bounty_id = ${bountyId} AND user_id = ${userId}
     `);
 
@@ -586,7 +808,7 @@ router.post('/bounties/:bountyId/check-progress', async (req, res) => {
       xpTotal: newXpEarned,
       progressPercent,
       completed,
-      fullKey,
+      fullKey: null,
       clips: clipCount,
       reels: reelCount,
       screenshots: ssCount,
@@ -606,39 +828,73 @@ router.post('/bounties/:bountyId/claim-full-key', async (req, res) => {
     const userId = (req.user as any).id;
 
     const acc = await db.execute(sql`
-      SELECT full_key, status, completed_at, progress_percent
+      SELECT full_key, full_key_ciphertext, full_key_iv, full_key_auth_tag,
+        full_key_version, full_keyring_id,
+        status, completed_at, progress_percent
       FROM game_bounty_acceptances WHERE bounty_id = ${bountyId} AND user_id = ${userId}
     `);
     const a = ((acc as any).rows ?? acc)[0];
     if (!a) return res.status(404).json({ message: 'Not joined' });
     if (a.status !== 'completed') return res.status(400).json({ message: 'Campaign not completed yet' });
-    if (a.full_key) return res.json({ success: true, fullKey: a.full_key, alreadyClaimed: true });
-
-    // Try to assign a key if not already assigned
-    const bounty = await db.execute(sql`
-      SELECT full_key_pool, full_keys_remaining, title FROM game_bounties WHERE id = ${bountyId}
-    `);
-    const b = ((bounty as any).rows ?? bounty)[0];
-    let fullKey: string | null = null;
-    if (b.full_keys_remaining > 0 && b.full_key_pool) {
-      try {
-        const pool = JSON.parse(b.full_key_pool);
-        if (Array.isArray(pool) && pool.length > 0) {
-          fullKey = pool[0];
-          const remaining = pool.slice(1);
-          await db.execute(sql`
-            UPDATE game_bounties SET full_key_pool = ${JSON.stringify(remaining)}, full_keys_remaining = ${remaining.length}
-            WHERE id = ${bountyId}
-          `);
-          await db.execute(sql`
-            UPDATE game_bounty_acceptances SET full_key = ${fullKey}
-            WHERE bounty_id = ${bountyId} AND user_id = ${userId}
-          `);
-        }
-      } catch (e) {
-        console.error('Failed to parse full key pool:', e);
-      }
+    if (a.full_key_ciphertext || a.full_key) {
+      return res.json({
+        success: true,
+        fullKey: decryptCampaignKey({
+          key_ciphertext: a.full_key_ciphertext,
+          key_iv: a.full_key_iv,
+          key_auth_tag: a.full_key_auth_tag,
+          key_version: a.full_key_version,
+          keyring_id: a.full_keyring_id,
+          key_value: a.full_key,
+        }),
+        alreadyClaimed: true,
+      });
     }
+
+    const fullKey = await db.transaction(async (tx) => {
+      const acceptanceResult: any = await tx.execute(sql`
+        SELECT status, full_key_ciphertext, full_key_iv, full_key_auth_tag,
+          full_key_version, full_keyring_id, full_key
+        FROM game_bounty_acceptances
+        WHERE bounty_id = ${bountyId} AND user_id = ${userId} FOR UPDATE
+      `);
+      const lockedAcceptance = (acceptanceResult.rows ?? acceptanceResult)[0];
+      if (lockedAcceptance?.full_key_ciphertext || lockedAcceptance?.full_key) {
+        return decryptCampaignKey({
+          key_ciphertext: lockedAcceptance.full_key_ciphertext,
+          key_iv: lockedAcceptance.full_key_iv,
+          key_auth_tag: lockedAcceptance.full_key_auth_tag,
+          key_version: lockedAcceptance.full_key_version,
+          keyring_id: lockedAcceptance.full_keyring_id,
+        });
+      }
+      const bountyResult: any = await tx.execute(sql`
+        SELECT full_key_pool, full_keys_remaining FROM game_bounties
+        WHERE id = ${bountyId} FOR UPDATE
+      `);
+      const b = (bountyResult.rows ?? bountyResult)[0];
+      if (!b?.full_keys_remaining || !b.full_key_pool) return null;
+      const pool = JSON.parse(b.full_key_pool);
+      if (!Array.isArray(pool) || pool.length === 0) return null;
+      const envelope = typeof pool[0] === 'string' ? encryptCampaignKey(pool[0]) : pool[0];
+      const plaintext = decryptCampaignKey({
+        key_ciphertext: envelope?.ciphertext,
+        key_iv: envelope?.iv,
+        key_auth_tag: envelope?.authTag,
+      });
+      await tx.execute(sql`
+        UPDATE game_bounties SET full_key_pool = ${JSON.stringify(pool.slice(1))},
+          full_keys_remaining = ${pool.length - 1} WHERE id = ${bountyId}
+      `);
+      await tx.execute(sql`
+        UPDATE game_bounty_acceptances
+        SET full_key = NULL, full_key_ciphertext = ${envelope?.ciphertext ?? null},
+            full_key_iv = ${envelope?.iv ?? null}, full_key_auth_tag = ${envelope?.authTag ?? null},
+            full_key_version = ${envelope?.keyVersion ?? null}, full_keyring_id = ${envelope?.keyringId ?? null}
+        WHERE bounty_id = ${bountyId} AND user_id = ${userId}
+      `);
+      return plaintext;
+    });
 
     if (!fullKey) return res.status(400).json({ message: 'No full keys available' });
     res.json({ success: true, fullKey });
@@ -691,7 +947,9 @@ router.get('/bounties/:bountyId/dashboard', async (req, res) => {
         gba.clips_uploaded AS "clipsUploaded", gba.reels_uploaded AS "reelsUploaded",
         gba.screenshots_uploaded AS "screenshotsUploaded", gba.total_views AS "totalViews",
         gba.xp_earned AS "xpEarned", gba.progress_percent AS "progressPercent",
-        gba.status, gba.completed_at AS "completedAt", gba.demo_key AS "demoKey", gba.full_key AS "fullKey"
+        gba.status, gba.completed_at AS "completedAt",
+        (gba.demo_key_ciphertext IS NOT NULL OR gba.demo_key IS NOT NULL) AS "accessKeyReserved",
+        (gba.full_key_ciphertext IS NOT NULL OR gba.full_key IS NOT NULL) AS "completionKeyAvailable"
       FROM game_bounty_acceptances gba
       JOIN users u ON u.id = gba.user_id
       WHERE gba.bounty_id = ${bountyId}
@@ -719,11 +977,9 @@ router.get('/bounties/:bountyId/dashboard', async (req, res) => {
 
 // Legacy accept endpoint (redirects to join)
 router.post('/bounties/:bountyId/accept', async (req, res) => {
-  // Forward to join logic
-  req.params.bountyId = req.params.bountyId;
-  return router.handle(req, res, () => {
-    res.status(404).json({ message: 'Use /join instead' });
-  });
+  // Express routers do not expose a public handle method. Preserve the POST
+  // semantics while forwarding to the canonical join endpoint.
+  return res.redirect(307, `/api/bounties/${encodeURIComponent(req.params.bountyId)}/join`);
 });
 
 // Batch: current user's statuses for all bounties in a game
@@ -738,8 +994,8 @@ router.get('/:gameId/bounties/my-statuses', async (req, res) => {
       SELECT
         gba.bounty_id AS "bountyId",
         gba.status,
-        gba.demo_key AS "demoKey",
-        gba.full_key AS "fullKey",
+        (gba.demo_key_ciphertext IS NOT NULL OR gba.demo_key IS NOT NULL) AS "accessKeyReserved",
+        (gba.full_key_ciphertext IS NOT NULL OR gba.full_key IS NOT NULL) AS "completionKeyAvailable",
         gba.clips_uploaded AS "clipsUploaded",
         gba.reels_uploaded AS "reelsUploaded",
         gba.screenshots_uploaded AS "screenshotsUploaded",
@@ -1005,8 +1261,8 @@ router.post('/bounties/:bountyId/keys', async (req, res) => {
     const b = ((bounty as any).rows ?? bounty)[0];
     const existingDemo = b.demo_key_pool ? JSON.parse(b.demo_key_pool) : [];
     const existingFull = b.full_key_pool ? JSON.parse(b.full_key_pool) : [];
-    const mergedDemo = [...existingDemo, ...newDemo];
-    const mergedFull = [...existingFull, ...newFull];
+    const mergedDemo = [...existingDemo, ...newDemo.map((key: string) => encryptCampaignKey(key))];
+    const mergedFull = [...existingFull, ...newFull.map((key: string) => encryptCampaignKey(key))];
 
     await db.execute(sql`
       UPDATE game_bounties SET
