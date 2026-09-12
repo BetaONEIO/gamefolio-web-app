@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { Link } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
-  BadgeCheck,
+  BarChart3,
   CalendarDays,
   Check,
   ExternalLink,
@@ -12,6 +12,8 @@ import {
   Globe2,
   ImageOff,
   MapPin,
+  MessageSquareText,
+  MousePointerClick,
   Pencil,
   Share2,
   SlidersHorizontal,
@@ -121,9 +123,10 @@ type StudioGame = StudioLinks & {
   releaseDate?: string | null;
   platforms?: string[] | null;
   genres?: string[] | null;
-  followerCount?: number | null;
-  communityUploads?: number | null;
-  views?: number | null;
+  pageViews?: number | null;
+  contentViews?: number | null;
+  storeClicks?: number | null;
+  communityPosts?: number | null;
   [key: string]: unknown;
 };
 
@@ -242,10 +245,7 @@ function GameCard({ game }: { game: StudioGame }) {
           {game.genres?.slice(0, 2).map((genre) => <MetaPill key={genre}>{genre}</MetaPill>)}
           {game.platforms?.slice(0, 2).map((platform) => <MetaPill key={platform}>{platform}</MetaPill>)}
         </div>
-        <div className="studio-muted mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs">
-          {game.followerCount != null && <span><Users className="mr-1 inline h-3.5 w-3.5" />{formatNumber(game.followerCount)} followers</span>}
-          {game.communityUploads != null && <span><Gamepad2 className="mr-1 inline h-3.5 w-3.5" />{formatNumber(game.communityUploads)} uploads</span>}
-        </div>
+        <GamePerformanceStats game={game} />
       </div>
     </article>
   );
@@ -272,11 +272,7 @@ function FeaturedGame({ game, isOwnProfile }: { game: StudioGame; isOwnProfile: 
             {game.genres?.map((genre) => <MetaPill key={genre}>{genre}</MetaPill>)}
             {game.platforms?.map((platform) => <MetaPill key={platform}>{platform}</MetaPill>)}
           </div>
-          <div className="studio-border mt-6 grid grid-cols-2 gap-3 border-y py-4 sm:grid-cols-3">
-            <MiniStat label="Followers" value={game.followerCount} icon={<Users className="h-3.5 w-3.5" />} />
-            <MiniStat label="Uploads" value={game.communityUploads} icon={<Gamepad2 className="h-3.5 w-3.5" />} />
-            <MiniStat label="Views" value={game.views} icon={<Eye className="h-3.5 w-3.5" />} />
-          </div>
+          <GamePerformanceStats game={game} />
           <div className="mt-5 flex flex-wrap gap-2">
             <Link href={GamePath({ game })} className="studio-accent-bg studio-button-text inline-flex min-h-10 items-center justify-center rounded-lg px-4 text-xs font-black hover:brightness-110">View Game</Link>
             <StoreLinks game={game} compact />
@@ -290,6 +286,17 @@ function FeaturedGame({ game, isOwnProfile }: { game: StudioGame; isOwnProfile: 
 
 function MiniStat({ label, value, icon }: { label: string; value?: number | null; icon: ReactNode }) {
   return <div><div className="studio-accent-text flex items-center gap-1.5">{icon}<span className="studio-text text-sm font-black">{formatNumber(value)}</span></div><p className="studio-muted mt-1 text-[10px] font-bold uppercase tracking-wider">{label}</p></div>;
+}
+
+function GamePerformanceStats({ game }: { game: StudioGame }) {
+  return (
+    <div className="studio-border mt-6 grid grid-cols-2 gap-3 border-y py-4 sm:grid-cols-4">
+      <MiniStat label="Page views" value={game.pageViews} icon={<BarChart3 className="h-3.5 w-3.5" />} />
+      <MiniStat label="Content views" value={game.contentViews} icon={<Eye className="h-3.5 w-3.5" />} />
+      <MiniStat label="Store clicks" value={game.storeClicks} icon={<MousePointerClick className="h-3.5 w-3.5" />} />
+      <MiniStat label="Community posts" value={game.communityPosts} icon={<MessageSquareText className="h-3.5 w-3.5" />} />
+    </div>
+  );
 }
 
 function LinkItem({ label, href, icon }: { label: string; href?: string | null; icon?: ReactNode }) {
@@ -335,8 +342,8 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
     { label: "Steam developer page", href: studio.steamUrl },
   ];
   const publishedGames = games.length;
-  const communityUploads = games.reduce((total, game) => total + Number(game.communityUploads || 0), 0);
-  const totalViews = games.reduce((total, game) => total + Number(game.views || 0), 0);
+  const communityPosts = games.reduce((total, game) => total + Number(game.communityPosts || 0), 0);
+  const totalContentViews = games.reduce((total, game) => total + Number(game.contentViews || 0), 0);
   const followers = (profile as any)._count?.followers;
   const bio = profile.bio?.trim() || "";
   const normalisedBio = bio.toLowerCase().replace(/[^a-z]/g, "");
@@ -474,7 +481,6 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
             <div className="min-w-0 flex-1 pb-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className={`text-3xl font-black tracking-tight sm:text-5xl ${profileFontAnimation}`} style={{ textShadow: profileFontEffect }}>{displayName}</h1>
-                <BadgeCheck className="studio-accent-text h-6 w-6" aria-label="Verified indie developer" />
               </div>
               <p className="studio-muted mt-1 text-sm font-semibold">@{profile.username} <span className="mx-2 opacity-50">/</span> Developer / Studio</p>
             </div>
@@ -507,8 +513,8 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
             <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-1">
               <Stat label={publishedGames === 1 ? "Published game" : "Published games"} value={publishedGames} icon={<Gamepad2 className="h-4 w-4" />} />
               <Stat label="Developer followers" value={followers} icon={<Users className="h-4 w-4" />} />
-              <Stat label="Community uploads" value={communityUploads} icon={<UploadIcon />} />
-              <Stat label="Total views" value={totalViews} icon={<Eye className="h-4 w-4" />} />
+               <Stat label="Community posts" value={communityPosts} icon={<MessageSquareText className="h-4 w-4" />} />
+               <Stat label="Content views" value={totalContentViews} icon={<Eye className="h-4 w-4" />} />
             </div>
             {primaryGame?.releaseDate && <div className="studio-muted mt-5 flex items-center gap-2 text-xs"><CalendarDays className="studio-accent-text h-4 w-4" /> Next release: {new Date(primaryGame.releaseDate).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</div>}
           </aside>
@@ -530,10 +536,6 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
       </div>
     </main>
   );
-}
-
-function UploadIcon() {
-  return <span className="inline-flex h-4 w-4 items-center justify-center rounded border border-current text-[9px] font-black">↑</span>;
 }
 
 function Stat({ label, value, icon }: { label: string; value: unknown; icon?: ReactNode }) {

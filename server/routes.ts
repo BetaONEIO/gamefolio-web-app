@@ -13800,9 +13800,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const catalogGame = p.catalogGameId ? await storage.getGame(p.catalogGameId) : null;
         const catalogueId = p.catalogGameId;
         const rowsOf = (queryResult: any): any[] => queryResult.rows ?? queryResult ?? [];
-        const [followerResult, contentResult] = catalogueId
+        const [contentResult, analyticsResult] = catalogueId
           ? await Promise.all([
-            db.execute(sql`SELECT COUNT(*)::int AS followers FROM user_game_favorites WHERE game_id = ${catalogueId}`),
             db.execute(sql`
               SELECT
                 (
@@ -13820,10 +13819,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   WHERE game_id = ${catalogueId} AND user_id <> ${result.user.id}
                 ) AS views
             `),
+            db.execute(sql`
+              SELECT
+                COUNT(*) FILTER (
+                  WHERE event_type = 'game_page_view'
+                    AND created_at >= NOW() - INTERVAL '30 days'
+                )::int AS "pageViews",
+                COUNT(*) FILTER (
+                  WHERE event_type = 'game_store_click'
+                    AND created_at >= NOW() - INTERVAL '30 days'
+                )::int AS "storeClicks"
+              FROM indie_game_analytics_events
+              WHERE profile_id = ${p.id}
+            `),
           ])
           : [null, null];
-        const followerRow = followerResult ? rowsOf(followerResult)[0] : null;
         const contentRow = contentResult ? rowsOf(contentResult)[0] : null;
+        const analyticsRow = analyticsResult ? rowsOf(analyticsResult)[0] : null;
         const title = catalogGame?.name ?? p.gameName ?? "untitled-game";
         const gameSlug = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "untitled-game";
         return {
@@ -13844,9 +13856,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           steamUrl: p.steamUrl,
           epicUrl: p.epicUrl,
           itchUrl: p.itchUrl,
-          followerCount: Number(followerRow?.followers ?? 0),
-          communityUploads: Number(contentRow?.uploads ?? 0),
-          views: Number(contentRow?.views ?? 0),
+          pageViews: Number(analyticsRow?.pageViews ?? 0),
+          contentViews: Number(contentRow?.views ?? 0),
+          storeClicks: Number(analyticsRow?.storeClicks ?? 0),
+          communityPosts: Number(contentRow?.uploads ?? 0),
           catalogGameName: catalogGame?.name ?? null,
           catalogImageUrl: catalogGame?.imageUrl ?? null,
         };
