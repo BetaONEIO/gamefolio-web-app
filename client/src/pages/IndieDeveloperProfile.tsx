@@ -24,7 +24,7 @@ import { useSignedUrl } from "@/hooks/use-signed-url";
 import { useAuth } from "@/hooks/use-auth";
 import { publicGamePath } from "@/lib/game-routes";
 import type { UserWithStats } from "@shared/schema";
-import { resolveProfileTheme } from "@shared/profile-theme";
+import { DEFAULT_PROFILE_THEME, resolveProfileTheme } from "@shared/profile-theme";
 
 const DEFAULT_BANNER_URL = "/api/static/telegram-cloud-photo-size-4-5929334272504744521-y_1749637964973.jpg";
 
@@ -343,9 +343,12 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
   const resolvedTheme = resolveProfileTheme(profile as any);
   const themeDefinition = resolvedTheme.theme;
   const themeTokens = themeDefinition?.tokens;
+  const isDefaultStudioTheme = !themeDefinition || themeDefinition.slug === "default";
   const accentColor = themeTokens?.accent || resolvedTheme.accentColor;
   const backgroundColor = themeTokens?.background || resolvedTheme.backgroundColor;
-  const surfaceColor = themeTokens?.surface || resolvedTheme.cardColor;
+  const surfaceColor = isDefaultStudioTheme
+    ? DEFAULT_PROFILE_THEME.cardColor
+    : (themeTokens?.surface || resolvedTheme.cardColor);
   const savedFontColor = (profile as any).profileFontColor || "";
   const textColor = savedFontColor && savedFontColor.toUpperCase() !== "#FFFFFF"
     ? savedFontColor
