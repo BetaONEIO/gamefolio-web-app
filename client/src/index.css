@@ -442,6 +442,10 @@ video:focus {
   position: fixed;
 }
 
+.studio-profile-theme[data-profile-theme="emerald"] > .profile-theme-atmosphere {
+  background-size: 640px 640px, 100% 100%;
+}
+
 :root {
   /* Global Gamefolio theme - solid competitive gaming surfaces */
   --background: 240 23.08% 5.10%; /* #0A0A10 */
