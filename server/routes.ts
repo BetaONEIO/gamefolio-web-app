@@ -13798,21 +13798,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!result) return res.status(404).json({ error: "Indie game profile not found" });
       const games = await Promise.all(result.profiles.map(async (p) => {
         const catalogGame = p.catalogGameId ? await storage.getGame(p.catalogGameId) : null;
+        const catalogueId = p.catalogGameId;
+        const rowsOf = (queryResult: any): any[] => queryResult.rows ?? queryResult ?? [];
+        const [followerResult, contentResult] = catalogueId
+          ? await Promise.all([
+            db.execute(sql`SELECT COUNT(*)::int AS followers FROM user_game_favorites WHERE game_id = ${catalogueId}`),
+            db.execute(sql`
+              SELECT
+                (
+                  SELECT COUNT(*) FROM clips
+                  WHERE game_id = ${catalogueId} AND user_id <> ${result.user.id}
+                ) + (
+                  SELECT COUNT(*) FROM screenshots
+                  WHERE game_id = ${catalogueId} AND user_id <> ${result.user.id}
+                ) AS uploads,
+                (
+                  SELECT COALESCE(SUM(views), 0) FROM clips
+                  WHERE game_id = ${catalogueId} AND user_id <> ${result.user.id}
+                ) + (
+                  SELECT COALESCE(SUM(views), 0) FROM screenshots
+                  WHERE game_id = ${catalogueId} AND user_id <> ${result.user.id}
+                ) AS views
+            `),
+          ])
+          : [null, null];
+        const followerRow = followerResult ? rowsOf(followerResult)[0] : null;
+        const contentRow = contentResult ? rowsOf(contentResult)[0] : null;
+        const title = catalogGame?.name ?? p.gameName ?? "untitled-game";
+        const gameSlug = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "untitled-game";
         return {
           id: p.id,
           catalogGameId: p.catalogGameId,
+          gameSlug,
           gameName: p.gameName,
           headerImageUrl: p.headerImageUrl,
           capsuleImageUrl: p.capsuleImageUrl,
           isPrimary: p.isPrimary,
+          isFeatured: p.isPrimary,
           releaseStatus: p.releaseStatus,
+          releaseDate: p.releaseDate,
           shortDescription: p.shortDescription,
+          fullDescription: p.fullDescription,
+          genres: p.genres,
+          platforms: p.platforms,
+          steamUrl: p.steamUrl,
+          epicUrl: p.epicUrl,
+          itchUrl: p.itchUrl,
+          followerCount: Number(followerRow?.followers ?? 0),
+          communityUploads: Number(contentRow?.uploads ?? 0),
+          views: Number(contentRow?.views ?? 0),
           catalogGameName: catalogGame?.name ?? null,
           catalogImageUrl: catalogGame?.imageUrl ?? null,
         };
       }));
+      const primaryProfile = result.profiles.find((profile) => profile.isPrimary) ?? result.profiles[0];
       res.json({
         games,
+        studio: {
+          studioWebsite: primaryProfile?.studioWebsite ?? null,
+          websiteUrl: primaryProfile?.websiteUrl ?? null,
+          discordUrl: primaryProfile?.discordUrl ?? null,
+          twitterUrl: primaryProfile?.twitterUrl ?? null,
+          youtubeUrl: primaryProfile?.youtubeUrl ?? null,
+          steamUrl: primaryProfile?.steamUrl ?? null,
+        },
       });
     } catch (err) {
       console.error("GET /api/games/indie/:username/list error:", err);
