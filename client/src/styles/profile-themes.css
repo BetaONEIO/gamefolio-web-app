@@ -52,7 +52,8 @@
   z-index: 0;
   opacity: 0.82;
   background-image: var(--profile-theme-pattern);
-  background-size: auto, auto;
+  background-size: 100% 100%, 100% 100%;
+  background-repeat: no-repeat;
   background-position: 0 0;
   mix-blend-mode: screen;
   animation: profile-theme-drift 18s ease-in-out infinite alternate;
