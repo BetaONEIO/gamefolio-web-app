@@ -23,6 +23,8 @@ import { getQueryFn, queryClient } from "@/lib/queryClient";
 import { useSignedUrl } from "@/hooks/use-signed-url";
 import { useAuth } from "@/hooks/use-auth";
 import { publicGamePath } from "@/lib/game-routes";
+import { BannerLightbox, useBannerLightbox } from "@/components/ui/banner-lightbox";
+import { ProfilePictureLightbox, useProfilePictureLightbox } from "@/components/ui/profile-picture-lightbox";
 import type { UserWithStats } from "@shared/schema";
 import { DEFAULT_PROFILE_THEME, resolveProfileTheme } from "@shared/profile-theme";
 
@@ -299,6 +301,8 @@ function LinkItem({ label, href, icon }: { label: string; href?: string | null; 
 export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) {
   const { user: currentUser } = useAuth();
   const [shared, setShared] = useState(false);
+  const { lightboxData, openLightbox, closeLightbox } = useProfilePictureLightbox();
+  const { lightboxData: bannerLightboxData, openLightbox: openBannerLightbox, closeLightbox: closeBannerLightbox } = useBannerLightbox();
   const { data: gamesData, isLoading: gamesLoading, error: gamesError } = useQuery<{ games?: StudioGame[]; studio?: StudioLinks }>({
     queryKey: [`/api/games/indie/${profile.username}/list`],
     queryFn: getQueryFn({ on401: "throw" }),
@@ -409,6 +413,14 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
     window.setTimeout(() => setShared(false), 1800);
   };
 
+  const openStudioAvatar = () => {
+    if (profile.avatarUrl) openLightbox(profile.avatarUrl, displayName, profile.username);
+  };
+
+  const openStudioBanner = () => {
+    if (bannerImage) openBannerLightbox(bannerImage, displayName, profile.username);
+  };
+
   return (
     <main
       className={`studio-profile-theme profile-theme-scope relative min-h-[100dvh] overflow-x-hidden pb-20 text-white ${statsGlassEffect ? "studio-stats-glass" : ""}`}
@@ -426,7 +438,20 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
       )}
       <div className="relative z-[1] mx-auto max-w-[1200px]">
         <section className="relative px-4 pt-4 sm:px-6 lg:px-0 lg:pt-6">
-          {!hideBanner && <div className="studio-border relative h-[180px] overflow-hidden rounded-2xl border sm:h-[235px] lg:h-[280px]" style={{ background: `linear-gradient(135deg, ${resolvedTheme.primaryColor}, ${backgroundColor})` }}>
+          {!hideBanner && <div
+            className={`studio-border relative h-[180px] overflow-hidden rounded-2xl border sm:h-[235px] lg:h-[280px] ${bannerImage ? "cursor-pointer transition-[filter] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset" : ""}`}
+            style={{ background: `linear-gradient(135deg, ${resolvedTheme.primaryColor}, ${backgroundColor})` }}
+            onClick={bannerImage ? openStudioBanner : undefined}
+            onKeyDown={bannerImage ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                openStudioBanner();
+              }
+            } : undefined}
+            role={bannerImage ? "button" : undefined}
+            tabIndex={bannerImage ? 0 : undefined}
+            aria-label={bannerImage ? `View ${displayName}'s banner` : undefined}
+          >
             <SafeSignedImage
               url={bannerImage}
               alt=""
@@ -437,7 +462,15 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
             <div className="absolute inset-0" style={{ background: `linear-gradient(to top, ${backgroundColor}, transparent 72%)` }} />
           </div>}
           <div className={`relative flex flex-col gap-5 px-2 sm:flex-row sm:items-end sm:px-5 lg:px-6 ${hideBanner ? "mt-8" : "-mt-14 sm:-mt-16"}`}>
-            <Avatar url={profile.avatarUrl} name={displayName} className="studio-avatar-border h-28 w-28 shrink-0 rounded-2xl border-4 text-3xl shadow-xl sm:h-32 sm:w-32" />
+            <button
+              type="button"
+              onClick={openStudioAvatar}
+              disabled={!profile.avatarUrl}
+              className={`studio-avatar-border shrink-0 overflow-hidden rounded-[1.25rem] border-4 p-0 text-3xl shadow-xl ${profile.avatarUrl ? "cursor-pointer transition-[filter] hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2" : "cursor-default"} disabled:opacity-100`}
+              aria-label={profile.avatarUrl ? `View ${displayName}'s profile picture` : undefined}
+            >
+              <Avatar url={profile.avatarUrl} name={displayName} className="h-28 w-28 rounded-[1rem] sm:h-32 sm:w-32" />
+            </button>
             <div className="min-w-0 flex-1 pb-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className={`text-3xl font-black tracking-tight sm:text-5xl ${profileFontAnimation}`} style={{ textShadow: profileFontEffect }}>{displayName}</h1>
@@ -480,6 +513,20 @@ export default function IndieDeveloperProfile({ profile, isOwnProfile }: Props) 
             {primaryGame?.releaseDate && <div className="studio-muted mt-5 flex items-center gap-2 text-xs"><CalendarDays className="studio-accent-text h-4 w-4" /> Next release: {new Date(primaryGame.releaseDate).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</div>}
           </aside>
         </div>
+        <ProfilePictureLightbox
+          isOpen={lightboxData.isOpen}
+          onClose={closeLightbox}
+          avatarUrl={lightboxData.avatarUrl}
+          displayName={lightboxData.displayName}
+          username={lightboxData.username}
+        />
+        <BannerLightbox
+          isOpen={bannerLightboxData.isOpen}
+          onClose={closeBannerLightbox}
+          bannerUrl={bannerLightboxData.bannerUrl}
+          displayName={bannerLightboxData.displayName}
+          username={bannerLightboxData.username}
+        />
       </div>
     </main>
   );
