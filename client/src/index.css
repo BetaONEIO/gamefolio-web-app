@@ -440,11 +440,11 @@ video:focus {
 
 :root {
   /* Global Gamefolio theme - solid competitive gaming surfaces */
-  --background: 235 28.57% 8.24%; /* #0A0A10 */
+  --background: 240 23.08% 5.10%; /* #0A0A10 */
   --foreground: 0 0% 100%;        /* #FFFFFF */
 
   /* Card */
-  --card: 235 28.57% 8.24%;         /* #0A0A10 */
+  --card: 240 23.08% 5.10%;         /* #0A0A10 */
   --card-foreground: 0 0% 100%;
 
   /* Popover */
@@ -473,7 +473,7 @@ video:focus {
 
   /* Border */
   --border: 227.37 20.43% 18.24%;  /* #252938 */
-  --input: 235 28.57% 8.24%;        /* #0A0A10 */
+  --input: 240 23.08% 5.10%;        /* #0A0A10 */
   --ring: 78 100% 54%;             /* #B7FF18 */
 
   /* Radius - premium rounded feel */
