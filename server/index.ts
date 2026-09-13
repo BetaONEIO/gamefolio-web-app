@@ -101,6 +101,7 @@ import oauthUserApiRoutes from './routes/oauth-user-api';
 import adminOAuthRoutes from './routes/admin-oauth';
 import { createOGMetaMiddleware } from './og-meta';
 import { storage } from './storage';
+import { syncExistingStreamersToMarketing } from './marketing-sync';
 import { LeaderboardService, loadXpSettingsFromDB } from './leaderboard-service';
 import path from 'path';
 import fs from 'fs';
@@ -442,6 +443,9 @@ app.use((req, res, next) => {
     }
     server.listen(listenOptions, () => {
       log(`serving on port ${port}`);
+
+      void syncExistingStreamersToMarketing()
+        .catch((err) => console.error('[MarketingSync] streamer backfill failed:', err));
 
       LeaderboardService.processPeriodicLeaderboardClosures()
         .then(() => log('Leaderboard periodic closures check completed'))
