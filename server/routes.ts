@@ -40,6 +40,7 @@ import { syncStreamerToMarketing } from "./marketing-sync";
 
 const SEASONAL_ANNOUNCEMENT_ID = "summer_2026_end_autumn_2026_launch";
 const SUMMER_SEASON_NUMBER = 8;
+const GENERIC_LOGIN_FAILURE_MESSAGE = "Incorrect username or password";
 
 type SeasonalReward = {
   type: "gft" | "cosmetic";
@@ -948,7 +949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (!user) {
           console.log(`❌ No user found for "${username}"`);
-          return done(null, false, { message: "Incorrect username or password" });
+          return done(null, false, { message: GENERIC_LOGIN_FAILURE_MESSAGE });
         }
 
         console.log(`✅ User found: ID ${user.id}, username: ${user.username}, authProvider: ${user.authProvider}`);
@@ -973,7 +974,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!isMatch) {
           console.log(`❌ Password mismatch for user ${user.username}`);
-          return done(null, false, { message: "Incorrect password" });
+          return done(null, false, { message: GENERIC_LOGIN_FAILURE_MESSAGE });
         }
 
         // Check if user account is banned or suspended
@@ -2638,7 +2639,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       if (!user) {
         console.log("Login failed for user:", req.body.username);
-        return res.status(401).json({ message: info?.message || "Authentication failed" });
+        return res.status(401).json({ message: GENERIC_LOGIN_FAILURE_MESSAGE });
       }
 
       // Check if 2FA is enabled for this user
