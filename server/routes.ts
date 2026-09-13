@@ -627,6 +627,13 @@ function toPublicUser(user: any): Record<string, unknown> {
   };
 }
 
+function toPublicScreenshotUsers(screenshots: any[]): any[] {
+  return screenshots.map(screenshot => ({
+    ...screenshot,
+    user: screenshot.user ? toPublicUser(screenshot.user) : null,
+  }));
+}
+
 // Removes credential/token/billing/PII columns that must never reach the
 // client. Blacklist (vs toPublicUser's whitelist) so callers that also need
 // stats or display fields — e.g. the profile endpoint — keep those intact.
@@ -3727,9 +3734,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }
 
-      const { password: _p, ...publicUser } = user;
       res.json({
-        user: publicUser,
+        user: toPublicUser(user),
         weeklyUploadsCount,
         topGame,
         gamesPlayed,
@@ -8331,7 +8337,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const gameId = req.query.gameId ? parseInt(req.query.gameId as string) : undefined;
       const screenshotsResult = await storage.getLatestScreenshots(limit, gameId);
-      res.json(screenshotsResult);
+      res.json(toPublicScreenshotUsers(screenshotsResult));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching latest screenshots:", err);
@@ -9119,7 +9125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         parseInt(limit as string) || 20,
         gameId ? parseInt(gameId as string) : undefined
       );
-      res.json(screenshots);
+      res.json(toPublicScreenshotUsers(screenshots));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching trending screenshots:", err);
@@ -9133,7 +9139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
       const gameId = req.query.gameId ? parseInt(req.query.gameId as string) : undefined;
       const screenshots = await storage.getLatestScreenshots(limit, gameId);
-      res.json(screenshots);
+      res.json(toPublicScreenshotUsers(screenshots));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching latest screenshots:", err);
@@ -9150,7 +9156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         parseInt(limit as string) || 20,
         gameId ? parseInt(gameId as string) : undefined
       );
-      res.json(screenshots);
+      res.json(toPublicScreenshotUsers(screenshots));
     } catch (err) {
       captureRouteError(err);
       console.error("Error fetching screenshots:", err);
