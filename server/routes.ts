@@ -611,6 +611,8 @@ function toPublicUser(user: any): Record<string, unknown> {
     profileBackgroundDesktopZoom: user.profileBackgroundDesktopZoom,
     profileBackgroundGradient: user.profileBackgroundGradient,
     profileBackgroundGradientCss: user.profileBackgroundGradientCss,
+    profileBackgroundTheme: user.profileBackgroundTheme,
+    profileBackgroundAnimation: user.profileBackgroundAnimation,
     hideBanner: user.hideBanner,
     statsGlassEffect: user.statsGlassEffect,
     layoutStyle: user.layoutStyle,

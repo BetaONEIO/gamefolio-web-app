@@ -1395,6 +1395,7 @@ export default function SettingsPage() {
     profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
     profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
     profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
+    profileBackgroundGradientCss: (user as any)?.profileBackgroundGradientCss || "",
     profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
     profileBackgroundPositionX: (user as any)?.profileBackgroundPositionX || "50",
     profileBackgroundPositionY: (user as any)?.profileBackgroundPositionY || "50",
@@ -1497,6 +1498,7 @@ export default function SettingsPage() {
           profileBackgroundType: (user as any)?.profileBackgroundType || "solid",
           profileBackgroundTheme: (user as any)?.profileBackgroundTheme || "default",
           profileBackgroundAnimation: (user as any)?.profileBackgroundAnimation || "none",
+          profileBackgroundGradientCss: (user as any)?.profileBackgroundGradientCss || "",
           profileBackgroundImageUrl: (user as any)?.profileBackgroundImageUrl || "",
           profileBackgroundPositionX: (user as any)?.profileBackgroundPositionX || "50",
           profileBackgroundPositionY: (user as any)?.profileBackgroundPositionY || "50",
@@ -1525,6 +1527,7 @@ export default function SettingsPage() {
         const newBgType        = (user as any)?.profileBackgroundType || "solid";
         const newBgTheme       = (user as any)?.profileBackgroundTheme || "default";
         const newBgAnim        = (user as any)?.profileBackgroundAnimation || "none";
+        const newBgGradientCss = (user as any)?.profileBackgroundGradientCss || "";
         const newBgImageUrl    = (user as any)?.profileBackgroundImageUrl || "";
         const newBgPosX        = (user as any)?.profileBackgroundPositionX || "50";
         const newBgPosY        = (user as any)?.profileBackgroundPositionY || "50";
@@ -1547,6 +1550,7 @@ export default function SettingsPage() {
           profileBackgroundType: newBgType,
           profileBackgroundTheme: newBgTheme,
           profileBackgroundAnimation: newBgAnim,
+          profileBackgroundGradientCss: newBgGradientCss,
           profileBackgroundImageUrl: newBgImageUrl,
           profileBackgroundPositionX: newBgPosX,
           profileBackgroundPositionY: newBgPosY,
@@ -1576,6 +1580,7 @@ export default function SettingsPage() {
           profileBackgroundType:        pick(prev.profileBackgroundType,     newBgType,     synced.profileBackgroundType),
           profileBackgroundTheme:       pick(prev.profileBackgroundTheme,    newBgTheme,    synced.profileBackgroundTheme),
           profileBackgroundAnimation:   pick(prev.profileBackgroundAnimation,newBgAnim,     synced.profileBackgroundAnimation),
+          profileBackgroundGradientCss: pick(prev.profileBackgroundGradientCss, newBgGradientCss, synced.profileBackgroundGradientCss),
           profileBackgroundImageUrl:    pick(prev.profileBackgroundImageUrl, newBgImageUrl, synced.profileBackgroundImageUrl),
           profileBackgroundPositionX:   pick(prev.profileBackgroundPositionX,newBgPosX,    synced.profileBackgroundPositionX),
           profileBackgroundPositionY:   pick(prev.profileBackgroundPositionY,newBgPosY,    synced.profileBackgroundPositionY),
@@ -1652,6 +1657,7 @@ export default function SettingsPage() {
     profileData.profileBackgroundType !== ((user as any)?.profileBackgroundType || "solid") ||
     profileData.profileBackgroundTheme !== ((user as any)?.profileBackgroundTheme || "default") ||
     profileData.profileBackgroundAnimation !== ((user as any)?.profileBackgroundAnimation || "none") ||
+    normalizeValue(profileData.profileBackgroundGradientCss) !== normalizeValue((user as any)?.profileBackgroundGradientCss) ||
     normalizeValue(profileData.profileBackgroundImageUrl) !== normalizeValue((user as any)?.profileBackgroundImageUrl) ||
     profileData.profileFont !== ((user as any)?.profileFont || "default") ||
     profileData.profileFontEffect !== ((user as any)?.profileFontEffect || "none") ||
@@ -2372,6 +2378,7 @@ export default function SettingsPage() {
       profileBackgroundGradientCss: (theme as any).profileBackgroundGradientCss || "",
       profileBackgroundTheme: theme.slug,
       profileBackgroundAnimation: theme.animation || "none",
+      profileBackgroundGradient: true,
     }));
   };
 
