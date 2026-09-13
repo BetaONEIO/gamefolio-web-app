@@ -11,6 +11,9 @@
  * works in-app, it just isn't mirrored to the marketing site.
  */
 import type { User } from "@shared/schema";
+import { users } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 const MARKETING_API_URL = process.env.MARKETING_API_URL;
 const PARTNER_SYNC_SECRET = process.env.PARTNER_SYNC_SECRET;
@@ -75,6 +78,35 @@ export async function syncStreamerToMarketing(user: User): Promise<void> {
 }
 
 export const syncPartnerToMarketing = syncStreamerToMarketing;
+
+function hasStreamerPersona(user: User): boolean {
+  const personas = typeof user.userType === "string"
+    ? user.userType.split(",").map((value) => value.trim().toLowerCase())
+    : [];
+  return user.isStreamer === true || personas.includes("streamer");
+}
+
+/**
+ * Backfill existing public streamer accounts after a deploy. Upserts are keyed
+ * by app user ID, so running this on every startup is safe and also refreshes
+ * listings when profile data changed while the sync was unavailable.
+ */
+export async function syncExistingStreamersToMarketing(): Promise<number> {
+  if (!isConfigured()) return 0;
+
+  const activeUsers = await db.select().from(users).where(eq(users.status, "active"));
+  const streamers = activeUsers.filter(
+    (user) => user.isPrivate !== true && hasStreamerPersona(user),
+  );
+
+  const batchSize = 10;
+  for (let offset = 0; offset < streamers.length; offset += batchSize) {
+    await Promise.all(streamers.slice(offset, offset + batchSize).map(syncStreamerToMarketing));
+  }
+
+  console.log(`[MarketingSync] backfilled ${streamers.length} existing streamer account(s)`);
+  return streamers.length;
+}
 
 /**
  * Remove a partner from the marketing site (partner status revoked or Pro
