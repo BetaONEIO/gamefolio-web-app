@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowRight, Check, ChevronDown, Rocket, Sliders, Sparkles, Zap } from "lucide-react";
-import { CAMPAIGN_COMMERCIAL_MODEL } from "@shared/campaign-commercial-model";
+import { CAMPAIGN_COMMERCIAL_MODEL, getPresetSubmissionEstimate } from "@shared/campaign-commercial-model";
 import type { CommercialPreset } from "@shared/campaign-commercial-model";
 import type { CampaignType } from "./CreateCampaignFlow";
 
@@ -56,6 +56,7 @@ export default function CommercialCampaignAccordion({
         const open = expanded === preset.slug;
         const selected = selectedType?.slug === preset.slug;
         const included = preset.slug === "quick-creator";
+        const estimate = getPresetSubmissionEstimate(preset);
         const paidLabel = preset.priceFromPence ? `FROM ${money(preset.priceFromPence)}` : "INCLUDED WITH PRO";
         const benefits = benefitsFor(preset);
 
@@ -110,15 +111,15 @@ export default function CommercialCampaignAccordion({
                         <p className="text-[11px] uppercase tracking-[.18em] font-black mb-3 text-white/65">ESTIMATED CAMPAIGN</p>
                         <div className="grid grid-cols-3 gap-4 max-w-lg">
                           <div>
-                            <p className="text-lg sm:text-xl font-black text-white">{preset.creatorReach}</p>
+                            <p className="text-lg sm:text-xl font-black text-white">{estimate ? `${estimate.creatorMin}–${estimate.creatorMax}` : "Dynamic"}</p>
                             <p className="mt-1 text-[10px] uppercase tracking-wider text-white/55">CREATORS</p>
                           </div>
                           <div>
-                            <p className="text-lg sm:text-xl font-black text-white">{preset.estimatedContent}</p>
-                            <p className="mt-1 text-[10px] uppercase tracking-wider text-white/55">CONTENT PIECES</p>
+                            <p className="text-lg sm:text-xl font-black text-white">{estimate ? `~${estimate.submissionMin}–${estimate.submissionMax}` : "Budget-based"}</p>
+                            <p className="mt-1 text-[10px] uppercase tracking-wider text-white/55">CREATOR SUBMISSIONS</p>
                           </div>
                           <div>
-                            <p className="text-lg sm:text-xl font-black text-white">{preset.campaignLength}</p>
+                            <p className="text-lg sm:text-xl font-black text-white">{estimate?.durationDays ? `${estimate.durationDays} days` : "Recommended"}</p>
                             <p className="mt-1 text-[10px] uppercase tracking-wider text-white/55">CAMPAIGN</p>
                           </div>
                         </div>

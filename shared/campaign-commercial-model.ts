@@ -1,18 +1,45 @@
 export type CampaignPriority = "high" | "medium" | "off";
 export type CampaignContentType = "clip" | "reel" | "screenshot" | "stream" | "review" | "feedback";
+export type CommercialObjective = {
+  type: CampaignContentType;
+  quantity: number;
+  mandatory: boolean;
+  title: string;
+  description: string;
+  validation: string;
+  xpReward: number;
+};
 
 export type CommercialPreset = {
   slug: "quick-creator" | "content-boost" | "creator-showcase" | "custom-campaign";
   priceFromPence: number | null;
   label: string;
-  creatorReach: string;
-  estimatedContent: string;
-  campaignLength: string;
+  estimatedCreatorMin: number | null;
+  estimatedCreatorMax: number | null;
+  expectedApprovedDeliverablesPerCreator: { min: number; max: number } | null;
+  campaignDurationDays: number | null;
   overview: string;
   content: string[];
   bestFor: string[];
   visibility: string;
+  objectives: readonly CommercialObjective[];
 };
+
+export function getPresetSubmissionEstimate(preset: CommercialPreset) {
+  if (
+    preset.estimatedCreatorMin == null ||
+    preset.estimatedCreatorMax == null ||
+    !preset.expectedApprovedDeliverablesPerCreator
+  ) return null;
+  const roundToFive = (value: number) => Math.ceil(value / 5) * 5;
+  return {
+    creatorMin: preset.estimatedCreatorMin,
+    creatorMax: preset.estimatedCreatorMax,
+    submissionMin: roundToFive(preset.estimatedCreatorMin * preset.expectedApprovedDeliverablesPerCreator.min),
+    submissionMax: roundToFive(preset.estimatedCreatorMax * preset.expectedApprovedDeliverablesPerCreator.max),
+    durationDays: preset.campaignDurationDays,
+  };
+}
 
 export type CampaignEstimate = {
   budgetPence: number;
@@ -38,8 +65,8 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
     creatorPlaces: 5,
     estimatedContent: {
       clip: 2,
-      reel: 1,
-      screenshot: 2,
+      reel: 0,
+      screenshot: 1,
       stream: 0,
       review: 0,
       feedback: 1,
@@ -56,49 +83,72 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
       slug: "quick-creator",
       priceFromPence: null,
       label: "INCLUDED WITH PRO",
-      creatorReach: "3–5 creators",
-      estimatedContent: "~5 pieces",
-      campaignLength: "7 days",
+      estimatedCreatorMin: 3,
+      estimatedCreatorMax: 5,
+      expectedApprovedDeliverablesPerCreator: { min: 3, max: 3 },
+      campaignDurationDays: 7,
       overview: "A small first campaign to get creators playing and creating around your game.",
       content: ["Gameplay clips", "Screenshots", "Creator feedback"],
       bestFor: ["First creator content", "Demos", "Early Access"],
       visibility: "Standard campaign visibility",
+      objectives: [
+        { type: "clip", quantity: 2, mandatory: true, title: "Upload 2 Gameplay Clips", description: "Upload 2 gameplay clips tagged with the game", validation: "manual_review", xpReward: 500 },
+        { type: "screenshot", quantity: 1, mandatory: true, title: "Upload 1 Screenshot", description: "Upload 1 screenshot from the game", validation: "manual_review", xpReward: 250 },
+        { type: "feedback", quantity: 1, mandatory: false, title: "Submit Creator Feedback", description: "Submit first impressions via the feedback form", validation: "form_submission", xpReward: 500 },
+      ],
     },
     {
       slug: "content-boost",
       priceFromPence: 2500,
       label: "PAID CAMPAIGN",
-      creatorReach: "5–10 creators",
-      estimatedContent: "~8–15 pieces",
-      campaignLength: "14 days",
+      estimatedCreatorMin: 5,
+      estimatedCreatorMax: 10,
+      expectedApprovedDeliverablesPerCreator: { min: 4, max: 3.5 },
+      campaignDurationDays: 14,
       overview: "Build a reusable content library with greater creator reach.",
       content: ["Gameplay clips", "Vertical reels", "Screenshots", "Creator feedback"],
       bestFor: ["Marketing libraries", "Updates", "Game discovery"],
       visibility: "Enhanced campaign visibility",
+      objectives: [
+        { type: "clip", quantity: 2, mandatory: true, title: "Upload 2 Gameplay Clips", description: "Upload 2 gameplay clips tagged with the game", validation: "manual_review", xpReward: 750 },
+        { type: "reel", quantity: 1, mandatory: true, title: "Upload 1 Vertical Reel", description: "Create and upload 1 vertical gameplay reel", validation: "manual_review", xpReward: 1000 },
+        { type: "screenshot", quantity: 1, mandatory: true, title: "Upload 1 Screenshot", description: "Upload 1 screenshot from the game", validation: "manual_review", xpReward: 250 },
+        { type: "feedback", quantity: 1, mandatory: false, title: "Submit Creator Feedback", description: "Submit impressions via the feedback form", validation: "form_submission", xpReward: 1000 },
+      ],
     },
     {
       slug: "creator-showcase",
       priceFromPence: 5000,
       label: "PREMIUM CAMPAIGN",
-      creatorReach: "10–20 creators",
-      estimatedContent: "~15–30 pieces",
-      campaignLength: "21 days",
+      estimatedCreatorMin: 10,
+      estimatedCreatorMax: 20,
+      expectedApprovedDeliverablesPerCreator: { min: 4, max: 3.5 },
+      campaignDurationDays: 21,
       overview: "Generate deeper creator engagement for your biggest moments.",
       content: ["Gameplay clips", "Vertical reels", "Screenshots", "Livestreams", "Creator reviews"],
       bestFor: ["Full launches", "Major updates", "DLC", "Seasonal events"],
       visibility: "Featured campaign visibility",
+      objectives: [
+        { type: "clip", quantity: 1, mandatory: true, title: "Upload 1 Gameplay Clip", description: "Upload 1 gameplay clip tagged with the game", validation: "manual_review", xpReward: 750 },
+        { type: "reel", quantity: 1, mandatory: true, title: "Upload 1 Vertical Reel", description: "Create and upload 1 vertical gameplay reel", validation: "manual_review", xpReward: 1250 },
+        { type: "screenshot", quantity: 1, mandatory: true, title: "Upload 1 Screenshot", description: "Upload 1 screenshot from the game", validation: "manual_review", xpReward: 250 },
+        { type: "stream", quantity: 1, mandatory: true, title: "Stream the Game", description: "Stream the game live for at least 30 minutes", validation: "stream_duration", xpReward: 3500 },
+        { type: "review", quantity: 1, mandatory: true, title: "Submit Creator Review", description: "Submit a written or video review", validation: "form_submission", xpReward: 1250 },
+      ],
     },
     {
       slug: "custom-campaign",
       priceFromPence: 1000,
       label: "FROM £10",
-      creatorReach: "Flexible",
-      estimatedContent: "Dynamic",
-      campaignLength: "Recommended",
+      estimatedCreatorMin: null,
+      estimatedCreatorMax: null,
+      expectedApprovedDeliverablesPerCreator: null,
+      campaignDurationDays: null,
       overview: "Choose your budget and let Gamefolio build a recommended creator campaign around it.",
       content: ["Choose your content mix"],
       bestFor: ["Specific content goals", "Flexible launches"],
       visibility: "Campaign visibility scales with budget",
+      objectives: [],
     },
   ] satisfies readonly CommercialPreset[],
 } as const;

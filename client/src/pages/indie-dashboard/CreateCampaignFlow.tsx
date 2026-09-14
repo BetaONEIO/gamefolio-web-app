@@ -74,8 +74,8 @@ const CAMPAIGN_TYPES: CampaignType[] = [
     description: "A short campaign designed to generate first impressions, gameplay content and useful creator feedback.",
     bestFor: "🚀 New Launches",
     bestForList: ["New game launches", "Steam demos", "Early Access", "First wave of creator content"],
-    duration: 7, deliverables: 5, xpReward: 3000, recommended: true, icon: Zap,
-    pills: [{ ct: "clip", qty: 2 }, { ct: "screenshot", qty: 2 }, { ct: "feedback", qty: 1 }],
+    duration: 7, deliverables: 3, xpReward: 3000, recommended: true, icon: Zap,
+    pills: [{ ct: "clip", qty: 2 }, { ct: "screenshot", qty: 1 }],
   },
   {
     slug: "content-boost", name: "Content Boost Campaign", shortName: "Content Boost",
@@ -85,8 +85,8 @@ const CAMPAIGN_TYPES: CampaignType[] = [
     description: "A multi-format campaign designed to generate gameplay clips, vertical content, screenshots and creator feedback for future marketing.",
     bestFor: "📈 Content Library",
     bestForList: ["Social media marketing", "Building a content library", "Steam page promotion", "Increasing game discovery"],
-    duration: 14, deliverables: 8, xpReward: 7500, icon: Sparkles,
-    pills: [{ ct: "clip", qty: 2 }, { ct: "reel", qty: 3 }, { ct: "screenshot", qty: 2 }, { ct: "feedback", qty: 1 }],
+    duration: 14, deliverables: 4, xpReward: 7500, icon: Sparkles,
+    pills: [{ ct: "clip", qty: 2 }, { ct: "reel", qty: 1 }, { ct: "screenshot", qty: 1 }],
   },
   {
     slug: "creator-showcase", name: "Creator Showcase Campaign", shortName: "Creator Showcase",
@@ -96,8 +96,8 @@ const CAMPAIGN_TYPES: CampaignType[] = [
     description: "A longer campaign for creators who will spend more time playing, streaming and producing higher-value content.",
     bestFor: "⭐ Deep Engagement",
     bestForList: ["Full game launches", "Major updates", "DLC releases", "Seasonal events", "Deep creator engagement"],
-    duration: 21, deliverables: 11, xpReward: 15000, icon: Rocket,
-    pills: [{ ct: "clip", qty: 3 }, { ct: "reel", qty: 3 }, { ct: "screenshot", qty: 3 }, { ct: "stream", qty: 1 }, { ct: "feedback", qty: 1 }],
+    duration: 21, deliverables: 5, xpReward: 15000, icon: Rocket,
+    pills: [{ ct: "clip", qty: 1 }, { ct: "reel", qty: 1 }, { ct: "screenshot", qty: 1 }, { ct: "stream", qty: 1 }, { ct: "review", qty: 1 }],
   },
   {
     slug: "custom-campaign", name: "Build Your Own Campaign", shortName: "Build Your Own",

@@ -568,6 +568,36 @@ const TEMPLATES = [
   },
 ];
 
+function canonicalTemplateBounties(slug: string, fallback: any[]) {
+  const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find((candidate) => candidate.slug === slug);
+  if (!preset?.objectives.length) return fallback;
+  return preset.objectives.map((objective, index) => ({
+    title: objective.title,
+    description: objective.description,
+    mandatory: objective.mandatory,
+    quantity: objective.quantity,
+    order: index + 1,
+    xp: objective.xpReward,
+    validation: objective.validation,
+    contentType: objective.type,
+  }));
+}
+
+function canonicalTemplateMetrics(slug: string, fallback: any) {
+  const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find((candidate) => candidate.slug === slug);
+  if (!preset?.objectives.length || preset.estimatedCreatorMax == null) return fallback;
+  const count = (type: CampaignContentType) =>
+    preset.objectives
+      .filter((objective) => objective.type === type)
+      .reduce((total, objective) => total + objective.quantity, 0) * preset.estimatedCreatorMax;
+  return {
+    estimatedClips: count("clip"),
+    estimatedReels: count("reel"),
+    estimatedScreenshots: count("screenshot"),
+    estimatedFeedback: count("feedback") + count("review"),
+  };
+}
+
 function toRows(result: any): any[] {
   // drizzle-orm/postgres-js returns a RowList (array-like), not { rows: [] }
   // drizzle-orm/node-postgres returns { rows: [] }
@@ -667,6 +697,7 @@ async function materializeCustomTemplateSnapshot(
 async function seedCampaignTemplates() {
   try {
     for (const t of TEMPLATES) {
+      const metrics = canonicalTemplateMetrics(t.slug, t);
       const existing = toRows(await db.execute(sql`SELECT id FROM campaign_templates WHERE slug = ${t.slug}`));
       let templateId: number;
       let archivedTemplateId: number | null = null;
@@ -705,10 +736,10 @@ async function seedCampaignTemplates() {
             full_keys_required = ${t.fullKeysRequired},
             completion_reward = ${t.completionReward},
             completion_reward_description = ${t.completionRewardDescription},
-            estimated_clips = ${t.estimatedClips},
-            estimated_reels = ${t.estimatedReels ?? 0},
-            estimated_screenshots = ${t.estimatedScreenshots},
-            estimated_feedback = ${t.estimatedFeedback},
+            estimated_clips = ${metrics.estimatedClips},
+            estimated_reels = ${metrics.estimatedReels ?? 0},
+            estimated_screenshots = ${metrics.estimatedScreenshots},
+            estimated_feedback = ${metrics.estimatedFeedback},
             estimated_views_min = ${t.estimatedViewsMin},
             estimated_views_max = ${t.estimatedViewsMax},
             bounty_xp_reward = ${t.bountyXpReward ?? 0},
@@ -739,7 +770,7 @@ async function seedCampaignTemplates() {
             (${t.name}, ${t.slug}, ${t.category}, ${t.description}, ${t.bestUseCase},
              ${t.duration}, ${t.participantCapacity}, ${t.demoKeysRequired}, ${t.fullKeysRequired},
              ${t.completionReward}, ${t.completionRewardDescription},
-             ${t.estimatedClips}, ${t.estimatedReels ?? 0}, ${t.estimatedScreenshots}, ${t.estimatedFeedback},
+              ${metrics.estimatedClips}, ${metrics.estimatedReels ?? 0}, ${metrics.estimatedScreenshots}, ${metrics.estimatedFeedback},
              ${t.estimatedViewsMin}, ${t.estimatedViewsMax},
                ${t.bountyXpReward ?? 0}, ${t.completionBonusXp ?? 0}, ${JSON.stringify(t.rewardConfig ?? null)}::jsonb,
               'demo_to_full', 30, ${t.duration},
@@ -766,7 +797,7 @@ async function seedCampaignTemplates() {
         }
       }
 
-      for (const b of t.bounties) {
+      for (const b of canonicalTemplateBounties(t.slug, t.bounties)) {
         await db.execute(sql`
           INSERT INTO campaign_template_bounties
             (template_id, title, description, mandatory, quantity, completion_order, xp_reward, validation_method, content_type)
