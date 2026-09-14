@@ -696,8 +696,7 @@ async function checkMediaOwnerAccess(
   return true;
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  const httpServer = createServer(app);
+export async function registerRoutes(app: Express, httpServer: Server = createServer(app)): Promise<Server> {
 
   // Keep the announcement acknowledgement available immediately in
   // development as well as after the schema is published.

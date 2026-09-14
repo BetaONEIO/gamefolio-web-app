@@ -262,15 +262,20 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
+export async function startApplication(server: import('node:http').Server) {
   try {
-    const server = await registerRoutes(app);
+    const startupStage = async (stage: string, task: () => Promise<unknown>) => {
+      const started = performance.now();
+      await task();
+      console.log(JSON.stringify({ event: 'startup_stage', stage, durationMs: Math.round(performance.now() - started) }));
+    };
+    await startupStage('routes', () => registerRoutes(app, server));
 
     // Load XP settings from DB and sync into POINT_VALUES
-    await loadXpSettingsFromDB();
+    await startupStage('xp_settings', loadXpSettingsFromDB);
 
     // Ensure special accounts exist in whichever DB this environment uses
-    await ensureBabyTomlinsonAccount();
+    await startupStage('special_accounts', ensureBabyTomlinsonAccount);
 
     // Serve static email assets
     app.use('/static/email-assets', express.static(path.join(__dirname, 'static/email-assets')));
@@ -430,28 +435,8 @@ app.use((req, res, next) => {
       serveStatic(app);
     }
 
-    // ALWAYS serve the app on port 5000
-    // this serves both the API and the client.
-    // It is the only port that is not firewalled.
-    // (Overridable via PORT for local dev — macOS AirPlay squats 5000.)
-    const port = process.env.NODE_ENV === "development" && process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
-    // reusePort uses SO_REUSEPORT, which macOS sockets reject with ENOTSUP —
-    // only enable it off-darwin (Linux/Replit), where it's supported.
-    // Overridable via HOST for local dev — on at least one dev machine, some
-    // local network/security software silently intercepted connections to a
-    // *specific* port (5050) with no error and no visible LISTEN socket;
-    // switching PORT resolved it, HOST=127.0.0.1 didn't independently confirm
-    // as necessary. Left here as a defensive knob for the same symptom
-    // elsewhere. Production/Replit still needs 0.0.0.0, so default unchanged.
-    const listenOptions: { port: number; host: string; reusePort?: boolean } = {
-      port,
-      host: process.env.HOST || "0.0.0.0",
-    };
-    if (process.platform !== "darwin") {
-      listenOptions.reusePort = true;
-    }
-    server.listen(listenOptions, () => {
-      log(`serving on port ${port}`);
+    {
+      log('application initialisation complete');
 
       void syncExistingStreamersToMarketing()
         .catch((err) => console.error('[MarketingSync] streamer backfill failed:', err));
@@ -579,7 +564,7 @@ app.use((req, res, next) => {
         setTimeout(tick, 2 * 60 * 1000);
         setInterval(tick, RECONCILE_INTERVAL_MS);
       }).catch((err) => console.error('Failed to schedule clip-processing reconciler:', err));
-    });
+    }
 
     // Reserved VM deploys stop the old process before the new one boots —
     // there's no second instance to keep serving traffic in the meantime —
@@ -605,6 +590,7 @@ app.use((req, res, next) => {
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   } catch (error) {
     console.error("Fatal server error:", error);
-    process.exit(1);
+    throw error;
   }
-})();
+  return app;
+}
