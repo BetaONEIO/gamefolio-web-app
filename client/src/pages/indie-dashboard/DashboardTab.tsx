@@ -480,13 +480,13 @@ export default function DashboardTab({
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ background: rgbaAccent(0.13) }}><Gamepad2 className="h-4 w-4" style={{ color: NEON }} /></div>
               <div>
                 <div className="text-[10px] font-black uppercase tracking-[0.15em]" style={{ color: NEON }}>Game Developer Pro</div>
-                <h2 className="mt-2 text-base font-black text-white">{user?.isIndieDevSubscriber ? "Your developer tools are active" : "Build more momentum"}</h2>
+                <h2 className="mt-2 text-base font-black text-white">{user?.isIndieDevSubscriber ? "Your monthly Starter Bounty is included" : "Turn players into creators"}</h2>
               </div>
             </div>
             <p className="mt-4 text-xs leading-relaxed text-white/40">
               {user?.isIndieDevSubscriber
-                ? "Your Pro access is active. Keep your profile and community presence working together."
-                : "Unlock expanded developer tools and promotion benefits built for your game."}
+                ? "Run one simple Starter Bounty each billing month, then scale up with paid creator campaigns when you are ready."
+                : "Get one Starter Bounty each billing month and use creator campaigns to generate clips, reels, screenshots and feedback."}
             </p>
             <button type="button" onClick={() => setShowUpgrade(true)} className="mt-4 w-full rounded-xl py-2.5 text-xs font-black transition-all hover:brightness-110" style={{ background: user?.isIndieDevSubscriber ? "rgba(255,255,255,0.07)" : NEON, color: user?.isIndieDevSubscriber ? "rgba(255,255,255,0.75)" : "#071000" }}>
               {user?.isIndieDevSubscriber ? "View Pro details" : "Explore Developer Pro"}

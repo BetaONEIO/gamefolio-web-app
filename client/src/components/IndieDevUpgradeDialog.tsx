@@ -22,8 +22,8 @@ interface IndieDevUpgradeDialogProps {
 
 const perks = [
   {
-    title: "Create & manage bounties",
-    description: "Give gamers and streamers challenges to complete using your game.",
+    title: "One Starter Bounty every month",
+    description: "Launch a focused creator campaign in each subscription billing month. Unused Starter Bounties do not roll over.",
     icon: <Trophy className="w-4 h-4 text-[#B7FF18]" />,
   },
   {
@@ -32,8 +32,8 @@ const perks = [
     icon: <KeyRound className="w-4 h-4 text-[#B7FF18]" />,
   },
   {
-    title: "Get your game promoted",
-    description: "Eligible games can receive exposure across Gamefolio and featured placements.",
+    title: "Scale with paid campaigns from £10",
+    description: "Choose a budget and see estimated creator reach, content and key requirements before launch.",
     icon: <Megaphone className="w-4 h-4 text-[#B7FF18]" />,
   },
   {
@@ -311,7 +311,7 @@ export default function IndieDevUpgradeDialog({ open, onOpenChange }: IndieDevUp
           <p className="mb-2 text-[10px] font-bold uppercase tracking-[1.5px] text-[#B7FF18]">Game Developer Pro</p>
           <h2 className="mb-2 text-3xl font-bold leading-tight text-white">Turn players into creators.</h2>
           <p className="text-sm leading-relaxed text-[#B8C0AE]">
-            Create bounties, distribute game keys and get the Gamefolio community creating content around your game.
+            Run creator campaigns, distribute game keys and get the Gamefolio community making content around your game.
           </p>
         </div>
 

@@ -7,6 +7,13 @@ import { computeCampaignTotalXP, computeCompletionBonus, type XPTier } from '../
 import { configuredActiveCampaignKeyVersion, decryptCampaignKey, encryptCampaignKey, hashCampaignKey } from '../campaign-key-security';
 import { normalizeCampaignInput, normalizeCampaignReminderThresholds } from '@shared/campaign-contract';
 import { createAndPush } from '../notification-service';
+import {
+  CAMPAIGN_COMMERCIAL_MODEL,
+  DEFAULT_CAMPAIGN_PRIORITIES,
+  calculateCampaignEstimate,
+  type CampaignContentType,
+  type CampaignPriority,
+} from '@shared/campaign-commercial-model';
 
 const router = express.Router();
 
@@ -120,6 +127,23 @@ async function ensureCampaignTables() {
     await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS manual_approval_required BOOLEAN NOT NULL DEFAULT false`).catch(() => {});
     await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS requires_access_key BOOLEAN NOT NULL DEFAULT true`).catch(() => {});
     await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS reminder_thresholds_hours INTEGER[]`).catch(() => {});
+    await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS commercial_type TEXT`).catch(() => {});
+    await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS budget_pence INTEGER`).catch(() => {});
+    await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS content_priorities JSONB`).catch(() => {});
+    await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS billing_period_start TIMESTAMP`).catch(() => {});
+    await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS billing_period_end TIMESTAMP`).catch(() => {});
+    await db.execute(sql`ALTER TABLE campaign_instances ADD COLUMN IF NOT EXISTS reward_pool_contribution_pence INTEGER`).catch(() => {});
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS campaign_starter_allowances (
+        id SERIAL PRIMARY KEY,
+        developer_user_id INTEGER NOT NULL,
+        period_start TIMESTAMP NOT NULL,
+        period_end TIMESTAMP NOT NULL,
+        instance_id INTEGER NOT NULL REFERENCES campaign_instances(id) ON DELETE CASCADE,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        UNIQUE (developer_user_id, period_start)
+      )
+    `).catch(() => {});
     await db.execute(sql`ALTER TABLE campaign_instances ALTER COLUMN reminder_thresholds_hours DROP NOT NULL`).catch(() => {});
     await db.execute(sql`ALTER TABLE campaign_instances ALTER COLUMN reminder_thresholds_hours DROP DEFAULT`).catch(() => {});
     await db.execute(sql`
@@ -1068,6 +1092,74 @@ router.get('/templates/:id', async (req, res) => {
 // ─────────────────────────────────────────────
 
 // GET /api/campaigns/overview — stats for the overview tab
+function addUtcMonths(date: Date, months: number) {
+  const day = date.getUTCDate();
+  const next = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1, date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds()));
+  const lastDay = new Date(Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0)).getUTCDate();
+  next.setUTCDate(Math.min(day, lastDay));
+  return next;
+}
+
+function subscriptionMonthWindow(startValue: unknown, endValue: unknown, now = new Date()) {
+  const start = startValue ? new Date(String(startValue)) : null;
+  const subscriptionEnd = endValue ? new Date(String(endValue)) : null;
+  if (!start || Number.isNaN(start.getTime()) || start > now) return null;
+  let cursor = new Date(start);
+  let next = addUtcMonths(cursor, 1);
+  while (next <= now) {
+    cursor = next;
+    next = addUtcMonths(cursor, 1);
+  }
+  if (subscriptionEnd && !Number.isNaN(subscriptionEnd.getTime()) && subscriptionEnd < next) next = subscriptionEnd;
+  if (next <= now) return null;
+  return { start: cursor, end: next };
+}
+
+function normalizePriorities(value: unknown): Record<CampaignContentType, CampaignPriority> {
+  const source = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+  return Object.fromEntries(Object.entries(DEFAULT_CAMPAIGN_PRIORITIES).map(([key, fallback]) => [
+    key,
+    ['high', 'medium', 'off'].includes(String(source[key])) ? source[key] : fallback,
+  ])) as Record<CampaignContentType, CampaignPriority>;
+}
+
+router.get('/commercial-model', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const [user] = toRows(await db.execute(sql`
+      SELECT is_indie_dev_subscriber, indie_dev_subscription_start_date, indie_dev_subscription_end_date
+      FROM users WHERE id = ${userId}
+    `)) as any[];
+    const window = user?.is_indie_dev_subscriber
+      ? subscriptionMonthWindow(user.indie_dev_subscription_start_date, user.indie_dev_subscription_end_date)
+      : null;
+    let used = false;
+    let starterInstanceId: number | null = null;
+    if (window) {
+      const [allowance] = toRows(await db.execute(sql`
+        SELECT instance_id FROM campaign_starter_allowances
+        WHERE developer_user_id = ${userId} AND period_start = ${window.start.toISOString()}
+      `)) as any[];
+      used = Boolean(allowance);
+      starterInstanceId = allowance?.instance_id ?? null;
+    }
+    res.json({
+      model: CAMPAIGN_COMMERCIAL_MODEL,
+      starterAllowance: {
+        eligible: Boolean(window),
+        available: Boolean(window) && !used,
+        used,
+        periodStart: window?.start.toISOString() ?? null,
+        periodEnd: window?.end.toISOString() ?? null,
+        instanceId: starterInstanceId,
+      },
+    });
+  } catch (err) {
+    console.error('GET /api/campaigns/commercial-model error:', err);
+    res.status(500).json({ error: 'Failed to load campaign allowance' });
+  }
+});
+
 router.get('/overview', requireAuth, async (req, res) => {
   try {
     const userId = req.user!.id;
@@ -1147,6 +1239,7 @@ router.post('/instances', requireAuth, async (req, res) => {
       startType, scheduledStart, artworkUrl, accessMethod, accessInstructions,
       applicationPeriodDays, creatorDeadlineDays, maxPlaces, completionRewardType,
       completionRewardKeyRequired, manualApprovalRequired, objectiveSnapshot, reminderThresholdsHours,
+      commercialType, budgetPence, contentPriorities,
     } = req.body;
     const normalized = normalizeCampaignInput(req.body);
     const canonicalAccessMethod = normalized.accessMethod ?? accessMethod;
@@ -1178,7 +1271,8 @@ router.post('/instances', requireAuth, async (req, res) => {
     }
 
     const [eligibility] = toRows(await db.execute(sql`
-      SELECT role, partner_type, is_indie_dev_subscriber
+      SELECT role, partner_type, is_indie_dev_subscriber,
+        indie_dev_subscription_start_date, indie_dev_subscription_end_date
       FROM users WHERE id = ${userId}
     `)) as any[];
     const eligibleRole = ['developer', 'indie_developer', 'admin', 'moderator'].includes(String(eligibility?.role))
@@ -1197,12 +1291,46 @@ router.post('/instances', requireAuth, async (req, res) => {
     }
 
     const [tmpl] = toRows(await db.execute(sql`
-      SELECT id, category, bounty_xp_reward, completion_bonus_xp, reward_config, duration
+      SELECT id, slug, category, bounty_xp_reward, completion_bonus_xp, reward_config, duration
         , access_method, application_period_days, completion_deadline_days,
           participant_capacity, objective_config, completion_reward
       FROM campaign_templates WHERE id = ${Number(templateId)}
     `));
     if (!tmpl) return res.status(404).json({ error: 'Campaign template not found' });
+    let resolvedTemplateId = Number(templateId);
+    const resolvedCommercialType = commercialType === 'starter' ? 'starter' : commercialType === 'paid' ? 'paid' : null;
+    const priorities = normalizePriorities(contentPriorities);
+    let commercialEstimate = null as ReturnType<typeof calculateCampaignEstimate> | null;
+    let billingWindow: ReturnType<typeof subscriptionMonthWindow> = null;
+    let resolvedBudgetPence: number | null = null;
+    if (resolvedCommercialType === 'starter') {
+      if (!eligibility?.is_indie_dev_subscriber) {
+        return res.status(403).json({ error: 'An active Indie Game Pro subscription is required for a Starter Bounty' });
+      }
+      billingWindow = subscriptionMonthWindow(
+        eligibility.indie_dev_subscription_start_date,
+        eligibility.indie_dev_subscription_end_date,
+      );
+      if (!billingWindow) return res.status(403).json({ error: 'No active Starter Bounty billing period was found' });
+      if (String((tmpl as any).slug ?? '') !== CAMPAIGN_COMMERCIAL_MODEL.starter.templateSlug) {
+        const [starterTemplate] = toRows(await db.execute(sql`
+          SELECT id, slug, category, bounty_xp_reward, completion_bonus_xp, reward_config, duration,
+            access_method, application_period_days, completion_deadline_days,
+            participant_capacity, objective_config, completion_reward
+          FROM campaign_templates
+          WHERE slug = ${CAMPAIGN_COMMERCIAL_MODEL.starter.templateSlug} AND status = 'available'
+        `)) as any[];
+        if (!starterTemplate) return res.status(503).json({ error: 'Starter Bounty template is not configured' });
+        resolvedTemplateId = Number(starterTemplate.id);
+        Object.assign(tmpl, starterTemplate);
+      }
+    } else if (resolvedCommercialType === 'paid') {
+      resolvedBudgetPence = Number(budgetPence);
+      if (!Number.isInteger(resolvedBudgetPence) || resolvedBudgetPence < CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence) {
+        return res.status(400).json({ error: `Paid campaigns require a budget of at least £${CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence / 100}` });
+      }
+      commercialEstimate = calculateCampaignEstimate(resolvedBudgetPence, priorities);
+    }
     let customEstimate: ReturnType<typeof calculateCustomCampaign> | null = null;
     if (String(tmpl.category) === 'custom' && canonicalObjectiveSnapshot && typeof canonicalObjectiveSnapshot === 'object') {
       const custom = calculateCustomCampaign(canonicalObjectiveSnapshot);
@@ -1227,8 +1355,6 @@ router.post('/instances', requireAuth, async (req, res) => {
     } else if (String(tmpl.category) === 'custom') {
       return res.status(400).json({ error: 'Custom campaigns require objective quantities' });
     }
-    let resolvedTemplateId = Number(templateId);
-
     // Active-campaign concurrency cap: free accounts get 1 active campaign at
     // a time, paid Indie Developer subscribers get up to 5. Drafts don't
     // count — only campaigns actually in flight (submitted, approved, live).
@@ -1281,19 +1407,75 @@ router.post('/instances', requireAuth, async (req, res) => {
           ${canonicalAccessMethod ?? tmpl.access_method ?? 'demo_to_full'},
           ${canonicalInstructions?.trim() || null},
           ${Number(applicationPeriodDays ?? tmpl.application_period_days ?? 30)},
-          ${Number(canonicalDeadlineDays ?? customEstimate?.deadlineDays ?? tmpl.completion_deadline_days ?? tmpl.duration ?? 14)},
-          ${Number(maxPlaces ?? tmpl.participant_capacity ?? 20)},
+          ${Number(resolvedCommercialType === 'starter'
+            ? CAMPAIGN_COMMERCIAL_MODEL.starter.durationDays
+            : canonicalDeadlineDays ?? commercialEstimate?.suggestedDurationDays ?? customEstimate?.deadlineDays ?? tmpl.completion_deadline_days ?? tmpl.duration ?? 14)},
+          ${Number(resolvedCommercialType === 'starter'
+            ? CAMPAIGN_COMMERCIAL_MODEL.starter.creatorPlaces
+            : maxPlaces ?? commercialEstimate?.creators.max ?? tmpl.participant_capacity ?? 20)},
           ${completionRewardType ?? tmpl.completion_reward ?? 'bounty_xp'},
           ${canonicalRewardKeyRequired ?? (tmpl.completion_reward === 'full_game_key')},
           ${canonicalRequiresAccessKey ?? true},
           ${manualApprovalRequired ?? false},
            ${canonicalReminderThresholds},
-          ${canonicalObjectiveSnapshot ? JSON.stringify(canonicalObjectiveSnapshot) : (tmpl.objective_config ? JSON.stringify(tmpl.objective_config) : null)}::jsonb,
+          ${resolvedCommercialType === 'starter'
+            ? JSON.stringify(CAMPAIGN_COMMERCIAL_MODEL.starter.estimatedContent)
+            : resolvedCommercialType === 'paid' && commercialEstimate
+              ? JSON.stringify(commercialEstimate.content)
+              : canonicalObjectiveSnapshot
+                ? JSON.stringify(canonicalObjectiveSnapshot)
+                : (tmpl.objective_config ? JSON.stringify(tmpl.objective_config) : null)}::jsonb,
           'draft', 'draft')
       RETURNING *
     `) as any[]);
 
-    res.status(201).json(instance);
+    const rewardPoolContributionPence = resolvedCommercialType === 'paid' && resolvedBudgetPence != null
+      ? Math.round(resolvedBudgetPence * CAMPAIGN_COMMERCIAL_MODEL.rewardPoolContributionRate)
+      : 0;
+    await db.execute(sql`
+      UPDATE campaign_instances SET
+        commercial_type = ${resolvedCommercialType},
+        budget_pence = ${resolvedBudgetPence},
+        content_priorities = ${resolvedCommercialType === 'paid' ? JSON.stringify(priorities) : null}::jsonb,
+        billing_period_start = ${billingWindow?.start.toISOString() ?? null},
+        billing_period_end = ${billingWindow?.end.toISOString() ?? null},
+        reward_pool_contribution_pence = ${rewardPoolContributionPence},
+        estimate_snapshot = COALESCE(
+          ${commercialEstimate
+            ? JSON.stringify(commercialEstimate)
+            : resolvedCommercialType === 'starter'
+              ? JSON.stringify({
+                  estimatedContent: CAMPAIGN_COMMERCIAL_MODEL.starter.estimatedContent,
+                  estimatesGuaranteed: false,
+                  methodologyVersion: CAMPAIGN_COMMERCIAL_MODEL.version,
+                })
+              : null}::jsonb,
+          estimate_snapshot
+        )
+      WHERE id = ${instance.id}
+    `);
+    if (resolvedCommercialType === 'starter' && billingWindow) {
+      const [reserved] = toRows(await db.execute(sql`
+        INSERT INTO campaign_starter_allowances
+          (developer_user_id, period_start, period_end, instance_id)
+        VALUES
+          (${userId}, ${billingWindow.start.toISOString()}, ${billingWindow.end.toISOString()}, ${instance.id})
+        ON CONFLICT (developer_user_id, period_start) DO NOTHING
+        RETURNING id
+      `)) as any[];
+      if (!reserved) {
+        await db.execute(sql`DELETE FROM campaign_instances WHERE id = ${instance.id} AND status = 'draft'`);
+        return res.status(409).json({ error: 'Your Starter Bounty has already been used for this billing period' });
+      }
+    }
+
+    res.status(201).json({
+      ...instance,
+      commercial_type: resolvedCommercialType,
+      budget_pence: resolvedBudgetPence,
+      reward_pool_contribution_pence: rewardPoolContributionPence,
+      estimate_snapshot: commercialEstimate ?? instance.estimate_snapshot,
+    });
   } catch (err) {
     console.error('POST /api/campaigns/instances error:', err);
     res.status(500).json({ error: 'Failed to create campaign' });
