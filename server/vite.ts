@@ -1,12 +1,8 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
-import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
-import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
-
-const viteLogger = createLogger();
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -20,6 +16,13 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
+  // Logging and production static serving also use this module. Load the
+  // development toolchain only when starting the development server.
+  const [{ createServer: createViteServer, createLogger }, { default: viteConfig }] = await Promise.all([
+    import('vite'),
+    import('../vite.config'),
+  ]);
+  const viteLogger = createLogger();
   // Replit terminates TLS and reverse-proxies everything through 443, so the
   // browser's HMR client needs to be told to reconnect via wss on 443
   // rather than the app's actual internal port. Plain local dev (no proxy,
