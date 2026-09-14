@@ -22,7 +22,7 @@
     "test:ai-vod-clip-policy": "node --import tsx --test tests/ai-vod-clip-policy.test.ts",
     "test:profile-theme": "node --import tsx --test tests/profile-theme.test.ts",
     "test:production-performance": "node --import tsx --test tests/production-performance.test.ts tests/profile-clips-performance.test.ts",
-    "test:startup": "node --import tsx --test tests/startup.test.ts tests/startup-imports.test.ts"
+    "test:startup": "node --import tsx --test tests/startup.test.ts tests/startup-imports.test.ts tests/startup-diagnostics.test.ts"
   },
   "dependencies": {
     "@0xsequence/connect": "^5.4.8",
