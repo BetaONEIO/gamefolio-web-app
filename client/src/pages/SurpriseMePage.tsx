@@ -18,7 +18,7 @@ export default function SurpriseMePage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [pick, setPick] = useState<PickResponse | null>(null);
-  const [progress, setProgress] = useState<ProgressState>({ completed: 0, remaining: 5, limit: 5 });
+  const [progress, setProgress] = useState<ProgressState>({ completed: 0, remaining: 1, limit: 1 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rewarded, setRewarded] = useState(false);
@@ -81,7 +81,7 @@ export default function SurpriseMePage() {
         <div className="mb-5 rounded-2xl border border-[#B7FF1A]/25 bg-gradient-to-br from-[#16251d] to-[#0b151b] p-5 shadow-[0_0_40px_rgba(183,255,26,0.08)]">
           <div className="flex items-start gap-3">
             <div className="rounded-xl bg-[#B7FF1A] p-2 text-[#071013]"><Shuffle className="h-6 w-6" /></div>
-            <div className="flex-1"><h1 className="text-2xl font-black">Surprise Me</h1><p className="mt-1 text-sm text-white/65">Discover something unexpected. Watch for 10 seconds to earn a 2x discovery bonus, up to five times daily.</p><Progress className="mt-4 h-2" value={(progress.completed / progress.limit) * 100} /></div>
+            <div className="flex-1"><h1 className="text-2xl font-black">Surprise Me</h1><p className="mt-1 text-sm text-white/65">Discover something unexpected. Watch for 10 seconds to earn a 2x discovery bonus. Free members get one surprise daily; Pro members get up to five.</p><Progress className="mt-4 h-2" value={(progress.completed / progress.limit) * 100} /></div>
           </div>
         </div>
         {loading && <div className="flex min-h-72 items-center justify-center"><Loader2 className="h-9 w-9 animate-spin text-[#B7FF1A]" /></div>}

@@ -8,7 +8,8 @@ import { XPService } from "../xp-service";
 import { captureRouteError } from "../sentry";
 
 const router = Router();
-const DAILY_LIMIT = 5;
+const FREE_DAILY_LIMIT = 1;
+const PRO_DAILY_LIMIT = 5;
 const WATCH_THRESHOLD_SECONDS = 10;
 const DOUBLED_DISCOVERY_XP = 20;
 
@@ -20,7 +21,7 @@ function utcDay() {
   return { dayKey, start, end };
 }
 
-async function getProgress(userId: number) {
+async function getProgress(userId: number, isPro: boolean) {
   const { start, end } = utcDay();
   const rows = await db.select({ count: sql<number>`count(*)::int` }).from(userXPHistory).where(and(
     eq(userXPHistory.userId, userId),
@@ -29,12 +30,13 @@ async function getProgress(userId: number) {
     lt(userXPHistory.createdAt, end),
   ));
   const completed = Number(rows[0]?.count ?? 0);
-  return { completed, remaining: Math.max(0, DAILY_LIMIT - completed), limit: DAILY_LIMIT };
+  const limit = isPro ? PRO_DAILY_LIMIT : FREE_DAILY_LIMIT;
+  return { completed, remaining: Math.max(0, limit - completed), limit };
 }
 
 router.get("/status", hybridAuth, async (req: Request, res: Response) => {
   try {
-    return res.json(await getProgress(req.user!.id));
+    return res.json(await getProgress(req.user!.id, req.user!.isPro));
   } catch (error) {
     captureRouteError(error, { route: "surprise-me-status" });
     return res.status(500).json({ message: "Could not load Surprise Me progress" });
@@ -44,7 +46,7 @@ router.get("/status", hybridAuth, async (req: Request, res: Response) => {
 router.post("/pick", hybridAuth, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
-    const progress = await getProgress(userId);
+    const progress = await getProgress(userId, req.user!.isPro);
     if (progress.remaining === 0) return res.status(429).json({ message: "Daily Surprise Me bonus complete", ...progress });
 
     const { dayKey, start, end } = utcDay();
@@ -95,7 +97,7 @@ router.post("/complete", hybridAuth, async (req: Request, res: Response) => {
     if (!Number.isInteger(clipId) || watchedSeconds < WATCH_THRESHOLD_SECONDS) {
       return res.status(400).json({ message: `Watch at least ${WATCH_THRESHOLD_SECONDS} seconds to earn the bonus` });
     }
-    const progress = await getProgress(userId);
+    const progress = await getProgress(userId, req.user!.isPro);
     if (progress.remaining === 0) return res.status(429).json({ message: "Daily Surprise Me bonus complete", ...progress });
 
     const { dayKey, start, end } = utcDay();
@@ -108,7 +110,7 @@ router.post("/complete", hybridAuth, async (req: Request, res: Response) => {
     await XPService.awardXP(userId, DOUBLED_DISCOVERY_XP, "surprise_me_bonus", `Surprise Me 2x discovery bonus for clip #${clipId}`, clipId, {
       contentType: "clip", contentId: clipId, dedupeKey: `surprise-reward:${userId}:${dayKey}:${clipId}`,
     });
-    const updated = await getProgress(userId);
+    const updated = await getProgress(userId, req.user!.isPro);
     return res.json({ awarded: updated.completed > progress.completed, xpAwarded: DOUBLED_DISCOVERY_XP, progress: updated });
   } catch (error) {
     captureRouteError(error, { route: "surprise-me-complete" });
