@@ -11,6 +11,8 @@ import {
   ChevronRight, ChevronDown, ClipboardList, Globe2,
 } from "lucide-react";
 import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
+import CommercialCampaignAccordion from "./CommercialCampaignAccordion";
+import { CAMPAIGN_COMMERCIAL_MODEL } from "@shared/campaign-commercial-model";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const CARD_BG     = "#0e1520";
@@ -54,7 +56,7 @@ const ANIM_CSS = `
 // Data types & constants
 // ─────────────────────────────────────────────
 
-interface CampaignType {
+export interface CampaignType {
   slug: string; name: string; shortName: string; tagline: string; description: string;
   shortDesc: string; subtitle: string; bestFor: string; bestForList: string[];
   duration: number;
@@ -838,7 +840,7 @@ function CampaignAccordion({
   onContinue: () => void;
   onBack: () => void;
 }) {
-  const [expandedSlug, setExpandedSlug] = useState(
+  const [expandedSlug, setExpandedSlug] = useState<string | null>(
     () => CAMPAIGN_TYPES.find(type => type.recommended)?.slug ?? CAMPAIGN_TYPES[0].slug,
   );
 
@@ -1704,9 +1706,10 @@ function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
 // Step 4: Launch
 // ─────────────────────────────────────────────
 
-function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting, onLaunch }: {
+function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting, onLaunch, commercialBudgetPence }: {
   type: CampaignType; settings: CampaignSettings; confirmed: boolean;
   capacity: number;
+  commercialBudgetPence: number | null;
   onConfirm: (v: boolean) => void; submitting: boolean; onLaunch: () => void;
 }) {
   const duration = type.custom && settings.customDuration ? settings.customDuration : type.duration;
@@ -1719,6 +1722,11 @@ function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting
 
   return (
     <div className="space-y-5 gf-fade-up">
+      <div className="rounded-xl p-4" style={{ background: commercialBudgetPence == null ? "rgba(183,255,24,0.05)" : "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.10)" }}>
+        <div className="text-[10px] uppercase tracking-wider font-bold text-white/45">{commercialBudgetPence == null ? "Included with Pro" : "Campaign cost"}</div>
+        <div className="mt-1 text-lg font-black text-white">{commercialBudgetPence == null ? "Monthly Quick Creator benefit" : `£${(commercialBudgetPence / 100).toFixed(0)}`}</div>
+        {commercialBudgetPence != null && <p className="mt-1 text-[11px] text-white/50">This campaign will be submitted for review. Payment is not collected by this launch step.</p>}
+      </div>
 
       {/* Campaign summary */}
       <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -1783,7 +1791,7 @@ function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting
        <p className="text-[11px] text-white/50">Estimates are based on eligible active creators, selected platforms and previous campaign performance. Results are not guaranteed.</p>
 
        {/* Confirmation checkbox */}
-      <button onClick={() => onConfirm(!confirmed)}
+       <button type="button" role="checkbox" aria-checked={confirmed} onClick={() => onConfirm(!confirmed)}
         className="w-full flex items-start gap-3 text-left p-4 rounded-2xl transition-all"
         style={{
           background: confirmed ? "rgba(183,255,24,0.05)" : "rgba(255,255,255,0.02)",
@@ -1807,7 +1815,7 @@ function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting
         {submitting ? (
           <><Loader2 className="w-4 h-4 animate-spin" /> Launching Campaign…</>
         ) : (
-          <><Rocket className="w-4 h-4" /> Launch Campaign</>
+          <><Rocket className="w-4 h-4" /> {commercialBudgetPence == null ? "Launch Campaign" : "Submit Paid Campaign for Review"}</>
         )}
       </button>
     </div>
@@ -2342,6 +2350,7 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
   const [currentStep, setCurrentStep] = useState(1);
   const [launched, setLaunched] = useState(false);
   const [selectedType, setSelectedType] = useState<CampaignType | null>(null);
+  const [commercialBudgetPence, setCommercialBudgetPence] = useState<number>(CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence);
   const [confirmed, setConfirmed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pendingDemoKeys, setPendingDemoKeys] = useState("");
@@ -2379,6 +2388,10 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
   const { data: templates = [] } = useQuery<any[]>({
     queryKey: ["/api/campaigns/templates"],
     queryFn: getQueryFn({ on401: "returnNull" }),
+  });
+  const { data: commercialModel, isLoading: commercialModelLoading } = useQuery<any>({
+    queryKey: ["/api/campaigns/commercial-model"],
+    queryFn: getQueryFn({ on401: "throw" }),
   });
   const { data: poolStatus, refetch: refetchPool } = useQuery<any>({
     queryKey: ["/api/campaigns/auto/pool"],
@@ -2467,6 +2480,8 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
          manualApprovalRequired: settings.manualApproval,
          objectiveSnapshot: customObjectives,
          estimateSnapshot,
+         commercialType: selectedType.slug === "quick-creator" ? "starter" : "paid",
+         budgetPence: selectedType.slug === "quick-creator" ? undefined : commercialBudgetPence,
          customAccessNeedsKey: settings.accessMethod === "custom_access" ? settings.customAccessNeedsKey : undefined,
          // Persist the canonical API field as well for deployments that
          // serialize campaign access settings in snake_case.
@@ -2474,10 +2489,6 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
       });
       const instData = await inst.json();
       if (!inst.ok) throw new Error(instData.message || "Failed to create campaign");
-      // Estimates are draft metadata accepted by the draft PATCH endpoint.
-      const estimatePatch = await apiRequest("PATCH", `/api/campaigns/instances/${instData.id}`, { estimateSnapshot });
-      if (!estimatePatch.ok) throw new Error("Failed to save campaign estimates");
-
       const demoKeyList = parseKeyLines(pendingDemoKeys);
       const fullKeyList = parseKeyLines(pendingFullKeys);
        if (demoKeyList.length > 0) {
@@ -2707,11 +2718,21 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
 
             {/* Accordion content — keyed so Automatic can open Quick Creator by default */}
             <div key={mode} className="gf-fade-up">
-              <CampaignAccordion
+              <CommercialCampaignAccordion
                 selectedType={selectedType}
+                campaignTypes={CAMPAIGN_TYPES}
+                allowance={commercialModel?.starterAllowance}
+                commercialModel={commercialModel?.model}
+                allowanceLoading={commercialModelLoading}
+                budgetPence={commercialBudgetPence}
+                onBudgetChange={setCommercialBudgetPence}
                 onBack={onComplete}
                 onSelect={(t) => {
                   setSelectedType(t);
+                  const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(p => p.slug === t.slug);
+                  if (preset?.priceFromPence && t.slug !== "custom-campaign") {
+                    setCommercialBudgetPence(preset.priceFromPence);
+                  }
                   setConfirmed(false);
                 }}
                 onContinue={() => {
@@ -2831,6 +2852,7 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
               state={manualStepState(4)}>
               {selectedType && (
                 <StepLaunch type={selectedType} settings={settings} capacity={campaignCapacity}
+                  commercialBudgetPence={selectedType.slug === "quick-creator" ? null : commercialBudgetPence}
                   confirmed={confirmed} onConfirm={setConfirmed}
                   submitting={submitting} onLaunch={handleLaunch} />
               )}

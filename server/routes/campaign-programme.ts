@@ -1329,6 +1329,14 @@ router.post('/instances', requireAuth, async (req, res) => {
       if (!Number.isInteger(resolvedBudgetPence) || resolvedBudgetPence < CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence) {
         return res.status(400).json({ error: `Paid campaigns require a budget of at least £${CAMPAIGN_COMMERCIAL_MODEL.paidMinimumPence / 100}` });
       }
+      const commercialPreset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(
+        preset => preset.slug === String((tmpl as any).slug),
+      );
+      if (commercialPreset?.priceFromPence && resolvedBudgetPence < commercialPreset.priceFromPence) {
+        return res.status(400).json({
+          error: `${commercialPreset.slug === 'creator-showcase' ? 'Creator Showcase' : 'Content Boost'} campaigns start at £${commercialPreset.priceFromPence / 100}`,
+        });
+      }
       commercialEstimate = calculateCampaignEstimate(resolvedBudgetPence, priorities);
     }
     let customEstimate: ReturnType<typeof calculateCustomCampaign> | null = null;

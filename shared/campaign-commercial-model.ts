@@ -1,6 +1,19 @@
 export type CampaignPriority = "high" | "medium" | "off";
 export type CampaignContentType = "clip" | "reel" | "screenshot" | "stream" | "review" | "feedback";
 
+export type CommercialPreset = {
+  slug: "quick-creator" | "content-boost" | "creator-showcase" | "custom-campaign";
+  priceFromPence: number | null;
+  label: string;
+  creatorReach: string;
+  estimatedContent: string;
+  campaignLength: string;
+  overview: string;
+  content: string[];
+  bestFor: string[];
+  visibility: string;
+};
+
 export type CampaignEstimate = {
   budgetPence: number;
   campaignScale: string;
@@ -38,6 +51,56 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
     contentPerCreatorMax: 2,
     keyBufferRate: 0.2,
   },
+  presets: [
+    {
+      slug: "quick-creator",
+      priceFromPence: null,
+      label: "INCLUDED WITH PRO",
+      creatorReach: "3–5 creators",
+      estimatedContent: "~5 pieces",
+      campaignLength: "7 days",
+      overview: "A small first campaign to get creators playing and making useful content around your game.",
+      content: ["Gameplay clips", "Screenshots", "Creator feedback"],
+      bestFor: ["First creator content", "Demos", "Early Access"],
+      visibility: "Standard campaign visibility",
+    },
+    {
+      slug: "content-boost",
+      priceFromPence: 2500,
+      label: "PAID CAMPAIGN",
+      creatorReach: "5–10 creators",
+      estimatedContent: "~8–15 pieces",
+      campaignLength: "14 days",
+      overview: "Build a larger, reusable content library with more reach and greater campaign visibility.",
+      content: ["Gameplay clips", "Vertical reels", "Screenshots", "Creator feedback"],
+      bestFor: ["Marketing libraries", "Updates", "Game discovery"],
+      visibility: "Enhanced campaign visibility",
+    },
+    {
+      slug: "creator-showcase",
+      priceFromPence: 5000,
+      label: "PREMIUM CAMPAIGN",
+      creatorReach: "10–20 creators",
+      estimatedContent: "~15–30 pieces",
+      campaignLength: "21 days",
+      overview: "Generate deeper creator engagement and premium coverage for your biggest moments.",
+      content: ["Gameplay clips", "Vertical reels", "Screenshots", "Livestreams", "Creator reviews"],
+      bestFor: ["Full launches", "Major updates", "DLC", "Seasonal events"],
+      visibility: "Featured campaign visibility",
+    },
+    {
+      slug: "custom-campaign",
+      priceFromPence: 1000,
+      label: "FROM £10",
+      creatorReach: "Flexible",
+      estimatedContent: "Dynamic",
+      campaignLength: "Recommended",
+      overview: "Choose your budget and let Gamefolio recommend a creator campaign around it.",
+      content: ["Choose your content mix"],
+      bestFor: ["Specific content goals", "Flexible launches"],
+      visibility: "Campaign visibility scales with budget",
+    },
+  ] satisfies readonly CommercialPreset[],
 } as const;
 
 export const DEFAULT_CAMPAIGN_PRIORITIES: Record<CampaignContentType, CampaignPriority> = {
