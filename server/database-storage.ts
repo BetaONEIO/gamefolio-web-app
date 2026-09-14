@@ -1,3 +1,4 @@
+import { loadProfileClips } from "./profile-clips";
 import {
   User, InsertUser,
   Game, InsertGame,
@@ -993,107 +994,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getClipsByUserId(userId: number): Promise<ClipWithUser[]> {
-    const userClips = await db
-      .select()
-      .from(clips)
-      .where(eq(clips.userId, userId))
-      .orderBy(desc(clips.createdAt), desc(clips.id));
-
-    const clipsWithDetails: ClipWithUser[] = [];
-    for (const clip of userClips) {
-      const clipWithUser = await this.getClipWithUser(clip.id);
-      if (clipWithUser) {
-        clipsWithDetails.push(clipWithUser);
-      }
-    }
-
-    return clipsWithDetails;
+    return loadProfileClips(db, userId);
   }
 
-  /**
-   * Paginated, batch-queried variant of getClipsByUserId. That method does
-   * 1 + 4*N sequential round-trips (a per-clip join + 3 separate COUNT
-   * queries via getClipWithUser) which is fine for a handful of clips but
-   * took 138s against a real 192-clip account — the cause of the
-   * /api/public/v1/clips timeout for prolific streamers. This does a fixed
-   * number of queries per page regardless of clip count: 1 total-count + 1
-   * page join query + 3 grouped aggregate queries.
-   */
-  async getClipsByUserIdPaginated(
-    userId: number,
-    opts: { limit: number; offset: number }
+  async getClipsByUserIdPaginated(userId: number, opts: { limit: number; offset: number }
   ): Promise<{ clips: ClipWithUser[]; total: number }> {
-    const { limit, offset } = opts;
-
-    const [{ count: totalCount }] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(clips)
-      .where(eq(clips.userId, userId));
-    const total = Number(totalCount) || 0;
-
-    if (total === 0) return { clips: [], total: 0 };
-
-    const rows = await db
-      .select({
-        ...getTableColumns(clips),
-        user: {
-          id: users.id,
-          username: users.username,
-          displayName: users.displayName,
-          avatarUrl: users.avatarUrl,
-          emailVerified: users.emailVerified,
-          nftProfileTokenId: users.nftProfileTokenId,
-          nftProfileImageUrl: users.nftProfileImageUrl,
-        },
-        game: {
-          id: games.id,
-          name: games.name,
-          imageUrl: games.imageUrl,
-          twitchId: games.twitchId,
-          isApproved: games.isApproved,
-          createdAt: games.createdAt,
-        },
-      })
-      .from(clips)
-      .leftJoin(users, eq(clips.userId, users.id))
-      .leftJoin(games, eq(clips.gameId, games.id))
-      .where(eq(clips.userId, userId))
-      .orderBy(desc(clips.createdAt), desc(clips.id))
-      .limit(limit)
-      .offset(offset);
-
-    if (rows.length === 0) return { clips: [], total };
-
-    const clipIds = rows.map((r) => r.id);
-
-    const [likesRows, commentsRows, reactionsRows] = await Promise.all([
-      db.select({ clipId: likes.clipId, count: sql<number>`count(*)` })
-        .from(likes).where(inArray(likes.clipId, clipIds)).groupBy(likes.clipId),
-      db.select({ clipId: comments.clipId, count: sql<number>`count(*)` })
-        .from(comments).where(inArray(comments.clipId, clipIds)).groupBy(comments.clipId),
-      db.select({ clipId: clipReactions.clipId, count: sql<number>`count(*)` })
-        .from(clipReactions).where(inArray(clipReactions.clipId, clipIds)).groupBy(clipReactions.clipId),
-    ]);
-
-    const likesMap = new Map(likesRows.map((r) => [r.clipId, Number(r.count)]));
-    const commentsMap = new Map(commentsRows.map((r) => [r.clipId, Number(r.count)]));
-    const reactionsMap = new Map(reactionsRows.map((r) => [r.clipId, Number(r.count)]));
-
-    const clipsWithDetails: ClipWithUser[] = rows.map((row) => {
-      const { user, game, ...clipData } = row;
-      return {
-        ...clipData,
-        user: user?.id ? { ...user } : null,
-        game: game?.id ? { ...game } : null,
-        _count: {
-          likes: likesMap.get(row.id) || 0,
-          comments: commentsMap.get(row.id) || 0,
-          reactions: reactionsMap.get(row.id) || 0,
-        },
-      } as ClipWithUser;
-    });
-
-    return { clips: clipsWithDetails, total };
+    const [{ count }] = await db.select({ count: sql<number>`count(*)` })
+      .from(clips).where(eq(clips.userId, userId));
+    const total = Number(count) || 0;
+    return { clips: total ? await loadProfileClips(db, userId, opts) : [], total };
   }
 
   async getClipByShareCode(shareCode: string): Promise<Clip | null> {

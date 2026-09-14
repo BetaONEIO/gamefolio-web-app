@@ -1,3 +1,5 @@
+import { performanceMiddleware, startRuntimeMetrics } from "./performance";
+import { reportSlowRequest } from "./sentry";
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import { eq } from 'drizzle-orm';
@@ -115,6 +117,13 @@ const __dirname = dirname(__filename);
 initServerSentry();
 
 const app = express();
+app.use(performanceMiddleware({ onSlow: reportSlowRequest }));
+if (process.env.NODE_ENV === 'production') startRuntimeMetrics();
+// Liveness only: independent of sessions and database availability.
+app.get('/api/health/live', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ status: 'ok' });
+});
 
 // Trust proxy for production deployment
 if (process.env.NODE_ENV === "production") {
