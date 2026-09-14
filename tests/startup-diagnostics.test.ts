@@ -7,6 +7,8 @@ import { profileGroup, profileStartupImports, summarizeProfile } from '../server
 test('CPU summaries group dependencies without exposing raw paths or function names', () => {
   assert.equal(profileGroup('file:///private/secret/node_modules/@sentry/node/lib/a.js', 'privateUserValue'), 'package:@sentry/node');
   assert.equal(profileGroup('https://private.example/user?token=secret', 'privateUserValue'), 'application-or-unattributed');
+  assert.equal(profileGroup('', 'readFileUtf8'), 'native:readFileUtf8');
+  assert.equal(profileGroup('', 'spawnSync'), 'native:spawnSync');
   assert.equal(profileGroup('file:///private/source.ts', 'privateUserValue'), 'application-or-unattributed');
   const summary = summarizeProfile({ startTime: 0, endTime: 3000, nodes: [
     { id: 1, callFrame: { functionName: 'privateUserValue', scriptId: '1', url: 'file:///private/node_modules/express/index.js', lineNumber: 0, columnNumber: 0 } },

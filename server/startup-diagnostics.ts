@@ -30,6 +30,13 @@ function delta(before: Record<string, number> | null, after: Record<string, numb
 // Never emit raw profile frames: URLs, source locations and function names can
 // contain sensitive values. Only package names and fixed runtime categories pass.
 export function profileGroup(url: string, functionName: string): string {
+  const nativeOperations = [
+    'readFileUtf8', 'readFileSync', 'read', 'open', 'stat', 'lstat', 'realpathSync',
+    'internalModuleStat', 'internalModuleReadJSON', 'compileFunction',
+    'compileFunctionForCJSLoader', 'compileSourceTextModule', 'internalCompileFunction',
+    'runInContext', 'runInThisContext', 'spawnSync', 'execSync', 'dlopen',
+  ];
+  if (!url && nativeOperations.includes(functionName)) return `native:${functionName}`;
   const dependency = url.split('/node_modules/').at(-1);
   if (dependency !== url) {
     const match = dependency?.match(/^(@[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+|[a-zA-Z0-9_.-]+)(?:\/|$)/);
