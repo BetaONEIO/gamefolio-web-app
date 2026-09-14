@@ -2660,7 +2660,7 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
                 <p className="text-[10px] uppercase tracking-widest mb-1.5 font-bold" style={{ color: "rgba(255,255,255,0.25)" }}>Step 1</p>
                 <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">Choose Your Campaign Type</h2>
                  <p className="text-sm text-white/70 mt-2 max-w-2xl">Start with a ready-made campaign or build one around your own goals.</p>
-                 <p className="text-[12px] text-white/45 mt-1 max-w-2xl">Predefined campaigns provide an easy recommended starting point. Build Your Own allows developers to select their own objectives, access method and timeframe.</p>
+                 <p className="text-sm text-white/70 mt-1 max-w-2xl">Indie Game Pro includes one Quick Creator campaign each billing month.</p>
                 <div className="mt-4 text-[11px] font-bold tracking-wide text-white/45" aria-label="Campaign creation steps">
                   <span style={{ color: NEON }}>1 Choose Type</span>
                   <span className="mx-2 text-white/25">→</span>
@@ -2672,48 +2672,16 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
                 </div>
               </div>
 
-              {/* Inline toggle pill */}
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <div className="text-[11px] font-bold text-white/65">Help me choose</div>
-                  <div className="text-[10px] text-white/40 mt-0.5">Automatically select the campaign that best matches your goals.</div>
-                </div>
-                <button
-                  type="button"
-                  aria-pressed={mode === "auto"}
-                  onClick={() => {
-                    const next = mode === "auto" ? "manual" : "auto";
-                    setMode(next);
-                    setAutoStep(1);
-                    setCurrentStep(1);
-                    setConfirmed(false);
-                    setAutoConfirmed(false);
-                    setSelectedType(next === "auto" ? (CAMPAIGN_TYPES.find(t => t.recommended) ?? null) : null);
-                  }}
-                  className="shrink-0 flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
-                  style={{
-                    background: mode === "auto" ? "rgba(183,255,24,0.12)" : "#111923",
-                    border: `1px solid ${mode === "auto" ? "rgba(183,255,24,0.42)" : "rgba(255,255,255,0.14)"}`,
-                  }}>
-                  <div className="relative shrink-0"
-                    style={{ width: "34px", height: "18px", borderRadius: "9999px",
-                      background: mode === "auto" ? NEON : "rgba(255,255,255,0.15)",
-                      transition: "background 0.25s ease" }}>
-                    <div style={{
-                      position: "absolute", top: "2px",
-                      width: "14px", height: "14px", borderRadius: "50%",
-                      background: "#fff",
-                      left: mode === "auto" ? "18px" : "2px",
-                      transition: "left 0.25s cubic-bezier(0.22,1,0.36,1)",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
-                    }} />
-                  </div>
-                  <span className="text-[12px] font-bold whitespace-nowrap"
-                    style={{ color: mode === "auto" ? NEON : "rgba(255,255,255,0.60)" }}>
-                    Automatic
-                  </span>
-                </button>
-              </div>
+               <button type="button" onClick={() => {
+                 setMode("auto");
+                 setAutoStep(1);
+                 setCurrentStep(1);
+                 setConfirmed(false);
+                 setAutoConfirmed(false);
+                 setSelectedType(CAMPAIGN_TYPES.find(t => t.recommended) ?? null);
+               }} className="self-start lg:mt-2 text-sm font-bold underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]" style={{ color: NEON }}>
+                 Not sure? Help me choose →
+               </button>
             </div>
 
             {/* Accordion content — keyed so Automatic can open Quick Creator by default */}
@@ -2724,8 +2692,7 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
                 allowance={commercialModel?.starterAllowance}
                 commercialModel={commercialModel?.model}
                 allowanceLoading={commercialModelLoading}
-                budgetPence={commercialBudgetPence}
-                onBudgetChange={setCommercialBudgetPence}
+                 gameArtworkUrl={indieProfile?.profile?.headerImageUrl ?? indieProfile?.profile?.backgroundImageUrl ?? indieProfile?.profile?.gameImageUrl ?? null}
                 onBack={onComplete}
                 onSelect={(t) => {
                   setSelectedType(t);
