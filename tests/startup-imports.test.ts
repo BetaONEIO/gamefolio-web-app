@@ -13,12 +13,16 @@ test('production application imports exclude the development toolchain', async (
   assert.ok(app, 'application remains a separate lazy bootstrap entry');
   const visited = new Set<string>();
   const external = new Set<string>();
+  const deferredExternal = new Set<string>();
   function visit(path: string) {
     if (visited.has(path)) return;
     visited.add(path);
     assert.ok(outputs[path], `missing output ${path}`);
     for (const dependency of outputs[path].imports) {
-      if (dependency.kind === 'dynamic-import') continue;
+      if (dependency.kind === 'dynamic-import') {
+        if (dependency.external) deferredExternal.add(dependency.path);
+        continue;
+      }
       if (dependency.external) external.add(dependency.path);
       else visit(dependency.path);
     }
@@ -33,6 +37,7 @@ test('production application imports exclude the development toolchain', async (
     assert.ok(!external.has(packageName), `${packageName} no longer requires filesystem resolution`);
   }
   assert.ok(!external.has('@huggingface/transformers'), 'transcription SDK stays off the eager graph');
+  assert.ok(deferredExternal.has('@huggingface/transformers'), 'transcription SDK remains available through a deferred import');
   assert.ok(external.has('sharp'), 'native image package remains external for binary resolution');
   assert.ok(![...external].some(name => name === 'vite' || name.startsWith('@vitejs/') || name.startsWith('@replit/vite-plugin-')),
     `development tooling in static graph: ${[...external].filter(name => name.includes('vite'))}`);
