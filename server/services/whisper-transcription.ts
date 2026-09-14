@@ -1,5 +1,5 @@
 import fs from 'fs/promises';
-import { pipeline, type AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers';
+import type { AutomaticSpeechRecognitionPipeline } from '@huggingface/transformers';
 // wavefile's UMD build sets `exports.WaveFile` dynamically inside a wrapper
 // function rather than as a static top-level assignment, so Node's CJS/ESM
 // interop (cjs-module-lexer) can't detect it as a named export — import the
@@ -23,7 +23,10 @@ function getAsrPipeline(): Promise<AutomaticSpeechRecognitionPipeline> {
   if (!asrPipelinePromise) {
     const model = process.env.AI_VOD_WHISPER_MODEL || 'Xenova/whisper-base.en';
     console.log(`Loading local Whisper model (${model})...`);
-    asrPipelinePromise = pipeline('automatic-speech-recognition', model) as Promise<AutomaticSpeechRecognitionPipeline>;
+    // The SDK imports native ONNX libraries. Load it only for a transcription job.
+    asrPipelinePromise = import('@huggingface/transformers').then(({ pipeline }) =>
+      pipeline('automatic-speech-recognition', model) as Promise<AutomaticSpeechRecognitionPipeline>
+    );
   }
   return asrPipelinePromise;
 }
