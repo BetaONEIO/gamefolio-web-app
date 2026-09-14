@@ -101,8 +101,8 @@ export function reportSlowRequest(event: import('./performance').PerformanceEven
   slowAlerts.set(key, now + 15 * 60 * 1000);
   Sentry.captureMessage('Slow API request', {
     level: 'warning', fingerprint: ['slow-api-request', key],
-    tags: { runtime: 'server', performance_issue: 'slow_api', route: event.route, method: event.method },
-    extra: { requestId: event.requestId, durationMs: event.durationMs,
-      status: event.status, stages: event.stages },
+    tags: { runtime: 'server', performance_issue: 'slow_api', route: event.route, method: event.method, request_id: event.requestId },
+    extra: { requestId: event.requestId, runtimeId: event.runtimeId, observedAt: event.observedAt, durationMs: event.durationMs,
+      status: event.status, stages: event.stages, processWindow: event.processWindow },
   });
 }

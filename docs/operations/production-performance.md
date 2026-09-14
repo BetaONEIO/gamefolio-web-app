@@ -8,7 +8,7 @@
 - API requests get a generated `X-Request-ID`. Structured logs capture all responses over two seconds, all server errors, aborted responses, and a 1% baseline sample. A ten-second watchdog records still-running requests and active stages. No raw URLs, user identifiers, credentials, SQL parameters or request/response bodies are added to these records.
 - Stage timings cover session loading, Passport deserialization, bearer lookup, current-user reads, streak processing, activity histories/milestones, profile queries and media signing/downloads. Database operation time includes connection acquisition; it does not separately prove pool wait versus query execution. Grouped parallel operations can overlap in duration.
 - Production emits event-loop utilization, p99/max delay and memory measurements every minute. `/api/health/live` is a lightweight process-liveness endpoint, independent of sessions/database; it must not be mistaken for full application readiness.
-- Interactive requests over ten seconds report Sentry warnings tagged `performance_issue=slow_api`. Warnings cover account, Google auth, daily activity, profile clips and social preview paths, not expected long uploads. Per process, limits are one per route per 15 minutes, four per hour, and 20 per day; restart resets these counters. Structured logs remain available when the warning budget is exhausted.
+- Interactive requests completing in five seconds or more, or still running at ten seconds, report Sentry warnings tagged `performance_issue=slow_api`. Warnings cover account, Google auth, daily activity, profile clips and social preview paths, not expected long uploads. Per process, limits are one per route per 15 minutes, four per hour, and 20 per day; restart resets these counters. Structured logs remain available when the warning budget is exhausted.
 
 ## External monitoring configured
 
@@ -29,3 +29,16 @@ Before production deployment, verify the deployed revision and test against a no
 After deployment, compare interactive response durations and database-stage times under normal traffic. Verify live endpoint, homepage and a database-backed API independently. Confirm real warnings reach the alert rule. Keep the deployment rollback available. No schema or data migration is required; reverting this code restores previous behavior. Reverting code stops slow-request telemetry; existing external uptime monitoring continues.
 
 Known limit: the repository-wide TypeScript check already fails on the baseline. The baseline comparison for this change has the same 542 diagnostics, with no new diagnostic messages after normalizing paths and line numbers. The production build and focused regression tests pass. This is not a clean whole-repository typecheck or a production load test.
+
+
+## Investigating intermittent stalls
+
+Every emitted request record now includes `requestId`, a UTC `observedAt`, and a per-process `runtimeId`. Match `X-Request-ID` from the response to the log and Sentry `request_id` tag. The header is exposed through CORS. Match `runtimeId` and time to periodic `runtime_performance` events; then compare the interval with uptime incidents. IDs are generated on the server, not accepted from the client. Existing Sentry warning rate limits remain in place.
+
+Additional stages distinguish JSON/form body parsing, session-store get/set/touch/destroy (including response-time persistence), Passport user lookup, impersonation, bearer authentication, and optional authentication on `/api/user`. Existing named database and media sign/download stages remain available. This is targeted instrumentation, not a trace of every database query or outbound request. No session IDs, tokens, SQL, URLs or payloads are recorded by these wrappers.
+
+`durationMs` aggregates completed calls and can overlap other stages. `activeMs` is elapsed time since the stage's current continuously-active interval began; for overlapping calls it is not a sum or an individual-call duration. The ten-second watchdog can therefore show which operations are still pending. Timed middleware closes on early responses and forwards rejected promises to Express error handling.
+
+`processWindow` measures CPU and event-loop activity across the request interval. These counters include concurrent requests and background work; they must not be attributed solely to that request. High active time with little CPU can indicate synchronous waiting; high CPU can indicate computation. Neither establishes the exact cause without stage timings and corroborating evidence. Database operation timings still include pool acquisition and execution together.
+
+For a five-second stall, inspect the named stages first. A large `session.store.get` or `.set` points to session persistence; `db.auth.session_lookup` points to the application user lookup; `media.*` points to signing/download work. If named stages are short, use process-window activity and request timestamps to narrow the remaining gap before adding more instrumentation. Do not infer a hosting fault solely from one timeout or missing logs.
