@@ -48,6 +48,8 @@ router.post("/pick", hybridAuth, async (req: Request, res: Response) => {
     if (progress.remaining === 0) return res.status(429).json({ message: "Daily Surprise Me bonus complete", ...progress });
 
     const { dayKey, start, end } = utcDay();
+    const startIso = start.toISOString();
+    const endIso = end.toISOString();
     const result = await db.execute(sql`
       SELECT c.id FROM clips c
       WHERE c.user_id <> ${userId}
@@ -63,8 +65,8 @@ router.post("/pick", hybridAuth, async (req: Request, res: Response) => {
           WHERE h.user_id = ${userId}
             AND h.source = 'surprise_me_assigned'
             AND h.content_id = c.id
-            AND h.created_at >= ${start}
-            AND h.created_at < ${end}
+            AND h.created_at >= ${startIso}
+            AND h.created_at < ${endIso}
         )
       ORDER BY random() LIMIT 1
     `);
