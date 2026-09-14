@@ -19,13 +19,13 @@ function dateLabel(value: string | null) {
 
 function benefitsFor(preset: CommercialPreset): string[] {
   if (preset.slug === "quick-creator") {
-    return ["Creator campaign", "Gameplay content", "Screenshots and reels", "Game key distribution", "Bounty Hub listing", "Gamefolio promotion"];
+    return ["Creator access", "Gameplay content", "Reels and screenshots", "Game key distribution", "Gamefolio promotion", "Bounty Hub exposure"];
   }
   if (preset.slug === "content-boost") {
-    return ["Gameplay clips", "Vertical reels", "Screenshots", "Creator feedback", "Gamefolio social promotion", "Campaign analytics"];
+    return ["More creators playing your game", "Gameplay clips", "Vertical reels", "Screenshots", "Creator feedback", "Gamefolio promotion", "Campaign analytics"];
   }
   if (preset.slug === "creator-showcase") {
-    return ["More creator reach", "More gameplay content", "Reels and screenshots", "Livestream opportunities", "Creator reviews", "Enhanced Gamefolio promotion", "Featured Bounty Hub visibility", "Advanced campaign analytics"];
+    return ["Larger creator push", "Gameplay clips", "Vertical reels", "Screenshots", "Livestream opportunities", "Creator reviews", "Enhanced Gamefolio promotion", "Featured Bounty Hub visibility"];
   }
   return ["Start from £10", "Choose your budget", "Estimated content updates automatically", "Choose your content priorities", "Recommended campaign length and game keys", "Seasonal Creator Reward Pool contribution"];
 }
@@ -56,15 +56,7 @@ export default function CommercialCampaignAccordion({
         const open = expanded === preset.slug;
         const selected = selectedType?.slug === preset.slug;
         const included = preset.slug === "quick-creator";
-        const paidLabel = preset.priceFromPence
-          ? `FROM ${money(preset.priceFromPence)}`
-          : allowanceLoading
-            ? "CHECKING PRO BENEFIT"
-            : allowance?.used
-              ? "MONTHLY BOUNTY USED"
-              : allowance?.available
-                ? "1 INCLUDED / MONTH"
-                : "PRO REQUIRED";
+        const paidLabel = preset.priceFromPence ? `FROM ${money(preset.priceFromPence)}` : "INCLUDED WITH PRO";
         const benefits = benefitsFor(preset);
 
         return (
@@ -79,18 +71,10 @@ export default function CommercialCampaignAccordion({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-base sm:text-lg font-black text-white">{preset.slug === "custom-campaign" ? "Build Your Own" : type.shortName}</span>
-                <span className="block text-sm text-white/70 mt-1 truncate">{preset.overview}</span>
+                <span className="block text-sm text-white/75 mt-1">{preset.overview}</span>
               </span>
               <span className="text-[10px] font-black tracking-[.08em] px-2.5 py-1 rounded-md whitespace-nowrap" style={{ background: included ? NEON : "rgba(255,255,255,.10)", color: included ? "#071013" : "#fff" }}>{paidLabel}</span>
               <ChevronDown size={18} className={`transition-transform ${open ? "rotate-180" : ""}`} style={{ color: "rgba(255,255,255,.55)" }} />
-              <span className="basis-full grid grid-cols-3 gap-2 sm:flex sm:basis-auto sm:gap-6 pl-14 sm:pl-0">
-                {[["CREATOR REACH", preset.creatorReach], ["EST. CONTENT", preset.estimatedContent], ["CAMPAIGN LENGTH", preset.campaignLength]].map(([label, value]) => (
-                  <span key={label} className="flex flex-col">
-                    <strong className="text-xs sm:text-sm text-white">{value}</strong>
-                    <small className="text-[10px] tracking-wider text-white/60 mt-1">{label}</small>
-                  </span>
-                ))}
-              </span>
             </button>
 
             {open && (
@@ -120,6 +104,27 @@ export default function CommercialCampaignAccordion({
                         ))}
                       </ul>
                     </div>
+
+                    {preset.slug !== "custom-campaign" && (
+                      <div className="mt-7 border-t border-white/10 pt-5">
+                        <p className="text-[11px] uppercase tracking-[.18em] font-black mb-3 text-white/65">ESTIMATED CAMPAIGN</p>
+                        <div className="grid grid-cols-3 gap-4 max-w-lg">
+                          <div>
+                            <p className="text-lg sm:text-xl font-black text-white">{preset.creatorReach}</p>
+                            <p className="mt-1 text-[10px] uppercase tracking-wider text-white/55">CREATORS</p>
+                          </div>
+                          <div>
+                            <p className="text-lg sm:text-xl font-black text-white">{preset.estimatedContent}</p>
+                            <p className="mt-1 text-[10px] uppercase tracking-wider text-white/55">CONTENT PIECES</p>
+                          </div>
+                          <div>
+                            <p className="text-lg sm:text-xl font-black text-white">{preset.campaignLength}</p>
+                            <p className="mt-1 text-[10px] uppercase tracking-wider text-white/55">CAMPAIGN</p>
+                          </div>
+                        </div>
+                        <p className="mt-3 text-xs text-white/55">Directional estimates, not guarantees.</p>
+                      </div>
+                    )}
 
                     <div className="mt-7">
                       <p className="text-xs uppercase tracking-[.18em] font-black mb-2" style={{ color: NEON }}>BEST FOR</p>
