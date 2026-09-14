@@ -28,6 +28,7 @@ interface VideoPlayerProps {
   onPlayingChange?: (isPlaying: boolean) => void;
   onMutedChange?: (isMuted: boolean) => void;
   onAspectRatioDetected?: (isPortrait: boolean) => void;
+  onProgress?: (currentTime: number, duration: number) => void;
   externalPaused?: boolean;
   externalMuted?: boolean;
   videoStyle?: React.CSSProperties;
@@ -51,6 +52,7 @@ const VideoPlayer = ({
   onPlayingChange,
   onMutedChange,
   onAspectRatioDetected,
+  onProgress,
   externalPaused,
   externalMuted,
   videoStyle,
@@ -332,6 +334,7 @@ const VideoPlayer = ({
 
     const onTimeUpdate = () => {
       setCurrentTime(video.currentTime);
+      onProgress?.(video.currentTime, video.duration);
     };
 
     const onLoadedMetadata = () => {
@@ -405,7 +408,7 @@ const VideoPlayer = ({
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [isPlaying, onEnded, initialTime]);
+  }, [isPlaying, onEnded, initialTime, onAspectRatioDetected, onProgress]);
 
 
   return (

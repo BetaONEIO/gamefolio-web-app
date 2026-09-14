@@ -111,6 +111,7 @@ const DashboardPage = lazyWithRecovery(() => import("./pages/DashboardPage"));
 const ProfilePage = lazyWithRecovery(() => import("./pages/ProfilePage"));
 const ExplorePage = lazyWithRecovery(() => import("./pages/explore-page"));
 const TrendingPage = lazyWithRecovery(() => import("./pages/TrendingPage"));
+const SurpriseMePage = lazyWithRecovery(() => import("./pages/SurpriseMePage"));
 const GameClipsPage = lazyWithRecovery(() => import("./pages/game-clips-page"));
 const GamePage = lazyWithRecovery(() => import("./pages/game-page"));
 const HashtagPage = lazyWithRecovery(() => import("./pages/hashtag-page"));
@@ -604,6 +605,7 @@ function Router() {
           <Route path="/" component={RootRoute} />
           <Route path="/dashboard" component={DashboardPage} />
           <Route path="/trending" component={TrendingPage} />
+          <ProtectedRoute path="/surprise-me" component={SurpriseMePage} />
           <Route path="/clip/:id" component={ClipRedirectPage} />
           <Route path="/clips/:id" component={ClipRedirectPage} />
           <Route path="/reel/:id" component={ClipRedirectPage} />
