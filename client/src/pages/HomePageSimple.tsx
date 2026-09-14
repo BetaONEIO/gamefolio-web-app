@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ClipWithUser, Game } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
-import { ChevronRight, Video, Plus, ChevronLeft, Shuffle, Sparkles } from "lucide-react";
+import { ChevronRight, Video, Plus, ChevronLeft } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { LatestReelsCarousel } from "@/components/clips/LatestReelsCarousel";
 import { ScreenshotCard } from "@/components/screenshots/ScreenshotCard";
@@ -878,18 +878,6 @@ const HomePage = () => {
       <LazySection minHeight="260px" rootMargin="300px">
         <DailyXPChallenges />
       </LazySection>
-
-      {user && (
-        <section className="px-4 sm:px-6 md:px-8">
-          <Link href="/surprise-me" className="group flex items-center justify-between gap-4 overflow-hidden rounded-2xl border border-[#B7FF1A]/30 bg-gradient-to-r from-[#13231b] via-[#0d1919] to-[#101522] p-4 shadow-[0_0_30px_rgba(183,255,26,0.07)] transition-all hover:border-[#B7FF1A]/60 hover:shadow-[0_0_35px_rgba(183,255,26,0.13)]">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="rounded-xl bg-[#B7FF1A] p-2.5 text-[#071013] transition-transform group-hover:rotate-6 group-hover:scale-105"><Shuffle className="h-6 w-6" /></div>
-              <div><div className="flex items-center gap-2"><h2 className="font-black text-white sm:text-lg">Surprise Me</h2><span className="flex items-center gap-1 rounded-full bg-[#B7FF1A]/15 px-2 py-0.5 text-[11px] font-black text-[#B7FF1A]"><Sparkles className="h-3 w-3" />2x XP</span></div><p className="mt-0.5 text-xs text-white/55 sm:text-sm">Discover a random clip or reel · 1 daily, or 5 with Pro</p></div>
-            </div>
-            <ChevronRight className="h-5 w-5 shrink-0 text-[#B7FF1A] transition-transform group-hover:translate-x-1" />
-          </Link>
-        </section>
-      )}
 
       {/* Latest Clips Section */}
       <LazySection minHeight="400px" rootMargin="200px">

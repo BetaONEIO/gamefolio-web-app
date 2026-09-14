@@ -28,6 +28,10 @@ if (typeof document !== "undefined" && !document.getElementById(STYLE_ID)) {
       50% { opacity: 1; transform: scale(1.1); }
       100% { opacity: 0; transform: scale(1.3); }
     }
+    @keyframes surprise-me-rainbow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
     .xp-pulse { animation: xp-pulse 2.4s ease-in-out infinite; }
     .legendary-border-shimmer {
       background: linear-gradient(90deg,
@@ -40,8 +44,42 @@ if (typeof document !== "undefined" && !document.getElementById(STYLE_ID)) {
       -webkit-background-clip: text;
       background-clip: text;
     }
+    .surprise-me-compact {
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+      padding: 2px;
+      border-radius: 14px;
+      box-shadow: 0 0 18px rgba(62, 197, 255, 0.04);
+      transition: box-shadow 180ms ease, filter 180ms ease;
+    }
+    .surprise-me-compact::before {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      inset: -180%;
+      background: conic-gradient(
+        from 0deg,
+        #22d3ee 0deg,
+        #3b82f6 55deg,
+        #8b5cf6 110deg,
+        #ec4899 165deg,
+        #f97316 220deg,
+        #facc15 270deg,
+        #b7ff18 320deg,
+        #22d3ee 360deg
+      );
+      animation: surprise-me-rainbow 5.5s linear infinite;
+    }
+    .surprise-me-compact:hover {
+      filter: brightness(1.08);
+      box-shadow: 0 0 22px rgba(62, 197, 255, 0.11);
+    }
+    .surprise-me-compact:active {
+      filter: brightness(0.96);
+    }
     @media (prefers-reduced-motion: reduce) {
-      .xp-pulse, .legendary-border-shimmer { animation: none !important; }
+      .xp-pulse, .legendary-border-shimmer, .surprise-me-compact::before { animation: none !important; }
     }
   `;
   document.head.appendChild(el);
@@ -514,7 +552,7 @@ export function DailyXPChallenges() {
     <section className="pt-5 sm:pt-8">
       {/* ── Header ── */}
       <div className="px-4 sm:px-6 md:px-8 mb-4">
-        <div className="flex items-start justify-between gap-3 mb-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 mb-2.5">
           <div className="flex items-center gap-3">
             <img
               src="/attached_assets/XP-text_1779960376768.png"
@@ -533,13 +571,36 @@ export function DailyXPChallenges() {
               </p>
             </div>
           </div>
-          <Link
-            href="/level-tracker"
-            className="flex-shrink-0 text-xs font-bold hover:opacity-80 transition-opacity px-3 py-2 rounded-xl"
-            style={{ background: 'rgba(183,255,26,0.12)', color: '#B7FF18', border: '1px solid rgba(183,255,26,0.2)' }}
-          >
-            View All <span aria-hidden="true">→</span>
-          </Link>
+          <div className="flex min-w-0 items-center gap-2">
+            {user && (
+              <Link
+                href="/surprise-me"
+                aria-label="Surprise Me: discover a random clip or reel"
+                className="surprise-me-compact group max-w-[min(100%,320px)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F101B]"
+              >
+                <span className="flex min-w-0 items-center gap-2 rounded-[12px] bg-[#0F101B] px-2.5 py-2">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#B7FF18] text-base font-black leading-none text-[#071013]" aria-hidden="true">?</span>
+                  <span className="min-w-0">
+                    <span className="flex items-baseline gap-1.5 leading-none">
+                      <span className="truncate text-[12px] font-black text-white">Surprise Me</span>
+                      <span className="shrink-0 text-[10px] font-black text-[#B7FF18]">x2 XP</span>
+                    </span>
+                    <span className="mt-1 block break-words text-[10px] leading-tight text-white/55 sm:text-[11px]">
+                      Discover a random clip or reel · 5 bonuses daily
+                    </span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[#B7FF18] transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />
+                </span>
+              </Link>
+            )}
+            <Link
+              href="/level-tracker"
+              className="flex-shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition-opacity hover:opacity-80"
+              style={{ background: 'rgba(183,255,26,0.12)', color: '#B7FF18', border: '1px solid rgba(183,255,26,0.2)' }}
+            >
+              View All <span aria-hidden="true">→</span>
+            </Link>
+          </div>
         </div>
         {/* Summary card (authenticated users) */}
         {user && (
