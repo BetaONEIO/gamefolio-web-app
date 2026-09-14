@@ -1,3 +1,5 @@
+import { measureStage, timedMiddleware } from "./performance";
+import { loadCurrentUser } from "./current-user";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
 import path from "path";
@@ -758,9 +760,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     `🍪 Session config: secure=${sessionSettings.cookie?.secure} sameSite=${sessionSettings.cookie?.sameSite} proxy=${sessionSettings.proxy} secretSource=${process.env.SESSION_SECRET ? "env" : "default"}`
   );
 
-  app.use(session(sessionSettings));
+  app.use(timedMiddleware("session.load", session(sessionSettings)));
   app.use(passport.initialize());
-  app.use(passport.session());
+  app.use(timedMiddleware("auth.deserialize", passport.session()));
 
   // Admin "impersonate user" bridge: if a valid impersonation token is present,
   // authenticate as the *target* user (not the admin) for this request. Runs
@@ -795,7 +797,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const payload = JWTService.verifyToken(token);
       const userId = Number(payload.userId);
       if (!userId || isNaN(userId)) return next();
-      const user = userId === 999 ? getDemoUser() : await storage.getUserById(userId);
+      const user = userId === 999 ? getDemoUser() : await measureStage("db.auth.bearer_lookup", () => storage.getUserById(userId));
       if (user) {
         req.user = user as any;
         _bearerUserCache.set(token, { user, expiresAt: now + BEARER_CACHE_TTL_MS });
@@ -3025,13 +3027,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const authenticatedUserId = (req.user as any).id;
-      // Users who remain signed in restore their existing session through this
-      // endpoint instead of running a login handler. Claim the daily streak
-      // here too; updateLoginStreak's atomic 20-hour guard prevents repeats.
-      const streakInfo = impersonation
-        ? null
-        : await StreakService.updateLoginStreak(authenticatedUserId);
-      const freshUser = await storage.getUserById(authenticatedUserId);
+      const { user: freshUser, streakInfo } = await loadCurrentUser(
+        authenticatedUserId, Boolean(impersonation), {
+          getUser: id => storage.getUserById(id),
+          updateStreak: id => StreakService.updateLoginStreak(id),
+        });
       if (freshUser) {
         const { password, ...u } = freshUser as any;
         if (u.username === 'busyguy' || alwaysRequiresOnboarding(u.username)) {
@@ -5232,8 +5232,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // counters (not real XP) and would otherwise spam this list. Mirrors the
       // merge already done for /api/dashboard's "Recent XP Activity" widget.
       const [xpHistory, pointsHistory] = await Promise.all([
-        storage.getUserXPHistory(userId, 500),
-        storage.getUserPointsHistory(userId, 500),
+        measureStage("db.activity.xp_history", () => storage.getUserXPHistory(userId, 500)),
+        measureStage("db.activity.points_history", () => storage.getUserPointsHistory(userId, 500)),
       ]);
       const merged = [
         ...xpHistory
@@ -5288,8 +5288,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const [xpHistory, pointsHistory] = await Promise.all([
-        storage.getUserXPHistory(userId, 500),
-        storage.getUserPointsHistory(userId, 500),
+        measureStage("db.activity.xp_history", () => storage.getUserXPHistory(userId, 500)),
+        measureStage("db.activity.points_history", () => storage.getUserPointsHistory(userId, 500)),
       ]);
       const today = new Date();
 
@@ -5313,11 +5313,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Creator milestone statuses
       const { CreatorMilestoneService: CMS } = await import("./creator-milestone-service");
-      const creatorStatus = await CMS.getCreatorMilestoneStatus(userId);
+      const creatorStatus = await measureStage("activity.milestones", () => CMS.getCreatorMilestoneStatus(userId));
 
       // Streak info
       const { StreakService: SS } = await import("./streak-service");
-      const streakInfo = await SS.getUserStreak(userId);
+      const streakInfo = await measureStage("db.activity.streak", () => SS.getUserStreak(userId));
 
       // Current weekend status
       const { BonusEventsService: BES } = await import("./bonus-events-service");
@@ -5481,8 +5481,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Daily activity
       const [xpHistory, pointsHistory] = await Promise.all([
-        storage.getUserXPHistory(userId, 500),
-        storage.getUserPointsHistory(userId, 500),
+        measureStage("db.activity.xp_history", () => storage.getUserXPHistory(userId, 500)),
+        measureStage("db.activity.points_history", () => storage.getUserPointsHistory(userId, 500)),
       ]);
       const today = new Date();
       const isSameDay = (d1: Date, d2: Date) =>
@@ -5520,7 +5520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Streak
       const { StreakService: SS } = await import("./streak-service");
-      const streakInfo = await SS.getUserStreak(userId);
+      const streakInfo = await measureStage("db.activity.streak", () => SS.getUserStreak(userId));
 
       // Lootbox
       const lootboxStatus = await storage.getDailyLootboxStatus(userId);
@@ -6734,9 +6734,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const signed = await supabaseStorage.convertToSignedUrl(user.bannerUrl, 120);
             if (signed) bannerFetchUrl = signed;
           }
-          const response = await fetch(bannerFetchUrl);
+          const response = await measureStage("media.banner.headers", () => fetch(bannerFetchUrl, { signal: AbortSignal.timeout(5000) }));
           if (response.ok) {
-            const bannerBuffer = Buffer.from(await response.arrayBuffer());
+            const bannerBuffer = Buffer.from(await measureStage("media.banner.body", () => response.arrayBuffer()));
             const bannerImage = await sharp(bannerBuffer)
               .resize(width, bannerHeight, { fit: 'cover', position: 'center' })
               .png()
@@ -6768,9 +6768,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const signed = await supabaseStorage.convertToSignedUrl(user.avatarUrl, 120);
             if (signed) avatarFetchUrl = signed;
           }
-          const avatarResponse = await fetch(avatarFetchUrl);
+          const avatarResponse = await measureStage("media.avatar.headers", () => fetch(avatarFetchUrl, { signal: AbortSignal.timeout(5000) }));
           if (avatarResponse.ok) {
-            const avatarBuffer = Buffer.from(await avatarResponse.arrayBuffer());
+            const avatarBuffer = Buffer.from(await measureStage("media.avatar.body", () => avatarResponse.arrayBuffer()));
             const profilePicSize = 180; // Much larger profile picture
             // Create circular avatar to fit inside the border
             const circularAvatar = await sharp(avatarBuffer)
@@ -6816,8 +6816,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔍 Getting stats for user ID: ${user.id}`);
       
       // Get clips count directly from database
-      const userClips = await storage.getClipsByUserId(user.id);
-      const clipsCount = userClips?.length || 0;
+      const [{ count: clipCount }] = await measureStage('db.social_preview.clip_count', () =>
+        db.select({ count: sql<number>`count(*)` }).from(clips).where(eq(clips.userId, user.id)));
+      const clipsCount = Number(clipCount) || 0;
       
       // Get follower counts using proper database queries
       const followersCount = await storage.getFollowerCount(user.id);

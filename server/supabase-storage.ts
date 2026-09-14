@@ -1,3 +1,4 @@
+import { measureStage } from "./performance";
 import { createClient } from '@supabase/supabase-js';
 import { randomBytes } from 'crypto';
 import path from 'path';
@@ -489,9 +490,9 @@ export class SupabaseStorage {
       // For GIFs, use download option to bypass imgproxy transformation which strips animation
       const options = isGif ? { download: false } : undefined;
 
-      const { data, error } = await this.supabase.storage
+      const { data, error } = await measureStage("media.sign", () => this.supabase.storage
         .from(this.bucketName)
-        .createSignedUrl(storagePath, expiresIn, options);
+        .createSignedUrl(storagePath, expiresIn, options));
 
       if (error) {
         console.error('Error generating signed URL:', error.message);
@@ -599,9 +600,9 @@ export class SupabaseStorage {
       const options = isGif ? { download: false } : undefined;
 
       const client = this.supabaseAdmin || this.supabase;
-      const { data, error } = await client.storage
+      const { data, error } = await measureStage("media.sign", () => client.storage
         .from(bucketName)
-        .createSignedUrl(storagePath, expiresIn, options);
+        .createSignedUrl(storagePath, expiresIn, options));
 
       if (error) {
         console.error(`Error generating signed URL for ${bucketName}:`, error.message);
