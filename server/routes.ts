@@ -1,4 +1,4 @@
-import { measureStage, timedMiddleware } from "./performance";
+import { measureStage, timedMiddleware, instrumentSessionStore } from "./performance";
 import { loadCurrentUser } from "./current-user";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
@@ -742,7 +742,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
     secret: process.env.SESSION_SECRET ?? "development-secret-key",
     resave: false,
     saveUninitialized: false,
-    store: storage.sessionStore,
+    store: instrumentSessionStore(storage.sessionStore),
     proxy: isProd,
     cookie: {
       secure: isProd,
@@ -768,7 +768,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   // before the generic native-JWT bridge below, which no-ops once req.user is
   // set. Deliberately not applied to /api/admin/* — see the middleware's own
   // docblock for why that matters.
-  app.use(impersonationAuthMiddleware);
+  app.use(timedMiddleware("auth.impersonation", impersonationAuthMiddleware));
 
   // Bearer-token bridge: if the session didn't authenticate the request but a
   // valid Authorization: Bearer JWT is present, populate req.user from it.
@@ -781,7 +781,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   const _bearerUserCache = new Map<string, { user: any; expiresAt: number }>();
   const BEARER_CACHE_TTL_MS = 30_000;
 
-  app.use(async (req, res, next) => {
+  app.use(timedMiddleware("auth.bearer", async (req, res, next) => {
     if (req.user) return next();
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
@@ -812,7 +812,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
       // hit the refresh path and replay the request.
     }
     next();
-  });
+  }));
 
 
   // URGENT FIX: Blocked users route override - MUST be first before any conflicting routes
@@ -1049,7 +1049,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
         return done(null, getDemoUser());
       }
 
-      const user = await storage.getUser(userId);
+      const user = await measureStage("db.auth.session_lookup", () => storage.getUser(userId));
       done(null, user);
     } catch (error) {
       console.error('Error in passport deserializeUser:', error);
@@ -3012,7 +3012,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
   });
 
   // Get current user (supports guest access)
-  app.get("/api/user", optionalHybridAuth, async (req, res) => {
+  app.get("/api/user", timedMiddleware("auth.optional", optionalHybridAuth), async (req, res) => {
     if (!req.user) {
       return res.json(null);
     }

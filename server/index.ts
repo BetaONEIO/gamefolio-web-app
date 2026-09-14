@@ -1,4 +1,4 @@
-import { performanceMiddleware, startRuntimeMetrics } from "./performance";
+import { performanceMiddleware, startRuntimeMetrics, timedMiddleware } from "./performance";
 import { reportSlowRequest } from "./sentry";
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
@@ -187,7 +187,7 @@ app.use((req, res, next) => {
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Upload-Type, Upload-Length, Upload-Offset, Upload-Metadata, Tus-Resumable, Upload-Defer-Length, Upload-Checksum');
-  res.setHeader('Access-Control-Expose-Headers', 'Upload-Offset, Upload-Length, Tus-Resumable, Upload-Metadata, Upload-Result');
+  res.setHeader('Access-Control-Expose-Headers', 'Upload-Offset, Upload-Length, Tus-Resumable, Upload-Metadata, Upload-Result, X-Request-ID');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Max-Age', '86400');
 
@@ -216,8 +216,8 @@ if (process.env.NODE_ENV !== 'production') {
 app.use(gfWebhookRoutes);
 
 // Configure body parser with larger limits to support file uploads
-app.use(express.json({ limit: '500mb' }));
-app.use(express.urlencoded({ extended: false, limit: '500mb' }));
+app.use(timedMiddleware('http.body.json', express.json({ limit: '500mb' })));
+app.use(timedMiddleware('http.body.urlencoded', express.urlencoded({ extended: false, limit: '500mb' })));
 
 // Expose the request's platform header + user-agent to deep call sites via
 // AsyncLocalStorage (e.g. signup-source detection in notifyNewSignup). Must run
