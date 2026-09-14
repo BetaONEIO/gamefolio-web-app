@@ -48,6 +48,7 @@ if (typeof document !== "undefined" && !document.getElementById(STYLE_ID)) {
       position: relative;
       isolation: isolate;
       overflow: hidden;
+      width: min(100%, 290px);
       padding: 2px;
       border-radius: 14px;
       box-shadow: 0 0 18px rgba(62, 197, 255, 0.04);
@@ -56,7 +57,7 @@ if (typeof document !== "undefined" && !document.getElementById(STYLE_ID)) {
     .surprise-me-compact::before {
       content: "";
       position: absolute;
-      z-index: -1;
+      z-index: 0;
       inset: -180%;
       background: conic-gradient(
         from 0deg,
@@ -70,6 +71,10 @@ if (typeof document !== "undefined" && !document.getElementById(STYLE_ID)) {
         #22d3ee 360deg
       );
       animation: surprise-me-rainbow 5.5s linear infinite;
+    }
+    .surprise-me-compact > span {
+      position: relative;
+      z-index: 1;
     }
     .surprise-me-compact:hover {
       filter: brightness(1.08);
@@ -552,8 +557,8 @@ export function DailyXPChallenges() {
     <section className="pt-5 sm:pt-8">
       {/* ── Header ── */}
       <div className="px-4 sm:px-6 md:px-8 mb-4">
-      <div className="flex flex-wrap items-center justify-between gap-2.5 mb-2.5">
-          <div className="flex items-center gap-3">
+      <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
             <img
               src="/attached_assets/XP-text_1779960376768.png"
               alt="XP"
@@ -570,13 +575,11 @@ export function DailyXPChallenges() {
                   : 'Sign in to track your progress'}
               </p>
             </div>
-          </div>
-          <div className="flex min-w-0 items-center gap-2">
             {user && (
               <Link
                 href="/surprise-me"
                 aria-label="Surprise Me: discover a random clip or reel"
-                className="surprise-me-compact group max-w-[min(100%,320px)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F101B]"
+                className="surprise-me-compact group max-w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F101B]"
               >
                 <span className="flex min-w-0 items-center gap-2 rounded-[12px] bg-[#0F101B] px-2.5 py-2">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#B7FF18] text-base font-black leading-none text-[#071013]" aria-hidden="true">?</span>
@@ -593,6 +596,8 @@ export function DailyXPChallenges() {
                 </span>
               </Link>
             )}
+          </div>
+          <div className="flex min-w-0 items-center gap-2">
             <Link
               href="/level-tracker"
               className="flex-shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition-opacity hover:opacity-80"
