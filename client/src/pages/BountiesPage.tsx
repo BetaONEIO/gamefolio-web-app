@@ -57,6 +57,14 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   expired:                { label: "Expired",                 color: "#6b7280", bg: "rgba(107,114,128,0.1)"  },
 };
 
+function isIndieDeveloperUser(user: any): boolean {
+  const role = String(user?.role ?? '').toLowerCase();
+  if (role === "admin" || role === "moderator") return false;
+  return role === "indie_developer"
+    || String(user?.partnerType ?? user?.partner_type ?? '').toLowerCase() === "indie"
+    || Boolean(user?.isIndieDevSubscriber ?? user?.is_indie_dev_subscriber);
+}
+
 function timeRemaining(endDate: string | null) {
   if (!endDate) return "Ongoing";
   const diff = new Date(endDate).getTime() - Date.now();
@@ -934,6 +942,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const { toast } = useToast();
   const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
+  const canParticipate = !isIndieDeveloperUser(user);
   const [, setClock] = useState(0);
   useEffect(() => {
     const timer = window.setInterval(() => setClock(value => value + 1), 60_000);
@@ -954,7 +963,7 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
     || (accessMethod === "custom_access" || accessMethod === "custom")
       && (customAccessNeedsKey === false
         || (customAccessNeedsKey == null && demoLeft === 0 && fullLeft === 0));
-  const canAccept = isGF || keylessAccess || demoLeft > 0 || fullLeft > 0;
+  const canAccept = canParticipate && (isGF || keylessAccess || demoLeft > 0 || fullLeft > 0);
 
   const joinMutation = useMutation({
     mutationFn: () => apiRequest("POST", `/api/bounties/${campaign.id}/join`, {}),
@@ -990,8 +999,17 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
   const [activePanel, setActivePanel] = useState<{ bounty: any } | null>(null);
   const [selectedItems, setSelectedItems] = useState<Record<number, any[]>>({});
   const [submittedItems, setSubmittedItems] = useState<Record<number, any[]>>({});
-  const [hasJoined, setHasJoined] = useState(Boolean(campaign.is_joined || campaign.participant_status));
+  const [hasJoined, setHasJoined] = useState(Boolean(canParticipate && (campaign.is_joined || campaign.participant_status)));
   const [panelSubmitting, setPanelSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!canParticipate) {
+      setHasJoined(false);
+      setActivePanel(null);
+    } else if (campaign.is_joined || campaign.participant_status) {
+      setHasJoined(true);
+    }
+  }, [canParticipate, campaign.is_joined, campaign.participant_status]);
 
   const activePanelCt = activePanel?.bounty?.content_type ?? "none";
   const { data: pickerData, isLoading: pickerLoading } = useQuery<any>({
@@ -1627,7 +1645,15 @@ function CampaignDetail({ campaign, onBack, onJoined }: { campaign: any; onBack:
             <div className="px-5 pb-5 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
               {user ? (
                 <div className="space-y-3">
-                  {completedMandatoryCount === mandatory.length && mandatory.length > 0 ? (
+                  {!canParticipate ? (
+                    <div className="rounded-2xl p-4 text-center space-y-1.5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <Lock size={18} className="mx-auto text-white/30" />
+                      <div className="text-sm font-black text-white/75">Campaign view only</div>
+                      <div className="text-[11px] leading-relaxed text-white/40">
+                        Indie developers can manage their own campaigns, but creator participation is for Gamefolio creators.
+                      </div>
+                    </div>
+                  ) : completedMandatoryCount === mandatory.length && mandatory.length > 0 ? (
                     <div className="rounded-2xl p-4 text-center space-y-1.5" style={{ background: "rgba(34,197,94,0.07)", border: "1px solid rgba(34,197,94,0.25)", boxShadow: "0 0 24px rgba(34,197,94,0.07)" }}>
                       <Trophy size={20} color={NEON} className="mx-auto" />
                       <div className="text-sm font-black text-white">Mission Complete!</div>
@@ -2697,11 +2723,12 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
   const [myTab, setMyTab] = useState<MyTab>("active");
   const [sortBy, setSortBy] = useState<"recent" | "ending" | "completion" | "reward">("recent");
   const { user } = useAuth();
+  const canParticipate = !isIndieDeveloperUser(user);
 
   const { data: campaigns = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/bounties/my/campaigns"],
     queryFn: getQueryFn({ on401: "returnNull" }),
-    enabled: !!user,
+    enabled: !!user && canParticipate,
   });
 
   const tabs: { key: MyTab; label: string }[] = [
@@ -2718,6 +2745,18 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
         <Lock size={32} className="text-white/20" />
         <div className="text-white/40 font-bold">Sign in to see your campaigns</div>
         <a href="/auth" className="text-sm font-black" style={{ color: NEON }}>Sign In →</a>
+      </div>
+    );
+  }
+
+  if (!canParticipate) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-3 text-center">
+        <Lock size={32} className="text-white/20" />
+        <div className="text-white/65 font-black">Creator missions are view-only for Indie developers</div>
+        <div className="max-w-md text-xs leading-relaxed text-white/35">
+          You can browse campaigns in the Bounty Hub and manage your own campaigns from the developer dashboard, but you cannot join or complete campaigns as a creator.
+        </div>
       </div>
     );
   }
@@ -3097,6 +3136,7 @@ export default function BountiesPage() {
   const [activeFilters, setActiveFilters]   = useState<Set<string>>(new Set());
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const routeSearch = useSearch();
+  const { user } = useAuth();
 
   useEffect(() => {
     const tab = new URLSearchParams(routeSearch).get("tab");
@@ -3180,7 +3220,7 @@ export default function BountiesPage() {
   }, [availableCampaigns]);
 
   const openDetail = (c: any) => {
-    if (c.is_joined || c.participant_status) {
+    if (!isIndieDeveloperUser(user) && (c.is_joined || c.participant_status)) {
       setProgressCampaign({ ...c, instance_id: c.instance_id ?? c.id });
       setView("progress");
       return;

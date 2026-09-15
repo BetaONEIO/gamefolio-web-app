@@ -37,6 +37,22 @@ function requireAuth(req: any, res: any, next: any) {
   next();
 }
 
+function isIndieDeveloperUser(user: any): boolean {
+  const role = String(user?.role ?? '').toLowerCase();
+  if (role === 'admin' || role === 'moderator') return false;
+  return role === 'indie_developer'
+    || String(user?.partner_type ?? user?.partnerType ?? '').toLowerCase() === 'indie'
+    || Boolean(user?.is_indie_dev_subscriber ?? user?.isIndieDevSubscriber);
+}
+
+function rejectIndieDeveloperParticipation(req: any, res: any): boolean {
+  if (!isIndieDeveloperUser(req.user)) return false;
+  res.status(403).json({
+    error: 'Indie developers can manage their own campaigns, but cannot join or complete campaigns as creators',
+  });
+  return true;
+}
+
 function requireAdmin(req: any, res: any, next: any) {
   if (!req.isAuthenticated?.() || !req.user) return res.status(401).json({ error: 'Unauthorized' });
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
@@ -709,6 +725,7 @@ router.get('/:instanceId', async (req, res) => {
 // POST /api/bounties/:instanceId/join
 router.post('/:instanceId/join', requireAuth, async (req, res) => {
   try {
+    if (rejectIndieDeveloperParticipation(req, res)) return;
     await expireOverdueCampaignParticipants();
     const userId = req.user!.id;
     const instanceId = Number(req.params.instanceId);
@@ -942,6 +959,7 @@ router.post('/:instanceId/join', requireAuth, async (req, res) => {
 // gate. The participant/key transaction still runs when the applicant joins.
 router.get('/:instanceId/application', requireAuth, async (req, res) => {
   try {
+    if (rejectIndieDeveloperParticipation(req, res)) return;
     const [application] = toRows(await db.execute(sql`
       SELECT id, status, notes, reviewed_at, created_at, updated_at
       FROM campaign_applications
@@ -995,6 +1013,7 @@ router.patch('/admin/:instanceId/applications/:userId', requireOwnerOrAdmin, asy
 // reveal it, which starts their individual completion deadline.
 router.post('/:instanceId/reveal-access-key', requireAuth, async (req, res) => {
   try {
+    if (rejectIndieDeveloperParticipation(req, res)) return;
     const userId = req.user!.id;
     const instanceId = Number(req.params.instanceId);
     const [participant] = toRows(await db.execute(sql`
@@ -1100,6 +1119,7 @@ router.post('/:instanceId/reveal-access-key', requireAuth, async (req, res) => {
 // Creators may request at most one bounded extension before expiry.
 router.post('/my/:instanceId/extension', requireAuth, async (req, res) => {
   try {
+    if (rejectIndieDeveloperParticipation(req, res)) return;
     const hours = Number(req.body?.hours);
     if (![24, 48].includes(hours)) return res.status(400).json({ error: 'Extension must be 24 or 48 hours' });
     const [updated] = toRows(await db.execute(sql`
@@ -1164,6 +1184,7 @@ router.patch('/developer/:instanceId/participants/:participantId/extension', req
 // GET /api/bounties/my/campaigns — all joined campaigns
 router.get('/my/campaigns', requireAuth, async (req, res) => {
   try {
+    if (rejectIndieDeveloperParticipation(req, res)) return;
     await expireOverdueCampaignParticipants();
     const userId = req.user!.id;
     const campaigns = await db.execute(sql`
@@ -1271,6 +1292,7 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
 
 // GET /api/bounties/my/content-picker?contentType=clip — user's existing content for submission
 router.get('/my/content-picker', requireAuth, async (req, res) => {
+  if (rejectIndieDeveloperParticipation(req, res)) return;
   const userId = req.user!.id;
   const contentType = (req.query.contentType as string) || 'clip';
   try {
@@ -1302,6 +1324,7 @@ router.get('/my/content-picker', requireAuth, async (req, res) => {
 // GET /api/bounties/my/:instanceId — progress on one campaign
 router.get('/my/:instanceId', requireAuth, async (req, res) => {
   try {
+    if (rejectIndieDeveloperParticipation(req, res)) return;
     await expireOverdueCampaignParticipants();
     const userId = req.user!.id;
     const instanceId = Number(req.params.instanceId);
@@ -1448,6 +1471,7 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
 // POST /api/bounties/my/:instanceId/submit/:bountyId
 router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) => {
   try {
+    if (rejectIndieDeveloperParticipation(req, res)) return;
     const userId = req.user!.id;
     const instanceId = Number(req.params.instanceId);
     const bountyId = Number(req.params.bountyId);
@@ -1580,6 +1604,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
 // POST /api/bounties/my/:instanceId/claim-full-key
 router.post('/my/:instanceId/claim-full-key', requireAuth, async (req, res) => {
   try {
+    if (rejectIndieDeveloperParticipation(req, res)) return;
     await expireOverdueCampaignParticipants();
     const userId = req.user!.id;
     const instanceId = Number(req.params.instanceId);
