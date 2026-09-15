@@ -2899,19 +2899,17 @@ function DeveloperBountyHubPrompt() {
 
   return (
     <section
-      className="relative overflow-hidden px-1 py-8 sm:px-3 sm:py-10"
+      className="relative overflow-hidden px-4 py-8 sm:px-8 sm:py-10 lg:px-5"
       style={{
         backgroundColor: "#0f101b",
-        backgroundImage: "linear-gradient(0deg, rgba(15,16,27,0.42) 0%, transparent 34%), linear-gradient(90deg, rgba(15,16,27,1) 0%, rgba(15,16,27,0.98) 25%, rgba(15,16,27,0.88) 40%, rgba(15,16,27,0.50) 58%, rgba(15,16,27,0.15) 78%, rgba(15,16,27,0.05) 100%), url('/attached_assets/creator-campaign-hero.png')",
+        backgroundImage: "linear-gradient(0deg, rgba(15,16,27,0.46) 0%, transparent 34%), linear-gradient(90deg, rgba(15,16,27,1) 0%, rgba(15,16,27,0.98) 20%, rgba(15,16,27,0.86) 34%, rgba(15,16,27,0.42) 52%, rgba(15,16,27,0.12) 70%, rgba(15,16,27,0.02) 100%), url('/attached_assets/creator-campaign-hero.png')",
         backgroundPosition: "center right",
         backgroundSize: "cover",
-        borderTop: "1px solid rgba(255,255,255,0.08)",
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
       }}
       aria-label="Developer campaign actions"
     >
-      <div className="min-h-[380px] sm:min-h-[400px]">
-        <div className="min-w-0 lg:max-w-[65%]">
+      <div className="flex min-h-[380px] items-center sm:min-h-[400px]">
+        <div className="min-w-0 lg:max-w-[700px]">
           {isLoading ? (
             <>
               <div className="h-3.5 w-44 animate-pulse rounded bg-white/10" />
@@ -2923,13 +2921,14 @@ function DeveloperBountyHubPrompt() {
               <p className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: NEON }}>
                 Your Monthly Bounty Is Ready
               </p>
-              <h2 className="mt-3 max-w-xl text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-[42px]">
-                Get creators playing your game.
+              <h2 className="mt-3 max-w-[680px] text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-[42px]">
+                <span className="block">Get creators playing</span>
+                <span className="block">your game.</span>
               </h2>
-              <p className="mt-4 max-w-xl text-base leading-7 text-white/70 sm:text-[17px]">
+              <p className="mt-4 max-w-[680px] text-base leading-7 text-white/70 sm:text-[17px]">
                 Your Quick Creator campaign is ready to launch. Get Gamefolio creators playing your game and creating content around it.
               </p>
-              <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-bold text-white/80 sm:text-[15px]">
+              <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-white/80 lg:flex-nowrap sm:text-[15px]">
                 {["Creator content", "Gamefolio promotion", "Included with Pro"].map(item => (
                   <span key={item} className="inline-flex items-center gap-2">
                     <Check size={14} style={{ color: NEON }} />
@@ -2937,16 +2936,16 @@ function DeveloperBountyHubPrompt() {
                   </span>
                 ))}
               </div>
-              <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3">
+              <div className="mt-6 flex flex-col items-start gap-3">
                 <button
                   type="button"
                   onClick={goToCreate}
-                  className="inline-flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] sm:w-auto"
+                  className="inline-flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] sm:w-[240px]"
                   style={{ background: NEON, color: "#070b10" }}
                 >
                   Create Bounty <ChevronRight size={16} />
                 </button>
-                <button type="button" onClick={goToCreate} className="text-xs font-black text-white/55 transition hover:text-white">
+                <button type="button" onClick={goToCreate} className="text-[13px] font-black text-white/60 transition hover:text-white">
                   Explore larger campaigns →
                 </button>
               </div>
@@ -2956,13 +2955,13 @@ function DeveloperBountyHubPrompt() {
               <p className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: NEON }}>
                 Creator Campaigns
               </p>
-              <h2 className="mt-3 max-w-xl text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-[42px]">
+              <h2 className="mt-3 max-w-[680px] text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-[42px]">
                 Ready for another creator push?
               </h2>
-              <p className="mt-4 max-w-xl text-base leading-7 text-white/70 sm:text-[17px]">
+              <p className="mt-4 max-w-[680px] text-base leading-7 text-white/70 sm:text-[17px]">
                 Your included Quick Creator campaign has been used for this billing period.
               </p>
-              <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-bold text-white/80 sm:text-[15px]">
+              <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-white/80 lg:flex-nowrap sm:text-[15px]">
                 {["Creator campaigns from £10", "Gamefolio promotion", "Creator content"].map(item => (
                   <span key={item} className="inline-flex items-center gap-2">
                     <Check size={14} style={{ color: NEON }} />
@@ -2973,11 +2972,11 @@ function DeveloperBountyHubPrompt() {
               <div className="mt-5 text-xs font-bold text-white/55">
                 Next Quick Creator: <span className="text-white/80">{resetDate}</span>
               </div>
-              <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3">
+              <div className="mt-6 flex flex-col items-start gap-3">
                 <button
                   type="button"
                   onClick={goToCreate}
-                  className="inline-flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] sm:w-auto"
+                  className="inline-flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] sm:w-[240px]"
                   style={{ background: NEON, color: "#070b10" }}
                 >
                   Build Another Campaign <ChevronRight size={16} />
@@ -2989,13 +2988,14 @@ function DeveloperBountyHubPrompt() {
               <p className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: NEON }}>
                 Creator Campaigns
               </p>
-              <h2 className="mt-3 max-w-xl text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-[42px]">
-                Get creators playing your game.
+              <h2 className="mt-3 max-w-[680px] text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-[42px]">
+                <span className="block">Get creators playing</span>
+                <span className="block">your game.</span>
               </h2>
-              <p className="mt-4 max-w-xl text-base leading-7 text-white/70 sm:text-[17px]">
+              <p className="mt-4 max-w-[680px] text-base leading-7 text-white/70 sm:text-[17px]">
                 Launch a Gamefolio creator campaign for clips, reels, screenshots, streams and more.
               </p>
-              <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-bold text-white/80 sm:text-[15px]">
+              <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-white/80 lg:flex-nowrap sm:text-[15px]">
                 {["Creator content", "Gamefolio promotion", "Campaigns from £10"].map(item => (
                   <span key={item} className="inline-flex items-center gap-2">
                     <Check size={14} style={{ color: NEON }} />
@@ -3003,16 +3003,16 @@ function DeveloperBountyHubPrompt() {
                   </span>
                 ))}
               </div>
-              <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3">
+              <div className="mt-6 flex flex-col items-start gap-3">
                 <button
                   type="button"
                   onClick={goToCreate}
-                  className="inline-flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] sm:w-auto"
+                  className="inline-flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] sm:w-[240px]"
                   style={{ background: NEON, color: "#070b10" }}
                 >
                   Build a Campaign <ChevronRight size={16} />
                 </button>
-                <button type="button" onClick={() => setLocation("/game-dashboard?tab=overview")} className="text-xs font-black text-white/60 transition hover:text-white">
+                <button type="button" onClick={() => setLocation("/game-dashboard?tab=overview")} className="text-[13px] font-black text-white/65 transition hover:text-white">
                   Quick Creator is included monthly with Indie Game Pro · <span style={{ color: NEON }}>View Pro →</span>
                 </button>
               </div>
@@ -3020,7 +3020,7 @@ function DeveloperBountyHubPrompt() {
           )}
 
           {activeCampaigns > 0 && (
-            <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-white/45">
+        <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-white/45">
               <span>{activeCampaigns} {activeCampaigns === 1 ? "campaign" : "campaigns"} active</span>
               <span aria-hidden="true">·</span>
               <button type="button" onClick={goToManage} className="font-black text-white/65 transition hover:text-white">
@@ -3169,7 +3169,7 @@ export default function BountiesPage() {
         <FeaturedSlider campaigns={featuredSlides} onSelect={openDetail} />
       )}
 
-      <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+      <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
         {/* ── Community Stats strip ── */}
         {mainTab === "marketplace" && !isLoading && availableCampaigns.length > 0 && (
