@@ -368,6 +368,7 @@ export async function ensureBountyMarketplaceTables() {
     await run(`ALTER TABLE campaign_bounty_submissions ADD COLUMN IF NOT EXISTS validation_details JSONB`);
     await run(`ALTER TABLE campaign_bounty_submissions ADD COLUMN IF NOT EXISTS reviewed_by_user_id INTEGER`);
     await run(`ALTER TABLE campaign_bounty_submissions ADD COLUMN IF NOT EXISTS supersedes_submission_id INTEGER`);
+      await run(`ALTER TABLE campaign_bounty_submissions ADD COLUMN IF NOT EXISTS slot_index INTEGER`);
     await run(`CREATE TABLE IF NOT EXISTS campaign_bounty_submission_reviews (
       id SERIAL PRIMARY KEY,
       submission_id INTEGER NOT NULL REFERENCES campaign_bounty_submissions(id) ON DELETE CASCADE,
@@ -1441,9 +1442,10 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
             SELECT
               s.id, s.status, s.review_notes, s.submitted_at, s.reviewed_at,
               s.content_type, s.clip_id, s.screenshot_id, s.reel_id,
-              s.content_url, s.content_data, s.xp_awarded,
+              s.content_url, s.content_data, s.xp_awarded, s.slot_index,
               COALESCE(c.title, ss.title) AS media_title,
-              COALESCE(c.thumbnail_url, ss.thumbnail_url, c.video_url, ss.image_url) AS thumbnail_url
+              COALESCE(c.thumbnail_url, ss.thumbnail_url, c.video_url, ss.image_url) AS thumbnail_url,
+              COALESCE(c.video_url, ss.image_url, s.content_url) AS media_url
             FROM campaign_bounty_submissions s
             LEFT JOIN clips c ON c.id = COALESCE(s.clip_id, s.reel_id)
             LEFT JOIN screenshots ss ON ss.id = s.screenshot_id
@@ -1550,6 +1552,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
       contentType, contentUrl, contentData,
       clipId, screenshotId, reelId,
       supersedesSubmissionId,
+      slotIndex,
     } = req.body;
     const submissionStatus = participation.manual_approval_required ? 'under_review' : 'pending';
     if (contentType && contentType !== bounty.content_type) {
@@ -1607,17 +1610,45 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
     }
 
     let replacementId: number | null = null;
+    let resolvedSlotIndex: number | null = null;
     if (supersedesSubmissionId != null) {
       const [previous] = toRows(await db.execute(sql`
-        SELECT id FROM campaign_bounty_submissions
+        SELECT id, slot_index FROM campaign_bounty_submissions
         WHERE id = ${Number(supersedesSubmissionId)}
           AND instance_id = ${instanceId}
           AND participant_id = ${userId}
           AND bounty_id = ${bountyId}
-          AND status = 'changes_requested'
+          AND status IN ('changes_requested', 'rejected')
       `)) as any[];
-      if (!previous) return res.status(400).json({ error: 'Only a changes-requested submission can be replaced' });
+      if (!previous) return res.status(400).json({ error: 'Only a rejected or changes-requested submission can be replaced' });
       replacementId = Number(previous.id);
+      resolvedSlotIndex = previous.slot_index == null ? null : Number(previous.slot_index);
+    }
+
+    // Slot assignment is authoritative on the server. The client may request a
+    // slot for presentation, but it can never choose a slot that is already
+    // occupied by an active submission or move a replacement to another slot.
+    if (resolvedSlotIndex == null) {
+      const requestedSlot = Number.isInteger(Number(slotIndex)) ? Number(slotIndex) : null;
+      const [availableSlot] = toRows(await db.execute(sql`
+        SELECT candidate.slot_index
+        FROM generate_series(0, GREATEST(COALESCE(${bounty.quantity}, 1), 1) - 1) AS candidate(slot_index)
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM campaign_bounty_submissions active_submission
+          WHERE active_submission.instance_id = ${instanceId}
+            AND active_submission.participant_id = ${userId}
+            AND active_submission.bounty_id = ${bountyId}
+            AND active_submission.status IN ('pending', 'under_review', 'approved')
+            AND active_submission.slot_index = candidate.slot_index
+        )
+        ORDER BY CASE WHEN candidate.slot_index = ${requestedSlot ?? -1} THEN 0 ELSE 1 END, candidate.slot_index
+        LIMIT 1
+      `)) as any[];
+      if (!availableSlot) {
+        return res.status(409).json({ error: 'All submission slots for this objective are already in use' });
+      }
+      resolvedSlotIndex = Number(availableSlot.slot_index);
     }
 
     // Compute XP for this submission (deferred until approval, but compute now for preview)
@@ -1640,14 +1671,14 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
         (instance_id, participant_id, participation_id, bounty_id, creator_id, game_id, objective_id,
          content_id, submission_type, content_type, clip_id, screenshot_id, reel_id,
          content_url, content_data, status, objective_state, validation_state,
-          submitted_at, xp_awarded, supersedes_submission_id)
+           submitted_at, xp_awarded, supersedes_submission_id, slot_index)
       VALUES
         (${instanceId}, ${userId}, ${participation.id}, ${bountyId}, ${userId}, ${bounty.campaign_game_id ?? null}, ${bountyId},
          ${clipId ?? screenshotId ?? reelId ?? null}, ${contentType ?? bounty.content_type},
          ${contentType ?? bounty.content_type},
          ${clipId ?? null}, ${screenshotId ?? null}, ${reelId ?? null},
           ${contentUrl ?? null}, ${contentData ? JSON.stringify(contentData) : null},
-           ${submissionStatus}, 'submitted', 'submitted', NOW(), 0, ${replacementId})
+            ${submissionStatus}, 'submitted', 'submitted', NOW(), 0, ${replacementId}, ${resolvedSlotIndex})
       RETURNING *
     `)) as any[];
 

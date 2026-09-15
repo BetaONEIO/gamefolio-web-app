@@ -1986,6 +1986,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const [copiedFull, setCopiedFull] = useState(false);
   const [expandedBounty, setExpandedBounty] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState<number | null>(null);
+  const [submittingSlotIndex, setSubmittingSlotIndex] = useState<number | null>(null);
   const [submitUrl, setSubmitUrl] = useState("");
   const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
   const [nativeFile, setNativeFile] = useState<File | null>(null);
@@ -2021,7 +2022,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const submittingBounty = progressBounties.find((b: any) => b.id === submitting);
   const usesExistingContent = ["clip", "reel", "screenshot"].includes(submittingBounty?.content_type);
   const { data: pickerData, isLoading: pickerLoading } = useQuery<any>({
-    queryKey: ["/api/bounties/my/content-picker", submittingBounty?.content_type],
+    queryKey: ["/api/bounties/my/content-picker", submittingBounty?.content_type, data?.game_id],
     queryFn: async () => {
       const gameQuery = data?.game_id ? `&gameId=${encodeURIComponent(String(data.game_id))}` : "";
       const res = await fetch(`/api/bounties/my/content-picker?contentType=${encodeURIComponent(submittingBounty.content_type)}${gameQuery}`, { credentials: "include" });
@@ -2088,6 +2089,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] });
       qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
       setSubmitting(null);
+      setSubmittingSlotIndex(null);
       setSubmitUrl("");
       setSelectedContentId(null);
       setNativeFile(null);
@@ -2104,7 +2106,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   });
 
   const nativeSubmitMutation = useMutation({
-    mutationFn: async ({ bountyId, file, title, description, supersedesSubmissionId }: { bountyId: number; file: File; title?: string; description?: string; supersedesSubmissionId?: number }) => {
+    mutationFn: async ({ bountyId, slotIndex, file, title, description, supersedesSubmissionId }: { bountyId: number; slotIndex: number; file: File; title?: string; description?: string; supersedesSubmissionId?: number }) => {
       const bounty = progressBounties.find((item: any) => item.id === bountyId);
       if (!bounty) throw new Error("Objective not found");
       setNativeUploadError(null);
@@ -2124,6 +2126,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         return apiRequest("POST", `/api/bounties/my/${cp.instance_id}/submit/${bountyId}`, {
           contentType: bounty.content_type,
           screenshotId: uploaded.screenshot?.id,
+          slotIndex,
           ...(supersedesSubmissionId ? { supersedesSubmissionId } : {}),
         });
       }
@@ -2149,6 +2152,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       setNativeUploadStage("submitting");
       return apiRequest("POST", `/api/bounties/my/${cp.instance_id}/submit/${bountyId}`, {
         contentType: bounty.content_type,
+        slotIndex,
         ...(bounty.content_type === "reel" ? { reelId: mediaId } : { clipId: mediaId }),
         ...(supersedesSubmissionId ? { supersedesSubmissionId } : {}),
       });
@@ -2157,6 +2161,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] });
       qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
       setSubmitting(null);
+      setSubmittingSlotIndex(null);
       setNativeFile(null);
       setNativePreview(null);
       setNativeTitle("");
@@ -2194,6 +2199,19 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     setNativeFile(file);
     setNativePreview(file ? URL.createObjectURL(file) : null);
     setSelectedContentId(null);
+  };
+
+  const openSubmissionForm = (bountyId: number, slotIndex: number) => {
+    setSubmitting(bountyId);
+    setSubmittingSlotIndex(slotIndex);
+    setSelectedContentId(null);
+    setSubmitUrl("");
+    setNativeFile(null);
+    setNativePreview(null);
+    setNativeTitle("");
+    setNativeDescription("");
+    setNativeUploadError(null);
+    setNativeUploadStage("idle");
   };
 
   const copyKey = (key: string, setter: (v: boolean) => void) => {
@@ -2245,11 +2263,14 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const completedOptional = optional.filter((b: any) => Number(b.approved_count ?? 0) >= Number(b.quantity ?? 1)).length;
   const contentRequirements = bountyRequirements(bounties);
 
-  const renderSubmissionForm = (b: any) => {
+  const renderSubmissionForm = (b: any, slotIndex: number) => {
     const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
     const isMedia = ["clip", "reel", "screenshot"].includes(b.content_type);
     const isVideo = ["clip", "reel"].includes(b.content_type);
-    const replacement = (b.submissions ?? []).find((submission: any) => submission.status === "changes_requested");
+    const submissionsForSlot = (b.submissions ?? []).filter((submission: any, index: number) =>
+      Number(submission.slot_index ?? index) === slotIndex
+    );
+    const replacement = submissionsForSlot.find((submission: any) => ["changes_requested", "rejected"].includes(submission.status));
     const isNativeBusy = nativeSubmitMutation.isPending;
     const campaignArtwork = data.game_artwork_url || data.hero_artwork_url || data.catalog_game_artwork_url || data.campaign_artwork_url;
     const campaignName = data.campaign_title || data.template_name || cp.template_name || "Campaign";
@@ -2458,12 +2479,14 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             onClick={() => {
               if (nativeFile) return nativeSubmitMutation.mutate({
                 bountyId: b.id,
+                slotIndex,
                 file: nativeFile,
                 title: nativeTitle,
                 description: nativeDescription,
                 ...(replacement ? { supersedesSubmissionId: replacement.id } : {}),
               });
               const body: Record<string, unknown> = { contentType: b.content_type };
+              body.slotIndex = slotIndex;
               if (b.content_type === "clip") body.clipId = selectedContentId;
               else if (b.content_type === "reel") body.reelId = selectedContentId;
               else if (b.content_type === "screenshot") body.screenshotId = selectedContentId;
@@ -2472,7 +2495,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               submitMutation.mutate({ bountyId: b.id, body });
             }}
             disabled={isNativeBusy || submitMutation.isPending || (isVideo
-              ? (!nativeFile || !nativeTitle.trim())
+              ? ((!nativeFile && !selectedContentId) || (Boolean(nativeFile) && !nativeTitle.trim()))
               : isMedia
               ? (!nativeFile && !selectedContentId)
               : !submitUrl.trim())}
@@ -2481,7 +2504,92 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           >
             {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : isMedia ? "Submit to Campaign" : b.content_type === "feedback" ? "Submit feedback" : "Submit report"}
           </button>
-          <button type="button" onClick={() => { setSubmitting(null); setSubmitUrl(""); setSelectedContentId(null); selectNativeFile(null); setNativeTitle(""); setNativeDescription(""); setNativeUploadError(null); setNativeUploadStage("idle"); }} className="px-4 py-2 text-sm text-white/50 hover:text-white">Cancel</button>
+          <button type="button" onClick={() => { setSubmitting(null); setSubmittingSlotIndex(null); setSubmitUrl(""); setSelectedContentId(null); selectNativeFile(null); setNativeTitle(""); setNativeDescription(""); setNativeUploadError(null); setNativeUploadStage("idle"); }} className="px-4 py-2 text-sm text-white/50 hover:text-white">Cancel</button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSubmissionSlots = (b: any) => {
+    const quantity = Math.max(Number(b.quantity ?? 1), 1);
+    const submissions: any[] = b.submissions ?? [];
+    const contentLabel = b.content_type === "reel"
+      ? "Reel"
+      : b.content_type === "screenshot"
+      ? "Screenshot"
+      : b.content_type === "bug"
+      ? "Report"
+      : b.content_type === "feedback"
+      ? "Response"
+      : "Clip";
+
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-bold text-white/45">
+          <span>{Math.min(Number(b.submitted_count ?? 0), quantity)} / {quantity} submitted</span>
+          <span className="text-white/20">·</span>
+          <span>{Math.min(Number(b.approved_count ?? 0), quantity)} / {quantity} approved</span>
+          <span className="text-white/20">·</span>
+          <span>+{(Number(b.xp_reward ?? 0) * quantity).toLocaleString()} XP total</span>
+        </div>
+        <div className="space-y-2">
+          {Array.from({ length: quantity }, (_, slotIndex) => {
+            const slotSubmissions = submissions.filter((submission: any, index: number) =>
+              Number(submission.slot_index ?? index) === slotIndex
+            );
+            const submission = slotSubmissions[0];
+            const statusCfg = submission
+              ? (STATUS_CONFIG[submission.status] ?? { label: submission.status, color: "#94a3b8", bg: "" })
+              : null;
+            const isSlotOpen = submitting === b.id && submittingSlotIndex === slotIndex;
+            const canReplace = submission && ["changes_requested", "rejected"].includes(submission.status);
+
+            return (
+              <div key={`${b.id}-${slotIndex}`} className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-[10px] font-black uppercase tracking-[0.16em] text-white/45">{contentLabel} {slotIndex + 1}</div>
+                  {statusCfg && <span className="rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-wider" style={{ color: statusCfg.color, background: statusCfg.bg }}>{statusCfg.label}</span>}
+                </div>
+
+                {isSlotOpen ? (
+                  <div className="mt-3">{renderSubmissionForm(b, slotIndex)}</div>
+                ) : submission ? (
+                  <div className="mt-3 flex items-center gap-3">
+                    {submission.thumbnail_url
+                      ? <img src={submission.thumbnail_url} alt="" className="h-12 w-16 shrink-0 rounded-lg object-cover" />
+                      : <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-lg bg-black/30"><Target size={16} className="text-white/25" /></div>}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xs font-black text-white/80">{submission.media_title || `${contentLabel} submission`}</div>
+                      <div className="mt-1 text-[10px] text-white/35">{submission.submitted_at ? `Submitted ${new Date(submission.submitted_at).toLocaleString()}` : "Submitted"}</div>
+                      {submission.status === "pending" || submission.status === "under_review"
+                        ? <div className="mt-1 text-[10px] font-bold text-white/45">+{Number(b.xp_reward ?? 0).toLocaleString()} XP pending review</div>
+                        : submission.status === "approved"
+                        ? <div className="mt-1 text-[10px] font-bold text-green-300">+{Number(submission.xp_awarded ?? b.xp_reward ?? 0).toLocaleString()} XP earned</div>
+                        : submission.review_notes
+                        ? <div className="mt-1 line-clamp-2 text-[10px] text-orange-300">{submission.review_notes}</div>
+                        : null}
+                    </div>
+                    {submission.media_url && (
+                      <a href={submission.media_url} target="_blank" rel="noopener noreferrer" className="shrink-0 text-[10px] font-bold text-white/45 hover:text-white">View</a>
+                    )}
+                    {canReplace && (
+                      <button type="button" onClick={() => openSubmissionForm(b.id, slotIndex)} className="shrink-0 rounded-lg border border-white/10 px-2.5 py-2 text-[10px] font-black text-white/65 hover:text-white">
+                        Replace
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => openSubmissionForm(b.id, slotIndex)}
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-white/15 px-3 py-3 text-xs font-black text-white/60 transition-colors hover:border-[#B8FF1B]/60 hover:text-white"
+                  >
+                    <Plus size={14} /> Upload {contentLabel}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -2497,7 +2605,6 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     const subs: any[] = b.submissions ?? [];
     const lastSub = subs[0];
     const isExpanded = expandedBounty === b.id;
-    const isSubmitting = submitting === b.id;
     const subStatusCfg = lastSub ? (STATUS_CONFIG[lastSub.status] ?? { label: lastSub.status, color: "#94a3b8", bg: "" }) : null;
     const rowStatus = subStatusCfg?.label ?? (done ? "Completed" : submitted > 0 ? "In Progress" : "Not Started");
 
@@ -2507,7 +2614,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           title={objectiveLabel(b)}
           description={objectiveDescription(b)}
           contentType={b.content_type}
-          xp={Number(b.xp_reward ?? 0)}
+          xp={Number(b.xp_reward ?? 0) * qty}
           quantity={qty}
           progress={visibleProgress}
           interactive
@@ -2521,38 +2628,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         {isExpanded && (
          <div className="px-1 sm:px-10 pb-5 border-t border-white/[0.06] pt-4 space-y-4">
 
-            {subs.length > 0 && (
-              <div className="space-y-1.5">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-white/30">Submissions</div>
-                {subs.map((submission: any, index: number) => {
-                  const submissionCfg = STATUS_CONFIG[submission.status] ?? { label: submission.status, color: "#94a3b8", bg: "" };
-                  return (
-                    <div key={index} className="flex items-center gap-2 py-2 border-b border-white/[0.05] last:border-b-0">
-                      {submission.thumbnail_url && <img src={submission.thumbnail_url} alt="" className="h-8 w-12 shrink-0 rounded object-cover" />}
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-[11px] font-bold text-white/70">{submission.media_title || "Campaign submission"}</div>
-                        <div className="text-[10px] text-white/35">{submission.submitted_at ? new Date(submission.submitted_at).toLocaleString() : "Submitted"}</div>
-                      </div>
-                      <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: submissionCfg.color, background: submissionCfg.bg }}>{submissionCfg.label}</span>
-                      {(submission.status === "pending" || submission.status === "under_review") && <span className="shrink-0 text-[10px] font-bold text-white/45">+{Number(b.xp_reward ?? 0).toLocaleString()} XP pending</span>}
-                      {submission.review_notes && <div className="text-[10px] text-orange-400 ml-auto">{submission.review_notes}</div>}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {!done && !applicationPending && (
-              isSubmitting ? renderSubmissionForm(b) : (
-                <button
-                   onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); setNativeFile(null); setNativePreview(null); setNativeTitle(""); setNativeDescription(""); setNativeUploadError(null); setNativeUploadStage("idle"); }}
-                  className="w-full sm:w-auto rounded-lg px-5 py-2.5 text-sm font-black transition-all hover:brightness-110"
-                  style={{ background: NEON, color: "#070b10" }}
-                >
-                  {lastSub?.status === "changes_requested" ? "Replace submission" : ["clip", "reel", "screenshot"].includes(b.content_type) ? "Upload content" : "Start objective"}
-                </button>
-              )
-            )}
+             {!applicationPending && renderSubmissionSlots(b)}
           </div>
         )}
       </div>
@@ -2705,7 +2781,6 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               const subs: any[] = b.submissions ?? [];
               const lastSub = subs[0];
               const isExpanded = expandedBounty === b.id;
-              const isSubmitting = submitting === b.id;
 
               const subStatusCfg = lastSub ? (STATUS_CONFIG[lastSub.status] ?? { label: lastSub.status, color: "#94a3b8", bg: "" }) : null;
               const rowStatus = subStatusCfg?.label ?? (done ? "Completed" : submitted > 0 ? "Submitted" : "Not Started");
@@ -2716,7 +2791,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                     title={objectiveLabel(b)}
                     description={objectiveDescription(b)}
                     contentType={b.content_type}
-                    xp={Number(b.xp_reward ?? 0)}
+                    xp={Number(b.xp_reward ?? 0) * qty}
                     quantity={qty}
                     progress={visibleProgress}
                     interactive
@@ -2729,39 +2804,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                   {isExpanded && (
                         <div className="px-1 sm:px-10 pb-5 border-t border-white/[0.06] pt-4 space-y-4">
 
-                      {/* Submission history */}
-                      {subs.length > 0 && (
-                        <div className="space-y-1.5">
-                          <div className="text-[10px] font-bold uppercase tracking-wider text-white/30">Submissions</div>
-                          {subs.map((s: any, i: number) => {
-                            const sCfg = STATUS_CONFIG[s.status] ?? { label: s.status, color: "#94a3b8", bg: "" };
-                            return (
-                              <div key={i} className="flex items-center gap-2 py-2 border-b border-white/[0.05] last:border-b-0">
-                                {s.thumbnail_url && <img src={s.thumbnail_url} alt="" className="h-8 w-12 shrink-0 rounded object-cover" />}
-                                <div className="min-w-0 flex-1">
-                                  <div className="truncate text-[11px] font-bold text-white/70">{s.media_title || "Campaign submission"}</div>
-                                  <div className="text-[10px] text-white/35">{s.submitted_at ? new Date(s.submitted_at).toLocaleString() : "Submitted"}</div>
-                                </div>
-                                <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: sCfg.color, background: sCfg.bg }}>{sCfg.label}</span>
-                                {(s.status === "pending" || s.status === "under_review") && <span className="shrink-0 text-[10px] font-bold text-white/45">+{Number(b.xp_reward ?? 0).toLocaleString()} XP pending</span>}
-                                {s.review_notes && <div className="text-[10px] text-orange-400 ml-auto">{s.review_notes}</div>}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {/* Submit button/form */}
-                      {!done && !applicationPending && (
-                        isSubmitting ? renderSubmissionForm(b) : (
-                          <button
-                            onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); setNativeFile(null); setNativePreview(null); setNativeTitle(""); setNativeDescription(""); setNativeUploadError(null); setNativeUploadStage("idle"); }}
-                            className="w-full sm:w-auto rounded-lg px-5 py-2.5 text-sm font-black transition-all hover:brightness-110"
-                            style={{ background: NEON, color: "#070b10" }}>
-                            {["clip", "reel", "screenshot"].includes(b.content_type) ? "Upload content" : "Start objective"}
-                          </button>
-                        )
-                      )}
+                      {!applicationPending && renderSubmissionSlots(b)}
                     </div>
                   )}
                 </div>

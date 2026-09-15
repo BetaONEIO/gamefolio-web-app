@@ -13,6 +13,7 @@ type Submission = {
   instance_id: number;
   participant_id: number;
   bounty_id: number;
+  slot_index?: number | null;
   content_type: string;
   clip_id?: number | null;
   screenshot_id?: number | null;
@@ -140,7 +141,10 @@ export default function SubmissionReviewTab() {
         <div className="flex items-center gap-3">
           {submission.thumbnail_url ? <img src={submission.thumbnail_url} className="h-14 w-20 rounded-lg object-cover" alt="" /> : <div className="flex h-14 w-20 items-center justify-center rounded-lg bg-white/[0.04]"><Icon size={18} className="text-white/35" /></div>}
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-black text-white">{submission.bounty_title ?? "Campaign objective"}</div>
+            <div className="truncate text-sm font-black text-white">
+              {submission.bounty_title ?? "Campaign objective"}
+              {submission.slot_index != null && ` · ${submission.content_type === "reel" ? "Reel" : submission.content_type === "screenshot" ? "Screenshot" : "Clip"} ${Number(submission.slot_index) + 1}`}
+            </div>
             <div className="mt-1 text-xs text-white/45">@{submission.username} · {submission.campaign_title ?? submission.game_name ?? "Campaign"}</div>
             <div className="mt-1 text-[10px] text-white/30">{new Date(submission.submitted_at).toLocaleString()}</div>
           </div>
