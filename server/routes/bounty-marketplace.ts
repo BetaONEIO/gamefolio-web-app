@@ -1321,12 +1321,16 @@ router.get('/my/content-picker', requireAuth, async (req, res) => {
   if (rejectIndieDeveloperParticipation(req, res)) return;
   const userId = req.user!.id;
   const contentType = (req.query.contentType as string) || 'clip';
+  const gameId = req.query.gameId == null ? null : Number(req.query.gameId);
   try {
     let items: any[] = [];
     if (contentType === 'clip' || contentType === 'reel') {
       const result = await db.execute(sql`
         SELECT id, title, thumbnail_url AS "thumbnailUrl", created_at AS "createdAt"
-        FROM clips WHERE user_id = ${userId}
+        FROM clips
+        WHERE user_id = ${userId}
+          AND COALESCE(video_type, 'clip') = ${contentType}
+          ${gameId != null && Number.isInteger(gameId) ? sql`AND game_id = ${gameId}` : sql``}
         ORDER BY created_at DESC LIMIT 36
       `);
       items = toRows(result);
@@ -1336,6 +1340,7 @@ router.get('/my/content-picker', requireAuth, async (req, res) => {
           COALESCE(thumbnail_url, image_url) AS "thumbnailUrl",
           created_at AS "createdAt"
         FROM screenshots WHERE user_id = ${userId}
+          ${gameId != null && Number.isInteger(gameId) ? sql`AND game_id = ${gameId}` : sql``}
         ORDER BY created_at DESC LIMIT 36
       `);
       items = toRows(result);
@@ -1431,9 +1436,19 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
       SELECT
         b.*,
         (
-          SELECT json_agg(s ORDER BY s.submitted_at DESC)
-          FROM campaign_bounty_submissions s
-          WHERE s.bounty_id = b.id AND s.instance_id = ${instanceId} AND s.participant_id = ${userId}
+          SELECT json_agg(submission ORDER BY submission.submitted_at DESC)
+          FROM (
+            SELECT
+              s.id, s.status, s.review_notes, s.submitted_at, s.reviewed_at,
+              s.content_type, s.clip_id, s.screenshot_id, s.reel_id,
+              s.content_url, s.content_data, s.xp_awarded,
+              COALESCE(c.title, ss.title) AS media_title,
+              COALESCE(c.thumbnail_url, ss.thumbnail_url, c.video_url, ss.image_url) AS thumbnail_url
+            FROM campaign_bounty_submissions s
+            LEFT JOIN clips c ON c.id = COALESCE(s.clip_id, s.reel_id)
+            LEFT JOIN screenshots ss ON ss.id = s.screenshot_id
+            WHERE s.bounty_id = b.id AND s.instance_id = ${instanceId} AND s.participant_id = ${userId}
+          ) submission
         ) AS submissions,
         (
           SELECT COUNT(*) FROM campaign_bounty_submissions s
@@ -1507,7 +1522,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
 
     // Verify participation
     const [participation] = toRows(await db.execute(sql`
-      SELECT cp.id, cp.status, cp.deadline, ci.end_date, ci.manual_approval_required
+      SELECT cp.id, cp.status, cp.deadline, ci.end_date, ci.manual_approval_required, ci.game_id
       FROM campaign_participants cp
       JOIN campaign_instances ci ON ci.id = cp.instance_id
       WHERE cp.instance_id = ${instanceId} AND cp.user_id = ${userId}
@@ -1521,7 +1536,8 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
 
     // Load bounty definition + campaign tier
     const [bounty] = toRows(await db.execute(sql`
-      SELECT b.*, t.id AS template_id, COALESCE(t.xp_tier, 'standard') AS xp_tier, ci.developer_user_id
+      SELECT b.*, t.id AS template_id, COALESCE(t.xp_tier, 'standard') AS xp_tier,
+        ci.developer_user_id, ci.game_id AS campaign_game_id
       FROM campaign_template_bounties b
       JOIN campaign_templates t ON t.id = b.template_id
       JOIN campaign_instances ci ON ci.template_id = t.id
@@ -1539,15 +1555,46 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
     if (contentType && contentType !== bounty.content_type) {
       return res.status(400).json({ error: `This objective requires ${bounty.content_type} content` });
     }
-    // A content id may only reference the authenticated participant's own upload.
-    if (clipId || reelId) {
-      const contentId = Number(clipId ?? reelId);
-      const [clip] = toRows(await db.execute(sql`SELECT id FROM clips WHERE id = ${contentId} AND user_id = ${userId}`));
-      if (!clip) return res.status(403).json({ error: 'Selected clip does not belong to you' });
+    const campaignGameId = participation.game_id == null ? null : Number(participation.game_id);
+    const expectedContentType = String(bounty.content_type);
+    const suppliedMediaIds = [clipId, reelId, screenshotId].filter((value) => value != null);
+    if (suppliedMediaIds.length > 1) {
+      return res.status(400).json({ error: 'Only one media item can be attached to a submission' });
     }
-    if (screenshotId) {
-      const [screenshot] = toRows(await db.execute(sql`SELECT id FROM screenshots WHERE id = ${Number(screenshotId)} AND user_id = ${userId}`));
+    if (['clip', 'reel', 'screenshot'].includes(expectedContentType) && campaignGameId == null) {
+      return res.status(409).json({ error: 'This campaign does not have a configured game for media submissions' });
+    }
+    if (expectedContentType === 'clip' || expectedContentType === 'reel') {
+      const expectedId = expectedContentType === 'reel' ? reelId : clipId;
+      if (expectedId == null || (expectedContentType === 'clip' && reelId != null) || (expectedContentType === 'reel' && clipId != null)) {
+        return res.status(400).json({ error: `This objective requires a ${expectedContentType}` });
+      }
+      const [clip] = toRows(await db.execute(sql`
+        SELECT id, game_id, COALESCE(video_type, 'clip') AS video_type
+        FROM clips
+        WHERE id = ${Number(expectedId)} AND user_id = ${userId}
+      `));
+      if (!clip) return res.status(403).json({ error: `Selected ${expectedContentType} does not belong to you` });
+      if (Number(clip.game_id) !== campaignGameId) {
+        return res.status(400).json({ error: `Selected ${expectedContentType} is not associated with this campaign game` });
+      }
+      if (clip.video_type !== expectedContentType) {
+        return res.status(400).json({ error: `Selected media is not a ${expectedContentType}` });
+      }
+    }
+    if (expectedContentType === 'screenshot') {
+      if (screenshotId == null || clipId != null || reelId != null) {
+        return res.status(400).json({ error: 'This objective requires a screenshot' });
+      }
+      const [screenshot] = toRows(await db.execute(sql`
+        SELECT id, game_id
+        FROM screenshots
+        WHERE id = ${Number(screenshotId)} AND user_id = ${userId}
+      `));
       if (!screenshot) return res.status(403).json({ error: 'Selected screenshot does not belong to you' });
+      if (Number(screenshot.game_id) !== campaignGameId) {
+        return res.status(400).json({ error: 'Selected screenshot is not associated with this campaign game' });
+      }
     }
 
     const [existingUnits] = toRows(await db.execute(sql`
@@ -1595,7 +1642,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
          content_url, content_data, status, objective_state, validation_state,
           submitted_at, xp_awarded, supersedes_submission_id)
       VALUES
-        (${instanceId}, ${userId}, ${participation.id}, ${bountyId}, ${userId}, ${bounty.game_id ?? null}, ${bountyId},
+        (${instanceId}, ${userId}, ${participation.id}, ${bountyId}, ${userId}, ${bounty.campaign_game_id ?? null}, ${bountyId},
          ${clipId ?? screenshotId ?? reelId ?? null}, ${contentType ?? bounty.content_type},
          ${contentType ?? bounty.content_type},
          ${clipId ?? null}, ${screenshotId ?? null}, ${reelId ?? null},

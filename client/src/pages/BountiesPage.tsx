@@ -1993,6 +1993,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const [nativeTitle, setNativeTitle] = useState("");
   const [nativeDescription, setNativeDescription] = useState("");
   const [nativeDragging, setNativeDragging] = useState(false);
+  const [nativeUploadError, setNativeUploadError] = useState<string | null>(null);
+  const [nativeUploadStage, setNativeUploadStage] = useState<"idle" | "uploading" | "processing" | "submitting">("idle");
   const [showDetails, setShowDetails] = useState(false);
   const [revealedAccessKey, setRevealedAccessKey] = useState<string | null>(null);
   const [revealedDeadline, setRevealedDeadline] = useState<string | null>(null);
@@ -2021,7 +2023,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const { data: pickerData, isLoading: pickerLoading } = useQuery<any>({
     queryKey: ["/api/bounties/my/content-picker", submittingBounty?.content_type],
     queryFn: async () => {
-      const res = await fetch(`/api/bounties/my/content-picker?contentType=${encodeURIComponent(submittingBounty.content_type)}`, { credentials: "include" });
+      const gameQuery = data?.game_id ? `&gameId=${encodeURIComponent(String(data.game_id))}` : "";
+      const res = await fetch(`/api/bounties/my/content-picker?contentType=${encodeURIComponent(submittingBounty.content_type)}${gameQuery}`, { credentials: "include" });
       if (!res.ok) throw new Error("Could not load your Gamefolio content");
       return res.json();
     },
@@ -2091,6 +2094,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       setNativePreview(null);
       setNativeTitle("");
       setNativeDescription("");
+      setNativeUploadError(null);
+      setNativeUploadStage("idle");
       toast({ title: "Submitted for review", description: "Gamefolio will verify your submission" });
     },
     onError: async (err: any) => {
@@ -2102,6 +2107,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     mutationFn: async ({ bountyId, file, title, description, supersedesSubmissionId }: { bountyId: number; file: File; title?: string; description?: string; supersedesSubmissionId?: number }) => {
       const bounty = progressBounties.find((item: any) => item.id === bountyId);
       if (!bounty) throw new Error("Objective not found");
+      setNativeUploadError(null);
+      setNativeUploadStage("uploading");
       const submissionTitle = title?.trim() || bounty.title || "Campaign upload";
       const submissionDescription = description?.trim() || data?.description || "";
 
@@ -2113,6 +2120,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         const upload = await fetch("/api/screenshots/upload", { method: "POST", body: form, credentials: "include" });
         const uploaded = await upload.json().catch(() => ({}));
         if (!upload.ok) throw new Error(uploaded?.message ?? "Screenshot upload failed");
+        setNativeUploadStage("submitting");
         return apiRequest("POST", `/api/bounties/my/${cp.instance_id}/submit/${bountyId}`, {
           contentType: bounty.content_type,
           screenshotId: uploaded.screenshot?.id,
@@ -2127,6 +2135,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       const uploaded = await upload.json().catch(() => ({}));
       if (!upload.ok) throw new Error(uploaded?.message ?? uploaded?.error ?? "Video upload failed");
 
+      setNativeUploadStage("processing");
       const processed = await apiRequest("POST", "/api/upload/process-video", {
         uploadResult: uploaded.result,
         title: submissionTitle,
@@ -2137,6 +2146,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       const processedData = await processed.json();
       const mediaId = processedData.clip?.id;
       if (!mediaId) throw new Error("Video was uploaded but could not be published");
+      setNativeUploadStage("submitting");
       return apiRequest("POST", `/api/bounties/my/${cp.instance_id}/submit/${bountyId}`, {
         contentType: bounty.content_type,
         ...(bounty.content_type === "reel" ? { reelId: mediaId } : { clipId: mediaId }),
@@ -2152,12 +2162,35 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       setNativeTitle("");
       setNativeDescription("");
       setSelectedContentId(null);
+      setNativeUploadError(null);
+      setNativeUploadStage("idle");
       toast({ title: "Submitted for review", description: "Your upload is now attached to this campaign objective." });
     },
-    onError: (err: any) => toast({ title: "Upload failed", description: err?.message ?? "Could not submit this upload", variant: "destructive" }),
+    onError: (err: any) => {
+      setNativeUploadStage("idle");
+      setNativeUploadError(err?.message ?? "Could not submit this upload");
+      toast({ title: "Upload failed", description: err?.message ?? "Could not submit this upload", variant: "destructive" });
+    },
   });
 
   const selectNativeFile = (file: File | null) => {
+    if (file) {
+      const activeType = submittingBounty?.content_type;
+      const isScreenshot = activeType === "screenshot";
+      const allowed = isScreenshot
+        ? ["image/jpeg", "image/png", "image/jpg", "image/webp"]
+        : ["video/mp4", "video/webm", "video/quicktime"];
+      if (file.type && !allowed.includes(file.type)) {
+        setNativeUploadError(isScreenshot ? "Please choose a JPG, PNG, or WebP image." : "Please choose an MP4, WebM, or MOV video.");
+        return;
+      }
+      const maxMb = isScreenshot ? uploadLimits?.maxScreenshotSizeMB : (activeType === "reel" ? uploadLimits?.maxReelSizeMB : uploadLimits?.maxClipSizeMB);
+      if (maxMb && file.size > maxMb * 1024 * 1024) {
+        setNativeUploadError(`This file is larger than the ${maxMb}MB campaign upload limit.`);
+        return;
+      }
+    }
+    setNativeUploadError(null);
     setNativeFile(file);
     setNativePreview(file ? URL.createObjectURL(file) : null);
     setSelectedContentId(null);
@@ -2218,6 +2251,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     const isVideo = ["clip", "reel"].includes(b.content_type);
     const replacement = (b.submissions ?? []).find((submission: any) => submission.status === "changes_requested");
     const isNativeBusy = nativeSubmitMutation.isPending;
+    const campaignArtwork = data.game_artwork_url || data.hero_artwork_url || data.catalog_game_artwork_url || data.campaign_artwork_url;
+    const campaignName = data.campaign_title || data.template_name || cp.template_name || "Campaign";
+    const gameName = data.game_name || "Campaign game";
+    const lockedGameId = data.game_id;
     const existingPicker = (
       <div className="space-y-3 border-t border-white/[0.08] pt-4">
         <div className="text-[10px] font-black uppercase tracking-wider text-white/35">
@@ -2250,8 +2287,27 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         ) : <div className="py-3 text-xs text-white/45">No matching Gamefolio content yet.</div>}
       </div>
     );
+    const campaignContext = (
+      <div className="flex items-center gap-3 rounded-xl border border-white/[0.09] bg-white/[0.025] p-3">
+        <div className="h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-black/30">
+          {campaignArtwork
+            ? <img src={campaignArtwork} alt="" className="h-full w-full object-cover" />
+            : <div className="flex h-full items-center justify-center"><Icon size={18} className="text-white/35" /></div>}
+        </div>
+        <div className="min-w-0">
+          <div className="text-[9px] font-black uppercase tracking-[0.18em] text-white/35">Submitting to campaign</div>
+          <div className="mt-1 truncate text-sm font-black text-white">{campaignName}</div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-white/45">
+            <span>{gameName}</span>
+            <span className="text-white/20">·</span>
+            <span className="truncate">{objectiveLabel(b)}</span>
+          </div>
+        </div>
+      </div>
+    );
     return (
       <div className="space-y-4 border-t border-white/[0.06] pt-5">
+        {campaignContext}
         {isVideo ? (
           <>
             <div className="flex items-center justify-between gap-3">
@@ -2261,68 +2317,89 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 <span>Maximum {uploadLimits?.maxClipSizeMB ?? 100}MB · {Math.round((uploadLimits?.maxClipDurationSeconds ?? 180) / 60)} min</span>
               </div>
             </div>
-            <div
-              className={`rounded-lg border-2 border-dashed p-8 text-center transition-colors ${nativeDragging ? "border-[#B8FF1B] bg-[#B8FF1B]/5" : "border-white/15"} ${!nativeFile ? "cursor-pointer hover:border-[#B8FF1B]" : ""}`}
-              onClick={() => !nativeFile && document.getElementById("campaign-video-upload")?.click()}
-              onDragEnter={(event) => { event.preventDefault(); setNativeDragging(true); }}
-              onDragOver={(event) => { event.preventDefault(); setNativeDragging(true); }}
-              onDragLeave={(event) => { event.preventDefault(); setNativeDragging(false); }}
-              onDrop={(event) => {
-                event.preventDefault();
-                setNativeDragging(false);
-                if (!nativeFile) selectNativeFile(event.dataTransfer.files?.[0] ?? null);
-              }}
-            >
-              <input
-                id="campaign-video-upload"
-                type="file"
-                className="hidden"
-                accept="video/mp4,video/webm,video/quicktime"
-                onChange={(event) => selectNativeFile(event.target.files?.[0] ?? null)}
-              />
-              {nativeFile && nativePreview ? (
-                <div className="space-y-3">
-                  <video src={nativePreview} controls className="mx-auto max-h-56 w-full rounded-lg bg-black object-contain" />
-                  <div className="flex items-center justify-between gap-3 text-left">
-                    <span className="truncate text-xs text-white/65">{nativeFile.name}</span>
-                    <button type="button" onClick={(event) => { event.stopPropagation(); selectNativeFile(null); }} className="text-xs text-white/40 hover:text-white">Remove</button>
+            <input
+              id="campaign-video-upload"
+              type="file"
+              className="hidden"
+              accept="video/mp4,video/webm,video/quicktime"
+              onChange={(event) => selectNativeFile(event.target.files?.[0] ?? null)}
+            />
+            {!nativeFile || !nativePreview ? (
+              <div
+                className={`rounded-lg border-2 border-dashed p-8 text-center transition-colors ${nativeDragging ? "border-[#B8FF1B] bg-[#B8FF1B]/5" : "border-white/15"} cursor-pointer hover:border-[#B8FF1B]`}
+                onClick={() => document.getElementById("campaign-video-upload")?.click()}
+                onDragEnter={(event) => { event.preventDefault(); setNativeDragging(true); }}
+                onDragOver={(event) => { event.preventDefault(); setNativeDragging(true); }}
+                onDragLeave={(event) => { event.preventDefault(); setNativeDragging(false); }}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  setNativeDragging(false);
+                  selectNativeFile(event.dataTransfer.files?.[0] ?? null);
+                }}
+              >
+                <Upload className="mx-auto mb-2 h-10 w-10 text-white/45" />
+                <p className="font-medium text-white/80">Drag and drop your video or click to browse</p>
+                <p className="mt-1 text-sm text-white/35">
+                  MP4, WebM, or MOV up to {uploadLimits?.maxClipSizeMB ?? 100}MB · {Math.round((uploadLimits?.maxClipDurationSeconds ?? 180) / 60)} min
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)]">
+                <div className="overflow-hidden rounded-xl border border-white/[0.10] bg-black/40">
+                  <video src={nativePreview} controls className="h-[320px] w-full bg-black object-contain sm:h-[370px]" />
+                  <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] px-3 py-2.5">
+                    <span className="min-w-0 truncate text-xs text-white/65">{nativeFile.name}</span>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <label htmlFor="campaign-video-upload" className="cursor-pointer text-xs font-bold text-white/55 hover:text-white">Replace</label>
+                      <button type="button" onClick={() => selectNativeFile(null)} className="text-xs text-white/40 hover:text-white">Remove</button>
+                    </div>
                   </div>
                 </div>
-              ) : (
-                <div>
-                  <Upload className="mx-auto mb-2 h-12 w-12 text-white/45" />
-                  <p className="font-medium text-white/80">Drag and drop your video or click to browse</p>
-                  <p className="mt-1 text-sm text-white/35">
-                    MP4, WebM, or MOV up to {uploadLimits?.maxClipSizeMB ?? 100}MB · {Math.round((uploadLimits?.maxClipDurationSeconds ?? 180) / 60)} min
-                  </p>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <label htmlFor="campaign-video-title" className="flex items-center gap-1 text-xs font-semibold text-white/85">
+                      Clip Title <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      id="campaign-video-title"
+                      value={nativeTitle}
+                      onChange={(event) => setNativeTitle(event.target.value)}
+                      placeholder="Give your clip a title"
+                      maxLength={100}
+                      className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#B8FF1B]/60"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="campaign-video-description" className="text-xs font-semibold text-white/85">Description</label>
+                    <textarea
+                      id="campaign-video-description"
+                      value={nativeDescription}
+                      onChange={(event) => setNativeDescription(event.target.value)}
+                      placeholder="What’s happening in this clip?"
+                      className="min-h-24 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#B8FF1B]/60"
+                    />
+                    <p className="text-[10px] text-white/35">Use @username to mention other users.</p>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 py-2.5">
+                    <Lock size={13} className="shrink-0 text-white/35" />
+                    <div className="min-w-0">
+                      <div className="text-[9px] font-black uppercase tracking-wider text-white/35">Game</div>
+                      <div className="truncate text-xs font-bold text-white/75">{gameName}</div>
+                      {!lockedGameId && <div className="text-[10px] text-red-300">This campaign game is not configured.</div>}
+                    </div>
+                  </div>
+                  <p className="text-[10px] leading-relaxed text-white/35">This video will be published to your Gamefolio profile and attached to this campaign for developer review.</p>
                 </div>
-              )}
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="campaign-video-title" className="flex items-center gap-1 text-xs font-semibold text-white/85">
-                Title <span className="text-red-400">*</span>
-              </label>
-              <input
-                id="campaign-video-title"
-                value={nativeTitle}
-                onChange={(event) => setNativeTitle(event.target.value)}
-                placeholder="Give your clip a catchy title"
-                maxLength={100}
-                className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#B8FF1B]/60"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="campaign-video-description" className="text-xs font-semibold text-white/85">Description (use @username to mention users)</label>
-              <textarea
-                id="campaign-video-description"
-                value={nativeDescription}
-                onChange={(event) => setNativeDescription(event.target.value)}
-                placeholder="Describe what's happening in your clip. Use @username to mention other users!"
-                className="min-h-24 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#B8FF1B]/60"
-              />
-            </div>
+              </div>
+            )}
+            {nativeUploadError && <div className="rounded-lg border border-red-400/20 bg-red-400/[0.08] px-3 py-2 text-xs text-red-200" role="alert">{nativeUploadError}</div>}
+            {isNativeBusy && (
+              <div className="flex items-center gap-2 text-[11px] font-bold text-white/55" role="status" aria-live="polite">
+                <Loader2 size={13} className="animate-spin" />
+                {nativeUploadStage === "processing" ? "Processing your video…" : nativeUploadStage === "submitting" ? "Attaching to campaign…" : "Uploading your video…"}
+              </div>
+            )}
             {existingPicker}
-            <p className="text-[10px] text-white/30">Your video will be published to Gamefolio and attached to this objective for developer review.</p>
           </>
         ) : isMedia ? (
           <>
@@ -2402,9 +2479,9 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             className="flex-1 rounded-lg py-2.5 text-sm font-black transition-all hover:brightness-110 disabled:opacity-50"
             style={{ background: NEON, color: "#070b10" }}
           >
-            {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : `Submit ${isMedia ? b.content_type === "screenshot" ? "screenshot" : "content" : b.content_type === "feedback" ? "feedback" : "report"}`}
+            {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : isMedia ? "Submit to Campaign" : b.content_type === "feedback" ? "Submit feedback" : "Submit report"}
           </button>
-          <button type="button" onClick={() => { setSubmitting(null); setSubmitUrl(""); setSelectedContentId(null); selectNativeFile(null); setNativeTitle(""); setNativeDescription(""); }} className="px-4 py-2 text-sm text-white/50 hover:text-white">Cancel</button>
+          <button type="button" onClick={() => { setSubmitting(null); setSubmitUrl(""); setSelectedContentId(null); selectNativeFile(null); setNativeTitle(""); setNativeDescription(""); setNativeUploadError(null); setNativeUploadStage("idle"); }} className="px-4 py-2 text-sm text-white/50 hover:text-white">Cancel</button>
         </div>
       </div>
     );
@@ -2442,8 +2519,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         />
 
         {isExpanded && (
-          <div className="px-1 sm:px-10 pb-5 border-t border-white/[0.06] pt-4 space-y-4">
-            {b.description && <div className="text-xs text-white/50">{b.description}</div>}
+         <div className="px-1 sm:px-10 pb-5 border-t border-white/[0.06] pt-4 space-y-4">
 
             {subs.length > 0 && (
               <div className="space-y-1.5">
@@ -2452,8 +2528,13 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                   const submissionCfg = STATUS_CONFIG[submission.status] ?? { label: submission.status, color: "#94a3b8", bg: "" };
                   return (
                     <div key={index} className="flex items-center gap-2 py-2 border-b border-white/[0.05] last:border-b-0">
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: submissionCfg.color, background: submissionCfg.bg }}>{submissionCfg.label}</span>
-                      {submission.content_url && <a href={submission.content_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-white/40 hover:text-white truncate max-w-[160px]">{submission.content_url}</a>}
+                      {submission.thumbnail_url && <img src={submission.thumbnail_url} alt="" className="h-8 w-12 shrink-0 rounded object-cover" />}
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[11px] font-bold text-white/70">{submission.media_title || "Campaign submission"}</div>
+                        <div className="text-[10px] text-white/35">{submission.submitted_at ? new Date(submission.submitted_at).toLocaleString() : "Submitted"}</div>
+                      </div>
+                      <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: submissionCfg.color, background: submissionCfg.bg }}>{submissionCfg.label}</span>
+                      {(submission.status === "pending" || submission.status === "under_review") && <span className="shrink-0 text-[10px] font-bold text-white/45">+{Number(b.xp_reward ?? 0).toLocaleString()} XP pending</span>}
                       {submission.review_notes && <div className="text-[10px] text-orange-400 ml-auto">{submission.review_notes}</div>}
                     </div>
                   );
@@ -2464,7 +2545,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             {!done && !applicationPending && (
               isSubmitting ? renderSubmissionForm(b) : (
                 <button
-                  onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); setNativeFile(null); setNativePreview(null); }}
+                   onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); setNativeFile(null); setNativePreview(null); setNativeTitle(""); setNativeDescription(""); setNativeUploadError(null); setNativeUploadStage("idle"); }}
                   className="w-full sm:w-auto rounded-lg px-5 py-2.5 text-sm font-black transition-all hover:brightness-110"
                   style={{ background: NEON, color: "#070b10" }}
                 >
@@ -2646,8 +2727,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                   />
 
                   {isExpanded && (
-                    <div className="px-1 sm:px-10 pb-5 border-t border-white/[0.06] pt-4 space-y-4">
-                      {b.description && <div className="text-xs text-white/50">{b.description}</div>}
+                        <div className="px-1 sm:px-10 pb-5 border-t border-white/[0.06] pt-4 space-y-4">
 
                       {/* Submission history */}
                       {subs.length > 0 && (
@@ -2657,8 +2737,13 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                             const sCfg = STATUS_CONFIG[s.status] ?? { label: s.status, color: "#94a3b8", bg: "" };
                             return (
                               <div key={i} className="flex items-center gap-2 py-2 border-b border-white/[0.05] last:border-b-0">
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: sCfg.color, background: sCfg.bg }}>{sCfg.label}</span>
-                                {s.content_url && <a href={s.content_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-white/40 hover:text-white truncate max-w-[160px]">{s.content_url}</a>}
+                                {s.thumbnail_url && <img src={s.thumbnail_url} alt="" className="h-8 w-12 shrink-0 rounded object-cover" />}
+                                <div className="min-w-0 flex-1">
+                                  <div className="truncate text-[11px] font-bold text-white/70">{s.media_title || "Campaign submission"}</div>
+                                  <div className="text-[10px] text-white/35">{s.submitted_at ? new Date(s.submitted_at).toLocaleString() : "Submitted"}</div>
+                                </div>
+                                <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ color: sCfg.color, background: sCfg.bg }}>{sCfg.label}</span>
+                                {(s.status === "pending" || s.status === "under_review") && <span className="shrink-0 text-[10px] font-bold text-white/45">+{Number(b.xp_reward ?? 0).toLocaleString()} XP pending</span>}
                                 {s.review_notes && <div className="text-[10px] text-orange-400 ml-auto">{s.review_notes}</div>}
                               </div>
                             );
@@ -2670,7 +2755,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                       {!done && !applicationPending && (
                         isSubmitting ? renderSubmissionForm(b) : (
                           <button
-                            onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); setNativeFile(null); setNativePreview(null); }}
+                            onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); setNativeFile(null); setNativePreview(null); setNativeTitle(""); setNativeDescription(""); setNativeUploadError(null); setNativeUploadStage("idle"); }}
                             className="w-full sm:w-auto rounded-lg px-5 py-2.5 text-sm font-black transition-all hover:brightness-110"
                             style={{ background: NEON, color: "#070b10" }}>
                             {["clip", "reel", "screenshot"].includes(b.content_type) ? "Upload content" : "Start objective"}
