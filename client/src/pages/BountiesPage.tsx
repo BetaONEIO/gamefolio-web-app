@@ -248,11 +248,17 @@ function campaignTabStatus(campaign: any): MyTab {
   if (["under_review", "submitted_for_review"].includes(status)) return "submitted";
   if (["completed", "completed_and_verified", "full_game_awarded"].includes(status)) return "completed";
   if (["expired", "rejected", "cancelled"].includes(status)) return "expired";
+  const deadline = campaignDeadline(campaign);
+  if (deadline && new Date(deadline).getTime() <= Date.now()) return "expired";
   return "active";
 }
 
 function campaignDeadline(campaign: any) {
-  return campaign.deadline ?? campaign.end_date ?? null;
+  return campaign.completion_deadline
+    ?? campaign.creator_deadline
+    ?? campaign.deadline
+    ?? campaign.end_date
+    ?? null;
 }
 
 function campaignDeadlineLabel(campaign: any) {
@@ -260,20 +266,23 @@ function campaignDeadlineLabel(campaign: any) {
   if (!deadline) return "No deadline";
   const diff = new Date(deadline).getTime() - Date.now();
   if (!Number.isFinite(diff)) return "No deadline";
-  if (diff <= 0) return "Ended";
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return "Ends today";
-  if (days === 1) return "Ends tomorrow";
-  return `Ends in ${days} days`;
+  if (diff <= 0) return "EXPIRED";
+  if (diff < 86400000) {
+    const hours = Math.max(1, Math.ceil(diff / 3600000));
+    return `${hours}h left`;
+  }
+  const days = Math.ceil(diff / 86400000);
+  return `${days}d left`;
 }
 
 function campaignDeadlineUrgency(campaign: any) {
   const deadline = campaignDeadline(campaign);
   if (!deadline) return "normal";
   const diff = new Date(deadline).getTime() - Date.now();
-  if (!Number.isFinite(diff) || diff <= 0) return "urgent";
+  if (!Number.isFinite(diff) || diff <= 0) return "expired";
+  if (diff < 86400000) return "critical";
   if (diff <= 2 * 86400000) return "urgent";
-  if (diff <= 7 * 86400000) return "soon";
+  if (diff <= 6 * 86400000) return "soon";
   return "normal";
 }
 
@@ -306,24 +315,17 @@ function campaignNextObjective(campaign: any, progress: { requiredUnits: number;
 }
 
 function campaignRewardSummary(campaign: any) {
-  const objectives: any[] = Array.isArray(campaign.objective_progress) ? campaign.objective_progress : [];
-  const objectiveXp = objectives.reduce((sum: number, objective: any) => sum + Number(objective.xp_reward ?? 0), 0);
-  const completionDescription = String(campaign.completion_reward_description ?? "");
-  const completionXp = Number(completionDescription.match(/([\d,]+)\s*XP/i)?.[1]?.replace(/,/g, "") ?? 0);
-  const gft = completionDescription.match(/([\d,]+)\s*GFT/i)?.[1];
   const rewards: { icon: any; label: string; tone?: string }[] = [];
-  const totalXp = objectiveXp + completionXp;
+  const totalXp = Number(campaign.total_campaign_xp ?? 0);
 
   if (totalXp > 0) rewards.push({ icon: Zap, label: `+${totalXp.toLocaleString()} Bounty XP Reward`, tone: NEON });
-  if (gft) rewards.push({ icon: Trophy, label: `${gft} GFT`, tone: "#fbbf24" });
-  if (campaign.completion_reward === "full_game_key" || /full[- ]game/i.test(completionDescription)) {
+  const gftAmount = Number(campaign.gft_reward_amount ?? 0);
+  if (gftAmount > 0) rewards.push({ icon: Trophy, label: `${gftAmount.toLocaleString()} GFT`, tone: "#fbbf24" });
+  if (campaign.has_full_game_reward || campaign.completion_reward_type === "full_game_key") {
     rewards.push({ icon: Gift, label: "Full game", tone: "#a78bfa" });
   }
-  if (campaign.completion_reward === "xp_badge" || /badge/i.test(completionDescription)) {
+  if (campaign.completion_reward_type === "xp_badge") {
     rewards.push({ icon: Star, label: "Profile badge", tone: "#60a5fa" });
-  }
-  if (rewards.length === 0 && completionDescription) {
-    rewards.push({ icon: Gift, label: completionDescription, tone: "rgba(255,255,255,0.68)" });
   }
   return rewards;
 }
