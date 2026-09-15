@@ -760,41 +760,6 @@ function FeaturedSlider({ campaigns, onSelect }: { campaigns: any[]; onSelect: (
   );
 }
 
-// ── Community stats strip ─────────────────────────────────────────────────
-function CommunityStats({ campaigns }: { campaigns: any[] }) {
-  const activeCampaigns = campaigns.length;
-  const creatorsPlaying = campaigns.reduce((a, c) => a + Number(c.participant_count ?? 0), 0);
-  const demoKeysClaimed = campaigns.reduce((a, c) => {
-    const total = Number(c.demo_key_total ?? c.demo_keys_remaining ?? 0);
-    const remaining = Number(c.demo_keys_remaining ?? 0);
-    return a + Math.max(0, total - remaining);
-  }, 0);
-  const clipsSubmitted = campaigns.reduce((a, c) => a + Number(c.total_submissions ?? 0), 0);
-  const completedCampaigns = campaigns.reduce((a, c) => a + Number(c.completed_count ?? 0), 0);
-
-  const stats = [
-    { icon: <Target size={15} color={NEON} />, label: "Active Campaigns", value: activeCampaigns.toLocaleString() },
-    { icon: <Users size={15} color={NEON} />, label: "Creators Playing", value: creatorsPlaying.toLocaleString() },
-    { icon: <Film size={15} color={NEON} />, label: "Clips Submitted", value: clipsSubmitted > 0 ? clipsSubmitted.toLocaleString() : "—" },
-    { icon: <img src="/icons/demo-key-icon.png" alt="" className="w-3.5 h-3.5 object-contain" />, label: "Demo Keys Claimed", value: demoKeysClaimed.toLocaleString() },
-    { icon: <Trophy size={15} color={NEON} />, label: "Campaigns Completed", value: completedCampaigns > 0 ? completedCampaigns.toLocaleString() : "—" },
-  ];
-
-  return (
-    <div className="flex overflow-x-auto" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.02)" }}>
-      {stats.map((s, i) => (
-        <div key={s.label} className="flex items-center gap-2.5 px-6 py-4 flex-1 min-w-[160px]" style={{ borderRight: i < stats.length - 1 ? "1px solid rgba(255,255,255,0.06)" : undefined }}>
-          <div className="flex-shrink-0">{s.icon}</div>
-          <div>
-            <div className="text-sm font-black text-white leading-none">{s.value}</div>
-            <div className="text-[10px] font-bold mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{s.label}</div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ── Filter sidebar data ────────────────────────────────────────────────────
 const FILTER_GROUPS = [
   {
@@ -3170,11 +3135,6 @@ export default function BountiesPage() {
       )}
 
       <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-
-        {/* ── Community Stats strip ── */}
-        {mainTab === "marketplace" && !isLoading && availableCampaigns.length > 0 && (
-          <CommunityStats campaigns={availableCampaigns} />
-        )}
 
         <DeveloperBountyHubPrompt />
 

@@ -63,6 +63,85 @@ function asArray(value: any): any[] {
   return [];
 }
 
+function jsonValue(value: any): any {
+  if (typeof value !== 'string') return value;
+  try { return JSON.parse(value); } catch { return value; }
+}
+
+/**
+ * Campaign instances keep their own objective snapshot. The template bounty
+ * rows remain the stable submission targets (and therefore provide ids), but
+ * their display fields must come from the instance snapshot when one exists.
+ */
+function mergeInstanceObjectives(templateBounties: any[], snapshotValue: any): any[] {
+  const snapshot = jsonValue(snapshotValue);
+  const definitions = Array.isArray(snapshot)
+    ? snapshot
+    : Array.isArray(snapshot?.objectives) ? snapshot.objectives : [];
+  if (definitions.length === 0) return templateBounties;
+
+  return definitions.map((definition: any, index: number) => {
+    const contentType = definition.content_type ?? definition.contentType ?? definition.type;
+    const order = Number(definition.completion_order ?? definition.completionOrder ?? index);
+    const template = templateBounties.find((candidate: any) =>
+      Number(candidate.completion_order ?? 0) === order ||
+      (contentType && candidate.content_type === contentType && !definitions
+        .slice(0, index)
+        .some((previous: any) => (previous.content_type ?? previous.contentType ?? previous.type) === candidate.content_type)),
+    ) ?? templateBounties[index];
+    return {
+      ...(template ?? {}),
+      ...definition,
+      id: template?.id ?? definition.id,
+      content_type: contentType ?? template?.content_type,
+      completion_order: Number.isFinite(order) ? order : index,
+      mandatory: definition.mandatory == null ? template?.mandatory : Boolean(definition.mandatory),
+      quantity: definition.quantity == null ? template?.quantity : Number(definition.quantity),
+      xp_reward: definition.xp_reward ?? definition.xpReward ?? template?.xp_reward,
+    };
+  }).filter((objective: any) => objective.content_type || objective.title || objective.id);
+}
+
+function objectiveXp(bounties: any[]): number | null {
+  const total = bounties.reduce((sum, bounty) =>
+    sum + Math.max(Number(bounty.xp_reward ?? 0), 0) * Math.max(Number(bounty.quantity ?? 1), 1), 0);
+  return total > 0 ? total : null;
+}
+
+function campaignRewardConfig(value: any): Record<string, any> {
+  const parsed = jsonValue(value);
+  return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+}
+
+function decorateCampaign(row: any): any {
+  const bounties = mergeInstanceObjectives(asArray(row.bounties), row.objective_snapshot);
+  const persistedXp = row.instance_bounty_xp_reward == null ? null : Number(row.instance_bounty_xp_reward);
+  const completionRewardType = row.completion_reward_type ?? row.completion_reward ?? null;
+  const rewardConfig = campaignRewardConfig(row.instance_reward_config ?? row.reward_config);
+  const gftAmount = Number(rewardConfig.gft ?? rewardConfig.gftAmount ?? 0);
+  return {
+    ...row,
+    bounties,
+    objective_snapshot: jsonValue(row.objective_snapshot),
+    description: row.description ?? null,
+    template_description: row.template_description ?? null,
+    participant_capacity: row.max_places ?? row.participant_capacity ?? null,
+    duration_days: row.creator_deadline_days ?? row.duration ?? null,
+    access_method: row.access_method ?? null,
+    application_period_days: row.application_period_days ?? null,
+    completion_reward_type: completionRewardType,
+    completion_reward_key_required: row.completion_reward_key_required == null
+      ? null : Boolean(row.completion_reward_key_required),
+    has_full_game_reward: completionRewardType === 'full_game_key' &&
+      row.completion_reward_key_required !== false,
+    gft_reward_amount: gftAmount > 0 ? gftAmount : null,
+    is_verified: ['approved', 'live'].includes(String(row.status)),
+    total_campaign_xp: persistedXp != null ? persistedXp : objectiveXp(bounties),
+    completion_bonus_xp: row.instance_completion_bonus_xp == null
+      ? null : Number(row.instance_completion_bonus_xp),
+  };
+}
+
 async function awardDurableCampaignReward(args: {
   instanceId: number;
   participantId: number;
@@ -472,9 +551,23 @@ router.get('/', async (req, res) => {
         ci.actual_start,
         ci.end_date,
         ci.created_at,
+        ci.developer_user_id,
+        ci.description,
+        ci.regions,
+        ci.platforms,
+        ci.access_method,
+        ci.application_period_days,
+        ci.creator_deadline_days,
+        ci.max_places,
+        ci.completion_reward_type,
+        ci.completion_reward_key_required,
+        ci.requires_access_key,
+        ci.objective_snapshot,
+        ci.reward_config AS instance_reward_config,
+        ci.reward_pool_contribution_pence,
         t.name AS template_name,
         t.slug AS template_slug,
-        t.description,
+        t.description AS template_description,
         t.category,
         t.duration,
         t.participant_capacity,
@@ -518,8 +611,12 @@ router.get('/', async (req, res) => {
         ) AS is_joined,
          (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo'
            AND gk.key_pool = 'access' AND gk.status = 'available') AS demo_keys_remaining,
-         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full'
+        (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full'
            AND gk.key_pool = 'reward' AND gk.status = 'available') AS full_keys_remaining,
+        (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo'
+          AND gk.key_pool = 'access') AS demo_key_total,
+        (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full'
+          AND gk.key_pool = 'reward') AS full_key_total,
         (SELECT json_agg(b ORDER BY b.completion_order) FROM campaign_template_bounties b WHERE b.template_id = t.id) AS bounties
       FROM campaign_instances ci
       JOIN campaign_templates t ON t.id = ci.template_id
@@ -533,25 +630,12 @@ router.get('/', async (req, res) => {
     let rows = toRows(campaigns);
 
     // Attach computed XP to each campaign
-    rows = rows.map((r: any) => {
-      const tier = (r.xp_tier || 'standard') as XPTier;
-      const mult = Number(r.xp_event_multiplier ?? 1.0);
-      return {
-        ...r,
-        total_campaign_xp: Number(r.instance_bounty_xp_reward ?? r.bounty_xp_reward) ||
-          getBountyRewardConfig(r.template_slug)?.totalReward ||
-          computeCampaignTotalXP(tier, mult),
-        completion_bonus_xp: Number(r.instance_completion_bonus_xp ?? r.completion_bonus_xp) ||
-          getBountyRewardConfig(r.template_slug)?.completionBonus ||
-          computeCompletionBonus(tier, mult),
-        xp_tier: tier,
-      };
-    });
+    rows = rows.map((r: any) => decorateCampaign(r));
 
     // Apply client-side filters
     if (filter === 'recommended') rows = rows.filter((r: any) => r.recommended);
     if (filter === 'demo_available') rows = rows.filter((r: any) => Number(r.demo_keys_remaining) > 0);
-    if (filter === 'full_game') rows = rows.filter((r: any) => r.completion_reward === 'full_game_key');
+    if (filter === 'full_game') rows = rows.filter((r: any) => r.has_full_game_reward);
 
     res.json(rows);
   } catch (err) {
@@ -569,7 +653,8 @@ router.get('/:instanceId', async (req, res) => {
         ci.*,
         t.name AS template_name,
         t.slug AS template_slug,
-        t.description,
+        ci.description AS description,
+        t.description AS template_description,
         t.best_use_case,
         t.category,
         t.duration,
@@ -587,6 +672,7 @@ router.get('/:instanceId', async (req, res) => {
          t.completion_bonus_xp,
          ci.bounty_xp_reward AS instance_bounty_xp_reward,
          ci.completion_bonus_xp AS instance_completion_bonus_xp,
+        ci.reward_config AS instance_reward_config,
         t.featured,
         t.recommended,
         COALESCE(t.xp_tier, 'standard') AS xp_tier,
@@ -597,6 +683,10 @@ router.get('/:instanceId', async (req, res) => {
            AND gk.key_pool = 'access' AND gk.status = 'available') AS demo_keys_remaining,
          (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full'
            AND gk.key_pool = 'reward' AND gk.status = 'available') AS full_keys_remaining,
+         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'demo'
+           AND gk.key_pool = 'access') AS demo_key_total,
+         (SELECT COUNT(*) FROM game_keys gk WHERE gk.instance_id = ci.id AND gk.key_type = 'full'
+           AND gk.key_pool = 'reward') AS full_key_total,
         (SELECT json_agg(b ORDER BY b.completion_order) FROM campaign_template_bounties b WHERE b.template_id = t.id) AS bounties
       FROM campaign_instances ci
       JOIN campaign_templates t ON t.id = ci.template_id
@@ -606,18 +696,7 @@ router.get('/:instanceId', async (req, res) => {
 
     if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
 
-    const tier = (campaign.xp_tier || 'standard') as XPTier;
-    const mult = Number(campaign.xp_event_multiplier ?? 1.0);
-    res.json({
-      ...campaign,
-      total_campaign_xp: Number(campaign.instance_bounty_xp_reward ?? campaign.bounty_xp_reward) ||
-        getBountyRewardConfig(campaign.template_slug)?.totalReward ||
-        computeCampaignTotalXP(tier, mult),
-      completion_bonus_xp: Number(campaign.instance_completion_bonus_xp ?? campaign.completion_bonus_xp) ||
-        getBountyRewardConfig(campaign.template_slug)?.completionBonus ||
-        computeCompletionBonus(tier, mult),
-      xp_tier: tier,
-    });
+    res.json(decorateCampaign(campaign));
   } catch (err) {
     res.status(500).json({ error: 'Failed to load campaign' });
   }
@@ -1106,10 +1185,23 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
         ci.game_itch_url,
         ci.game_epic_slug,
         ci.end_date,
+        ci.description,
+        ci.regions,
+        ci.platforms,
+        ci.access_method,
+        ci.application_period_days,
+        ci.creator_deadline_days,
+        ci.max_places,
+        ci.completion_reward_type,
+        ci.completion_reward_key_required,
+        ci.requires_access_key,
+        ci.objective_snapshot,
+        ci.reward_config AS instance_reward_config,
+        ci.reward_pool_contribution_pence,
         t.name AS template_name,
         t.slug AS template_slug,
         t.category,
-        t.description,
+        t.description AS template_description,
         t.best_use_case,
         t.duration,
         t.completion_reward,
@@ -1163,18 +1255,12 @@ router.get('/my/campaigns', requireAuth, async (req, res) => {
       ORDER BY cp.joined_at DESC
     `);
     res.json(toRows(campaigns).map((campaign: any) => {
-      const objectives = asArray(campaign.objective_progress);
-      const tier = (campaign.xp_tier || 'standard') as XPTier;
-      const mult = Number(campaign.xp_event_multiplier ?? 1.0);
+      const objectives = mergeInstanceObjectives(asArray(campaign.objective_progress), campaign.objective_snapshot);
+      const decorated = decorateCampaign({ ...campaign, bounties: objectives });
       return {
-        ...campaign,
-        total_campaign_xp: Number(campaign.instance_bounty_xp_reward ?? campaign.bounty_xp_reward) ||
-          getBountyRewardConfig(campaign.template_slug)?.totalReward ||
-          computeCampaignTotalXP(tier, mult),
-        completion_bonus_xp: Number(campaign.instance_completion_bonus_xp ?? campaign.completion_bonus_xp) ||
-          getBountyRewardConfig(campaign.template_slug)?.completionBonus ||
-          computeCompletionBonus(tier, mult),
-        ...campaignJourney(campaign, objectives),
+        ...decorated,
+        objective_progress: decorated.bounties,
+        ...campaignJourney(decorated, decorated.bounties),
       };
     }));
   } catch (err) {
@@ -1239,10 +1325,23 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         ci.game_itch_url,
         ci.game_epic_slug,
         ci.end_date,
+        ci.description,
+        ci.regions,
+        ci.platforms,
+        ci.access_method,
+        ci.application_period_days,
+        ci.creator_deadline_days,
+        ci.max_places,
+        ci.completion_reward_type,
+        ci.completion_reward_key_required,
+        ci.requires_access_key,
+        ci.objective_snapshot,
+        ci.reward_config AS instance_reward_config,
+        ci.reward_pool_contribution_pence,
         t.id AS template_id,
         t.name AS template_name,
         t.category,
-        t.description,
+        t.description AS template_description,
         t.best_use_case,
         t.duration,
         t.completion_reward,
@@ -1317,7 +1416,8 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
       ORDER BY b.completion_order ASC
     `));
 
-    const enrichedBounties = bounties.map((bounty: any) => {
+    const instanceBounties = mergeInstanceObjectives(bounties, participation.objective_snapshot);
+    const enrichedBounties = instanceBounties.map((bounty: any) => {
       const quantity = Math.max(Number(bounty.quantity ?? 1), 1);
       const approved = Math.min(Number(bounty.approved_count ?? 0), quantity);
       const submitted = Math.min(Number(bounty.submitted_count ?? 0), quantity);
@@ -1329,18 +1429,11 @@ router.get('/my/:instanceId', requireAuth, async (req, res) => {
         : 'not_started';
       return { ...bounty, required_units: quantity, submitted_units: submitted, approved_units: approved, remaining_units: quantity - approved, submission_status };
     });
-    const tier = (participation.xp_tier || 'standard') as XPTier;
-    const multiplier = Number(participation.xp_event_multiplier ?? 1.0);
+    const decorated = decorateCampaign({ ...participation, bounties: enrichedBounties });
     res.json({
-      ...participation,
+      ...decorated,
       bounties: enrichedBounties,
-      total_campaign_xp: Number(participation.instance_bounty_xp_reward ?? participation.bounty_xp_reward) ||
-        getBountyRewardConfig(participation.template_slug)?.totalReward ||
-        computeCampaignTotalXP(tier, multiplier),
-      completion_bonus_xp: Number(participation.instance_completion_bonus_xp ?? participation.completion_bonus_xp) ||
-        getBountyRewardConfig(participation.template_slug)?.completionBonus ||
-        computeCompletionBonus(tier, multiplier),
-      ...campaignJourney(participation, enrichedBounties),
+      ...campaignJourney(decorated, enrichedBounties),
     });
   } catch (err) {
     console.error('GET /api/bounties/my/:instanceId error:', err);

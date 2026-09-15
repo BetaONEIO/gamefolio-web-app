@@ -598,6 +598,30 @@ function canonicalTemplateMetrics(slug: string, fallback: any) {
   };
 }
 
+function normalizeObjectiveSnapshotRows(rows: any[]): any[] {
+  return rows.map((row: any, index: number) => ({
+    title: row.title,
+    description: row.description ?? null,
+    mandatory: Boolean(row.mandatory),
+    quantity: Math.max(Number(row.quantity ?? 1), 1),
+    completion_order: Number(row.completion_order ?? index),
+    xp_reward: Math.max(Number(row.xp_reward ?? 0), 0),
+    validation_method: row.validation_method ?? null,
+    content_type: row.content_type ?? null,
+  }));
+}
+
+async function loadObjectiveSnapshot(templateId: number): Promise<any[]> {
+  const rows = toRows(await db.execute(sql`
+    SELECT title, description, mandatory, quantity, completion_order,
+           xp_reward, validation_method, content_type
+    FROM campaign_template_bounties
+    WHERE template_id = ${templateId}
+    ORDER BY completion_order ASC, id ASC
+  `)) as any[];
+  return normalizeObjectiveSnapshotRows(rows);
+}
+
 function toRows(result: any): any[] {
   // drizzle-orm/postgres-js returns a RowList (array-like), not { rows: [] }
   // drizzle-orm/node-postgres returns { rows: [] }
@@ -1423,6 +1447,7 @@ router.post('/instances', requireAuth, async (req, res) => {
         customEstimate,
       );
     }
+    const persistedObjectiveSnapshot = await loadObjectiveSnapshot(resolvedTemplateId);
 
     const [instance] = toRows(await db.execute(sql`
       INSERT INTO campaign_instances
@@ -1461,9 +1486,7 @@ router.post('/instances', requireAuth, async (req, res) => {
             ? JSON.stringify(CAMPAIGN_COMMERCIAL_MODEL.starter.estimatedContent)
             : resolvedCommercialType === 'paid' && commercialEstimate
               ? JSON.stringify(commercialEstimate.content)
-              : canonicalObjectiveSnapshot
-                ? JSON.stringify(canonicalObjectiveSnapshot)
-                : (tmpl.objective_config ? JSON.stringify(tmpl.objective_config) : null)}::jsonb,
+               : JSON.stringify(persistedObjectiveSnapshot)}::jsonb,
           'draft', 'draft')
       RETURNING *
     `) as any[]);
@@ -1603,6 +1626,9 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         patchEstimate,
       );
     }
+    const persistedPatchObjectiveSnapshot = canonicalPatchedObjectives
+      ? await loadObjectiveSnapshot(patchTemplateId ?? existing.template_id)
+      : null;
 
     const newStatus = status === 'awaiting_review' ? 'awaiting_review' : undefined;
     const submittedAt = newStatus === 'awaiting_review' ? new Date().toISOString() : undefined;
@@ -1633,7 +1659,7 @@ router.patch('/instances/:id', requireAuth, async (req, res) => {
         manual_approval_required = COALESCE(${manualApprovalRequired ?? null}, manual_approval_required),
         reminder_thresholds_hours = COALESCE(${patchedReminderThresholds}, reminder_thresholds_hours),
         template_id = COALESCE(${patchTemplateId}, template_id),
-        objective_snapshot = COALESCE(${canonicalPatchedObjectives ? JSON.stringify(canonicalPatchedObjectives) : null}::jsonb, objective_snapshot),
+         objective_snapshot = COALESCE(${persistedPatchObjectiveSnapshot ? JSON.stringify(persistedPatchObjectiveSnapshot) : null}::jsonb, objective_snapshot),
         bounty_xp_reward = COALESCE(${patchEstimate?.totalXp ?? null}, bounty_xp_reward),
         completion_bonus_xp = COALESCE(${patchEstimate?.completionBonus ?? null}, completion_bonus_xp),
         estimate_snapshot = COALESCE(${patchEstimate ? JSON.stringify(patchEstimate) : null}::jsonb, estimate_snapshot),
