@@ -27,6 +27,7 @@ import { Game } from "@shared/schema";
 import { isPartnerType } from "@shared/partner-access";
 import { BOUNTIES_ENABLED, GAME_DEVELOPER_FEATURES_ENABLED } from "@/lib/feature-flags";
 import { GiftProSearchDialog } from "@/components/profile/GiftProSearchDialog";
+import { useDeveloperBountySummary } from "@/hooks/use-developer-bounty-summary";
 
 const LEVEL_THRESHOLDS = [
   { level: 1,  xpRequired: 0 },
@@ -130,6 +131,7 @@ const MobileMenu = () => {
 
   const [showGiftProDialog, setShowGiftProDialog] = useState(false);
   const [myGamefolioExpanded, setMyGamefolioExpanded] = useState(false);
+  const [bountyHubExpanded, setBountyHubExpanded] = useState(false);
 
   const { data: ownProfileData } = useQuery({
     queryKey: [`/api/users/${user?.username}`],
@@ -152,6 +154,11 @@ const MobileMenu = () => {
     isPartnerType(user, "indie") ||
     user.userType?.split(",").includes("indie_developer")
   );
+  const {
+    isEligible: canManageBounties,
+    allowance: bountyAllowance,
+    overview: bountyOverview,
+  } = useDeveloperBountySummary();
 
   const { data: favoriteGames } = useQuery<Game[]>({
     queryKey: [`/api/users/${user?.id}/favorites`],
@@ -318,15 +325,49 @@ const MobileMenu = () => {
               )}
               {user && BOUNTIES_ENABLED && (
                 <li>
-                  <Link
-                    href="/bounties"
-                    onClick={handleClose}
-                    className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
-                    data-testid="mobile-bounty-hub-link"
-                  >
-                    <Trophy className="mr-3 h-5 w-5 text-primary group-hover:text-[#0A0A10]" />
-                    <span className="font-medium">Bounty Hub</span>
-                  </Link>
+                  {canManageBounties ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setBountyHubExpanded(prev => !prev)}
+                        className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left"
+                        aria-expanded={bountyHubExpanded}
+                        data-testid="mobile-bounty-hub-link"
+                      >
+                        <Trophy className="mr-3 h-5 w-5 text-primary group-hover:text-[#0A0A10]" />
+                        <span className="font-medium flex-1">Bounty Hub</span>
+                        <ChevronDown className={cn("h-4 w-4 transition-transform", bountyHubExpanded ? "rotate-180" : "")} />
+                      </button>
+                      {bountyHubExpanded && (
+                        <div className="ml-8 space-y-1 border-l border-border pl-3">
+                          <Link href="/bounties" onClick={handleClose} className="drawer-nav-item flex items-center rounded-md p-2 text-sm">
+                            Discover Bounties
+                          </Link>
+                          <Link href="/bounties?tab=my" onClick={handleClose} className="drawer-nav-item flex items-center rounded-md p-2 text-sm">
+                            My Campaigns
+                          </Link>
+                          <Link href="/game-dashboard?tab=campaigns&campaignSub=create" onClick={handleClose} className="drawer-nav-item flex items-center justify-between rounded-md p-2 text-sm">
+                            <span>Create Bounty</span>
+                            {bountyAllowance?.eligible && bountyAllowance.available && <span className="text-[9px] font-black text-primary">1 AVAILABLE</span>}
+                          </Link>
+                          <Link href="/game-dashboard?tab=campaigns&campaignSub=my" onClick={handleClose} className="drawer-nav-item flex items-center justify-between rounded-md p-2 text-sm">
+                            <span>Manage Bounties</span>
+                            {Number(bountyOverview?.activeCampaigns ?? 0) > 0 && <span className="text-[9px] font-black text-primary">{bountyOverview?.activeCampaigns} ACTIVE</span>}
+                          </Link>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <Link
+                      href="/bounties"
+                      onClick={handleClose}
+                      className="drawer-nav-item flex items-center p-2 rounded-md w-full text-left no-underline"
+                      data-testid="mobile-bounty-hub-link"
+                    >
+                      <Trophy className="mr-3 h-5 w-5 text-primary group-hover:text-[#0A0A10]" />
+                      <span className="font-medium">Bounty Hub</span>
+                    </Link>
+                  )}
                 </li>
               )}
               {user && (isStreamerPartner || user.role === "admin") && (

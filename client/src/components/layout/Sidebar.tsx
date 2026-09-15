@@ -44,6 +44,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
+import { useDeveloperBountySummary } from "@/hooks/use-developer-bounty-summary";
 
 interface TwitchGame {
   id: string;
@@ -63,7 +64,13 @@ const Sidebar = () => {
   const [hoveredGameId, setHoveredGameId] = useState<number | null>(null);
   const [gameToRemove, setGameToRemove] = useState<{ id: number; name: string } | null>(null);
   const [myGamefolioExpanded, setMyGamefolioExpanded] = useState(false);
+  const [bountyHubExpanded, setBountyHubExpanded] = useState(false);
   const [showGiftProDialog, setShowGiftProDialog] = useState(false);
+  const {
+    isEligible: canManageBounties,
+    allowance: bountyAllowance,
+    overview: bountyOverview,
+  } = useDeveloperBountySummary();
 
   // Maximum number of games a user can have
   const MAX_GAMES = 25;
@@ -382,6 +389,51 @@ const Sidebar = () => {
                         <span>Gift Pro</span>
                       </button>
                       */}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            if (item.label === "Bounty Hub" && canManageBounties) {
+              const monthlyAvailable = Boolean(bountyAllowance?.eligible && bountyAllowance.available);
+              const activeCampaigns = Number(bountyOverview?.activeCampaigns ?? 0);
+              const bountySectionActive = location === "/bounties" || location.startsWith("/game-dashboard");
+
+              return (
+                <div key={item.href}>
+                  <button
+                    type="button"
+                    onClick={() => { closeClipDialog(); setBountyHubExpanded(prev => !prev); }}
+                    className={cn(
+                      "w-full flex items-center p-3 rounded-lg transition-all cursor-pointer group",
+                      bountySectionActive
+                        ? "text-[#0A0A10] bg-primary"
+                        : "text-muted-foreground hover:bg-primary hover:text-[#0A0A10]"
+                    )}
+                    aria-expanded={bountyHubExpanded}
+                  >
+                    <Trophy className="w-6 h-6" />
+                    <span className="ml-3 font-medium flex-1 text-left">Bounty Hub</span>
+                    <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", bountyHubExpanded ? "rotate-180" : "")} />
+                  </button>
+                  {bountyHubExpanded && (
+                    <div className="ml-3 mt-0.5 space-y-0.5 border-l border-border pl-5">
+                      {[
+                        { label: "Discover Bounties", href: "/bounties" },
+                        { label: "My Campaigns", href: "/bounties?tab=my" },
+                        { label: "Create Bounty", href: "/game-dashboard?tab=campaigns&campaignSub=create", badge: monthlyAvailable ? "1 AVAILABLE" : undefined },
+                        { label: "Manage Bounties", href: "/game-dashboard?tab=campaigns&campaignSub=my", badge: activeCampaigns > 0 ? `${activeCampaigns} ACTIVE` : undefined },
+                      ].map((subItem) => (
+                        <Link key={subItem.href} href={subItem.href} onClick={() => closeClipDialog()}>
+                          <div className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary">
+                            <span className="min-w-0 flex-1 truncate">{subItem.label}</span>
+                            {subItem.badge && (
+                              <span className="shrink-0 text-[9px] font-black tracking-wide" style={{ color: "#B7FF18" }}>{subItem.badge}</span>
+                            )}
+                          </div>
+                        </Link>
+                      ))}
                     </div>
                   )}
                 </div>

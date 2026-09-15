@@ -1,13 +1,15 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, getQueryFn } from "@/lib/queryClient";
+import { useDeveloperBountySummary } from "@/hooks/use-developer-bounty-summary";
 import {
   Target, ShieldCheck, Clock, Users, Key, KeyRound, ChevronRight, ChevronLeft,
   Zap, Copy, Check, Loader2, Lock,
   Film, Camera, MessageSquare, Star, AlertCircle, Upload, Plus,
-  Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown, Store, Flame,
+  Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown, Store, Flame, Rocket,
 } from "lucide-react";
 import { SiSteam } from "react-icons/si";
 import {
@@ -2880,6 +2882,132 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
   );
 }
 
+function DeveloperBountyHubPrompt() {
+  const [, setLocation] = useLocation();
+  const { isEligible, isLoading, allowance, overview } = useDeveloperBountySummary();
+
+  if (!isEligible) return null;
+
+  const activeCampaigns = Number(overview?.activeCampaigns ?? 0);
+  const monthlyAvailable = Boolean(allowance?.eligible && allowance.available);
+  const monthlyUsed = Boolean(allowance?.eligible && allowance.used);
+  const resetDate = allowance?.periodEnd
+    ? new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long" }).format(new Date(allowance.periodEnd))
+    : "your next billing reset";
+  const goToCreate = () => setLocation("/game-dashboard?tab=campaigns&campaignSub=create");
+  const goToManage = () => setLocation("/game-dashboard?tab=campaigns&campaignSub=my");
+
+  return (
+    <section
+      className="rounded-2xl px-4 py-4 sm:px-5"
+      style={{
+        background: "linear-gradient(110deg, rgba(183,255,24,0.08), rgba(14,21,32,0.96) 46%)",
+        border: "1px solid rgba(183,255,24,0.22)",
+      }}
+      aria-label="Developer campaign actions"
+    >
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <div
+            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+            style={{ background: "rgba(183,255,24,0.14)", color: NEON }}
+          >
+            <Rocket size={18} aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            {isLoading ? (
+              <>
+                <div className="h-4 w-56 animate-pulse rounded bg-white/10" />
+                <div className="mt-2 h-3 w-80 max-w-full animate-pulse rounded bg-white/5" />
+              </>
+            ) : monthlyAvailable ? (
+              <>
+                <p className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: NEON }}>
+                  Your Pro Bounty Is Ready
+                </p>
+                <p className="mt-1 text-sm font-semibold text-white">
+                  You have 1 Quick Creator campaign included this month.
+                </p>
+                <p className="mt-1 text-xs text-white/55">Get Gamefolio creators playing your game and creating content around it.</p>
+              </>
+            ) : monthlyUsed ? (
+              <>
+                <p className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: NEON }}>
+                  Monthly Bounty Used ✓
+                </p>
+                <p className="mt-1 text-sm font-semibold text-white">Your next Quick Creator campaign is available {resetDate}.</p>
+                <p className="mt-1 text-xs text-white/55">Want to run another campaign?</p>
+              </>
+            ) : (
+              <>
+                <p className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: NEON }}>
+                  Create a Creator Campaign
+                </p>
+                <p className="mt-1 text-sm font-semibold text-white">Get Gamefolio creators playing your game and creating content.</p>
+                <p className="mt-1 text-xs text-white/55">Quick Creator is included monthly with Indie Game Pro.</p>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
+          {monthlyAvailable ? (
+            <>
+              <button
+                type="button"
+                onClick={goToCreate}
+                className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
+                style={{ background: NEON, color: "#070b10" }}
+              >
+                Create Bounty <ChevronRight size={14} />
+              </button>
+              <span className="text-[10px] font-bold text-white/45">Included with Indie Game Pro</span>
+            </>
+          ) : monthlyUsed ? (
+            <button
+              type="button"
+              onClick={goToCreate}
+              className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
+              style={{ background: NEON, color: "#070b10" }}
+            >
+              Create Paid Campaign <ChevronRight size={14} />
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setLocation("/game-dashboard?tab=overview")}
+                className="rounded-xl border border-white/12 px-3.5 py-2.5 text-xs font-bold text-white/75 transition hover:border-white/25 hover:text-white"
+              >
+                View Indie Game Pro
+              </button>
+              <button
+                type="button"
+                onClick={goToCreate}
+                className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
+                style={{ background: NEON, color: "#070b10" }}
+              >
+                Build a Paid Campaign <ChevronRight size={14} />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {activeCampaigns > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3 text-xs">
+          <span className="font-bold text-white/70">Your campaigns</span>
+          <span className="font-black" style={{ color: NEON }}>{activeCampaigns} Active</span>
+          <button type="button" onClick={goToManage} className="font-black text-white/60 transition hover:text-white">
+            Manage Campaigns →
+          </button>
+          {monthlyAvailable && <span className="text-white/35">· Monthly bounty still available</span>}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function BountiesPage() {
   const [mainTab, setMainTab]               = useState<MainTab>("marketplace");
   const [view, setView]                     = useState<View>("marketplace");
@@ -2888,6 +3016,12 @@ export default function BountiesPage() {
   const [search, setSearch]                 = useState("");
   const [activeFilters, setActiveFilters]   = useState<Set<string>>(new Set());
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const routeSearch = useSearch();
+
+  useEffect(() => {
+    const tab = new URLSearchParams(routeSearch).get("tab");
+    if (tab === "my" || tab === "marketplace") setMainTab(tab);
+  }, [routeSearch]);
 
   const { data: allCampaigns = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/bounties"],
@@ -2928,7 +3062,7 @@ export default function BountiesPage() {
         const ageMs = c.created_at ? now - new Date(c.created_at).getTime() : Infinity;
         const agedays = ageMs / 86400000;
 
-        for (const f of activeFilters) {
+        for (const f of Array.from(activeFilters)) {
           // Campaign Status
           if (f === "status_demo"     && demoLeft === 0) return false;
           if (f === "status_nearly"   && fillPct < 0.75) return false;
@@ -3015,6 +3149,8 @@ export default function BountiesPage() {
         {mainTab === "marketplace" && !isLoading && availableCampaigns.length > 0 && (
           <CommunityStats campaigns={availableCampaigns} />
         )}
+
+        <DeveloperBountyHubPrompt />
 
         {/* ── Tabs row ── */}
         <div className="flex items-center justify-between">
