@@ -83,7 +83,7 @@ export default function SurpriseMePage() {
         <div className="surprise-me-rainbow-border mb-5">
           <div className="surprise-me-rainbow-inner rounded-[12px] p-4 sm:p-5">
             <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#B7FF1A] text-2xl font-black leading-none text-[#071013]" aria-hidden="true">?</div>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#B7FF1A] text-[#071013]" aria-hidden="true"><Shuffle className="h-6 w-6" /></div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-2">
                   <h1 className="text-2xl font-black tracking-tight">Surprise Me</h1>
