@@ -9,7 +9,7 @@ import {
   Target, ShieldCheck, Clock, Users, Key, KeyRound, ChevronRight, ChevronLeft,
   Zap, Copy, Check, Loader2, Lock,
   Film, Camera, MessageSquare, Star, AlertCircle, Upload, Plus,
-  Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown, Store, Flame,
+  Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown, Store, Flame, Info,
 } from "lucide-react";
 import { SiSteam } from "react-icons/si";
 import {
@@ -1990,6 +1990,9 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
   const [nativeFile, setNativeFile] = useState<File | null>(null);
   const [nativePreview, setNativePreview] = useState<string | null>(null);
+  const [nativeTitle, setNativeTitle] = useState("");
+  const [nativeDescription, setNativeDescription] = useState("");
+  const [nativeDragging, setNativeDragging] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [revealedAccessKey, setRevealedAccessKey] = useState<string | null>(null);
   const [revealedDeadline, setRevealedDeadline] = useState<string | null>(null);
@@ -2000,6 +2003,12 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     const timer = window.setInterval(() => setClock(value => value + 1), 30_000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (nativePreview) URL.revokeObjectURL(nativePreview);
+    };
+  }, [nativePreview]);
 
   const { data: progress, isLoading } = useQuery<any>({
     queryKey: ["/api/bounties/my", cp.instance_id],
@@ -2018,6 +2027,11 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
     },
     enabled: Boolean(submittingBounty && usesExistingContent),
     staleTime: 30_000,
+  });
+  const { data: uploadLimits } = useQuery<any>({
+    queryKey: ["/api/upload/limits"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    staleTime: 5 * 60_000,
   });
 
   const claimFullMutation = useMutation({
@@ -2075,6 +2089,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       setSelectedContentId(null);
       setNativeFile(null);
       setNativePreview(null);
+      setNativeTitle("");
+      setNativeDescription("");
       toast({ title: "Submitted for review", description: "Gamefolio will verify your submission" });
     },
     onError: async (err: any) => {
@@ -2083,13 +2099,15 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   });
 
   const nativeSubmitMutation = useMutation({
-    mutationFn: async ({ bountyId, file }: { bountyId: number; file: File }) => {
+    mutationFn: async ({ bountyId, file, title, description, supersedesSubmissionId }: { bountyId: number; file: File; title?: string; description?: string; supersedesSubmissionId?: number }) => {
       const bounty = progressBounties.find((item: any) => item.id === bountyId);
       if (!bounty) throw new Error("Objective not found");
+      const submissionTitle = title?.trim() || bounty.title || "Campaign upload";
+      const submissionDescription = description?.trim() || data?.description || "";
 
       if (bounty.content_type === "screenshot") {
         const form = new FormData();
-        form.append("title", bounty.title || "Campaign screenshot");
+        form.append("title", submissionTitle);
         if (data?.game_id) form.append("gameId", String(data.game_id));
         form.append("screenshot", file);
         const upload = await fetch("/api/screenshots/upload", { method: "POST", body: form, credentials: "include" });
@@ -2098,6 +2116,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         return apiRequest("POST", `/api/bounties/my/${cp.instance_id}/submit/${bountyId}`, {
           contentType: bounty.content_type,
           screenshotId: uploaded.screenshot?.id,
+          ...(supersedesSubmissionId ? { supersedesSubmissionId } : {}),
         });
       }
 
@@ -2110,8 +2129,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
 
       const processed = await apiRequest("POST", "/api/upload/process-video", {
         uploadResult: uploaded.result,
-        title: bounty.title || "Campaign upload",
-        description: data?.description || "",
+        title: submissionTitle,
+        description: submissionDescription,
         gameId: data?.game_id ?? null,
         videoType: bounty.content_type === "reel" ? "reel" : "clip",
       });
@@ -2121,6 +2140,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       return apiRequest("POST", `/api/bounties/my/${cp.instance_id}/submit/${bountyId}`, {
         contentType: bounty.content_type,
         ...(bounty.content_type === "reel" ? { reelId: mediaId } : { clipId: mediaId }),
+        ...(supersedesSubmissionId ? { supersedesSubmissionId } : {}),
       });
     },
     onSuccess: () => {
@@ -2129,11 +2149,19 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       setSubmitting(null);
       setNativeFile(null);
       setNativePreview(null);
+      setNativeTitle("");
+      setNativeDescription("");
       setSelectedContentId(null);
       toast({ title: "Submitted for review", description: "Your upload is now attached to this campaign objective." });
     },
     onError: (err: any) => toast({ title: "Upload failed", description: err?.message ?? "Could not submit this upload", variant: "destructive" }),
   });
+
+  const selectNativeFile = (file: File | null) => {
+    setNativeFile(file);
+    setNativePreview(file ? URL.createObjectURL(file) : null);
+    setSelectedContentId(null);
+  };
 
   const copyKey = (key: string, setter: (v: boolean) => void) => {
     navigator.clipboard.writeText(key).then(() => {
@@ -2187,11 +2215,116 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const renderSubmissionForm = (b: any) => {
     const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
     const isMedia = ["clip", "reel", "screenshot"].includes(b.content_type);
+    const isVideo = ["clip", "reel"].includes(b.content_type);
     const replacement = (b.submissions ?? []).find((submission: any) => submission.status === "changes_requested");
     const isNativeBusy = nativeSubmitMutation.isPending;
+    const existingPicker = (
+      <div className="space-y-3 border-t border-white/[0.08] pt-4">
+        <div className="text-[10px] font-black uppercase tracking-wider text-white/35">
+          Choose existing Gamefolio content
+        </div>
+        {!isVideo && nativeFile && nativePreview ? (
+          <div className="overflow-hidden rounded-xl border border-white/10 bg-black/30">
+            {b.content_type === "screenshot"
+              ? <img src={nativePreview} alt={nativeFile.name} className="max-h-56 w-full object-contain" />
+              : <video src={nativePreview} controls className="max-h-56 w-full" />}
+            <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] px-3 py-2">
+              <span className="truncate text-xs text-white/65">{nativeFile.name}</span>
+              <button type="button" onClick={() => selectNativeFile(null)} className="text-xs text-white/40 hover:text-white">Remove</button>
+            </div>
+          </div>
+        ) : pickerLoading ? (
+          <div className="flex items-center justify-center py-5"><Loader2 size={16} className="animate-spin text-white/35" /></div>
+        ) : (pickerData?.items ?? []).length > 0 ? (
+          <div className="grid max-h-52 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4">
+            {(pickerData?.items ?? []).map((item: any) => {
+              const selected = selectedContentId === item.id;
+              return (
+                <button type="button" key={item.id} onClick={() => { selectNativeFile(null); setSelectedContentId(selected ? null : item.id); }} className="relative aspect-video overflow-hidden rounded-lg text-left" style={{ border: selected ? `2px solid ${NEON}` : "1px solid rgba(255,255,255,0.10)" }}>
+                  {item.thumbnailUrl ? <img src={item.thumbnailUrl} alt={item.title ?? "Gamefolio content"} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-white/5"><Icon size={16} className="text-white/35" /></div>}
+                  {selected && <div className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full" style={{ background: NEON }}><Check size={11} color="#070b10" strokeWidth={3} /></div>}
+                </button>
+              );
+            })}
+          </div>
+        ) : <div className="py-3 text-xs text-white/45">No matching Gamefolio content yet.</div>}
+      </div>
+    );
     return (
       <div className="space-y-4 border-t border-white/[0.06] pt-5">
-        {isMedia ? (
+        {isVideo ? (
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor="campaign-video-upload" className="text-xs font-semibold text-white/85">Video File</label>
+              <div className="flex items-center text-[10px] text-white/35">
+                <Info size={11} className="mr-1" />
+                <span>Maximum {uploadLimits?.maxClipSizeMB ?? 100}MB · {Math.round((uploadLimits?.maxClipDurationSeconds ?? 180) / 60)} min</span>
+              </div>
+            </div>
+            <div
+              className={`rounded-lg border-2 border-dashed p-8 text-center transition-colors ${nativeDragging ? "border-[#B8FF1B] bg-[#B8FF1B]/5" : "border-white/15"} ${!nativeFile ? "cursor-pointer hover:border-[#B8FF1B]" : ""}`}
+              onClick={() => !nativeFile && document.getElementById("campaign-video-upload")?.click()}
+              onDragEnter={(event) => { event.preventDefault(); setNativeDragging(true); }}
+              onDragOver={(event) => { event.preventDefault(); setNativeDragging(true); }}
+              onDragLeave={(event) => { event.preventDefault(); setNativeDragging(false); }}
+              onDrop={(event) => {
+                event.preventDefault();
+                setNativeDragging(false);
+                if (!nativeFile) selectNativeFile(event.dataTransfer.files?.[0] ?? null);
+              }}
+            >
+              <input
+                id="campaign-video-upload"
+                type="file"
+                className="hidden"
+                accept="video/mp4,video/webm,video/quicktime"
+                onChange={(event) => selectNativeFile(event.target.files?.[0] ?? null)}
+              />
+              {nativeFile && nativePreview ? (
+                <div className="space-y-3">
+                  <video src={nativePreview} controls className="mx-auto max-h-56 w-full rounded-lg bg-black object-contain" />
+                  <div className="flex items-center justify-between gap-3 text-left">
+                    <span className="truncate text-xs text-white/65">{nativeFile.name}</span>
+                    <button type="button" onClick={(event) => { event.stopPropagation(); selectNativeFile(null); }} className="text-xs text-white/40 hover:text-white">Remove</button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <Upload className="mx-auto mb-2 h-12 w-12 text-white/45" />
+                  <p className="font-medium text-white/80">Drag and drop your video or click to browse</p>
+                  <p className="mt-1 text-sm text-white/35">
+                    MP4, WebM, or MOV up to {uploadLimits?.maxClipSizeMB ?? 100}MB · {Math.round((uploadLimits?.maxClipDurationSeconds ?? 180) / 60)} min
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="campaign-video-title" className="flex items-center gap-1 text-xs font-semibold text-white/85">
+                Title <span className="text-red-400">*</span>
+              </label>
+              <input
+                id="campaign-video-title"
+                value={nativeTitle}
+                onChange={(event) => setNativeTitle(event.target.value)}
+                placeholder="Give your clip a catchy title"
+                maxLength={100}
+                className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#B8FF1B]/60"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="campaign-video-description" className="text-xs font-semibold text-white/85">Description (use @username to mention users)</label>
+              <textarea
+                id="campaign-video-description"
+                value={nativeDescription}
+                onChange={(event) => setNativeDescription(event.target.value)}
+                placeholder="Describe what's happening in your clip. Use @username to mention other users!"
+                className="min-h-24 w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#B8FF1B]/60"
+              />
+            </div>
+            {existingPicker}
+            <p className="text-[10px] text-white/30">Your video will be published to Gamefolio and attached to this objective for developer review.</p>
+          </>
+        ) : isMedia ? (
           <>
             <div className="flex items-center justify-between gap-3">
               <div className="text-[10px] font-black uppercase tracking-wider text-white/35">Choose existing Gamefolio content</div>
@@ -2203,21 +2336,17 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                   accept={b.content_type === "screenshot" ? "image/*" : "video/mp4,video/quicktime,video/webm"}
                   onChange={(event) => {
                     const file = event.target.files?.[0] ?? null;
-                    setNativeFile(file);
-                    setNativePreview(file ? URL.createObjectURL(file) : null);
-                    setSelectedContentId(null);
+                    selectNativeFile(file);
                   }}
                 />
               </label>
             </div>
             {nativeFile && nativePreview ? (
               <div className="overflow-hidden rounded-xl border border-white/10 bg-black/30">
-                {b.content_type === "screenshot"
-                  ? <img src={nativePreview} alt={nativeFile.name} className="max-h-56 w-full object-contain" />
-                  : <video src={nativePreview} controls className="max-h-56 w-full" />}
+                <img src={nativePreview} alt={nativeFile.name} className="max-h-56 w-full object-contain" />
                 <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] px-3 py-2">
                   <span className="truncate text-xs text-white/65">{nativeFile.name}</span>
-                  <button type="button" onClick={() => { setNativeFile(null); setNativePreview(null); }} className="text-xs text-white/40 hover:text-white">Remove</button>
+                  <button type="button" onClick={() => selectNativeFile(null)} className="text-xs text-white/40 hover:text-white">Remove</button>
                 </div>
               </div>
             ) : (
@@ -2239,7 +2368,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 ) : <div className="py-3 text-xs text-white/45">No matching Gamefolio content yet. Upload a new file above.</div>}
               </>
             )}
-            <p className="text-[10px] text-white/30">{b.content_type === "screenshot" ? "PNG, JPG and other supported image formats are accepted." : "Use Gamefolio's existing upload limits. Your media will be published and attached to this objective."}</p>
+            <p className="text-[10px] text-white/30">PNG, JPG and other supported image formats are accepted.</p>
           </>
         ) : (
           <div className="space-y-3">
@@ -2250,7 +2379,13 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         <div className="flex gap-2">
           <button
             onClick={() => {
-              if (nativeFile) return nativeSubmitMutation.mutate({ bountyId: b.id, file: nativeFile });
+              if (nativeFile) return nativeSubmitMutation.mutate({
+                bountyId: b.id,
+                file: nativeFile,
+                title: nativeTitle,
+                description: nativeDescription,
+                ...(replacement ? { supersedesSubmissionId: replacement.id } : {}),
+              });
               const body: Record<string, unknown> = { contentType: b.content_type };
               if (b.content_type === "clip") body.clipId = selectedContentId;
               else if (b.content_type === "reel") body.reelId = selectedContentId;
@@ -2259,13 +2394,17 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
               if (replacement) body.supersedesSubmissionId = replacement.id;
               submitMutation.mutate({ bountyId: b.id, body });
             }}
-            disabled={isNativeBusy || submitMutation.isPending || (isMedia ? (!nativeFile && !selectedContentId) : !submitUrl.trim())}
+            disabled={isNativeBusy || submitMutation.isPending || (isVideo
+              ? (!nativeFile || !nativeTitle.trim())
+              : isMedia
+              ? (!nativeFile && !selectedContentId)
+              : !submitUrl.trim())}
             className="flex-1 rounded-lg py-2.5 text-sm font-black transition-all hover:brightness-110 disabled:opacity-50"
             style={{ background: NEON, color: "#070b10" }}
           >
             {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : `Submit ${isMedia ? b.content_type === "screenshot" ? "screenshot" : "content" : b.content_type === "feedback" ? "feedback" : "report"}`}
           </button>
-          <button type="button" onClick={() => { setSubmitting(null); setSubmitUrl(""); setSelectedContentId(null); setNativeFile(null); setNativePreview(null); }} className="px-4 py-2 text-sm text-white/50 hover:text-white">Cancel</button>
+          <button type="button" onClick={() => { setSubmitting(null); setSubmitUrl(""); setSelectedContentId(null); selectNativeFile(null); setNativeTitle(""); setNativeDescription(""); }} className="px-4 py-2 text-sm text-white/50 hover:text-white">Cancel</button>
         </div>
       </div>
     );
