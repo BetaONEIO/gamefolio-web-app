@@ -1061,8 +1061,8 @@ function AccessMethodSelector({ settings, onChange }: { settings: CampaignSettin
   return (
     <div className="space-y-3">
       <div>
-        <label className="text-[11px] font-bold text-white/75 uppercase tracking-[0.08em] block">How will creators access your game?</label>
-        <p className="text-[11px] text-white/50 mt-1">Campaign access and completion rewards are separate.</p>
+        <label className="text-[11px] font-bold text-white/75 uppercase tracking-[0.08em] block">How will creators play your game?</label>
+        <p className="text-[11px] text-white/50 mt-1">Choose how creators receive access when they join.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {ACCESS_METHODS.map(option => {
@@ -1077,11 +1077,16 @@ function AccessMethodSelector({ settings, onChange }: { settings: CampaignSettin
               style={{ background: selected ? "#182817" : "#111923", border: `1.5px solid ${selected ? NEON : "rgba(255,255,255,0.12)"}` }}>
               <div className="flex items-start gap-3">
                 <Icon size={17} style={{ color: selected ? NEON : "rgba(255,255,255,0.55)" }} />
-                <div><div className="text-xs font-black text-white">{option.title}</div><div className="text-[11px] leading-relaxed text-white/50 mt-1">{option.description}</div></div>
+                <div className="text-xs font-black text-white">{option.title}</div>
               </div>
             </button>
           );
         })}
+      </div>
+      <div className="rounded-xl px-3.5 py-3" style={{ background: "rgba(255,255,255,0.035)" }}>
+        <div className="text-[10px] uppercase tracking-wider font-bold text-white/45">Selected</div>
+        <div className="text-sm font-black text-white mt-1">{method.title}</div>
+        <p className="text-[11px] leading-relaxed text-white/55 mt-1">{method.description}</p>
       </div>
       {["public_demo", "private_playtest"].includes(settings.accessMethod) && (
         <label className="flex items-center gap-2 text-xs text-white/70">
@@ -1100,15 +1105,252 @@ function AccessMethodSelector({ settings, onChange }: { settings: CampaignSettin
         </div>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-xl p-3.5" style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}>
-        <div><div className="text-[10px] uppercase font-bold tracking-wider text-white/45">Campaign access</div><div className="text-xs font-bold text-white mt-1">{method.id === "free_to_play" || method.id === "public_demo" || (method.id === "custom_access" && !settings.customAccessNeedsKey) ? "No access key required" : method.title}</div></div>
-        <div><div className="text-[10px] uppercase font-bold tracking-wider text-white/45">Completion reward</div><div className="text-xs font-bold text-white mt-1">{settings.completionFullGameKey ? "Bounty XP + full-game key" : "Bounty XP"}</div></div>
+        <div><div className="text-[10px] uppercase font-bold tracking-wider text-white/45">Join</div><div className="text-xs font-bold text-white mt-1">{method.id === "free_to_play" || method.id === "public_demo" || (method.id === "custom_access" && !settings.customAccessNeedsKey) ? "No key required" : method.id === "demo_to_full" ? "Demo/playtest key" : method.title}</div></div>
+        <div><div className="text-[10px] uppercase font-bold tracking-wider text-white/45">Complete</div><div className="text-xs font-bold text-white mt-1">{settings.completionFullGameKey ? "Full-game key" : "Bounty XP"}</div></div>
       </div>
-      {settings.completionFullGameKey && <p className="text-[11px] text-white/55">Full-game keys are released only after every campaign objective has been completed and validated.</p>}
+      {settings.completionFullGameKey && <p className="text-[11px] text-white/55">Full-game access is released after the creator's required campaign objectives have been completed and validated.</p>}
+    </div>
+  );
+}
+
+function presetPlatformIds(values: unknown[]): string[] {
+  const ids = values.map(value => String(value).toLowerCase()).flatMap(value => {
+    if (value.includes("window") || value === "pc") return ["windows"];
+    if (value.includes("mac")) return ["mac"];
+    if (value.includes("linux")) return ["linux"];
+    if (value.includes("playstation") || value === "ps" || value.includes("ps5") || value.includes("ps4")) return ["ps"];
+    if (value.includes("xbox")) return ["xbox"];
+    if (value.includes("switch")) return ["switch"];
+    if (value.includes("mobile") || value.includes("android") || value.includes("ios")) return ["mobile"];
+    return [];
+  });
+  return Array.from(new Set(ids));
+}
+
+function PresetPersonalise({ type, settings, onChange }: {
+  type: CampaignType; settings: CampaignSettings; onChange: (s: Partial<CampaignSettings>) => void;
+}) {
+  const { data: indieProfile } = useQuery<any>({
+    queryKey: ["/api/indie/profile"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+  });
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const autoTitleRef = useRef("");
+  const profile = indieProfile?.profile ?? {};
+  const profilePlatforms = Array.isArray(profile.platforms) ? profile.platforms : [];
+  const inheritedPlatformIds = presetPlatformIds(profilePlatforms);
+  const inheritedLabels = profilePlatforms.length > 0
+    ? profilePlatforms.map(String)
+    : inheritedPlatformIds.map(id => PLATFORM_OPTIONS.find(option => option.id === id)?.label ?? id);
+  const preset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(item => item.slug === type.slug);
+  const estimate = preset ? getPresetSubmissionEstimate(preset) : null;
+  const gameName = settings.gameName || profile.gameName || "Your Game";
+  const gameImage = settings.gameImageUrl || profile.headerImageUrl || null;
+  const studioName = profile.studioName || profile.developerName || "Independent developer";
+  const effectivePlatformIds = settings.platforms.length > 0 ? settings.platforms : inheritedPlatformIds;
+  const effectivePlatformLabels = effectivePlatformIds.length > 0
+    ? PLATFORM_OPTIONS.filter(option => effectivePlatformIds.includes(option.id)).map(option => option.label)
+    : (inheritedLabels.length > 0 ? inheritedLabels : ["All platforms"]);
+  const configuredDuration = preset?.campaignDurationDays ?? type.duration;
+  const configuredApplicationPeriod = settings.applicationPeriod || preset?.applicationPeriodDays || 30;
+  const regionLabel = REGION_OPTIONS.find(region => region.id === settings.regions)?.label ?? "Worldwide";
+  const accent = TYPE_ACCENT[type.slug] ?? NEON;
+  const labelStyle = "text-[11px] font-bold text-white/75 uppercase tracking-[0.08em] block mb-2";
+  const helperStyle = "text-[11px] leading-relaxed text-white/55 mt-1.5";
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split("T")[0];
+  const timeZoneOptions = Array.from(new Set([
+    settings.timeZone || "UTC", "UTC", "Europe/London", "America/New_York", "America/Los_Angeles", "Asia/Tokyo",
+  ]));
+
+  useEffect(() => {
+    const nextTitle = `${gameName} ${type.shortName}`;
+    const patch: Partial<CampaignSettings> = {};
+    if (profile.gameName && !settings.gameName) {
+      patch.gameName = profile.gameName;
+      patch.gameId = profile.gameId ?? null;
+      patch.gameImageUrl = profile.headerImageUrl ?? null;
+    }
+    if (!settings.campaignTitle || settings.campaignTitle === autoTitleRef.current) {
+      patch.campaignTitle = nextTitle;
+      autoTitleRef.current = nextTitle;
+    }
+    if (settings.platforms.length === 0 && inheritedPlatformIds.length > 0) {
+      patch.platforms = inheritedPlatformIds;
+    }
+    if (preset?.applicationPeriodDays && settings.applicationPeriod !== preset.applicationPeriodDays) {
+      patch.applicationPeriod = preset.applicationPeriodDays;
+    }
+    if (Object.keys(patch).length > 0) onChange(patch);
+  }, [
+    profile.gameId, profile.gameName, profile.headerImageUrl, inheritedPlatformIds.join(","),
+    settings.gameName, settings.campaignTitle, settings.platforms.length, settings.applicationPeriod,
+    type.shortName, preset?.applicationPeriodDays,
+  ]);
+
+  return (
+    <div className="gf-fade-up -mx-1 rounded-2xl px-1 py-1" style={{ background: "#0F101B" }}>
+      <div className="mx-auto max-w-[900px] space-y-8">
+        <div>
+          <p className="text-sm leading-relaxed text-white/60 max-w-2xl">
+            Just add the details creators need. We've configured the rest of the campaign for you.
+          </p>
+        </div>
+
+        <div className="space-y-5">
+          <div>
+            <label htmlFor="campaign-title" className={labelStyle}>Campaign Title <span style={{ color: NEON }}>*</span></label>
+            <input id="campaign-title" required maxLength={120} style={fieldStyle} value={settings.campaignTitle}
+              onChange={e => onChange({ campaignTitle: e.target.value })}
+              placeholder={`${gameName} ${type.shortName}`} />
+            <p className={helperStyle}>This is the campaign title creators will see in the Bounty Hub.</p>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor="campaign-brief" className={labelStyle}>Campaign Brief <span style={{ color: NEON }}>*</span></label>
+              <span className="text-[11px] text-white/55 tabular-nums">{settings.description.length} / 300</span>
+            </div>
+            <textarea id="campaign-brief" required maxLength={300}
+              style={{ ...fieldStyle, minHeight: "132px", resize: "vertical" } as any}
+              value={settings.description} onChange={e => onChange({ description: e.target.value })}
+              placeholder="Tell creators what makes your game worth playing and what you'd love them to capture." />
+            <p className={helperStyle}>Tell creators what makes your game worth playing and what you'd love them to capture.</p>
+          </div>
+        </div>
+
+        <div>
+          <label className={labelStyle}>Your Game</label>
+          <div className="flex items-center gap-3">
+            {gameImage ? <img src={gameImage} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" /> : (
+              <div className="w-14 h-14 rounded-lg flex items-center justify-center shrink-0" style={{ background: `rgba(183,255,24,0.10)` }}>
+                <Gamepad2 className="w-6 h-6" style={{ color: accent }} />
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="text-sm font-black text-white truncate">{gameName}</div>
+              <div className="text-[11px] text-white/60 mt-1 truncate">{studioName}</div>
+              <div className="text-[10px] text-white/45 mt-1 truncate">{effectivePlatformLabels.join(" · ")}</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label className={labelStyle}>Launch</label>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {([
+              { value: "asap" as const, title: "Launch after approval" },
+              { value: "scheduled" as const, title: "Schedule launch" },
+            ]).map(option => {
+              const selected = settings.startType === option.value;
+              return (
+                <button key={option.value} type="button" aria-pressed={selected}
+                  onClick={() => onChange({ startType: option.value })}
+                  className="flex flex-1 items-center gap-2 rounded-xl px-3.5 py-3 text-left transition-colors"
+                  style={{ background: selected ? "#182817" : "#111923", border: `1px solid ${selected ? NEON : "rgba(255,255,255,0.12)"}` }}>
+                  <span className="h-3.5 w-3.5 rounded-full border-2 flex items-center justify-center"
+                    style={{ borderColor: selected ? NEON : "rgba(255,255,255,0.3)" }}>
+                    {selected && <span className="h-1.5 w-1.5 rounded-full" style={{ background: NEON }} />}
+                  </span>
+                  <span className="text-xs font-black text-white">{option.title}</span>
+                </button>
+              );
+            })}
+          </div>
+          {settings.startType === "scheduled" && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+              <input aria-label="Launch date" type="date" min={tomorrowStr} style={{ ...fieldStyle, colorScheme: "dark" } as any}
+                value={settings.scheduledDate} onChange={e => onChange({ scheduledDate: e.target.value })} />
+              <input aria-label="Launch time" type="time" style={{ ...fieldStyle, colorScheme: "dark" } as any}
+                value={settings.scheduledTime} onChange={e => onChange({ scheduledTime: e.target.value })} />
+              <select aria-label="Launch time zone" style={{ ...fieldStyle, paddingRight: "28px" } as any}
+                value={settings.timeZone} onChange={e => onChange({ timeZone: e.target.value })}>
+                {timeZoneOptions.map(zone => <option key={zone} value={zone}>{zone}</option>)}
+              </select>
+            </div>
+          )}
+        </div>
+
+        <AccessMethodSelector settings={settings} onChange={onChange} />
+
+        <div>
+          <div className={labelStyle}>Campaign Timing</div>
+          <div className="grid grid-cols-2 gap-5 max-w-md">
+            <div><div className="text-lg font-black text-white">{configuredApplicationPeriod} days</div><div className="text-[10px] text-white/50 uppercase tracking-wider mt-1">Open for creators</div></div>
+            <div><div className="text-lg font-black text-white">{configuredDuration} days</div><div className="text-[10px] text-white/50 uppercase tracking-wider mt-1">Creator completion</div></div>
+          </div>
+          <p className={helperStyle}>Gamefolio recommended timing for {type.shortName}.</p>
+        </div>
+
+        <div>
+          <div className={labelStyle}>Campaign Setup</div>
+          <ul className="space-y-2.5 text-sm text-white/75">
+            {estimate && <li className="flex items-start gap-2"><Check size={15} className="mt-0.5 shrink-0" style={{ color: NEON }} /> {estimate.creatorMin}–{estimate.creatorMax} estimated creators</li>}
+            {estimate && <li className="flex items-start gap-2"><Check size={15} className="mt-0.5 shrink-0" style={{ color: NEON }} /> ~{estimate.submissionMin}–{estimate.submissionMax} estimated creator submissions</li>}
+            <li className="flex items-start gap-2"><Check size={15} className="mt-0.5 shrink-0" style={{ color: NEON }} /> {type.deliverables} deliverables per creator</li>
+            <li className="flex items-start gap-2"><Check size={15} className="mt-0.5 shrink-0" style={{ color: NEON }} /> {configuredDuration}-day creator completion window</li>
+            <li className="flex items-start gap-2"><Check size={15} className="mt-0.5 shrink-0" style={{ color: NEON }} /> Platforms matched to {gameName}</li>
+            <li className="flex items-start gap-2"><Check size={15} className="mt-0.5 shrink-0" style={{ color: NEON }} /> {regionLabel} availability</li>
+            <li className="flex items-start gap-2"><Check size={15} className="mt-0.5 shrink-0" style={{ color: NEON }} /> Gamefolio promotion included</li>
+            <li className="flex items-start gap-2"><Check size={15} className="mt-0.5 shrink-0" style={{ color: NEON }} /> Seasonal Creator Reward Pool contribution</li>
+          </ul>
+        </div>
+
+        <div>
+          <button type="button" onClick={() => setAdvancedOpen(value => !value)}
+            className="flex items-center gap-2 text-sm font-black text-white/75 hover:text-white transition-colors">
+            <ChevronDown size={16} className={`transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+            Advanced Settings
+          </button>
+          <p className="text-[11px] text-white/50 mt-1.5">Optional controls for developers who need more specific campaign restrictions.</p>
+          {advancedOpen && (
+            <div className="mt-4 space-y-5 border-t border-white/10 pt-5">
+              <div>
+                <div className={labelStyle}>Supported Platforms</div>
+                <div className="flex flex-wrap gap-2">
+                  {PLATFORM_OPTIONS.map(option => {
+                    const selected = effectivePlatformIds.includes(option.id);
+                    return <button key={option.id} type="button" aria-pressed={selected}
+                      onClick={() => onChange({ platforms: selected ? effectivePlatformIds.filter(id => id !== option.id) : [...effectivePlatformIds, option.id] })}
+                      className="rounded-lg px-3 py-2 text-[11px] font-bold"
+                      style={{ background: selected ? "#182817" : "#111923", color: selected ? "#F4FFD7" : "rgba(255,255,255,0.72)", border: `1px solid ${selected ? NEON : "rgba(255,255,255,0.14)"}` }}>
+                      {selected && <Check size={12} className="inline mr-1" style={{ color: NEON }} />}{option.label}
+                    </button>;
+                  })}
+                </div>
+              </div>
+              <div>
+                <label htmlFor="eligible-region-preset" className={labelStyle}>Eligible Region</label>
+                <select id="eligible-region-preset" style={{ ...fieldStyle, paddingRight: "32px" } as any}
+                  value={settings.regions} onChange={e => onChange({ regions: e.target.value })}>
+                  {REGION_OPTIONS.map(region => <option key={region.id} value={region.id}>{region.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="application-period-preset" className={labelStyle}>Campaign Application Period</label>
+                <select id="application-period-preset" style={{ ...fieldStyle, paddingRight: "32px" } as any}
+                  value={settings.applicationPeriod} onChange={e => onChange({ applicationPeriod: Number(e.target.value) })}>
+                  {[7, 14, 30, 60, 90].map(days => <option key={days} value={days}>{days} days</option>)}
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
 function StepPersonalise({ type, settings, onChange }: {
+  type: CampaignType; settings: CampaignSettings; onChange: (s: Partial<CampaignSettings>) => void;
+}) {
+  return type.custom
+    ? <CustomPersonalise type={type} settings={settings} onChange={onChange} />
+    : <PresetPersonalise type={type} settings={settings} onChange={onChange} />;
+}
+
+function CustomPersonalise({ type, settings, onChange }: {
   type: CampaignType; settings: CampaignSettings; onChange: (s: Partial<CampaignSettings>) => void;
 }) {
   const { data: indieProfile } = useQuery<any>({
@@ -1613,13 +1855,13 @@ function KeyUploadArea({
 
 function StepUploadKeys({ type, demoKeys, fullKeys, vaultDemo, vaultFull,
   useVaultDemo, useVaultFull, onUseVaultDemoChange, onUseVaultFullChange,
-  onDemoChange, onFullChange, accessMethod, completionFullGameKey, maxPlaces, onMaxPlacesChange }: {
+  onDemoChange, onFullChange, accessMethod, completionFullGameKey, customAccessNeedsKey, maxPlaces, onMaxPlacesChange }: {
   type: CampaignType;
   demoKeys: string; fullKeys: string; vaultDemo: number; vaultFull: number;
   useVaultDemo: boolean; useVaultFull: boolean;
   onUseVaultDemoChange: (v: boolean) => void; onUseVaultFullChange: (v: boolean) => void;
   onDemoChange: (v: string) => void; onFullChange: (v: string) => void;
-  accessMethod: AccessMethod; completionFullGameKey: boolean; maxPlaces: number; onMaxPlacesChange: (v: number) => void;
+  accessMethod: AccessMethod; completionFullGameKey: boolean; customAccessNeedsKey: boolean; maxPlaces: number; onMaxPlacesChange: (v: number) => void;
 }) {
   const effectiveDemo = (useVaultDemo ? vaultDemo : 0) + parseKeyLines(demoKeys).length;
   const effectiveFull = (useVaultFull ? vaultFull : 0) + parseKeyLines(fullKeys).length;
@@ -1714,6 +1956,14 @@ function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting
 }) {
   const duration = type.custom && settings.customDuration ? settings.customDuration : type.duration;
   const bountyXp = type.custom ? calculatedCustomXp(settings.customObjectives) : type.xpReward;
+  const commercialPreset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(preset => preset.slug === type.slug);
+  const submissionEstimate = commercialPreset ? getPresetSubmissionEstimate(commercialPreset) : null;
+  const estimatedCreators = submissionEstimate
+    ? `${submissionEstimate.creatorMin}–${submissionEstimate.creatorMax}`
+    : `${Math.max(1, Math.floor(capacity * 0.6))}–${Math.max(1, capacity)}`;
+  const estimatedSubmissions = submissionEstimate
+    ? `~${submissionEstimate.submissionMin}–${submissionEstimate.submissionMax}`
+    : "Calculated from objectives";
   const requiresDemo = settings.accessMethod === "demo_to_full" || settings.accessMethod === "private_playtest"
     || (settings.accessMethod === "custom_access" && settings.customAccessNeedsKey);
   const regionLabel = REGION_OPTIONS.find(r => r.id === settings.regions)?.label ?? "Worldwide";
@@ -1751,16 +2001,18 @@ function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5">
           {[
             { label: "Duration",  value: `${duration}d` },
-            { label: "Deliverables", value: type.deliverables || "Custom" },
+            { label: "Deliverables per creator", value: type.deliverables || "Custom" },
+            { label: "Estimated creators", value: estimatedCreators },
+            { label: "Estimated submissions", value: estimatedSubmissions },
             { label: "Bounty XP", value: `${bountyXp.toLocaleString()} XP` },
           ].map((s, i) => (
             <div key={s.label} className="flex flex-col items-center py-3.5"
-              style={{ borderRight: i < 3 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
-              <div className="text-base font-black text-white">{s.value}</div>
-              <div className="text-[9px] text-white/25 uppercase tracking-wider mt-0.5">{s.label}</div>
+              style={{ borderRight: i < 4 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
+              <div className="text-sm font-black text-white text-center">{s.value}</div>
+              <div className="text-[9px] text-white/25 uppercase tracking-wider mt-0.5 text-center">{s.label}</div>
             </div>
           ))}
         </div>
@@ -1771,7 +2023,7 @@ function StepLaunch({ type, settings, capacity, confirmed, onConfirm, submitting
           <span>{settings.startType === "asap" ? "🚀 Launches immediately" : `📅 Launches ${settings.scheduledDate}`}</span>
           <span>· {regionLabel}</span>
           {settings.platforms.length > 0 && <span>· {settings.platforms.join(", ")}</span>}
-           <span>· Application period: {settings.applicationPeriod}d</span>
+           <span>· Campaign availability: {settings.applicationPeriod}d</span>
            <span>· Capacity: {capacity} places</span>
         </div>
       </div>
@@ -2047,11 +2299,13 @@ function AutoStepUploadKeys({ demoKeys, fullKeys, poolDemo, poolFull, onDemoChan
           label="Demo Keys" accent="#60a5fa" accentRgb="96,165,250"
           description="Issued automatically when a creator joins a campaign."
           keys={demoKeys} needed={1} vaultAvail={poolDemo}
+          useVault={false} onUseVaultChange={() => undefined}
           onChange={onDemoChange} />
         <KeyUploadArea
           label="Full Game Keys" accent="#fb923c" accentRgb="251,146,60"
           description="Rewarded when a creator completes their campaign deliverables."
           keys={fullKeys} needed={1} vaultAvail={poolFull}
+          useVault={false} onUseVaultChange={() => undefined}
           onChange={onFullChange} />
       </div>
 
@@ -2422,10 +2676,11 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
     : requiresFullAccess ? accessFullCount
     : requiresDemoAccess ? accessDemoCount
     : requiresFullReward ? accessFullCount : settings.maxPlaces;
+  const presetPlatformsAreReady = !!selectedType && !selectedType.custom;
   const personaliseReady = !!selectedType &&
     settings.campaignTitle.trim().length > 0 &&
     settings.description.trim().length > 0 &&
-    settings.platforms.length > 0 &&
+     (presetPlatformsAreReady || settings.platforms.length > 0) &&
     (settings.startType === "asap" || (settings.scheduledDate.length > 0 && settings.scheduledTime.length > 0)) &&
     (settings.accessMethod !== "custom_access" || settings.customAccessInstructions.trim().length > 0) &&
     (!selectedType.custom || settings.customObjectives.some(objective => objective.quantity > 0));
@@ -2451,13 +2706,15 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
     setSubmitting(true);
     try {
       const customObjectives = selectedType.custom ? objectiveSnapshot(settings.customObjectives) : undefined;
+      const commercialPreset = CAMPAIGN_COMMERCIAL_MODEL.presets.find(preset => preset.slug === selectedType.slug);
       const completionDeadlineDays = selectedType.custom
         ? (settings.customDuration ?? recommendedCustomDeadline(settings.customObjectives))
-        : selectedType.duration;
+        : (commercialPreset?.campaignDurationDays ?? selectedType.duration);
+      const hasPlatformScope = selectedType.custom ? settings.platforms.length > 0 : true;
       const estimateSnapshot = {
-        estimatedCreatorReach: settings.platforms.length > 0 && settings.regions ? { min: Math.max(1, Math.floor(campaignCapacity * 2.5)), max: Math.max(2, campaignCapacity * 4) } : null,
-        expectedParticipation: settings.platforms.length > 0 && settings.regions ? { min: Math.max(1, Math.floor(campaignCapacity * 0.6)), max: Math.max(1, campaignCapacity) } : null,
-        expectedCompletions: settings.platforms.length > 0 && settings.regions ? { min: Math.max(1, Math.floor(campaignCapacity * 0.4)), max: Math.max(1, Math.floor(campaignCapacity * 0.8)) } : null,
+        estimatedCreatorReach: hasPlatformScope && settings.regions ? { min: Math.max(1, Math.floor(campaignCapacity * 2.5)), max: Math.max(2, campaignCapacity * 4) } : null,
+        expectedParticipation: hasPlatformScope && settings.regions ? { min: Math.max(1, Math.floor(campaignCapacity * 0.6)), max: Math.max(1, campaignCapacity) } : null,
+        expectedCompletions: hasPlatformScope && settings.regions ? { min: Math.max(1, Math.floor(campaignCapacity * 0.4)), max: Math.max(1, Math.floor(campaignCapacity * 0.8)) } : null,
         estimatesGuaranteed: false,
       };
       const inst = await apiRequest("POST", "/api/campaigns/instances", {
@@ -2584,7 +2841,9 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
   const autoStep2Summary = `${poolDemo} demo · ${poolFull} full keys in pool`;
   const autoStep3Summary = `${autoLimits.maxCreators} campaign places · ${FREQUENCY_OPTS.find(f => f.id === autoLimits.frequency)?.label}`;
   const SelectedTypeIcon = selectedType?.icon ?? Gamepad2;
-  const selectedTypeSummary = selectedType ? campaignSummary(selectedType) : "";
+  const selectedTypeSummary = selectedType
+    ? `${selectedType.shortName} · ${selectedType.duration} days · ${selectedType.deliverables || "Custom"} deliverables`
+    : "";
 
   return (
     <>
@@ -2700,6 +2959,9 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
                   if (preset?.priceFromPence && t.slug !== "custom-campaign") {
                     setCommercialBudgetPence(preset.priceFromPence);
                   }
+                  if (preset?.applicationPeriodDays) {
+                    setSettings(current => ({ ...current, applicationPeriod: preset.applicationPeriodDays }));
+                  }
                   setConfirmed(false);
                 }}
                 onContinue={() => {
@@ -2796,13 +3058,14 @@ export default function CreateCampaignFlow({ onComplete }: { onComplete: () => v
               onEdit={() => setCurrentStep(3)}>
               {selectedType && (
                 <div>
-                  <StepUploadKeys type={selectedType}
+                   <StepUploadKeys type={selectedType}
                     demoKeys={pendingDemoKeys} fullKeys={pendingFullKeys}
                     vaultDemo={vaultDemo} vaultFull={vaultFull}
                     useVaultDemo={useVaultDemo} useVaultFull={useVaultFull}
                     onUseVaultDemoChange={setUseVaultDemo} onUseVaultFullChange={setUseVaultFull}
                      onDemoChange={setPendingDemoKeys} onFullChange={setPendingFullKeys}
-                     accessMethod={settings.accessMethod} completionFullGameKey={settings.completionFullGameKey}
+                      accessMethod={settings.accessMethod} completionFullGameKey={settings.completionFullGameKey}
+                      customAccessNeedsKey={settings.customAccessNeedsKey}
                      maxPlaces={settings.maxPlaces} onMaxPlacesChange={value => updateSettings({ maxPlaces: value })} />
                   <button
                     onClick={() => keysReady && setCurrentStep(4)}
