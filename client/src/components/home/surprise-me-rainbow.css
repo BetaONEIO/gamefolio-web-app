@@ -1,0 +1,54 @@
+@keyframes surprise-me-rainbow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.surprise-me-rainbow-border {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 2px;
+  border-radius: 14px;
+  box-shadow: 0 0 18px rgba(62, 197, 255, 0.04);
+  transition: box-shadow 180ms ease, filter 180ms ease;
+}
+
+.surprise-me-rainbow-border::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -180%;
+  background: conic-gradient(
+    from 0deg,
+    #22d3ee 0deg,
+    #3b82f6 55deg,
+    #8b5cf6 110deg,
+    #ec4899 165deg,
+    #f97316 220deg,
+    #facc15 270deg,
+    #b7ff18 320deg,
+    #22d3ee 360deg
+  );
+  animation: surprise-me-rainbow 5.5s linear infinite;
+}
+
+.surprise-me-rainbow-inner {
+  position: relative;
+  z-index: 1;
+  background: #0f101b;
+}
+
+.surprise-me-rainbow-border:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 0 22px rgba(62, 197, 255, 0.11);
+}
+
+.surprise-me-rainbow-border:active {
+  filter: brightness(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .surprise-me-rainbow-border::before {
+    animation: none !important;
+  }
+}
