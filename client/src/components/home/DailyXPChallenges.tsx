@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRef, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { CheckCircle2, ChevronLeft, ChevronRight, Zap, Clock, Flame } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Zap, Clock, Flame, Shuffle } from "lucide-react";
 import { getQueryFn } from "@/lib/queryClient";
 import { Skeleton } from "@/components/ui/skeleton";
 import "./surprise-me-rainbow.css";
@@ -540,7 +540,7 @@ export function DailyXPChallenges() {
                 className="surprise-me-rainbow-border surprise-me-compact group max-w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0F101B]"
               >
                 <span className="surprise-me-rainbow-inner flex min-w-0 items-center gap-2 rounded-[12px] px-2.5 py-2">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#B7FF18] text-base font-black leading-none text-[#071013]" aria-hidden="true">?</span>
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#B7FF18] text-[#071013]" aria-hidden="true"><Shuffle className="h-4 w-4" /></span>
                   <span className="min-w-0">
                     <span className="flex items-baseline gap-1.5 leading-none">
                       <span className="truncate text-[12px] font-black text-white">Surprise Me</span>
