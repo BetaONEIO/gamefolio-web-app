@@ -9,7 +9,7 @@ import {
   Target, ShieldCheck, Clock, Users, Key, KeyRound, ChevronRight, ChevronLeft,
   Zap, Copy, Check, Loader2, Lock,
   Film, Camera, MessageSquare, Star, AlertCircle, Upload, Plus,
-  Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown, Store, Flame, Rocket,
+  Trophy, Gift, Search, SlidersHorizontal, X, ChevronDown, Store, Flame,
 } from "lucide-react";
 import { SiSteam } from "react-icons/si";
 import {
@@ -2882,7 +2882,73 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
   );
 }
 
-function DeveloperBountyHubPrompt() {
+function CreatorCampaignVisual({ campaigns }: { campaigns: any[] }) {
+  const visualCampaigns = campaigns
+    .filter(campaign => campaignHeroSources(campaign).length > 0)
+    .slice(0, 3);
+  const frames = Array.from({ length: 3 }, (_, index) => {
+    const campaign = visualCampaigns[index];
+    const source = campaign ? campaignHeroSources(campaign)[0] : null;
+    return { campaign, source };
+  });
+
+  return (
+    <div
+      className="relative min-h-[210px] overflow-hidden sm:min-h-[220px]"
+      aria-hidden="true"
+    >
+      <div
+        className="absolute right-0 top-1/2 h-52 w-64 -translate-y-1/2 opacity-70"
+        style={{
+          background: "radial-gradient(circle at center, rgba(184,255,27,0.12), transparent 68%)",
+          filter: "blur(12px)",
+        }}
+      />
+      <div className="absolute right-2 top-1/2 h-40 w-52 -translate-y-1/2 rotate-[5deg] overflow-hidden rounded-2xl opacity-55 shadow-2xl shadow-black/50">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: frames[2].source
+              ? `url("${frames[2].source}")`
+              : CAMPAIGN_HERO_FALLBACK,
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0f101b] via-transparent to-white/5" />
+        <div className="absolute bottom-3 left-3 text-[9px] font-black uppercase tracking-[0.16em] text-white/65">Screenshot</div>
+      </div>
+      <div className="absolute right-16 top-1/2 h-44 w-56 -translate-y-1/2 -rotate-[7deg] overflow-hidden rounded-2xl shadow-2xl shadow-black/60">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: frames[1].source
+              ? `url("${frames[1].source}")`
+              : CAMPAIGN_HERO_FALLBACK,
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0f101b] via-transparent to-white/5" />
+        <div className="absolute bottom-3 left-3 text-[9px] font-black uppercase tracking-[0.16em] text-white/70">Gameplay clip</div>
+      </div>
+      <div className="absolute right-32 top-1/2 h-48 w-28 -translate-y-1/2 rotate-[8deg] overflow-hidden rounded-2xl shadow-2xl shadow-black/70">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: frames[0].source
+              ? `url("${frames[0].source}")`
+              : CAMPAIGN_HERO_FALLBACK,
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0f101b] via-transparent to-white/5" />
+        <div className="absolute bottom-3 left-2 text-[8px] font-black uppercase tracking-[0.12em] text-white/75">Creator reel</div>
+      </div>
+      <div className="absolute bottom-5 right-3 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-[#b8ff1b]/70">
+        <span className="h-1.5 w-1.5 rounded-full bg-[#b8ff1b]" />
+        Game → creators → content
+      </div>
+    </div>
+  );
+}
+
+function DeveloperBountyHubPrompt({ campaigns = [] }: { campaigns?: any[] }) {
   const [, setLocation] = useLocation();
   const { isEligible, isLoading, allowance, overview } = useDeveloperBountySummary();
 
@@ -2899,111 +2965,127 @@ function DeveloperBountyHubPrompt() {
 
   return (
     <section
-      className="rounded-2xl px-4 py-4 sm:px-5"
+      className="relative overflow-hidden px-1 py-8 sm:px-3 sm:py-10"
       style={{
-        background: "linear-gradient(110deg, rgba(183,255,24,0.08), rgba(14,21,32,0.96) 46%)",
-        border: "1px solid rgba(183,255,24,0.22)",
+        background: "#0f101b",
+        borderTop: "1px solid rgba(255,255,255,0.08)",
+        borderBottom: "1px solid rgba(255,255,255,0.08)",
       }}
       aria-label="Developer campaign actions"
     >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          <div
-            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-            style={{ background: "rgba(183,255,24,0.14)", color: NEON }}
-          >
-            <Rocket size={18} aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            {isLoading ? (
-              <>
-                <div className="h-4 w-56 animate-pulse rounded bg-white/10" />
-                <div className="mt-2 h-3 w-80 max-w-full animate-pulse rounded bg-white/5" />
-              </>
-            ) : monthlyAvailable ? (
-              <>
-                <p className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: NEON }}>
-                  Your Pro Bounty Is Ready
-                </p>
-                <p className="mt-1 text-sm font-semibold text-white">
-                  You have 1 Quick Creator campaign included this month.
-                </p>
-                <p className="mt-1 text-xs text-white/55">Get Gamefolio creators playing your game and creating content around it.</p>
-              </>
-            ) : monthlyUsed ? (
-              <>
-                <p className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: NEON }}>
-                  Monthly Bounty Used ✓
-                </p>
-                <p className="mt-1 text-sm font-semibold text-white">Your next Quick Creator campaign is available {resetDate}.</p>
-                <p className="mt-1 text-xs text-white/55">Want to run another campaign?</p>
-              </>
-            ) : (
-              <>
-                <p className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: NEON }}>
-                  Create a Creator Campaign
-                </p>
-                <p className="mt-1 text-sm font-semibold text-white">Get Gamefolio creators playing your game and creating content.</p>
-                <p className="mt-1 text-xs text-white/55">Quick Creator is included monthly with Indie Game Pro.</p>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
-          {monthlyAvailable ? (
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.7fr)] lg:items-center lg:gap-4">
+        <div className="min-w-0">
+          {isLoading ? (
             <>
-              <button
-                type="button"
-                onClick={goToCreate}
-                className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
-                style={{ background: NEON, color: "#070b10" }}
-              >
-                Create Bounty <ChevronRight size={14} />
-              </button>
-              <span className="text-[10px] font-bold text-white/45">Included with Indie Game Pro</span>
+              <div className="h-3.5 w-44 animate-pulse rounded bg-white/10" />
+              <div className="mt-4 h-9 w-[min(100%,28rem)] animate-pulse rounded bg-white/10" />
+              <div className="mt-3 h-4 w-[min(100%,34rem)] animate-pulse rounded bg-white/5" />
+            </>
+          ) : monthlyAvailable ? (
+            <>
+              <p className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: NEON }}>
+                Your Monthly Bounty Is Ready
+              </p>
+              <h2 className="mt-3 max-w-xl text-2xl font-black tracking-tight text-white sm:text-3xl">
+                Launch your Quick Creator campaign.
+              </h2>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-white/58">
+                Get Gamefolio creators playing your game and creating content around it.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs font-bold text-white/70">
+                {["Included with Pro", "1 available this billing period", "Gamefolio promotion included"].map(item => (
+                  <span key={item} className="inline-flex items-center gap-2">
+                    <Check size={14} style={{ color: NEON }} />
+                    {item}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3">
+                <button
+                  type="button"
+                  onClick={goToCreate}
+                  className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
+                  style={{ background: NEON, color: "#070b10" }}
+                >
+                  Create Bounty <ChevronRight size={16} />
+                </button>
+                <button type="button" onClick={goToCreate} className="text-xs font-black text-white/55 transition hover:text-white">
+                  Explore larger campaigns →
+                </button>
+              </div>
             </>
           ) : monthlyUsed ? (
-            <button
-              type="button"
-              onClick={goToCreate}
-              className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
-              style={{ background: NEON, color: "#070b10" }}
-            >
-              Create Paid Campaign <ChevronRight size={14} />
-            </button>
+            <>
+              <p className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: NEON }}>
+                Creator Campaigns
+              </p>
+              <h2 className="mt-3 max-w-xl text-2xl font-black tracking-tight text-white sm:text-3xl">
+                Ready for another creator push?
+              </h2>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-white/58">
+                Your included Quick Creator campaign has been used for this billing period.
+              </p>
+              <div className="mt-5 text-xs font-bold text-white/55">
+                Next Quick Creator: <span className="text-white/80">{resetDate}</span>
+              </div>
+              <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3">
+                <button
+                  type="button"
+                  onClick={goToCreate}
+                  className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
+                  style={{ background: NEON, color: "#070b10" }}
+                >
+                  Build Another Campaign <ChevronRight size={16} />
+                </button>
+              </div>
+            </>
           ) : (
             <>
-              <button
-                type="button"
-                onClick={() => setLocation("/game-dashboard?tab=overview")}
-                className="rounded-xl border border-white/12 px-3.5 py-2.5 text-xs font-bold text-white/75 transition hover:border-white/25 hover:text-white"
-              >
-                View Indie Game Pro
-              </button>
-              <button
-                type="button"
-                onClick={goToCreate}
-                className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
-                style={{ background: NEON, color: "#070b10" }}
-              >
-                Build a Paid Campaign <ChevronRight size={14} />
-              </button>
+              <p className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: NEON }}>
+                Creator Campaigns
+              </p>
+              <h2 className="mt-3 max-w-xl text-2xl font-black tracking-tight text-white sm:text-3xl">
+                Get creators playing your game.
+              </h2>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-white/58">
+                Launch a Gamefolio creator campaign for clips, reels, screenshots, streams and more.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs font-bold text-white/70">
+                {["Creator content", "Gamefolio promotion", "Campaigns from £10"].map(item => (
+                  <span key={item} className="inline-flex items-center gap-2">
+                    <Check size={14} style={{ color: NEON }} />
+                    {item}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3">
+                <button
+                  type="button"
+                  onClick={goToCreate}
+                  className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B7FF18]"
+                  style={{ background: NEON, color: "#070b10" }}
+                >
+                  Build a Campaign <ChevronRight size={16} />
+                </button>
+                <button type="button" onClick={() => setLocation("/game-dashboard?tab=overview")} className="text-xs font-black text-white/55 transition hover:text-white">
+                  Quick Creator included monthly with Indie Game Pro · View Pro →
+                </button>
+              </div>
             </>
           )}
-        </div>
-      </div>
 
-      {activeCampaigns > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3 text-xs">
-          <span className="font-bold text-white/70">Your campaigns</span>
-          <span className="font-black" style={{ color: NEON }}>{activeCampaigns} Active</span>
-          <button type="button" onClick={goToManage} className="font-black text-white/60 transition hover:text-white">
-            Manage Campaigns →
-          </button>
-          {monthlyAvailable && <span className="text-white/35">· Monthly bounty still available</span>}
+          {activeCampaigns > 0 && (
+            <div className="mt-5 flex flex-wrap items-center gap-2 text-xs text-white/45">
+              <span>{activeCampaigns} {activeCampaigns === 1 ? "campaign" : "campaigns"} active</span>
+              <span aria-hidden="true">·</span>
+              <button type="button" onClick={goToManage} className="font-black text-white/65 transition hover:text-white">
+                Manage →
+              </button>
+            </div>
+          )}
         </div>
-      )}
+        <CreatorCampaignVisual campaigns={campaigns} />
+      </div>
     </section>
   );
 }
