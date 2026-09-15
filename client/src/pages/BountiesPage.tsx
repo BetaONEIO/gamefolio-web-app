@@ -448,6 +448,45 @@ function FeaturedHeroBackground({ campaign, className }: { campaign: any; classN
   );
 }
 
+function CampaignRowArtwork({ campaign }: { campaign: any }) {
+  const sources = [
+    campaign.campaign_artwork_url,
+    campaign.artwork_url,
+    campaign.game_artwork_url,
+    campaign.catalog_game_artwork_url,
+    campaign.game_profile_capsule_artwork_url,
+    campaign.game_profile_header_artwork_url,
+    campaign.game_profile_screenshot_artwork_url,
+  ].filter((source, index, all): source is string =>
+    typeof source === "string" && source.trim().length > 0 && all.indexOf(source) === index,
+  );
+  const [sourceIndex, setSourceIndex] = useState(0);
+  const source = sources[sourceIndex] ?? null;
+
+  useEffect(() => {
+    setSourceIndex(0);
+  }, [campaign.instance_id, sources.join("|")]);
+
+  if (!source) {
+    return (
+      <div
+        className="w-14 h-14 rounded-lg flex-shrink-0 bg-center bg-cover bg-no-repeat"
+        style={{ background: CAMPAIGN_HERO_FALLBACK }}
+        aria-hidden="true"
+      />
+    );
+  }
+
+  return (
+    <img
+      src={source}
+      alt=""
+      className="w-14 h-14 rounded-lg flex-shrink-0 object-cover"
+      onError={() => setSourceIndex(current => current + 1)}
+    />
+  );
+}
+
 // ── Campaign card ─────────────────────────────────────────────────────────
 function CampaignCard({ campaign, onClick }: { campaign: any; onClick: () => void }) {
   const demoLeft  = Number(campaign.demo_keys_remaining ?? 0);
@@ -2777,15 +2816,56 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
             const needsAction = effectiveStatus === "changes_requested";
             const demoKeyActive = Boolean(c.demo_key_value || c.demo_key_id);
             const fullKeyActive = Boolean(c.full_key_value || c.full_key_id);
+            const campaignState = campaignTabStatus(c);
+            const deadlineTone = deadlineUrgency === "expired"
+              ? { color: "#f87171", background: "rgba(248,113,113,0.10)" }
+              : deadlineUrgency === "critical"
+                ? { color: "#f87171", background: "rgba(248,113,113,0.10)" }
+                : deadlineUrgency === "urgent"
+                  ? { color: "#fbbf24", background: "rgba(251,191,36,0.10)" }
+                  : deadlineUrgency === "soon"
+                    ? { color: "#fcd34d", background: "rgba(252,211,77,0.08)" }
+                    : { color: "rgba(255,255,255,0.52)", background: "transparent" };
+            const ctaLabel = campaignState === "expired"
+              ? "View Campaign"
+              : needsAction
+                ? "Submit Content"
+                : campaignState === "submitted"
+                ? "View Campaign"
+                : campaignState === "completed"
+                  ? "View Rewards"
+                  : "Continue Mission";
 
             return (
-              <div key={c.instance_id} className="rounded-xl px-3.5 py-3 sm:px-4 sm:py-3.5" style={{ background: CARD_BG, border: `1px solid ${needsAction ? "rgba(249,115,22,0.30)" : CARD_BORDER}` }}>
+              <div
+                key={c.instance_id}
+                role="button"
+                tabIndex={0}
+                aria-label={`${c.campaign_title || c.template_name || "Campaign"} — ${ctaLabel}`}
+                onClick={() => onViewProgress(c)}
+                onKeyDown={event => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onViewProgress(c);
+                  }
+                }}
+                className="group rounded-xl px-3.5 py-3 sm:px-4 sm:py-3.5 cursor-pointer transition-[background,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8FF1B]/70"
+                style={{
+                  background: CARD_BG,
+                  border: `1px solid ${needsAction ? "rgba(249,115,22,0.30)" : CARD_BORDER}`,
+                }}
+                onMouseEnter={event => {
+                  event.currentTarget.style.background = "#111b27";
+                  event.currentTarget.style.borderColor = needsAction ? "rgba(249,115,22,0.48)" : "rgba(255,255,255,0.18)";
+                }}
+                onMouseLeave={event => {
+                  event.currentTarget.style.background = CARD_BG;
+                  event.currentTarget.style.borderColor = needsAction ? "rgba(249,115,22,0.30)" : CARD_BORDER;
+                }}
+              >
                 <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[minmax(220px,0.9fr)_minmax(250px,1.4fr)_auto] sm:items-center sm:gap-5">
                   <div className="flex items-center gap-3 min-w-0">
-                  <FeaturedHeroBackground
-                    campaign={c}
-                    className="w-14 h-14 rounded-lg flex-shrink-0 bg-center bg-cover bg-no-repeat"
-                  />
+                  <CampaignRowArtwork campaign={c} />
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] text-white/40 font-bold">{c.game_name}</div>
                     <div className="text-sm font-black text-white leading-tight truncate">{c.campaign_title || c.template_name}</div>
@@ -2807,36 +2887,43 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
                     <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#182334" }}>
                       <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: pct >= 100 ? "#4ade80" : NEON }} />
                     </div>
-                    <div className="flex items-center justify-between gap-3 mt-2">
-                      <div className="text-[10px] text-white/42 truncate">
-                        <span className="font-black text-white/70">Next objective</span>
-                        {" · "}
-                        {nextObjective.title}
-                        {nextObjective.progress && <span className="text-white/35"> · {nextObjective.progress}</span>}
+                    <div className="flex items-end justify-between gap-3 mt-2.5">
+                      <div className="min-w-0">
+                        <div className="text-[9px] font-black uppercase tracking-[0.16em] text-white/30">Up next</div>
+                        <div className="text-[11px] font-bold text-white/75 truncate mt-0.5">{nextObjective.title}</div>
+                        {nextObjective.detail && nextObjective.detail !== nextObjective.title && (
+                          <div className="text-[10px] text-white/35 truncate mt-0.5">{nextObjective.detail}</div>
+                        )}
                       </div>
-                      <span className={`flex items-center gap-1 text-[10px] whitespace-nowrap ${deadlineUrgency === "urgent" ? "text-red-300" : deadlineUrgency === "soon" ? "text-amber-300" : "text-white/40"}`}>
-                        <Clock size={11} />
-                        {deadlineLabel}
-                      </span>
+                      {nextObjective.progress && <span className="text-[11px] font-black tabular-nums text-white/55 whitespace-nowrap">{nextObjective.progress}</span>}
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-4 sm:min-w-[175px]">
+                  <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-4 sm:min-w-[175px]">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
                       {rewards.map((reward, index) => <CampaignRewardChip key={`${reward.label}-${index}`} {...reward} />)}
                       {demoKeyActive && <CampaignRewardChip icon={Key} label="Demo key active" tone={NEON} />}
                       {fullKeyActive && <CampaignRewardChip icon={Gift} label="Full game claimed" tone="#4ade80" />}
                     </div>
+                    <div
+                      className="flex items-center gap-1 text-[10px] font-bold whitespace-nowrap rounded-md px-1.5 py-1"
+                      style={{ color: deadlineTone.color, background: deadlineTone.background }}
+                      aria-label={`Campaign deadline: ${deadlineLabel}`}
+                    >
+                      <Clock size={11} />
+                      {deadlineLabel}
+                    </div>
                     <button
-                      onClick={() => onViewProgress(c)}
-                      className="flex-shrink-0 px-3.5 py-2 rounded-lg text-xs font-black flex items-center justify-center gap-1 transition-all hover:brightness-110"
+                      type="button"
+                      onClick={event => {
+                        event.stopPropagation();
+                        onViewProgress(c);
+                      }}
+                      className="w-full sm:w-auto flex-shrink-0 px-3.5 py-2 rounded-lg text-xs font-black flex items-center justify-center gap-1 transition-all hover:brightness-110"
                       style={{ background: NEON, color: "#070b10" }}
                     >
-                      {myTab === "active" && needsAction ? "Submit Content" :
-                        myTab === "submitted" ? "View Submission" :
-                        myTab === "completed" ? "View Results" :
-                        "Continue Mission"}
-                      <ChevronRight size={14} />
+                      {ctaLabel}
+                      <ChevronRight className="transition-transform duration-200 group-hover:translate-x-0.5" size={14} />
                     </button>
                   </div>
                 </div>
