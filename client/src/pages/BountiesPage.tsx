@@ -2882,73 +2882,7 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
   );
 }
 
-function CreatorCampaignVisual({ campaigns }: { campaigns: any[] }) {
-  const visualCampaigns = campaigns
-    .filter(campaign => campaignHeroSources(campaign).length > 0)
-    .slice(0, 3);
-  const frames = Array.from({ length: 3 }, (_, index) => {
-    const campaign = visualCampaigns[index];
-    const source = campaign ? campaignHeroSources(campaign)[0] : null;
-    return { campaign, source };
-  });
-
-  return (
-    <div
-      className="relative min-h-[210px] overflow-hidden sm:min-h-[220px]"
-      aria-hidden="true"
-    >
-      <div
-        className="absolute right-0 top-1/2 h-52 w-64 -translate-y-1/2 opacity-70"
-        style={{
-          background: "radial-gradient(circle at center, rgba(184,255,27,0.12), transparent 68%)",
-          filter: "blur(12px)",
-        }}
-      />
-      <div className="absolute right-2 top-1/2 h-40 w-52 -translate-y-1/2 rotate-[5deg] overflow-hidden rounded-2xl opacity-55 shadow-2xl shadow-black/50">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: frames[2].source
-              ? `url("${frames[2].source}")`
-              : CAMPAIGN_HERO_FALLBACK,
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0f101b] via-transparent to-white/5" />
-        <div className="absolute bottom-3 left-3 text-[9px] font-black uppercase tracking-[0.16em] text-white/65">Screenshot</div>
-      </div>
-      <div className="absolute right-16 top-1/2 h-44 w-56 -translate-y-1/2 -rotate-[7deg] overflow-hidden rounded-2xl shadow-2xl shadow-black/60">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: frames[1].source
-              ? `url("${frames[1].source}")`
-              : CAMPAIGN_HERO_FALLBACK,
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0f101b] via-transparent to-white/5" />
-        <div className="absolute bottom-3 left-3 text-[9px] font-black uppercase tracking-[0.16em] text-white/70">Gameplay clip</div>
-      </div>
-      <div className="absolute right-32 top-1/2 h-48 w-28 -translate-y-1/2 rotate-[8deg] overflow-hidden rounded-2xl shadow-2xl shadow-black/70">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: frames[0].source
-              ? `url("${frames[0].source}")`
-              : CAMPAIGN_HERO_FALLBACK,
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0f101b] via-transparent to-white/5" />
-        <div className="absolute bottom-3 left-2 text-[8px] font-black uppercase tracking-[0.12em] text-white/75">Creator reel</div>
-      </div>
-      <div className="absolute bottom-5 right-3 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-[#b8ff1b]/70">
-        <span className="h-1.5 w-1.5 rounded-full bg-[#b8ff1b]" />
-        Game → creators → content
-      </div>
-    </div>
-  );
-}
-
-function DeveloperBountyHubPrompt({ campaigns = [] }: { campaigns?: any[] }) {
+function DeveloperBountyHubPrompt() {
   const [, setLocation] = useLocation();
   const { isEligible, isLoading, allowance, overview } = useDeveloperBountySummary();
 
@@ -2967,14 +2901,17 @@ function DeveloperBountyHubPrompt({ campaigns = [] }: { campaigns?: any[] }) {
     <section
       className="relative overflow-hidden px-1 py-8 sm:px-3 sm:py-10"
       style={{
-        background: "#0f101b",
+        backgroundColor: "#0f101b",
+        backgroundImage: "linear-gradient(90deg, rgba(15,16,27,0.98) 0%, rgba(15,16,27,0.92) 34%, rgba(15,16,27,0.44) 68%, rgba(15,16,27,0.62) 100%), url('/attached_assets/creator-campaign-hero.png')",
+        backgroundPosition: "center",
+        backgroundSize: "cover",
         borderTop: "1px solid rgba(255,255,255,0.08)",
         borderBottom: "1px solid rgba(255,255,255,0.08)",
       }}
       aria-label="Developer campaign actions"
     >
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.7fr)] lg:items-center lg:gap-4">
-        <div className="min-w-0">
+      <div className="min-h-[360px]">
+        <div className="min-w-0 lg:max-w-[65%]">
           {isLoading ? (
             <>
               <div className="h-3.5 w-44 animate-pulse rounded bg-white/10" />
@@ -3084,7 +3021,6 @@ function DeveloperBountyHubPrompt({ campaigns = [] }: { campaigns?: any[] }) {
             </div>
           )}
         </div>
-        <CreatorCampaignVisual campaigns={campaigns} />
       </div>
     </section>
   );
