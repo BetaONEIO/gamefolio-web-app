@@ -234,6 +234,7 @@ import scheduledPostsRouter from "./routes/scheduled-posts";
 import migrationRouter from "./routes/migration";
 import viewRouter from "./routes/view";
 import supportRouter from "./routes/support";
+import surpriseMeRouter from "./routes/surprise-me";
 import { reportsRouter } from "./routes/reports";
 import {
   fetchRevenueCatSubscriber,
@@ -16528,6 +16529,7 @@ export async function registerRoutes(app: Express, httpServer: Server = createSe
 
   // Mount support routes
   app.use('/api/support', supportRouter);
+  app.use('/api/surprise-me', surpriseMeRouter);
 
   // Mount reports routes
   app.use('/api', reportsRouter);
