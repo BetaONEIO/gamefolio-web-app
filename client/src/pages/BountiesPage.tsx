@@ -2925,7 +2925,7 @@ function DeveloperBountyHubPrompt() {
                 <span className="block">Get creators playing</span>
                 <span className="block">your game.</span>
               </h2>
-              <p className="mt-4 max-w-[680px] text-base leading-7 text-white/70 sm:text-[17px]">
+              <p className="mt-4 max-w-[620px] pr-8 text-base leading-7 text-white/70 sm:pr-12 sm:text-[17px]">
                 Your Quick Creator campaign is ready to launch. Get Gamefolio creators playing your game and creating content around it.
               </p>
               <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-white/80 lg:flex-nowrap sm:text-[15px]">
@@ -2958,7 +2958,7 @@ function DeveloperBountyHubPrompt() {
               <h2 className="mt-3 max-w-[680px] text-3xl font-black leading-[1.05] tracking-tight text-white sm:text-[42px]">
                 Ready for another creator push?
               </h2>
-              <p className="mt-4 max-w-[680px] text-base leading-7 text-white/70 sm:text-[17px]">
+              <p className="mt-4 max-w-[620px] pr-8 text-base leading-7 text-white/70 sm:pr-12 sm:text-[17px]">
                 Your included Quick Creator campaign has been used for this billing period.
               </p>
               <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-white/80 lg:flex-nowrap sm:text-[15px]">
@@ -2992,7 +2992,7 @@ function DeveloperBountyHubPrompt() {
                 <span className="block">Get creators playing</span>
                 <span className="block">your game.</span>
               </h2>
-              <p className="mt-4 max-w-[680px] text-base leading-7 text-white/70 sm:text-[17px]">
+              <p className="mt-4 max-w-[620px] pr-8 text-base leading-7 text-white/70 sm:pr-12 sm:text-[17px]">
                 Launch a Gamefolio creator campaign for clips, reels, screenshots, streams and more.
               </p>
               <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm font-bold text-white/80 lg:flex-nowrap sm:text-[15px]">
