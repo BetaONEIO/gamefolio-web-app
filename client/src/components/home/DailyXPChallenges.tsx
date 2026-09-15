@@ -547,7 +547,7 @@ export function DailyXPChallenges() {
                       <span className="shrink-0 text-[10px] font-black text-[#B7FF18]">x2 XP</span>
                     </span>
                     <span className="mt-1 block break-words text-[10px] leading-tight text-white/55 sm:text-[11px]">
-                      Discover a random clip or reel · 1 free bonus daily
+                      Discover a random clip or reel · {user.isPro ? "up to 5 Pro bonuses daily" : "1 free bonus daily"}
                     </span>
                   </span>
                   <ChevronRight className="h-4 w-4 shrink-0 text-[#B7FF18] transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true" />

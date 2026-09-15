@@ -24,6 +24,7 @@ export default function SurpriseMePage() {
   const [error, setError] = useState<string | null>(null);
   const [rewarded, setRewarded] = useState(false);
   const claimingRef = useRef(false);
+  const isPro = progress.limit > 1 || user?.isPro === true;
 
   const loadSurprise = useCallback(async () => {
     setLoading(true);
@@ -89,7 +90,7 @@ export default function SurpriseMePage() {
                   <h1 className="text-2xl font-black tracking-tight">Surprise Me</h1>
                   <span className="shrink-0 text-sm font-black text-[#B7FF1A]">x2 XP</span>
                 </div>
-                <p className="mt-1 text-sm leading-6 text-white/65">Discover a random clip or reel · 1 free bonus daily</p>
+                <p className="mt-1 text-sm leading-6 text-white/65">Discover a random clip or reel · {isPro ? "up to 5 Pro bonuses daily" : "1 free bonus daily"}</p>
                 <Progress className="mt-4 h-2" value={(progress.completed / progress.limit) * 100} />
               </div>
               <ChevronRight className="mt-2 h-5 w-5 shrink-0 text-[#B7FF1A]" aria-hidden="true" />
