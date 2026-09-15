@@ -1988,6 +1988,8 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const [submitting, setSubmitting] = useState<number | null>(null);
   const [submitUrl, setSubmitUrl] = useState("");
   const [selectedContentId, setSelectedContentId] = useState<number | null>(null);
+  const [nativeFile, setNativeFile] = useState<File | null>(null);
+  const [nativePreview, setNativePreview] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [revealedAccessKey, setRevealedAccessKey] = useState<string | null>(null);
   const [revealedDeadline, setRevealedDeadline] = useState<string | null>(null);
@@ -2071,11 +2073,66 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
       setSubmitting(null);
       setSubmitUrl("");
       setSelectedContentId(null);
+      setNativeFile(null);
+      setNativePreview(null);
       toast({ title: "Submitted for review", description: "Gamefolio will verify your submission" });
     },
     onError: async (err: any) => {
       toast({ title: "Submission failed", description: err?.message ?? "Error", variant: "destructive" });
     },
+  });
+
+  const nativeSubmitMutation = useMutation({
+    mutationFn: async ({ bountyId, file }: { bountyId: number; file: File }) => {
+      const bounty = progressBounties.find((item: any) => item.id === bountyId);
+      if (!bounty) throw new Error("Objective not found");
+
+      if (bounty.content_type === "screenshot") {
+        const form = new FormData();
+        form.append("title", bounty.title || "Campaign screenshot");
+        if (data?.game_id) form.append("gameId", String(data.game_id));
+        form.append("screenshot", file);
+        const upload = await fetch("/api/screenshots/upload", { method: "POST", body: form, credentials: "include" });
+        const uploaded = await upload.json().catch(() => ({}));
+        if (!upload.ok) throw new Error(uploaded?.message ?? "Screenshot upload failed");
+        return apiRequest("POST", `/api/bounties/my/${cp.instance_id}/submit/${bountyId}`, {
+          contentType: bounty.content_type,
+          screenshotId: uploaded.screenshot?.id,
+        });
+      }
+
+      const uploadForm = new FormData();
+      uploadForm.append("file", file);
+      uploadForm.append("uploadType", bounty.content_type === "reel" ? "reel" : "clip");
+      const upload = await fetch("/api/upload/video-direct", { method: "POST", body: uploadForm, credentials: "include" });
+      const uploaded = await upload.json().catch(() => ({}));
+      if (!upload.ok) throw new Error(uploaded?.message ?? uploaded?.error ?? "Video upload failed");
+
+      const processed = await apiRequest("POST", "/api/upload/process-video", {
+        uploadResult: uploaded.result,
+        title: bounty.title || "Campaign upload",
+        description: data?.description || "",
+        gameId: data?.game_id ?? null,
+        videoType: bounty.content_type === "reel" ? "reel" : "clip",
+      });
+      const processedData = await processed.json();
+      const mediaId = processedData.clip?.id;
+      if (!mediaId) throw new Error("Video was uploaded but could not be published");
+      return apiRequest("POST", `/api/bounties/my/${cp.instance_id}/submit/${bountyId}`, {
+        contentType: bounty.content_type,
+        ...(bounty.content_type === "reel" ? { reelId: mediaId } : { clipId: mediaId }),
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/bounties/my", cp.instance_id] });
+      qc.invalidateQueries({ queryKey: ["/api/bounties/my/campaigns"] });
+      setSubmitting(null);
+      setNativeFile(null);
+      setNativePreview(null);
+      setSelectedContentId(null);
+      toast({ title: "Submitted for review", description: "Your upload is now attached to this campaign objective." });
+    },
+    onError: (err: any) => toast({ title: "Upload failed", description: err?.message ?? "Could not submit this upload", variant: "destructive" }),
   });
 
   const copyKey = (key: string, setter: (v: boolean) => void) => {
@@ -2126,6 +2183,93 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
   const missionRewards = missionRewardItems(displayData, bounties, allApproved);
   const completedOptional = optional.filter((b: any) => Number(b.approved_count ?? 0) >= Number(b.quantity ?? 1)).length;
   const contentRequirements = bountyRequirements(bounties);
+
+  const renderSubmissionForm = (b: any) => {
+    const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
+    const isMedia = ["clip", "reel", "screenshot"].includes(b.content_type);
+    const replacement = (b.submissions ?? []).find((submission: any) => submission.status === "changes_requested");
+    const isNativeBusy = nativeSubmitMutation.isPending;
+    return (
+      <div className="space-y-4 border-t border-white/[0.06] pt-5">
+        {isMedia ? (
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-[10px] font-black uppercase tracking-wider text-white/35">Choose existing Gamefolio content</div>
+              <label className="cursor-pointer text-xs font-black" style={{ color: NEON }}>
+                <Upload size={12} className="mr-1 inline" /> Upload {b.content_type === "screenshot" ? "screenshot" : b.content_type === "reel" ? "reel" : "video"}
+                <input
+                  type="file"
+                  className="hidden"
+                  accept={b.content_type === "screenshot" ? "image/*" : "video/mp4,video/quicktime,video/webm"}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    setNativeFile(file);
+                    setNativePreview(file ? URL.createObjectURL(file) : null);
+                    setSelectedContentId(null);
+                  }}
+                />
+              </label>
+            </div>
+            {nativeFile && nativePreview ? (
+              <div className="overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                {b.content_type === "screenshot"
+                  ? <img src={nativePreview} alt={nativeFile.name} className="max-h-56 w-full object-contain" />
+                  : <video src={nativePreview} controls className="max-h-56 w-full" />}
+                <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] px-3 py-2">
+                  <span className="truncate text-xs text-white/65">{nativeFile.name}</span>
+                  <button type="button" onClick={() => { setNativeFile(null); setNativePreview(null); }} className="text-xs text-white/40 hover:text-white">Remove</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {pickerLoading ? (
+                  <div className="flex items-center justify-center py-5"><Loader2 size={16} className="animate-spin text-white/35" /></div>
+                ) : (pickerData?.items ?? []).length > 0 ? (
+                  <div className="grid max-h-52 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4">
+                    {(pickerData?.items ?? []).map((item: any) => {
+                      const selected = selectedContentId === item.id;
+                      return (
+                        <button type="button" key={item.id} onClick={() => setSelectedContentId(selected ? null : item.id)} className="relative aspect-video overflow-hidden rounded-lg text-left" style={{ border: selected ? `2px solid ${NEON}` : "1px solid rgba(255,255,255,0.10)" }}>
+                          {item.thumbnailUrl ? <img src={item.thumbnailUrl} alt={item.title ?? "Gamefolio content"} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-white/5"><Icon size={16} className="text-white/35" /></div>}
+                          {selected && <div className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full" style={{ background: NEON }}><Check size={11} color="#070b10" strokeWidth={3} /></div>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : <div className="py-3 text-xs text-white/45">No matching Gamefolio content yet. Upload a new file above.</div>}
+              </>
+            )}
+            <p className="text-[10px] text-white/30">{b.content_type === "screenshot" ? "PNG, JPG and other supported image formats are accepted." : "Use Gamefolio's existing upload limits. Your media will be published and attached to this objective."}</p>
+          </>
+        ) : (
+          <div className="space-y-3">
+            <label className="text-[10px] font-black uppercase tracking-wider text-white/35">Your response</label>
+            <textarea value={submitUrl} onChange={e => setSubmitUrl(e.target.value)} placeholder={b.content_type === "feedback" ? "Tell the developer what you thought…" : b.content_type === "bug" ? "Describe the bug, steps to reproduce, and expected behaviour…" : "Paste a supporting link or write your response…"} className="min-h-28 w-full rounded-xl bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-white/25" style={{ border: "1px solid rgba(255,255,255,0.10)" }} />
+          </div>
+        )}
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              if (nativeFile) return nativeSubmitMutation.mutate({ bountyId: b.id, file: nativeFile });
+              const body: Record<string, unknown> = { contentType: b.content_type };
+              if (b.content_type === "clip") body.clipId = selectedContentId;
+              else if (b.content_type === "reel") body.reelId = selectedContentId;
+              else if (b.content_type === "screenshot") body.screenshotId = selectedContentId;
+              else body.contentData = { text: submitUrl.trim() };
+              if (replacement) body.supersedesSubmissionId = replacement.id;
+              submitMutation.mutate({ bountyId: b.id, body });
+            }}
+            disabled={isNativeBusy || submitMutation.isPending || (isMedia ? (!nativeFile && !selectedContentId) : !submitUrl.trim())}
+            className="flex-1 rounded-lg py-2.5 text-sm font-black transition-all hover:brightness-110 disabled:opacity-50"
+            style={{ background: NEON, color: "#070b10" }}
+          >
+            {isNativeBusy || submitMutation.isPending ? <Loader2 size={14} className="mx-auto animate-spin" /> : `Submit ${isMedia ? b.content_type === "screenshot" ? "screenshot" : "content" : b.content_type === "feedback" ? "feedback" : "report"}`}
+          </button>
+          <button type="button" onClick={() => { setSubmitting(null); setSubmitUrl(""); setSelectedContentId(null); setNativeFile(null); setNativePreview(null); }} className="px-4 py-2 text-sm text-white/50 hover:text-white">Cancel</button>
+        </div>
+      </div>
+    );
+  };
 
   const renderObjective = (b: any, isBonus = false) => {
     const Icon = CONTENT_TYPE_ICON[b.content_type] ?? Target;
@@ -2179,81 +2323,13 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             )}
 
             {!done && !applicationPending && (
-              isSubmitting ? (
-                <div className="space-y-2">
-                  {["clip", "reel", "screenshot"].includes(b.content_type) ? (
-                    <>
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-white/35">Select from Gamefolio</div>
-                      {pickerLoading ? (
-                        <div className="flex items-center justify-center py-5"><Loader2 size={16} className="animate-spin text-white/35" /></div>
-                      ) : (pickerData?.items ?? []).length > 0 ? (
-                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-52 overflow-y-auto pr-1">
-                          {(pickerData?.items ?? []).map((item: any) => {
-                            const selected = selectedContentId === item.id;
-                            return (
-                              <button
-                                type="button"
-                                key={item.id}
-                                onClick={() => setSelectedContentId(selected ? null : item.id)}
-                                className="relative rounded-lg overflow-hidden aspect-video text-left"
-                                style={{ border: selected ? `2px solid ${NEON}` : "1px solid rgba(255,255,255,0.10)" }}
-                              >
-                                {item.thumbnailUrl ? (
-                                  <img src={item.thumbnailUrl} alt={item.title ?? "Gamefolio content"} className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center bg-white/5"><Icon size={16} className="text-white/35" /></div>
-                                )}
-                                {selected && <div className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: NEON }}><Check size={11} color="#070b10" strokeWidth={3} /></div>}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="py-3 text-xs text-white/45">
-                          No matching Gamefolio content yet.
-                        </div>
-                      )}
-                      <a href="/upload" className="inline-flex items-center gap-1.5 text-xs font-black" style={{ color: NEON }}>
-                        <Upload size={12} /> Upload new content
-                      </a>
-                    </>
-                  ) : (
-                    <input
-                      value={submitUrl}
-                      onChange={e => setSubmitUrl(e.target.value)}
-                      placeholder={b.content_type === "feedback" || b.content_type === "bug" ? "Enter your response or paste a supporting link" : "Paste content URL or Gamefolio link"}
-                      className="w-full px-3 py-2 rounded-lg text-sm text-white bg-black/30 border border-white/10 focus:border-white/30 outline-none"
-                    />
-                  )}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        const body: Record<string, unknown> = { contentType: b.content_type };
-                        if (b.content_type === "clip") body.clipId = selectedContentId;
-                        else if (b.content_type === "reel") body.reelId = selectedContentId;
-                        else if (b.content_type === "screenshot") body.screenshotId = selectedContentId;
-                        else body.contentUrl = submitUrl.trim();
-                        submitMutation.mutate({ bountyId: b.id, body });
-                      }}
-                      disabled={(["clip", "reel", "screenshot"].includes(b.content_type) ? !selectedContentId : !submitUrl.trim()) || submitMutation.isPending}
-                      className="flex-1 py-2 rounded-lg text-sm font-black transition-all hover:brightness-110 disabled:opacity-50"
-                      style={{ background: NEON, color: "#070b10" }}
-                    >
-                      {submitMutation.isPending ? <Loader2 size={14} className="animate-spin mx-auto" /> : "Submit"}
-                    </button>
-                    <button onClick={() => { setSubmitting(null); setSubmitUrl(""); setSelectedContentId(null); }}
-                      className="px-4 py-2 rounded-lg text-sm text-white/50 border border-white/10 hover:text-white">
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
+              isSubmitting ? renderSubmissionForm(b) : (
                 <button
-                  onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); }}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-black transition-all hover:brightness-110"
+                  onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); setNativeFile(null); setNativePreview(null); }}
+                  className="w-full sm:w-auto rounded-lg px-5 py-2.5 text-sm font-black transition-all hover:brightness-110"
                   style={{ background: NEON, color: "#070b10" }}
                 >
-                  Submit Content
+                  {lastSub?.status === "changes_requested" ? "Replace submission" : ["clip", "reel", "screenshot"].includes(b.content_type) ? "Upload content" : "Start objective"}
                 </button>
               )
             )}
@@ -2271,7 +2347,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
         </button>
 
         {/* Compact game and campaign hero */}
-        <section className="relative overflow-hidden rounded-xl bg-[#0A0A10] sm:min-h-[430px]">
+        <section className="relative overflow-hidden rounded-xl bg-[#0A0A10] sm:min-h-[300px]">
           <FeaturedHeroBackground
             campaign={data}
             className="absolute inset-x-0 top-0 h-[220px] bg-center bg-cover bg-no-repeat transition-[background-image] duration-300 sm:inset-0 sm:h-auto"
@@ -2286,7 +2362,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           />
           <div className="absolute inset-0 hidden sm:block" style={{ background: "linear-gradient(0deg, rgba(15,16,27,0.42) 0%, transparent 35%)" }} />
 
-          <div className="relative z-10 flex flex-col justify-end px-5 pb-6 pt-[225px] sm:min-h-[430px] sm:max-w-[600px] sm:justify-center sm:px-9 sm:py-8 lg:px-11">
+          <div className="relative z-10 flex flex-col justify-end px-5 pb-6 pt-[225px] sm:min-h-[300px] sm:max-w-[600px] sm:justify-center sm:px-9 sm:py-8 lg:px-11">
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-full"
                 style={{ color: "#070b10", background: NEON }}>
@@ -2363,24 +2439,33 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#252938" }}>
             <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: pct >= 100 ? "#4ade80" : NEON }} />
           </div>
-          {nextObjectiveTitle && pct < 100 && (
-            <button
-              onClick={() => {
-                const nextBounty = mandatory.find((b: any) => Number(b.approved_count ?? 0) < Number(b.quantity ?? 1));
-                if (nextBounty) setExpandedBounty(nextBounty.id);
-              }}
-              className="w-full flex items-center justify-between gap-4 mt-5 rounded-sm px-1 py-2.5 text-left hover:bg-white/[0.03] transition-colors"
-            >
-              <div>
-                <div className="text-[9px] font-black uppercase tracking-widest" style={{ color: NEON }}>Next Objective</div>
-                <div className="text-sm font-black text-white mt-0.5">{nextObjectiveTitle}</div>
-              </div>
-              <ChevronRight size={16} style={{ color: NEON }} />
-            </button>
-          )}
         </section>
 
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-8 lg:gap-10 mt-8 items-start">
+        {nextObjectiveTitle && pct < 100 && (
+          <section className="mt-8 border-b border-white/[0.08] pb-8">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: NEON }}>Up Next</div>
+            {(() => {
+              const nextBounty = mandatory.find((b: any) => Number(b.approved_count ?? 0) < Number(b.quantity ?? 1));
+              const nextQty = Number(nextBounty?.quantity ?? 1);
+              const nextSubmitted = Number(nextBounty?.submitted_count ?? 0);
+              return (
+                <button
+                  onClick={() => nextBounty && setExpandedBounty(nextBounty.id)}
+                  className="mt-3 flex w-full items-end justify-between gap-5 text-left"
+                >
+                  <span className="min-w-0">
+                    <span className="block text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">{nextObjectiveTitle}</span>
+                    <span className="mt-2 block max-w-2xl text-sm leading-relaxed text-white/50">{objectiveDescription(nextBounty ?? {})}</span>
+                    <span className="mt-3 block text-xs font-bold text-white/45">{Math.min(nextSubmitted, nextQty)} / {nextQty} submitted <span className="mx-1 text-white/20">·</span> +{Number(nextBounty?.xp_reward ?? 0).toLocaleString()} Bounty XP</span>
+                  </span>
+                  <span className="shrink-0 rounded-lg px-4 py-2.5 text-xs font-black" style={{ background: NEON, color: "#070b10" }}>Start objective <ChevronRight size={14} className="ml-1 inline" /></span>
+                </button>
+              );
+            })()}
+          </section>
+        )}
+
+        <div className="mt-8">
           <main className="space-y-8 min-w-0">
 
         {/* Required objectives */}
@@ -2444,79 +2529,12 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
 
                       {/* Submit button/form */}
                       {!done && !applicationPending && (
-                        isSubmitting ? (
-                          <div className="space-y-2">
-                            {["clip", "reel", "screenshot"].includes(b.content_type) ? (
-                              <>
-                                <div className="text-[10px] font-bold uppercase tracking-wider text-white/35">Select from Gamefolio</div>
-                                {pickerLoading ? (
-                                  <div className="flex items-center justify-center py-5"><Loader2 size={16} className="animate-spin text-white/35" /></div>
-                                ) : (pickerData?.items ?? []).length > 0 ? (
-                                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-52 overflow-y-auto pr-1">
-                                    {(pickerData?.items ?? []).map((item: any) => {
-                                      const selected = selectedContentId === item.id;
-                                      return (
-                                        <button
-                                          type="button"
-                                          key={item.id}
-                                          onClick={() => setSelectedContentId(selected ? null : item.id)}
-                                          className="relative rounded-lg overflow-hidden aspect-video text-left"
-                                          style={{ border: selected ? `2px solid ${NEON}` : "1px solid rgba(255,255,255,0.10)" }}
-                                        >
-                                          {item.thumbnailUrl ? (
-                                            <img src={item.thumbnailUrl} alt={item.title ?? "Gamefolio content"} className="w-full h-full object-cover" />
-                                          ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-white/5"><Icon size={16} className="text-white/35" /></div>
-                                          )}
-                                          {selected && <div className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: NEON }}><Check size={11} color="#070b10" strokeWidth={3} /></div>}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                ) : (
-                                  <div className="py-3 text-xs text-white/45">
-                                    No matching Gamefolio content yet.
-                                  </div>
-                                )}
-                                <a href="/upload" className="inline-flex items-center gap-1.5 text-xs font-black" style={{ color: NEON }}>
-                                  <Upload size={12} /> Upload new content
-                                </a>
-                              </>
-                            ) : (
-                              <input
-                                value={submitUrl}
-                                onChange={e => setSubmitUrl(e.target.value)}
-                                placeholder={b.content_type === "feedback" || b.content_type === "bug" ? "Enter your response or paste a supporting link" : "Paste content URL or Gamefolio link"}
-                                className="w-full px-3 py-2 rounded-lg text-sm text-white bg-black/30 border border-white/10 focus:border-white/30 outline-none"
-                              />
-                            )}
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => {
-                                  const body: Record<string, unknown> = { contentType: b.content_type };
-                                  if (b.content_type === "clip") body.clipId = selectedContentId;
-                                  else if (b.content_type === "reel") body.reelId = selectedContentId;
-                                  else if (b.content_type === "screenshot") body.screenshotId = selectedContentId;
-                                  else body.contentUrl = submitUrl.trim();
-                                  submitMutation.mutate({ bountyId: b.id, body });
-                                }}
-                                disabled={(["clip", "reel", "screenshot"].includes(b.content_type) ? !selectedContentId : !submitUrl.trim()) || submitMutation.isPending}
-                                className="flex-1 py-2 rounded-lg text-sm font-black transition-all hover:brightness-110 disabled:opacity-50"
-                                style={{ background: NEON, color: "#070b10" }}>
-                                {submitMutation.isPending ? <Loader2 size={14} className="animate-spin mx-auto" /> : "Submit"}
-                              </button>
-                              <button onClick={() => { setSubmitting(null); setSubmitUrl(""); setSelectedContentId(null); }}
-                                className="px-4 py-2 rounded-lg text-sm text-white/50 border border-white/10 hover:text-white">
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
+                        isSubmitting ? renderSubmissionForm(b) : (
                           <button
-                            onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); }}
-                            className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-sm font-black transition-all hover:brightness-110"
+                            onClick={() => { setSubmitting(b.id); setSelectedContentId(null); setSubmitUrl(""); setNativeFile(null); setNativePreview(null); }}
+                            className="w-full sm:w-auto rounded-lg px-5 py-2.5 text-sm font-black transition-all hover:brightness-110"
                             style={{ background: NEON, color: "#070b10" }}>
-                            Submit Content
+                            {["clip", "reel", "screenshot"].includes(b.content_type) ? "Upload content" : "Start objective"}
                           </button>
                         )
                       )}
@@ -2596,10 +2614,10 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
             </section>
           </main>
 
-          {/* Desktop sticky summary; normal-flow reward summary on mobile */}
-          <aside className="lg:sticky lg:top-24">
+          {/* Access and rewards stay in the mission flow, not in a duplicate sidebar. */}
+          <section className="border-t border-white/[0.08] pt-8">
             <div className="rounded-xl p-4 space-y-4" style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}>
-              <div className="text-xs font-black uppercase tracking-[0.16em] text-white/65">Your Campaign</div>
+              <div className="text-xs font-black uppercase tracking-[0.16em] text-white/65">Access & Rewards</div>
 
               <div>
                 <div className="flex items-center justify-between text-[10px] font-bold text-white/38 mb-1.5">
@@ -2712,7 +2730,7 @@ function CampaignProgress({ campaign: cp, onBack }: { campaign: any; onBack: () 
                 </button>
               ) : null}
             </div>
-          </aside>
+          </section>
         </div>
       </div>
     </div>

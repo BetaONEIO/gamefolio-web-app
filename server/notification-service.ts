@@ -496,4 +496,26 @@ export class NotificationService {
       console.error("Error creating bounty review notification:", error);
     }
   }
+
+  // Notify a creator when a campaign owner asks for a replacement submission.
+  static async createBountySubmissionChangesRequestedNotification(
+    submitterId: number,
+    bountyId: number,
+    bountyTitle: string,
+    reason?: string
+  ) {
+    try {
+      const notification: InsertNotification = {
+        userId: submitterId,
+        type: "bounty_review",
+        title: "Changes Requested",
+        message: `Changes were requested on your submission for "${bountyTitle}".${reason ? ` Reason: ${reason}` : ""}`,
+        actionUrl: `/game-dashboard?tab=bounties&bounty=${bountyId}`,
+        metadata: { bountyId, reviewAction: "changes_requested" },
+      };
+      await createAndPush(notification);
+    } catch (error) {
+      console.error("Error creating bounty changes-requested notification:", error);
+    }
+  }
 }

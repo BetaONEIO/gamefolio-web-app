@@ -71,6 +71,22 @@ async function requireOwnerOrAdmin(req: any, res: any, next: any) {
   next();
 }
 
+async function requireCampaignSubmissionOwnerOrAdmin(req: any, res: any, next: any) {
+  if (!req.isAuthenticated?.() || !req.user) return res.status(401).json({ error: 'Unauthorized' });
+  if (req.user.role === 'admin') return next();
+  const [submission] = toRows(await db.execute(sql`
+    SELECT ci.developer_user_id
+    FROM campaign_bounty_submissions bs
+    JOIN campaign_instances ci ON ci.id = bs.instance_id
+    WHERE bs.id = ${Number(req.params.id)}
+  `)) as any[];
+  if (!submission) return res.status(404).json({ error: 'Submission not found' });
+  if (Number(submission.developer_user_id) !== Number(req.user.id)) {
+    return res.status(403).json({ error: 'Campaign owner or admin access required' });
+  }
+  next();
+}
+
 function asArray(value: any): any[] {
   if (Array.isArray(value)) return value;
   if (typeof value === 'string') {
@@ -350,6 +366,16 @@ export async function ensureBountyMarketplaceTables() {
     await run(`ALTER TABLE campaign_bounty_submissions ADD COLUMN IF NOT EXISTS validation_state TEXT DEFAULT 'submitted'`);
     await run(`ALTER TABLE campaign_bounty_submissions ADD COLUMN IF NOT EXISTS objective_state TEXT DEFAULT 'submitted'`);
     await run(`ALTER TABLE campaign_bounty_submissions ADD COLUMN IF NOT EXISTS validation_details JSONB`);
+    await run(`ALTER TABLE campaign_bounty_submissions ADD COLUMN IF NOT EXISTS reviewed_by_user_id INTEGER`);
+    await run(`ALTER TABLE campaign_bounty_submissions ADD COLUMN IF NOT EXISTS supersedes_submission_id INTEGER`);
+    await run(`CREATE TABLE IF NOT EXISTS campaign_bounty_submission_reviews (
+      id SERIAL PRIMARY KEY,
+      submission_id INTEGER NOT NULL REFERENCES campaign_bounty_submissions(id) ON DELETE CASCADE,
+      reviewer_user_id INTEGER,
+      verdict TEXT NOT NULL,
+      notes TEXT,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )`);
     await run(`CREATE TABLE IF NOT EXISTS campaign_reward_events (
       id SERIAL PRIMARY KEY, instance_id INTEGER NOT NULL, participant_id INTEGER NOT NULL,
       reward_type TEXT NOT NULL, reward_key TEXT NOT NULL, amount INTEGER, key_id INTEGER,
@@ -1507,6 +1533,7 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
     const {
       contentType, contentUrl, contentData,
       clipId, screenshotId, reelId,
+      supersedesSubmissionId,
     } = req.body;
     const submissionStatus = participation.manual_approval_required ? 'under_review' : 'pending';
     if (contentType && contentType !== bounty.content_type) {
@@ -1532,6 +1559,20 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
       return res.status(409).json({ error: 'All required submission units for this objective have already been submitted' });
     }
 
+    let replacementId: number | null = null;
+    if (supersedesSubmissionId != null) {
+      const [previous] = toRows(await db.execute(sql`
+        SELECT id FROM campaign_bounty_submissions
+        WHERE id = ${Number(supersedesSubmissionId)}
+          AND instance_id = ${instanceId}
+          AND participant_id = ${userId}
+          AND bounty_id = ${bountyId}
+          AND status = 'changes_requested'
+      `)) as any[];
+      if (!previous) return res.status(400).json({ error: 'Only a changes-requested submission can be replaced' });
+      replacementId = Number(previous.id);
+    }
+
     // Compute XP for this submission (deferred until approval, but compute now for preview)
     const tier = (bounty.xp_tier || 'standard') as XPTier;
     const profile = getXPProfile(tier);
@@ -1552,14 +1593,14 @@ router.post('/my/:instanceId/submit/:bountyId', requireAuth, async (req, res) =>
         (instance_id, participant_id, participation_id, bounty_id, creator_id, game_id, objective_id,
          content_id, submission_type, content_type, clip_id, screenshot_id, reel_id,
          content_url, content_data, status, objective_state, validation_state,
-         submitted_at, xp_awarded)
+          submitted_at, xp_awarded, supersedes_submission_id)
       VALUES
         (${instanceId}, ${userId}, ${participation.id}, ${bountyId}, ${userId}, ${bounty.game_id ?? null}, ${bountyId},
          ${clipId ?? screenshotId ?? reelId ?? null}, ${contentType ?? bounty.content_type},
          ${contentType ?? bounty.content_type},
          ${clipId ?? null}, ${screenshotId ?? null}, ${reelId ?? null},
-         ${contentUrl ?? null}, ${contentData ? JSON.stringify(contentData) : null},
-          ${submissionStatus}, 'submitted', 'submitted', NOW(), 0)
+          ${contentUrl ?? null}, ${contentData ? JSON.stringify(contentData) : null},
+           ${submissionStatus}, 'submitted', 'submitted', NOW(), 0, ${replacementId})
       RETURNING *
     `)) as any[];
 
@@ -1748,26 +1789,34 @@ router.post('/my/:instanceId/claim-full-key', requireAuth, async (req, res) => {
 // ADMIN — SUBMISSION REVIEW
 // ─────────────────────────────────────────────
 
-// GET /api/bounties/admin/submissions — list pending submissions
-router.get('/admin/submissions', requireAdmin, async (req, res) => {
+// GET /api/bounties/admin/submissions — list pending submissions for admins or campaign owners
+router.get('/admin/submissions', requireAuth, async (req, res) => {
   try {
     const { status } = req.query;
     const statusFilter = status
       ? sql`bs.status = ${status as string}`
       : sql`bs.status IN ('pending', 'under_review')`;
+    const ownerFilter = req.user!.role === 'admin'
+      ? sql`TRUE`
+      : sql`ci.developer_user_id = ${req.user!.id}`;
     const submissions = await db.execute(sql`
       SELECT
         bs.*,
-        u.username, u.display_name,
+        u.username, u.display_name, u.avatar_url,
         ci.game_name,
         ci.campaign_title,
+        ci.developer_user_id,
         b.title AS bounty_title,
-        b.content_type
+        b.content_type,
+        COALESCE(c.video_url, s.image_url) AS media_url,
+        COALESCE(c.thumbnail_url, s.thumbnail_url, s.image_url) AS thumbnail_url
       FROM campaign_bounty_submissions bs
       JOIN users u ON u.id = bs.participant_id
       JOIN campaign_instances ci ON ci.id = bs.instance_id
       JOIN campaign_template_bounties b ON b.id = bs.bounty_id
-       WHERE ${statusFilter}
+      LEFT JOIN clips c ON c.id = COALESCE(bs.clip_id, bs.reel_id)
+      LEFT JOIN screenshots s ON s.id = bs.screenshot_id
+       WHERE ${statusFilter} AND ${ownerFilter}
       ORDER BY bs.submitted_at ASC
     `);
     res.json(toRows(submissions));
@@ -1777,13 +1826,16 @@ router.get('/admin/submissions', requireAdmin, async (req, res) => {
 });
 
 // PATCH /api/bounties/admin/submissions/:id/review
-router.patch('/admin/submissions/:id/review', requireAdmin, async (req, res) => {
+router.patch('/admin/submissions/:id/review', requireCampaignSubmissionOwnerOrAdmin, async (req, res) => {
   try {
     await expireOverdueCampaignParticipants();
     const submissionId = Number(req.params.id);
     const { verdict, notes } = req.body; // verdict: 'approved' | 'rejected' | 'changes_requested'
     if (!['approved', 'rejected', 'changes_requested', 'under_review'].includes(verdict)) {
       return res.status(400).json({ error: 'Invalid review verdict' });
+    }
+    if (['rejected', 'changes_requested'].includes(verdict) && !String(notes ?? '').trim()) {
+      return res.status(400).json({ error: 'A reason is required for this review decision' });
     }
     const reviewTransition = await db.transaction(async (tx) => {
       const [current] = toRows(await tx.execute(sql`
@@ -1796,7 +1848,7 @@ router.patch('/admin/submissions/:id/review', requireAdmin, async (req, res) => 
             UPDATE campaign_bounty_submissions
              SET status = 'approved', objective_state = 'complete',
                  validation_state = 'complete',
-                 review_notes = ${notes ?? null}, reviewed_at = NOW()
+                  review_notes = ${notes ?? null}, reviewed_by_user_id = ${req.user!.id}, reviewed_at = NOW()
             WHERE id = ${submissionId} AND status <> 'approved' RETURNING *
           `)) as any[]
         : toRows(await tx.execute(sql`
@@ -1807,9 +1859,16 @@ router.patch('/admin/submissions/:id/review', requireAdmin, async (req, res) => 
                    WHEN ${verdict} = 'rejected' THEN 'rejected'
                    ELSE objective_state END,
                  validation_state = ${verdict},
-                 review_notes = ${notes ?? null}, reviewed_at = NOW()
+                  review_notes = ${notes ?? null}, reviewed_by_user_id = ${req.user!.id}, reviewed_at = NOW()
             WHERE id = ${submissionId} RETURNING *
           `)) as any[];
+      if (transitioned) {
+        await tx.execute(sql`
+          INSERT INTO campaign_bounty_submission_reviews
+            (submission_id, reviewer_user_id, verdict, notes)
+          VALUES (${submissionId}, ${req.user!.id}, ${verdict}, ${notes ?? null})
+        `);
+      }
       return { currentSubmission: current, transitionedSubmission: transitioned };
     });
     const currentSubmission = reviewTransition.currentSubmission;
@@ -1984,6 +2043,18 @@ router.patch('/admin/submissions/:id/review', requireAdmin, async (req, res) => 
       if (submissionInfo) {
         void NotificationService.createBountySubmissionReviewedNotification(
           submissionInfo.participant_id, submissionInfo.bounty_id, submissionInfo.title, false, notes
+        );
+      }
+    }
+    if (verdict === 'changes_requested') {
+      const [submissionInfo] = toRows(await db.execute(sql`
+        SELECT bs.participant_id, bs.bounty_id, b.title
+        FROM campaign_bounty_submissions bs JOIN campaign_template_bounties b ON b.id = bs.bounty_id
+        WHERE bs.id = ${submissionId}
+      `)) as any[];
+      if (submissionInfo) {
+        void NotificationService.createBountySubmissionChangesRequestedNotification(
+          submissionInfo.participant_id, submissionInfo.bounty_id, submissionInfo.title, notes
         );
       }
     }
