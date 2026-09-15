@@ -2899,7 +2899,7 @@ function DeveloperBountyHubPrompt() {
 
   return (
     <section
-      className="relative overflow-hidden px-4 py-8 sm:px-8 sm:py-10 lg:px-5"
+      className="relative overflow-hidden px-6 py-8 sm:px-8 sm:py-10 lg:px-10 xl:px-16"
       style={{
         backgroundColor: "#0f101b",
         backgroundImage: "linear-gradient(0deg, rgba(15,16,27,0.46) 0%, transparent 34%), linear-gradient(90deg, rgba(15,16,27,1) 0%, rgba(15,16,27,0.98) 20%, rgba(15,16,27,0.86) 34%, rgba(15,16,27,0.42) 52%, rgba(15,16,27,0.12) 70%, rgba(15,16,27,0.02) 100%), url('/attached_assets/creator-campaign-hero.png')",
