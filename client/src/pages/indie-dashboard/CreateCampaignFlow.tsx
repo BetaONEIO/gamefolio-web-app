@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { NEON, DASHBOARD_THEME, rgbaAccent } from "./constants";
 import CommercialCampaignAccordion from "./CommercialCampaignAccordion";
-import { CAMPAIGN_COMMERCIAL_MODEL } from "@shared/campaign-commercial-model";
+import { CAMPAIGN_COMMERCIAL_MODEL, getPresetSubmissionEstimate } from "@shared/campaign-commercial-model";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const CARD_BG     = "#0e1520";

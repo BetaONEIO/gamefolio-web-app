@@ -18,6 +18,7 @@ export type CommercialPreset = {
   estimatedCreatorMax: number | null;
   expectedApprovedDeliverablesPerCreator: { min: number; max: number } | null;
   campaignDurationDays: number | null;
+  applicationPeriodDays: number | null;
   overview: string;
   content: string[];
   bestFor: string[];
@@ -87,6 +88,7 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
       estimatedCreatorMax: 5,
       expectedApprovedDeliverablesPerCreator: { min: 3, max: 3 },
       campaignDurationDays: 7,
+      applicationPeriodDays: 30,
       overview: "A small first campaign to get creators playing and creating around your game.",
       content: ["Gameplay clips", "Screenshots", "Creator feedback"],
       bestFor: ["First creator content", "Demos", "Early Access"],
@@ -105,6 +107,7 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
       estimatedCreatorMax: 10,
       expectedApprovedDeliverablesPerCreator: { min: 4, max: 3.5 },
       campaignDurationDays: 14,
+      applicationPeriodDays: 30,
       overview: "Build a reusable content library with greater creator reach.",
       content: ["Gameplay clips", "Vertical reels", "Screenshots", "Creator feedback"],
       bestFor: ["Marketing libraries", "Updates", "Game discovery"],
@@ -124,6 +127,7 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
       estimatedCreatorMax: 20,
       expectedApprovedDeliverablesPerCreator: { min: 4, max: 3.5 },
       campaignDurationDays: 21,
+      applicationPeriodDays: 30,
       overview: "Generate deeper creator engagement for your biggest moments.",
       content: ["Gameplay clips", "Vertical reels", "Screenshots", "Livestreams", "Creator reviews"],
       bestFor: ["Full launches", "Major updates", "DLC", "Seasonal events"],
@@ -144,6 +148,7 @@ export const CAMPAIGN_COMMERCIAL_MODEL = {
       estimatedCreatorMax: null,
       expectedApprovedDeliverablesPerCreator: null,
       campaignDurationDays: null,
+      applicationPeriodDays: null,
       overview: "Choose your budget and let Gamefolio build a recommended creator campaign around it.",
       content: ["Choose your content mix"],
       bestFor: ["Specific content goals", "Flexible launches"],
