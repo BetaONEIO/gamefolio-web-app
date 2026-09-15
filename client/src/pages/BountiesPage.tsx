@@ -19,8 +19,8 @@ import {
 } from "@/lib/campaign-hero";
 
 const NEON = "#B8FF1B";
-const PAGE_BG = "#070b10";
-const CARD_BG = "#0e1520";
+const PAGE_BG = "#0F101B";
+const CARD_BG = "rgba(255,255,255,0.035)";
 const CARD_BORDER = "rgba(255,255,255,0.10)";
 
 type View = "marketplace" | "detail" | "progress";
@@ -38,7 +38,7 @@ const CONTENT_TYPE_LABEL: Record<string, string> = {
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  active:                  { label: "In Progress",             color: "#60a5fa", bg: "rgba(96,165,250,0.12)" },
+  active:                  { label: "In Progress",             color: NEON,      bg: "transparent" },
   under_review:            { label: "Under Review",             color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
   pending:                 { label: "Submitted for Review",     color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
   enrolled:               { label: "Joined",                  color: "#94a3b8", bg: "rgba(148,163,184,0.12)" },
@@ -47,12 +47,12 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
   application_approved:   { label: "Application Approved",    color: "#4ade80", bg: "rgba(74,222,128,0.12)" },
   approved:               { label: "Application Approved",    color: "#4ade80", bg: "rgba(74,222,128,0.12)" },
   demo_key_claimed:       { label: "Demo Key Claimed",        color: NEON,      bg: "rgba(183,255,24,0.12)" },
-  in_progress:            { label: "In Progress",             color: "#60a5fa", bg: "rgba(96,165,250,0.12)" },
+  in_progress:            { label: "In Progress",             color: NEON,      bg: "transparent" },
   submitted_for_review:   { label: "Submitted for Review",    color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
   changes_requested:      { label: "Changes Requested",       color: "#f97316", bg: "rgba(249,115,22,0.12)" },
   completed_and_verified: { label: "All Bounties Verified",   color: NEON,      bg: "rgba(183,255,24,0.12)" },
   completed:              { label: "Completed",               color: "#4ade80", bg: "rgba(74,222,128,0.12)" },
-  full_game_awarded:      { label: "Full Game Awarded",       color: "#a78bfa", bg: "rgba(167,139,250,0.12)" },
+  full_game_awarded:      { label: "Full Game Awarded",       color: NEON,      bg: "transparent" },
   rejected:               { label: "Rejected",                color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
   expired:                { label: "Expired",                 color: "#6b7280", bg: "rgba(107,114,128,0.1)"  },
 };
@@ -394,8 +394,8 @@ function missionRewardItems(campaign: any, bounties: any[], complete: boolean) {
 
 function CampaignRewardChip({ icon: Icon, label, tone }: { icon: any; label: string; tone?: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold whitespace-nowrap" style={{ color: tone ?? "rgba(255,255,255,0.62)" }}>
-      <Icon size={12} strokeWidth={2.4} />
+    <span className="inline-flex items-center gap-1.5 text-[10px] font-bold whitespace-nowrap text-white/70">
+      <Icon size={12} strokeWidth={2.4} style={{ color: tone ?? NEON }} />
       {label}
     </span>
   );
@@ -479,7 +479,7 @@ function CampaignRowArtwork({ campaign }: { campaign: any }) {
     return (
       <div
         className="w-14 h-14 rounded-lg flex-shrink-0 bg-center bg-cover bg-no-repeat"
-        style={{ background: CAMPAIGN_HERO_FALLBACK }}
+        style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}
         aria-hidden="true"
       />
     );
@@ -2790,7 +2790,7 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
     <div className="space-y-5 pb-24 sm:pb-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Status navigation */}
-        <div className="flex gap-1 p-1 rounded-xl overflow-x-auto" style={{ background: "rgba(255,255,255,0.04)" }} role="tablist" aria-label="Campaign status">
+        <div className="flex gap-1 p-1 rounded-xl overflow-x-auto" style={{ background: "rgba(255,255,255,0.035)" }} role="tablist" aria-label="Campaign status">
         {tabs.map(t => {
           const count = filter(t.key).length;
           return (
@@ -2801,13 +2801,13 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
               aria-selected={myTab === t.key}
               className="flex items-center justify-center gap-2 min-w-max px-3.5 py-2 rounded-lg text-xs font-bold transition-all"
               style={myTab === t.key
-                ? { background: NEON, color: "#070b10" }
-                : { color: "rgba(255,255,255,0.5)" }}
+                ? { background: NEON, color: "#0F101B" }
+                : { background: "transparent", color: "rgba(255,255,255,0.58)" }}
             >
               {t.label}
               <span
                 className="min-w-4 h-4 px-1 rounded-full text-[9px] font-black flex items-center justify-center"
-                style={{ background: myTab === t.key ? "rgba(7,11,16,0.22)" : "rgba(255,255,255,0.09)", color: myTab === t.key ? "#070b10" : "rgba(255,255,255,0.48)" }}
+                style={{ color: myTab === t.key ? "#0F101B" : "rgba(255,255,255,0.58)" }}
               >
                   {count}
               </span>
@@ -2823,7 +2823,7 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
             value={sortBy}
             onChange={e => setSortBy(e.target.value as typeof sortBy)}
             className="rounded-lg px-2.5 py-2 text-[11px] font-bold text-white outline-none cursor-pointer"
-            style={{ background: "#111820", border: "1px solid rgba(255,255,255,0.10)" }}
+            style={{ background: CARD_BG, border: `1px solid ${CARD_BORDER}` }}
           >
             <option value="recent">Recently joined</option>
             <option value="ending">Ending soon</option>
@@ -2843,7 +2843,15 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
         <div className="space-y-2.5">
           {currentCampaigns.map((c: any) => {
             const effectiveStatus = campaignJourneyStatus(c);
-            const statusCfg = STATUS_CONFIG[effectiveStatus] ?? STATUS_CONFIG.enrolled;
+            const statusIsCompleted = ["completed", "completed_and_verified", "full_game_awarded"].includes(effectiveStatus);
+            const statusIsReview = ["under_review", "submitted_for_review", "pending", "pending_application", "application_pending"].includes(effectiveStatus);
+            const statusLabel = statusIsCompleted
+              ? "Completed"
+              : statusIsReview
+                ? "Under Review"
+                : effectiveStatus === "expired"
+                  ? "Expired"
+                  : "In Progress";
             const progress = campaignProgressUnits(c);
             const requiredUnits = progress.requiredUnits;
             const progressUnits = Math.max(progress.approvedUnits, progress.submittedUnits);
@@ -2857,14 +2865,14 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
             const fullKeyActive = Boolean(c.full_key_value || c.full_key_id);
             const campaignState = campaignTabStatus(c);
             const deadlineTone = deadlineUrgency === "expired"
-              ? { color: "#f87171", background: "rgba(248,113,113,0.10)" }
+              ? { color: "rgba(248,113,113,0.78)" }
               : deadlineUrgency === "critical"
-                ? { color: "#f87171", background: "rgba(248,113,113,0.10)" }
+                ? { color: "#fbbf24" }
                 : deadlineUrgency === "urgent"
-                  ? { color: "#fbbf24", background: "rgba(251,191,36,0.10)" }
+                  ? { color: "#fbbf24" }
                   : deadlineUrgency === "soon"
-                    ? { color: "#fcd34d", background: "rgba(252,211,77,0.08)" }
-                    : { color: "rgba(255,255,255,0.52)", background: "transparent" };
+                    ? { color: "rgba(255,255,255,0.72)" }
+                    : { color: "rgba(255,255,255,0.58)" };
             const ctaLabel = campaignState === "expired"
               ? "View Campaign"
               : needsAction
@@ -2888,18 +2896,18 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
                     onViewProgress(c);
                   }
                 }}
-                className="group rounded-xl px-3.5 py-3 sm:px-4 sm:py-3.5 cursor-pointer transition-[background,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8FF1B]/70"
+                className="group rounded-xl px-3.5 py-3 sm:px-4 sm:py-3.5 cursor-pointer transition-[background,border-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B8FF1B]/70"
                 style={{
                   background: CARD_BG,
-                  border: `1px solid ${needsAction ? "rgba(249,115,22,0.30)" : CARD_BORDER}`,
+                  border: `1px solid ${CARD_BORDER}`,
                 }}
                 onMouseEnter={event => {
-                  event.currentTarget.style.background = "#111b27";
-                  event.currentTarget.style.borderColor = needsAction ? "rgba(249,115,22,0.48)" : "rgba(255,255,255,0.18)";
+                  event.currentTarget.style.background = "rgba(255,255,255,0.055)";
+                  event.currentTarget.style.borderColor = "rgba(255,255,255,0.16)";
                 }}
                 onMouseLeave={event => {
                   event.currentTarget.style.background = CARD_BG;
-                  event.currentTarget.style.borderColor = needsAction ? "rgba(249,115,22,0.30)" : CARD_BORDER;
+                  event.currentTarget.style.borderColor = CARD_BORDER;
                 }}
               >
                 <div className="flex flex-col gap-3 sm:grid sm:grid-cols-[minmax(220px,0.9fr)_minmax(250px,1.4fr)_auto] sm:items-center sm:gap-5">
@@ -2908,12 +2916,13 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] text-white/40 font-bold">{c.game_name}</div>
                     <div className="text-sm font-black text-white leading-tight truncate">{c.campaign_title || c.template_name}</div>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                    <span className="inline-flex items-center text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full"
-                      style={{ color: statusCfg.color, background: statusCfg.bg }}>
-                      {statusCfg.label}
-                    </span>
-                      {needsAction && <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full text-orange-300 bg-orange-400/10">Action required</span>}
+                    <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                      <span className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-[0.12em]"
+                        style={{ color: statusIsCompleted ? NEON : statusIsReview ? "rgba(255,255,255,0.72)" : effectiveStatus === "expired" ? "rgba(255,255,255,0.42)" : "rgba(255,255,255,0.72)" }}>
+                        {statusIsCompleted ? <Check size={11} strokeWidth={3} /> : !statusIsReview && effectiveStatus !== "expired" ? <span className="h-1.5 w-1.5 rounded-full" style={{ background: NEON }} /> : null}
+                        {statusLabel}
+                      </span>
+                      {needsAction && <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-amber-300/80">Action required</span>}
                     </div>
                   </div>
                 </div>
@@ -2921,17 +2930,17 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
                   <div className="min-w-0">
                     <div className="flex items-center justify-between gap-3 mb-1.5">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-white/35">Required progress</div>
-                      <div className="text-[11px] font-black tabular-nums" style={{ color: pct >= 100 ? "#4ade80" : NEON }}>{progressUnits}/{requiredUnits || 0}</div>
+                      <div className="text-[11px] font-black tabular-nums" style={{ color: NEON }}>{progressUnits}/{requiredUnits || 0}</div>
                     </div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "#182334" }}>
-                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: pct >= 100 ? "#4ade80" : NEON }} />
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.10)" }}>
+                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: NEON }} />
                     </div>
                     <div className="flex items-end justify-between gap-3 mt-2.5">
                       <div className="min-w-0">
-                        <div className="text-[9px] font-black uppercase tracking-[0.16em] text-white/30">Up next</div>
-                        <div className="text-[11px] font-bold text-white/75 truncate mt-0.5">{nextObjective.title}</div>
+                        <div className="text-[9px] font-black uppercase tracking-[0.16em]" style={{ color: NEON }}>Up next</div>
+                        <div className="text-[11px] font-bold text-white/85 truncate mt-0.5">{nextObjective.title}</div>
                         {nextObjective.detail && nextObjective.detail !== nextObjective.title && (
-                          <div className="text-[10px] text-white/35 truncate mt-0.5">{nextObjective.detail}</div>
+                          <div className="text-[10px] text-white/52 truncate mt-0.5">{nextObjective.detail}</div>
                         )}
                       </div>
                       {nextObjective.progress && <span className="text-[11px] font-black tabular-nums text-white/55 whitespace-nowrap">{nextObjective.progress}</span>}
@@ -2945,8 +2954,8 @@ function MyCampaigns({ onViewProgress }: { onViewProgress: (campaign: any) => vo
                       {fullKeyActive && <CampaignRewardChip icon={Gift} label="Full game claimed" tone="#4ade80" />}
                     </div>
                     <div
-                      className="flex items-center gap-1 text-[10px] font-bold whitespace-nowrap rounded-md px-1.5 py-1"
-                      style={{ color: deadlineTone.color, background: deadlineTone.background }}
+                      className="flex items-center gap-1 text-[10px] font-bold whitespace-nowrap"
+                      style={{ color: deadlineTone.color }}
                       aria-label={`Campaign deadline: ${deadlineLabel}`}
                     >
                       <Clock size={11} />

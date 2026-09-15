@@ -38,6 +38,7 @@
 - [Seasonal reward claims](seasonal-reward-claims.md) — bulk grants must be distinct-user and existence-checked because legacy claim history is not globally unique.
 - [Pro-gated catalog cache](pro-gated-catalog-cache.md) — entitlement-dependent catalogs need the entitlement in the client query key or an explicit invalidation after upgrade.
 - [Campaign personalization persistence](campaign-personalization-persistence.md) — campaign_instances is provisioned at runtime; new creator-facing setup fields need additive columns and Bounty Hub selects.
+- [Bounty row visual language](bounty-row-visual-language.md) — My Campaigns rows use neutral dark surfaces, real artwork, plain statuses, and neon green as the only primary accent.
 - [RevenueCat Web Billing catalog limits](revenuecat-web-billing-catalog-limits.md) — Developer API can rename Web Billing entities but rejects product creation and repricing; use the dashboard.
 - [Upload attempt idempotency](upload-attempt-idempotency.md) — direct video uploads reconcile creator-scoped attempt IDs to recover lost responses without duplicates.
 - [Indie dashboard access](indie-dashboard-access.md) — Indie Developer personas have the free game quota; paid Indie partners receive the higher subscriber quota.
