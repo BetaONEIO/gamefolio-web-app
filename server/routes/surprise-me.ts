@@ -94,8 +94,22 @@ router.post("/complete", hybridAuth, async (req: Request, res: Response) => {
     const userId = req.user!.id;
     const clipId = Number(req.body?.clipId);
     const watchedSeconds = Number(req.body?.watchedSeconds);
-    if (!Number.isInteger(clipId) || watchedSeconds < WATCH_THRESHOLD_SECONDS) {
+    const mediaDuration = Number(req.body?.mediaDuration);
+    if (!Number.isInteger(clipId) || !Number.isFinite(watchedSeconds)) {
       return res.status(400).json({ message: `Watch at least ${WATCH_THRESHOLD_SECONDS} seconds to earn the bonus` });
+    }
+    const clip = await storage.getClipById(clipId);
+    const knownDuration = clip?.duration && clip.duration > 0
+      ? clip.duration
+      : Number.isFinite(mediaDuration) && mediaDuration > 0
+        ? mediaDuration
+        : WATCH_THRESHOLD_SECONDS;
+    const requiredWatchSeconds = Math.max(
+      1,
+      Math.min(WATCH_THRESHOLD_SECONDS, knownDuration) - 0.5,
+    );
+    if (!clip || watchedSeconds < requiredWatchSeconds) {
+      return res.status(400).json({ message: `Watch the clip through to earn the bonus` });
     }
     const progress = await getProgress(userId, req.user!.isPro);
     if (progress.remaining === 0) return res.status(429).json({ message: "Daily Surprise Me bonus complete", ...progress });

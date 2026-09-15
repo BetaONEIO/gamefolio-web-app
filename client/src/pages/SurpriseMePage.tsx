@@ -49,13 +49,14 @@ export default function SurpriseMePage() {
 
   useEffect(() => { void loadSurprise(); }, [loadSurprise]);
 
-  const handleProgress = useCallback(async (currentTime: number) => {
-    if (!pick || rewarded || claimingRef.current || currentTime < pick.watchThresholdSeconds) return;
+  const handleProgress = useCallback(async (currentTime: number, duration: number) => {
+    const requiredSeconds = Math.max(1, Math.min(pick?.watchThresholdSeconds ?? 10, duration || 10) - 0.5);
+    if (!pick || rewarded || claimingRef.current || currentTime < requiredSeconds) return;
     claimingRef.current = true;
     try {
       const response = await fetch("/api/surprise-me/complete", {
         method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clipId: pick.clip.id, watchedSeconds: currentTime }),
+        body: JSON.stringify({ clipId: pick.clip.id, watchedSeconds: currentTime, mediaDuration: duration }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Could not award bonus XP");
