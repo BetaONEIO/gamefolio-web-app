@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, ChevronRight, Gift, Loader2 } from "lucide-react";
+import { ArrowLeft, ChevronRight, Gift, Loader2, Shuffle } from "lucide-react";
 import type { ClipWithUser } from "@shared/schema";
 import VideoPlayer from "@/components/shared/VideoPlayer";
 import { LikeButton } from "@/components/engagement/LikeButton";
