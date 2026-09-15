@@ -48,7 +48,7 @@ if (typeof document !== "undefined" && !document.getElementById(STYLE_ID)) {
       position: relative;
       isolation: isolate;
       overflow: hidden;
-      width: min(100%, 290px);
+      width: min(100%, 240px);
       padding: 2px;
       border-radius: 14px;
       box-shadow: 0 0 18px rgba(62, 197, 255, 0.04);
